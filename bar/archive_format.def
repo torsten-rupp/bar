@@ -1,0 +1,37 @@
+#***********************************************************************
+#
+# $Source: /home/torsten/cvs/bar/archive_format.def,v $
+# $Revision: 1.1.1.1 $
+# $Author: torsten $
+# Contents: Backup ARchiver file format definition
+# Systems : all
+#
+#***********************************************************************
+
+CHUNK BAR "BAR0" Header
+
+CHUNK COMPRESSION "COMP" Compression
+  uint8 algorithm
+
+CHUNK ENCRYPTION "CRYP" Encryption
+  uint8 algorithm
+
+CHUNK NAME "NAME" Name
+  uint32 id
+  name   name
+
+CHUNK FILE "FIL0" File
+  uint16 fileType
+  uint64 size
+  uint64 timeLastAccess
+  uint64 timeModified
+  uint64 timeLastChanged
+  uint32 userId
+  uint32 groupId
+  uint32 permission
+  name   name
+  data   data
+
+CHUNK PERMISSION "PER0" Permission
+
+# end of file
