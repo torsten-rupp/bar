@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.1.1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver
 * Systems :
@@ -23,7 +23,20 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-enum
+
+/***************************** Datatypes *******************************/
+
+typedef enum
+{
+  ERROR_NONE,
+
+  ERROR_INSUFFICIENT_MEMORY,
+  ERROR_IO_ERROR,
+
+  ERROR_UNKNOWN,
+} Errors;
+
+typedef enum
 {
   EXITCODE_OK=0,
   EXITCODE_FAIL=1,
@@ -33,9 +46,7 @@ enum
   EXITCODE_FATAL_ERROR=126,
 
   EXITCODE_UNKNOWN=128
-};
-
-/***************************** Datatypes *******************************/
+} ExitCodes;
 
 typedef struct PatternNode
 {

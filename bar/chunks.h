@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.h,v $
-* $Revision: 1.1.1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems : all
@@ -22,6 +22,8 @@
 
 /***************************** Constants *******************************/
 
+#define CHUNK_HEADER_SIZE (4+8)
+
 #define CHUNK_DATATYPE_UINT8    1
 #define CHUNK_DATATYPE_UINT16   2
 #define CHUNK_DATATYPE_UINT32   3
@@ -35,21 +37,25 @@
 
 /***************************** Datatypes *******************************/
 
+typedef uint32 ChunkId;
+
 typedef struct
 {
-  uint32 id;
-  uint64 size;
+  ChunkId id;
+  uint64  size;
 } ChunkHeader;
 
-typedef struct ChunkInfoBlock
+typedef struct ChunkInfo
 {
-  struct ChunkInfoBlock *containerChunkInfoBlock;
+  struct ChunkInfo *containerChunkInfo;
 
   enum
   {
     CHUNK_MODE_WRITE,
     CHUNK_MODE_READ,
   } mode;
+  bool(*nextFile)(void *userData);
+  bool(*closeFile)(void *userData);
   bool(*readFile)(void *userData, void *buffer, ulong length);
   bool(*writeFile)(void *userData, const void *buffer, ulong length);
   bool(*tellFile)(void *userData, uint64 *offset);
@@ -60,7 +66,7 @@ typedef struct ChunkInfoBlock
   uint32                id;
   uint64                size;      // size of chunk
   uint64                index;     // current position in chunk
-} ChunkInfoBlock;
+} ChunkInfo;
 
 /***************************** Variables *******************************/
 
@@ -74,32 +80,32 @@ typedef struct ChunkInfoBlock
   extern "C" {
 #endif
 
-bool chunks_init(ChunkInfoBlock *chunkInfoBlock,
+bool chunks_init(ChunkInfo *chunkInfo,
                  bool(*readFile)(void *userData, void *buffer, ulong length),
                  bool(*writeFile)(void *userData, const void *buffer, ulong length),
                  bool(*tellFile)(void *userData, uint64 *offset),
                  bool(*seekFile)(void *userData, uint64 offset),
                  void *userData
                 );
-void chunks_done(ChunkInfoBlock *chunkInfoBlock);
+void chunks_done(ChunkInfo *chunkInfo);
 
-bool chunks_get(ChunkInfoBlock *chunkInfoBlock);
-bool chunks_getSub(ChunkInfoBlock *chunkInfoBlock, ChunkInfoBlock *containerChunkInfoBlock);
-bool chunks_new(ChunkInfoBlock *chunkInfoBlock, uint32 id);
-bool chunks_newSub(ChunkInfoBlock *chunkInfoBlock, ChunkInfoBlock *containerChunkInfoBlock, uint32 id);
-bool chunks_close(ChunkInfoBlock *chunkInfoBlock);
+bool chunks_get(ChunkInfo *chunkInfo);
+bool chunks_getSub(ChunkInfo *chunkInfo, ChunkInfo *containerChunkInfo);
+bool chunks_new(ChunkInfo *chunkInfo, ChunkId chunkId);
+bool chunks_newSub(ChunkInfo *chunkInfo, ChunkInfo *containerChunkInfo, ChunkId chunkId);
+bool chunks_close(ChunkInfo *chunkInfo);
 
-bool chunks_skip(ChunkInfoBlock *chunkInfoBlock);
-bool chunks_eof(ChunkInfoBlock *chunkInfoBlock);
+bool chunks_skip(ChunkInfo *chunkInfo);
+bool chunks_eof(ChunkInfo *chunkInfo);
 
 ulong chunks_getSize(const void *data, int definition[]);
 
-bool chunks_read(ChunkInfoBlock *chunkInfoBlock, void *data, int definition[]);
-bool chunks_write(ChunkInfoBlock *chunkInfoBlock, const void *data, int definition[]);
+bool chunks_read(ChunkInfo *chunkInfo, void *data, int definition[]);
+bool chunks_write(ChunkInfo *chunkInfo, const void *data, int definition[]);
 
-bool chunks_readData(ChunkInfoBlock *chunkInfoBlock, void *data, ulong size);
-bool chunks_writeData(ChunkInfoBlock *chunkInfoBlock, const void *data, ulong size);
-bool chunks_skipData(ChunkInfoBlock *chunkInfoBlock, ulong size);
+bool chunks_readData(ChunkInfo *chunkInfo, void *data, ulong size);
+bool chunks_writeData(ChunkInfo *chunkInfo, const void *data, ulong size);
+bool chunks_skipData(ChunkInfo *chunkInfo, ulong size);
 
 #ifdef __cplusplus
   }

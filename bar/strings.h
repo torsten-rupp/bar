@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.1.1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems : all
@@ -318,7 +318,8 @@ String String_leftPad(String string, unsigned long length, char ch);
 *          ...    - arguments
 * Output : -
 * Return : format string
-* Notes  : -
+* Notes  : additional format characters
+*           %S  String
 \***********************************************************************/
 
 String String_format(String string, const char *format, ...);

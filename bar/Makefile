@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.1.1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: Makefile for
 # Systems :
@@ -61,8 +61,11 @@ PERL = perl
 #--------------------------------- objects -----------------------------------
 
 OBJECTS = 	bar.o \
-                archive.o \
+                archive_create.o \
+                archive_list.o \
+                archive_restore.o \
                 archive_format.o \
+                files.o \
                 chunks.o \
                 \
                 global.o \
@@ -87,11 +90,11 @@ bar: $(OBJECTS)
 
 bar.o: bar.c bar.h archive.h archive_format.h
 
-options.o: options.c options.h
+archive_create.o: archive_create.c archive.h archive_format.h strings.h
 
-chunks.o: chunks.c chunks.h
+archive_list.o: archive_list.c archive.h archive_format.h strings.h
 
-archive.o: archive.c archive.h archive_format.h strings.h
+archive_restore.o: archive_restore.c archive.h archive_format.h strings.h
 
 archive_format.o: archive_format.c archive_format.h
 
@@ -100,9 +103,24 @@ archive_format.h: archive_format.def
 archive_format.c: archive_format.def
 	$(PERL) archive_format.pl < $^ -c $@
 
-.PHONE: pack list
-pack: bar
-	./bar -a data.back -c /tmp/x/bin
+chunks.o: chunks.c chunks.h
 
-list: bar
-	./bar -l data.back
+files.o: files.c files.h
+
+options.o: options.c options.h
+
+.PHONE: pack1 list1 pack2 list2
+pack1: bar
+	./bar -a data/data.back -c /tmp/x/bin
+
+list1: bar
+	./bar -l data/data.back
+
+pack2: bar
+	./bar -a data/data.back -c -s 1000000 /tmp/x/bin
+
+list2: bar
+	./bar -l data/data.back.*
+
+clean_data:
+	$(RMF) data/data.back*
