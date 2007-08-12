@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -11,10 +11,6 @@
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <assert.h>
 
 #include "global.h"
@@ -67,17 +63,10 @@
 LOCAL bool endOfFile(void *userData)
 {
   ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
-  off64_t     n;
 
   assert(archiveInfo != NULL);
 
-  n = lseek64(archiveInfo->handle,0,SEEK_CUR);
-  if (n == (off64_t)-1)
-  {
-    return TRUE;
-  }
-
-  return (n >= archiveInfo->size);
+  return files_eof(&archiveInfo->fileHandle);
 }
 
 /***********************************************************************\
@@ -95,7 +84,7 @@ LOCAL bool readFile(void *userData, void *buffer, ulong bufferLength)
 
   assert(archiveInfo != NULL);
 
-  return (read(archiveInfo->handle,buffer,bufferLength) == bufferLength);
+  return (files_read(&archiveInfo->fileHandle,buffer,bufferLength) == ERROR_NONE);
 }
 
 /***********************************************************************\
@@ -113,7 +102,7 @@ LOCAL bool writeFile(void *userData, const void *buffer, ulong bufferLength)
 
   assert(archiveInfo != NULL);
 
-  return (write(archiveInfo->handle,buffer,bufferLength) == bufferLength);
+  return (files_write(&archiveInfo->fileHandle,buffer,bufferLength) == ERROR_NONE);
 }
 
 /***********************************************************************\
@@ -128,19 +117,11 @@ LOCAL bool writeFile(void *userData, const void *buffer, ulong bufferLength)
 LOCAL bool tellFile(void *userData, uint64 *offset)
 {
   ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
-  off64_t     n;
 
   assert(archiveInfo != NULL);
   assert(offset != NULL);
 
-  n = lseek64(archiveInfo->handle,0,SEEK_CUR);
-  if (n == (off64_t)-1)
-  {
-    return FALSE;
-  }
-  (*offset) = (uint64)n;
-
-  return TRUE;
+  return (files_tell(&archiveInfo->fileHandle,offset) == ERROR_NONE);
 }
 
 /***********************************************************************\
@@ -158,12 +139,7 @@ LOCAL bool seekFile(void *userData, uint64 offset)
 
   assert(archiveInfo != NULL);
 
-  if (lseek64(archiveInfo->handle,(off64_t)offset,SEEK_SET) == (off64_t)-1)
-  {
-    return FALSE;
-  }
-
-  return TRUE;
+  return (files_seek(&archiveInfo->fileHandle,offset) == ERROR_NONE);
 }
 
 /*---------------------------------------------------------------------*/
@@ -187,12 +163,12 @@ Errors archive_create(ArchiveInfo *archiveInfo,
     return ERROR_INIT;
   }
 
-  archiveInfo->fileName             = String_newCString(archiveFileName); 
-  archiveInfo->partSize             = partSize;                           
-  archiveInfo->partNumber           = 0;                                  
-  archiveInfo->handle               = -1;                                 
-//  archiveInfo->index                = 0;                                  
-//  archiveInfo->size                 = 0;                                  
+  archiveInfo->fileName          = String_newCString(archiveFileName); 
+  archiveInfo->partSize          = partSize;                           
+
+  archiveInfo->partNumber        = 0;
+  archiveInfo->fileHandle.handle = -1;
+  archiveInfo->fileHandle.size   = 0;
 
   return ERROR_NONE;
 }
@@ -201,9 +177,7 @@ Errors archive_open(ArchiveInfo *archiveInfo,
                     const char  *archiveFileName
                    )
 {
-  int     handle;
-  off64_t n;
-  uint64  size;
+  Errors error;
 
   assert(archiveInfo != NULL);
   assert(archiveFileName != NULL);
@@ -219,56 +193,28 @@ Errors archive_open(ArchiveInfo *archiveInfo,
     return ERROR_INIT;
   }
 
-  /* open file */
-  handle = open(archiveFileName,O_RDONLY,0);
-  if (handle == -1)
-  {
-    return ERROR_IO_ERROR;
-  }
-
-  /* get file size */
-  if (lseek64(handle,(off64_t)0,SEEK_END) == (off64_t)-1)
-  {
-    close(handle);
-    return ERROR_IO_ERROR;
-  }
-  n = lseek64(handle,0,SEEK_CUR);
-  if (n == (off64_t)-1)
-  {
-    close(handle);
-    return ERROR_IO_ERROR;
-  }
-  size = (uint64)n;
-  if (lseek64(handle,(off64_t)0,SEEK_SET) == (off64_t)-1)
-  {
-    close(handle);
-    return ERROR_IO_ERROR;
-  }
-
   /* init */
-  archiveInfo->fileName            = String_newCString(archiveFileName);
-  archiveInfo->partSize            = 0;
-  archiveInfo->partNumber          = 0;
-  archiveInfo->handle              = handle;
-//  archiveInfo->index               = 0;
-  archiveInfo->size                = size;
+  archiveInfo->fileName          = String_newCString(archiveFileName);
+  archiveInfo->partSize          = 0;
+  archiveInfo->partNumber        = 0;
+  archiveInfo->fileHandle.handle = -1;
+  archiveInfo->fileHandle.size   = 0;
+
+  /* open file */
+  error = files_open(&archiveInfo->fileHandle,archiveInfo->fileName);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   return ERROR_NONE;
 }
 
 bool archive_eof(ArchiveInfo *archiveInfo)
 {
-  uint64 offset;
-
   assert(archiveInfo != NULL);
-  assert(archiveInfo->handle >= 0);
 
-  if (!tellFile(archiveInfo,&offset))
-  {
-    return TRUE;
-  }
-
-  return offset >= archiveInfo->size;
+  return files_eof(&archiveInfo->fileHandle);
 }
 
 Errors archive_done(ArchiveInfo *archiveInfo)
@@ -585,6 +531,7 @@ Errors archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
   ulong      partLength;
   ulong      n;
   String     fileName;
+  Errors     error;
   void       *writeBuffer;
   ulong      writeLength;
 
@@ -600,7 +547,7 @@ Errors archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
     {
       /* check if new file-part is needed */
       newPartFlag = FALSE;
-      if (archiveFileInfo->archiveInfo->handle == -1)
+      if (archiveFileInfo->archiveInfo->fileHandle.handle == -1)
       {
         /* not open -> new part */
         newPartFlag = TRUE;
@@ -628,7 +575,7 @@ Errors archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
       }
       if (newPartFlag)
       {
-        if (archiveFileInfo->archiveInfo->handle >= 0)
+        if (archiveFileInfo->archiveInfo->fileHandle.handle >= 0)
         {
           /* close file, prepare for next part */
           if (archiveFileInfo->headerWrittenFlag)
@@ -658,10 +605,8 @@ Errors archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
             archiveFileInfo->headerWrittenFlag = FALSE;
           }
 
-          close(archiveFileInfo->archiveInfo->handle);
-          archiveFileInfo->archiveInfo->handle = -1;
-//          archiveFileInfo->archiveInfo->index  = 0;
-//          archiveFileInfo->archiveInfo->size   = 0;
+          files_close(&archiveFileInfo->archiveInfo->fileHandle);
+          archiveFileInfo->archiveInfo->fileHandle.handle = -1;
         }
       }
 
@@ -699,7 +644,7 @@ writeLength=partLength;
     }
 
     /* open file */
-    if (archiveFileInfo->archiveInfo->handle < 0)
+    if (archiveFileInfo->archiveInfo->fileHandle.handle == -1)
     {
       /* get output filename */
       if (archiveFileInfo->archiveInfo->partSize > 0)
@@ -713,10 +658,10 @@ writeLength=partLength;
       }
 
       /* create file */
-      archiveFileInfo->archiveInfo->handle = open(String_cString(fileName),O_CREAT|O_RDWR|O_TRUNC,0644);
-      if (archiveFileInfo->archiveInfo->handle == -1)
+      error = files_create(&archiveFileInfo->archiveInfo->fileHandle,fileName);
+      if (error != ERROR_NONE)
       {
-        return ERROR_IO_ERROR;
+        return error;
       }
 
 //      archiveFileInfo->archiveInfo->index               = 0;

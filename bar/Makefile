@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -39,6 +39,7 @@ SOURCES =       bar.c \
                 command_list.c \
                 command_restore.c \
                 command_test.c \
+                files.c \
                 archive.c \
                 chunks.c \
                 \

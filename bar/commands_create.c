@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -16,7 +16,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
@@ -33,9 +32,6 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-
-#define PATHNAME_SEPARATOR_CHAR '/'
-#define PATHNAME_SEPARATOR_CHARS "/"
 
 #define BUFFER_SIZE (64*1024)
 
@@ -167,32 +163,6 @@ LOCAL bool checkIsExcluded(PatternList *excludePatternList,
 }
 
 /***********************************************************************\
-* Name   : getFileType
-* Purpose: get file type
-* Input  : fileName - filename
-* Output : -
-* Return : file type; see FILETYPES_*
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ArchiveFileTypes getFileType(String fileName)
-{
-  struct stat fileStat;
-
-  if (lstat(String_cString(fileName),&fileStat) == 0)
-  {
-    if      (S_ISREG(fileStat.st_mode)) return FILETYPE_FILE;
-    else if (S_ISDIR(fileStat.st_mode)) return FILETYPE_DIRECTORY;
-    else if (S_ISLNK(fileStat.st_mode)) return FILETYPE_LINK;
-    else                                return FILETYPE_UNKNOWN;
-  }
-  else
-  {
-    return FILETYPE_UNKNOWN;
-  }
-}
-
-/***********************************************************************\
 * Name   : appendFileNameToList
 * Purpose: append a filename to a filename list
 * Input  : fileNameList - filename list
@@ -293,10 +263,10 @@ LOCAL void collector(void)
   String          s;
   String          basePath;
   FileNameList    directoryList;
-  DIR             *directoryHandle;
-  struct dirent   *directoryEntry;
   FileNameNode    *fileNameNode;
+  Errors          error;
   String          fileName;
+  DirectoryHandle directoryHandle;
 
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
@@ -306,11 +276,11 @@ LOCAL void collector(void)
   {
     /* find base path */
     basePath = String_new();
-    String_initTokenizer(&fileNameTokenizer,includePatternNode->pattern,PATHNAME_SEPARATOR_CHARS,NULL);
+    String_initTokenizer(&fileNameTokenizer,includePatternNode->pattern,FILES_PATHNAME_SEPARATOR_CHARS,NULL);
     s = String_new();
     while (String_getNextToken(&fileNameTokenizer,&s,NULL) && !checkIsPattern(s))
     {
-      if (String_length(basePath) > 0) String_appendChar(basePath,PATHNAME_SEPARATOR_CHAR);
+      if (String_length(basePath) > 0) String_appendChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
       String_append(basePath,s);
     }
     String_delete(s);
@@ -324,7 +294,7 @@ LOCAL void collector(void)
       fileNameNode = (FileNameNode*)List_getFirst(&directoryList);
       if (checkIsIncluded(includePatternNode,fileNameNode->fileName))
       {
-        switch (getFileType(fileNameNode->fileName))
+        switch (files_getType(fileNameNode->fileName))
         {
           case FILETYPE_FILE:
             /* add to file list */
@@ -334,55 +304,52 @@ LOCAL void collector(void)
             break;
           case FILETYPE_DIRECTORY:
             /* read directory contents */
-            directoryHandle = opendir(String_cString(fileNameNode->fileName));
-            if (directoryHandle != NULL)
+            error = files_openDirectory(&directoryHandle,fileNameNode->fileName);
+            if (error == ERROR_NONE)
             {
-              while ((directoryEntry = readdir(directoryHandle)) != NULL)
+              fileName = String_new();
+              while (!files_endOfDirectory(&directoryHandle))
               {
-                if ((strcmp(directoryEntry->d_name,".") != 0) && (strcmp(directoryEntry->d_name,"..") != 0))
+                error = files_readDirectory(&directoryHandle,fileName);
+                if (error != ERROR_NONE)
                 {
-                  /* get filename */
-                  fileName = String_copy(fileNameNode->fileName);
-                  String_appendChar(fileName,PATHNAME_SEPARATOR_CHAR);
-                  String_appendCString(fileName,directoryEntry->d_name);
-
-                  /* filter excludes */
-                  if (!checkIsExcluded(excludePatternList,s))
-                  {
-                    /* detect file type */
-                    switch (getFileType(fileName))
-                    {
-                      case FILETYPE_FILE:
-                        /* add to file list */
-                        appendFileNameToList(&fileNameList,fileName);
-                        statistics.includedCount++;
-      //fprintf(stderr,"%s,%d: collect %s\n",__FILE__,__LINE__,String_cString(fileName));
-                        break;
-                      case FILETYPE_DIRECTORY:
-                        /* add to directory list */
-                        appendFileNameToList(&directoryList,fileName);
-                        break;
-                      case FILETYPE_LINK:
-          // ???
-                        break;
-                      default:
-                        // ??? log
-                        break;
-                    }
-                  }
-                  else
-                  {
-                    statistics.excludedCount++;
-                  }
-
-                  String_delete(fileName);
-                }
-              }
-              if (errno != 0)
-              {
         //??? log
+HALT_INTERNAL_ERROR("x");
+                }
+
+                /* filter excludes */
+                if (!checkIsExcluded(excludePatternList,fileName))
+                {
+                  /* detect file type */
+                  switch (files_getType(fileName))
+                  {
+                    case FILETYPE_FILE:
+                      /* add to file list */
+                      appendFileNameToList(&fileNameList,fileName);
+                      statistics.includedCount++;
+    //fprintf(stderr,"%s,%d: collect %s\n",__FILE__,__LINE__,String_cString(fileName));
+                      break;
+                    case FILETYPE_DIRECTORY:
+                      /* add to directory list */
+                      appendFileNameToList(&directoryList,fileName);
+                      break;
+                    case FILETYPE_LINK:
+        // ???
+                      break;
+                    default:
+                      // ??? log
+                      break;
+                  }
+                }
+                else
+                {
+                  statistics.excludedCount++;
+                }
+
               }
-              closedir(directoryHandle);
+              String_delete(fileName);
+
+              files_closeDirectory(&directoryHandle);
             }
             else
             {
@@ -427,7 +394,6 @@ LOCAL void packer(void)
   Errors          error;
   void            *buffer;
   String          fileName;
-  struct stat     fileStat;
   FileInfo        fileInfo;
   ArchiveFileInfo archiveFileInfo;
   int             inputHandle;
@@ -452,24 +418,18 @@ LOCAL void packer(void)
 HALT(1,"x");
   }
 
+  fileInfo.name = String_new();
   while (!exitFlag && (getNextFile(fileName) != NULL))
   {
 fprintf(stderr,"%s,%d: pack %s\n",__FILE__,__LINE__,String_cString(fileName));
     /* get file info */
-    if (lstat(String_cString(fileName),&fileStat) != 0)
+    error = files_getInfo(fileName,&fileInfo);
+    if (error != ERROR_NONE)
     {
 fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   // log ???
       continue;
     }
-    fileInfo.name            = fileName;
-    fileInfo.size            = fileStat.st_size;
-    fileInfo.timeLastAccess  = fileStat.st_atime;
-    fileInfo.timeModified    = fileStat.st_mtime;
-    fileInfo.timeLastChanged = fileStat.st_ctime;
-    fileInfo.userId          = fileStat.st_uid;
-    fileInfo.groupId         = fileStat.st_gid;
-    fileInfo.permission      = fileStat.st_mode;
 
     /* new file */
     error = archive_newFile(&archiveInfo,
@@ -504,6 +464,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
     archive_closeFile(&archiveFileInfo);
   }
+  String_delete(fileInfo.name);
 
   /* close archive */
   archive_done(&archiveInfo);

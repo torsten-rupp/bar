@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -62,10 +62,14 @@ bool command_restore(FileNameList *fileNameList,
   ArchiveFileInfo archiveFileInfo;
   FileInfo        fileInfo;
   uint64          partOffset,partSize;
+  ulong           length;
 
   assert(fileNameList != NULL);
   assert(includeList != NULL);
   assert(excludeList != NULL);
+
+  /* initialise variables */
+  fileInfo.name = String_new();
 
   fileNameNode = fileNameList->head;
   while (fileNameNode != NULL)
@@ -95,7 +99,10 @@ HALT_INTERNAL_ERROR("x");
 HALT_INTERNAL_ERROR("x");
       }
 
-      
+      length = 0;
+      while (length < partSize)
+      {
+      }
 
       archive_closeFile(&archiveFileInfo);
     }
@@ -103,8 +110,12 @@ HALT_INTERNAL_ERROR("x");
     /* close archive */
     archive_done(&archiveInfo);
 
+    /* next file */
     fileNameNode = fileNameNode->next;
   }
+
+  /* free resources */
+  String_delete(fileInfo.name);
 
   return TRUE;
 }

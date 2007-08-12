@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver
 * Systems : all
@@ -36,7 +36,7 @@ typedef enum
   COMMAND_CREATE,
   COMMAND_LIST,
   COMMAND_TEST,
-  COMMAND_EXTRACT,
+  COMMAND_RESTORE,
 
   COMMAND_UNKNOWN,
 } Commands;
@@ -54,7 +54,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM   ("create",       'c',command,        COMMAND_NONE,COMMAND_CREATE, "create new archive"), 
   CMD_OPTION_ENUM   ("list",         'l',command,        COMMAND_NONE,COMMAND_LIST,   "list contents of archive"), 
   CMD_OPTION_ENUM   ("test",         't',command,        COMMAND_NONE,COMMAND_TEST,   "test contents of ardhive"), 
-  CMD_OPTION_ENUM   ("extract",      'x',command,        COMMAND_NONE,COMMAND_EXTRACT,"restore archive"), 
+  CMD_OPTION_ENUM   ("extract",      'x',command,        COMMAND_NONE,COMMAND_RESTORE,"restore archive"), 
 
   CMD_OPTION_STRING ("archive",      'a',archiveFileName,NULL,                        "archive filename"),
   CMD_OPTION_INTEGER("part-size",    's',partSize,       0,                           "part size"),
@@ -205,7 +205,7 @@ int main(int argc, const char *argv[])
       break;
     case COMMAND_LIST:
     case COMMAND_TEST:
-    case COMMAND_EXTRACT:
+    case COMMAND_RESTORE:
       {
         /* get archive files */
         List_init(&fileNameList);
@@ -228,7 +228,7 @@ int main(int argc, const char *argv[])
           case COMMAND_TEST:
             exitcode = (command_test(&fileNameList,&includePatternList,&excludePatternList))?EXITCODE_OK:EXITCODE_FAIL;
             break;
-          case COMMAND_EXTRACT:
+          case COMMAND_RESTORE:
             exitcode = (command_restore(&fileNameList,&includePatternList,&excludePatternList,directory))?EXITCODE_OK:EXITCODE_FAIL;
             break;
           default:

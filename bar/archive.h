@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: archive functions
 * Systems : all
@@ -32,24 +32,12 @@
 
 typedef struct
 {
-  String fileName;
-  uint64 partSize;
+  String     fileName;
+  uint64     partSize;
 
-  int    partNumber;
-  int    handle;
-  uint64 size;
+  int        partNumber;
+  FileHandle fileHandle;
 } ArchiveInfo;
-
-typedef enum
-{
-  FILETYPE_NONE,
-
-  FILETYPE_FILE,
-  FILETYPE_LINK,
-  FILETYPE_DIRECTORY,
-
-  FILETYPE_UNKNOWN
-} ArchiveFileTypes;
 
 typedef struct
 {

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -60,15 +60,15 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printFileInfo(const ArchiveFileInfo *archiveFileInfo)
+LOCAL void printFileInfo(const FileInfo *fileInfo, uint64 partOffset, uint64 partSize)
 {
-  assert(archiveFileInfo != NULL);
+  assert(fileInfo != NULL);
 
 printf("%10llu %10llu..%10llu %s\n",
-archiveFileInfo->chunkFileEntry.size,
-archiveFileInfo->chunkFileData.partOffset,
-archiveFileInfo->chunkFileData.partOffset+archiveFileInfo->chunkFileData.partSize-1,
-String_cString(archiveFileInfo->chunkFileEntry.name)
+fileInfo->size,
+partOffset,
+partOffset+partSize-1,
+String_cString(fileInfo->name)
 );
 }
 
@@ -118,16 +118,18 @@ HALT_INTERNAL_ERROR("x");
       {
 HALT_INTERNAL_ERROR("x");
       }
-      printFileInfo(&archiveFileInfo);
+      printFileInfo(&fileInfo,partOffset,partSize);
       archive_closeFile(&archiveFileInfo);
     }
 
     /* close archive */
     archive_done(&archiveInfo);
 
+    /* next file */
     fileNameNode = fileNameNode->next;
   }
 
+  /* free resources */
   String_delete(fileInfo.name);
 
   return TRUE;
