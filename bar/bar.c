@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.1.1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver
 * Systems : all
@@ -18,7 +18,10 @@
 #include "cmdoptions.h"
 
 #include "bar.h"
-#include "archive.h"
+#include "command_create.h"
+#include "command_list.h"
+#include "command_restore.h"
+#include "command_test.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -197,7 +200,7 @@ int main(int argc, const char *argv[])
         }
 
         /* create archive */
-        exitcode = (archive_create(archiveFileName,&includePatternList,&excludePatternList,tmpDirectory,partSize))?EXITCODE_OK:EXITCODE_FAIL;
+        exitcode = (command_create(archiveFileName,&includePatternList,&excludePatternList,tmpDirectory,partSize))?EXITCODE_OK:EXITCODE_FAIL;
       }
       break;
     case COMMAND_LIST:
@@ -220,13 +223,13 @@ int main(int argc, const char *argv[])
         switch (command)
         {
           case COMMAND_LIST:
-            exitcode = (archive_list(&fileNameList,&includePatternList,&excludePatternList))?EXITCODE_OK:EXITCODE_FAIL;
+            exitcode = (command_list(&fileNameList,&includePatternList,&excludePatternList))?EXITCODE_OK:EXITCODE_FAIL;
             break;
           case COMMAND_TEST:
-            archive_test(&fileNameList,&includePatternList,&excludePatternList);
+            exitcode = (command_test(&fileNameList,&includePatternList,&excludePatternList))?EXITCODE_OK:EXITCODE_FAIL;
             break;
           case COMMAND_EXTRACT:
-            archive_restore(&fileNameList,&includePatternList,&excludePatternList,directory);
+            exitcode = (command_restore(&fileNameList,&includePatternList,&excludePatternList,directory))?EXITCODE_OK:EXITCODE_FAIL;
             break;
           default:
             break;

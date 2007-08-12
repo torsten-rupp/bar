@@ -1,6 +1,6 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/archive_restore.c,v $
+* $Source: /home/torsten/cvs/bar/commands_test.c,v $
 * $Revision: 1.1 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
@@ -27,12 +27,14 @@
 #include "bar.h"
 #include "chunks.h"
 #include "archive_format.h"
-
 #include "archive.h"
+
+#include "command_test.h"
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
 
 /***************************** Datatypes *******************************/
 
@@ -48,53 +50,15 @@
   extern "C" {
 #endif
 
-LOCAL bool readFile(void *userData, void *buffer, ulong length)
+bool command_test(FileNameList *fileNameList,
+                  PatternList  *includeList,
+                  PatternList  *excludeList
+                 )
 {
-  return (read((int)userData,buffer,length) == length);
-}
+  assert(fileNameList != NULL);
+  assert(includeList != NULL);
+  assert(excludeList != NULL);
 
-LOCAL bool writeFile(void *userData, const void *buffer, ulong length)
-{
-  return (write((int)userData,buffer,length) == length);
-}
-
-LOCAL bool tellFile(void *userData, uint64 *offset)
-{
-  off64_t n;
-
-  assert(offset != NULL);
-
-  n = lseek64((int)userData,0,SEEK_CUR);
-  if (n == (off_t)-1)
-  {
-    return FALSE;
-  }
-  (*offset) = (uint64)n;
-
-  return TRUE;
-}
-
-LOCAL bool seekFile(void *userData, uint64 offset)
-{
-  if (lseek64((int)userData,(off64_t)offset,SEEK_SET) == (off_t)-1)
-  {
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-/*---------------------------------------------------------------------*/
-
-bool archive_test(FileNameList *fileNameList, PatternList *includeList, PatternList *excludeList)
-{
-  return TRUE;
-}
-
-/*---------------------------------------------------------------------*/
-
-bool archive_restore(FileNameList *fileNameList, PatternList *includeList, PatternList *excludeList, const char *directory)
-{
   return TRUE;
 }
 

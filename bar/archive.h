@@ -1,28 +1,76 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.1.1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive functions
+* Contents: archive functions
 * Systems : all
 *
 \***********************************************************************/
 
-#ifndef __ARCHIVE_H__
-#define __ARCHIVE_H__
+#ifndef __ARCHIVE__
+#define __ARCHIVE__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 
+#include "global.h"
+#include "strings.h"
+
 #include "bar.h"
+#include "chunks.h"
+#include "archive_format.h"
+#include "files.h"
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
+
+typedef struct
+{
+  String fileName;
+  uint64 partSize;
+
+  int    partNumber;
+  int    handle;
+  uint64 size;
+} ArchiveInfo;
+
+typedef enum
+{
+  FILETYPE_NONE,
+
+  FILETYPE_FILE,
+  FILETYPE_LINK,
+  FILETYPE_DIRECTORY,
+
+  FILETYPE_UNKNOWN
+} ArchiveFileTypes;
+
+typedef struct
+{
+  ArchiveInfo    *archiveInfo;
+
+  enum
+  {
+    FILE_MODE_READ,
+    FILE_MODE_WRITE,
+  } mode;
+
+  ChunkInfo      chunkInfoFile;            // chunk info block for file
+  ChunkFile      chunkFile;                // file
+  ChunkInfo      chunkInfoFileEntry;       // chunk info block for file entry
+  ChunkFileEntry chunkFileEntry;           // file entry
+  ChunkInfo      chunkInfoFileData;        // chunk info block for file data
+  ChunkFileData  chunkFileData;            // file data
+
+  uint           headerLength;             // length of header
+  bool           headerWrittenFlag;        // TRUE iff header written
+} ArchiveFileInfo;
 
 /***************************** Variables *******************************/
 
@@ -36,15 +84,127 @@
   extern "C" {
 #endif
 
-bool archive_create(const char *fileName, PatternList *includeList, PatternList *excludeList, const char *tmpDirectory, ulong size);
-bool archive_list(FileNameList *fileNameList, PatternList *includeList, PatternList *excludeList);
-bool archive_test(FileNameList *fileNameList, PatternList *includeList, PatternList *excludeList);
-bool archive_restore(FileNameList *fileNameList, PatternList *includeList, PatternList *excludeList, const char *directory);
+/***********************************************************************\
+* Name   : archive_create
+* Purpose: create archive
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors archive_create(ArchiveInfo *archiveInfo,
+                      const char  *archiveFileName,
+                      uint64      partSize
+                     );
+
+/***********************************************************************\
+* Name   : archive_open
+* Purpose: open archive
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors archive_open(ArchiveInfo *archiveInfo,
+                    const char  *archiveFileName
+                   );
+
+/***********************************************************************\
+* Name   : archive_done
+* Purpose: close archive
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors archive_done(ArchiveInfo *archiveInfo);
+
+/***********************************************************************\
+* Name   : archive_eof
+* Purpose: check if end-of-archive file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool archive_eof(ArchiveInfo *archiveInfo);
+
+/***********************************************************************\
+* Name   : archive_newFile
+* Purpose: add new file to archive
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors archive_newFile(ArchiveInfo     *archiveInfo,
+                       ArchiveFileInfo *archiveFileInfo,
+                       const FileInfo  *fileInfo
+                      );
+
+/***********************************************************************\
+* Name   : archive_readFile
+* Purpose: read file info from archive
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors archive_readFile(ArchiveInfo     *archiveInfo,
+                        ArchiveFileInfo *archiveFileInfo,
+                        FileInfo        *fileInfo,
+                        uint64          *partOffset,
+                        uint64          *partSize
+                       );
+
+/***********************************************************************\
+* Name   : archive_closeFile
+* Purpose: clsoe file in archive
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors archive_closeFile(ArchiveFileInfo *archiveFileInfo);
+
+/***********************************************************************\
+* Name   : archive_writeFileData
+* Purpose: write data to file in archive
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors archive_writeFileData(ArchiveFileInfo *archiveFileInfo,
+                             const void      *buffer,
+                             ulong           bufferLength);
+
+/***********************************************************************\
+* Name   : archive_readFileData
+* Purpose: read data from file in archive
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors archive_readFileData(ArchiveFileInfo *archiveFileInfo,
+                            void            *buffer,
+                            ulong           bufferLength
+                           );
 
 #ifdef __cplusplus
   }
 #endif
 
-#endif /* __ARCHIVE_H__ */
+#endif /* __ARCHIVE__ */
 
 /* end of file */

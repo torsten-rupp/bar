@@ -3,38 +3,12 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # $Author: torsten $
-# Contents: Makefile for
-# Systems :
+# Contents: Makefile for bar
+# Systems : all
 #			   
 # ----------------------------------------------------------------------------
-
-#-----------------------------------------------------------------------------
-# Compiler options (gcc):
-#
-# basic options:
-#  -ansi           support ANSI C standard programs
-#  -nostdinc       don't search in host include files
-#  -c              compile only (create object files)
-#  -S              produce assembly source _only_
-#  -g              produce debug information for debugger
-#
-# additional options:
-#  -p              include profiler code statements (prof/gprof)
-#  -a              include profiler code statements (tcov)
-#
-# special options:
-#  -E              execute preprocessor _only_
-#  -C              keep comments in preprocessor output
-#  -M              generate dependency list (with system files)
-#  -MM             generate dependency list (without system files)
-#
-# C++ options:
-#  -fcheck-new     include check if new-operator returns NULL;
-#                  constructors are called only if none-NULL
-#
-#-----------------------------------------------------------------------------
 
 #--------------------------------- tool chain --------------------------------
 
@@ -42,8 +16,8 @@ CC         = gcc
 CC_FLAGS   = -Wall -g -O0
 CC_DEFINES = -D_LARGEFILE64_SOURCE
 
-LD       = gcc
-LD_FLAGS =
+LD         = gcc
+LD_FLAGS   =
 
 #---------------------------------- commands----------------------------------
 
@@ -60,54 +34,54 @@ PERL = perl
 
 #--------------------------------- objects -----------------------------------
 
-OBJECTS = 	bar.o \
-                archive_create.o \
-                archive_list.o \
-                archive_restore.o \
-                archive_format.o \
-                files.o \
-                chunks.o \
+SOURCES =       bar.c \
+                command_create.c \
+                command_list.c \
+                command_restore.c \
+                command_test.c \
+                archive.c \
+                chunks.c \
                 \
-                global.o \
-                cmdoptions.o \
-                lists.o \
-                strings.o \
+                global.c \
+                cmdoptions.c \
+                lists.c \
+                strings.c \
 
-INTERMEDIATE =  archive_format.c archive_format.h
+OBJECTS = 	$(foreach z,$(SOURCES),$(subst .c,.o,$z)) \
+                archive_format.o \
 
-TARGETS = 	bar
+INTERMEDIATE =  archive_format.c archive_format.h \
+
+TARGETS = 	bar \
 
 #------------------------------ dependencies ---------------------------------
 
-.PHONE: all clean
+.PHONE: all clean distclean depend
 all:		$(TARGETS)
 
 clean:
-		$(RM) $(OBJECTS) $(INTERMEDIATE) $(TARGETS)
+		$(RMF) $(OBJECTS) $(INTERMEDIATE) $(TARGETS)
+		$(RMF) $(OBJECTS) $(INTERMEDIATE) $(TARGETS)
+		$(RMF) $(OBJECTS) $(INTERMEDIATE) $(TARGETS)
+
+distclean: clean
+	$(RMF) Makefile.depend
+
+depend: archive_format.h
+	$(ECHO) > Makefile.depend
+	for z in $(SOURCES); do \
+          $(CC) -MM >> Makefile.depend $$z; \
+        done;
 
 bar: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^ -lpthread
-
-bar.o: bar.c bar.h archive.h archive_format.h
-
-archive_create.o: archive_create.c archive.h archive_format.h strings.h
-
-archive_list.o: archive_list.c archive.h archive_format.h strings.h
-
-archive_restore.o: archive_restore.c archive.h archive_format.h strings.h
-
-archive_format.o: archive_format.c archive_format.h
 
 archive_format.h: archive_format.def
 	$(PERL) archive_format.pl < $^ -h $@
 archive_format.c: archive_format.def
 	$(PERL) archive_format.pl < $^ -c $@
 
-chunks.o: chunks.c chunks.h
-
-files.o: files.c files.h
-
-options.o: options.c options.h
+-include Makefile.depend
 
 .PHONE: pack1 list1 pack2 list2
 pack1: bar

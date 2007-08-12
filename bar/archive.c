@@ -1,32 +1,30 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive functions
-* Systems : all
+* Contents: 
+* Systems :
 *
 \***********************************************************************/
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
-#include <pthread.h>
-#include <semaphore.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <dirent.h>
 #include <unistd.h>
-#include <errno.h>
 #include <assert.h>
 
 #include "global.h"
 #include "strings.h"
+#include "lists.h"
 
 #include "bar.h"
-#include "chunks.h"
 #include "archive_format.h"
+#include "chunks.h"
+#include "files.h"
 
 #include "archive.h"
 
@@ -34,49 +32,9 @@
 
 /***************************** Constants *******************************/
 
-#define PATHNAME_SEPARATOR_CHAR '/'
-#define PATHNAME_SEPARATOR_CHARS "/"
-
-#define BUFFER_SIZE (64*1024)
-
 /***************************** Datatypes *******************************/
 
-typedef enum
-{
-  FILETYPE_NONE,
-
-  FILETYPE_FILE,
-  FILETYPE_LINK,
-  FILETYPE_DIRECTORY,
-
-  FILETYPE_UNKNOWN
-} FileTypes;
-
 /***************************** Variables *******************************/
-LOCAL bool            exitFlag;
-LOCAL const char      *archiveFileName;
-LOCAL PatternList     *includePatternList;
-LOCAL PatternList     *excludePatternList;
-LOCAL ulong           partSize;
-
-LOCAL pthread_mutex_t fileNameListLock;
-LOCAL pthread_cond_t  fileNameListNew;
-LOCAL FileNameList    fileNameList;
-
-LOCAL bool            collectorDone;
-LOCAL pthread_t       threadCollector;
-LOCAL pthread_t       threadPacker;
-
-LOCAL uint            partNumber;
-LOCAL int             outputHandle;
-LOCAL ulong           outputSize;
-
-LOCAL struct
-{
-  ulong includedCount;
-  ulong excludedCount;
-  ulong skippedCount;
-} statistics;
 
 /****************************** Macros *********************************/
 
@@ -88,24 +46,95 @@ LOCAL struct
   extern "C" {
 #endif
 
-LOCAL bool readFile(void *userData, void *buffer, ulong length)
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool endOfFile(void *userData)
 {
-  return (read((int)userData,buffer,length) == length);
+  ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
+  off64_t     n;
+
+  assert(archiveInfo != NULL);
+
+  n = lseek64(archiveInfo->handle,0,SEEK_CUR);
+  if (n == (off64_t)-1)
+  {
+    return TRUE;
+  }
+
+  return (n >= archiveInfo->size);
 }
 
-LOCAL bool writeFile(void *userData, const void *buffer, ulong length)
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool readFile(void *userData, void *buffer, ulong bufferLength)
 {
-  return (write((int)userData,buffer,length) == length);
+  ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
+
+  assert(archiveInfo != NULL);
+
+  return (read(archiveInfo->handle,buffer,bufferLength) == bufferLength);
 }
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool writeFile(void *userData, const void *buffer, ulong bufferLength)
+{
+  ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
+
+  assert(archiveInfo != NULL);
+
+  return (write(archiveInfo->handle,buffer,bufferLength) == bufferLength);
+}
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool tellFile(void *userData, uint64 *offset)
 {
-  off64_t n;
+  ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
+  off64_t     n;
 
+  assert(archiveInfo != NULL);
   assert(offset != NULL);
 
-  n = lseek64((int)userData,0,SEEK_CUR);
-  if (n == (off_t)-1)
+  n = lseek64(archiveInfo->handle,0,SEEK_CUR);
+  if (n == (off64_t)-1)
   {
     return FALSE;
   }
@@ -114,9 +143,22 @@ LOCAL bool tellFile(void *userData, uint64 *offset)
   return TRUE;
 }
 
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool seekFile(void *userData, uint64 offset)
 {
-  if (lseek64((int)userData,(off64_t)offset,SEEK_SET) == (off_t)-1)
+  ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
+
+  assert(archiveInfo != NULL);
+
+  if (lseek64(archiveInfo->handle,(off64_t)offset,SEEK_SET) == (off64_t)-1)
   {
     return FALSE;
   }
@@ -126,663 +168,619 @@ LOCAL bool seekFile(void *userData, uint64 offset)
 
 /*---------------------------------------------------------------------*/
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool createFile(void)
+Errors archive_create(ArchiveInfo *archiveInfo,
+                      const char  *archiveFileName,
+                      uint64      partSize
+                     )
 {
-  String fileName;
-  char   s[7];
+  assert(archiveInfo != NULL);
+  assert(archiveFileName != NULL);
 
-  /* get output filename */
-  if (partSize > 0)
+  if (!chunks_initF(endOfFile,
+                   readFile,
+                   writeFile,
+                   tellFile,
+                   seekFile
+                  )
+     )
   {
-    fileName = String_format(String_new(),"%s.%06d",archiveFileName,);
-    snprintf(s,6,"%06d",partNumber);
-    String_appendChar(fileName,'.');
-    String_appendCString(fileName,s);
-  }
-  else
-  {
-    fileName = String_newCString(archiveFileName);
+    return ERROR_INIT;
   }
 
-  /* create file */
-  outputHandle = open(String_cString(fileName),O_CREAT|O_RDWR|O_TRUNC,0644);
-  if (outputHandle == -1)
-  {
-//??? log
-    return FALSE;
-  }
-  outputSize = 0;
+  archiveInfo->fileName             = String_newCString(archiveFileName); 
+  archiveInfo->partSize             = partSize;                           
+  archiveInfo->partNumber           = 0;                                  
+  archiveInfo->handle               = -1;                                 
+//  archiveInfo->index                = 0;                                  
+//  archiveInfo->size                 = 0;                                  
 
-  String_delete(fileName);
-
-  return TRUE;
+  return ERROR_NONE;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void closeFile(void)
+Errors archive_open(ArchiveInfo *archiveInfo,
+                    const char  *archiveFileName
+                   )
 {
-  if (outputHandle >= 0)
+  int     handle;
+  off64_t n;
+  uint64  size;
+
+  assert(archiveInfo != NULL);
+  assert(archiveFileName != NULL);
+
+  if (!chunks_initF(endOfFile,
+                   readFile,
+                   writeFile,
+                   tellFile,
+                   seekFile
+                  )
+     )
   {
-    close(outputHandle);
-    outputHandle = -1;
+    return ERROR_INIT;
   }
+
+  /* open file */
+  handle = open(archiveFileName,O_RDONLY,0);
+  if (handle == -1)
+  {
+    return ERROR_IO_ERROR;
+  }
+
+  /* get file size */
+  if (lseek64(handle,(off64_t)0,SEEK_END) == (off64_t)-1)
+  {
+    close(handle);
+    return ERROR_IO_ERROR;
+  }
+  n = lseek64(handle,0,SEEK_CUR);
+  if (n == (off64_t)-1)
+  {
+    close(handle);
+    return ERROR_IO_ERROR;
+  }
+  size = (uint64)n;
+  if (lseek64(handle,(off64_t)0,SEEK_SET) == (off64_t)-1)
+  {
+    close(handle);
+    return ERROR_IO_ERROR;
+  }
+
+  /* init */
+  archiveInfo->fileName            = String_newCString(archiveFileName);
+  archiveInfo->partSize            = 0;
+  archiveInfo->partNumber          = 0;
+  archiveInfo->handle              = handle;
+//  archiveInfo->index               = 0;
+  archiveInfo->size                = size;
+
+  return ERROR_NONE;
 }
 
-/***********************************************************************\
-* Name   : ensureFileSpace
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool ensureFileSpace(ulong size)
+bool archive_eof(ArchiveInfo *archiveInfo)
 {
-  /* check part size, prepare for next part if needed */
-  if (outputHandle >= 0)
+  uint64 offset;
+
+  assert(archiveInfo != NULL);
+  assert(archiveInfo->handle >= 0);
+
+  if (!tellFile(archiveInfo,&offset))
   {
-    if ((partSize > 0) && (outputSize + size + 1 >= partSize))
+    return TRUE;
+  }
+
+  return offset >= archiveInfo->size;
+}
+
+Errors archive_done(ArchiveInfo *archiveInfo)
+{
+  assert(archiveInfo != NULL);
+  assert(archiveInfo->fileName != NULL);
+
+  String_delete(archiveInfo->fileName);
+
+  chunks_doneF();
+
+  return ERROR_NONE;
+}
+
+Errors archive_newFile(ArchiveInfo     *archiveInfo,
+                       ArchiveFileInfo *archiveFileInfo,
+                       const FileInfo  *fileInfo
+                      )
+{
+  assert(archiveInfo != NULL);
+  assert(archiveFileInfo != NULL);
+  assert(fileInfo != NULL);
+
+  /* init archive file info */
+  archiveFileInfo->archiveInfo                    = archiveInfo;
+  archiveFileInfo->mode                           = FILE_MODE_WRITE;
+
+  archiveFileInfo->chunkFileEntry.fileType        = 0;
+  archiveFileInfo->chunkFileEntry.size            = fileInfo->size;
+  archiveFileInfo->chunkFileEntry.timeLastAccess  = fileInfo->timeLastAccess;
+  archiveFileInfo->chunkFileEntry.timeModified    = fileInfo->timeModified;
+  archiveFileInfo->chunkFileEntry.timeLastChanged = fileInfo->timeLastChanged;
+  archiveFileInfo->chunkFileEntry.userId          = fileInfo->userId;
+  archiveFileInfo->chunkFileEntry.groupId         = fileInfo->groupId;
+  archiveFileInfo->chunkFileEntry.permission      = fileInfo->permission;
+  archiveFileInfo->chunkFileEntry.name            = String_copy(fileInfo->name);
+
+  archiveFileInfo->chunkFileData.partOffset       = 0;
+  archiveFileInfo->chunkFileData.partSize         = 0;
+
+  archiveFileInfo->headerLength                   = 0;
+  archiveFileInfo->headerWrittenFlag              = FALSE;
+
+  /* init file-chunks */
+  if (!chunks_init(&archiveFileInfo->chunkInfoFile,
+                   NULL,
+                   archiveInfo,
+                   CHUNK_ID_FILE,
+                   CHUNK_DEFINITION_FILE
+                  )
+     )
+  {
+    return ERROR_IO_ERROR;
+  }
+  if (!chunks_init(&archiveFileInfo->chunkInfoFileEntry,
+                   &archiveFileInfo->chunkInfoFile,
+                   archiveInfo,
+                   CHUNK_ID_FILE_ENTRY,
+                   CHUNK_DEFINITION_FILE_ENTRY
+                  )
+     )
+  {
+    chunks_done(&archiveFileInfo->chunkInfoFile);
+    return ERROR_IO_ERROR;
+  }
+  if (!chunks_init(&archiveFileInfo->chunkInfoFileData,
+                   &archiveFileInfo->chunkInfoFile,
+                   archiveInfo,
+                   CHUNK_ID_FILE_DATA,
+                   CHUNK_DEFINITION_FILE_DATA
+                  )
+     )
+  {
+    chunks_done(&archiveFileInfo->chunkInfoFileEntry);
+    chunks_done(&archiveFileInfo->chunkInfoFile);
+    return ERROR_IO_ERROR;
+  }
+
+  /* calculate header length */
+  archiveFileInfo->headerLength = chunks_getSize(&archiveFileInfo->chunkInfoFile,     &archiveFileInfo->chunkFile)+
+                                  chunks_getSize(&archiveFileInfo->chunkInfoFileEntry,&archiveFileInfo->chunkFileEntry)+
+                                  chunks_getSize(&archiveFileInfo->chunkInfoFileData, &archiveFileInfo->chunkFileData);
+
+  return ERROR_NONE;
+}
+
+Errors archive_readFile(ArchiveInfo     *archiveInfo,
+                        ArchiveFileInfo *archiveFileInfo,
+                        FileInfo        *fileInfo,
+                        uint64          *partOffset,
+                        uint64          *partSize
+                       )
+{
+  ChunkHeader chunkHeader;
+  bool        foundFileEntry,foundFileData;
+
+  assert(archiveInfo != NULL);
+  assert(archiveFileInfo != NULL);
+  assert(fileInfo != NULL);
+
+  /* init archive file info */
+  archiveFileInfo->archiveInfo = archiveInfo;
+  archiveFileInfo->mode        = FILE_MODE_READ;
+
+  /* init file-chunk */
+  if (!chunks_init(&archiveFileInfo->chunkInfoFile,
+                   NULL,
+                   archiveInfo,
+                   CHUNK_ID_FILE,
+                   CHUNK_DEFINITION_FILE
+                  )
+     )
+  {
+    return ERROR_IO_ERROR;
+  }
+  if (!chunks_init(&archiveFileInfo->chunkInfoFileEntry,
+                   &archiveFileInfo->chunkInfoFile,
+                   archiveInfo,
+                   CHUNK_ID_FILE_ENTRY,
+                   CHUNK_DEFINITION_FILE_ENTRY
+                  )
+     )
+  {
+    chunks_done(&archiveFileInfo->chunkInfoFile);
+    return ERROR_IO_ERROR;
+  }
+  if (!chunks_init(&archiveFileInfo->chunkInfoFileData,
+                   &archiveFileInfo->chunkInfoFile,
+                   archiveInfo,
+                   CHUNK_ID_FILE_DATA,
+                   CHUNK_DEFINITION_FILE_DATA
+                  )
+     )
+  {
+    chunks_done(&archiveFileInfo->chunkInfoFileEntry);
+    chunks_done(&archiveFileInfo->chunkInfoFile);
+    return ERROR_IO_ERROR;
+  }
+
+  /* find file chunk */
+  do
+  {
+    if (chunks_eof(archiveInfo))
     {
-      closeFile();
-      partNumber++;
+      chunks_done(&archiveFileInfo->chunkInfoFileData);
+      chunks_done(&archiveFileInfo->chunkInfoFileEntry);
+      chunks_done(&archiveFileInfo->chunkInfoFile);
+      return ERROR_END_OF_ARCHIVE;
+    }
+
+    if (!chunks_next(archiveInfo,&chunkHeader))
+    {
+      chunks_done(&archiveFileInfo->chunkInfoFileData);
+      chunks_done(&archiveFileInfo->chunkInfoFileEntry);
+      chunks_done(&archiveFileInfo->chunkInfoFile);
+      return ERROR_IO_ERROR;
+    }
+
+    if (chunkHeader.id != CHUNK_ID_FILE)
+    {
+      chunks_skip(archiveInfo,&chunkHeader);
+      continue;
     }
   }
+  while (chunkHeader.id != CHUNK_ID_FILE);
 
-  /* open next part */
-  if (outputHandle < 0)
+  /* read file chunk, find file data */
+  if (!chunks_open(&archiveFileInfo->chunkInfoFile,
+                   &chunkHeader,
+                   &archiveFileInfo->chunkFile
+                  )
+     )
   {
-    if (!createFile())
+    return ERROR_IO_ERROR;
+  }
+  foundFileEntry = FALSE;
+  foundFileData  = FALSE;
+  while (   !chunks_eofSub(&archiveFileInfo->chunkInfoFile)
+         && (!foundFileEntry || !foundFileData)         
+        )
+  {
+    if (!chunks_nextSub(&archiveFileInfo->chunkInfoFile,&chunkHeader))
     {
-      return FALSE;
+      chunks_done(&archiveFileInfo->chunkInfoFileData);
+      chunks_done(&archiveFileInfo->chunkInfoFileEntry);
+      chunks_done(&archiveFileInfo->chunkInfoFile);
+      return ERROR_IO_ERROR;
+    }
+
+    switch (chunkHeader.id)
+    {
+      case CHUNK_ID_FILE_ENTRY:
+        if (!chunks_open(&archiveFileInfo->chunkInfoFileEntry,
+                         &chunkHeader,
+                         &archiveFileInfo->chunkFileEntry
+                        )
+           )
+        {
+          chunks_done(&archiveFileInfo->chunkInfoFileData);
+          chunks_done(&archiveFileInfo->chunkInfoFileEntry);
+          chunks_done(&archiveFileInfo->chunkInfoFile);
+          return ERROR_IO_ERROR;
+        }
+
+        String_set(fileInfo->name,archiveFileInfo->chunkFileEntry.name);
+        fileInfo->size            = archiveFileInfo->chunkFileEntry.size;
+        fileInfo->timeLastAccess  = archiveFileInfo->chunkFileEntry.timeLastAccess;
+        fileInfo->timeModified    = archiveFileInfo->chunkFileEntry.timeModified;
+        fileInfo->timeLastChanged = archiveFileInfo->chunkFileEntry.timeLastChanged;
+        fileInfo->userId          = archiveFileInfo->chunkFileEntry.userId;
+        fileInfo->groupId         = archiveFileInfo->chunkFileEntry.groupId;
+        fileInfo->permission      = archiveFileInfo->chunkFileEntry.permission;
+
+        foundFileEntry = TRUE;
+        break;
+      case CHUNK_ID_FILE_DATA:
+        if (!chunks_open(&archiveFileInfo->chunkInfoFileData,
+                         &chunkHeader,
+                         &archiveFileInfo->chunkFileData
+                        )
+           )
+        {
+          if (foundFileEntry) String_delete(archiveFileInfo->chunkFileEntry.name);
+          chunks_done(&archiveFileInfo->chunkInfoFileData);
+          chunks_done(&archiveFileInfo->chunkInfoFileEntry);
+          chunks_done(&archiveFileInfo->chunkInfoFile);
+          return ERROR_IO_ERROR;
+        }
+
+        if (partOffset != NULL) (*partOffset) = archiveFileInfo->chunkFileData.partOffset;
+        if (partSize   != NULL) (*partSize)   = archiveFileInfo->chunkFileData.partSize;
+
+        foundFileData = TRUE;
+        break;
+      default:
+        chunks_skipSub(&archiveFileInfo->chunkInfoFile,&chunkHeader);
+        break;
     }
   }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : lockFileNameList
-* Purpose: lock filename list
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void lockFileNameList(void)
-{
-  pthread_mutex_lock(&fileNameListLock);
-}
-
-/***********************************************************************\
-* Name   : unlockFileNameList
-* Purpose: unlock filename list
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void unlockFileNameList(void)
-{
-  pthread_mutex_unlock(&fileNameListLock);
-}
-
-/***********************************************************************\
-* Name   : checkIsPattern
-* Purpose: check is string a pattern
-* Input  : s - string
-* Output : -
-* Return : TRUE is s is a pattern, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool checkIsPattern(String s)
-{
-// ???
-return FALSE;
-}
-
-/***********************************************************************\
-* Name   : getFileType
-* Purpose: get file type
-* Input  : fileName - filename
-* Output : -
-* Return : file type; see FILETYPES_*
-* Notes  : -
-\***********************************************************************/
-
-LOCAL FileTypes getFileType(String fileName)
-{
-  struct stat fileInfo;
-
-  if (lstat(String_cString(fileName),&fileInfo) == 0)
+  if (!foundFileEntry)
   {
-    if      (S_ISREG(fileInfo.st_mode)) return FILETYPE_FILE;
-    else if (S_ISDIR(fileInfo.st_mode)) return FILETYPE_DIRECTORY;
-    else if (S_ISLNK(fileInfo.st_mode)) return FILETYPE_LINK;
-    else                                return FILETYPE_UNKNOWN;
+    if (foundFileEntry) String_delete(archiveFileInfo->chunkFileEntry.name);
+    chunks_done(&archiveFileInfo->chunkInfoFileData);
+    chunks_done(&archiveFileInfo->chunkInfoFileEntry);
+    chunks_done(&archiveFileInfo->chunkInfoFile);
+    return ERROR_NO_FILE_ENTRY;
   }
-  else
+  if (!foundFileData)
   {
-    return FILETYPE_UNKNOWN;
-  }
-}
-
-/***********************************************************************\
-* Name   : appendFileNameToList
-* Purpose: append a filename to a filename list
-* Input  : fileNameList - filename list
-*          fileName     - filename to add (will be copied!)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void appendFileNameToList(FileNameList *fileNameList, String fileName)
-{
-  FileNameNode *fileNameNode;
-
-  assert(fileNameList != NULL);
-  assert(fileName != NULL);
-
-  /* allocate node */
-  fileNameNode = (FileNameNode*)malloc(sizeof(FileNameNode));
-  if (fileNameNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  fileNameNode->fileName = String_copy(fileName);
-
-  /* add */
-  lockFileNameList();
-  List_add(fileNameList,fileNameNode);
-  unlockFileNameList();
-
-  /* send signal to waiting threads */
-  pthread_cond_broadcast(&fileNameListNew);
-}
-
-/***********************************************************************\
-* Name   : freeFileNameNode
-* Purpose: free filename node
-* Input  : fileNameNode - filename node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeFileNameNode(FileNameNode *fileNameNode, void *userData)
-{
-  assert(fileNameNode != NULL);
-
-  String_delete(fileNameNode->fileName);
-}
-
-/***********************************************************************\
-* Name   : getNextFile
-* Purpose: get next file from list of files to pack
-* Input  : fileName - filename
-* Output : -
-* Return : filename or NULL of no more file available
-* Notes  : -
-\***********************************************************************/
-
-LOCAL String getNextFile(String fileName)
-{
-  FileNameNode *fileNameNode;
-
-  lockFileNameList();
-  fileNameNode = (FileNameNode*)List_getFirst(&fileNameList);
-  while ((fileNameNode == NULL) && !collectorDone)
-  {
-    pthread_cond_wait(&fileNameListNew,&fileNameListLock);
-    fileNameNode = (FileNameNode*)List_getFirst(&fileNameList);
-  }
-  unlockFileNameList();
-  if (fileNameNode != NULL)
-  {
-    String_set(fileName,fileNameNode->fileName);
-    freeFileNameNode(fileNameNode,NULL);
-    free(fileNameNode);
-  }
-  else
-  {
-    fileName = NULL;
+    if (foundFileEntry) String_delete(archiveFileInfo->chunkFileEntry.name);
+    chunks_done(&archiveFileInfo->chunkInfoFileData);
+    chunks_done(&archiveFileInfo->chunkInfoFileEntry);
+    chunks_done(&archiveFileInfo->chunkInfoFile);
+    return ERROR_NO_FILE_DATA;
   }
 
-  return fileName;
+  return ERROR_NONE;
 }
 
-/***********************************************************************\
-* Name   : collector
-* Purpose: file collector thread
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void collector(void)
+Errors archive_closeFile(ArchiveFileInfo *archiveFileInfo)
 {
-  PatternNode     *includePatternNode;
-  PatternNode     *excludePatternNode;
-  StringTokenizer fileNameTokenizer;
-  String          s;
-  String          basePath;
-  FileNameList    directoryList;
-  DIR             *directoryHandle;
-  struct dirent   *directoryEntry;
-  FileNameNode    *fileNameNode;
-  String          fileName;
-  bool            excludeFlag;
+  assert(archiveFileInfo != NULL);
+  assert(archiveFileInfo->archiveInfo != NULL);
 
-  assert(includePatternList != NULL);
-  assert(excludePatternList != NULL);
-
-  includePatternNode = includePatternList->head;
-  while (!exitFlag && (includePatternNode != NULL))
+  /* update data */
+  switch (archiveFileInfo->mode)
   {
-    /* find base path */
-    basePath = String_new();
-    String_initTokenizer(&fileNameTokenizer,includePatternNode->pattern,PATHNAME_SEPARATOR_CHARS,NULL);
-    s = String_new();
-    while (String_getNextToken(&fileNameTokenizer,&s,NULL) && !checkIsPattern(s))
-    {
-      String_appendChar(basePath,PATHNAME_SEPARATOR_CHAR);
-      String_append(basePath,s);
-    }
-    String_delete(s);
-
-    /* find files */
-    List_init(&directoryList);
-    appendFileNameToList(&directoryList,basePath);
-    while (!List_empty(&directoryList))
-    {
-      /* get next directory to process */
-      fileNameNode = (FileNameNode*)List_getFirst(&directoryList);
-
-      /* read directory contents */
-      directoryHandle = opendir(String_cString(fileNameNode->fileName));
-      if (directoryHandle != NULL)
+    case FILE_MODE_WRITE:
+      /* update part offset, part size */
+      if (!chunks_update(&archiveFileInfo->chunkInfoFileData,
+                         &archiveFileInfo->chunkFileData
+                        )
+         )
       {
-        while ((directoryEntry = readdir(directoryHandle)) != NULL)
-        {
-          if ((strcmp(directoryEntry->d_name,".") != 0) && (strcmp(directoryEntry->d_name,"..") != 0))
-          {
-            /* get filename */
-            fileName = String_copy(fileNameNode->fileName);
-            String_appendChar(fileName,PATHNAME_SEPARATOR_CHAR);
-            String_appendCString(fileName,directoryEntry->d_name);
+        return ERROR_IO_ERROR;
+      }
+      break;
+    case FILE_MODE_READ:
+      break;
+  }
 
-            /* filter excludes */
-            excludeFlag = FALSE;
-            excludePatternNode = excludePatternList->head;
-            while (!exitFlag && (excludePatternNode != NULL) && !excludeFlag)
-            {
-              /* match with exclude pattern */
+  /* close chunks */
+  if (!chunks_close(&archiveFileInfo->chunkInfoFileData))
+  {
+    return ERROR_IO_ERROR;
+  }
+  if (!chunks_close(&archiveFileInfo->chunkInfoFileEntry))
+  {
+    return ERROR_IO_ERROR;
+  }
+  if (!chunks_close(&archiveFileInfo->chunkInfoFile))
+  {
+    return ERROR_IO_ERROR;
+  }
+//  archiveFileInfo->archiveInfo->index               = archiveFileInfo->archiveInfo->chunkInfoData.index;
+  archiveFileInfo->headerWrittenFlag = FALSE;
 
-              excludePatternNode = excludePatternNode->next;
-            }
+  /* free resources */
+  chunks_done(&archiveFileInfo->chunkInfoFileData);
+  chunks_done(&archiveFileInfo->chunkInfoFileEntry);
+  chunks_done(&archiveFileInfo->chunkInfoFile);
+  String_delete(archiveFileInfo->chunkFileEntry.name);
 
-            if (!excludeFlag)
-            {
-              /* detect file type */
-              switch (getFileType(fileName))
-              {
-                case FILETYPE_FILE:
-                  /* store in file list */
-                  appendFileNameToList(&fileNameList,fileName);
-                  statistics.includedCount++;
-//fprintf(stderr,"%s,%d: collect %s\n",__FILE__,__LINE__,String_cString(fileName));
-                  break;
-                case FILETYPE_DIRECTORY:
-                  /* store in directory list */
-                  appendFileNameToList(&directoryList,fileName);
-                  break;
-                case FILETYPE_LINK:
-    // ???
-                  break;
-                default:
-                  // ??? log
-                  break;
-              }
-            }
-            else
-            {
-              statistics.excludedCount++;
-            }
+  return ERROR_NONE;
+}
 
-            String_delete(fileName);
-          }
-        }
-        if (errno != 0)
-        {
-  //??? log
-        }
+Errors archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffer, ulong bufferLength)
+{
+  const char *p;
+  ulong      length;
+  uint64     size;
+  bool       newPartFlag;
+  ulong      restLength;
+  ulong      partLength;
+  ulong      n;
+  String     fileName;
+  void       *writeBuffer;
+  ulong      writeLength;
 
-        closedir(directoryHandle);
+  assert(archiveFileInfo != NULL);
+  assert(archiveFileInfo->archiveInfo != NULL);
+
+  p      = (char*)buffer;
+  length = 0;
+  while (length < bufferLength)
+  {
+    /* split, calculate rest-length */
+    if (archiveFileInfo->archiveInfo->partSize > 0)
+    {
+      /* check if new file-part is needed */
+      newPartFlag = FALSE;
+      if (archiveFileInfo->archiveInfo->handle == -1)
+      {
+        /* not open -> new part */
+        newPartFlag = TRUE;
       }
       else
       {
-  //??? log
-      }
-
-      freeFileNameNode(fileNameNode,NULL);
-      free(fileNameNode);
-    }
-    List_done(&directoryList,NULL,NULL);
-
-    String_delete(basePath);
-
-    /* next include pattern */
-    includePatternNode = includePatternNode->next;
-  }
-  collectorDone = TRUE;
-}
-
-/***********************************************************************\
-* Name   : packer
-* Purpose: file packer thread
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void packer(void)
-{
-  void           *buffer;
-  String         fileName;
-  struct stat    fileInfo;
-  int            inputHandle;
-  ChunkInfoBlock chunkInfoBlock;
-  BARChunk_File  chunkFile;
-  ssize_t        n;
-
-  buffer = malloc(BUFFER_SIZE);
-  if (buffer == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  fileName = String_new();
-
-  /* create archive file */
-  if (!createFile())
-  {
-  // log ???
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-    exitFlag = TRUE;
-    return;
-  }
-
-  while (!exitFlag && (getNextFile(fileName) != NULL))
-  {
-fprintf(stderr,"%s,%d: pack %s\n",__FILE__,__LINE__,String_cString(fileName));
-
-    /* get file info */
-    if (lstat(String_cString(fileName),&fileInfo) != 0)
-    {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
-      continue;
-    }
-    chunkFile.fileType        = 0;
-    chunkFile.size            = fileInfo.st_size;
-    chunkFile.timeLastAccess  = fileInfo.st_atime;
-    chunkFile.timeModified    = fileInfo.st_mtime;
-    chunkFile.timeLastChanged = fileInfo.st_ctime;
-    chunkFile.userId          = fileInfo.st_uid;
-    chunkFile.groupId         = fileInfo.st_gid;
-    chunkFile.permission      = fileInfo.st_mode;
-    chunkFile.name            = fileName;
-
-    /* init */
-    chunks_init(&chunkInfoBlock,readFile,writeFile,tellFile,seekFile,(void*)&outputHandle);
-
-    /* make sure chunk can be written in single file */
-    if (!ensureFileSpace(sizeof(ChunkHeader) + chunks_getSize(&chunkFile,BAR_CHUNK_DEFINITION_FILE)))
-    {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
-      continue;
-    }
-
-    /* create new entry */
-    if (!chunks_new(&chunkInfoBlock,BAR_CHUNK_ID_FILE))
-    {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
-      continue;
-    }
-
-    /* write file info */
-    if (!chunks_write(&chunkInfoBlock,&chunkFile,BAR_CHUNK_DEFINITION_FILE))
-    {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
-      continue;
-    }
-
-    /* write file content */
-    inputHandle = open(String_cString(fileName),O_RDONLY);
-    if (inputHandle == -1)
-    {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
-      continue;
-    }
-    do
-    {
-      n = read(inputHandle,buffer,BUFFER_SIZE);
-      if (n > 0)
-      {
-        if (!chunks_writeData(&chunkInfoBlock,buffer,n))
+        /* get current size */
+        if (!tellFile(archiveFileInfo->archiveInfo,&size))
         {
-          n = -1;
+          return ERROR_IO_ERROR;
+        }
+        
+        if      (   !archiveFileInfo->headerWrittenFlag
+                 && (size + archiveFileInfo->headerLength >= archiveFileInfo->archiveInfo->partSize)
+                )
+        {
+          /* file header cannot be written -> new part */
+          newPartFlag = TRUE;
+        }
+        else if (size >= archiveFileInfo->archiveInfo->partSize)
+        {
+          /* part is full -> new part */
+          newPartFlag = TRUE;
         }
       }
-    }
-    while (n > 0);
-    close(inputHandle);
-    if (n == -1)
-    {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
-    }
-
-    /* close entry */
-    if (!chunks_close(&chunkInfoBlock))
-    {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
-    }
-  }
-
-  /* close archive file */
-  closeFile();
-
-  String_delete(fileName);
-  free(buffer);
-}
-
-/*---------------------------------------------------------------------*/
-
-bool archive_create(const char *fileName, PatternList *includeList, PatternList *excludeList, const char *tmpDirectory, ulong size)
-{
-  /* initialise variables */
-  archiveFileName    = fileName;
-  includePatternList = includeList;
-  excludePatternList = excludeList;
-  partSize           = size;
-  partNumber         = 0;
-  outputHandle       = -1;
-  if (pthread_mutex_init(&fileNameListLock,NULL) != 0)
-  {
-    HALT(EXITCODE_FATAL_ERROR,"Cannot initialise filename list lock semaphore!");
-  }
-  if (pthread_cond_init(&fileNameListNew,NULL) != 0)
-  {
-    HALT(EXITCODE_FATAL_ERROR,"Cannot initialise filename list new event!");
-  }
-  List_init(&fileNameList);
-  statistics.includedCount = 0;
-  statistics.excludedCount = 0;
-  statistics.skippedCount  = 0;
-
-  /* start threads */
-  collectorDone = FALSE;
-  if (pthread_create(&threadCollector,NULL,(void*(*)(void*))collector,NULL) != 0)
-  {
-    HALT(EXITCODE_FATAL_ERROR,"Cannot initialise collector thread!");
-  }
-  if (pthread_create(&threadPacker,NULL,(void*(*)(void*))packer,NULL) != 0)
-  {
-    HALT(EXITCODE_FATAL_ERROR,"Cannot initialise collector thread!");
-  }
-
-  /* wait for threads */
-  pthread_join(threadCollector,NULL);
-  pthread_join(threadPacker,NULL); 
-
-  List_done(&fileNameList,(NodeFreeFunction)freeFileNameNode,NULL);
-  pthread_cond_destroy(&fileNameListNew);
-  pthread_mutex_destroy(&fileNameListLock);
-
-fprintf(stderr,"%s,%d: included=%ld excluded=%ld\n",__FILE__,__LINE__,statistics.includedCount,statistics.excludedCount);
-
-  return TRUE;
-}
-
-/*---------------------------------------------------------------------*/
-
-LOCAL void printFileInfo(const BARChunk_File *chunkFile)
-{
-  assert(chunkFile != NULL);
-
-  printf("%10llu %s\n",chunkFile->size,String_cString(chunkFile->name));
-}
-
-LOCAL bool listFileChunks(ChunkInfoBlock *containerChunkInfoBlock)
-{
-  ChunkInfoBlock chunkInfoBlock;
-  BARChunk_File  chunkFile;
-
-  while (chunks_getSub(&chunkInfoBlock,containerChunkInfoBlock))
-  {
-    switch (chunkInfoBlock.id)
-    {
-      case BAR_CHUNK_ID_COMPRESSION:
-chunks_skip(&chunkInfoBlock);
-        break;
-      case BAR_CHUNK_ID_ENCRYPTION:
-chunks_skip(&chunkInfoBlock);
-        break;
-      case BAR_CHUNK_ID_FILE:
-        if (chunks_read(&chunkInfoBlock,&chunkFile,BAR_CHUNK_DEFINITION_FILE))
-        {
-          printFileInfo(&chunkFile);
-          String_delete(chunkFile.name);
-        }
-        chunks_skip(&chunkInfoBlock);
-        break;
-      default:
-fprintf(stderr,"%s,%d: skip unknown chunk 0x%ux size %llu\n",__FILE__,__LINE__,chunkInfoBlock.id,chunkInfoBlock.size);
-        chunks_skip(&chunkInfoBlock);
-        break;
-    }
-  }
-
-  return TRUE;
-}
-
-bool archive_list(FileNameList *fileNameList, PatternList *includeList, PatternList *excludeList)
-{
-  FileNameNode   *fileNameNode;
-  int            fileHandle;
-  ChunkInfoBlock chunkInfoBlock;
-  BARChunk_File  chunkFile;
-
-  fileNameNode = fileNameList->head;
-  while (fileNameNode != NULL)
-  {
-    /* open archive */
-    fileHandle = open(String_cString(fileNameNode->fileName),O_RDONLY);
-    if (fileHandle == -1)
-    {
-      printError("Cannot open file '%s' (error: %s)!\n",String_cString(fileNameNode->fileName),strerror(errno));
-      return FALSE;
-    }
-
-    /* list contents */
-    chunks_init(&chunkInfoBlock,readFile,writeFile,tellFile,seekFile,(void*)fileHandle);
-    while (chunks_get(&chunkInfoBlock))
-    {
-      switch (chunkInfoBlock.id)
+      if (newPartFlag)
       {
-        case BAR_CHUNK_ID_BAR:
-          listFileChunks(&chunkInfoBlock);
-          break;
-        case BAR_CHUNK_ID_COMPRESSION:
-chunks_skip(&chunkInfoBlock);
-          break;
-        case BAR_CHUNK_ID_ENCRYPTION:
-chunks_skip(&chunkInfoBlock);
-          break;
-        case BAR_CHUNK_ID_FILE:
-          if (chunks_read(&chunkInfoBlock,&chunkFile,BAR_CHUNK_DEFINITION_FILE))
+        if (archiveFileInfo->archiveInfo->handle >= 0)
+        {
+          /* close file, prepare for next part */
+          if (archiveFileInfo->headerWrittenFlag)
           {
-            printFileInfo(&chunkFile);
-            String_delete(chunkFile.name);
+            /* update part offset, part size */
+            if (!chunks_update(&archiveFileInfo->chunkInfoFileData,
+                               &archiveFileInfo->chunkFileData
+                              )
+               )
+            {
+              return ERROR_IO_ERROR;
+            }
+
+            /* close chunks */
+            if (!chunks_close(&archiveFileInfo->chunkInfoFileData))
+            {
+              return ERROR_IO_ERROR;
+            }
+            if (!chunks_close(&archiveFileInfo->chunkInfoFileEntry))
+            {
+              return ERROR_IO_ERROR;
+            }
+            if (!chunks_close(&archiveFileInfo->chunkInfoFile))
+            {
+              return ERROR_IO_ERROR;
+            }
+            archiveFileInfo->headerWrittenFlag = FALSE;
           }
-          chunks_skip(&chunkInfoBlock);
-          break;
-        default:
-fprintf(stderr,"%s,%d: skip unknown chunk 0x%ux size %lld\n",__FILE__,__LINE__,chunkInfoBlock.id,chunkInfoBlock.size);
-          chunks_skip(&chunkInfoBlock);
-          break;
+
+          close(archiveFileInfo->archiveInfo->handle);
+          archiveFileInfo->archiveInfo->handle = -1;
+//          archiveFileInfo->archiveInfo->index  = 0;
+//          archiveFileInfo->archiveInfo->size   = 0;
+        }
       }
+
+      /* get size of space to reserve for chunk-header */
+      if (!archiveFileInfo->headerWrittenFlag || newPartFlag)
+      {
+        n = archiveFileInfo->headerLength;
+      }
+      else
+      {
+        n = 0;
+      }
+
+      /* calculate max. length of data which can be written into this part */
+      restLength = archiveFileInfo->archiveInfo->partSize-(size+n);
+
+      /* calculate length of data to write */
+      partLength = (restLength < (bufferLength-length))?restLength:bufferLength-length;
+    }
+    else
+    {
+      partLength = bufferLength - length;
     }
 
-    /* close */
-    close(fileHandle);
+    /* compress */
+writeBuffer=(char*)buffer;
+writeLength=partLength;
+    if (1)
+    {
+    }
 
-    fileNameNode = fileNameNode->next;
+    /* encrypt */
+    if (0)
+    {
+    }
+
+    /* open file */
+    if (archiveFileInfo->archiveInfo->handle < 0)
+    {
+      /* get output filename */
+      if (archiveFileInfo->archiveInfo->partSize > 0)
+      {
+        fileName = String_format(String_new(),"%S.%06d",archiveFileInfo->archiveInfo->fileName,archiveFileInfo->archiveInfo->partNumber);
+        archiveFileInfo->archiveInfo->partNumber++;
+      }
+      else
+      {
+        fileName = String_copy(archiveFileInfo->archiveInfo->fileName);
+      }
+
+      /* create file */
+      archiveFileInfo->archiveInfo->handle = open(String_cString(fileName),O_CREAT|O_RDWR|O_TRUNC,0644);
+      if (archiveFileInfo->archiveInfo->handle == -1)
+      {
+        return ERROR_IO_ERROR;
+      }
+
+//      archiveFileInfo->archiveInfo->index               = 0;
+//      archiveFileInfo->archiveInfo->size                = 0;
+      archiveFileInfo->headerWrittenFlag = FALSE;
+
+      String_delete(fileName);
+    }
+
+    /* write chunk-header */
+    if (!archiveFileInfo->headerWrittenFlag)
+    {
+      if (!chunks_new(&archiveFileInfo->chunkInfoFile,
+                      NULL
+                     )
+         )
+      {
+        return ERROR_IO_ERROR;
+      }
+//      archiveFileInfo->archiveInfo->size += CHUNK_HEADER_SIZE;
+
+      if (!chunks_new(&archiveFileInfo->chunkInfoFileEntry,
+                      &archiveFileInfo->chunkFileEntry
+                     )
+         )
+      {
+        return ERROR_IO_ERROR;
+      }
+//      archiveFileInfo->archiveInfo->size += chunks_getSize(&archiveFileInfo->chunkInfoFileEntry,&chunkFileEntry);
+
+      if (!chunks_new(&archiveFileInfo->chunkInfoFileData,
+                      &archiveFileInfo->chunkFileData
+                     )
+         )
+      {
+        return ERROR_IO_ERROR;
+      }
+//      archiveFileInfo->archiveInfo->size += chunks_getSize(&archiveFileInfo->chunkInfoFileData,&chunkFileData);
+
+      archiveFileInfo->chunkFileData.partOffset = archiveFileInfo->chunkFileData.partOffset+archiveFileInfo->chunkFileData.partSize;
+      archiveFileInfo->chunkFileData.partSize   = 0;
+
+      archiveFileInfo->headerWrittenFlag = TRUE;
+    }
+
+    /* write */
+    if (!chunks_writeData(&archiveFileInfo->chunkInfoFileData,writeBuffer,writeLength))
+    {
+      return ERROR_IO_ERROR;
+    }
+//    archiveFileInfo->archiveInfo->size += writeLength;
+    archiveFileInfo->chunkFileData.partSize += partLength;
+
+    length += partLength;
   }
 
-  return TRUE;
+  return ERROR_NONE;
 }
 
-/*---------------------------------------------------------------------*/
-
-bool archive_test(FileNameList *fileNameList, PatternList *includeList, PatternList *excludeList)
+Errors archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulong bufferLength)
 {
-  return TRUE;
-}
+  assert(archiveFileInfo != NULL);
 
-/*---------------------------------------------------------------------*/
-
-bool archive_restore(FileNameList *fileNameList, PatternList *includeList, PatternList *excludeList, const char *directory)
-{
-  return TRUE;
+  return ERROR_NONE;
 }
 
 #ifdef __cplusplus

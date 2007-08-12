@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -75,12 +75,11 @@ LOCAL struct
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ulong getDefinitionSize(ChunkInfo *chunkInfo, const void *data, const int *definition)
+LOCAL ulong getDefinitionSize(const void *data, const int *definition)
 {
   int   z;
   ulong size;
 
-  assert(chunkInfo != NULL);
   assert(data != NULL);
 
   size = 0;
@@ -150,7 +149,6 @@ LOCAL bool readDefinition(void      *userData,
 {
   int z;
 
-  assert(data != NULL);
   assert(bytesRead != NULL);
 
   (*bytesRead) = 0;
@@ -165,6 +163,8 @@ LOCAL bool readDefinition(void      *userData,
         case CHUNK_DATATYPE_INT8:
           {
             uint8 n;
+
+            assert(data != NULL);
 
             if (!IO.readFile(userData,&n,1))
             {
@@ -181,6 +181,8 @@ LOCAL bool readDefinition(void      *userData,
           {
             uint16 n;
 
+            assert(data != NULL);
+
             if (!IO.readFile(userData,&n,2))
             {
               return FALSE;
@@ -196,6 +198,8 @@ LOCAL bool readDefinition(void      *userData,
         case CHUNK_DATATYPE_INT32:
           {
             uint32 n;
+
+            assert(data != NULL);
 
             if (!IO.readFile(userData,&n,4))
             {
@@ -214,6 +218,8 @@ LOCAL bool readDefinition(void      *userData,
             uint64 n;
             uint32 l[2];
 
+            assert(data != NULL);
+
             if (!IO.readFile(userData,l,8))
             {
               return FALSE;
@@ -231,6 +237,8 @@ LOCAL bool readDefinition(void      *userData,
             ulong  length;
             void   *buffer;
             String s;
+
+            assert(data != NULL);
 
             if (!IO.readFile(userData,&n,2))
             {
@@ -285,7 +293,6 @@ bool writeDefinition(void       *userData,
 {
   int z;
 
-  assert(data != NULL);
   assert(bytesWritten != NULL);
 
   (*bytesWritten) = 0;
@@ -301,6 +308,8 @@ bool writeDefinition(void       *userData,
           {
             uint8 n;
 
+            assert(data != NULL);
+
             n = (*((uint8*)data));
             if (!IO.writeFile(userData,&n,1))
             {
@@ -314,6 +323,8 @@ bool writeDefinition(void       *userData,
         case CHUNK_DATATYPE_INT16:
           {
             uint16 n;
+
+            assert(data != NULL);
 
             n = htons(*((uint16*)data));
             if (!IO.writeFile(userData,&n,2))
@@ -329,6 +340,8 @@ bool writeDefinition(void       *userData,
           {
             uint32 n;
 
+            assert(data != NULL);
+
             n = htonl(*((uint32*)data));
             if (!IO.writeFile(userData,&n,4))
             {
@@ -343,6 +356,8 @@ bool writeDefinition(void       *userData,
           {
             uint64 n;
             uint32 l[2];
+
+            assert(data != NULL);
 
             n = (*((uint64*)data));
             l[0] = htonl((n & 0xFFFFffff00000000LL) >> 32);
@@ -360,6 +375,8 @@ bool writeDefinition(void       *userData,
             String s;
             ulong  length;
             uint16 n;
+
+            assert(data != NULL);
 
             s = (*((String*)data));
             assert(s != NULL);
@@ -433,13 +450,23 @@ void chunks_doneF(void)
 
 bool chunks_init(ChunkInfo *chunkInfo,
                  ChunkInfo *parentChunkInfo,
-                 void      *userData
+                 void      *userData,
+                 ChunkId   chunkId,
+                 int       *definition
                 )
 {
   assert(chunkInfo != NULL);
 
   chunkInfo->parentChunkInfo = parentChunkInfo;
   chunkInfo->userData        = userData;
+
+  chunkInfo->mode       = CHUNK_MODE_UNKNOWN;
+  chunkInfo->definition = definition;
+
+  chunkInfo->id         = chunkId;
+  chunkInfo->size       = 0;
+  chunkInfo->offset     = 0;
+  chunkInfo->index      = 0;
 
   return TRUE;
 }
@@ -534,24 +561,21 @@ bool chunks_eof(void *userData)
 
 bool chunks_open(ChunkInfo   *chunkInfo,
                  ChunkHeader *chunkHeader,
-                 int         *definition,
                  void        *data
                 )
 {
   ulong bytesRead;
 
   assert(chunkInfo != NULL);
-  assert(chunkHeader->id != CHUNK_ID_NONE);
+  assert(chunkInfo->id == chunkHeader->id);
 
   /* init */
-  chunkInfo->id         = chunkHeader->id;
-  chunkInfo->size       = chunkHeader->size;
-  chunkInfo->offset     = chunkHeader->offset;
-  chunkInfo->mode       = CHUNK_MODE_READ;
-  chunkInfo->definition = definition;
-  chunkInfo->index      = 0;
+  chunkInfo->size   = chunkHeader->size;
+  chunkInfo->offset = chunkHeader->offset;
+  chunkInfo->mode   = CHUNK_MODE_READ;
+  chunkInfo->index  = 0;
 
-  if (!readDefinition(chunkInfo->userData,data,definition,&bytesRead))
+  if (!readDefinition(chunkInfo->userData,data,chunkInfo->definition,&bytesRead))
   {
     return FALSE;
   }
@@ -574,8 +598,6 @@ bool chunks_open(ChunkInfo   *chunkInfo,
 \***********************************************************************/
 
 bool chunks_new(ChunkInfo  *chunkInfo,
-                ChunkId    chunkId,
-                int        *definition,
                 const void *data
                )
 {
@@ -584,14 +606,12 @@ bool chunks_new(ChunkInfo  *chunkInfo,
   ulong       bytesWritten;
 
   assert(chunkInfo != NULL);
-  assert(chunkId != CHUNK_ID_NONE);
+  assert(chunkInfo->id != CHUNK_ID_NONE);
 
   /* init */
-  chunkInfo->id         = chunkId;
   chunkInfo->size       = 0;
   chunkInfo->offset     = 0;
   chunkInfo->mode       = CHUNK_MODE_WRITE;
-  chunkInfo->definition = definition;
   chunkInfo->index      = 0;
 
   /* get current offset */
@@ -617,9 +637,9 @@ bool chunks_new(ChunkInfo  *chunkInfo,
   }
 
   /* write chunk data */
-  if (definition != NULL)
+  if (chunkInfo->definition != NULL)
   {
-    if (!writeDefinition(chunkInfo->userData,data,definition,&bytesWritten))
+    if (!writeDefinition(chunkInfo->userData,data,chunkInfo->definition,&bytesWritten))
     {
       return FALSE;
     }
@@ -782,12 +802,14 @@ bool chunks_eofSub(ChunkInfo *chunkInfo)
 * Notes  : -
 \***********************************************************************/
 
-ulong chunks_getSize(ChunkInfo *chunkInfo, const void *data)
+ulong chunks_getSize(ChunkInfo  *chunkInfo,
+                     const void *data
+                    )
 {
   assert(chunkInfo != NULL);
   assert(data != NULL);
 
-  return CHUNK_HEADER_SIZE+getDefinitionSize(chunkInfo,data,chunkInfo->definition);
+  return CHUNK_HEADER_SIZE+getDefinitionSize(data,chunkInfo->definition);
 }
 
 /***********************************************************************\
