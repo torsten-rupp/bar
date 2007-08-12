@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -21,6 +21,7 @@
 
 #include "bar.h"
 #include "chunks.h"
+#include "archive_format.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -35,11 +36,9 @@ typedef struct
 
   int       partNumber;
   int       handle;
-  uint64    index;
+//  uint64    index;
   uint64    size;
 
-  ChunkInfo chunkInfo;
-  bool      chunkFlag;
 } ArchiveInfo;
 
 typedef enum
@@ -55,20 +54,23 @@ typedef enum
 
 typedef struct
 {
-  ArchiveInfo *archiveInfo;
+  ArchiveInfo    *archiveInfo;
 
-  uint16      fileType;
-  uint64      size;
-  uint64      timeLastAccess;
-  uint64      timeModified;
-  uint64      timeLastChanged;
-  uint32      userId;
-  uint32      groupId;
-  uint32      permission;
-  String      name;
+  enum
+  {
+    FILE_MODE_READ,
+    FILE_MODE_WRITE,
+  } mode;
 
-  uint64      partOffset;
-  uint64      partSize;
+  ChunkInfo      chunkInfoFile;
+  ChunkFile      chunkFile;
+  ChunkInfo      chunkInfoFileEntry;
+  ChunkFileEntry chunkFileEntry;
+  ChunkInfo      chunkInfoFileData;
+  ChunkFileData  chunkFileData;
+
+  uint           headerLength;
+  bool           headerWrittenFlag;
 } FileInfo;
 
 /***************************** Variables *******************************/
@@ -97,9 +99,11 @@ bool files_eof(ArchiveInfo *archiveInfo);
 Errors files_writeData(const void *buffer, ulong bufferLength);
 Errors files_readData(void *buffer, ulong bufferLength);
 
-Errors files_getNext(ArchiveInfo *archiveInfo,
-                     ChunkId     *chunkId
-                    );
+/*
+Errors files_next(ArchiveInfo *archiveInfo,
+                  ChunkId     *chunkId
+                 );
+*/
 
 Errors files_newFile(ArchiveInfo *archiveInfo,
                      FileInfo    *fileInfo,

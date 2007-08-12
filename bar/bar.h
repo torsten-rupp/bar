@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver
 * Systems :
@@ -31,7 +31,11 @@ typedef enum
   ERROR_NONE,
 
   ERROR_INSUFFICIENT_MEMORY,
+  ERROR_INIT,
   ERROR_IO_ERROR,
+  ERROR_END_OF_ARCHIVE,
+  ERROR_NO_FILE_ENTRY,
+  ERROR_NO_FILE_DATA,
 
   ERROR_UNKNOWN,
 } Errors;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -78,6 +78,22 @@ LOCAL bool closeFile(void *userData)
     return FALSE;
 }
 
+LOCAL bool endOfFile(void *userData)
+{
+  ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
+  off64_t     n;
+
+  assert(archiveInfo != NULL);
+
+  n = lseek64(archiveInfo->handle,0,SEEK_CUR);
+  if (n == (off64_t)-1)
+  {
+    return TRUE;
+  }
+
+  return (n >= archiveInfo->size);
+}
+
 LOCAL bool readFile(void *userData, void *buffer, ulong bufferLength)
 {
   ArchiveInfo *archiveInfo = (ArchiveInfo*)userData;
@@ -139,26 +155,23 @@ Errors files_create(ArchiveInfo *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveFileName != NULL);
 
-  archiveInfo->fileName   = String_newCString(archiveFileName);
-  archiveInfo->partSize   = partSize;
-  archiveInfo->partNumber = 0;
-  archiveInfo->handle     = -1;
-  archiveInfo->index      = 0;
-  archiveInfo->size       = 0;
-  archiveInfo->chunkFlag  = FALSE;
-
-  /* init file-chunk */
-  if (!chunks_init(&archiveInfo->chunkInfo,
+  if (!chunks_initF(endOfFile,
                    readFile,
                    writeFile,
                    tellFile,
-                   seekFile,
-                   archiveInfo
+                   seekFile
                   )
      )
   {
-    return ERROR_IO_ERROR;
+    return ERROR_INIT;
   }
+
+  archiveInfo->fileName             = String_newCString(archiveFileName); 
+  archiveInfo->partSize             = partSize;                           
+  archiveInfo->partNumber           = 0;                                  
+  archiveInfo->handle               = -1;                                 
+//  archiveInfo->index                = 0;                                  
+//  archiveInfo->size                 = 0;                                  
 
   return ERROR_NONE;
 }
@@ -174,17 +187,15 @@ Errors files_open(ArchiveInfo *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveFileName != NULL);
 
-  /* init file-chunk */
-  if (!chunks_init(&archiveInfo->chunkInfo,
+  if (!chunks_initF(endOfFile,
                    readFile,
                    writeFile,
                    tellFile,
-                   seekFile,
-                   archiveInfo
+                   seekFile
                   )
      )
   {
-    return ERROR_IO_ERROR;
+    return ERROR_INIT;
   }
 
   /* open file */
@@ -214,62 +225,60 @@ Errors files_open(ArchiveInfo *archiveInfo,
   }
 
   /* init */
-  archiveInfo->fileName   = String_newCString(archiveFileName);
-  archiveInfo->partSize   = 0;
-  archiveInfo->partNumber = 0;
-  archiveInfo->handle     = handle;
-  archiveInfo->index      = 0;
-  archiveInfo->size       = size;
-  archiveInfo->chunkFlag  = FALSE;
+  archiveInfo->fileName            = String_newCString(archiveFileName);
+  archiveInfo->partSize            = 0;
+  archiveInfo->partNumber          = 0;
+  archiveInfo->handle              = handle;
+//  archiveInfo->index               = 0;
+  archiveInfo->size                = size;
 
   return ERROR_NONE;
 }
 
 bool files_eof(ArchiveInfo *archiveInfo)
 {
+  uint64 offset;
+
   assert(archiveInfo != NULL);
   assert(archiveInfo->handle >= 0);
 
-  return archiveInfo->index >= archiveInfo->size;
+  if (!tellFile(archiveInfo,&offset))
+  {
+    return TRUE;
+  }
+
+  return offset >= archiveInfo->size;
 }
 
-Errors files_getNext(ArchiveInfo *archiveInfo,
-                     ChunkId     *chunkId
-                    )
+/*
+Errors files_next(ArchiveInfo *archiveInfo,
+                  ChunkId     *chunkId
+                 )
 {
-  ChunkHeader chunkHeader;
-
   assert(archiveInfo != NULL);
   assert(chunkId != NULL);
 
-  if (archiveInfo->chunkFlag)
-  {
-    if (!chunks_close(&archiveInfo->chunkInfo))
-    {
-      return ERROR_IO_ERROR;
-    }
-    archiveInfo->chunkFlag = FALSE;
-  }
-
-  if (!chunks_get(&archiveInfo->chunkInfo))
+  if (!chunks_net(&archiveInfo->chunkInfoEntry,NULL,chunkId))
   {
     return ERROR_IO_ERROR;
   }
-  archiveInfo->index += CHUNK_HEADER_SIZE;
-
-  (*chunkId) = archiveInfo->chunkInfo.id;
+//  archiveInfo->index += CHUNK_HEADER_SIZE;
 
   return ERROR_NONE;
 }
+*/
 
 Errors files_done(ArchiveInfo *archiveInfo)
 {
   assert(archiveInfo != NULL);
   assert(archiveInfo->fileName != NULL);
 
-  chunks_done(&archiveInfo->chunkInfo);
+//  chunks_done(&archiveInfo->chunkInfoData);
+//  chunks_done(&archiveInfo->chunkInfoEntry);
 
   String_delete(archiveInfo->fileName);
+
+  chunks_doneF();
 
   return ERROR_NONE;
 }
@@ -289,19 +298,49 @@ Errors files_newFile(ArchiveInfo *archiveInfo,
   assert(archiveInfo != NULL);
   assert(fileInfo != NULL);
 
-  fileInfo->archiveInfo     = archiveInfo;
+  /* init file-chunk */
+  if (!chunks_init(&fileInfo->chunkInfoFile,
+                   NULL,
+                   archiveInfo
+                  )
+     )
+  {
+    return ERROR_IO_ERROR;
+  }
+  if (!chunks_init(&fileInfo->chunkInfoFileEntry,
+                   &fileInfo->chunkInfoFile,
+                   archiveInfo
+                  )
+     )
+  {
+    return ERROR_IO_ERROR;
+  }
+  if (!chunks_init(&fileInfo->chunkInfoFileData,
+                   &fileInfo->chunkInfoFile,
+                   archiveInfo
+                  )
+     )
+  {
+    return ERROR_IO_ERROR;
+  }
 
-  fileInfo->name            = fileName;
-  fileInfo->size            = size;
-  fileInfo->timeLastAccess  = timeLastAccess;
-  fileInfo->timeModified    = timeModified;
-  fileInfo->timeLastChanged = timeLastChanged;
-  fileInfo->userId          = userId;
-  fileInfo->groupId         = groupId;
-  fileInfo->permission      = permission;
+  fileInfo->archiveInfo                    = archiveInfo;
+  fileInfo->mode                           = FILE_MODE_WRITE;
 
-  fileInfo->partOffset      = 0;
-  fileInfo->partSize        = 0;
+  fileInfo->chunkFileEntry.fileType        = 0;
+  fileInfo->chunkFileEntry.size            = size;
+  fileInfo->chunkFileEntry.timeLastAccess  = timeLastAccess;
+  fileInfo->chunkFileEntry.timeModified    = timeModified;
+  fileInfo->chunkFileEntry.timeLastChanged = timeLastChanged;
+  fileInfo->chunkFileEntry.userId          = userId;
+  fileInfo->chunkFileEntry.groupId         = groupId;
+  fileInfo->chunkFileEntry.permission      = permission;
+  fileInfo->chunkFileEntry.name            = fileName;
+
+  fileInfo->chunkFileData.partOffset       = 0;
+  fileInfo->chunkFileData.partSize         = 0;
+
+  fileInfo->headerWrittenFlag              = FALSE;
 
   return ERROR_NONE;
 }
@@ -310,62 +349,182 @@ Errors files_readFile(ArchiveInfo *archiveInfo,
                       FileInfo    *fileInfo
                      )
 {
-  BARChunk_File chunkFile;
+  ChunkHeader    chunkHeader;
+  ChunkFileEntry chunkFileEntry;
+  ChunkFileData  chunkFileData;
+  bool           foundFileEntry,foundFileData;
 
   assert(archiveInfo != NULL);
   assert(fileInfo != NULL);
 
-  if (!chunks_read(&archiveInfo->chunkInfo,&chunkFile,BAR_CHUNK_DEFINITION_FILE))
+  /* init file-chunk */
+  if (!chunks_init(&fileInfo->chunkInfoFile,
+                   NULL,
+                   archiveInfo
+                  )
+     )
   {
     return ERROR_IO_ERROR;
   }
-  archiveInfo->index += chunks_getSize(&chunkFile,BAR_CHUNK_DEFINITION_FILE);
+  if (!chunks_init(&fileInfo->chunkInfoFileEntry,
+                   &fileInfo->chunkInfoFile,
+                   archiveInfo
+                  )
+     )
+  {
+    return ERROR_IO_ERROR;
+  }
+  if (!chunks_init(&fileInfo->chunkInfoFileData,
+                   &fileInfo->chunkInfoFile,
+                   archiveInfo
+                  )
+     )
+  {
+    return ERROR_IO_ERROR;
+  }
 
-  fileInfo->archiveInfo     = archiveInfo;
+  /* find file chunk */
+  do
+  {
+    if (chunks_eof(archiveInfo))
+    {
+      return ERROR_END_OF_ARCHIVE;
+    }
 
-  fileInfo->fileType        = chunkFile.fileType;
-  fileInfo->size            = chunkFile.size;
-  fileInfo->timeLastAccess  = chunkFile.timeLastAccess;
-  fileInfo->timeModified    = chunkFile.timeModified;
-  fileInfo->timeLastChanged = chunkFile.timeLastChanged;
-  fileInfo->userId          = chunkFile.userId;
-  fileInfo->groupId         = chunkFile.groupId;
-  fileInfo->permission      = chunkFile.permission;
-  fileInfo->name            = chunkFile.name;
+    if (!chunks_next(archiveInfo,&chunkHeader))
+    {
+      return ERROR_IO_ERROR;
+    }
+
+    if (chunkHeader.id != CHUNK_ID_FILE)
+    {
+      chunks_skip(archiveInfo,&chunkHeader);
+      continue;
+    }
+  }
+  while (chunkHeader.id != CHUNK_ID_FILE);
+
+  /* read file chunk, find file data */
+  if (!chunks_open(&fileInfo->chunkInfoFile,
+                   &chunkHeader,
+                   CHUNK_DEFINITION_FILE,
+                   &fileInfo->chunkFile
+                  )
+     )
+  {
+    return ERROR_IO_ERROR;
+  }
+  foundFileEntry = FALSE;
+  foundFileData  = FALSE;
+  while (   !chunks_eofSub(&fileInfo->chunkInfoFile)
+         && (!foundFileEntry || !foundFileData)         
+        )
+  {
+    if (!chunks_nextSub(&fileInfo->chunkInfoFile,&chunkHeader))
+    {
+      return ERROR_IO_ERROR;
+    }
+
+    switch (chunkHeader.id)
+    {
+      case CHUNK_ID_FILE_ENTRY:
+        if (!chunks_open(&fileInfo->chunkInfoFileEntry,
+                         &chunkHeader,
+                         CHUNK_DEFINITION_FILE_ENTRY,
+                         &fileInfo->chunkFileEntry
+                        )
+           )
+        {
+          return ERROR_IO_ERROR;
+        }
+        foundFileEntry = TRUE;
+        break;
+      case CHUNK_ID_FILE_DATA:
+        if (!chunks_open(&fileInfo->chunkInfoFileData,
+                         &chunkHeader,
+                         CHUNK_DEFINITION_FILE_DATA,
+                         &fileInfo->chunkFileData
+                        )
+           )
+        {
+          return ERROR_IO_ERROR;
+        }
+        foundFileData = TRUE;
+        break;
+      default:
+        chunks_skipSub(&fileInfo->chunkInfoFile,&chunkHeader);
+        break;
+    }
+  }
+  if (!foundFileEntry)
+  {
+    return ERROR_NO_FILE_ENTRY;
+  }
+  if (!foundFileData)
+  {
+    return ERROR_NO_FILE_DATA;
+  }
+
+  fileInfo->archiveInfo = archiveInfo;
+  fileInfo->mode        = FILE_MODE_READ;
 
   return ERROR_NONE;
 }
 
 Errors files_closeFile(FileInfo *fileInfo)
 {
-  off64_t n;
-
   assert(fileInfo != NULL);
   assert(fileInfo->archiveInfo != NULL);
 
-  if (!chunks_close(&fileInfo->archiveInfo->chunkInfo))
+  if (fileInfo->mode == FILE_MODE_WRITE)
+  {
+  // offset, partsize
+    if (!chunks_update(&fileInfo->chunkInfoFileData,
+                       &fileInfo->chunkFileData
+                      )
+       )
+    {
+      return ERROR_IO_ERROR;
+    }
+    if (!chunks_update(&fileInfo->chunkInfoFile,
+                       &fileInfo->chunkFile
+                      )
+       )
+    {
+      return ERROR_IO_ERROR;
+    }
+  }
+
+  if (!chunks_close(&fileInfo->chunkInfoFileData))
   {
     return ERROR_IO_ERROR;
   }
-  fileInfo->archiveInfo->index = fileInfo->archiveInfo->chunkInfo.index;
-  fileInfo->archiveInfo->chunkFlag = FALSE;
+  if (!chunks_close(&fileInfo->chunkInfoFileEntry))
+  {
+    return ERROR_IO_ERROR;
+  }
+  if (!chunks_close(&fileInfo->chunkInfoFile))
+  {
+    return ERROR_IO_ERROR;
+  }
+//  fileInfo->archiveInfo->index               = fileInfo->archiveInfo->chunkInfoData.index;
+  fileInfo->headerWrittenFlag = FALSE;
 
   return ERROR_NONE;
 }
 
 Errors files_writeFileData(FileInfo *fileInfo, const void *buffer, ulong bufferLength)
 {
-  const char    *p;
-  ulong         length;
-  BARChunk_File chunkFile;
-  ulong         fileChunkHeaderLength;
-  bool          newPartFlag;
-  ulong         restLength;
-  ulong         partLength;
-  ulong         n;
-  String        fileName;
-  void          *writeBuffer;
-  ulong         writeLength;
+  const char     *p;
+  ulong          length;
+  uint64         size;
+  bool           newPartFlag;
+  ulong          restLength;
+  ulong          partLength;
+  ulong          n;
+  String         fileName;
+  void           *writeBuffer;
+  ulong          writeLength;
 
   assert(fileInfo != NULL);
   assert(fileInfo->archiveInfo != NULL);
@@ -377,17 +536,20 @@ Errors files_writeFileData(FileInfo *fileInfo, const void *buffer, ulong bufferL
     /* split, calculate rest-length */
     if (fileInfo->archiveInfo->partSize > 0)
     {
-      /* get chunk-header length */
-      chunkFile.name        = fileInfo->name;     
-      fileChunkHeaderLength = chunks_getSize(&chunkFile,BAR_CHUNK_DEFINITION_FILE);
+      if (!tellFile(fileInfo->archiveInfo,&size))
+      {
+        return ERROR_IO_ERROR;
+      }
 
       /* check if file-header can be written */
       newPartFlag = FALSE;
-      if      (!fileInfo->archiveInfo->chunkFlag && (fileInfo->archiveInfo->size + fileChunkHeaderLength >= fileInfo->archiveInfo->partSize))
+      if      (   !fileInfo->headerWrittenFlag
+               && (size + fileInfo->headerLength >= fileInfo->archiveInfo->partSize)
+              )
       {
         newPartFlag = TRUE;
       }
-      else if (fileInfo->archiveInfo->size >= fileInfo->archiveInfo->partSize)
+      else if (size >= fileInfo->archiveInfo->partSize)
       {
         newPartFlag = TRUE;
       }
@@ -396,26 +558,34 @@ Errors files_writeFileData(FileInfo *fileInfo, const void *buffer, ulong bufferL
         if (fileInfo->archiveInfo->handle >= 0)
         {
           /* close file, prepare for next part */
-          if (fileInfo->archiveInfo->chunkFlag)
+          if (fileInfo->headerWrittenFlag)
           {
-            if (!chunks_close(&fileInfo->archiveInfo->chunkInfo))
+            if (!chunks_close(&fileInfo->chunkInfoFileData))
             {
               return ERROR_IO_ERROR;
             }
-            fileInfo->archiveInfo->chunkFlag = FALSE;
+            if (!chunks_close(&fileInfo->chunkInfoFileEntry))
+            {
+              return ERROR_IO_ERROR;
+            }
+            if (!chunks_close(&fileInfo->chunkInfoFile))
+            {
+              return ERROR_IO_ERROR;
+            }
+            fileInfo->headerWrittenFlag = FALSE;
           }
 
           close(fileInfo->archiveInfo->handle);
           fileInfo->archiveInfo->handle = -1;
-          fileInfo->archiveInfo->index  = 0;
-          fileInfo->archiveInfo->size   = 0;
+//          fileInfo->archiveInfo->index  = 0;
+//          fileInfo->archiveInfo->size   = 0;
         }
       }
 
       /* get size of space to reserve for chunk-header */
-      if (!fileInfo->archiveInfo->chunkFlag || newPartFlag)
+      if (!fileInfo->headerWrittenFlag || newPartFlag)
       {
-        n = CHUNK_HEADER_SIZE+fileChunkHeaderLength;
+        n = fileInfo->headerLength;
       }
       else
       {
@@ -423,7 +593,7 @@ Errors files_writeFileData(FileInfo *fileInfo, const void *buffer, ulong bufferL
       }
 
       /* calculate max. length of data to write */
-      restLength = fileInfo->archiveInfo->partSize-(fileInfo->archiveInfo->size+n);
+      restLength = fileInfo->archiveInfo->partSize-(size+n);
 
       /* calculate length of data to write */
       partLength = (restLength < (bufferLength-length))?restLength:bufferLength-length;
@@ -434,7 +604,7 @@ Errors files_writeFileData(FileInfo *fileInfo, const void *buffer, ulong bufferL
     }
 
     /* compress */
-writeBuffer=buffer;
+writeBuffer=(char*)buffer;
 writeLength=partLength;
     if (1)
     {
@@ -465,47 +635,66 @@ writeLength=partLength;
       {
         return ERROR_IO_ERROR;
       }
-      fileInfo->archiveInfo->index     = 0;
-      fileInfo->archiveInfo->size      = 0;
-      fileInfo->archiveInfo->chunkFlag = FALSE;
+
+//      fileInfo->archiveInfo->index               = 0;
+//      fileInfo->archiveInfo->size                = 0;
+      fileInfo->headerWrittenFlag = FALSE;
 
       String_delete(fileName);
     }
 
     /* write chunk-header */
-    if (!fileInfo->archiveInfo->chunkFlag)
+    if (!fileInfo->headerWrittenFlag)
     {
-      if (!chunks_new(&fileInfo->archiveInfo->chunkInfo,BAR_CHUNK_ID_FILE))
+      if (!chunks_new(&fileInfo->chunkInfoFile,
+                      CHUNK_ID_FILE,
+                      NULL,
+                      NULL
+                     )
+         )
       {
         return ERROR_IO_ERROR;
       }
-      fileInfo->archiveInfo->size += CHUNK_HEADER_SIZE;
+//      fileInfo->archiveInfo->size += CHUNK_HEADER_SIZE;
 
-      chunkFile.fileType        = fileInfo->fileType;
-      chunkFile.size            = fileInfo->size;
-      chunkFile.timeLastAccess  = fileInfo->timeLastAccess;
-      chunkFile.timeModified    = fileInfo->timeModified;
-      chunkFile.timeLastChanged = fileInfo->timeLastChanged;
-      chunkFile.userId          = fileInfo->userId;
-      chunkFile.groupId         = fileInfo->groupId;
-      chunkFile.permission      = fileInfo->permission;
-      chunkFile.name            = fileInfo->name;
-// offset, partsize
-      if (!chunks_write(&fileInfo->archiveInfo->chunkInfo,&chunkFile,BAR_CHUNK_DEFINITION_FILE))
+      if (!chunks_new(&fileInfo->chunkInfoFileEntry,
+                      CHUNK_ID_FILE_ENTRY,
+                      CHUNK_DEFINITION_FILE_ENTRY,
+                      &fileInfo->chunkFileEntry
+                     )
+         )
       {
         return ERROR_IO_ERROR;
       }
-      fileInfo->archiveInfo->size += chunks_getSize(&chunkFile,BAR_CHUNK_DEFINITION_FILE);
+//      fileInfo->archiveInfo->size += chunks_getSize(&fileInfo->chunkInfoFileEntry,&chunkFileEntry);
 
-      fileInfo->archiveInfo->chunkFlag = TRUE;
+      if (!chunks_new(&fileInfo->chunkInfoFileData,
+                      CHUNK_ID_FILE_DATA,
+                      CHUNK_DEFINITION_FILE_DATA,
+                      &fileInfo->chunkFileData
+                     )
+         )
+      {
+        return ERROR_IO_ERROR;
+      }
+//      fileInfo->archiveInfo->size += chunks_getSize(&fileInfo->chunkInfoFileData,&chunkFileData);
+
+      fileInfo->chunkFileData.partOffset = fileInfo->chunkFileData.partOffset+fileInfo->chunkFileData.partSize;
+      fileInfo->chunkFileData.partSize   = 0;
+
+      fileInfo->headerLength      = chunks_getSize(&fileInfo->chunkInfoFile,     &fileInfo->chunkFile)+
+                                    chunks_getSize(&fileInfo->chunkInfoFileEntry,&fileInfo->chunkFileEntry)+
+                                    chunks_getSize(&fileInfo->chunkInfoFileData, &fileInfo->chunkFileData);
+      fileInfo->headerWrittenFlag = TRUE;
     }
 
     /* write */
-    if (!chunks_writeData(&fileInfo->archiveInfo->chunkInfo,writeBuffer,writeLength))
+    if (!chunks_writeData(&fileInfo->chunkInfoFileData,writeBuffer,writeLength))
     {
       return ERROR_IO_ERROR;
     }
-    fileInfo->archiveInfo->size += writeLength;
+//    fileInfo->archiveInfo->size += writeLength;
+    fileInfo->chunkFileData.partSize += partLength;
 
     length += partLength;
   }

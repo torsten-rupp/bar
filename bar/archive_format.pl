@@ -9,7 +9,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/archive_format.pl,v $
-# $Revision: 1.1.1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: create header file definition from format definition
 # Systems : all
@@ -31,9 +31,9 @@ use Getopt::Long;
 
 # ---------------------------- constants/variables ---------------------------
 
-my $PREFIX_ID         = "BAR_CHUNK_ID_";
-my $PREFIX_NAME       = "BARChunk_";
-my $PREFIX_DEFINITION = "BAR_CHUNK_DEFINITION_";
+my $PREFIX_ID         = "CHUNK_ID_";
+my $PREFIX_NAME       = "Chunk";
+my $PREFIX_DEFINITION = "CHUNK_DEFINITION_";
 
 my $DEFINITION_TYPES =
   {
@@ -88,6 +88,8 @@ if ($cFileName ne "")
 if ($hFileName ne "")
 {
   open(HFILE_HANDLE,"> $hFileName");
+  print HFILE_HANDLE "#ifndef __ARCHIVE_FORMAT__\n";
+  print HFILE_HANDLE "#define __ARCHIVE_FORMAT__\n";
 }
 
 writeCFile("#include \"chunks.h\"\n");
@@ -175,6 +177,7 @@ if ($cFileName ne "")
 }
 if ($hFileName ne "")
 {
+  print HFILE_HANDLE "#endif /* __ARCHIVE_FORMAT__ */\n";
   close(HFILE_HANDLE);
 }
 

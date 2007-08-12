@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive_create.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -296,6 +296,57 @@ return FALSE;
 }
 
 /***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool checkIsIncluded(PatternNode *includePatternNode,
+                           String      fileName
+                          )
+{
+  assert(includePatternNode != NULL);
+  assert(fileName != NULL);
+
+  
+return TRUE;
+}
+
+/***********************************************************************\
+* Name   : checkIsExcluded
+* Purpose: check if filename is excluded
+* Input  : s - filename
+* Output : -
+* Return : TRUE if excluded, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool checkIsExcluded(PatternList *excludePatternList,
+                           String      fileName
+                          )
+{
+  bool        excludeFlag;
+  PatternNode *excludePatternNode;
+
+  assert(excludePatternList != NULL);
+  assert(fileName != NULL);
+
+  excludeFlag = FALSE;
+  excludePatternNode = excludePatternList->head;
+  while (!exitFlag && (excludePatternNode != NULL) && !excludeFlag)
+  {
+    /* match with exclude pattern */
+
+    excludePatternNode = excludePatternNode->next;
+  }
+
+  return excludeFlag;
+}
+
+/***********************************************************************\
 * Name   : getFileType
 * Purpose: get file type
 * Input  : fileName - filename
@@ -418,7 +469,6 @@ LOCAL String getNextFile(String fileName)
 LOCAL void collector(void)
 {
   PatternNode     *includePatternNode;
-  PatternNode     *excludePatternNode;
   StringTokenizer fileNameTokenizer;
   String          s;
   String          basePath;
@@ -441,7 +491,7 @@ LOCAL void collector(void)
     s = String_new();
     while (String_getNextToken(&fileNameTokenizer,&s,NULL) && !checkIsPattern(s))
     {
-      String_appendChar(basePath,PATHNAME_SEPARATOR_CHAR);
+      if (String_length(basePath) > 0) String_appendChar(basePath,PATHNAME_SEPARATOR_CHAR);
       String_append(basePath,s);
     }
     String_delete(s);
@@ -453,73 +503,83 @@ LOCAL void collector(void)
     {
       /* get next directory to process */
       fileNameNode = (FileNameNode*)List_getFirst(&directoryList);
-
-      /* read directory contents */
-      directoryHandle = opendir(String_cString(fileNameNode->fileName));
-      if (directoryHandle != NULL)
+      if (checkIsIncluded(includePatternNode,fileNameNode->fileName))
       {
-        while ((directoryEntry = readdir(directoryHandle)) != NULL)
+        switch (getFileType(fileNameNode->fileName))
         {
-          if ((strcmp(directoryEntry->d_name,".") != 0) && (strcmp(directoryEntry->d_name,"..") != 0))
-          {
-            /* get filename */
-            fileName = String_copy(fileNameNode->fileName);
-            String_appendChar(fileName,PATHNAME_SEPARATOR_CHAR);
-            String_appendCString(fileName,directoryEntry->d_name);
-
-            /* filter excludes */
-            excludeFlag = FALSE;
-            excludePatternNode = excludePatternList->head;
-            while (!exitFlag && (excludePatternNode != NULL) && !excludeFlag)
-            {
-              /* match with exclude pattern */
-
-              excludePatternNode = excludePatternNode->next;
-            }
-
-            if (!excludeFlag)
-            {
-              /* detect file type */
-              switch (getFileType(fileName))
-              {
-                case FILETYPE_FILE:
-                  /* store in file list */
-                  appendFileNameToList(&fileNameList,fileName);
-                  statistics.includedCount++;
+          case FILETYPE_FILE:
+            /* add to file list */
+            appendFileNameToList(&fileNameList,fileNameNode->fileName);
+            statistics.includedCount++;
 //fprintf(stderr,"%s,%d: collect %s\n",__FILE__,__LINE__,String_cString(fileName));
-                  break;
-                case FILETYPE_DIRECTORY:
-                  /* store in directory list */
-                  appendFileNameToList(&directoryList,fileName);
-                  break;
-                case FILETYPE_LINK:
-    // ???
-                  break;
-                default:
-                  // ??? log
-                  break;
+            break;
+          case FILETYPE_DIRECTORY:
+            /* read directory contents */
+            directoryHandle = opendir(String_cString(fileNameNode->fileName));
+            if (directoryHandle != NULL)
+            {
+              while ((directoryEntry = readdir(directoryHandle)) != NULL)
+              {
+                if ((strcmp(directoryEntry->d_name,".") != 0) && (strcmp(directoryEntry->d_name,"..") != 0))
+                {
+                  /* get filename */
+                  fileName = String_copy(fileNameNode->fileName);
+                  String_appendChar(fileName,PATHNAME_SEPARATOR_CHAR);
+                  String_appendCString(fileName,directoryEntry->d_name);
+
+                  /* filter excludes */
+                  if (!checkIsExcluded(excludePatternList,s))
+                  {
+                    /* detect file type */
+                    switch (getFileType(fileName))
+                    {
+                      case FILETYPE_FILE:
+                        /* add to file list */
+                        appendFileNameToList(&fileNameList,fileName);
+                        statistics.includedCount++;
+      //fprintf(stderr,"%s,%d: collect %s\n",__FILE__,__LINE__,String_cString(fileName));
+                        break;
+                      case FILETYPE_DIRECTORY:
+                        /* add to directory list */
+                        appendFileNameToList(&directoryList,fileName);
+                        break;
+                      case FILETYPE_LINK:
+          // ???
+                        break;
+                      default:
+                        // ??? log
+                        break;
+                    }
+                  }
+                  else
+                  {
+                    statistics.excludedCount++;
+                  }
+
+                  String_delete(fileName);
+                }
               }
+              if (errno != 0)
+              {
+        //??? log
+              }
+              closedir(directoryHandle);
             }
             else
             {
-              statistics.excludedCount++;
+        //??? log
             }
-
-            String_delete(fileName);
-          }
+            break;
+          case FILETYPE_LINK:
+// ???
+            break;
+          default:
+            // ??? log
+            break;
         }
-        if (errno != 0)
-        {
-  //??? log
-        }
-
-        closedir(directoryHandle);
-      }
-      else
-      {
-  //??? log
       }
 
+      /* free resources */
       freeFileNameNode(fileNameNode,NULL);
       free(fileNameNode);
     }
@@ -582,17 +642,8 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   // log ???
       continue;
     }
-/*
-    fileInfoBlock.chunkFile.fileType        = 0;
-    fileInfoBlock.chunkFile.size            = fileStat.st_size;
-    fileInfoBlock.chunkFile.timeLastAccess  = fileStat.st_atime;
-    fileInfoBlock.chunkFile.timeModified    = fileStat.st_mtime;
-    fileInfoBlock.chunkFile.timeLastChanged = fileStat.st_ctime;
-    fileInfoBlock.chunkFile.userId          = fileStat.st_uid;
-    fileInfoBlock.chunkFile.groupId         = fileStat.st_gid;
-    fileInfoBlock.chunkFile.permission      = fileStat.st_mode;
-    fileInfoBlock.chunkFile.name            = fileName;
-*/
+
+    /* new file */
     error = files_newFile(&archiveInfo,
                           &fileInfo,
                           fileName,
@@ -604,32 +655,6 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
                           fileStat.st_gid,
                           fileStat.st_mode
                          );
-#if 0
-    /* make sure chunk can be written in single file */
-    if (!ensureArchiveFileSpace(&fileInfoBlock,
-                                sizeof(ChunkHeader) + chunks_getSize(&fileInfoBlock.chunkFile,BAR_CHUNK_DEFINITION_FILE)))
-    {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
-      continue;
-    }
-
-    /* create new entry */
-    if (!chunks_new(&chunkInfoBlock,BAR_CHUNK_ID_FILE))
-    {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
-      continue;
-    }
-
-    /* write file info */
-    if (!chunks_write(&chunkInfoBlock,&fileInfoBlock.chunkFile,BAR_CHUNK_DEFINITION_FILE))
-    {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
-      continue;
-    }
-#endif /* 0 */
 
     /* write file content */  
     inputHandle = open(String_cString(fileName),O_RDONLY);

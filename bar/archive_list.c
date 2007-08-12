@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive_list.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -92,7 +92,12 @@ LOCAL void printFileInfo(const FileInfo *fileInfo)
 {
   assert(fileInfo != NULL);
 
-  printf("%10llu %s\n",fileInfo->size,String_cString(fileInfo->name));
+printf("%10llu %10llu..%10llu %s\n",
+fileInfo->chunkFileEntry.size,
+fileInfo->chunkFileData.partOffset,
+fileInfo->chunkFileData.partOffset+fileInfo->chunkFileData.partSize,
+String_cString(fileInfo->chunkFileEntry.name)
+);
 }
 
 bool archive_list(FileNameList *fileNameList, PatternList *includeList, PatternList *excludeList)
@@ -114,32 +119,19 @@ bool archive_list(FileNameList *fileNameList, PatternList *includeList, PatternL
     {
       printError("Cannot open file '%s' (error: %s)!\n",String_cString(fileNameNode->fileName),strerror(errno));
       return FALSE;
-HALT(1,"x");
+HALT_INTERNAL_ERROR("x");
     }
 
     /* list contents */
     while (!files_eof(&archiveInfo))
     {
-      error = files_getNext(&archiveInfo,&chunkId);
+      error = files_readFile(&archiveInfo,&fileInfo);
       if (error != ERROR_NONE)
       {
-HALT(1,"x");
+HALT_INTERNAL_ERROR("x");
       }
-
-      if (chunkId == BAR_CHUNK_ID_FILE)
-      {
-        error = files_readFile(&archiveInfo,&fileInfo);
-        if (error != ERROR_NONE)
-        {
-  HALT(1,"x");
-        }
-        printFileInfo(&fileInfo);
-        files_closeFile(&fileInfo);
-      }
-      else
-      {
-HALT(1,"unknown id 0x%x",chunkId);
-      }
+      printFileInfo(&fileInfo);
+      files_closeFile(&fileInfo);
     }
 
     /* close archive */

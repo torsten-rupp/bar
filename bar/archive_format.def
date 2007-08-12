@@ -1,14 +1,14 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/archive_format.def,v $
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems : all
 #
 #***********************************************************************
 
-CHUNK BAR "BAR0" Header
+#CHUNK BAR "BAR0" Archive
 
 CHUNK COMPRESSION "COMP" Compression
   uint8 algorithm
@@ -21,10 +21,10 @@ CHUNK NAME "NAME" Name
   name   name
 
 CHUNK FILE "FIL0" File
+
+CHUNK FILE_ENTRY "FENT" FileEntry
   uint16 fileType
   uint64 size
-  uint64 partOffset
-  uint64 partSize
   uint64 timeLastAccess
   uint64 timeModified
   uint64 timeLastChanged
@@ -32,6 +32,10 @@ CHUNK FILE "FIL0" File
   uint32 groupId
   uint32 permission
   name   name
+
+CHUNK FILE_DATA "FDAT" FileData
+  uint64 partOffset
+  uint64 partSize
   data   data
 
 CHUNK PERMISSION "PER0" Permission

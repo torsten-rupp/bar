@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # $Author: torsten $
 # Contents: Makefile for
 # Systems :
@@ -111,13 +111,13 @@ options.o: options.c options.h
 
 .PHONE: pack1 list1 pack2 list2
 pack1: bar
-	./bar -a data/data.back -c /tmp/x/bin
+	./bar -a data/data.back -c demo
 
 list1: bar
 	./bar -l data/data.back
 
 pack2: bar
-	./bar -a data/data.back -c -s 1000000 /tmp/x/bin
+	./bar -a data/data.back -c -s 1000000 demo
 
 list2: bar
 	./bar -l data/data.back.*
