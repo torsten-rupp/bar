@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -25,6 +25,7 @@
 #include "strings.h"
 
 #include "bar.h"
+#include "patterns.h"
 #include "files.h"
 #include "archive.h"
 
@@ -33,6 +34,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+#define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
 
@@ -50,46 +53,61 @@
 
 /*---------------------------------------------------------------------*/
 
-bool command_restore(FileNameList *fileNameList,
-                     PatternList  *includeList,
-                     PatternList  *excludeList,
-                     const char   *directory
+bool command_restore(FileNameList *archiveFileNameList,
+                     PatternList  *includePatternList,
+                     PatternList  *excludePatternList,
+                     uint         directoryStripCount,
+                     const char   *directory,
+                     const char   *password
                     )
 {
+  void            *buffer;
+  String          fileName;
   Errors          error;
-  FileNameNode    *fileNameNode;
+  FileNameNode    *archiveFileNameNode;
   ArchiveInfo     archiveInfo;
   ArchiveFileInfo archiveFileInfo;
   FileInfo        fileInfo;
   uint64          partOffset,partSize;
-  ulong           length;
+  String          destinationFileName;
+  FileHandle      fileHandle;
+  uint64          length;
+  ulong           n;
 
-  assert(fileNameList != NULL);
-  assert(includeList != NULL);
-  assert(excludeList != NULL);
+  assert(archiveFileNameList != NULL);
+  assert(includePatternList != NULL);
+  assert(excludePatternList != NULL);
 
-  /* initialise variables */
-  fileInfo.name = String_new();
+  /* allocate resources */
+  buffer = malloc(BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  fileName = String_new();
 
-  fileNameNode = fileNameList->head;
-  while (fileNameNode != NULL)
+  archiveFileNameNode = archiveFileNameList->head;
+  while (archiveFileNameNode != NULL)
   {
     /* open archive */
-    error = archive_open(&archiveInfo,
-                         String_cString(fileNameNode->fileName)
+    error = Archive_open(&archiveInfo,
+                         String_cString(archiveFileNameNode->fileName),
+                         password
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open file '%s' (error: %s)!\n",String_cString(fileNameNode->fileName),strerror(errno));
+      printError("Cannot open file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),strerror(errno));
       return FALSE;
 HALT_INTERNAL_ERROR("x");
     }
 
     /* read files */
-    while (!archive_eof(&archiveInfo))
+    while (!Archive_eof(&archiveInfo))
     {
-      error = archive_readFile(&archiveInfo,
+      /* get next file from archive */
+      error = Archive_readFile(&archiveInfo,
                                &archiveFileInfo,
+                               fileName,
                                &fileInfo,
                                &partOffset,
                                &partSize
@@ -97,25 +115,75 @@ HALT_INTERNAL_ERROR("x");
       if (error != ERROR_NONE)
       {
 HALT_INTERNAL_ERROR("x");
+        Archive_closeFile(&archiveFileInfo);
+        continue;
       }
 
-      length = 0;
-      while (length < partSize)
+      if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName))
+          && !Patterns_matchList(excludePatternList,fileName)
+         )
       {
+        /* get destination filename */
+        destinationFileName = String_new();
+        if (directory != NULL) String_setCString(destinationFileName,directory);
+        if (directoryStripCount > 0)
+        {
+  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+        }
+        Files_appendFileName(destinationFileName,fileName);
+
+        /* write file */
+        error = Files_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
+        if (error != ERROR_NONE)
+        {
+  HALT_INTERNAL_ERROR("x");
+          Archive_closeFile(&archiveFileInfo);
+          continue;
+        }
+        error = Files_seek(&fileHandle,partOffset);
+        if (error != ERROR_NONE)
+        {
+  HALT_INTERNAL_ERROR("x");
+        }
+
+        length = 0;
+        while (length < partSize)
+        {
+          n = ((partSize-length) > BUFFER_SIZE)?BUFFER_SIZE:partSize-length;
+
+          error = Archive_readFileData(&archiveFileInfo,buffer,n);
+          if (error != ERROR_NONE) break;
+          error = Files_write(&fileHandle,buffer,n);
+          if (error != ERROR_NONE) break;
+
+          length += n;
+        }
+        Files_close(&fileHandle);
+        if (error != ERROR_NONE)
+        {
+  HALT_INTERNAL_ERROR("x");
+        }
+
+        /* set file permissions, file owner/group */
+
+        /* free resources */
+        String_delete(destinationFileName);
       }
 
-      archive_closeFile(&archiveFileInfo);
+      /* close archive file */
+      Archive_closeFile(&archiveFileInfo);
     }
 
     /* close archive */
-    archive_done(&archiveInfo);
+    Archive_done(&archiveInfo);
 
     /* next file */
-    fileNameNode = fileNameNode->next;
+    archiveFileNameNode = archiveFileNameNode->next;
   }
 
   /* free resources */
-  String_delete(fileInfo.name);
+  String_delete(fileName);
+  free(buffer);
 
   return TRUE;
 }

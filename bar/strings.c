@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.1.1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems : all
@@ -1046,28 +1046,31 @@ String String_copy(String fromString)
 * Notes  : -
 \***********************************************************************/
 
-String String_sub(String fromString, unsigned long index, long length)
+String String_sub(String string, String fromString, unsigned long index, long length)
 {
-  struct __String *string;
-  unsigned long   n;
+  unsigned long n;
 
-  if (fromString != NULL)
+  if (string != NULL)
   {
-    assert(fromString->data != NULL);
+    assert(string->data != NULL);
 
-    string = String_new();
-    if (string == NULL)
+    if (fromString != NULL)
     {
-      return NULL;
+      assert(fromString->data != NULL);
+
+      if (index < fromString->length)
+      {
+        n = MIN(length,fromString->length-index);
+        ensureStringLength(string,n);
+        memcpy(&string->data[0],&fromString->data[index],n);
+        string->data[n] ='\0';
+        string->length = n;
+      }
     }
-
-    if (index < fromString->length)
+    else
     {
-      n = MIN(length,fromString->length-index);
-      ensureStringLength(string,n);
-      memcpy(&string->data[0],&fromString->data[index],n);
-      string->data[n] ='\0';
-      string->length = n;
+      string->data[0] = '\0';
+      string->length = 0;
     }
   }
 
@@ -1500,7 +1503,7 @@ long String_find(String string, unsigned long index, String findString)
 
   findIndex = -1;
 
-  z = index;
+  z = (index != STRING_BEGIN)?index:0;
   while (((z+findString->length) < string->length) && (findIndex < 0))
   {
     i = 0;
@@ -1528,7 +1531,7 @@ long String_findCString(String string, unsigned long index, const char *s)
   findIndex = -1;
 
   sLength = strlen(s);
-  z = index;
+  z = (index != STRING_BEGIN)?index:0;
   while (((z+sLength) < string->length) && (findIndex < 0))
   {
     i = 0;
@@ -1550,13 +1553,82 @@ long String_findChar(String string, unsigned long index, char ch)
 
   assert(string != NULL);
 
-  z = index;
+  z = (index != STRING_BEGIN)?index:0;
   while ((z < string->length) && (string->data[z] != ch))
   {
     z++;
   }
 
   return (z < string->length)?z:-1;
+}
+
+long String_findLast(String string, long index, String findString)
+{
+  long z,i;
+  long findIndex;
+
+  assert(string != NULL);
+  assert(findString != NULL);
+
+  findIndex = -1;
+
+  z = (index != STRING_END)?index:string->length-1;
+  while ((z >= 0) && (findIndex < 0))
+  {
+    i = 0;
+    while ((i < findString->length) && (string->data[z+i] == findString->data[i]))
+    {
+      i++;
+    }
+    if (i >=  findString->length) findIndex = z;
+
+    z--;
+  }
+
+  return findIndex;
+}
+
+long String_findLastCString(String string, long index, const char *s)
+{
+  long findIndex;
+  long sLength;
+  long z,i;
+
+  assert(string != NULL);
+  assert(s != NULL);
+
+  findIndex = -1;
+
+  sLength = strlen(s);
+  z = (index != STRING_END)?index:string->length-1;
+  while ((z >= 0) && (findIndex < 0))
+  {
+    i = 0;
+    while ((i < sLength) && (string->data[z+i] == s[i]))
+    {
+      i++;
+    }
+    if (i >=  sLength) findIndex = z;
+
+    z--;
+  }
+
+  return findIndex;
+}
+
+long String_findLastChar(String string, long index, char ch)
+{
+  long z;
+
+  assert(string != NULL);
+
+  z = (index != STRING_END)?index:string->length-1;
+  while ((z >= 0) && (string->data[z] != ch))
+  {
+    z--;
+  }
+
+  return (z >= 0)?z:-1;
 }
 
 /***********************************************************************\
@@ -1723,7 +1795,7 @@ String String_format(String string, const char *format, ...)
 * Notes  : -
 \***********************************************************************/
 
-void String_initTokenizer(StringTokenizer *stringTokenizer, String string, const char *separatorChars, const char *stringChars)
+void String_initTokenizer(StringTokenizer *stringTokenizer, const String string, const char *separatorChars, const char *stringChars)
 {
   assert(stringTokenizer != NULL);
 
@@ -1746,8 +1818,8 @@ void String_initTokenizer(StringTokenizer *stringTokenizer, String string, const
 void String_doneTokenizer(StringTokenizer *stringTokenizer)
 {
   assert(stringTokenizer != NULL);
-
   assert(stringTokenizer->string != NULL);
+
   String_delete(stringTokenizer->token);
 }
 
@@ -1760,7 +1832,7 @@ void String_doneTokenizer(StringTokenizer *stringTokenizer)
 * Notes  : -
 \***********************************************************************/
 
-bool String_getNextToken(StringTokenizer *stringTokenizer, String *token, long *tokenIndex)
+bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, long *tokenIndex)
 {
   const char *s;
 

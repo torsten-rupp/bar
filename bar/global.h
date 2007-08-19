@@ -107,6 +107,8 @@ typedef enum
 } TCmpResults;
 
 // ??? configure
+typedef unsigned char      byte;
+
 typedef char               bool8;
 typedef int                bool32;
 typedef char               char8;
@@ -132,6 +134,8 @@ typedef void               void32;
 #else
   #define LOCAL
 #endif
+
+#define UNUSED_VARIABLE(s) (void)s
 
 #define SIZE_OF_ARRAY(a) (sizeof(a)/sizeof(a[0]))
 
@@ -233,23 +237,23 @@ typedef void               void32;
      __abort(__FILE__, __LINE__, format, ## args); \
   } \
   while (0)
-#define HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED(...) \
+#define HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED(args...) \
   do \
   { \
-     HALT_INTERNAL_ERROR("INTERNAL ERROR: still not implemented: " args); \
+     HALT_INTERNAL_ERROR("INTERNAL ERROR: still not implemented: ", ## args); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE(args...) \
   do \
   { \
-     HALT_INTERNAL_ERROR("INTERNAL ERROR: unhandled switch case: " args); \
+     HALT_INTERNAL_ERROR("INTERNAL ERROR: unhandled switch case: ", ## args); \
   } \
   while (0)
 
 #define HALT_INTERAL_ERROR_UNHANDLED_SWITCH_CASE(args...) \
   do \
   { \
-     HALT_INTERNAL_ERROR("INTERNAL ERROR: unhandled switch-case: " args); \
+     HALT_INTERNAL_ERROR("INTERNAL ERROR: unhandled switch-case: ", ## args); \
   } \
  while (0)
 

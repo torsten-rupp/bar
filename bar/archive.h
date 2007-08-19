@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: archive functions
 * Systems : all
@@ -21,6 +21,8 @@
 
 #include "bar.h"
 #include "chunks.h"
+#include "compress.h"
+#include "crypt.h"
 #include "archive_format.h"
 #include "files.h"
 
@@ -32,16 +34,28 @@
 
 typedef struct
 {
-  String     fileName;
-  uint64     partSize;
+  String          fileName;
+  uint64          partSize;
+  CryptAlgorithms cryptAlgorithm;
+  const char      *password;
 
-  int        partNumber;
-  FileHandle fileHandle;
+  int             partNumber;
+  FileHandle      fileHandle;
 } ArchiveInfo;
 
 typedef struct
 {
   ArchiveInfo    *archiveInfo;
+
+  uint           blockLength;              /* block length for file entry/file
+                                              data (depend on used crypt
+                                              algorithm)
+                                            */
+
+  CompressInfo   compressInfo;             // file data compress info  
+
+  CryptInfo      cryptInfoFileEntry;       // file entry cryption info
+  CryptInfo      cryptInfoFileData;        // file data cryption info
 
   enum
   {
@@ -58,6 +72,14 @@ typedef struct
 
   uint           headerLength;             // length of header
   bool           headerWrittenFlag;        // TRUE iff header written
+
+  void           *buffer;
+  ulong          bufferLength;
+
+  void           *compressBuffer;
+//  ulong          compressBufferSize;
+  void           *cryptBuffer;
+//  ulong          cryptBufferSize;
 } ArchiveFileInfo;
 
 /***************************** Variables *******************************/
@@ -73,7 +95,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : archive_create
+* Name   : Archive_create
 * Purpose: create archive
 * Input  : -
 * Output : -
@@ -81,13 +103,15 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors archive_create(ArchiveInfo *archiveInfo,
-                      const char  *archiveFileName,
-                      uint64      partSize
+Errors Archive_create(ArchiveInfo     *archiveInfo,
+                      const char      *archiveFileName,
+                      uint64          partSize,
+                      CryptAlgorithms cryptAlgorithm,
+                      const char      *password
                      );
 
 /***********************************************************************\
-* Name   : archive_open
+* Name   : Archive_open
 * Purpose: open archive
 * Input  : -
 * Output : -
@@ -95,12 +119,13 @@ Errors archive_create(ArchiveInfo *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors archive_open(ArchiveInfo *archiveInfo,
-                    const char  *archiveFileName
+Errors Archive_open(ArchiveInfo *archiveInfo,
+                    const char  *archiveFileName,
+                    const char  *password
                    );
 
 /***********************************************************************\
-* Name   : archive_done
+* Name   : Archive_done
 * Purpose: close archive
 * Input  : -
 * Output : -
@@ -108,10 +133,10 @@ Errors archive_open(ArchiveInfo *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors archive_done(ArchiveInfo *archiveInfo);
+Errors Archive_done(ArchiveInfo *archiveInfo);
 
 /***********************************************************************\
-* Name   : archive_eof
+* Name   : Archive_eof
 * Purpose: check if end-of-archive file
 * Input  : -
 * Output : -
@@ -119,10 +144,10 @@ Errors archive_done(ArchiveInfo *archiveInfo);
 * Notes  : -
 \***********************************************************************/
 
-bool archive_eof(ArchiveInfo *archiveInfo);
+bool Archive_eof(ArchiveInfo *archiveInfo);
 
 /***********************************************************************\
-* Name   : archive_newFile
+* Name   : Archive_newFile
 * Purpose: add new file to archive
 * Input  : -
 * Output : -
@@ -130,13 +155,14 @@ bool archive_eof(ArchiveInfo *archiveInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors archive_newFile(ArchiveInfo     *archiveInfo,
+Errors Archive_newFile(ArchiveInfo     *archiveInfo,
                        ArchiveFileInfo *archiveFileInfo,
+                       const String    fileName,
                        const FileInfo  *fileInfo
                       );
 
 /***********************************************************************\
-* Name   : archive_readFile
+* Name   : Archive_readFile
 * Purpose: read file info from archive
 * Input  : -
 * Output : -
@@ -144,15 +170,16 @@ Errors archive_newFile(ArchiveInfo     *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors archive_readFile(ArchiveInfo     *archiveInfo,
+Errors Archive_readFile(ArchiveInfo     *archiveInfo,
                         ArchiveFileInfo *archiveFileInfo,
+                        String          fileName,
                         FileInfo        *fileInfo,
                         uint64          *partOffset,
                         uint64          *partSize
                        );
 
 /***********************************************************************\
-* Name   : archive_closeFile
+* Name   : Archive_closeFile
 * Purpose: clsoe file in archive
 * Input  : -
 * Output : -
@@ -160,10 +187,10 @@ Errors archive_readFile(ArchiveInfo     *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors archive_closeFile(ArchiveFileInfo *archiveFileInfo);
+Errors Archive_closeFile(ArchiveFileInfo *archiveFileInfo);
 
 /***********************************************************************\
-* Name   : archive_writeFileData
+* Name   : Archive_writeFileData
 * Purpose: write data to file in archive
 * Input  : -
 * Output : -
@@ -171,12 +198,13 @@ Errors archive_closeFile(ArchiveFileInfo *archiveFileInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors archive_writeFileData(ArchiveFileInfo *archiveFileInfo,
+Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo,
                              const void      *buffer,
-                             ulong           bufferLength);
+                             ulong           bufferLength
+                            );
 
 /***********************************************************************\
-* Name   : archive_readFileData
+* Name   : Archive_readFileData
 * Purpose: read data from file in archive
 * Input  : -
 * Output : -
@@ -184,7 +212,7 @@ Errors archive_writeFileData(ArchiveFileInfo *archiveFileInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors archive_readFileData(ArchiveFileInfo *archiveFileInfo,
+Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo,
                             void            *buffer,
                             ulong           bufferLength
                            );

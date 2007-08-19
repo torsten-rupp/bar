@@ -1,15 +1,15 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: files functions
 * Systems : all
 *
 \***********************************************************************/
 
-#ifndef __FILES_H__
-#define __FILES_H__
+#ifndef __FILES__
+#define __FILES__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -41,6 +41,13 @@ typedef enum
   FILETYPE_UNKNOWN
 } FileTypes;
 
+typedef enum
+{
+  FILE_OPENMODE_CREATE,
+  FILE_OPENMODE_READ,
+  FILE_OPENMODE_WRITE,
+} FileOpenModes;
+
 /***************************** Datatypes *******************************/
 typedef struct
 {
@@ -57,7 +64,6 @@ typedef struct
 
 typedef struct
 {
-  String name;
   uint64 size;
   uint64 timeLastAccess;
   uint64 timeModified;
@@ -80,104 +86,148 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_getFilePath
+* Purpose: get path of filename
+* Input  : fileName - file name
+*          path     - path variable
 * Output : -
-* Return : -
+* Return : path
 * Notes  : -
 \***********************************************************************/
 
-Errors files_create(FileHandle   *fileHandle,
-                    const String fileName
-                   );
+String Files_getFilePath(String fileName, String path);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_getFileBaseName
+* Purpose: get basename of file
+* Input  : fileName - file name
+*          baseName - basename variable
 * Output : -
-* Return : -
+* Return : basename
 * Notes  : -
 \***********************************************************************/
 
-Errors files_open(FileHandle   *fileHandle,
-                  const String fileName
+String Files_getFileBaseName(String fileName, String baseName);
+
+/***********************************************************************\
+* Name   : Files_fileNameAppend
+* Purpose: append name to file name
+* Input  : fileName - file name
+*          name     - name to append
+* Output : -
+* Return : file name
+* Notes  : -
+\***********************************************************************/
+
+String Files_appendFileName(String fileName, String name);
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Files_openCreate
+* Purpose: create new file
+* Input  : fileHandle - file handle
+*          fileName   - file name
+* Output : fileHandle - file handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Files_open(FileHandle    *fileHandle,
+                  const String  fileName,
+                  FileOpenModes fileOpenMode
                  );
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_close
+* Purpose: close file
+* Input  : fileHandle - file handle
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors files_close(FileHandle *fileHandle);
+Errors Files_close(FileHandle *fileHandle);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_eof
+* Purpose: check if end-of-file
+* Input  : fileHandle - file handle
 * Output : -
-* Return : -
+* Return : TRUE if end-of-file, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool files_eof(FileHandle *fileHandle);
+bool Files_eof(FileHandle *fileHandle);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_read
+* Purpose: read data from file
+* Input  : fileHandle   - file handle
+*          buffer       - buffer for data to read
+*          bufferLength - length of data to read
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors files_read(FileHandle *fileHandle,
+Errors Files_read(FileHandle *fileHandle,
                   void       *buffer,
-                  ulong      bufferLength
+                  ulong      bufferLength,
+                  ulong      *readBytes
                  );
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_write
+* Purpose: write data into file
+* Input  : fileHandle   - file handle
+*          buffer       - buffer for data to write
+*          bufferLength - length of data to write
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors files_write(FileHandle *fileHandle,
+Errors Files_write(FileHandle *fileHandle,
                    const void *buffer,
                    ulong      bufferLength
                   );
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_size
+* Purpose: get file size
+* Input  : fileHandle - file handle
 * Output : -
-* Return : -
+* Return : size of file (in bytes)
 * Notes  : -
 \***********************************************************************/
 
-Errors files_tell(FileHandle *fileHandle,
+uint64 Files_size(FileHandle *fileHandle);
+
+/***********************************************************************\
+* Name   : Files_tell
+* Purpose: get current position in file
+* Input  : fileHandle - file handle
+* Output : offset - offset (0..n-1)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Files_tell(FileHandle *fileHandle,
                   uint64     *offset
                  );
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_seek
+* Purpose: seek in file
+* Input  : fileHandle - file handle
+*          offset     - offset (0..n-1)
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors files_seek(FileHandle *fileHandle, uint64 offset);
+Errors Files_seek(FileHandle *fileHandle, uint64 offset);
 
 /*---------------------------------------------------------------------*/
 
@@ -190,7 +240,18 @@ Errors files_seek(FileHandle *fileHandle, uint64 offset);
 * Notes  : -
 \***********************************************************************/
 
-Errors files_openDirectory(DirectoryHandle *directoryHandle,
+Errors Files_makeDirectory(const String pathName);
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Files_openDirectory(DirectoryHandle *directoryHandle,
                            const String    pathName);
 
 /***********************************************************************\
@@ -202,7 +263,7 @@ Errors files_openDirectory(DirectoryHandle *directoryHandle,
 * Notes  : -
 \***********************************************************************/
 
-void files_closeDirectory(DirectoryHandle *directoryHandle);
+void Files_closeDirectory(DirectoryHandle *directoryHandle);
 
 /***********************************************************************\
 * Name   : 
@@ -213,7 +274,7 @@ void files_closeDirectory(DirectoryHandle *directoryHandle);
 * Notes  : -
 \***********************************************************************/
 
-bool files_endOfDirectory(DirectoryHandle *directoryHandle);
+bool Files_endOfDirectory(DirectoryHandle *directoryHandle);
 
 /***********************************************************************\
 * Name   : 
@@ -224,12 +285,12 @@ bool files_endOfDirectory(DirectoryHandle *directoryHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors files_readDirectory(DirectoryHandle *directoryHandle,
+Errors Files_readDirectory(DirectoryHandle *directoryHandle,
                            String          fileName
                           );
 
 /***********************************************************************\
-* Name   : files_getType
+* Name   : Files_getType
 * Purpose: get file type
 * Input  : fileName - file name
 * Output : -
@@ -237,7 +298,18 @@ Errors files_readDirectory(DirectoryHandle *directoryHandle,
 * Notes  : -
 \***********************************************************************/
 
-FileTypes files_getType(String fileName);
+FileTypes Files_getType(String fileName);
+
+/***********************************************************************\
+* Name   : Files_exist
+* Purpose: check if file exist
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if file exists, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool Files_exist(String fileName);
 
 /***********************************************************************\
 * Name   : 
@@ -248,7 +320,20 @@ FileTypes files_getType(String fileName);
 * Notes  : -
 \***********************************************************************/
 
-Errors files_getInfo(String   fileName,
+Errors Files_getInfo(String   fileName,
+                     FileInfo *fileInfo
+                    );
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Files_setInfo(String   fileName,
                      FileInfo *fileInfo
                     );
 
@@ -256,6 +341,6 @@ Errors files_getInfo(String   fileName,
   }
 #endif
 
-#endif /* __FILES_H__ */
+#endif /* __FILES__ */
 
 /* end of file */

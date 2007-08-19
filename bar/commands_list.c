@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -25,6 +25,7 @@
 #include "strings.h"
 
 #include "bar.h"
+#include "patterns.h"
 #include "files.h"
 #include "archive.h"
 
@@ -60,7 +61,7 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printFileInfo(const FileInfo *fileInfo, uint64 partOffset, uint64 partSize)
+LOCAL void printFileInfo(const String fileName, const FileInfo *fileInfo, uint64 partOffset, uint64 partSize)
 {
   assert(fileInfo != NULL);
 
@@ -68,48 +69,54 @@ printf("%10llu %10llu..%10llu %s\n",
 fileInfo->size,
 partOffset,
 partOffset+partSize-1,
-String_cString(fileInfo->name)
+String_cString(fileName)
 );
 }
 
 /*---------------------------------------------------------------------*/
 
-bool command_list(FileNameList *fileNameList,
-                  PatternList  *includeList,
-                  PatternList  *excludeList)
+bool command_list(FileNameList *archiveFileNameList,
+                  PatternList  *includePatternList,
+                  PatternList  *excludePatternList,
+                  const char   *password
+                 )
 {
   Errors          error;
-  FileNameNode    *fileNameNode;
+  String          fileName;
+  FileNameNode    *archiveFileNameNode;
   ArchiveInfo     archiveInfo;
   ArchiveFileInfo archiveFileInfo;
   FileInfo        fileInfo;
   uint64          partOffset,partSize;
 
-  assert(fileNameList != NULL);
-  assert(includeList != NULL);
-  assert(excludeList != NULL);
+  assert(archiveFileNameList != NULL);
+  assert(includePatternList != NULL);
+  assert(excludePatternList != NULL);
 
-  fileInfo.name = String_new();
+  fileName = String_new();
  
-  fileNameNode = fileNameList->head;
-  while (fileNameNode != NULL)
+  archiveFileNameNode = archiveFileNameList->head;
+  while (archiveFileNameNode != NULL)
   {
     /* open archive */
-    error = archive_open(&archiveInfo,
-                         String_cString(fileNameNode->fileName)
+    error = Archive_open(&archiveInfo,
+                         String_cString(archiveFileNameNode->fileName),
+                         password
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open file '%s' (error: %s)!\n",String_cString(fileNameNode->fileName),strerror(errno));
+      printError("Cannot open file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),strerror(errno));
       return FALSE;
 HALT_INTERNAL_ERROR("x");
     }
 
     /* list contents */
-    while (!archive_eof(&archiveInfo))
+    while (!Archive_eof(&archiveInfo))
     {
-      error = archive_readFile(&archiveInfo,
+      /* open archive file */
+      error = Archive_readFile(&archiveInfo,
                                &archiveFileInfo,
+                               fileName,
                                &fileInfo,
                                &partOffset,
                                &partSize
@@ -118,19 +125,28 @@ HALT_INTERNAL_ERROR("x");
       {
 HALT_INTERNAL_ERROR("x");
       }
-      printFileInfo(&fileInfo,partOffset,partSize);
-      archive_closeFile(&archiveFileInfo);
+
+      if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName))
+          && !Patterns_matchList(excludePatternList,fileName)
+         )
+      {
+        /* output file info */
+        printFileInfo(fileName,&fileInfo,partOffset,partSize);
+      }
+
+      /* close archive file */
+      Archive_closeFile(&archiveFileInfo);
     }
 
     /* close archive */
-    archive_done(&archiveInfo);
+    Archive_done(&archiveInfo);
 
     /* next file */
-    fileNameNode = fileNameNode->next;
+    archiveFileNameNode = archiveFileNameNode->next;
   }
 
   /* free resources */
-  String_delete(fileInfo.name);
+  String_delete(fileName);
 
   return TRUE;
 }

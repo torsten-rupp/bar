@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -12,12 +12,16 @@
 
 #--------------------------------- tool chain --------------------------------
 
-CC         = gcc
-CC_FLAGS   = -Wall -g -O0
-CC_DEFINES = -D_LARGEFILE64_SOURCE
+CC                  = gcc
+CC_FLAGS            = -Wall -g -O0
+CC_DEFINES          = -D_LARGEFILE64_SOURCE
+CC_INCLUDES         =
 
-LD         = gcc
-LD_FLAGS   =
+LD                  = gcc
+LD_FLAGS            =
+LD_LIBRARY_PATHS    = /usr/local/lib
+LD_LIBRARIES        = pthread
+LD_STATIC_LIBRARIES = gcrypt gpg-error
 
 #---------------------------------- commands----------------------------------
 
@@ -30,7 +34,16 @@ PERL = perl
 #---------------------------------- rules ------------------------------------
 
 %.o:%.c
-	$(CC) $(CC_FLAGS) $(CC_DEFINES) -o $*.o -c $*.c
+	$(CC) $(CC_FLAGS) $(CC_DEFINES) $(for z,$(CC_INCLUDES),-I$z) -o $*.o -c $*.c
+
+%:%.o
+	$(LD) \
+          $(LD_FLAGS) \
+          -o $@ \
+          $^ \
+          $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(foreach z,$(LD_LIBRARIES),-l$z) \
+          -Wl,-static $(foreach z,$(LD_STATIC_LIBRARIES),-l$z)
 
 #--------------------------------- objects -----------------------------------
 
@@ -42,6 +55,9 @@ SOURCES =       bar.c \
                 files.c \
                 archive.c \
                 chunks.c \
+                patterns.c \
+                compress.c \
+                crypt.c \
                 \
                 global.c \
                 cmdoptions.c \
@@ -62,8 +78,6 @@ all:		$(TARGETS)
 
 clean:
 		$(RMF) $(OBJECTS) $(INTERMEDIATE) $(TARGETS)
-		$(RMF) $(OBJECTS) $(INTERMEDIATE) $(TARGETS)
-		$(RMF) $(OBJECTS) $(INTERMEDIATE) $(TARGETS)
 
 distclean: clean
 	$(RMF) Makefile.depend
@@ -75,7 +89,6 @@ depend: archive_format.h
         done;
 
 bar: $(OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $^ -lpthread
 
 archive_format.h: archive_format.def
 	$(PERL) archive_format.pl < $^ -h $@
@@ -84,18 +97,48 @@ archive_format.c: archive_format.def
 
 -include Makefile.depend
 
-.PHONE: pack1 list1 pack2 list2
-pack1: bar
+.PHONE: p0 pack0 l0 list0 r0 restore0 t0 c0 compare0
+p0 pack0: bar
+	./bar -a data/data.back -c demo/abc.dat --crypt-algorithm=aes128 --password=test
+
+l0 list0: bar
+	./bar -l data/data.back --password=test
+
+r0 restore0: bar
+	./bar --directory data/restore -x data/data.back --password=test
+
+t0 c0 compare0: bar
+	./bar -t data/data.back --password=test
+
+.PHONE: p1 pack1 l1 list1 r1 restore1 t1 c1 compare1
+p1 pack1: bar
 	./bar -a data/data.back -c demo
 
-list1: bar
+l1 list1: bar
 	./bar -l data/data.back
 
-pack2: bar
+r1 restore1: bar
+	./bar --directory data/restore -x data/data.back
+
+t1 c1 compare1: bar
+	./bar -t data/data.back
+
+.PHONE: p2 pack2 l2 list2 r2 restore2
+p2 pack2: bar
 	./bar -a data/data.back -c -s 1000000 demo
 
-list2: bar
+l2 list2: bar
 	./bar -l data/data.back.*
+
+r2 restore2:
+	./bar --directory data/restore -x data/data.back.*
+
+c2 compare2: bar
+	./bar -t data/data.back.*
+
+.PHONE: p3 pack3
+p3 pack3: bar
+	./bar -a data/data.back -c "demo/abc*.dat"
 
 clean_data:
 	$(RMF) data/data.back*

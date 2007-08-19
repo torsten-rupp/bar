@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.1.1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems :
@@ -97,7 +97,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       (*commandLineOption->variable.enumeration) = commandLineOption->enumerationValue;
       break;
     case CMD_OPTION_TYPE_SELECT:
-      assert(commandLineOption->variable.enumeration != NULL);
+      assert(commandLineOption->variable.select != NULL);
       i = 0;
       while ((i < commandLineOption->selectCount) && (strcmp(commandLineOption->selects[i].name,value) != 0))
       {
@@ -116,8 +116,8 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       break;
 
     case CMD_OPTION_TYPE_SPECIAL:
-      assert(commandLineOption->variable.parseSpecial != NULL);
-      if (!commandLineOption->variable.parseSpecial(commandLineOption->userData, value, commandLineOption->defaultValue.p))
+      assert(commandLineOption->variable.special != NULL);
+      if (!commandLineOption->parseSpecial(commandLineOption->variable.special,value,commandLineOption->defaultValue.p,commandLineOption->userData))
       {
         if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Cannot parse value '%s' for option '%s%s'!\n",value,prefix,name);
         return FALSE;
@@ -136,21 +136,20 @@ bool cmdOptions_parse(const char              *argv[],
                       const char              *errorPrefix
                      )
 {
-  int        argumentsCount;
-  bool       endOfOptionsFlag;
-  uint       z;
-  const char *s;
-  char       name[128];
-  const char *optionChars;
-  const char *value;
-  uint       i;
+  unsigned int priority,maxPriority;
+  bool         endOfOptionsFlag;
+  uint         z;
+  const char   *s;
+  char         name[128];
+  const char   *optionChars;
+  const char   *value;
+  uint         i;
+  int          argumentsCount;
 
   assert(argv != NULL);
   assert(argc != NULL);
   assert((*argc) >= 1);
   assert(commandLineOptions != NULL);
-
-  argumentsCount = 1;
 
   /* set default values */
   for (i = 0; i < commandLineOptionCount; i++)
@@ -174,8 +173,8 @@ bool cmdOptions_parse(const char              *argv[],
         (*commandLineOptions[i].variable.enumeration) = commandLineOptions[i].defaultValue.enumeration;
         break;
       case CMD_OPTION_TYPE_SELECT:
-        assert(commandLineOptions[i].variable.enumeration != NULL);
-        (*commandLineOptions[i].variable.enumeration) = commandLineOptions[i].defaultValue.enumeration;
+        assert(commandLineOptions[i].variable.select != NULL);
+        (*commandLineOptions[i].variable.select) = commandLineOptions[i].defaultValue.select;
         break;
       case CMD_OPTION_TYPE_STRING:
         assert(commandLineOptions[i].variable.string != NULL);
@@ -186,159 +185,183 @@ bool cmdOptions_parse(const char              *argv[],
     }
   }
 
-  endOfOptionsFlag = FALSE;
-  z = 1;
-  while (z < (*argc))
+  /* get max. option priority */
+  maxPriority = 0;
+  for (i = 0; i < commandLineOptionCount; i++)
   {
-    if      (!endOfOptionsFlag && (strcmp(argv[z],"--") == 0))
-    {
-      endOfOptionsFlag = TRUE;
-    }
-    else if (!endOfOptionsFlag && (strncmp(argv[z],"--",2) == 0))
-    {
-      /* get name */
-      s = strchr(argv[z]+2,'=');
-      if (s != NULL)
-      {
-        strncpy(name,argv[z]+2,MIN(s-(argv[z]+2),sizeof(name)-1));
-      }
-      else
-      {
-        strncpy(name,argv[z]+2,sizeof(name)-1);
-      }
-      name[sizeof(name)-1] = '\0';
+    maxPriority = MAX(maxPriority,commandLineOptions[i].priority);
+  }
 
-      /* find option */
-      i = 0;
-      while ((i < commandLineOptionCount) && (strcmp(commandLineOptions[i].name,name) != 0))
-      {
-        i++;
-      }
-      if (i >= commandLineOptionCount)
-      {
-        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown option '--%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
-        return FALSE;
-      }
-
-      /* get option value */
-      if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER)
-               || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE )
-               || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT )
-               || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING )
-               || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL)
-              )
-      {
-        if (s != NULL)
-        {
-          /* skip '=' */
-          s++;
-          value = s;
-        }
-        else
-        {
-          if ((z+1) >= (*argc))
-          {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sNo value given to option '--%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
-            return FALSE;
-          }
-          z++;
-          value = argv[z];
-        }
-      }
-      else if ((commandLineOptions[i].type == CMD_OPTION_TYPE_BOOLEAN))
-      {
-        if (s != NULL)
-        {
-          /* skip '=' */
-          s++;
-          value = s;
-        }
-        else
-        {
-          value = NULL;
-        }
-      }
-
-      /* process option */
-      if (!processOption(&commandLineOptions[i],"--",name,value,errorOutputHandle,errorPrefix))
-      {
-        return FALSE;
-      }
-    }
-    else if (!endOfOptionsFlag && (strncmp(argv[z],"-",1) == 0))
+  /* parse options */
+  argumentsCount = 1;
+  for (priority = 0; priority <= maxPriority; priority++)
+  {
+    endOfOptionsFlag = FALSE;
+    z = 1;
+    while (z < (*argc))
     {
-      /* get option chars */
-      optionChars = argv[z]+1;
-      while ((optionChars != NULL) && (*optionChars) != '\0')
+      if      (!endOfOptionsFlag && (strcmp(argv[z],"--") == 0))
+      {
+        endOfOptionsFlag = TRUE;
+      }
+      else if (!endOfOptionsFlag && (strncmp(argv[z],"--",2) == 0))
       {
         /* get name */
-        name[0] = (*optionChars);
-        name[1] = '\0';
+        s = strchr(argv[z]+2,'=');
+        if (s != NULL)
+        {
+          strncpy(name,argv[z]+2,MIN(s-(argv[z]+2),sizeof(name)-1));
+          name[MIN(s-(argv[z]+2),sizeof(name)-1)] = '\0';
+        }
+        else
+        {
+          strncpy(name,argv[z]+2,sizeof(name)-1);
+          name[sizeof(name)-1] = '\0';
+        }
 
         /* find option */
         i = 0;
-        while ((i < commandLineOptionCount) && (commandLineOptions[i].shortName != name[0]))
+        while ((i < commandLineOptionCount) && (strcmp(commandLineOptions[i].name,name) != 0))
         {
           i++;
         }
-        if (i >= commandLineOptionCount)
+        if (i < commandLineOptionCount)
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown option '-%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
-          return FALSE;
-        }
-
-        /* find optional value for option */
-        if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER)
-                 || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE )
-                 || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT )
-                 || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING )
-                 || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL)
-                )
-        {
-          /* next argument is option value */
-          if ((z+1) >= (*argc))
+          /* get option value */
+          if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER)
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL)
+                  )
           {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sNo value given to option '-%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
-            return FALSE;
+            if (s != NULL)
+            {
+              /* skip '=' */
+              s++;
+              value = s;
+            }
+            else
+            {
+              if ((z+1) >= (*argc))
+              {
+                if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sNo value given to option '--%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
+                return FALSE;
+              }
+              z++;
+              value = argv[z];
+            }
           }
-          z++;
-          s = argv[z];
-          value = s;
+          else if ((commandLineOptions[i].type == CMD_OPTION_TYPE_BOOLEAN))
+          {
+            if (s != NULL)
+            {
+              /* skip '=' */
+              s++;
+              value = s;
+            }
+            else
+            {
+              value = NULL;
+            }
+          }
+
+          if (commandLineOptions[i].priority == priority)
+          {
+            /* process option */
+            if (!processOption(&commandLineOptions[i],"--",name,value,errorOutputHandle,errorPrefix))
+            {
+              return FALSE;
+            }
+          }
         }
         else
         {
-          s = NULL;
-          value = NULL;
-        }
-
-        /* process option */
-        if (!processOption(&commandLineOptions[i],"-",name,value,errorOutputHandle,errorPrefix))
-        {
+          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown option '--%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
           return FALSE;
-        }
-
-        /* next option char */
-        if (s == NULL)
-        {
-          optionChars++;
-        }
-        else
-        {
-          optionChars = NULL;
         }
       }
-    }
-    else
-    {
-      /* add argument */
-      argv[argumentsCount] = argv[z];
-      argumentsCount++;
-    }
+      else if (!endOfOptionsFlag && (strncmp(argv[z],"-",1) == 0))
+      {
+        /* get option chars */
+        optionChars = argv[z]+1;
+        while ((optionChars != NULL) && (*optionChars) != '\0')
+        {
+          /* get name */
+          name[0] = (*optionChars);
+          name[1] = '\0';
 
-    z++;
+          /* find option */
+          i = 0;
+          while ((i < commandLineOptionCount) && (commandLineOptions[i].shortName != name[0]))
+          {
+            i++;
+          }
+          if (i < commandLineOptionCount)
+          {
+            /* find optional value for option */
+            if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER)
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL)
+                    )
+            {
+              /* next argument is option value */
+              if ((z+1) >= (*argc))
+              {
+                if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sNo value given to option '-%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
+                return FALSE;
+              }
+              z++;
+              s = argv[z];
+              value = s;
+            }
+            else
+            {
+              s = NULL;
+              value = NULL;
+            }
+
+            if (commandLineOptions[i].priority == priority)
+            {
+              /* process option */
+              if (!processOption(&commandLineOptions[i],"-",name,value,errorOutputHandle,errorPrefix))
+              {
+                return FALSE;
+              }
+            }
+
+            /* next option char */
+            if (s == NULL)
+            {
+              optionChars++;
+            }
+            else
+            {
+              optionChars = NULL;
+            }
+          }
+          else
+          {
+            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown option '-%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
+            return FALSE;
+          }
+        }
+      }
+      else
+      {
+        if (priority >= maxPriority)
+        {
+          /* add argument */
+          argv[argumentsCount] = argv[z];
+          argumentsCount++;
+        }
+      }
+
+      z++;
+    }
   }
-
-  /* store new number of arguments */
   (*argc) = argumentsCount;
 
   return TRUE;

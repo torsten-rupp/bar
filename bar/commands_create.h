@@ -1,15 +1,15 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive functions
+* Contents: Backup ARchiver archive functions: create
 * Systems : all
 *
 \***********************************************************************/
 
-#ifndef __COMMAND_CREATE_H__
-#define __COMMAND_CREATE_H__
+#ifndef __COMMAND_CREATE__
+#define __COMMAND_CREATE__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -17,6 +17,8 @@
 #include <assert.h>
 
 #include "bar.h"
+#include "patterns.h"
+#include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -45,17 +47,19 @@
 * Notes  : -
 \***********************************************************************/
 
-bool command_create(const char  *fileName,
-                    PatternList *includeList,
-                    PatternList *excludeList,
-                    const char  *tmpDirectory,
-                    ulong       partSize
+bool command_create(const char      *archiveFileName,
+                    PatternList     *includePatternList,
+                    PatternList     *excludePatternList,
+                    const char      *tmpDirectory,
+                    ulong           partSize,
+                    CryptAlgorithms cryptAlgorithm,
+                    const char      *password
                    );
 
 #ifdef __cplusplus
   }
 #endif
 
-#endif /* __COMMAND_CREATE_H__ */
+#endif /* __COMMAND_CREATE__ */
 
 /* end of file */

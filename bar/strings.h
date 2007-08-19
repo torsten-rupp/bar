@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems : all
@@ -20,7 +20,8 @@
 
 /***************************** Constants *******************************/
 
-#define STRING_END -1
+#define STRING_BEGIN 0
+#define STRING_END   -1
 
 /***************************** Datatypes *******************************/
 
@@ -117,7 +118,8 @@ String String_copy(const String fromString);
 /***********************************************************************\
 * Name   : String_sub
 * Purpose: get sub-string from string
-* Input  : fromString - string to get sub-string from
+* Input  : string     - string to set
+*          fromString - string to get sub-string from
 *          index      - start index (0..n-1)
 *          length     - length of sub-string (0..n)
 * Output : -
@@ -125,7 +127,7 @@ String String_copy(const String fromString);
 * Notes  : -
 \***********************************************************************/
 
-String String_sub(const String fromString, unsigned long index, long length);
+String String_sub(String string, const String fromString, unsigned long index, long length);
 
 /***********************************************************************\
 * Name   : String_append, String_appendCString, String_appendChar
@@ -259,7 +261,7 @@ bool String_equalsChar(String string, char ch);
 * Name   : String_find, String_findCString, String_findChar
 * Purpose: find string in string
 * Input  : string - string
-*          index - index to start search
+*          index - index to start search (0..n-1)
 *          findString - string to find/s - C-string to find/
 *          ch - character to find
 * Output : -
@@ -270,9 +272,12 @@ bool String_equalsChar(String string, char ch);
 long String_find(String string, unsigned long index, String findString);
 long String_findCString(String string, unsigned long index, const char *s);
 long String_findChar(String string, unsigned long index, char ch);
+long String_findLast(String string, long index, String findString);
+long String_findLastCString(String string, long index, const char *s);
+long String_findLastChar(String string, long index, char ch);
 
 /***********************************************************************\
-* Name   : String_findCString
+* Name   : String_iterate
 * Purpose: iterate over string
 * Input  : string                - string
 *          stringIterateFunction - iterator function
@@ -336,21 +341,20 @@ String String_format(String string, const char *format, ...);
 * Notes  : -
 \***********************************************************************/
 
-void String_initTokenizer(StringTokenizer *stringTokenizer, String string, const char *separatorChars, const char *stringChars);
+void String_initTokenizer(StringTokenizer *stringTokenizer, const String string, const char *separatorChars, const char *stringChars);
 void String_doneTokenizer(StringTokenizer *stringTokenizer);
 
 /***********************************************************************\
 * Name   : String_getNextToken
 * Purpose: find next token
 * Input  : stringTokenizer - string tokenizer
-*          token           - token
 * Output : token      - token
 *          tokenIndex - token index (could be NULL)
 * Return : TRUE if token found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool String_getNextToken(StringTokenizer *stringTokenizer, String *token, long *tokenIndex);
+bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, long *tokenIndex);
 
 /***********************************************************************\
 * Name   : String_parse

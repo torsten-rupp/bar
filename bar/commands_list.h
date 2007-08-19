@@ -1,15 +1,15 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive functions
+* Contents: Backup ARchiver archive functions: list
 * Systems : all
 *
 \***********************************************************************/
 
-#ifndef __COMMAND_LIST_H__
-#define __COMMAND_LIST_H__
+#ifndef __COMMAND_LIST__
+#define __COMMAND_LIST__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -17,6 +17,8 @@
 #include <assert.h>
 
 #include "bar.h"
+#include "patterns.h"
+#include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -46,14 +48,15 @@
 \***********************************************************************/
 
 bool command_list(FileNameList *fileNameList,
-                  PatternList  *includeList,
-                  PatternList  *excludeList
+                  PatternList  *includePatternList,
+                  PatternList  *excludePatternList,
+                  const char   *password
                  );
 
 #ifdef __cplusplus
   }
 #endif
 
-#endif /* __COMMAND_LIST_H__ */
+#endif /* __COMMAND_LIST__ */
 
 /* end of file */

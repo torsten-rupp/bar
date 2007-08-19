@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -67,15 +67,20 @@ LOCAL struct
 #endif
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : getDefinitionSize
+* Purpose: get size of chunk definition
+* Input  : data       - chunk data
+*          definition - chunk definition
+*          alignment  - chunk alignment
 * Output : -
-* Return : -
+* Return : size of definition (in bytes)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ulong getDefinitionSize(const void *data, const int *definition)
+LOCAL ulong getDefinitionSize(const void *data,
+                              const int  *definition,
+                              uint       alignment
+                             )
 {
   int   z;
   ulong size;
@@ -129,30 +134,44 @@ LOCAL ulong getDefinitionSize(const void *data, const int *definition)
     }
   }
 
+  /* add padding for alignment */
+  if ((alignment > 0) && (size%alignment > 0))
+  {
+    size += alignment-size%alignment;
+  }
+
   return size;
 }
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
+* Name   : readDefinition
+* Purpose: read chunk definition
+* Input  : userData   - user data
+*          definition - chunk definition
+*          alignment  - chunk alignment
+* Output : data      - read data
+*          bytesRead - number of bytes read
+* Return : TRUE if read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 LOCAL bool readDefinition(void      *userData,
                           void      *data,
                           const int *definition,
+                          uint      alignment,
                           ulong     *bytesRead
                          )
 {
-  int z;
+  int   z;
+  ulong length;
+  uint  padSize;
+  char  padBuffer[16];
 
   assert(bytesRead != NULL);
 
   (*bytesRead) = 0;
 
+  /* read data */
   if (definition != NULL)
   {
     for (z = 0; definition[z] != 0; z++)
@@ -234,7 +253,6 @@ LOCAL bool readDefinition(void      *userData,
         case CHUNK_DATATYPE_NAME:
           {
             uint16 n;
-            ulong  length;
             void   *buffer;
             String s;
 
@@ -273,25 +291,49 @@ LOCAL bool readDefinition(void      *userData,
     }
   }
 
+  /* read padding for alignment */
+  if ((alignment > 0) && (((*bytesRead)%alignment) > 0))
+  {
+    padSize = alignment-(*bytesRead)%alignment;
+    while (padSize > 0)
+    {
+      length = MIN(padSize,sizeof(padBuffer));
+      if (!IO.readFile(userData,padBuffer,length))
+      {
+        return FALSE;
+      }
+      (*bytesRead) += length;
+
+      padSize -= length;
+    }
+  }
+
   return TRUE;
 }
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
+* Name   : writeDefinition
+* Purpose: write chunk definition
+* Input  : userData   - user data
+*          data       - chunk data
+*          definition - chunk definition
+*          alignment  - chunk alignment
+* Output : bytesWritten - number of bytes written
+* Return : TRUE if written, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool writeDefinition(void       *userData,
-                     const void *data,
-                     const int  *definition,
-                     ulong      *bytesWritten
-                    )
+LOCAL bool writeDefinition(void       *userData,
+                           const void *data,
+                           const int  *definition,
+                           uint      alignment,
+                           ulong      *bytesWritten
+                          )
 {
-  int z;
+  int   z;
+  ulong length;
+  uint  padSize;
+  char  padBuffer[16];
 
   assert(bytesWritten != NULL);
 
@@ -373,7 +415,6 @@ bool writeDefinition(void       *userData,
         case CHUNK_DATATYPE_NAME:
           {
             String s;
-            ulong  length;
             uint16 n;
 
             assert(data != NULL);
@@ -404,22 +445,30 @@ bool writeDefinition(void       *userData,
     }
   }
 
+  /* write padding for alignment */
+  if ((alignment > 0) && (((*bytesWritten)%alignment) > 0))
+  {
+    memset(padBuffer,0,sizeof(padBuffer));
+    padSize = alignment-(*bytesWritten)%alignment;
+    while (padSize > 0)
+    {
+      length = MIN(padSize,sizeof(padBuffer));
+      if (!IO.writeFile(userData,padBuffer,length))
+      {
+        return FALSE;
+      }
+      (*bytesWritten) += length;
+
+      padSize -= length;
+    }
+  }
+
   return TRUE;
 }
 
 /*---------------------------------------------------------------------*/
 
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_initF(bool(*endOfFile)(void *userData),
+bool Chunks_initF(bool(*endOfFile)(void *userData),
                   bool(*readFile)(void *userData, void *buffer, ulong length),
                   bool(*writeFile)(void *userData, const void *buffer, ulong length),
                   bool(*tellFile)(void *userData, uint64 *offset),
@@ -435,24 +484,16 @@ bool chunks_initF(bool(*endOfFile)(void *userData),
   return TRUE;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void chunks_doneF(void)
+void Chunks_doneF(void)
 {
 }
 
-bool chunks_init(ChunkInfo *chunkInfo,
+bool Chunks_init(ChunkInfo *chunkInfo,
                  ChunkInfo *parentChunkInfo,
                  void      *userData,
                  ChunkId   chunkId,
-                 int       *definition
+                 int       *definition,
+                 uint      alignment
                 )
 {
   assert(chunkInfo != NULL);
@@ -462,6 +503,7 @@ bool chunks_init(ChunkInfo *chunkInfo,
 
   chunkInfo->mode       = CHUNK_MODE_UNKNOWN;
   chunkInfo->definition = definition;
+  chunkInfo->alignment  = alignment;
 
   chunkInfo->id         = chunkId;
   chunkInfo->size       = 0;
@@ -471,22 +513,13 @@ bool chunks_init(ChunkInfo *chunkInfo,
   return TRUE;
 }
 
-void chunks_done(ChunkInfo *chunkInfo)
+void Chunks_done(ChunkInfo *chunkInfo)
 {
   assert(chunkInfo != NULL);
 
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_next(void        *userData,
+bool Chunks_next(void        *userData,
                  ChunkHeader *chunkHeader)
 {
   uint64 offset;
@@ -503,7 +536,7 @@ bool chunks_next(void        *userData,
   chunkHeader->offset = offset;
 
   /* read chunk header */
-  if (!readDefinition(userData,&chunk,CHUNK_DEFINITION,&bytesRead))
+  if (!readDefinition(userData,&chunk,CHUNK_DEFINITION,0,&bytesRead))
   {
     return FALSE;
   }
@@ -513,16 +546,7 @@ bool chunks_next(void        *userData,
   return TRUE;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_skip(void        *userData,
+bool Chunks_skip(void        *userData,
                  ChunkHeader *chunkHeader
                 )
 {
@@ -536,30 +560,12 @@ bool chunks_skip(void        *userData,
   return TRUE;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_eof(void *userData)
+bool Chunks_eof(void *userData)
 {
   return IO.endOfFile(userData);
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_open(ChunkInfo   *chunkInfo,
+bool Chunks_open(ChunkInfo   *chunkInfo,
                  ChunkHeader *chunkHeader,
                  void        *data
                 )
@@ -575,7 +581,7 @@ bool chunks_open(ChunkInfo   *chunkInfo,
   chunkInfo->mode   = CHUNK_MODE_READ;
   chunkInfo->index  = 0;
 
-  if (!readDefinition(chunkInfo->userData,data,chunkInfo->definition,&bytesRead))
+  if (!readDefinition(chunkInfo->userData,data,chunkInfo->definition,chunkInfo->alignment,&bytesRead))
   {
     return FALSE;
   }
@@ -588,16 +594,7 @@ bool chunks_open(ChunkInfo   *chunkInfo,
   return TRUE;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_new(ChunkInfo  *chunkInfo,
+bool Chunks_new(ChunkInfo  *chunkInfo,
                 const void *data
                )
 {
@@ -624,7 +621,7 @@ bool chunks_new(ChunkInfo  *chunkInfo,
   /* write chunk header id */
   chunkHeader.id   = 0;
   chunkHeader.size = 0;
-  if (!writeDefinition(chunkInfo->userData,&chunkHeader,CHUNK_DEFINITION,&bytesWritten))
+  if (!writeDefinition(chunkInfo->userData,&chunkHeader,CHUNK_DEFINITION,0,&bytesWritten))
   {
     return FALSE;
   }
@@ -639,11 +636,12 @@ bool chunks_new(ChunkInfo  *chunkInfo,
   /* write chunk data */
   if (chunkInfo->definition != NULL)
   {
-    if (!writeDefinition(chunkInfo->userData,data,chunkInfo->definition,&bytesWritten))
+    if (!writeDefinition(chunkInfo->userData,data,chunkInfo->definition,chunkInfo->alignment,&bytesWritten))
     {
       return FALSE;
     }
     chunkInfo->index += bytesWritten;
+    chunkInfo->size  += bytesWritten;
     if (chunkInfo->parentChunkInfo != NULL)
     {
       chunkInfo->parentChunkInfo->index += bytesWritten;
@@ -654,16 +652,7 @@ bool chunks_new(ChunkInfo  *chunkInfo,
   return TRUE;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_close(ChunkInfo *chunkInfo)
+bool Chunks_close(ChunkInfo *chunkInfo)
 {
   uint64      offset;
   ChunkHeader chunkHeader;
@@ -688,7 +677,7 @@ bool chunks_close(ChunkInfo *chunkInfo)
       }
       chunkHeader.id   = chunkInfo->id;
       chunkHeader.size = chunkInfo->size;
-      if (!writeDefinition(chunkInfo->userData,&chunkHeader,CHUNK_DEFINITION,&bytesWritten))
+      if (!writeDefinition(chunkInfo->userData,&chunkHeader,CHUNK_DEFINITION,0,&bytesWritten))
       {
         return FALSE;
       }
@@ -708,16 +697,7 @@ bool chunks_close(ChunkInfo *chunkInfo)
   return TRUE; 
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_nextSub(ChunkInfo   *chunkInfo,
+bool Chunks_nextSub(ChunkInfo   *chunkInfo,
                     ChunkHeader *chunkHeader
                    )
 {
@@ -741,7 +721,7 @@ bool chunks_nextSub(ChunkInfo   *chunkInfo,
   chunkHeader->offset = offset;
 
   /* read chunk header */
-  if (!readDefinition(chunkInfo->userData,&chunk,CHUNK_DEFINITION,&bytesRead))
+  if (!readDefinition(chunkInfo->userData,&chunk,CHUNK_DEFINITION,0,&bytesRead))
   {
     return FALSE;
   }
@@ -762,16 +742,7 @@ bool chunks_nextSub(ChunkInfo   *chunkInfo,
   return TRUE; 
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_skipSub(ChunkInfo   *chunkInfo,
+bool Chunks_skipSub(ChunkInfo   *chunkInfo,
                     ChunkHeader *chunkHeader
                    )
 {
@@ -779,56 +750,29 @@ bool chunks_skipSub(ChunkInfo   *chunkInfo,
   return TRUE; 
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_eofSub(ChunkInfo *chunkInfo)
+bool Chunks_eofSub(ChunkInfo *chunkInfo)
 {
   return chunkInfo->index>=chunkInfo->size;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-ulong chunks_getSize(ChunkInfo  *chunkInfo,
+ulong Chunks_getSize(ChunkInfo  *chunkInfo,
                      const void *data
                     )
 {
   assert(chunkInfo != NULL);
   assert(data != NULL);
 
-  return CHUNK_HEADER_SIZE+getDefinitionSize(data,chunkInfo->definition);
+  return CHUNK_HEADER_SIZE+getDefinitionSize(data,chunkInfo->definition,chunkInfo->alignment);
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_read(ChunkInfo *chunkInfo, void *data)
+bool Chunks_read(ChunkInfo *chunkInfo, void *data)
 {
   ulong bytesRead;
 
   assert(chunkInfo != NULL);
   assert(data != NULL);
 
-  if (!readDefinition(chunkInfo->userData,data,chunkInfo->definition,&bytesRead))
+  if (!readDefinition(chunkInfo->userData,data,chunkInfo->definition,chunkInfo->alignment,&bytesRead))
   {
     return FALSE;
   }
@@ -841,16 +785,7 @@ bool chunks_read(ChunkInfo *chunkInfo, void *data)
   return TRUE;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_write(ChunkInfo *chunkInfo, const void *data)
+bool Chunks_write(ChunkInfo *chunkInfo, const void *data)
 {
   uint64 offset;
   ulong bytesWritten;
@@ -865,7 +800,7 @@ bool chunks_write(ChunkInfo *chunkInfo, const void *data)
   }
   assert(offset == chunkInfo->offset+CHUNK_HEADER_SIZE);
 
-  if (!writeDefinition(chunkInfo->userData,data,chunkInfo->definition,&bytesWritten))
+  if (!writeDefinition(chunkInfo->userData,data,chunkInfo->definition,chunkInfo->alignment,&bytesWritten))
   {
     return FALSE;
   }
@@ -880,16 +815,7 @@ bool chunks_write(ChunkInfo *chunkInfo, const void *data)
   return TRUE;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_update(ChunkInfo *chunkInfo, const void *data)
+bool Chunks_update(ChunkInfo *chunkInfo, const void *data)
 {
   uint64 offset;
   ulong  bytesWritten;
@@ -905,7 +831,7 @@ bool chunks_update(ChunkInfo *chunkInfo, const void *data)
   {
     return FALSE;
   }
-  if (!writeDefinition(chunkInfo->userData,data,chunkInfo->definition,&bytesWritten))
+  if (!writeDefinition(chunkInfo->userData,data,chunkInfo->definition,chunkInfo->alignment,&bytesWritten))
   {
     return FALSE;
   }
@@ -919,75 +845,7 @@ bool chunks_update(ChunkInfo *chunkInfo, const void *data)
   return TRUE;
 }
 
-#if 0
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_readChunkString(ChunkInfo *chunkInfo, String string, ulong length)
-{
-  void *buffer;
-  ssize_t n;
-
-  assert(chunkInfo != NULL);
-
-  buffer = malloc(length);
-  if (buffer == NULL)
-  {
-    return FALSE;
-  }
-
-  n = read(chunkInfo->fileHandle,buffer,length);
-  if (n < 0)
-  {
-    free(buffer);
-    return FALSE;
-  }
-  chunkInfo->index += n;
-
-  if (n != length)
-  {
-    free(buffer);
-    return FALSE;
-  }
-
-  String_setBuffer(string,buffer,length);
-
-  free(buffer);
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_writeChunkString(ChunkInfo *chunkInfo, String string)
-{
-  assert(chunkInfo != NULL);
-}
-#endif /* 0 */
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_readData(ChunkInfo *chunkInfo, void *data, ulong size)
+bool Chunks_readData(ChunkInfo *chunkInfo, void *data, ulong size)
 {
   assert(chunkInfo != NULL);
 
@@ -1009,16 +867,7 @@ bool chunks_readData(ChunkInfo *chunkInfo, void *data, ulong size)
   return TRUE;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_writeData(ChunkInfo *chunkInfo, const void *data, ulong size)
+bool Chunks_writeData(ChunkInfo *chunkInfo, const void *data, ulong size)
 {
   assert(chunkInfo != NULL);
 
@@ -1037,16 +886,7 @@ bool chunks_writeData(ChunkInfo *chunkInfo, const void *data, ulong size)
   return TRUE;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool chunks_skipData(ChunkInfo *chunkInfo, ulong size)
+bool Chunks_skipData(ChunkInfo *chunkInfo, ulong size)
 {
   uint64 offset;
 

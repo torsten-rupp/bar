@@ -9,7 +9,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/archive_format.pl,v $
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # $Author: torsten $
 # Contents: create header file definition from format definition
 # Systems : all
@@ -111,6 +111,8 @@ while ($line=<STDIN>)
     my $id=$2;
     my $structName=$3;
     my @parseDefinitions;
+
+    # Note: use padding in C structures for access via pointer
 
     writeHFile("#define $PREFIX_ID$idName (('".substr($id,0,1)."' << 24) | ('".substr($id,1,1)."' << 16) | ('".substr($id,2,1)."' << 8) | '".substr($id,3,1)."')\n");
     writeHFile("typedef struct {\n");

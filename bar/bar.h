@@ -1,15 +1,15 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver
 * Systems :
 *
 \***********************************************************************/
 
-#ifndef __BAR_H__
-#define __BAR_H__
+#ifndef __BAR__
+#define __BAR__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -32,6 +32,17 @@ typedef enum
 
   ERROR_INSUFFICIENT_MEMORY,
   ERROR_INIT,
+
+  ERROR_INVALID_PATTERN,
+
+  ERROR_COMPRESS_ERROR,
+
+  ERROR_INIT_CRYPT,
+  ERROR_NO_PASSWORD,
+  ERROR_INIT_CIPHER,
+  ERROR_ENCRYPT_FAIL,
+  ERROR_DECRYPT_FAIL,
+
   ERROR_CREATE_FILE,
   ERROR_OPEN_FILE,
   ERROR_OPEN_DIRECTORY,
@@ -50,22 +61,11 @@ typedef enum
 
   EXITCODE_INVALID_ARGUMENT=5,
 
+  EXITCODE_INIT_FAIL=125,
   EXITCODE_FATAL_ERROR=126,
 
   EXITCODE_UNKNOWN=128
 } ExitCodes;
-
-typedef struct PatternNode
-{
-  NODE_HEADER(struct PatternNode);
-
-  String pattern;
-} PatternNode;
-
-typedef struct
-{
-  LIST_HEADER(PatternNode);
-} PatternList;
 
 typedef struct FileNameNode
 {
@@ -97,6 +97,6 @@ void printError(const char *text, ...);
   }
 #endif
 
-#endif /* __BAR_H__ */
+#endif /* __BAR__ */
 
 /* end of file */

@@ -1,15 +1,15 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive functions
+* Contents: Backup ARchiver archive functions: restore
 * Systems : all
 *
 \***********************************************************************/
 
-#ifndef __COMMAND_RESTORE_H__
-#define __COMMAND_RESTORE_H__
+#ifndef __COMMAND_RESTORE__
+#define __COMMAND_RESTORE__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -17,6 +17,8 @@
 #include <assert.h>
 
 #include "bar.h"
+#include "patterns.h"
+#include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -48,13 +50,15 @@
 bool command_restore(FileNameList *fileNameList,
                      PatternList  *includeList,
                      PatternList  *excludeList,
-                     const char   *directory
+                     uint         directoryStripCount,
+                     const char   *directory,
+                     const char   *password
                     );
 
 #ifdef __cplusplus
   }
 #endif
 
-#endif /* __COMMAND_RESTORE_H__ */
+#endif /* __COMMAND_RESTORE__ */
 
 /* end of file */
