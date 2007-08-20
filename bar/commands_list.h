@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive functions: list
+* Contents: Backup ARchiver archive list function
 * Systems : all
 *
 \***********************************************************************/

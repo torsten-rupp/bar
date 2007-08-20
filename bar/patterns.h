@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: Backup ARchiver patterns
-* Systems :
+* Contents: Backup ARchiver pattern functions
+* Systems : all
 *
 \***********************************************************************/
 

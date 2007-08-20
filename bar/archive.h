@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
-* Contents: archive functions
+* Contents: Backup ARchiver archive functions
 * Systems : all
 *
 \***********************************************************************/
@@ -34,13 +34,14 @@
 
 typedef struct
 {
-  String          fileName;
-  uint64          partSize;
-  CryptAlgorithms cryptAlgorithm;
-  const char      *password;
+  String             fileName;
+  uint64             partSize;
+  CompressAlgorithms compressAlgorithm;
+  CryptAlgorithms    cryptAlgorithm;
+  const char         *password;
 
-  int             partNumber;
-  FileHandle      fileHandle;
+  int                partNumber;
+  FileHandle         fileHandle;
 } ArchiveInfo;
 
 typedef struct
@@ -73,13 +74,8 @@ typedef struct
   uint           headerLength;             // length of header
   bool           headerWrittenFlag;        // TRUE iff header written
 
-  void           *buffer;
+  byte           *buffer;
   ulong          bufferLength;
-
-  void           *compressBuffer;
-//  ulong          compressBufferSize;
-  void           *cryptBuffer;
-//  ulong          cryptBufferSize;
 } ArchiveFileInfo;
 
 /***************************** Variables *******************************/
@@ -103,11 +99,12 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_create(ArchiveInfo     *archiveInfo,
-                      const char      *archiveFileName,
-                      uint64          partSize,
-                      CryptAlgorithms cryptAlgorithm,
-                      const char      *password
+Errors Archive_create(ArchiveInfo        *archiveInfo,
+                      const char         *archiveFileName,
+                      uint64             partSize,
+                      CompressAlgorithms compressAlgorithm,
+                      CryptAlgorithms    cryptAlgorithm,
+                      const char         *password
                      );
 
 /***********************************************************************\

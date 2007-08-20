@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive functions: test
+* Contents: Backup ARchiver archive test function
 * Systems : all
 *
 \***********************************************************************/

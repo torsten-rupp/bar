@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
-* Contents: file functions
+* Contents: Backup ARchiver file functions
 * Systems : all
 *
 \***********************************************************************/

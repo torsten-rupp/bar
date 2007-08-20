@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: 
-* Systems :
+* Contents: Backup ARchiver crypt functions
+* Systems : all
 *
 \***********************************************************************/
 
@@ -79,17 +79,30 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 
   assert(blockLength != NULL);
 
-  gcryptError = gcry_cipher_algo_info(GCRY_CIPHER_AES,
-                                      GCRYCTL_GET_BLKLEN,
-                                      NULL,
-                                      &n
-                                     );
-  if (gcryptError != 0)
+  switch (cryptAlgorithm)
   {
-    printError("Cannot detect block length of AES cipher (error: %s)\n",gpg_strerror(gcryptError));
-    return ERROR_INIT_CIPHER;
+    case CRYPT_ALGORITHM_NONE:
+      (*blockLength) = 1;
+      break;
+    case CRYPT_ALGORITHM_AES128:
+      gcryptError = gcry_cipher_algo_info(GCRY_CIPHER_AES,
+                                          GCRYCTL_GET_BLKLEN,
+                                          NULL,
+                                          &n
+                                         );
+      if (gcryptError != 0)
+      {
+        printError("Cannot detect block length of AES cipher (error: %s)\n",gpg_strerror(gcryptError));
+        return ERROR_INIT_CIPHER;
+      }
+      (*blockLength) = n;
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
   }
-  (*blockLength) = n;
 
   return ERROR_NONE;
 }
@@ -107,6 +120,10 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
 
   assert(cryptInfo != NULL);
 
+  /* init variables */
+  cryptInfo->cryptAlgorithm = cryptAlgorithm;
+
+  /* init crypt algorithm */
   switch (cryptAlgorithm)
   {
     case CRYPT_ALGORITHM_NONE:
@@ -198,8 +215,6 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
         break; /* not reached */
     #endif /* NDEBUG */
   }
-
-  cryptInfo->cryptAlgorithm = cryptAlgorithm;
 
   return ERROR_NONE;
 }

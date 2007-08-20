@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive functions
+* Contents: Backup ARchiver archive test function
 * Systems : all
 *
 \***********************************************************************/
@@ -108,7 +108,7 @@ bool command_test(FileNameList *archiveFileNameList,
   assert(excludePatternList != NULL);
 
   /* allocate resources */
-  archiveBuffer = malloc(BUFFER_SIZE);
+  archiveBuffer = (byte*)malloc(BUFFER_SIZE);
   if (archiveBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();

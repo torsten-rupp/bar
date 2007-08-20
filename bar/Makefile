@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -20,7 +20,7 @@ CC_INCLUDES         =
 LD                  = gcc
 LD_FLAGS            =
 LD_LIBRARY_PATHS    = /usr/local/lib
-LD_LIBRARIES        = pthread
+LD_LIBRARIES        = pthread z
 LD_STATIC_LIBRARIES = gcrypt gpg-error
 
 #---------------------------------- commands----------------------------------
@@ -30,6 +30,10 @@ RMF  = rm -f
 PERL = perl
 
 #------------------------ specific variables/settings ------------------------
+
+CRYPT=none
+#CRYPT=aes128
+COMPRESS=none
 
 #---------------------------------- rules ------------------------------------
 
@@ -99,7 +103,7 @@ archive_format.c: archive_format.def
 
 .PHONE: p0 pack0 l0 list0 r0 restore0 t0 c0 compare0
 p0 pack0: bar
-	./bar -a data/data.back -c demo/abc.dat --crypt-algorithm=aes128 --password=test
+	./bar -a data/data.back -c demo/abc.dat --compress=$(COMPRESS) --crypt=$(CRYPT) --password=test
 
 l0 list0: bar
 	./bar -l data/data.back --password=test

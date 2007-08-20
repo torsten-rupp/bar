@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: archive functions
+* Contents: Backup ARchive crypt functions
 * Systems : all
 *
 \***********************************************************************/
@@ -26,15 +26,19 @@
 
 /***************************** Constants *******************************/
 
+/* available chipers */
 typedef enum
 {
   CRYPT_ALGORITHM_NONE,
 
   CRYPT_ALGORITHM_AES128,
+
+  CRYPT_ALGORITHM_UNKNOWN=65535,
 } CryptAlgorithms;
 
 /***************************** Datatypes *******************************/
 
+/* crypt info block */
 typedef struct
 {
   CryptAlgorithms  cryptAlgorithm;
@@ -92,7 +96,9 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 /***********************************************************************\
 * Name   : Crypt_new
 * Purpose: create new crypt handle
-* Input  : -
+* Input  : cryptInfo      - crypt info block
+*          cryptAlgorithm - crypt algorithm to use
+*          password       - crypt password
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -106,7 +112,7 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
 /***********************************************************************\
 * Name   : Crypt_delete
 * Purpose: delete crypt handle
-* Input  : -
+* Input  : cryptInfo - crypt info block
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -117,8 +123,10 @@ void Crypt_delete(CryptInfo *cryptInfo);
 /***********************************************************************\
 * Name   : Crypt_encrypt
 * Purpose: encrypt data
-* Input  : -
-* Output : -
+* Input  : cryptInfo    - crypt info block
+*          buffer       - data
+*          bufferLength - length of data
+* Output : buffer - encrypted data
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -131,8 +139,10 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
 /***********************************************************************\
 * Name   : Crypt_decrypt
 * Purpose: decrypt data
-* Input  : -
-* Output : -
+* Input  : cryptInfo    - crypt info block
+*          buffer       - encrypted data
+*          bufferLength - length of data
+* Output : buffer - data
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/

@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
-* Contents: Backup ARchiver
+* Contents: Backup ARchiver main program
 * Systems : all
 *
 \***********************************************************************/
@@ -47,24 +47,40 @@ typedef enum
 } Commands;
 
 /***************************** Variables *******************************/
-LOCAL Commands        command;
-LOCAL const char      *archiveFileName;
-LOCAL unsigned long   partSize;
-LOCAL const char      *tmpDirectory;
-LOCAL uint            directoryStripCount;
-LOCAL const char      *directory;
-LOCAL PatternTypes    patternType;
-LOCAL PatternList     includePatternList;
-LOCAL PatternList     excludePatternList;
-LOCAL CryptAlgorithms cryptAlgorithm;
-LOCAL const char      *password;
-LOCAL bool            helpFlag;
+LOCAL Commands           command;
+LOCAL const char         *archiveFileName;
+LOCAL unsigned long      partSize;
+LOCAL const char         *tmpDirectory;
+LOCAL uint               directoryStripCount;
+LOCAL const char         *directory;
+LOCAL PatternTypes       patternType;
+LOCAL PatternList        includePatternList;
+LOCAL PatternList        excludePatternList;
+LOCAL CompressAlgorithms compressAlgorithm;
+LOCAL CryptAlgorithms    cryptAlgorithm;
+LOCAL const char         *password;
+LOCAL bool               helpFlag;
 
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPE[] =
 {
   {"glob",  PATTERN_TYPE_GLOB,    "glob patterns: * and ?"},
   {"basic", PATTERN_TYPE_BASIC,   "basic pattern matching"},
   {"extend",PATTERN_TYPE_EXTENDED,"extended pattern matching"},
+};
+
+const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM[] =
+{
+  {"none",COMPRESS_ALGORITHM_NONE,"no compression"},
+  {"zip0",COMPRESS_ALGORITHM_ZIP0,"ZIP compression level 0"},
+  {"zip1",COMPRESS_ALGORITHM_ZIP1,"ZIP compression level 1"},
+  {"zip2",COMPRESS_ALGORITHM_ZIP2,"ZIP compression level 2"},
+  {"zip3",COMPRESS_ALGORITHM_ZIP3,"ZIP compression level 3"},
+  {"zip4",COMPRESS_ALGORITHM_ZIP4,"ZIP compression level 4"},
+  {"zip5",COMPRESS_ALGORITHM_ZIP5,"ZIP compression level 5"},
+  {"zip6",COMPRESS_ALGORITHM_ZIP6,"ZIP compression level 6"},
+  {"zip7",COMPRESS_ALGORITHM_ZIP7,"ZIP compression level 7"},
+  {"zip8",COMPRESS_ALGORITHM_ZIP8,"ZIP compression level 8"},
+  {"zip9",COMPRESS_ALGORITHM_ZIP9,"ZIP compression level 9"},
 };
 
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM[] =
@@ -86,27 +102,28 @@ LOCAL bool parseIncludeExclude(void *variable, const char *value, const void *de
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM   ("create",         'c',0,command,            COMMAND_NONE,COMMAND_CREATE,                        "create new archive"), 
-  CMD_OPTION_ENUM   ("list",           'l',0,command,            COMMAND_NONE,COMMAND_LIST,                          "list contents of archive"), 
-  CMD_OPTION_ENUM   ("test",           't',0,command,            COMMAND_NONE,COMMAND_TEST,                          "test contents of ardhive"), 
-  CMD_OPTION_ENUM   ("extract",        'x',0,command,            COMMAND_NONE,COMMAND_RESTORE,                       "restore archive"), 
+  CMD_OPTION_ENUM   ("create",         'c',0,command,            COMMAND_NONE,COMMAND_CREATE,                                    "create new archive"), 
+  CMD_OPTION_ENUM   ("list",           'l',0,command,            COMMAND_NONE,COMMAND_LIST,                                      "list contents of archive"), 
+  CMD_OPTION_ENUM   ("test",           't',0,command,            COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"), 
+  CMD_OPTION_ENUM   ("extract",        'x',0,command,            COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"), 
 
-  CMD_OPTION_STRING ("archive",        'a',0,archiveFileName,    NULL,                                               "archive filename"),
-  CMD_OPTION_INTEGER("part-size",      's',0,partSize,           0,                                                  "part size"),
-  CMD_OPTION_STRING ("tmp-directory",  0,  0,tmpDirectory,       "/tmp",                                             "temporary directory"),
-  CMD_OPTION_INTEGER("directory-strip",'p',0,directoryStripCount,0,                                                  "number of directories to strip on extract"),
-  CMD_OPTION_STRING ("directory",      0,  0,directory,          NULL,                                               "directory to restore files"),
+  CMD_OPTION_STRING ("archive",        'a',0,archiveFileName,    NULL,                                                           "archive filename"),
+  CMD_OPTION_INTEGER("part-size",      's',0,partSize,           0,                                                              "part size"),
+  CMD_OPTION_STRING ("tmp-directory",  0,  0,tmpDirectory,       "/tmp",                                                         "temporary directory"),
+  CMD_OPTION_INTEGER("directory-strip",'p',0,directoryStripCount,0,                                                              "number of directories to strip on extract"),
+  CMD_OPTION_STRING ("directory",      0,  0,directory,          NULL,                                                           "directory to restore files"),
 
-  CMD_OPTION_SELECT ("pattern-type",   0,  0,patternType,        PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,"select pattern type"),
+  CMD_OPTION_SELECT ("pattern-type",   0,  0,patternType,        PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,            "select pattern type"),
 
-  CMD_OPTION_SPECIAL("include",        'i',1,includePatternList, NULL,parseIncludeExclude,NULL,                      "include pattern"),
-  CMD_OPTION_SPECIAL("exclude",        0,  1,excludePatternList, NULL,parseIncludeExclude,NULL,                      "exclude pattern"),
+  CMD_OPTION_SPECIAL("include",        'i',1,includePatternList, NULL,parseIncludeExclude,NULL,                                  "include pattern"),
+  CMD_OPTION_SPECIAL("exclude",        0,  1,excludePatternList, NULL,parseIncludeExclude,NULL,                                  "exclude pattern"),
 
-  CMD_OPTION_SELECT ("crypt-algorithm",0,  0,cryptAlgorithm,     CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,"select crypt algorithm to use"),
-  CMD_OPTION_STRING ("password",       0,  0,password,           NULL,                                                     "crypt password"),
+  CMD_OPTION_SELECT ("compress",       0,  0,compressAlgorithm,  COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"),
 
+  CMD_OPTION_SELECT ("crypt",          0,  0,cryptAlgorithm,     CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"),
+  CMD_OPTION_STRING ("password",       0,  0,password,           NULL,                                                           "crypt password"),
 
-  CMD_OPTION_BOOLEAN("help",           'h',0,helpFlag,           FALSE,                                              "print this help"),
+  CMD_OPTION_BOOLEAN("help",           'h',0,helpFlag,           FALSE,                                                          "print this help"),
 };
 
 /****************************** Macros *********************************/
@@ -162,7 +179,7 @@ LOCAL void printUsage(const char *programName)
 * Purpose: initialize
 * Input  : -
 * Output : -
-* Return : -
+* Return : TRUE if init ok, FALSE on error
 * Notes  : -
 \***********************************************************************/
 
@@ -275,6 +292,7 @@ int main(int argc, const char *argv[])
                                    &excludePatternList,
                                    tmpDirectory,
                                    partSize,
+                                   compressAlgorithm,
                                    cryptAlgorithm,
                                    password
                                   )

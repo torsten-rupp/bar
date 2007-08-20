@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive functions
+* Contents: Backup ARchiver archive create function
 * Systems : all
 *
 \***********************************************************************/
@@ -40,21 +40,22 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL bool             exitFlag;
-LOCAL const char       *archiveFileName;
-LOCAL PatternList      *includePatternList;
-LOCAL PatternList      *excludePatternList;
-LOCAL ulong            partSize;
-LOCAL CryptAlgorithms  cryptAlgorithm;
-LOCAL const char       *password;
+LOCAL bool               exitFlag;
+LOCAL const char         *archiveFileName;
+LOCAL PatternList        *includePatternList;
+LOCAL PatternList        *excludePatternList;
+LOCAL ulong              partSize;
+LOCAL CompressAlgorithms compressAlgorithm;
+LOCAL CryptAlgorithms    cryptAlgorithm;
+LOCAL const char         *password;
 
-LOCAL pthread_mutex_t  fileNameListLock;
-LOCAL pthread_cond_t   fileNameListNew;
-LOCAL FileNameList     fileNameList;
+LOCAL pthread_mutex_t    fileNameListLock;
+LOCAL pthread_cond_t     fileNameListNew;
+LOCAL FileNameList       fileNameList;
 
-LOCAL bool             collectorDone;
-LOCAL pthread_t        threadCollector;
-LOCAL pthread_t        threadPacker;
+LOCAL bool               collectorDone;
+LOCAL pthread_t          threadCollector;
+LOCAL pthread_t          threadPacker;
 
 LOCAL struct
 {
@@ -393,6 +394,7 @@ LOCAL void packer(void)
   error = Archive_create(&archiveInfo,
                          archiveFileName,
                          partSize,
+                         compressAlgorithm,
                          cryptAlgorithm,
                          password
                         );
@@ -466,6 +468,7 @@ bool command_create(const char      *_archiveFileName,
                     PatternList     *_excludePatternList,
                     const char      *tmpDirectory,
                     ulong           _partSize,
+                    uint            _compressAlgorithm,
                     CryptAlgorithms _cryptAlgorithm,
                     const char      *_password
                    )
@@ -479,6 +482,7 @@ bool command_create(const char      *_archiveFileName,
   includePatternList = _includePatternList;
   excludePatternList = _excludePatternList;
   partSize           = _partSize;
+  compressAlgorithm  = _compressAlgorithm;
   cryptAlgorithm     = _cryptAlgorithm;
   password           = _password;
   if (pthread_mutex_init(&fileNameListLock,NULL) != 0)

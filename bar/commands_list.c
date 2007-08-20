@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive functions
+* Contents: Backup ARchiver archive list function
 * Systems : all
 *
 \***********************************************************************/
@@ -68,7 +68,7 @@ LOCAL void printFileInfo(const String fileName, const FileInfo *fileInfo, uint64
 printf("%10llu %10llu..%10llu %s\n",
 fileInfo->size,
 partOffset,
-partOffset+partSize-1,
+(partSize > 0)?partOffset+partSize-1:partOffset,
 String_cString(fileName)
 );
 }

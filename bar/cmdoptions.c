@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems :
@@ -58,6 +58,8 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
   uint i;
 
   assert(commandLineOption != NULL);
+  assert(prefix != NULL);
+  assert(name != NULL);
 
   switch (commandLineOption->type)
   {
@@ -127,6 +129,40 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
 
   return TRUE;
 }
+
+/***********************************************************************\
+* Name   : printSpaces
+* Purpose: print spaces
+* Input  : outputHandle - output file handle
+*          n            - number of spaces to print
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printSpaces(FILE *outputHandle, uint n)
+{
+  const char *SPACES8 = "        ";
+
+  uint z;
+
+  assert(outputHandle != NULL);
+
+  z = 0;
+  while ((z+8) < n)
+  {
+    fprintf(outputHandle,SPACES8);
+    z+=8;
+  }
+  while (z < n)
+  {
+    fprintf(outputHandle," ");
+    z++;
+  }
+}
+
+/*---------------------------------------------------------------------*/
+
 
 bool cmdOptions_parse(const char              *argv[],
                       int                     *argc,
@@ -379,9 +415,11 @@ void cmdOptions_printHelp(FILE                    *outputHandle,
   uint n;
   char name[128];
   char s[6];
-  uint z;
   uint maxValueLength;
   uint j;
+
+  assert(outputHandle != NULL);
+  assert(commandLineOptions != NULL);
 
   /* get max. width of name column */
   maxNameLength = 0;
@@ -433,10 +471,7 @@ void cmdOptions_printHelp(FILE                    *outputHandle,
     }
     else
     {
-      for (z = 0; z < strlen(PREFIX); z++)
-      {
-        fprintf(outputHandle," ");
-      }
+      printSpaces(outputHandle,strlen(PREFIX));
     }
 
     /* output name */
@@ -473,10 +508,7 @@ void cmdOptions_printHelp(FILE                    *outputHandle,
     fprintf(outputHandle,"%s",name);
 
     /* output descriptions */
-    for (z = strlen(name); z < maxNameLength; z++)
-    {
-      fprintf(outputHandle," ");
-    }
+    printSpaces(outputHandle,maxNameLength-strlen(name));
     if (commandLineOptions[i].description != NULL)
     {
       fprintf(outputHandle," - %s",commandLineOptions[i].description);
@@ -492,16 +524,15 @@ void cmdOptions_printHelp(FILE                    *outputHandle,
 
       for (j = 0; j < commandLineOptions[i].selectCount; j++)
       {
-        for (z = 0; z < strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?3:0)+1; z++)
-        {
-          fprintf(outputHandle," ");
-        }
+        printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?3:0)+1);
         fprintf(outputHandle,"%s",commandLineOptions[i].selects[j].name);
-        for (z = strlen(commandLineOptions[i].selects[j].name); z < maxValueLength; z++)
+        printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].selects[j].name));
+        fprintf(outputHandle,": %s",commandLineOptions[i].selects[j].description);
+        if (commandLineOptions[i].selects[j].value == commandLineOptions[i].defaultValue.select)
         {
-          fprintf(outputHandle," ");
+          fprintf(outputHandle," (default)");
         }
-        fprintf(outputHandle,": %s\n",commandLineOptions[i].selects[j].description);
+        fprintf(outputHandle,"\n");
       }
     }
   }
