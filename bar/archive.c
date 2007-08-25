@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -17,7 +17,7 @@
 #include "strings.h"
 #include "lists.h"
 
-#include "bar.h"
+#include "errors.h"
 #include "archive_format.h"
 #include "chunks.h"
 #include "files.h"
@@ -47,11 +47,11 @@
 #endif
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : endOfFile
+* Purpose: check if end-of-file
+* Input  : userData - archive-info
 * Output : -
-* Return : -
+* Return : TRUE if end-of-file, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -65,8 +65,8 @@ LOCAL bool endOfFile(void *userData)
 }
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
+* Name   : readFile
+* Purpose: read data from file
 * Input  : -
 * Output : -
 * Return : -
@@ -89,8 +89,8 @@ LOCAL bool readFile(void *userData, void *buffer, ulong bufferLength)
 }
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
+* Name   : writeFile
+* Purpose: write data to file
 * Input  : -
 * Output : -
 * Return : -
@@ -107,8 +107,8 @@ LOCAL bool writeFile(void *userData, const void *buffer, ulong bufferLength)
 }
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
+* Name   : tellFile
+* Purpose: get position in file
 * Input  : -
 * Output : -
 * Return : -
@@ -126,8 +126,8 @@ LOCAL bool tellFile(void *userData, uint64 *offset)
 }
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
+* Name   : seekFile
+* Purpose: seek in file
 * Input  : -
 * Output : -
 * Return : -
@@ -157,30 +157,15 @@ LOCAL bool seekFile(void *userData, uint64 offset)
 LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
 {
   ulong  length;
-  uint64 size;
+  uint64 fileSize;
   bool   newPartFlag;
   ulong  n;
+//  ulong  freeBlocks;
   String fileName;
   Errors error;
 
   assert(archiveFileInfo != NULL);
   assert(!Compress_checkBlockIsEmpty(&archiveFileInfo->compressInfo));
-
-  /* get compressed block */
-  Compress_getBlock(&archiveFileInfo->compressInfo,
-                    archiveFileInfo->buffer,
-                    &length
-                   );         
-
-  /* encrypt block */
-  error = Crypt_encrypt(&archiveFileInfo->cryptInfoFileData,
-                        archiveFileInfo->buffer,
-                        archiveFileInfo->blockLength
-                       );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
 
   /* split, calculate rest-length */
   if (archiveFileInfo->archiveInfo->partSize > 0)
@@ -194,20 +179,17 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
     }
     else
     {
-      /* get current size */
-      if (!tellFile(archiveFileInfo->archiveInfo,&size))
-      {
-        return ERROR_IO_ERROR;
-      }
+      /* get total file size */
+      fileSize = archiveFileInfo->chunkInfoFileData.offset+CHUNK_HEADER_SIZE+archiveFileInfo->chunkInfoFileData.size;
 
       if      (   !archiveFileInfo->headerWrittenFlag
-               && (size + archiveFileInfo->headerLength >= archiveFileInfo->archiveInfo->partSize)
+               && (fileSize+archiveFileInfo->headerLength >= archiveFileInfo->archiveInfo->partSize)
               )
       {
         /* file header cannot be written without fragmentation -> new part */
         newPartFlag = TRUE;
       }
-      else if ((size+archiveFileInfo->blockLength) > archiveFileInfo->archiveInfo->partSize)
+      else if ((fileSize+archiveFileInfo->blockLength) >= archiveFileInfo->archiveInfo->partSize)
       {
         /* less than one block left in part -> new part */
         newPartFlag = TRUE;
@@ -220,6 +202,38 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
         /* close file, prepare for next part */
         if (archiveFileInfo->headerWrittenFlag)
         {
+          /* flush blocks in compress buffer */
+          Compress_flush(&archiveFileInfo->compressInfo);
+          while (!Compress_checkBlockIsEmpty(&archiveFileInfo->compressInfo))
+          {
+            /* get compressed block */
+            Compress_getBlock(&archiveFileInfo->compressInfo,
+                              archiveFileInfo->buffer,
+                              &length
+                             );         
+
+            /* encrypt block */
+            error = Crypt_encrypt(&archiveFileInfo->cryptInfoFileData,
+                                  archiveFileInfo->buffer,
+                                  archiveFileInfo->blockLength
+                                 );
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+
+            /* write */
+            if (!Chunks_writeData(&archiveFileInfo->chunkInfoFileData,
+                                  archiveFileInfo->buffer,
+                                  archiveFileInfo->blockLength
+                                 )
+               )
+            {
+              return ERROR_IO_ERROR;
+            }
+            Compress_flush(&archiveFileInfo->compressInfo);
+          }
+
           /* update part size */
           archiveFileInfo->chunkFileData.partSize = Compress_getInputLength(&archiveFileInfo->compressInfo);
           if (!Chunks_update(&archiveFileInfo->chunkInfoFileData,
@@ -244,6 +258,11 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
             return ERROR_IO_ERROR;
           }
           archiveFileInfo->headerWrittenFlag = FALSE;
+
+          /* reset compress, crypt */
+          Compress_reset(&archiveFileInfo->compressInfo);
+          Crypt_reset(&archiveFileInfo->cryptInfoFileEntry);
+          Crypt_reset(&archiveFileInfo->cryptInfoFileData);
         }
 
         Files_close(&archiveFileInfo->archiveInfo->fileHandle);
@@ -263,13 +282,6 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
 
     /* calculate max. length of data which can be written into this part */
 //        freeBlocks = (archiveFileInfo->archiveInfo->partSize-(size+n))/archiveFileInfo->blockLength;
-
-    /* calculate length of data to write */
-//        partLength = MIN(restLength,dataLength);
-  }
-  else
-  {
-//        partLength = dataLength;
   }
 
   /* open file */
@@ -295,8 +307,6 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
 
     /* free resources */
     String_delete(fileName);
-
-    /* reset compress, crypt */
 
     /* initialise variables */
     archiveFileInfo->headerWrittenFlag = FALSE;
@@ -335,10 +345,80 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
     archiveFileInfo->headerWrittenFlag = TRUE;
   }
 
-  /* write */
-  if (!Chunks_writeData(&archiveFileInfo->chunkInfoFileData,archiveFileInfo->buffer,archiveFileInfo->blockLength))
+  /* get compressed block */
+  Compress_getBlock(&archiveFileInfo->compressInfo,
+                    archiveFileInfo->buffer,
+                    &length
+                   );         
+
+  /* encrypt block */
+  error = Crypt_encrypt(&archiveFileInfo->cryptInfoFileData,
+                        archiveFileInfo->buffer,
+                        archiveFileInfo->blockLength
+                       );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  /* write block */
+  if (!Chunks_writeData(&archiveFileInfo->chunkInfoFileData,
+                        archiveFileInfo->buffer,
+                        archiveFileInfo->blockLength
+                       )
+     )
   {
     return ERROR_IO_ERROR;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : readBlock
+* Purpose: read block: decrypt
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readBlock(ArchiveFileInfo *archiveFileInfo)
+{
+  Errors error;
+
+  assert(archiveFileInfo != NULL);
+
+  if (!Chunks_eofSub(&archiveFileInfo->chunkInfoFileData))
+  {
+    /* read */
+    if (!Chunks_readData(&archiveFileInfo->chunkInfoFileData,
+                         archiveFileInfo->buffer,
+                         archiveFileInfo->blockLength
+                        )
+       )
+    {
+      return ERROR_IO_ERROR;
+    }
+
+    /* decrypt */
+    error = Crypt_decrypt(&archiveFileInfo->cryptInfoFileData,
+                          archiveFileInfo->buffer,
+                          archiveFileInfo->blockLength
+                         );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    Compress_putBlock(&archiveFileInfo->compressInfo,
+                      archiveFileInfo->buffer,
+                      archiveFileInfo->blockLength
+                     );
+  }
+  else
+  {
+    Compress_flush(&archiveFileInfo->compressInfo);
   }
 
   return ERROR_NONE;
@@ -987,36 +1067,10 @@ Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulon
     /* get next block */
     if (Compress_checkEndOfBlock(&archiveFileInfo->compressInfo))
     {
-      if (!Chunks_eofSub(&archiveFileInfo->chunkInfoFileData))
+      error = readBlock(archiveFileInfo);
+      if (error != ERROR_NONE)
       {
-        /* read */
-        if (!Chunks_readData(&archiveFileInfo->chunkInfoFileData,
-                             archiveFileInfo->buffer,
-                             archiveFileInfo->blockLength
-                            )
-           )
-        {
-          return ERROR_IO_ERROR;
-        }
-
-        /* decrypt */
-        error = Crypt_decrypt(&archiveFileInfo->cryptInfoFileData,
-                              archiveFileInfo->buffer,
-                              archiveFileInfo->blockLength
-                             );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        Compress_putBlock(&archiveFileInfo->compressInfo,
-                          archiveFileInfo->buffer,
-                          archiveFileInfo->blockLength
-                         );
-      }
-      else
-      {
-        Compress_flush(&archiveFileInfo->compressInfo);
+        return error;
       }
     }
     if (Compress_checkEndOfBlock(&archiveFileInfo->compressInfo))

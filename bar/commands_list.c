@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -25,6 +25,7 @@
 #include "strings.h"
 
 #include "bar.h"
+#include "errors.h"
 #include "patterns.h"
 #include "files.h"
 #include "archive.h"
@@ -61,16 +62,33 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printFileInfo(const String fileName, const FileInfo *fileInfo, uint64 partOffset, uint64 partSize)
+LOCAL void printFileInfo(const String   fileName,
+                         const FileInfo *fileInfo,
+                         uint64         partOffset,
+                         uint64         partSize,
+                         uint64         fileSize
+                        )
 {
+  double ratio;
+
   assert(fileInfo != NULL);
 
-printf("%10llu %10llu..%10llu %s\n",
-fileInfo->size,
-partOffset,
-(partSize > 0)?partOffset+partSize-1:partOffset,
-String_cString(fileName)
-);
+  if (fileSize > 0)
+  {
+    ratio = 100.0-fileSize*100.0/partSize;
+  }
+  else
+  {
+    ratio = 0;
+  }
+
+  printf("%10llu %10llu..%10llu %6.1f%% %s\n",
+         fileInfo->size,
+         partOffset,
+         (partSize > 0)?partOffset+partSize-1:partOffset,
+         ratio,
+         String_cString(fileName)
+        );
 }
 
 /*---------------------------------------------------------------------*/
@@ -81,8 +99,10 @@ bool command_list(FileNameList *archiveFileNameList,
                   const char   *password
                  )
 {
-  Errors          error;
   String          fileName;
+  bool            failFlag;
+  ulong           fileCount;
+  Errors          error;
   FileNameNode    *archiveFileNameNode;
   ArchiveInfo     archiveInfo;
   ArchiveFileInfo archiveFileInfo;
@@ -94,9 +114,18 @@ bool command_list(FileNameList *archiveFileNameList,
   assert(excludePatternList != NULL);
 
   fileName = String_new();
- 
-  archiveFileNameNode = archiveFileNameList->head;
-  while (archiveFileNameNode != NULL)
+
+  failFlag  = FALSE;
+  fileCount = 0;
+  info(0,
+       "%-10s %-22s %-7s %s\n",
+       "Size",
+       "Part",
+       "Ratio %",
+       "Name"
+      );
+  info(0,"------------------------------------------------------------\n");
+  for (archiveFileNameNode = archiveFileNameList->head; archiveFileNameNode != NULL; archiveFileNameNode = archiveFileNameNode->next)
   {
     /* open archive */
     error = Archive_open(&archiveInfo,
@@ -105,9 +134,9 @@ bool command_list(FileNameList *archiveFileNameList,
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),strerror(errno));
-      return FALSE;
-HALT_INTERNAL_ERROR("x");
+      printError("Cannot open file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+      failFlag = TRUE;
+      continue;
     }
 
     /* list contents */
@@ -123,7 +152,9 @@ HALT_INTERNAL_ERROR("x");
                               );
       if (error != ERROR_NONE)
       {
-HALT_INTERNAL_ERROR("x");
+        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+        failFlag = TRUE;
+        break;
       }
 
       if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName))
@@ -131,7 +162,13 @@ HALT_INTERNAL_ERROR("x");
          )
       {
         /* output file info */
-        printFileInfo(fileName,&fileInfo,partOffset,partSize);
+        printFileInfo(fileName,
+                      &fileInfo,
+                      partOffset,
+                      partSize,
+                      archiveFileInfo.chunkInfoFileData.size
+                     );
+        fileCount++;
       }
 
       /* close archive file */
@@ -140,15 +177,14 @@ HALT_INTERNAL_ERROR("x");
 
     /* close archive */
     Archive_done(&archiveInfo);
-
-    /* next file */
-    archiveFileNameNode = archiveFileNameNode->next;
   }
+  info(0,"------------------------------------------------------------\n");
+  info(0,"%lu file(s)\n",fileCount);
 
   /* free resources */
   String_delete(fileName);
 
-  return TRUE;
+  return !failFlag;
 }
 
 #ifdef __cplusplus

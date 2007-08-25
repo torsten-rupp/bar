@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -24,7 +24,7 @@
 #include "global.h"
 #include "strings.h"
 
-#include "bar.h"
+#include "errors.h"
 #include "patterns.h"
 #include "files.h"
 #include "archive.h"
@@ -81,6 +81,8 @@ LOCAL ulong compare(const void *p0, const void *p1, ulong length)
   return i;
 }
 
+/*---------------------------------------------------------------------*/
+
 bool command_test(FileNameList *archiveFileNameList,
                   PatternList  *includePatternList,
                   PatternList  *excludePatternList,
@@ -122,8 +124,7 @@ bool command_test(FileNameList *archiveFileNameList,
   fileName = String_new();
 
   failFlag = FALSE;
-  archiveFileNameNode = archiveFileNameList->head;
-  while ((archiveFileNameNode != NULL) && !failFlag)
+  for (archiveFileNameNode = archiveFileNameList->head; archiveFileNameNode != NULL; archiveFileNameNode = archiveFileNameNode->next)
   {
     /* open archive */
     error = Archive_open(&archiveInfo,
@@ -132,7 +133,7 @@ bool command_test(FileNameList *archiveFileNameList,
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open archive file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),strerror(errno));
+      printError("Cannot open archive file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
       failFlag = TRUE;
       continue;
     }
@@ -150,7 +151,7 @@ bool command_test(FileNameList *archiveFileNameList,
                               );
       if (error != ERROR_NONE)
       {
-        printError("Cannot read archive file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),strerror(errno));
+        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
         Archive_closeFile(&archiveFileInfo);
         failFlag = TRUE;
         break;
@@ -160,11 +161,14 @@ bool command_test(FileNameList *archiveFileNameList,
           && !Patterns_matchList(excludePatternList,fileName)
          )
       {
+        info(0,"Test '%s'...",String_cString(fileName));
+
         /* compare file content */
         error = Files_open(&fileHandle,fileName,FILE_OPENMODE_READ);
         if (error != ERROR_NONE)
         {
-          printf("Cannot open file '%s' (error: %s)\n",String_cString(fileName),strerror(errno));
+          info(0,"fail\n");
+          printf("Cannot open file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
           Archive_closeFile(&archiveFileInfo);
           failFlag = TRUE;
           continue;
@@ -172,7 +176,8 @@ bool command_test(FileNameList *archiveFileNameList,
         error = Files_seek(&fileHandle,partOffset);
         if (error != ERROR_NONE)
         {
-          printf("Cannot read file '%s' (error: %s)\n",String_cString(fileName),strerror(errno));
+          info(0,"fail\n");
+          printf("Cannot read file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
           Archive_closeFile(&archiveFileInfo);
           Files_close(&fileHandle);
           failFlag = TRUE;
@@ -191,13 +196,17 @@ bool command_test(FileNameList *archiveFileNameList,
             error = Archive_readFileData(&archiveFileInfo,archiveBuffer,n);
             if (error != ERROR_NONE)
             {
-              printf("Cannot archive read file '%s' (error: %s)\n",String_cString(archiveFileNameNode->fileName),strerror(errno));
+              info(0,"fail\n");
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+              failFlag = TRUE;
               break;
             }
             error = Files_read(&fileHandle,fileBuffer,n,&readBytes);
             if (error != ERROR_NONE)
             {
-              printf("Cannot read file '%s' (error: %s)\n",String_cString(fileName),strerror(errno));
+              info(0,"fail\n");
+              printf("Cannot read file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+              failFlag = TRUE;
               break;
             }
             if (n != readBytes)
@@ -216,39 +225,43 @@ bool command_test(FileNameList *archiveFileNameList,
 
             length += n;
           }
-          if (error != ERROR_NONE)
+          if (failFlag)
           {
             Archive_closeFile(&archiveFileInfo);
             Files_close(&fileHandle);
-            failFlag = TRUE;
             continue;
           }
 
           if (equalFlag)
           {
-            printf("File '%s' ok\n",
-                   String_cString(fileName)
-                  );
+            info(0,"ok\n",
+                 String_cString(fileName)
+                );
           }
           else
           {
-            printf("File '%s' differ at offset %lld\n",
-                   String_cString(fileName),
-                   partOffset+length+diffIndex
-                  );
+            info(0,"differ at offset %lld\n",
+                 String_cString(fileName),
+                 partOffset+length+diffIndex
+                );
             failFlag = TRUE;
           }
         }
         else
         {
-          printf("File '%s' differ in size: expected %lld bytes, found %lld bytes\n",
-                 String_cString(fileName),
-                 fileInfo.size,
-                 Files_size(&fileHandle)
-                );
+          info(0,"differ in size: expected %lld bytes, found %lld bytes\n",
+               String_cString(fileName),
+               fileInfo.size,
+               Files_size(&fileHandle)
+              );
           failFlag = TRUE;
         }
         Files_close(&fileHandle);
+      }
+      else
+      {
+        /* skip */
+        info(1,"Test '%s'...skipped\n",String_cString(fileName));
       }
 
       /* close archive file */
@@ -257,9 +270,6 @@ bool command_test(FileNameList *archiveFileNameList,
 
     /* close archive */
     Archive_done(&archiveInfo);
-
-    /* next file */
-    archiveFileNameNode = archiveFileNameNode->next;
   }
 
   /* free resources */

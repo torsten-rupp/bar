@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems : all
@@ -17,6 +17,7 @@
 #include "global.h"
 #include "cmdoptions.h"
 
+#include "errors.h"
 #include "files.h"
 #include "patterns.h"
 #include "crypt.h"
@@ -31,6 +32,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+#define VERSION "0.01"
 
 /***************************** Datatypes *******************************/
 
@@ -47,18 +50,21 @@ typedef enum
 } Commands;
 
 /***************************** Variables *******************************/
+
+GlobalOptions globalOptions;
+
 LOCAL Commands           command;
 LOCAL const char         *archiveFileName;
-LOCAL unsigned long      partSize;
-LOCAL const char         *tmpDirectory;
 LOCAL uint               directoryStripCount;
 LOCAL const char         *directory;
+LOCAL ulong              partSize;
 LOCAL PatternTypes       patternType;
 LOCAL PatternList        includePatternList;
 LOCAL PatternList        excludePatternList;
 LOCAL CompressAlgorithms compressAlgorithm;
 LOCAL CryptAlgorithms    cryptAlgorithm;
 LOCAL const char         *password;
+LOCAL bool               versionFlag;
 LOCAL bool               helpFlag;
 
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPE[] =
@@ -102,28 +108,32 @@ LOCAL bool parseIncludeExclude(void *variable, const char *value, const void *de
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM   ("create",         'c',0,command,            COMMAND_NONE,COMMAND_CREATE,                                    "create new archive"), 
-  CMD_OPTION_ENUM   ("list",           'l',0,command,            COMMAND_NONE,COMMAND_LIST,                                      "list contents of archive"), 
-  CMD_OPTION_ENUM   ("test",           't',0,command,            COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"), 
-  CMD_OPTION_ENUM   ("extract",        'x',0,command,            COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"), 
+  CMD_OPTION_ENUM   ("create",         'c',0,command,                   COMMAND_NONE,COMMAND_CREATE,                                    "create new archive"), 
+  CMD_OPTION_ENUM   ("list",           'l',0,command,                   COMMAND_NONE,COMMAND_LIST,                                      "list contents of archive"), 
+  CMD_OPTION_ENUM   ("test",           't',0,command,                   COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"), 
+  CMD_OPTION_ENUM   ("extract",        'x',0,command,                   COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"), 
 
-  CMD_OPTION_STRING ("archive",        'a',0,archiveFileName,    NULL,                                                           "archive filename"),
-  CMD_OPTION_INTEGER("part-size",      's',0,partSize,           0,                                                              "part size"),
-  CMD_OPTION_STRING ("tmp-directory",  0,  0,tmpDirectory,       "/tmp",                                                         "temporary directory"),
-  CMD_OPTION_INTEGER("directory-strip",'p',0,directoryStripCount,0,                                                              "number of directories to strip on extract"),
-  CMD_OPTION_STRING ("directory",      0,  0,directory,          NULL,                                                           "directory to restore files"),
+  CMD_OPTION_STRING ("archive",        'a',0,archiveFileName,           NULL,                                                           "archive filename"),
+  CMD_OPTION_INTEGER("part-size",      's',0,partSize,                  0,                                                              "part size"),
+  CMD_OPTION_STRING ("tmp-directory",  0,  0,globalOptions.tmpDirectory,"/tmp",                                                         "temporary directory"),
+  CMD_OPTION_INTEGER("directory-strip",'p',0,directoryStripCount,       0,                                                              "number of directories to strip on extract"),
+  CMD_OPTION_STRING ("directory",      0,  0,directory,                 NULL,                                                           "directory to restore files"),
 
-  CMD_OPTION_SELECT ("pattern-type",   0,  0,patternType,        PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,            "select pattern type"),
+  CMD_OPTION_SELECT ("pattern-type",   0,  0,patternType,               PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,            "select pattern type"),
 
-  CMD_OPTION_SPECIAL("include",        'i',1,includePatternList, NULL,parseIncludeExclude,NULL,                                  "include pattern"),
-  CMD_OPTION_SPECIAL("exclude",        0,  1,excludePatternList, NULL,parseIncludeExclude,NULL,                                  "exclude pattern"),
+  CMD_OPTION_SPECIAL("include",        'i',1,includePatternList,        NULL,parseIncludeExclude,NULL,                                  "include pattern"),
+  CMD_OPTION_SPECIAL("exclude",        0,  1,excludePatternList,        NULL,parseIncludeExclude,NULL,                                  "exclude pattern"),
 
-  CMD_OPTION_SELECT ("compress",       0,  0,compressAlgorithm,  COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"),
+  CMD_OPTION_SELECT ("compress",       0,  0,compressAlgorithm,         COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"),
 
-  CMD_OPTION_SELECT ("crypt",          0,  0,cryptAlgorithm,     CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"),
-  CMD_OPTION_STRING ("password",       0,  0,password,           NULL,                                                           "crypt password"),
+  CMD_OPTION_SELECT ("crypt",          0,  0,cryptAlgorithm,            CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"),
+  CMD_OPTION_STRING ("password",       0,  0,password,                  NULL,                                                           "crypt password"),
 
-  CMD_OPTION_BOOLEAN("help",           'h',0,helpFlag,           FALSE,                                                          "print this help"),
+  CMD_OPTION_BOOLEAN("quiet",          'q',0,globalOptions.quietFlag,   FALSE,                                                          "surpress any output"),
+  CMD_OPTION_INTEGER("verbose",        'v',0,globalOptions.verboseLevel,0,                                                              "verbosity level"),
+
+  CMD_OPTION_BOOLEAN("version",        0  ,0,versionFlag,               FALSE,                                                          "print version"),
+  CMD_OPTION_BOOLEAN("help",           'h',0,helpFlag,                  FALSE,                                                          "print this help"),
 };
 
 /****************************** Macros *********************************/
@@ -136,18 +146,67 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   extern "C" {
 #endif
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
+void info(uint verboseLevel, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  if (!globalOptions.quietFlag && (globalOptions.verboseLevel>=verboseLevel))
+  {
+    va_start(arguments,format);
+    vprintf(format,arguments);
+    va_end(arguments);
+    fflush(stdout);
+  }
+}
+
+const char *getErrorText(Errors error)
+{
+  #define CASE(error,text) case error: return text; break;
+  #define DEFAULT(text) default: return text; break;
+
+  switch (error)
+  {
+    CASE(ERROR_NONE,                   "none"                  );
+                                                  
+    CASE(ERROR_INSUFFICIENT_MEMORY,    "insufficient memory"   );
+    CASE(ERROR_INIT,                   "init"                  );
+
+    CASE(ERROR_INVALID_PATTERN,        "init pattern matching" );
+
+    CASE(ERROR_INIT_COMPRESS,          "init compress"         );
+    CASE(ERROR_COMPRESS_ERROR,         "compress"              );
+
+    CASE(ERROR_UNSUPPORTED_BLOCK_SIZE, "unsupported block size");
+    CASE(ERROR_INIT_CRYPT,             "init crypt"            );
+    CASE(ERROR_NO_PASSWORD,            "no password"           );
+    CASE(ERROR_INIT_CIPHER,            "init cipher"           );
+    CASE(ERROR_ENCRYPT_FAIL,           "encrypt"               );
+    CASE(ERROR_DECRYPT_FAIL,           "decrypt"               );
+
+    CASE(ERROR_CREATE_FILE,            "create file"           );
+    CASE(ERROR_OPEN_FILE,              "open file"             );
+    CASE(ERROR_OPEN_DIRECTORY,         "open directory"        );
+    CASE(ERROR_IO_ERROR,               "input/output"          );
+
+    CASE(ERROR_END_OF_ARCHIVE,         "end of archive"        );
+    CASE(ERROR_NO_FILE_ENTRY,          "no file entry"         );
+    CASE(ERROR_NO_FILE_DATA,           "no data entry"         );
+    CASE(ERROR_END_OF_DATA,            "end of data"           );
+
+    DEFAULT(                           "unknown"               );
+  }
+
+  #undef DEFAULT
+  #undef CASE
+}
 
 void printError(const char *text, ...)
 {
   va_list arguments;
+
+  assert(text != NULL);
 
   va_start(arguments,text);
   fprintf(stderr,"ERROR: ");
@@ -167,7 +226,9 @@ void printError(const char *text, ...)
 
 LOCAL void printUsage(const char *programName)
 {
-  printf("Usage: %s [<options>] [--] [cltx]...\n",programName);
+  assert(programName != NULL);
+
+  printf("Usage: %s [<options>] [--] <archive name>... [<files>...]\n",programName);
   printf("\n");
   cmdOptions_printHelp(stdout,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS)
@@ -262,6 +323,11 @@ int main(int argc, const char *argv[])
   {
     return EXITCODE_INVALID_ARGUMENT;
   }
+  if (versionFlag)
+  {
+    printf("BAR version %s\n",VERSION);
+    return EXITCODE_OK;
+  }
   if (helpFlag)
   {
     printUsage(argv[0]);
@@ -290,7 +356,7 @@ int main(int argc, const char *argv[])
         exitcode = (command_create(archiveFileName,
                                    &includePatternList,
                                    &excludePatternList,
-                                   tmpDirectory,
+                                   globalOptions.tmpDirectory,
                                    partSize,
                                    compressAlgorithm,
                                    cryptAlgorithm,

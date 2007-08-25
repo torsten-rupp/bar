@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems : all
@@ -229,6 +229,25 @@ void Crypt_delete(CryptInfo *cryptInfo)
       break;
     case CRYPT_ALGORITHM_AES128:
       gcry_cipher_close(cryptInfo->gcry_cipher_hd);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+}
+
+void Crypt_reset(CryptInfo *cryptInfo)
+{
+  assert(cryptInfo != NULL);
+
+  switch (cryptInfo->cryptAlgorithm)
+  {
+    case CRYPT_ALGORITHM_NONE:
+      break;
+    case CRYPT_ALGORITHM_AES128:
+      gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
       break;
     #ifndef NDEBUG
       default:

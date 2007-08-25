@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -23,7 +23,7 @@
 #include "global.h"
 #include "strings.h"
 
-#include "bar.h"
+#include "errors.h"
 #include "patterns.h"
 #include "files.h"
 #include "archive.h"
@@ -373,6 +373,7 @@ HALT_INTERNAL_ERROR("x");
 
 LOCAL void packer(void)
 {
+  bool            failFlag;
   ArchiveInfo     archiveInfo;
   Errors          error;
   void            *buffer;
@@ -400,13 +401,15 @@ LOCAL void packer(void)
                         );
   if (error != ERROR_NONE)
   {
+    printError("Cannot create archive file '%s' (error: %s)\n",archiveFileName,getErrorText(error));
     free(buffer);
-HALT(1,"x");
+    return;
   }
 
   while (!exitFlag && (getNextFile(fileName) != NULL))
   {
-fprintf(stderr,"%s,%d: pack %s\n",__FILE__,__LINE__,String_cString(fileName));
+    info(0,"Store '%s'...",String_cString(fileName));
+
     /* get file info */
     error = Files_getInfo(fileName,&fileInfo);
     if (error != ERROR_NONE)
@@ -422,6 +425,10 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
                             fileName,
                             &fileInfo
                            );
+    if (error != ERROR_NONE)
+    {
+      
+    }
 
     /* write file content into archive */  
     error = Files_open(&fileHandle,fileName,FILE_OPENMODE_READ);
@@ -450,7 +457,10 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       break;
     }
 
+    /* close archive file */
     Archive_closeFile(&archiveFileInfo);
+
+    info(0,"ok\n");
   }
 
   /* close archive */

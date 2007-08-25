@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -24,7 +24,7 @@
 #include "global.h"
 #include "strings.h"
 
-#include "bar.h"
+#include "errors.h"
 #include "patterns.h"
 #include "files.h"
 #include "archive.h"
@@ -63,6 +63,7 @@ bool command_restore(FileNameList *archiveFileNameList,
 {
   void            *buffer;
   String          fileName;
+  bool            failFlag;
   Errors          error;
   FileNameNode    *archiveFileNameNode;
   ArchiveInfo     archiveInfo;
@@ -86,8 +87,8 @@ bool command_restore(FileNameList *archiveFileNameList,
   }
   fileName = String_new();
 
-  archiveFileNameNode = archiveFileNameList->head;
-  while (archiveFileNameNode != NULL)
+  failFlag = FALSE;
+  for (archiveFileNameNode = archiveFileNameList->head; archiveFileNameNode != NULL; archiveFileNameNode = archiveFileNameNode->next)
   {
     /* open archive */
     error = Archive_open(&archiveInfo,
@@ -96,9 +97,9 @@ bool command_restore(FileNameList *archiveFileNameList,
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),strerror(errno));
-      return FALSE;
-HALT_INTERNAL_ERROR("x");
+      printError("Cannot open archive file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+      failFlag = TRUE;
+      continue;
     }
 
     /* read files */
@@ -114,15 +115,18 @@ HALT_INTERNAL_ERROR("x");
                               );
       if (error != ERROR_NONE)
       {
-HALT_INTERNAL_ERROR("x");
+        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
         Archive_closeFile(&archiveFileInfo);
-        continue;
+        failFlag = TRUE;
+        break;
       }
 
       if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName))
           && !Patterns_matchList(excludePatternList,fileName)
          )
       {
+        info(0,"Restore '%s'...",String_cString(fileName));
+
         /* get destination filename */
         destinationFileName = String_new();
         if (directory != NULL) String_setCString(destinationFileName,directory);
@@ -136,14 +140,21 @@ HALT_INTERNAL_ERROR("x");
         error = Files_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
         if (error != ERROR_NONE)
         {
-  HALT_INTERNAL_ERROR("x");
+          info(0,"fail\n");
+          printf("Cannot open file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
           Archive_closeFile(&archiveFileInfo);
+          failFlag = TRUE;
           continue;
         }
         error = Files_seek(&fileHandle,partOffset);
         if (error != ERROR_NONE)
         {
-  HALT_INTERNAL_ERROR("x");
+          info(0,"fail\n");
+          printf("Cannot write file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+          Archive_closeFile(&archiveFileInfo);
+          Files_close(&fileHandle);
+          failFlag = TRUE;
+          continue;
         }
 
         length = 0;
@@ -152,22 +163,43 @@ HALT_INTERNAL_ERROR("x");
           n = ((partSize-length) > BUFFER_SIZE)?BUFFER_SIZE:partSize-length;
 
           error = Archive_readFileData(&archiveFileInfo,buffer,n);
-          if (error != ERROR_NONE) break;
+          if (error != ERROR_NONE)
+          {
+            info(0,"fail\n");
+            printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+            failFlag = TRUE;
+            break;
+          }
           error = Files_write(&fileHandle,buffer,n);
-          if (error != ERROR_NONE) break;
+          if (error != ERROR_NONE)
+          {
+            info(0,"fail\n");
+            printf("Cannot write file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+            failFlag = TRUE;
+            break;
+          }
 
           length += n;
         }
         Files_close(&fileHandle);
-        if (error != ERROR_NONE)
+        if (failFlag)
         {
-  HALT_INTERNAL_ERROR("x");
+          Archive_closeFile(&archiveFileInfo);
+          Files_close(&fileHandle);
+          continue;
         }
 
         /* set file permissions, file owner/group */
 
         /* free resources */
         String_delete(destinationFileName);
+
+        info(0,"ok\n");
+      }
+      else
+      {
+        /* skip */
+        info(1,"Restore '%s'...skipped\n",String_cString(fileName));
       }
 
       /* close archive file */
@@ -176,16 +208,13 @@ HALT_INTERNAL_ERROR("x");
 
     /* close archive */
     Archive_done(&archiveInfo);
-
-    /* next file */
-    archiveFileNameNode = archiveFileNameNode->next;
   }
 
   /* free resources */
   String_delete(fileName);
   free(buffer);
 
-  return TRUE;
+  return !failFlag;
 }
 
 #ifdef __cplusplus

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems : all
@@ -20,7 +20,7 @@
 #include "global.h"
 #include "strings.h"
 
-#include "bar.h"
+#include "errors.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -114,11 +114,22 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
 * Purpose: delete crypt handle
 * Input  : cryptInfo - crypt info block
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
 void Crypt_delete(CryptInfo *cryptInfo);
+
+/***********************************************************************\
+* Name   : Crypt_reset
+* Purpose: reset crypt handle
+* Input  : cryptInfo - crypt info block
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_reset(CryptInfo *cryptInfo);
 
 /***********************************************************************\
 * Name   : Crypt_encrypt

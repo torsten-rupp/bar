@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -103,7 +103,7 @@ archive_format.c: archive_format.def
 
 .PHONE: p0 pack0 l0 list0 r0 restore0 t0 c0 compare0
 p0 pack0: bar
-	./bar -a data/data.back -c demo/abc.dat --compress=$(COMPRESS) --crypt=$(CRYPT) --password=test
+	./bar -a data/data.back -c demo/4.dat --compress=$(COMPRESS) --crypt=$(CRYPT) --password=test
 
 l0 list0: bar
 	./bar -l data/data.back --password=test
@@ -130,6 +130,7 @@ t1 c1 compare1: bar
 .PHONE: p2 pack2 l2 list2 r2 restore2
 p2 pack2: bar
 	./bar -a data/data.back -c -s 1000000 demo
+        #/1.dat demo/4.dat
 
 l2 list2: bar
 	./bar -l data/data.back.*
@@ -137,7 +138,7 @@ l2 list2: bar
 r2 restore2:
 	./bar --directory data/restore -x data/data.back.*
 
-c2 compare2: bar
+t2 c2 compare2: bar
 	./bar -t data/data.back.*
 
 .PHONE: p3 pack3

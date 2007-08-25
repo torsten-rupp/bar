@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -20,7 +20,7 @@
 #include "global.h"
 #include "strings.h"
 
-#include "bar.h"
+#include "errors.h"
 
 /****************** Conditional compilation switches *******************/
 

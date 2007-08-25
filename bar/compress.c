@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -345,7 +345,7 @@ Errors Compress_flush(CompressInfo *compressInfo)
 
   assert(compressInfo != NULL);
   assert(compressInfo->buffer != NULL);
-  assert(compressInfo->bufferIndex < compressInfo->blockLength);
+  assert(compressInfo->bufferIndex <= compressInfo->blockLength);
 
   switch (compressInfo->compressAlgorithm)
   {

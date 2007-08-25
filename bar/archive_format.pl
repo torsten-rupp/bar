@@ -9,9 +9,9 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/archive_format.pl,v $
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # $Author: torsten $
-# Contents: create header file definition from format definition
+# Contents: create header/c file definition from format definition
 # Systems : all
 #
 # ----------------------------------------------------------------------------

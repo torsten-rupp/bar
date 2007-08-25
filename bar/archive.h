@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -19,7 +19,7 @@
 #include "global.h"
 #include "strings.h"
 
-#include "bar.h"
+#include "errors.h"
 #include "chunks.h"
 #include "compress.h"
 #include "crypt.h"
@@ -34,14 +34,14 @@
 
 typedef struct
 {
-  String             fileName;
+  String             fileName;             // archive basename
   uint64             partSize;
-  CompressAlgorithms compressAlgorithm;
-  CryptAlgorithms    cryptAlgorithm;
-  const char         *password;
+  CompressAlgorithms compressAlgorithm;    // compression algorithm
+  CryptAlgorithms    cryptAlgorithm;       // crypt algorithm
+  const char         *password;            // password
 
-  int                partNumber;
-  FileHandle         fileHandle;
+  int                partNumber;           // file part number
+  FileHandle         fileHandle;           // file handle
 } ArchiveInfo;
 
 typedef struct

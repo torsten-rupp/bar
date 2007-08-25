@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems : all
@@ -22,7 +22,7 @@
 #include "lists.h"
 #include "strings.h"
 
-#include "bar.h"
+#include "errors.h"
 
 /****************** Conditional compilation switches *******************/
 
