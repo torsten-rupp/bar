@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -61,7 +61,7 @@ bool command_restore(FileNameList *archiveFileNameList,
                      const char   *password
                     )
 {
-  void            *buffer;
+  byte            *buffer;
   String          fileName;
   bool            failFlag;
   Errors          error;

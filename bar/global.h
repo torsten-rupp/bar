@@ -220,40 +220,47 @@ typedef void               void32;
 #define HALT(errorLevel, format, args...) \
  do \
   { \
-   __halt(__FILE__, __LINE__, errorLevel, format, ## args); \
+   __halt(__FILE__,__LINE__,errorLevel,format, ## args); \
   } \
  while (0)
 
 #define HALT_INSUFFICIENT_MEMORY(args...) \
   do \
   { \
-     __abort(__FILE__, __LINE__, "insufficient memory", ## args); \
+     __abort(__FILE__,__LINE__,"FATAL ERROR: ","insufficient memory", ## args); \
+  } \
+ while (0)
+
+#define HALT_FATAL_ERROR(format, args...) \
+  do \
+  { \
+     __abort(__FILE__, __LINE__,"FATAL ERROR: ",format, ## args); \
   } \
  while (0)
 
 #define HALT_INTERNAL_ERROR(format, args...) \
   do \
   { \
-     __abort(__FILE__, __LINE__, format, ## args); \
+     __abort(__FILE__, __LINE__, "INTERNAL ERROR: ", format, ## args); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED(args...) \
   do \
   { \
-     HALT_INTERNAL_ERROR("INTERNAL ERROR: still not implemented: ", ## args); \
+     HALT_INTERNAL_ERROR("still not implemented: ", ## args); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE(args...) \
   do \
   { \
-     HALT_INTERNAL_ERROR("INTERNAL ERROR: unhandled switch case: ", ## args); \
+     HALT_INTERNAL_ERROR("unhandled switch case: ", ## args); \
   } \
   while (0)
 
 #define HALT_INTERAL_ERROR_UNHANDLED_SWITCH_CASE(args...) \
   do \
   { \
-     HALT_INTERNAL_ERROR("INTERNAL ERROR: unhandled switch-case: ", ## args); \
+     HALT_INTERNAL_ERROR("unhandled switch-case: ", ## args); \
   } \
  while (0)
 
@@ -573,13 +580,19 @@ inline ulong swapLONG(ulong n)
 * Notes  : -
 \***********************************************************************/
 
-void __halt(const char *filename, unsigned int lineNb, int exitcode, const char *format, ...);
+void __halt(const char   *filename,
+            unsigned int lineNb,
+            int          exitcode,
+            const char   *format,
+            ...
+           );
 
 /***********************************************************************\
 * Name   : __abort
 * Purpose: abort program
 * Input  : filename - filename
 *          lineNb   - line number
+*          prefix   - prefix text
 *          format   - format string (like printf)
 *          ...      - optional arguments
 * Output : -
@@ -587,7 +600,12 @@ void __halt(const char *filename, unsigned int lineNb, int exitcode, const char 
 * Notes  : -
 \***********************************************************************/
 
-void __abort(const char *filename, unsigned int lineNb, const char *format, ...);
+void __abort(const char   *filename,
+             unsigned int lineNb,
+             const char   *prefix,
+             const char   *format,
+             ...
+            );
 
 #ifdef __cplusplus
 }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems : all
@@ -79,6 +79,8 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 
   assert(blockLength != NULL);
 
+//*blockLength=16;
+//return ERROR_NONE;
   switch (cryptAlgorithm)
   {
     case CRYPT_ALGORITHM_NONE:

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -55,7 +55,9 @@ typedef struct
 {
   CompressModes      compressMode;
   CompressAlgorithms compressAlgorithm;
-  uint               blockLength;
+  ulong              blockLength;
+
+  bool               flushFlag;                 // TRUE for flushing all buffers
 
   union
   {
@@ -69,9 +71,16 @@ typedef struct
     } zlib;
   };
 
-  byte               *buffer;
-  uint               bufferIndex;
-  uint               bufferLength;
+  byte               *dataBuffer;               // buffer for uncompressed data
+  ulong              dataBufferIndex;           // position of next byte in uncompressed data buffer
+  ulong              dataBufferLength;          // length of data in uncompressed data buffer
+  ulong              dataBufferSize;            // length of data in uncompressed data buffer
+
+  byte               *compressBuffer;           // buffer for compressed data
+  ulong              compressBufferIndex;       // position of next byte in compressed data buffer
+  ulong              compressBufferLength;      // length of data in compressed data buffer
+  ulong              compressBufferSize;        // length of data in compressed data buffer
+
 } CompressInfo;
 
 /***************************** Variables *******************************/
@@ -122,7 +131,7 @@ void Compress_done(void);
 Errors Compress_new(CompressInfo       *compressInfo,
                     CompressModes      compressMode,
                     CompressAlgorithms compressAlgorithm,
-                    uint               blockLength
+                    ulong              blockLength
                    );
 
 /***********************************************************************\
@@ -206,6 +215,8 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo);
 \***********************************************************************/
 
 uint64 Compress_getOutputLength(CompressInfo *compressInfo);
+
+Errors Compress_available(CompressInfo *compressInfo, ulong *availableBytes);
 
 /***********************************************************************\
 * Name   : Compress_checkBlockIsFull

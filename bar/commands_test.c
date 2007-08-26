@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -89,7 +89,7 @@ bool command_test(FileNameList *archiveFileNameList,
                   const char   *password
                  )
 {
-  void            *archiveBuffer,*fileBuffer;
+  byte            *archiveBuffer,*fileBuffer;
   String          fileName;
   bool            failFlag;
   FileNameNode    *archiveFileNameNode;

@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -103,7 +103,7 @@ archive_format.c: archive_format.def
 
 .PHONE: p0 pack0 l0 list0 r0 restore0 t0 c0 compare0
 p0 pack0: bar
-	./bar -a data/data.back -c demo/4.dat --compress=$(COMPRESS) --crypt=$(CRYPT) --password=test
+	./bar -a data/data.back -c demo/abcd.dat --compress=$(COMPRESS) --crypt=$(CRYPT) --password=test
 
 l0 list0: bar
 	./bar -l data/data.back --password=test
@@ -116,20 +116,20 @@ t0 c0 compare0: bar
 
 .PHONE: p1 pack1 l1 list1 r1 restore1 t1 c1 compare1
 p1 pack1: bar
-	./bar -a data/data.back -c demo
+	./bar -a data/data.back -c demo --compress=$(COMPRESS) --crypt=$(CRYPT) --password=test
 
 l1 list1: bar
-	./bar -l data/data.back
+	./bar -l data/data.back --password=test
 
 r1 restore1: bar
 	./bar --directory data/restore -x data/data.back
 
 t1 c1 compare1: bar
-	./bar -t data/data.back
+	./bar -t data/data.back --password=test
 
 .PHONE: p2 pack2 l2 list2 r2 restore2
 p2 pack2: bar
-	./bar -a data/data.back -c -s 1000000 demo
+	./bar -a data/data.back -c -s 1000000 demo --compress=$(COMPRESS) --crypt=$(CRYPT) --password=test
         #/1.dat demo/4.dat
 
 l2 list2: bar

@@ -31,22 +31,17 @@
 extern "C" {
 #endif
 
-/***********************************************************************\
-* Name   : __halt
-* Purpose: halt program
-* Input  : filename - filename
-*          lineNb   - line number
-*          exitcode - exitcode
-*          format   - format string (like printf)
-*          ...      - optional arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void __halt(const char *filename, unsigned int lineNb, int exitcode, const char *format, ...)
+void __halt(const char   *filename,
+            unsigned int lineNb,
+            int          exitcode,
+            const char   *format,
+            ...
+           )
 {
   va_list arguments;
+
+  assert(filename != NULL);
+  assert(format != NULL);
 
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
@@ -55,22 +50,19 @@ void __halt(const char *filename, unsigned int lineNb, int exitcode, const char 
   exit(exitcode);
 }
 
-/***********************************************************************\
-* Name   : __abort
-* Purpose: abort program
-* Input  : filename - filename
-*          lineNb   - line number
-*          format   - format string (like printf)
-*          ...      - optional arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void __abort(const char *filename, unsigned int lineNb, const char *format, ...)
+void __abort(const char   *filename,
+             unsigned int lineNb,
+             const char   *prefix,
+             const char   *format,
+             ...
+            )
 {
   va_list arguments;
 
+  assert(filename != NULL);
+  assert(format != NULL);
+
+  if (prefix != NULL) fprintf(stderr,"%s", prefix);
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
   va_end(arguments);

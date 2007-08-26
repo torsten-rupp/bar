@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems : all
@@ -177,6 +177,8 @@ const char *getErrorText(Errors error)
 
     CASE(ERROR_INIT_COMPRESS,          "init compress"         );
     CASE(ERROR_COMPRESS_ERROR,         "compress"              );
+    CASE(ERROR_DEFLATE_ERROR,          "deflate"               );
+    CASE(ERROR_INFLATE_ERROR,          "inflate"               );
 
     CASE(ERROR_UNSUPPORTED_BLOCK_SIZE, "unsupported block size");
     CASE(ERROR_INIT_CRYPT,             "init crypt"            );
