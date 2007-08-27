@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems : all
@@ -114,7 +114,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM   ("extract",        'x',0,command,                   COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"), 
 
   CMD_OPTION_STRING ("archive",        'a',0,archiveFileName,           NULL,                                                           "archive filename"),
-  CMD_OPTION_INTEGER("part-size",      's',0,partSize,                  0,                                                              "part size"),
+  CMD_OPTION_INTEGER("part-size",      's',0,partSize,                  0,                                                              "approximated part size"),
   CMD_OPTION_STRING ("tmp-directory",  0,  0,globalOptions.tmpDirectory,"/tmp",                                                         "temporary directory"),
   CMD_OPTION_INTEGER("directory-strip",'p',0,directoryStripCount,       0,                                                              "number of directories to strip on extract"),
   CMD_OPTION_STRING ("directory",      0,  0,directory,                 NULL,                                                           "directory to restore files"),

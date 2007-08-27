@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -60,22 +60,29 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
   {
     case COMPRESS_ALGORITHM_NONE:
       if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
-          && (compressInfo->dataBufferLength > 0)                                     // data available
+          && !compressInfo->endOfDataFlag                                             // not end-of-data
          )
       {
-        /* copy from data buffer -> compress buffer */
-        maxDataBytes     = compressInfo->dataBufferLength;
-        maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
-        n = MIN(maxDataBytes,maxCompressBytes);
-        memcpy(compressInfo->compressBuffer+compressInfo->compressBufferLength,
-               compressInfo->dataBuffer+compressInfo->dataBufferIndex,
-               n
-              );
-        compressInfo->compressBufferLength += n;
+        if (compressInfo->dataBufferLength > 0)  // data available
+        {
+          /* copy from data buffer -> compress buffer */
+          maxDataBytes     = compressInfo->dataBufferLength;
+          maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
+          n = MIN(maxDataBytes,maxCompressBytes);
+          memcpy(compressInfo->compressBuffer+compressInfo->compressBufferLength,
+                 compressInfo->dataBuffer+compressInfo->dataBufferIndex,
+                 n
+                );
+          compressInfo->compressBufferLength += n;
 
-        /* shift data buffer */
-        memmove(compressInfo->dataBuffer,compressInfo->dataBuffer+n,compressInfo->dataBufferLength-n);
-        compressInfo->dataBufferLength -= n;
+          /* shift data buffer */
+          memmove(compressInfo->dataBuffer,compressInfo->dataBuffer+n,compressInfo->dataBufferLength-n);
+          compressInfo->dataBufferLength -= n;
+        }
+        else
+        {
+//          compressInfo->endOfDataFlag = TRUE;
+        }
       }
       break;
     case COMPRESS_ALGORITHM_ZIP0:
@@ -88,7 +95,9 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
     case COMPRESS_ALGORITHM_ZIP7:
     case COMPRESS_ALGORITHM_ZIP8:
     case COMPRESS_ALGORITHM_ZIP9:
-      if (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
+      if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
+          && !compressInfo->endOfDataFlag                                             // not end-of-data
+         )
       {
         if      (compressInfo->dataBufferLength > 0)  // data available
         {
@@ -100,6 +109,10 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           compressInfo->zlib.stream.next_out  = compressInfo->compressBuffer+compressInfo->compressBufferLength;
           compressInfo->zlib.stream.avail_out = maxCompressBytes;
           zlibError = deflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
+//if (compressInfo->zlib.stream.avail_in<1)
+//{
+//asm(" nop");
+//}
           if ((zlibError != Z_OK) && (zlibError != Z_BUF_ERROR))
           {
             return ERROR_COMPRESS_ERROR;
@@ -108,10 +121,15 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
 
           /* shift data buffer */
           n = maxDataBytes-compressInfo->zlib.stream.avail_in;
-          memmove(compressInfo->dataBuffer,compressInfo->dataBuffer+n,n);
+          memmove(compressInfo->dataBuffer,compressInfo->dataBuffer+n,compressInfo->dataBufferLength-n);
           compressInfo->dataBufferLength -= n;
         }
-        else if (compressInfo->flushFlag) // flush data
+      }
+      if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
+          && !compressInfo->endOfDataFlag                                             // not end-of-data
+         )
+      {
+        if (compressInfo->flushFlag)  // flush data
         {
           /* compress with flush */
           maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
@@ -120,7 +138,14 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           compressInfo->zlib.stream.next_out  = compressInfo->compressBuffer+compressInfo->compressBufferLength;
           compressInfo->zlib.stream.avail_out = maxCompressBytes;
           zlibError = deflate(&compressInfo->zlib.stream,Z_FINISH);
-          if ((zlibError != Z_OK) && (zlibError != Z_STREAM_END) && (zlibError != Z_BUF_ERROR))
+          if      (zlibError == Z_STREAM_END)
+          {
+//fprintf(stderr,"%s,%d: compressInfo->zlib.stream.total_out=%ld zlibError=%d\n",__FILE__,__LINE__,compressInfo->zlib.stream.total_out,zlibError);
+            compressInfo->endOfDataFlag = TRUE;
+          }
+          else if (   (zlibError != Z_OK)
+                   && (zlibError != Z_BUF_ERROR)
+                  )
           {
             return ERROR_COMPRESS_ERROR;
           }
@@ -156,22 +181,33 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
-      if (   (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)         // no data buffer
-          && (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
-         )
+      if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in buffer
       {
-        /* copy from compress buffer -> data buffer */
-        maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
-        maxDataBytes     = compressInfo->dataBufferLength;
-        n = MIN(maxCompressBytes,maxDataBytes);
-        memcpy(compressInfo->dataBuffer,
-               compressInfo->compressBuffer+compressInfo->compressBufferIndex,
-               n
-              );
-        compressInfo->compressBufferLength += n;
-
         compressInfo->dataBufferIndex  = 0;
-        compressInfo->dataBufferLength = n;
+        compressInfo->dataBufferLength = 0;
+
+        if (!compressInfo->endOfDataFlag)
+        {
+          if (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
+          {
+            /* copy from compress buffer -> data buffer */
+            maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
+            maxDataBytes     = compressInfo->dataBufferLength;
+            n = MIN(maxCompressBytes,maxDataBytes);
+            memcpy(compressInfo->dataBuffer,
+                   compressInfo->compressBuffer+compressInfo->compressBufferIndex,
+                   n
+                  );
+            compressInfo->compressBufferLength += n;
+
+            compressInfo->dataBufferIndex  = 0;
+            compressInfo->dataBufferLength = n;
+          }
+          else
+          {
+//            compressInfo->endOfDataFlag = TRUE;
+          }
+        }
       }
       break;
     case COMPRESS_ALGORITHM_ZIP0:
@@ -189,38 +225,63 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
         compressInfo->dataBufferIndex  = 0;
         compressInfo->dataBufferLength = 0;
 
-        if      (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
+        if (!compressInfo->endOfDataFlag)
         {
-          /* decompress */
-          maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
-          maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
-          compressInfo->zlib.stream.next_in   = compressInfo->compressBuffer+compressInfo->compressBufferIndex;
-          compressInfo->zlib.stream.avail_in  = maxCompressBytes;
-          compressInfo->zlib.stream.next_out  = compressInfo->dataBuffer+compressInfo->dataBufferLength;
-          compressInfo->zlib.stream.avail_out = maxDataBytes;
-          zlibError = inflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
-          if ((zlibError != Z_OK) && (zlibError != Z_STREAM_END) && (zlibError != Z_BUF_ERROR))
+          if      (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
           {
-            return ERROR_COMPRESS_ERROR;
+            /* decompress */
+            maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
+            maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
+            compressInfo->zlib.stream.next_in   = compressInfo->compressBuffer+compressInfo->compressBufferIndex;
+            compressInfo->zlib.stream.avail_in  = maxCompressBytes;
+            compressInfo->zlib.stream.next_out  = compressInfo->dataBuffer+compressInfo->dataBufferLength;
+            compressInfo->zlib.stream.avail_out = maxDataBytes;
+            zlibError = inflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
+            if      (zlibError == Z_STREAM_END)
+            {
+              compressInfo->endOfDataFlag = TRUE;
+            }
+            else if (   (zlibError != Z_OK)
+                     && (zlibError != Z_BUF_ERROR)
+                    )
+            {
+              return ERROR_COMPRESS_ERROR;
+            }
+            compressInfo->compressBufferIndex += maxCompressBytes-compressInfo->zlib.stream.avail_in;
+            compressInfo->dataBufferLength += maxDataBytes-compressInfo->zlib.stream.avail_out;
           }
-          compressInfo->compressBufferIndex += maxCompressBytes-compressInfo->zlib.stream.avail_in;
-          compressInfo->dataBufferLength += maxDataBytes-compressInfo->zlib.stream.avail_out;
         }
-        else if (compressInfo->flushFlag) // flush data
+      }
+      if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in buffer
+      {
+        compressInfo->dataBufferIndex  = 0;
+        compressInfo->dataBufferLength = 0;
+
+        if (!compressInfo->endOfDataFlag)
         {
-          /* decompress with flush */
-          maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
-          maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
-          compressInfo->zlib.stream.next_in   = NULL;
-          compressInfo->zlib.stream.avail_in  = 0;
-          compressInfo->zlib.stream.next_out  = compressInfo->dataBuffer+compressInfo->dataBufferLength;
-          compressInfo->zlib.stream.avail_out = maxDataBytes;
-          zlibError = inflate(&compressInfo->zlib.stream,Z_FINISH);
-          if ((zlibError != Z_OK) && (zlibError != Z_STREAM_END) && (zlibError != Z_BUF_ERROR))
+          if (compressInfo->flushFlag) // flush data
           {
-            return ERROR_COMPRESS_ERROR;
+            /* decompress with flush */
+            maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
+            maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
+            compressInfo->zlib.stream.next_in   = NULL;
+            compressInfo->zlib.stream.avail_in  = 0;
+            compressInfo->zlib.stream.next_out  = compressInfo->dataBuffer+compressInfo->dataBufferLength;
+            compressInfo->zlib.stream.avail_out = maxDataBytes;
+            zlibError = inflate(&compressInfo->zlib.stream,Z_FINISH);
+fprintf(stderr,"%s,%d: compressInfo->zlib.stream.total_in=%ld zlibError=%d\n",__FILE__,__LINE__,compressInfo->zlib.stream.total_in,zlibError);
+            if      (zlibError == Z_STREAM_END)
+            {
+              compressInfo->endOfDataFlag = TRUE;
+            }
+            else if (   (zlibError != Z_OK)
+                     && (zlibError != Z_BUF_ERROR)
+                    )
+            {
+              return ERROR_COMPRESS_ERROR;
+            }
+            compressInfo->dataBufferLength += maxDataBytes-compressInfo->zlib.stream.avail_out;
           }
-          compressInfo->dataBufferLength += maxDataBytes-compressInfo->zlib.stream.avail_out;
         }
       }
       break;
@@ -260,6 +321,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
   compressInfo->compressMode         = compressMode; 
   compressInfo->compressAlgorithm    = compressAlgorithm; 
   compressInfo->blockLength          = blockLength;
+  compressInfo->endOfDataFlag        = FALSE;
   compressInfo->flushFlag            = FALSE;
   compressInfo->dataBufferIndex      = 0;
   compressInfo->dataBufferLength     = 0;
@@ -400,6 +462,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
   assert(compressInfo != NULL);
 
   /* init variables */
+  compressInfo->endOfDataFlag        = FALSE;
   compressInfo->flushFlag            = FALSE;
   compressInfo->dataBufferIndex      = 0;
   compressInfo->dataBufferLength     = 0;
@@ -454,18 +517,10 @@ Errors Compress_deflate(CompressInfo *compressInfo,
                         byte         data
                        )
 {
-  ulong maxCompressBytes,maxDataBytes;
-  ulong n;
   Errors error;
 
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
-  assert(compressInfo->dataBuffer != NULL);
-  assert(compressInfo->compressBuffer != NULL);
-  assert(compressInfo->dataBufferIndex <= compressInfo->dataBufferLength);
-  assert(compressInfo->dataBufferLength <= compressInfo->dataBufferSize);
-  assert(compressInfo->compressBufferIndex <= compressInfo->compressBufferLength);
-  assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
 
   if (compressInfo->dataBufferLength >= compressInfo->dataBufferSize)  // no more space in data buffer
   {
@@ -478,61 +533,6 @@ Errors Compress_deflate(CompressInfo *compressInfo,
   assert(compressInfo->dataBufferLength < compressInfo->dataBufferSize);
   (*(compressInfo->dataBuffer+compressInfo->dataBufferLength)) = data;
   compressInfo->dataBufferLength++;
-#if 0
-  switch (compressInfo->compressAlgorithm)
-  {
-    case COMPRESS_ALGORITHM_NONE:
-      assert(compressInfo->compressBufferLength < compressInfo->compressBufferSize);
-      (*(compressInfo->compressBuffer+compressInfo->compressBufferIndex)) = data;
-      compressInfo->compressBufferIndex++;
-      compressInfo->compressBufferLength++;
-
-      compressInfo->none.length++;
-      break;
-    case COMPRESS_ALGORITHM_ZIP0:
-    case COMPRESS_ALGORITHM_ZIP1:
-    case COMPRESS_ALGORITHM_ZIP2:
-    case COMPRESS_ALGORITHM_ZIP3:
-    case COMPRESS_ALGORITHM_ZIP4:
-    case COMPRESS_ALGORITHM_ZIP5:
-    case COMPRESS_ALGORITHM_ZIP6:
-    case COMPRESS_ALGORITHM_ZIP7:
-    case COMPRESS_ALGORITHM_ZIP8:
-    case COMPRESS_ALGORITHM_ZIP9:
-      if (compressInfo->dataBufferLength >= compressInfo->dataBufferSize)  // no more space in data buffer
-      {
-        /* compress */
-        maxDataBytes     = compressInfo->dataBufferLength;
-        maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
-        compressInfo->zlib.stream.next_in   = compressInfo->dataBuffer;
-        compressInfo->zlib.stream.avail_in  = maxDataBytes;
-        compressInfo->zlib.stream.next_out  = compressInfo->compressBuffer+compressInfo->compressBufferLength;
-        compressInfo->zlib.stream.avail_out = maxCompressBytes;
-        if (deflate(&compressInfo->zlib.stream,Z_NO_FLUSH) != Z_OK)
-        {
-          return ERROR_COMPRESS_ERROR;
-        }
-        compressInfo->compressBufferLength += maxCompressBytes-compressInfo->zlib.stream.avail_out;
-
-        /* shift data buffer */
-        n = maxDataBytes-compressInfo->zlib.stream.avail_in;
-        memmove(compressInfo->dataBuffer,compressInfo->dataBuffer+n,n);
-        compressInfo->dataBufferLength -= n;
-      }
-
-      /* store in data buffer */
-      assert(compressInfo->dataBufferLength < compressInfo->compressBufferSize);
-      (*(compressInfo->dataBuffer+compressInfo->dataBufferLength)) = data;
-      compressInfo->dataBufferLength++;
-
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
-#endif /* 0 */
 
   return ERROR_NONE;
 }
@@ -541,18 +541,10 @@ Errors Compress_inflate(CompressInfo *compressInfo,
                         byte         *data
                        )
 {
-  ulong maxCompressBytes,maxDataBytes;
-  int  zlibError;
   Errors error;
 
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_INFLATE);
-  assert(compressInfo->dataBuffer != NULL);
-  assert(compressInfo->compressBuffer != NULL);
-  assert(compressInfo->dataBufferIndex <= compressInfo->dataBufferLength);
-  assert(compressInfo->dataBufferLength <= compressInfo->dataBufferSize);
-  assert(compressInfo->compressBufferIndex <= compressInfo->compressBufferLength);
-  assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
   assert(data != NULL);
 
   if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)
@@ -560,66 +552,12 @@ Errors Compress_inflate(CompressInfo *compressInfo,
     error = decompressData(compressInfo);
     if (error != ERROR_NONE)
     {
-      return;
+      return error;
     }
   }
   assert(compressInfo->dataBufferIndex < compressInfo->dataBufferLength);
   (*data) = (*(compressInfo->dataBuffer+compressInfo->dataBufferIndex));
   compressInfo->dataBufferIndex++;
-
-#if 0
-  switch (compressInfo->compressAlgorithm)
-  {
-    case COMPRESS_ALGORITHM_NONE:
-      assert(compressInfo->compressBufferIndex < compressInfo->compressBufferLength);
-      (*data) = (*(compressInfo->compressBuffer+compressInfo->compressBufferIndex));
-      compressInfo->compressBufferIndex++;
-
-      compressInfo->none.length++;
-      break;
-    case COMPRESS_ALGORITHM_ZIP0:
-    case COMPRESS_ALGORITHM_ZIP1:
-    case COMPRESS_ALGORITHM_ZIP2:
-    case COMPRESS_ALGORITHM_ZIP3:
-    case COMPRESS_ALGORITHM_ZIP4:
-    case COMPRESS_ALGORITHM_ZIP5:
-    case COMPRESS_ALGORITHM_ZIP6:
-    case COMPRESS_ALGORITHM_ZIP7:
-    case COMPRESS_ALGORITHM_ZIP8:
-    case COMPRESS_ALGORITHM_ZIP9:
-      if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no more data
-      {
-        compressInfo->dataBufferIndex  = 0;
-        compressInfo->dataBufferLength = 0;
-
-        /* decompress */
-        maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
-        maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
-        compressInfo->zlib.stream.next_in   = compressInfo->compressBuffer+compressInfo->compressBufferIndex;
-        compressInfo->zlib.stream.avail_in  = maxCompressBytes;
-        compressInfo->zlib.stream.next_out  = compressInfo->dataBuffer+compressInfo->dataBufferLength;
-        compressInfo->zlib.stream.avail_out = maxDataBytes;
-        zlibError = inflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
-        if ((zlibError != Z_OK) && (zlibError != Z_BUF_ERROR))
-        {
-          return ERROR_COMPRESS_ERROR;
-        }
-        compressInfo->compressBufferIndex += maxCompressBytes-compressInfo->zlib.stream.avail_in;
-        compressInfo->dataBufferLength += maxDataBytes-compressInfo->zlib.stream.avail_out;
-      }
-
-      /* get from data buffer */
-      assert(compressInfo->dataBufferIndex < compressInfo->dataBufferLength);
-      (*data) = (*(compressInfo->dataBuffer+compressInfo->dataBufferIndex));
-      compressInfo->dataBufferIndex++;
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
-#endif /* 0 */
 
   return ERROR_NONE;
 }
@@ -629,6 +567,7 @@ Errors Compress_flush(CompressInfo *compressInfo)
   assert(compressInfo != NULL);
 
   compressInfo->flushFlag = TRUE;
+//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
@@ -709,11 +648,11 @@ Errors Compress_available(CompressInfo *compressInfo, ulong *availableBytes)
   {
     case COMPRESS_MODE_DEFLATE:
       error = compressData(compressInfo);
-      if (error != ERROR_NONE) return FALSE;
+      if (error != ERROR_NONE) return error;
       break;
     case COMPRESS_MODE_INFLATE:
       error = decompressData(compressInfo);
-      if (error != ERROR_NONE) return FALSE;
+      if (error != ERROR_NONE) return error;
       break;
     #ifndef NDEBUG
       default:

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -57,6 +57,7 @@ typedef struct
   CompressAlgorithms compressAlgorithm;
   ulong              blockLength;
 
+  bool               endOfDataFlag;             // TRUE if end-of-data detected
   bool               flushFlag;                 // TRUE for flushing all buffers
 
   union
