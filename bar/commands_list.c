@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -73,7 +73,7 @@ LOCAL void printFileInfo(const String   fileName,
 
   assert(fileInfo != NULL);
 
-  if (fileSize > 0)
+  if (partSize > 0)
   {
     ratio = 100.0-fileSize*100.0/partSize;
   }
@@ -82,11 +82,13 @@ LOCAL void printFileInfo(const String   fileName,
     ratio = 0;
   }
 
-  printf("%10llu %10llu..%10llu %6.1f%% %s\n",
+  printf("%10llu %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
          fileInfo->size,
          partOffset,
          (partSize > 0)?partOffset+partSize-1:partOffset,
+         Compress_getAlgorithmName(fileInfo->compressAlgorithm),
          ratio,
+         Crypt_getAlgorithmName(fileInfo->cryptAlgorithm),
          String_cString(fileName)
         );
 }
@@ -118,13 +120,15 @@ bool command_list(FileNameList *archiveFileNameList,
   failFlag  = FALSE;
   fileCount = 0;
   info(0,
-       "%-10s %-22s %-7s %s\n",
+       "%-10s %-22s %-10s %-7s %-10s %s\n",
        "Size",
        "Part",
+       "Compress",
        "Ratio %",
+       "Crypt",
        "Name"
       );
-  info(0,"------------------------------------------------------------\n");
+  info(0,"--------------------------------------------------------------------------------\n");
   for (archiveFileNameNode = archiveFileNameList->head; archiveFileNameNode != NULL; archiveFileNameNode = archiveFileNameNode->next)
   {
     /* open archive */
@@ -178,7 +182,7 @@ bool command_list(FileNameList *archiveFileNameList,
     /* close archive */
     Archive_done(&archiveInfo);
   }
-  info(0,"------------------------------------------------------------\n");
+  info(0,"--------------------------------------------------------------------------------\n");
   info(0,"%lu file(s)\n",fileCount);
 
   /* free resources */

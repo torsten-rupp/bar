@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems : all
@@ -22,6 +22,8 @@
 #include "strings.h"
 
 #include "bar.h"
+#include "compress.h"
+#include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -49,12 +51,15 @@ typedef enum
 } FileOpenModes;
 
 /***************************** Datatypes *******************************/
+
+/* file i/o handle */
 typedef struct
 {
   int    handle;
   uint64 size;
 } FileHandle;
 
+/* directory read handle */
 typedef struct
 {
   String        name;
@@ -62,15 +67,19 @@ typedef struct
   struct dirent *entry;
 } DirectoryHandle;
 
+/* file info data */
 typedef struct
 {
-  uint64 size;
-  uint64 timeLastAccess;
-  uint64 timeModified;
-  uint64 timeLastChanged;
-  uint32 userId;
-  uint32 groupId;
-  uint32 permission;
+  uint64             size;
+  uint64             timeLastAccess;
+  uint64             timeModified;
+  uint64             timeLastChanged;
+  uint32             userId;
+  uint32             groupId;
+  uint32             permission;
+
+  CompressAlgorithms compressAlgorithm;
+  CryptAlgorithms    cryptAlgorithm;
 } FileInfo;
 
 /***************************** Variables *******************************/

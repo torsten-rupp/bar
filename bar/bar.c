@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems : all
@@ -54,11 +54,11 @@ typedef enum
 GlobalOptions globalOptions;
 
 LOCAL Commands           command;
-LOCAL const char         *archiveFileName;
 LOCAL uint               directoryStripCount;
 LOCAL const char         *directory;
 LOCAL ulong              partSize;
 LOCAL PatternTypes       patternType;
+LOCAL const char         *archiveFileName;
 LOCAL PatternList        includePatternList;
 LOCAL PatternList        excludePatternList;
 LOCAL CompressAlgorithms compressAlgorithm;
@@ -113,7 +113,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM   ("test",           't',0,command,                   COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"), 
   CMD_OPTION_ENUM   ("extract",        'x',0,command,                   COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"), 
 
-  CMD_OPTION_STRING ("archive",        'a',0,archiveFileName,           NULL,                                                           "archive filename"),
+//  CMD_OPTION_STRING ("archive",        'a',0,archiveFileName,           NULL,                                                           "archive filename"),
   CMD_OPTION_INTEGER("part-size",      's',0,partSize,                  0,                                                              "approximated part size"),
   CMD_OPTION_STRING ("tmp-directory",  0,  0,globalOptions.tmpDirectory,"/tmp",                                                         "temporary directory"),
   CMD_OPTION_INTEGER("directory-strip",'p',0,directoryStripCount,       0,                                                              "number of directories to strip on extract"),
@@ -341,15 +341,16 @@ int main(int argc, const char *argv[])
   {
     case COMMAND_CREATE:
       {
-        /* check command line arguments */
-        if (archiveFileName == NULL)
+        /* get archive filename */
+        if (argc < 1)
         {
           printError("no archive filename given!\n");
           return EXITCODE_INVALID_ARGUMENT;
         }
+        archiveFileName = argv[1];
 
         /* get include patterns */
-        for (z = 1; z < argc; z++)
+        for (z = 2; z < argc; z++)
         {
           error = Patterns_addList(&includePatternList,argv[z],patternType);
         }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems : all
@@ -79,6 +79,17 @@ Errors Crypt_init(void);
 \***********************************************************************/
 
 void Crypt_done(void);
+
+/***********************************************************************\
+* Name   : Crypt_getAlgorithmName
+* Purpose: get name of crypt algorithm
+* Input  : cryptAlgorithm - crypt algorithm
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm);
 
 /***********************************************************************\
 * Name   : Crypt_getBlockLength

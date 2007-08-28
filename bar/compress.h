@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -119,6 +119,17 @@ Errors Compress_init(void);
 void Compress_done(void);
 
 /***********************************************************************\
+* Name   : Compress_getAlgorithmName
+* Purpose: get name of compress algorithm
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm);
+
+/***********************************************************************\
 * Name   : Compress_new
 * Purpose: create new compress handle
 * Input  : compressInfo     - compress info block
@@ -216,6 +227,15 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo);
 \***********************************************************************/
 
 uint64 Compress_getOutputLength(CompressInfo *compressInfo);
+
+/***********************************************************************\
+* Name   : Compress_available
+* Purpose: get number of available bytes
+* Input  : compressInfo - compress info block
+* Output : availableBytes - number of available bytes
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 Errors Compress_available(CompressInfo *compressInfo, ulong *availableBytes);
 

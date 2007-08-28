@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -407,7 +407,7 @@ bool command_create(const char      *archiveFileName,
   ArchiveFileInfo archiveFileInfo;
   FileHandle      fileHandle;
   ulong           n;
-ulong xx;
+  double          ratio;
 
   assert(archiveFileName != NULL);
   assert(includePatternList != NULL);
@@ -482,8 +482,9 @@ ulong xx;
     error = Files_getInfo(fileName,&fileInfo);
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
+      info(0,"fail\n");
+      printError("Cannot get info for file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+      failFlag = TRUE;
       continue;
     }
 
@@ -505,27 +506,24 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     error = Files_open(&fileHandle,fileName,FILE_OPENMODE_READ);
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-  // log ???
+      info(0,"fail\n");
+      printError("Cannot open file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
       failFlag = TRUE;
       continue;
     }
     error = ERROR_NONE;
-xx=0;
     do
     {
       Files_read(&fileHandle,buffer,BUFFER_SIZE,&n);
       if (n > 0)
       {
         error = Archive_writeFileData(&archiveFileInfo,buffer,n);
-xx+=n;
       }
     }
     while ((n > 0) && (error == ERROR_NONE));
     Files_close(&fileHandle);
     if (error != ERROR_NONE)
     {
-// log ???
       Archive_closeFile(&archiveFileInfo);
       info(0,"fail\n");
       printError("Cannot create archive file!\n");
@@ -536,7 +534,16 @@ xx+=n;
     /* close archive file */
     Archive_closeFile(&archiveFileInfo);
 
-    info(0,"ok\n");
+    if (archiveFileInfo.chunkFileData.partSize > 0)
+    {
+      ratio = 100.0-archiveFileInfo.chunkInfoFileData.size*100.0/archiveFileInfo.chunkFileData.partSize;
+    }
+    else
+    {
+      ratio = 0;
+    }
+
+    info(0,"ok (ratio %.1f%%)\n",ratio);
   }
 
   /* close archive */

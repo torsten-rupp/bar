@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems : all
@@ -68,6 +68,20 @@ Errors Crypt_init(void)
 
 void Crypt_done(void)
 {
+}
+
+const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
+{
+  const char *s;
+
+  switch (cryptAlgorithm)
+  {
+    case CRYPT_ALGORITHM_NONE:   s = "none";    break;
+    case CRYPT_ALGORITHM_AES128: s = "AES128";  break;
+    default:                     s = "unknown"; break;
+  }
+
+  return s;
 }
 
 Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,

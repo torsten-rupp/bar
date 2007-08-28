@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -788,6 +788,8 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->chunkInfoFile);
     return ERROR_IO_ERROR;
   }
+  fileInfo->compressAlgorithm = archiveFileInfo->chunkFile.compressAlgorithm;
+  fileInfo->cryptAlgorithm    = archiveFileInfo->chunkFile.cryptAlgorithm;
 
   /* detect block length of use crypt algorithm */
   error = Crypt_getBlockLength(archiveFileInfo->chunkFile.cryptAlgorithm,&archiveFileInfo->blockLength);

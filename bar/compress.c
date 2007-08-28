@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -41,6 +41,15 @@
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : compressData
+* Purpose: compress data if possible
+* Input  : compressInfo - compress info block
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors compressData(CompressInfo *compressInfo)
 {
   ulong maxCompressBytes,maxDataBytes;
@@ -59,18 +68,17 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
-      if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
-          && !compressInfo->endOfDataFlag                                             // not end-of-data
-         )
+      if (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
       {
         if (compressInfo->dataBufferLength > 0)  // data available
         {
           /* copy from data buffer -> compress buffer */
+          assert(compressInfo->dataBufferIndex == 0);
           maxDataBytes     = compressInfo->dataBufferLength;
           maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
           n = MIN(maxDataBytes,maxCompressBytes);
           memcpy(compressInfo->compressBuffer+compressInfo->compressBufferLength,
-                 compressInfo->dataBuffer+compressInfo->dataBufferIndex,
+                 compressInfo->dataBuffer,
                  n
                 );
           compressInfo->compressBufferLength += n;
@@ -78,10 +86,8 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           /* shift data buffer */
           memmove(compressInfo->dataBuffer,compressInfo->dataBuffer+n,compressInfo->dataBufferLength-n);
           compressInfo->dataBufferLength -= n;
-        }
-        else
-        {
-//          compressInfo->endOfDataFlag = TRUE;
+
+          compressInfo->none.length += n;
         }
       }
       break;
@@ -163,6 +169,15 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : decompressData
+* Purpose: decompress data if possible
+* Input  : compressInfo - compress info block
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors decompressData(CompressInfo *compressInfo)
 {
   ulong maxCompressBytes,maxDataBytes;
@@ -186,27 +201,21 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
         compressInfo->dataBufferIndex  = 0;
         compressInfo->dataBufferLength = 0;
 
-        if (!compressInfo->endOfDataFlag)
+        if (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
         {
-          if (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
-          {
-            /* copy from compress buffer -> data buffer */
-            maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
-            maxDataBytes     = compressInfo->dataBufferLength;
-            n = MIN(maxCompressBytes,maxDataBytes);
-            memcpy(compressInfo->dataBuffer,
-                   compressInfo->compressBuffer+compressInfo->compressBufferIndex,
-                   n
-                  );
-            compressInfo->compressBufferLength += n;
+          /* copy from compress buffer -> data buffer */
+          maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
+          maxDataBytes     = compressInfo->dataBufferSize;
+          n = MIN(maxCompressBytes,maxDataBytes);
+          memcpy(compressInfo->dataBuffer,
+                 compressInfo->compressBuffer+compressInfo->compressBufferIndex,
+                 n
+                );
+          compressInfo->compressBufferIndex += n;
 
-            compressInfo->dataBufferIndex  = 0;
-            compressInfo->dataBufferLength = n;
-          }
-          else
-          {
-//            compressInfo->endOfDataFlag = TRUE;
-          }
+          compressInfo->dataBufferLength = n;
+
+          compressInfo->none.length += n;
         }
       }
       break;
@@ -304,6 +313,29 @@ Errors Compress_init(void)
 
 void Compress_done(void)
 {
+}
+
+const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm)
+{
+  const char *s;
+
+  switch (compressAlgorithm)
+  {
+    case COMPRESS_ALGORITHM_NONE: s = "none";    break;
+    case COMPRESS_ALGORITHM_ZIP0: s = "ZIP0";    break;
+    case COMPRESS_ALGORITHM_ZIP1: s = "ZIP1";    break;
+    case COMPRESS_ALGORITHM_ZIP2: s = "ZIP2";    break;
+    case COMPRESS_ALGORITHM_ZIP3: s = "ZIP3";    break;
+    case COMPRESS_ALGORITHM_ZIP4: s = "ZIP4";    break;
+    case COMPRESS_ALGORITHM_ZIP5: s = "ZIP5";    break;
+    case COMPRESS_ALGORITHM_ZIP6: s = "ZIP6";    break;
+    case COMPRESS_ALGORITHM_ZIP7: s = "ZIP7";    break;
+    case COMPRESS_ALGORITHM_ZIP8: s = "ZIP8";    break;
+    case COMPRESS_ALGORITHM_ZIP9: s = "ZIP9";    break;
+    default:                      s = "unknown"; break;
+  }
+
+  return s;
 }
 
 Errors Compress_new(CompressInfo       *compressInfo,
