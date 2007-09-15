@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -33,6 +33,9 @@ PERL = perl
 DIFF = diff
 
 #------------------------ specific variables/settings ------------------------
+
+CRYPT_NAMES    = none 3des cast5 blowfish aes128 aes192 aes256 twofish128 twofish256
+COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
 
 CRYPT=none
 #CRYPT=aes128
@@ -97,6 +100,7 @@ depend: archive_format.h
           $(CC) -MM >> Makefile.depend $$z; \
         done;
 
+# create Backup Archiver
 bar: $(OBJECTS)
 
 archive_format.h: archive_format.def
@@ -104,6 +108,7 @@ archive_format.h: archive_format.def
 archive_format.c: archive_format.def
 	$(PERL) archive_format.pl < $^ -c $@
 
+# do test
 .PHONY: test test1 test2 test3 test4 test_all
 test:
 	@$(MAKE) -s test1 test2 test3 test4 test_all
@@ -115,14 +120,14 @@ test1: bar
 
 test2: bar
 	@$(ECHO_NO_LF) "Test 2: compress..."
-	for compress in none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9; do \
+	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) OPTIONS="--compress=$$compress" standard_test; \
         done
 	@$(ECHO) "ok"
 
 test3: bar
 	@$(ECHO_NO_LF) "Test 3: crypt..."
-	for crypt in none aes128; do \
+	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) OPTIONS="--crypt=$$crypt --password=$(TEST_PASSWORD)" standard_test; \
         done
 	@$(ECHO) "ok"
@@ -134,8 +139,8 @@ test4: bar
 
 test_all: bar
 	@$(ECHO_NO_LF) "Test all..."
-	for compress in zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9; do \
-          for crypt in none aes128; do \
+	for compress in $(COMPRESS_NAMES); do \
+          for crypt in $(CRYPT_NAMES); do \
             $(MAKE) OPTIONS="--compress=$$compress --crypt=$$crypt --password=$(TEST_PASSWORD) -s 100000" standard_test; \
           done; \
         done
