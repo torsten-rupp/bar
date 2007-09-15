@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -82,7 +82,7 @@ TARGETS = 	bar \
 
 #------------------------------ dependencies ---------------------------------
 
-.PHONE: all clean distclean depend
+.PHONY: all clean distclean depend
 all:		$(TARGETS)
 
 clean:
@@ -104,38 +104,39 @@ archive_format.h: archive_format.def
 archive_format.c: archive_format.def
 	$(PERL) archive_format.pl < $^ -c $@
 
-.PHONE: test test1 test2 test3 test4 test_all
-test: test1 test2 test3 test4 test_all
+.PHONY: test test1 test2 test3 test4 test_all
+test:
+	@$(MAKE) -s test1 test2 test3 test4 test_all
 
 test1: bar
-	@$(ECHO_NO_LF) "Test basic..."
-	@$(MAKE) -s COMPRESS=none CRYPT=none OPTIONS="" standard_test
+	@$(ECHO_NO_LF) "Test 1: basic..."
+	$(MAKE) COMPRESS=none CRYPT=none OPTIONS="" standard_test
 	@$(ECHO) "ok"
 
 test2: bar
-	@$(ECHO_NO_LF) "Test compress..."
-	@for compress in none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9; do \
-          $(MAKE) -s OPTIONS="--compress=$$compress" standard_test; \
+	@$(ECHO_NO_LF) "Test 2: compress..."
+	for compress in none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9; do \
+          $(MAKE) OPTIONS="--compress=$$compress" standard_test; \
         done
 	@$(ECHO) "ok"
 
 test3: bar
-	@$(ECHO_NO_LF) "Test crypt..."
-	@for crypt in none aes128; do \
-          $(MAKE) -s OPTIONS="--crypt=$$crypt --password=$(TEST_PASSWORD)" standard_test; \
+	@$(ECHO_NO_LF) "Test 3: crypt..."
+	for crypt in none aes128; do \
+          $(MAKE) OPTIONS="--crypt=$$crypt --password=$(TEST_PASSWORD)" standard_test; \
         done
 	@$(ECHO) "ok"
 
 test4: bar
-	@$(ECHO_NO_LF) "Test split..."
-	@$(MAKE) -s OPTIONS="-s 100000" standard_test
+	@$(ECHO_NO_LF) "Test 4: split..."
+	$(MAKE) OPTIONS="-s 100000" standard_test
 	@$(ECHO) "ok"
 
 test_all: bar
 	@$(ECHO_NO_LF) "Test all..."
-	@for compress in zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9; do \
+	for compress in zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9; do \
           for crypt in none aes128; do \
-            $(MAKE) -s OPTIONS="--compress=$$compress --crypt=$$crypt --password=$(TEST_PASSWORD) -s 100000" standard_test; \
+            $(MAKE) OPTIONS="--compress=$$compress --crypt=$$crypt --password=$(TEST_PASSWORD) -s 100000" standard_test; \
           done; \
         done
 	@$(ECHO) "ok"
@@ -151,7 +152,7 @@ standard_test: bar
         
 -include Makefile.depend
 
-.PHONE: p0 pack0 l0 list0 r0 restore0 t0 c0 compare0
+.PHONY: p0 pack0 l0 list0 r0 restore0 t0 c0 compare0
 p0 pack0: bar
 	./bar -c data/data.bar demo/1.dat --compress=$(COMPRESS) --crypt=$(CRYPT) --password=test
 
@@ -164,7 +165,7 @@ r0 restore0: bar
 t0 c0 compare0: bar
 	./bar -t data/data.bar --password=test
 
-.PHONE: p1 pack1 l1 list1 r1 restore1 t1 c1 compare1
+.PHONY: p1 pack1 l1 list1 r1 restore1 t1 c1 compare1
 p1 pack1: bar
 	./bar -c data/data.bar demo --compress=$(COMPRESS) --crypt=$(CRYPT) --password=test
 
@@ -177,7 +178,7 @@ r1 restore1: bar
 t1 c1 compare1: bar
 	./bar -t data/data.bar --password=test
 
-.PHONE: p2 pack2 l2 list2 r2 restore2
+.PHONY: p2 pack2 l2 list2 r2 restore2
 p2 pack2: bar
 	./bar -c -s 1000000 data/data.bar demo --compress=$(COMPRESS) --crypt=$(CRYPT) --password=test
 
@@ -190,7 +191,7 @@ r2 restore2:
 t2 c2 compare2: bar
 	./bar -t data/data.bar.* --password=test
 
-.PHONE: p3 pack3
+.PHONY: p3 pack3
 p3 pack3: bar
 	./bar -a data/data.bar -c "demo/abc*.dat"
 

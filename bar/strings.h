@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems : all
@@ -52,9 +52,13 @@ typedef char(*StringIterateFunction)(void *userData, char ch);
 #endif
 
 /***********************************************************************\
-* Name   : String_new, String_newCString, String_newChar
+* Name   : String_new, String_newCString, String_newChar,
+*          String_newBuffer
 * Purpose: create new string
-* Input  : s - C-string/ch - char
+* Input  : s            - C-string
+*          ch           - character
+*          buffer       - buffer
+*          bufferLength - length of buffer
 * Output : -
 * Return : string or NULL
 * Notes  : -
@@ -63,6 +67,7 @@ typedef char(*StringIterateFunction)(void *userData, char ch);
 String String_new(void);
 String String_newCString(const char *s);
 String String_newChar(char ch);
+String String_newBuffer(char *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : String_delete
@@ -90,19 +95,21 @@ String String_clear(String string);
 * Name   : String_set, String_setCString, String_setChar,
 *          Stirng_setBuffer
 * Purpose: set string (copy string)
-* Input  : string                - string to set
-*          sourceString/s/buffer - source string
-*          ch                    - character
-*          bufferLength          - length of buffer
+* Input  : string       - string to set
+*          sourceString - source string
+*          s            - C-string
+*          ch           - character
+*          buffer       - buffer
+*          bufferLength - length of buffer
 * Output : -
 * Return : string
 * Notes  : -
 \***********************************************************************/
 
 String String_set(String string, String sourceString);
-String String_setBuffer(String string, const char *buffer, ulong bufferLength);
 String String_setCString(String string, const char *s);
 String String_setChar(String string, char ch);
+String String_setBuffer(String string, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : String_copy

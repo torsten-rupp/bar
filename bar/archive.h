@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -53,11 +53,6 @@ typedef struct
                                               algorithm)
                                             */
 
-  CompressInfo   compressInfo;             // file data compress info  
-
-  CryptInfo      cryptInfoFileEntry;       // file entry cryption info
-  CryptInfo      cryptInfoFileData;        // file data cryption info
-
   enum
   {
     FILE_MODE_READ,
@@ -66,10 +61,17 @@ typedef struct
 
   ChunkInfo      chunkInfoFile;            // chunk info block for file
   ChunkFile      chunkFile;                // file
+
   ChunkInfo      chunkInfoFileEntry;       // chunk info block for file entry
   ChunkFileEntry chunkFileEntry;           // file entry
+  CryptInfo      cryptInfoFileEntry;       // file entry cryption info (without data elements)
+
   ChunkInfo      chunkInfoFileData;        // chunk info block for file data
   ChunkFileData  chunkFileData;            // file data
+  CryptInfo      cryptInfoFileData;        // file data cryption info (without data elements)
+
+  CompressInfo   compressInfoData;         // data compress info
+  CryptInfo      cryptInfoData;            // data cryption info
 
   uint           headerLength;             // length of header
   bool           headerWrittenFlag;        // TRUE iff header written

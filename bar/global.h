@@ -139,6 +139,8 @@ typedef void               void32;
 
 #define SIZE_OF_ARRAY(a) (sizeof(a)/sizeof(a[0]))
 
+#define ALIGN(n,alignment) (((alignment)>0)?(((n)+(alignment)-1) & ~((alignment)-1)):(n))
+
 /* mathematicl macros */
 #ifndef __cplusplus
   #define IS_NAN(d) (!((d)==(d)))                        // check if Not-A-Number (NaN)

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems : all
@@ -29,8 +29,7 @@
 
 /***************************** Constants *******************************/
 
-#define MAX_KEY_SIZE 128
-#define BUFFER_SIZE  (64*1024)
+#define MAX_KEY_SIZE 2048          // max. size of a key in bits
 
 /***************************** Datatypes *******************************/
 
@@ -93,7 +92,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 
   assert(blockLength != NULL);
 
-//*blockLength=16;
+// *blockLength=16;
 //return ERROR_NONE;
   switch (cryptAlgorithm)
   {
@@ -128,10 +127,10 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
                  const char      *password
                 )
 {
+  int    passwordLength;
   int    gcryptError;
   size_t n;
   char   key[MAX_KEY_SIZE/8];
-  int    passwordLength;
   int    z;
 
   assert(cryptInfo != NULL);
@@ -148,6 +147,12 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
       if (password == NULL)
       {
         printError("No password given for cipher!\n");
+        return ERROR_NO_PASSWORD;
+      }
+      passwordLength = strlen(password);
+      if (passwordLength <= 0)
+      {
+        printError("Passwort is empty!\n");
         return ERROR_NO_PASSWORD;
       }
 
@@ -177,10 +182,6 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
         printError("Cannot detect block length of AES cipher (error: %s)\n",gpg_strerror(gcryptError));
         return ERROR_INIT_CIPHER;
       }
-      if (n > BUFFER_SIZE)
-      {
-        HALT_INTERNAL_ERROR("AES cipher block length %d to large\n",n);
-      }
       cryptInfo->blockLength = n;
 
       /* init AES cipher */
@@ -196,22 +197,24 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
       }
 
       /* set key */
-      passwordLength=strlen(password);
-      for (z=0; z<MAX_KEY_SIZE/8; z++)
+      assert(sizeof(key) >= 128/8);
+      for (z = 0; z < 128/8; z++)
       {
         key[z] = password[z%passwordLength];
       }
       gcryptError = gcry_cipher_setkey(cryptInfo->gcry_cipher_hd,
                                        key,
-                                       sizeof(key)
+                                       128/8
                                       );
-      memset(key,0,sizeof(key));
       if (gcryptError != 0)
       {
         printError("Cannot set cipher key (error: %s)\n",gpg_strerror(gcryptError));
         gcry_cipher_close(cryptInfo->gcry_cipher_hd);
         return ERROR_INIT_CIPHER;
       }
+
+#if 0
+      /* set 0 IV */
       gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
                                       NULL,
                                       0
@@ -224,6 +227,7 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
       }
 
       gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
+#endif /* 0 */
       break;
     #ifndef NDEBUG
       default:
@@ -254,8 +258,12 @@ void Crypt_delete(CryptInfo *cryptInfo)
   }
 }
 
-void Crypt_reset(CryptInfo *cryptInfo)
+Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
 {
+  char iv[MAX_KEY_SIZE/8];
+  int  z;
+  int  gcryptError;
+
   assert(cryptInfo != NULL);
 
   switch (cryptInfo->cryptAlgorithm)
@@ -264,6 +272,25 @@ void Crypt_reset(CryptInfo *cryptInfo)
       break;
     case CRYPT_ALGORITHM_AES128:
       gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
+
+      if (seed != 0)
+      {
+        /* set IV */
+        assert(sizeof(iv) >= 128/8);
+        for (z = 0; z < 128/8; z++)
+        {
+          iv[z] = (seed >> (z%8)*8) & 0xFF;
+        }
+        gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
+                                        iv,
+                                        128/8
+                                       );
+        if (gcryptError != 0)
+        {
+          printError("Cannot set cipher IV (error: %s)\n",gpg_strerror(gcryptError));
+          return ERROR_INIT_CIPHER;
+        }
+      }
       break;
     #ifndef NDEBUG
       default:
@@ -271,6 +298,8 @@ void Crypt_reset(CryptInfo *cryptInfo)
         break; /* not reached */
     #endif /* NDEBUG */
   }
+
+  return ERROR_NONE;
 }
 
 Errors Crypt_encrypt(CryptInfo *cryptInfo,

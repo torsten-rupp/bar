@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems : all
@@ -37,6 +37,12 @@ typedef enum
 } CryptAlgorithms;
 
 /***************************** Datatypes *******************************/
+
+/* password */
+typedef struct
+{
+  char data[256];
+} Password;
 
 /* crypt info block */
 typedef struct
@@ -79,6 +85,41 @@ Errors Crypt_init(void);
 \***********************************************************************/
 
 void Crypt_done(void);
+
+#if 0
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+const char *Crypt_setPassword(PasswordInfo *passwordInfo);
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+const char *Crypt_Password(PasswordInfo *passwordInfo, char *buffer, uint bufferSize);
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+const char *Crypt_Password(PasswordInfo *passwordInfo, char *buffer, uint bufferSize);
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : Crypt_getAlgorithmName
@@ -135,12 +176,16 @@ void Crypt_delete(CryptInfo *cryptInfo);
 * Name   : Crypt_reset
 * Purpose: reset crypt handle
 * Input  : cryptInfo - crypt info block
+*          seed      - seed value for initializing IV (use 0 if not
+*                      needed)
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_reset(CryptInfo *cryptInfo);
+Errors Crypt_reset(CryptInfo *cryptInfo,
+                   uint64    seed
+                  );
 
 /***********************************************************************\
 * Name   : Crypt_encrypt

@@ -1,14 +1,12 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/archive_format.def,v $
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems : all
 #
 #***********************************************************************
-
-#CHUNK BAR "BAR0" Archive
 
 CHUNK NAME "NAME" Name
   uint32 id

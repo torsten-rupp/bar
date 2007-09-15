@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -194,10 +194,13 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
   /* split */
   if (newPartFlag)
   {
-    /* write chunk-header */
+    /* create chunk-headers */
     if (!archiveFileInfo->headerWrittenFlag)
     {
       if (!Chunks_create(&archiveFileInfo->chunkInfoFile,
+                         CHUNK_ID_FILE,
+                         CHUNK_DEFINITION_FILE,
+                         Chunks_getSize(CHUNK_DEFINITION_FILE,0,&archiveFileInfo->chunkFile),
                          &archiveFileInfo->chunkFile
                         )
          )
@@ -206,6 +209,9 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
       }
 
       if (!Chunks_create(&archiveFileInfo->chunkInfoFileEntry,
+                         CHUNK_ID_FILE_ENTRY,
+                         CHUNK_DEFINITION_FILE_ENTRY,
+                         Chunks_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->chunkFileEntry),
                          &archiveFileInfo->chunkFileEntry
                         )
          )
@@ -214,6 +220,9 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
       }
 
       if (!Chunks_create(&archiveFileInfo->chunkInfoFileData,
+                         CHUNK_ID_FILE_DATA,
+                         CHUNK_DEFINITION_FILE_DATA,
+                         Chunks_getSize(CHUNK_DEFINITION_FILE_DATA,archiveFileInfo->blockLength,&archiveFileInfo->chunkFileData),
                          &archiveFileInfo->chunkFileData
                         )
          )
@@ -225,13 +234,13 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
     }
 
     /* get compressed block */
-    Compress_getBlock(&archiveFileInfo->compressInfo,
+    Compress_getBlock(&archiveFileInfo->compressInfoData,
                       archiveFileInfo->buffer,
                       &length
                      );         
 
     /* encrypt block */
-    error = Crypt_encrypt(&archiveFileInfo->cryptInfoFileData,
+    error = Crypt_encrypt(&archiveFileInfo->cryptInfoData,
                           archiveFileInfo->buffer,
                           archiveFileInfo->blockLength
                          );
@@ -251,17 +260,17 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
     }
 
     /* flush compress buffer */
-    Compress_flush(&archiveFileInfo->compressInfo);
-    while (!Compress_checkBlockIsEmpty(&archiveFileInfo->compressInfo))
+    Compress_flush(&archiveFileInfo->compressInfoData);
+    while (!Compress_checkBlockIsEmpty(&archiveFileInfo->compressInfoData))
     {
       /* get compressed block */
-      Compress_getBlock(&archiveFileInfo->compressInfo,
+      Compress_getBlock(&archiveFileInfo->compressInfoData,
                         archiveFileInfo->buffer,
                         &length
                        );         
 
       /* encrypt block */
-      error = Crypt_encrypt(&archiveFileInfo->cryptInfoFileData,
+      error = Crypt_encrypt(&archiveFileInfo->cryptInfoData,
                             archiveFileInfo->buffer,
                             archiveFileInfo->blockLength
                            );
@@ -282,7 +291,7 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
     }
 
     /* update part size */
-    archiveFileInfo->chunkFileData.partSize = Compress_getInputLength(&archiveFileInfo->compressInfo);
+    archiveFileInfo->chunkFileData.partSize = Compress_getInputLength(&archiveFileInfo->compressInfoData);
     if (!Chunks_update(&archiveFileInfo->chunkInfoFileData,
                        &archiveFileInfo->chunkFileData
                       )
@@ -306,13 +315,12 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
     }
     archiveFileInfo->headerWrittenFlag = FALSE;
 
-    /* reset compress, crypt */
-    Compress_reset(&archiveFileInfo->compressInfo);
-    Crypt_reset(&archiveFileInfo->cryptInfoFileEntry);
-    Crypt_reset(&archiveFileInfo->cryptInfoFileData);
-
+    /* close file */
     Files_close(&archiveFileInfo->archiveInfo->fileHandle);
     archiveFileInfo->archiveInfo->fileHandle.handle = -1;
+
+    /* reset compress (do it here because data if buffered and can be processed before a new file is opened) */
+    Compress_reset(&archiveFileInfo->compressInfoData);
   }
   else
   {
@@ -358,12 +366,18 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
 
       archiveFileInfo->chunkFileData.partOffset = archiveFileInfo->chunkFileData.partOffset+archiveFileInfo->chunkFileData.partSize;
       archiveFileInfo->chunkFileData.partSize   = 0;
+  
+      /* reset data crypt */
+      Crypt_reset(&archiveFileInfo->cryptInfoData,0);
     }
 
-    /* write chunk-header */
+    /* create chunk-headers */
     if (!archiveFileInfo->headerWrittenFlag)
     {
       if (!Chunks_create(&archiveFileInfo->chunkInfoFile,
+                         CHUNK_ID_FILE,
+                         CHUNK_DEFINITION_FILE,
+                         Chunks_getSize(CHUNK_DEFINITION_FILE,0,&archiveFileInfo->chunkFile),
                          &archiveFileInfo->chunkFile
                         )
          )
@@ -372,6 +386,9 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
       }
 
       if (!Chunks_create(&archiveFileInfo->chunkInfoFileEntry,
+                         CHUNK_ID_FILE_ENTRY,
+                         CHUNK_DEFINITION_FILE_ENTRY,
+                         Chunks_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->chunkFileEntry),
                          &archiveFileInfo->chunkFileEntry
                         )
          )
@@ -380,6 +397,9 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
       }
 
       if (!Chunks_create(&archiveFileInfo->chunkInfoFileData,
+                         CHUNK_ID_FILE_DATA,
+                         CHUNK_DEFINITION_FILE_DATA,
+                         Chunks_getSize(CHUNK_DEFINITION_FILE_DATA,archiveFileInfo->blockLength,&archiveFileInfo->chunkFileData),
                          &archiveFileInfo->chunkFileData
                         )
          )
@@ -391,13 +411,13 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
     }
 
     /* get compressed block */
-    Compress_getBlock(&archiveFileInfo->compressInfo,
+    Compress_getBlock(&archiveFileInfo->compressInfoData,
                       archiveFileInfo->buffer,
                       &length
                      );         
 
     /* encrypt block */
-    error = Crypt_encrypt(&archiveFileInfo->cryptInfoFileData,
+    error = Crypt_encrypt(&archiveFileInfo->cryptInfoData,
                           archiveFileInfo->buffer,
                           archiveFileInfo->blockLength
                          );
@@ -448,7 +468,7 @@ LOCAL Errors readBlock(ArchiveFileInfo *archiveFileInfo)
     }
 
     /* decrypt */
-    error = Crypt_decrypt(&archiveFileInfo->cryptInfoFileData,
+    error = Crypt_decrypt(&archiveFileInfo->cryptInfoData,
                           archiveFileInfo->buffer,
                           archiveFileInfo->blockLength
                          );
@@ -457,15 +477,14 @@ LOCAL Errors readBlock(ArchiveFileInfo *archiveFileInfo)
       return error;
     }
 
-    Compress_putBlock(&archiveFileInfo->compressInfo,
+    Compress_putBlock(&archiveFileInfo->compressInfoData,
                       archiveFileInfo->buffer,
                       archiveFileInfo->blockLength
                      );
   }
   else
   {
-    Compress_flush(&archiveFileInfo->compressInfo);
-    
+    Compress_flush(&archiveFileInfo->compressInfoData);
   }
 
   return ERROR_NONE;
@@ -618,9 +637,8 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
   if (!Chunks_new(&archiveFileInfo->chunkInfoFile,
                   NULL,
                   archiveInfo,
-                  CHUNK_ID_FILE,
-                  CHUNK_DEFINITION_FILE,
-                  0
+                  0,
+                  NULL
                  )
      )
   {
@@ -661,17 +679,46 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->chunkInfoFile);
     return error;
   }
+  error = Crypt_new(&archiveFileInfo->cryptInfoData,
+                    archiveInfo->cryptAlgorithm,
+                    archiveInfo->password
+                   );
+  if (error != ERROR_NONE)
+  {
+    Crypt_delete(&archiveFileInfo->cryptInfoFileData);
+    Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
+    free(archiveFileInfo->buffer);
+    Chunks_delete(&archiveFileInfo->chunkInfoFile);
+    return error;
+  }
+
+  /* init compress info */
+  error = Compress_new(&archiveFileInfo->compressInfoData,
+                       COMPRESS_MODE_DEFLATE,
+                       archiveFileInfo->archiveInfo->compressAlgorithm,
+                       archiveFileInfo->blockLength
+                      );
+  if (error != ERROR_NONE)
+  {
+    Crypt_delete(&archiveFileInfo->cryptInfoData);
+    Crypt_delete(&archiveFileInfo->cryptInfoFileData);
+    Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
+    free(archiveFileInfo->buffer);
+    Chunks_delete(&archiveFileInfo->chunkInfoFile);
+    return ERROR_COMPRESS_ERROR;
+  }
 
   /* init entry/dat file-chunks */
   if (!Chunks_new(&archiveFileInfo->chunkInfoFileEntry,
                   &archiveFileInfo->chunkInfoFile,
                   archiveInfo,
-                  CHUNK_ID_FILE_ENTRY,
-                  CHUNK_DEFINITION_FILE_ENTRY,
-                  archiveFileInfo->blockLength
+                  archiveFileInfo->blockLength,
+                  &archiveFileInfo->cryptInfoFileEntry
                  )
      )
   {
+    Compress_delete(&archiveFileInfo->compressInfoData);
+    Crypt_delete(&archiveFileInfo->cryptInfoData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
     free(archiveFileInfo->buffer);
@@ -681,13 +728,14 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
   if (!Chunks_new(&archiveFileInfo->chunkInfoFileData,
                   &archiveFileInfo->chunkInfoFile,
                   archiveInfo,
-                  CHUNK_ID_FILE_DATA,
-                  CHUNK_DEFINITION_FILE_DATA,
-                  archiveFileInfo->blockLength
+                  archiveFileInfo->blockLength,
+                  &archiveFileInfo->cryptInfoFileData
                  )
      )
   {
     Chunks_delete(&archiveFileInfo->chunkInfoFileEntry);
+    Compress_delete(&archiveFileInfo->compressInfoData);
+    Crypt_delete(&archiveFileInfo->cryptInfoData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
     free(archiveFileInfo->buffer);
@@ -695,27 +743,10 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
     return ERROR_IO_ERROR;
   }
 
-  /* init compress info */
-  error = Compress_new(&archiveFileInfo->compressInfo,
-                       COMPRESS_MODE_DEFLATE,
-                       archiveFileInfo->archiveInfo->compressAlgorithm,
-                       archiveFileInfo->blockLength
-                      );
-  if (error != ERROR_NONE)
-  {
-    Chunks_delete(&archiveFileInfo->chunkInfoFileData);
-    Chunks_delete(&archiveFileInfo->chunkInfoFileEntry);
-    Crypt_delete(&archiveFileInfo->cryptInfoFileData);
-    Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
-    free(archiveFileInfo->buffer);
-    Chunks_delete(&archiveFileInfo->chunkInfoFile);
-    return ERROR_COMPRESS_ERROR;
-  }
-
   /* calculate header length */
-  archiveFileInfo->headerLength = Chunks_getSize(&archiveFileInfo->chunkInfoFile,     &archiveFileInfo->chunkFile)+
-                                  Chunks_getSize(&archiveFileInfo->chunkInfoFileEntry,&archiveFileInfo->chunkFileEntry)+
-                                  Chunks_getSize(&archiveFileInfo->chunkInfoFileData, &archiveFileInfo->chunkFileData);
+  archiveFileInfo->headerLength = Chunks_getSize(CHUNK_DEFINITION_FILE,      0,                           &archiveFileInfo->chunkFile     )+
+                                  Chunks_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->chunkFileEntry)+
+                                  Chunks_getSize(CHUNK_DEFINITION_FILE_DATA, archiveFileInfo->blockLength,&archiveFileInfo->chunkFileData );
 
   return ERROR_NONE;
 }
@@ -746,9 +777,8 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
   if (!Chunks_new(&archiveFileInfo->chunkInfoFile,
                   NULL,
                   archiveInfo,
-                  CHUNK_ID_FILE,
-                  CHUNK_DEFINITION_FILE,
-                  0
+                  0,
+                  NULL
                  )
      )
   {
@@ -781,6 +811,9 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
   /* read file chunk, find file data */
   if (!Chunks_open(&archiveFileInfo->chunkInfoFile,
                    &chunkHeader,
+                   CHUNK_ID_FILE,
+                   CHUNK_DEFINITION_FILE,
+                   Chunks_getSize(CHUNK_DEFINITION_FILE,0,NULL),
                    &archiveFileInfo->chunkFile
                   )
      )
@@ -830,17 +863,46 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->chunkInfoFile);
     return error;
   }
+  error = Crypt_new(&archiveFileInfo->cryptInfoData,
+                    archiveFileInfo->chunkFile.cryptAlgorithm,
+                    archiveInfo->password
+                   );
+  if (error != ERROR_NONE)
+  {
+    Crypt_delete(&archiveFileInfo->cryptInfoFileData);
+    Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
+    free(archiveFileInfo->buffer);
+    Chunks_delete(&archiveFileInfo->chunkInfoFile);
+    return error;
+  }
+
+  /* init compress info */
+  error = Compress_new(&archiveFileInfo->compressInfoData,
+                       COMPRESS_MODE_INFLATE,
+                       archiveFileInfo->chunkFile.compressAlgorithm,
+                       archiveFileInfo->blockLength
+                      );
+  if (error != ERROR_NONE)
+  {
+    Crypt_delete(&archiveFileInfo->cryptInfoData);
+    Crypt_delete(&archiveFileInfo->cryptInfoFileData);
+    Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
+    free(archiveFileInfo->buffer);
+    Chunks_delete(&archiveFileInfo->chunkInfoFile);
+    return ERROR_COMPRESS_ERROR;
+  }
 
   /* init file entry/data chunks */
   if (!Chunks_new(&archiveFileInfo->chunkInfoFileEntry,
                   &archiveFileInfo->chunkInfoFile,
                   archiveInfo,
-                  CHUNK_ID_FILE_ENTRY,
-                  CHUNK_DEFINITION_FILE_ENTRY,
-                  archiveFileInfo->blockLength
+                  archiveFileInfo->blockLength,
+                  &archiveFileInfo->cryptInfoFileEntry
                  )
      )
   {
+    Compress_delete(&archiveFileInfo->compressInfoData);
+    Crypt_delete(&archiveFileInfo->cryptInfoData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
     free(archiveFileInfo->buffer);
@@ -850,13 +912,14 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
   if (!Chunks_new(&archiveFileInfo->chunkInfoFileData,
                   &archiveFileInfo->chunkInfoFile,
                   archiveInfo,
-                  CHUNK_ID_FILE_DATA,
-                  CHUNK_DEFINITION_FILE_DATA,
-                  archiveFileInfo->blockLength
+                  archiveFileInfo->blockLength,
+                  &archiveFileInfo->cryptInfoFileData
                  )
      )
   {
     Chunks_delete(&archiveFileInfo->chunkInfoFileEntry);
+    Compress_delete(&archiveFileInfo->compressInfoData);
+    Crypt_delete(&archiveFileInfo->cryptInfoData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
     free(archiveFileInfo->buffer);
@@ -875,6 +938,8 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
     {
       Chunks_delete(&archiveFileInfo->chunkInfoFileData);
       Chunks_delete(&archiveFileInfo->chunkInfoFileEntry);
+      Compress_delete(&archiveFileInfo->compressInfoData);
+      Crypt_delete(&archiveFileInfo->cryptInfoData);
       Crypt_delete(&archiveFileInfo->cryptInfoFileData);
       Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
       free(archiveFileInfo->buffer);
@@ -887,12 +952,17 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
       case CHUNK_ID_FILE_ENTRY:
         if (!Chunks_open(&archiveFileInfo->chunkInfoFileEntry,
                          &chunkHeader,
+                         CHUNK_ID_FILE_ENTRY,
+                         CHUNK_DEFINITION_FILE_ENTRY,
+                         chunkHeader.size,
                          &archiveFileInfo->chunkFileEntry
                         )
            )
         {
           Chunks_delete(&archiveFileInfo->chunkInfoFileData);
           Chunks_delete(&archiveFileInfo->chunkInfoFileEntry);
+          Compress_delete(&archiveFileInfo->compressInfoData);
+          Crypt_delete(&archiveFileInfo->cryptInfoData);
           Crypt_delete(&archiveFileInfo->cryptInfoFileData);
           Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
           free(archiveFileInfo->buffer);
@@ -914,6 +984,9 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
       case CHUNK_ID_FILE_DATA:
         if (!Chunks_open(&archiveFileInfo->chunkInfoFileData,
                          &chunkHeader,
+                         CHUNK_ID_FILE_DATA,
+                         CHUNK_DEFINITION_FILE_DATA,
+                         Chunks_getSize(CHUNK_DEFINITION_FILE_DATA,archiveFileInfo->blockLength,NULL),
                          &archiveFileInfo->chunkFileData
                         )
            )
@@ -921,6 +994,8 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
           if (foundFileEntry) String_delete(archiveFileInfo->chunkFileEntry.name);
           Chunks_delete(&archiveFileInfo->chunkInfoFileData);
           Chunks_delete(&archiveFileInfo->chunkInfoFileEntry);
+          Compress_delete(&archiveFileInfo->compressInfoData);
+          Crypt_delete(&archiveFileInfo->cryptInfoData);
           Crypt_delete(&archiveFileInfo->cryptInfoFileData);
           Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
           free(archiveFileInfo->buffer);
@@ -943,6 +1018,8 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
     if (foundFileEntry) String_delete(archiveFileInfo->chunkFileEntry.name);
     Chunks_delete(&archiveFileInfo->chunkInfoFileData);
     Chunks_delete(&archiveFileInfo->chunkInfoFileEntry);
+    Compress_delete(&archiveFileInfo->compressInfoData);
+    Crypt_delete(&archiveFileInfo->cryptInfoData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
     free(archiveFileInfo->buffer);
@@ -954,6 +1031,8 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
     if (foundFileEntry) String_delete(archiveFileInfo->chunkFileEntry.name);
     Chunks_delete(&archiveFileInfo->chunkInfoFileData);
     Chunks_delete(&archiveFileInfo->chunkInfoFileEntry);
+    Compress_delete(&archiveFileInfo->compressInfoData);
+    Crypt_delete(&archiveFileInfo->cryptInfoData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileData);
     Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
     free(archiveFileInfo->buffer);
@@ -961,22 +1040,9 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
     return ERROR_NO_FILE_DATA;
   }
 
-  /* init compress info */
-  error = Compress_new(&archiveFileInfo->compressInfo,
-                       COMPRESS_MODE_INFLATE,
-                       archiveFileInfo->chunkFile.compressAlgorithm,
-                       archiveFileInfo->blockLength
-                      );
-  if (error != ERROR_NONE)
-  {
-    Chunks_delete(&archiveFileInfo->chunkInfoFileData);
-    Chunks_delete(&archiveFileInfo->chunkInfoFileEntry);
-    Crypt_delete(&archiveFileInfo->cryptInfoFileData);
-    Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
-    free(archiveFileInfo->buffer);
-    Chunks_delete(&archiveFileInfo->chunkInfoFile);
-    return ERROR_COMPRESS_ERROR;
-  }
+      /* reset compress, crypt */
+      Compress_reset(&archiveFileInfo->compressInfoData);
+      Crypt_reset(&archiveFileInfo->cryptInfoFileData,0);
 
   return ERROR_NONE;
 }
@@ -993,8 +1059,8 @@ Errors Archive_closeFile(ArchiveFileInfo *archiveFileInfo)
     case FILE_MODE_WRITE:
       {
         /* flush last blocks */
-        Compress_flush(&archiveFileInfo->compressInfo);
-        while (!Compress_checkBlockIsEmpty(&archiveFileInfo->compressInfo))
+        Compress_flush(&archiveFileInfo->compressInfoData);
+        while (!Compress_checkBlockIsEmpty(&archiveFileInfo->compressInfoData))
         {
           error = writeBlock(archiveFileInfo);
           if (error != ERROR_NONE)
@@ -1004,7 +1070,7 @@ Errors Archive_closeFile(ArchiveFileInfo *archiveFileInfo)
         }
 
         /* update part size */
-        archiveFileInfo->chunkFileData.partSize = Compress_getInputLength(&archiveFileInfo->compressInfo);
+        archiveFileInfo->chunkFileData.partSize = Compress_getInputLength(&archiveFileInfo->compressInfoData);
         if (!Chunks_update(&archiveFileInfo->chunkInfoFileData,
                            &archiveFileInfo->chunkFileData
                           )
@@ -1034,9 +1100,10 @@ Errors Archive_closeFile(ArchiveFileInfo *archiveFileInfo)
   archiveFileInfo->headerWrittenFlag = FALSE;
 
   /* free resources */
-  Compress_delete(&archiveFileInfo->compressInfo);
   Chunks_delete(&archiveFileInfo->chunkInfoFileData);
   Chunks_delete(&archiveFileInfo->chunkInfoFileEntry);
+  Compress_delete(&archiveFileInfo->compressInfoData);
+  Crypt_delete(&archiveFileInfo->cryptInfoData);
   Crypt_delete(&archiveFileInfo->cryptInfoFileData);
   Crypt_delete(&archiveFileInfo->cryptInfoFileEntry);
   Chunks_delete(&archiveFileInfo->chunkInfoFile);
@@ -1068,10 +1135,10 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
   while (length < bufferLength)
   {
     /* compress */
-    Compress_deflate(&archiveFileInfo->compressInfo,*p);
+    Compress_deflate(&archiveFileInfo->compressInfoData,*p);
 
     /* check if block can be encrypted and written */
-    while (Compress_checkBlockIsFull(&archiveFileInfo->compressInfo))
+    while (Compress_checkBlockIsFull(&archiveFileInfo->compressInfoData))
     {
       error = writeBlock(archiveFileInfo);
       if (error != ERROR_NONE)
@@ -1079,7 +1146,7 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
         return error;
       }
     }
-    assert(!Compress_checkBlockIsFull(&archiveFileInfo->compressInfo));
+    assert(!Compress_checkBlockIsFull(&archiveFileInfo->compressInfoData));
 
     /* next byte */
     p++;
@@ -1107,7 +1174,7 @@ Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulon
     /* fill decompressor with compressed data blocks */
     do
     {
-      error = Compress_available(&archiveFileInfo->compressInfo,&n);
+      error = Compress_available(&archiveFileInfo->compressInfoData,&n);
       if (error != ERROR_NONE)
       {
         return error;
@@ -1125,7 +1192,7 @@ Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulon
     while (n <= 0);
 
     /* decompress data */
-    Compress_inflate(&archiveFileInfo->compressInfo,p);
+    Compress_inflate(&archiveFileInfo->compressInfoData,p);
 
     /* next byte */
     p++;

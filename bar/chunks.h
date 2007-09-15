@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems : all
@@ -17,6 +17,8 @@
 #include <assert.h>
 
 #include "global.h"
+
+#include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -53,9 +55,9 @@ typedef uint32 ChunkId;
 
 typedef struct
 {
-  uint32 id;                      // chunk id                              
-  uint64 size;                    // size of chunk (without chunk header)  
-  uint64 offset;                  // start of chunk in file (header)       
+  uint32 id;                        // chunk id                              
+  uint64 size;                      // size of chunk (without chunk header)  
+  uint64 offset;                    // start of chunk in file (header)       
 } ChunkHeader;
 
 typedef struct ChunkInfo
@@ -64,13 +66,15 @@ typedef struct ChunkInfo
   void             *userData;
 
   ChunkModes       mode;
-  const int        *definition;   // chunk definition
-  uint             alignment;     // alignment for chunk
+  uint             alignment;       // alignment for chunk
+  CryptInfo        *cryptInfo;      // encryption
 
-  uint32           id;            // chunk id
-  uint64           size;          // size of chunk (without chunk header)
-  uint64           offset;        // start of chunk in file (header) 
-  uint64           index;         // current position in chunk
+  ChunkId          id;              // chunk id
+  const int        *definition;     // chunk definition
+  ulong            definitionSize;  // chunk definition size (without data elements)
+  uint64           size;            // total size of chunk (without chunk header)
+  uint64           offset;          // start of chunk in file (header) 
+  uint64           index;           // current position in chunk
 } ChunkInfo;
 
 /***************************** Variables *******************************/
@@ -103,9 +107,30 @@ bool Chunks_initF(bool(*endOfFile)(void *userData),
 void Chunks_doneF(void);
 
 /***********************************************************************\
+* Name   : Chunks_getSize
+* Purpose: get size of chunk in bytes (without header and data elements)
+* Input  : definition - chunk definition
+*          alignment  - alignment to use
+*          data       - chunk data
+* Output : -
+* Return : size of chunk
+* Notes  : -
+\***********************************************************************/
+
+ulong Chunks_getSize(const int  *definition,
+                     ulong      alignment,
+                     const void *data
+                    );
+
+/***********************************************************************\
 * Name   : Chunks_new
 * Purpose: create new chunk handle
-* Input  : -
+* Input  : chunkInfo       - chunk info block
+*          parentChunkInfo - parent chunk info block
+*          userData        - user data for i/o
+*          alignment       - alignment to use
+*          cryptInfo       - crypt info
+*          dataCryptInfo   - crypt info for data elements
 * Output : -
 * Return : -
 * Notes  : -
@@ -114,15 +139,14 @@ void Chunks_doneF(void);
 bool Chunks_new(ChunkInfo *chunkInfo,
                 ChunkInfo *parentChunkInfo,
                 void      *userData,
-                ChunkId   chunkId,
-                int       *definition,
-                uint      alignment
+                uint      alignment,
+                CryptInfo *cryptInfo
                );
 
 /***********************************************************************\
 * Name   : Chunks_delete
 * Purpose: delete chunk handle
-* Input  : -
+* Input  : chunkInfo - chunk info block
 * Output : -
 * Return : -
 * Notes  : -
@@ -171,8 +195,11 @@ bool Chunks_eof(void *userData);
 /***********************************************************************\
 * Name   : Chunks_open
 * Purpose: open chunk
-* Input  : chunkInfo   - chunk info block
-*          chunkHeader - chunk header
+* Input  : chunkInfo      - chunk info block
+*          chunkHeader    - chunk header
+*          chunkId        - chunk id
+*          definition     - chunk definition
+*          definitionSize - size of chunk (without data elements)
 * Output : data - chunk data
 * Return : TRUE if no error, FALSE otherwise
 * Notes  : -
@@ -180,20 +207,29 @@ bool Chunks_eof(void *userData);
 
 bool Chunks_open(ChunkInfo   *chunkInfo,
                  ChunkHeader *chunkHeader,
+                 ChunkId     chunkId,
+                 const int   *definition,
+                 ulong       definitionSize,
                  void        *data
                 );
 
 /***********************************************************************\
 * Name   : Chunks_create
 * Purpose: create new chunk
-* Input  : chunkInfo - chunk info block
-*          data      - chunk data
+* Input  : chunkInfo      - chunk info block
+*          chunkId        - chunk id
+*          definition     - chunk definition
+*          definitionSize - size of chunk (without data elements)
+*          data           - chunk data
 * Output : -
 * Return : TRUE if no error, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Chunks_create(ChunkInfo  *chunkInfo,
+                   ChunkId    chunkId,
+                   const int  *definition,
+                   ulong      definitionSize,
                    const void *data
                   );
 
@@ -246,20 +282,6 @@ bool Chunks_skipSub(ChunkInfo   *chunkInfo,
 \***********************************************************************/
 
 bool Chunks_eofSub(ChunkInfo *chunkInfo);
-
-/***********************************************************************\
-* Name   : Chunks_getSize
-* Purpose: get size of chunk in bytes (without data elements)
-* Input  : chunkInfo - chunk info block
-*          data      - chunk data
-* Output : -
-* Return : size of chunk
-* Notes  : -
-\***********************************************************************/
-
-ulong Chunks_getSize(ChunkInfo  *chunkInfo,
-                     const void *data
-                    );
 
 /***********************************************************************\
 * Name   : Chunks_update

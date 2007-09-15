@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems : all
@@ -874,6 +874,16 @@ String String_newChar(char ch)
   return string;
 }
 
+String String_newBuffer(char *buffer, ulong bufferLength)
+{
+  String string;
+
+  string = String_new();
+  String_setBuffer(string,buffer,bufferLength);
+
+  return string;
+}
+
 /***********************************************************************\
 * Name   : 
 * Purpose: 
@@ -953,31 +963,6 @@ String String_set(String string, String sourceString)
   return string;
 }
 
-String String_setBuffer(String string, const char *buffer, ulong bufferLength)
-{
-  if (string != NULL)
-  {
-    assert(string->data != NULL);
-
-    if (buffer != NULL)
-    {
-      assert(buffer != NULL);
-
-      ensureStringLength(string,bufferLength+1);
-      memcpy(&string->data[0],buffer,bufferLength);
-      string->data[bufferLength] = '\0';
-      string->length = bufferLength;
-    }
-    else
-    {
-      string->data[0] = '\0';
-      string->length = 0;
-    }
-  }
-
-  return string;
-}
-
 String String_setCString(String string, const char *s)
 {
   if (string != NULL)
@@ -1001,6 +986,31 @@ String String_setCString(String string, const char *s)
 String String_setChar(String string, char ch)
 {
   String_setBuffer(string,&ch,1); 
+
+  return string;
+}
+
+String String_setBuffer(String string, const char *buffer, ulong bufferLength)
+{
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    if (buffer != NULL)
+    {
+      assert(buffer != NULL);
+
+      ensureStringLength(string,bufferLength+1);
+      memcpy(&string->data[0],buffer,bufferLength);
+      string->data[bufferLength] = '\0';
+      string->length = bufferLength;
+    }
+    else
+    {
+      string->data[0] = '\0';
+      string->length = 0;
+    }
+  }
 
   return string;
 }
