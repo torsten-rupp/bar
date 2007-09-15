@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems : all
@@ -76,7 +76,7 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPE[] =
 
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM[] =
 {
-  {"none",COMPRESS_ALGORITHM_NONE,"no compression"},
+  {"none",COMPRESS_ALGORITHM_NONE,"no compression"         },
   {"zip0",COMPRESS_ALGORITHM_ZIP0,"ZIP compression level 0"},
   {"zip1",COMPRESS_ALGORITHM_ZIP1,"ZIP compression level 1"},
   {"zip2",COMPRESS_ALGORITHM_ZIP2,"ZIP compression level 2"},
@@ -91,8 +91,15 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM[] =
 
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM[] =
 {
-  {"none",  CRYPT_ALGORITHM_NONE,  "no crypting"},
-  {"aes128",CRYPT_ALGORITHM_AES128,"AES cipher 128bit"},
+  {"none",      CRYPT_ALGORITHM_NONE,      "no crypting"          },
+  {"3des",      CRYPT_ALGORITHM_3DES,      "3DES cipher"          },
+  {"cast5",     CRYPT_ALGORITHM_CAST5,     "CAST5 cipher"         },
+  {"blowfish",  CRYPT_ALGORITHM_BLOWFISH,  "Blowfish cipher"      },
+  {"aes128",    CRYPT_ALGORITHM_AES128,    "AES cipher 128bit"    },
+  {"aes192",    CRYPT_ALGORITHM_AES192,    "AES cipher 192bit"    },
+  {"aes256",    CRYPT_ALGORITHM_AES256,    "AES cipher 256bit"    },
+  {"twofish128",CRYPT_ALGORITHM_TWOFISH128,"Twofish cipher 128bit"},
+  {"twofish256",CRYPT_ALGORITHM_TWOFISH256,"Twofish cipher 256bit"},
 };
 
 LOCAL bool parseIncludeExclude(void *variable, const char *value, const void *defaultValue, void *userData)

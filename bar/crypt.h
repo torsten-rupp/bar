@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems : all
@@ -31,7 +31,14 @@ typedef enum
 {
   CRYPT_ALGORITHM_NONE,
 
+  CRYPT_ALGORITHM_3DES,
+  CRYPT_ALGORITHM_CAST5,
+  CRYPT_ALGORITHM_BLOWFISH,
   CRYPT_ALGORITHM_AES128,
+  CRYPT_ALGORITHM_AES192,
+  CRYPT_ALGORITHM_AES256,
+  CRYPT_ALGORITHM_TWOFISH128,
+  CRYPT_ALGORITHM_TWOFISH256,
 
   CRYPT_ALGORITHM_UNKNOWN=65535,
 } CryptAlgorithms;

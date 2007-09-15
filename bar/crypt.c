@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems : all
@@ -75,9 +75,43 @@ const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
 
   switch (cryptAlgorithm)
   {
-    case CRYPT_ALGORITHM_NONE:   s = "none";    break;
-    case CRYPT_ALGORITHM_AES128: s = "AES128";  break;
-    default:                     s = "unknown"; break;
+    case CRYPT_ALGORITHM_NONE:
+      s = "none"; 
+      break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
+    case CRYPT_ALGORITHM_AES128:
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
+      {
+        int gcryptAlgorithm;
+
+        switch (cryptAlgorithm)
+        {
+          case CRYPT_ALGORITHM_3DES:       gcryptAlgorithm = GCRY_CIPHER_3DES;       break;
+          case CRYPT_ALGORITHM_CAST5:      gcryptAlgorithm = GCRY_CIPHER_CAST5;      break;
+          case CRYPT_ALGORITHM_BLOWFISH:   gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;   break;
+          case CRYPT_ALGORITHM_AES128:     gcryptAlgorithm = GCRY_CIPHER_AES;        break;
+          case CRYPT_ALGORITHM_AES192:     gcryptAlgorithm = GCRY_CIPHER_AES192;     break;
+          case CRYPT_ALGORITHM_AES256:     gcryptAlgorithm = GCRY_CIPHER_AES256;     break;
+          case CRYPT_ALGORITHM_TWOFISH128: gcryptAlgorithm = GCRY_CIPHER_TWOFISH128; break;
+          case CRYPT_ALGORITHM_TWOFISH256: gcryptAlgorithm = GCRY_CIPHER_TWOFISH;    break;
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; /* not reached */
+          #endif /* NDEBUG */
+        }
+
+        s = gcry_cipher_algo_name(gcryptAlgorithm);
+      }
+      break;
+    default:
+      s = "unknown";
+      break;
   }
 
   return s;
@@ -87,8 +121,6 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
                             uint            *blockLength
                            )
 {
-  int    gcryptError;
-  size_t n;
 
   assert(blockLength != NULL);
 
@@ -99,18 +131,50 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
     case CRYPT_ALGORITHM_NONE:
       (*blockLength) = 1;
       break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
     case CRYPT_ALGORITHM_AES128:
-      gcryptError = gcry_cipher_algo_info(GCRY_CIPHER_AES,
-                                          GCRYCTL_GET_BLKLEN,
-                                          NULL,
-                                          &n
-                                         );
-      if (gcryptError != 0)
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
       {
-        printError("Cannot detect block length of AES cipher (error: %s)\n",gpg_strerror(gcryptError));
-        return ERROR_INIT_CIPHER;
+        int    gcryptAlgorithm;
+        int    gcryptError;
+        size_t n;
+
+        switch (cryptAlgorithm)
+        {
+          case CRYPT_ALGORITHM_3DES:       gcryptAlgorithm = GCRY_CIPHER_3DES;       break;
+          case CRYPT_ALGORITHM_CAST5:      gcryptAlgorithm = GCRY_CIPHER_CAST5;      break;
+          case CRYPT_ALGORITHM_BLOWFISH:   gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;   break;
+          case CRYPT_ALGORITHM_AES128:     gcryptAlgorithm = GCRY_CIPHER_AES;        break;
+          case CRYPT_ALGORITHM_AES192:     gcryptAlgorithm = GCRY_CIPHER_AES192;     break;
+          case CRYPT_ALGORITHM_AES256:     gcryptAlgorithm = GCRY_CIPHER_AES256;     break;
+          case CRYPT_ALGORITHM_TWOFISH128: gcryptAlgorithm = GCRY_CIPHER_TWOFISH128; break;
+          case CRYPT_ALGORITHM_TWOFISH256: gcryptAlgorithm = GCRY_CIPHER_TWOFISH;    break;
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; /* not reached */
+          #endif /* NDEBUG */
+        }
+        gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                            GCRYCTL_GET_BLKLEN,
+                                            NULL,
+                                            &n
+                                           );
+        if (gcryptError != 0)
+        {
+          printError("Cannot detect block length of '%s' cipher (error: %s)\n",
+                     gcry_cipher_algo_name(gcryptAlgorithm),
+                     gpg_strerror(gcryptError)
+                    );
+          return ERROR_INIT_CIPHER;
+        }
+        (*blockLength) = n;
       }
-      (*blockLength) = n;
       break;
     #ifndef NDEBUG
       default:
@@ -127,12 +191,6 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
                  const char      *password
                 )
 {
-  int    passwordLength;
-  int    gcryptError;
-  size_t n;
-  char   key[MAX_KEY_SIZE/8];
-  int    z;
-
   assert(cryptInfo != NULL);
 
   /* init variables */
@@ -143,91 +201,161 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
   {
     case CRYPT_ALGORITHM_NONE:
       break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
     case CRYPT_ALGORITHM_AES128:
-      if (password == NULL)
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
       {
-        printError("No password given for cipher!\n");
-        return ERROR_NO_PASSWORD;
-      }
-      passwordLength = strlen(password);
-      if (passwordLength <= 0)
-      {
-        printError("Passwort is empty!\n");
-        return ERROR_NO_PASSWORD;
-      }
+        uint   passwordLength;
+        int    gcryptAlgorithm;
+        int    gcryptError;
+        size_t n;
+        uint   maxKeyLength;
+        uint   keyLength;
+        char   key[MAX_KEY_SIZE/8];
+        int    z;
 
-      /* get key length, block length */
-      gcryptError = gcry_cipher_algo_info(GCRY_CIPHER_AES,
-                                          GCRYCTL_GET_KEYLEN,
-                                          NULL,
-                                          &n
-                                         );
-      if (gcryptError != 0)
-      {
-        printError("Cannot detect max. key length of AES cipher (error: %s)\n",gpg_strerror(gcryptError));
-        return ERROR_INIT_CIPHER;
-      }
-      if (n*8 < 128)
-      {
-        printError("AES cipher does not support 128bit keys\n");
-        return ERROR_INIT_CIPHER;
-      }
-      gcryptError = gcry_cipher_algo_info(GCRY_CIPHER_AES,
-                                          GCRYCTL_GET_BLKLEN,
-                                          NULL,
-                                          &n
-                                         );
-      if (gcryptError != 0)
-      {
-        printError("Cannot detect block length of AES cipher (error: %s)\n",gpg_strerror(gcryptError));
-        return ERROR_INIT_CIPHER;
-      }
-      cryptInfo->blockLength = n;
+        if (password == NULL)
+        {
+          printError("No password given for cipher!\n");
+          return ERROR_NO_PASSWORD;
+        }
+        passwordLength = strlen(password);
+        if (passwordLength <= 0)
+        {
+          printError("Passwort is empty!\n");
+          return ERROR_NO_PASSWORD;
+        }
 
-      /* init AES cipher */
-      gcryptError = gcry_cipher_open(&cryptInfo->gcry_cipher_hd,
-                                     GCRY_CIPHER_AES,
-                                     GCRY_CIPHER_MODE_CBC,
-                                     GCRY_CIPHER_CBC_CTS
-                                    );
-      if (gcryptError != 0)
-      {
-        printError("Open AES cipher failed (error: %s)\n",gpg_strerror(gcryptError));
-        return ERROR_INIT_CIPHER;
-      }
+        switch (cryptAlgorithm)
+        {
+          case CRYPT_ALGORITHM_3DES:       gcryptAlgorithm = GCRY_CIPHER_3DES;       break;
+          case CRYPT_ALGORITHM_CAST5:      gcryptAlgorithm = GCRY_CIPHER_CAST5;      break;
+          case CRYPT_ALGORITHM_BLOWFISH:   gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;   break;
+          case CRYPT_ALGORITHM_AES128:     gcryptAlgorithm = GCRY_CIPHER_AES;        break;
+          case CRYPT_ALGORITHM_AES192:     gcryptAlgorithm = GCRY_CIPHER_AES192;     break;
+          case CRYPT_ALGORITHM_AES256:     gcryptAlgorithm = GCRY_CIPHER_AES256;     break;
+          case CRYPT_ALGORITHM_TWOFISH128: gcryptAlgorithm = GCRY_CIPHER_TWOFISH128; break;
+          case CRYPT_ALGORITHM_TWOFISH256: gcryptAlgorithm = GCRY_CIPHER_TWOFISH;    break;
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; /* not reached */
+          #endif /* NDEBUG */
+        }
 
-      /* set key */
-      assert(sizeof(key) >= 128/8);
-      for (z = 0; z < 128/8; z++)
-      {
-        key[z] = password[z%passwordLength];
-      }
-      gcryptError = gcry_cipher_setkey(cryptInfo->gcry_cipher_hd,
-                                       key,
-                                       128/8
+        /* get key length, block length */
+        gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                            GCRYCTL_GET_KEYLEN,
+                                            NULL,
+                                            &n
+                                           );
+        if (gcryptError != 0)
+        {
+          printError("Cannot detect max. key length of cipher '%s' (error: %s)\n",
+                     gcry_cipher_algo_name(gcryptAlgorithm),
+                     gpg_strerror(gcryptError)
+                    );
+          return ERROR_INIT_CIPHER;
+        }
+        maxKeyLength = n*8;
+        gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                            GCRYCTL_GET_BLKLEN,
+                                            NULL,
+                                            &n
+                                           );
+        if (gcryptError != 0)
+        {
+          printError("Cannot detect block length of cipher '%s' (error: %s)\n",
+                     gcry_cipher_algo_name(gcryptAlgorithm),
+                     gpg_strerror(gcryptError)
+                    );
+          return ERROR_INIT_CIPHER;
+        }
+        cryptInfo->blockLength = n;
+
+        /* get key length */
+        switch (cryptAlgorithm)
+        {
+          case CRYPT_ALGORITHM_3DES:       keyLength = 192; break;
+          case CRYPT_ALGORITHM_CAST5:      keyLength = 128; break;
+          case CRYPT_ALGORITHM_BLOWFISH:   keyLength = 128; break;
+          case CRYPT_ALGORITHM_AES128:     keyLength = 128; break;
+          case CRYPT_ALGORITHM_AES192:     keyLength = 192; break;
+          case CRYPT_ALGORITHM_AES256:     keyLength = 256; break;
+          case CRYPT_ALGORITHM_TWOFISH128: keyLength = 128; break;
+          case CRYPT_ALGORITHM_TWOFISH256: keyLength = 256; break;
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; /* not reached */
+          #endif /* NDEBUG */
+        }
+        if (keyLength > maxKeyLength)
+        {
+          printError("Cipher '%s' does not support %dbit keys\n",
+                     gcry_cipher_algo_name(gcryptAlgorithm),
+                     keyLength
+                    );
+          return ERROR_INIT_CIPHER;
+        }
+
+        /* init cipher */
+        gcryptError = gcry_cipher_open(&cryptInfo->gcry_cipher_hd,
+                                       gcryptAlgorithm,
+                                       GCRY_CIPHER_MODE_CBC,
+                                       GCRY_CIPHER_CBC_CTS
                                       );
-      if (gcryptError != 0)
-      {
-        printError("Cannot set cipher key (error: %s)\n",gpg_strerror(gcryptError));
-        gcry_cipher_close(cryptInfo->gcry_cipher_hd);
-        return ERROR_INIT_CIPHER;
-      }
+        if (gcryptError != 0)
+        {
+          printError("Init cipher '%s' failed (error: %s)\n",
+                     gcry_cipher_algo_name(gcryptAlgorithm),
+                     gpg_strerror(gcryptError)
+                    );
+          return ERROR_INIT_CIPHER;
+        }
 
-#if 0
-      /* set 0 IV */
-      gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
-                                      NULL,
-                                      0
-                                     );
-      if (gcryptError != 0)
-      {
-        printError("Cannot set cipher IV (error: %s)\n",gpg_strerror(gcryptError));
-        gcry_cipher_close(cryptInfo->gcry_cipher_hd);
-        return ERROR_INIT_CIPHER;
-      }
+        /* set key */
+        assert(sizeof(key) >= (keyLength+7)/8);
+        for (z = 0; z < (keyLength+7)/8; z++)
+        {
+          key[z] = password[z%passwordLength];
+        }
+        gcryptError = gcry_cipher_setkey(cryptInfo->gcry_cipher_hd,
+                                         key,
+                                         (keyLength+7)/8
+                                        );
+        if (gcryptError != 0)
+        {
+          printError("Cannot set key for cipher '%s' with %dbit (error: %s)\n",
+                     gcry_cipher_algo_name(gcryptAlgorithm),
+                     keyLength,
+                     gpg_strerror(gcryptError)
+                    );
+          gcry_cipher_close(cryptInfo->gcry_cipher_hd);
+          return ERROR_INIT_CIPHER;
+        }
 
-      gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
-#endif /* 0 */
+  #if 0
+        /* set 0 IV */
+        gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
+                                        NULL,
+                                        0
+                                       );
+        if (gcryptError != 0)
+        {
+          printError("Cannot set cipher IV (error: %s)\n",gpg_strerror(gcryptError));
+          gcry_cipher_close(cryptInfo->gcry_cipher_hd);
+          return ERROR_INIT_CIPHER;
+        }
+
+        gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
+  #endif /* 0 */
+      }
       break;
     #ifndef NDEBUG
       default:
@@ -247,7 +375,14 @@ void Crypt_delete(CryptInfo *cryptInfo)
   {
     case CRYPT_ALGORITHM_NONE:
       break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
     case CRYPT_ALGORITHM_AES128:
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
       gcry_cipher_close(cryptInfo->gcry_cipher_hd);
       break;
     #ifndef NDEBUG
@@ -260,9 +395,6 @@ void Crypt_delete(CryptInfo *cryptInfo)
 
 Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
 {
-  char iv[MAX_KEY_SIZE/8];
-  int  z;
-  int  gcryptError;
 
   assert(cryptInfo != NULL);
 
@@ -270,25 +402,59 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
   {
     case CRYPT_ALGORITHM_NONE:
       break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
     case CRYPT_ALGORITHM_AES128:
-      gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
-
-      if (seed != 0)
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
       {
-        /* set IV */
-        assert(sizeof(iv) >= 128/8);
-        for (z = 0; z < 128/8; z++)
+        uint ivLength;
+        char iv[MAX_KEY_SIZE/8];
+        int  z;
+        int  gcryptError;
+
+        gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
+
+        if (seed != 0)
         {
-          iv[z] = (seed >> (z%8)*8) & 0xFF;
-        }
-        gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
-                                        iv,
-                                        128/8
-                                       );
-        if (gcryptError != 0)
-        {
-          printError("Cannot set cipher IV (error: %s)\n",gpg_strerror(gcryptError));
-          return ERROR_INIT_CIPHER;
+          /* get IV length */
+          switch (cryptInfo->cryptAlgorithm)
+          {
+            case CRYPT_ALGORITHM_3DES:       ivLength = 192; break;
+            case CRYPT_ALGORITHM_CAST5:      ivLength = 128; break;
+            case CRYPT_ALGORITHM_BLOWFISH:   ivLength = 128; break;
+            case CRYPT_ALGORITHM_AES128:     ivLength = 128; break;
+            case CRYPT_ALGORITHM_AES192:     ivLength = 192; break;
+            case CRYPT_ALGORITHM_AES256:     ivLength = 256; break;
+            case CRYPT_ALGORITHM_TWOFISH128: ivLength = 128; break;
+            case CRYPT_ALGORITHM_TWOFISH256: ivLength = 256; break;
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break; /* not reached */
+            #endif /* NDEBUG */
+          }
+
+          /* set IV */
+          assert(sizeof(iv) >= (ivLength+7)/8);
+          for (z = 0; z < (ivLength+7)/8; z++)
+          {
+            iv[z] = (seed >> (z%8)*8) & 0xFF;
+          }
+          gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
+                                          iv,
+                                          (ivLength+7)/8
+                                         );
+          if (gcryptError != 0)
+          {
+            printError("Cannot set cipher IV (error: %s)\n",
+                       gpg_strerror(gcryptError)
+                      );
+            return ERROR_INIT_CIPHER;
+          }
         }
       }
       break;
@@ -316,7 +482,14 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
   {
     case CRYPT_ALGORITHM_NONE:
       break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
     case CRYPT_ALGORITHM_AES128:
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
       assert((bufferLength%cryptInfo->blockLength) == 0);
 
       gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
@@ -354,7 +527,14 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
   {
     case CRYPT_ALGORITHM_NONE:
       break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
     case CRYPT_ALGORITHM_AES128:
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
       assert((bufferLength%cryptInfo->blockLength) == 0);
 
       gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
