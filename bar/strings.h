@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: dynamic string functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -37,6 +37,7 @@ typedef struct
   long       index;
   const char *separatorChars;
   const char *stringChars;
+  bool       skipEmptyTokens;
   String     token;
 } StringTokenizer;
 
@@ -346,12 +347,19 @@ String String_format(String string, const char *format, ...);
 *          string          - string
 *          separatorChars  - token seperator characters, e. g. " "
 *          stringChars     - token string escape characters, e. g. ",'
+*          skipEmptyTokens - TRUE to skip empty tokens, FALSE to get
+*                            also empty tokens
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void String_initTokenizer(StringTokenizer *stringTokenizer, const String string, const char *separatorChars, const char *stringChars);
+void String_initTokenizer(StringTokenizer *stringTokenizer,
+                          const String    string,
+                          const char      *separatorChars,
+                          const char      *stringChars,
+                          bool            skipEmptyTokens
+                         );
 void String_doneTokenizer(StringTokenizer *stringTokenizer);
 
 /***********************************************************************\

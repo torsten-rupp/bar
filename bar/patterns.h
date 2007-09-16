@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems : all
@@ -34,6 +34,13 @@ typedef enum
   PATTERN_TYPE_BASIC,
   PATTERN_TYPE_EXTENDED
 } PatternTypes;
+
+typedef enum
+{
+  PATTERN_MATCH_MODE_BEGIN,
+  PATTERN_MATCH_MODE_END,
+  PATTERN_MATCH_MODE_EXACT,
+} PatternMatchModes;
 
 /***************************** Datatypes *******************************/
 
@@ -125,30 +132,34 @@ Errors Patterns_addList(PatternList  *patternList,
 
 /***********************************************************************\
 * Name   : Patterns_match
-* Purpose: patch string with pattern
-* Input  : patternNode - pattern node
-*          s           - string
+* Purpose: patch string with single pattern
+* Input  : patternNode      - pattern node
+*          s                - string
+*          patternMatchMode - pattern match mode; see PatternMatchModes
 * Output : -
 * Return : TRUE if pattern match, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Patterns_match(PatternNode *patternNode,
-                    String      s
+bool Patterns_match(PatternNode       *patternNode,
+                    String            s,
+                    PatternMatchModes patternMatchMode
                    );
 
 /***********************************************************************\
 * Name   : Patterns_matchList
-* Purpose: patch string with pattern list
-* Input  : patternList - pattern list
-*          s           - string
+* Purpose: patch string with all patterns of list
+* Input  : patternList      - pattern list
+*          s                - string
+*          patternMatchMode - pattern match mode; see PatternMatchModes
 * Output : -
 * Return : TRUE if pattern match, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Patterns_matchList(PatternList *patternList,
-                        String      s
+bool Patterns_matchList(PatternList       *patternList,
+                        String            s,
+                        PatternMatchModes patternMatchMode
                        );
 
 /***********************************************************************\

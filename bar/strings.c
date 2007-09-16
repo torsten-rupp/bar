@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: dynamic string functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -541,9 +541,9 @@ LOCAL bool parseString(struct __String *string,
         case 'u':
           /* get data */
           z = 0;
-          while ((index < string->length) &&
-                 (z < sizeof(buffer)-1) &&
-                 isdigit(string->data[index])
+          while (   (index < string->length)
+                 && (z < sizeof(buffer)-1)
+                 && isdigit(string->data[index])
                 )
           {
             buffer[z] = string->data[index];
@@ -594,10 +594,10 @@ LOCAL bool parseString(struct __String *string,
         case 'o':
           /* get data */
           z = 0;
-          while ((index < string->length) &&
-                 (z < sizeof(buffer)-1) &&
-                 (string->data[index] >= '0') &&
-                 (string->data[index] <= '7')
+          while (   (index < string->length)
+                 && (z < sizeof(buffer)-1)
+                 && (string->data[index] >= '0')
+                 && (string->data[index] <= '7')
                 )
           {
             buffer[z] = string->data[index];
@@ -619,9 +619,9 @@ LOCAL bool parseString(struct __String *string,
             index+=2;
           }
           z = 0;
-          while ((index < string->length) &&
-                 (z < sizeof(buffer)-1) &&
-                 isdigit(string->data[index])
+          while (   (index < string->length)
+                 && (z < sizeof(buffer)-1)
+                 && isdigit(string->data[index])
                 )
           {
             buffer[z] = string->data[index];
@@ -666,9 +666,9 @@ LOCAL bool parseString(struct __String *string,
         case 'A':
           /* get data */
           z = 0;
-          while ((index < string->length) &&
-                 (z < sizeof(buffer)-1) &&
-                 isdigit(string->data[index])
+          while (   (index < string->length)
+                 && (z < sizeof(buffer)-1)
+                 && isdigit(string->data[index])
                 )
           {
             buffer[z] = string->data[index];
@@ -680,9 +680,9 @@ LOCAL bool parseString(struct __String *string,
             buffer[z] = '.';
             z++;
             index++;
-            while ((index < string->length) &&
-                   (z < sizeof(buffer)-1) &&
-                   isdigit(string->data[index])
+            while (   (index < string->length)
+                   && (z < sizeof(buffer)-1)
+                   && isdigit(string->data[index])
                   )
             {
               buffer[z] = string->data[index];
@@ -701,10 +701,10 @@ LOCAL bool parseString(struct __String *string,
           value.s = va_arg(arguments,char*);
           assert(value.s != NULL);
           z = 0;
-          while ((index < string->length) &&
-                 ((formatToken.width == 0) || (z < formatToken.width-1)) &&
-                 !isspace(string->data[index]) &&
-                 (string->data[index] != (*format))
+          while (   (index < string->length)
+                 && ((formatToken.width == 0) || (z < formatToken.width-1))
+                 && !isspace(string->data[index])
+                 && (string->data[index] != (*format))
                 )
           {
             value.s[z] = string->data[index];
@@ -822,15 +822,6 @@ JAMAICA_HALT_NOT_YET_IMPLEMENTED();
 
 /*---------------------------------------------------------------------*/
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 String String_new(void)
 {
   struct __String *string;
@@ -884,15 +875,6 @@ String String_newBuffer(char *buffer, ulong bufferLength)
   return string;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 void String_delete(String string)
 {
   if (string != NULL)
@@ -903,15 +885,6 @@ void String_delete(String string)
     free(string);
   }
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 String String_clear(String string)
 {
@@ -925,15 +898,6 @@ String String_clear(String string)
 
   return string;
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 String String_set(String string, String sourceString)
 {
@@ -1015,15 +979,6 @@ String String_setBuffer(String string, const char *buffer, ulong bufferLength)
   return string;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 String String_copy(String fromString)
 {
   struct __String *string;
@@ -1046,15 +1001,6 @@ String String_copy(String fromString)
 
   return string;
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 String String_sub(String string, String fromString, unsigned long index, long length)
 {
@@ -1086,15 +1032,6 @@ String String_sub(String string, String fromString, unsigned long index, long le
 
   return string;
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 String String_append(String string, String appendString)
 {
@@ -1163,15 +1100,6 @@ String String_appendChar(String string, char ch)
   return string;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 String String_insert(String string, unsigned long index, String insertString)
 {
   unsigned long n;
@@ -1182,7 +1110,15 @@ String String_insert(String string, unsigned long index, String insertString)
 
     if (insertString != NULL)
     {
-      if (index <= string->length)
+      if      (index == STRING_END)
+      {
+        n = string->length+insertString->length;
+        ensureStringLength(string,n+1);
+        memcpy(&string->data[string->length],&insertString->data[0],insertString->length);
+        string->data[n] = '\0';
+        string->length = n;
+      }
+      else if (index <= string->length)
       {
         n = string->length+insertString->length;
         ensureStringLength(string,n+1);
@@ -1207,7 +1143,15 @@ String String_insertBuffer(String string, unsigned long index, const char *buffe
 
     if (buffer != NULL)
     {
-      if (index <= string->length)
+      if      (index == STRING_END)
+      {
+        n = string->length+bufferLength;
+        ensureStringLength(string,n+1);
+        memcpy(&string->data[string->length],buffer,bufferLength);
+        string->data[n] = '\0';
+        string->length = n;
+      }
+      else if (index <= string->length)
       {
         n = string->length+bufferLength;
         ensureStringLength(string,n+1);
@@ -1249,15 +1193,6 @@ String String_insertChar(String string, unsigned long index, char ch)
   return string;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 String String_remove(String string, unsigned long index, unsigned long length)
 {
   unsigned long n;
@@ -1284,19 +1219,6 @@ String String_remove(String string, unsigned long index, unsigned long length)
 
   return string;
 }
-
-/***********************************************************************\
-* Name   : String_replace, String_replaceCString, String_replaceChar
-* Purpose: replace part of string with other string
-* Input  : string         - string                
-*          index          - index where to insert 
-*          length         - length to replace     
-*          insertString/s - string to insert
-*          ch             - character to insert
-* Output : -
-* Return : string
-* Notes  : -
-\***********************************************************************/
 
 String String_replace(String string, unsigned long index, unsigned long length, String insertString)
 {
@@ -1330,56 +1252,20 @@ String String_replaceChar(String string, unsigned long index, unsigned long leng
   return string;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 unsigned long String_length(String string)
 {
   return (string != NULL)?string->length:0;
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 char String_index(String string, unsigned long index)
 {
   return ((string != NULL) && (index < string->length))?string->data[index]:'\0';
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 const char *String_cString(String string)
 {
   return (string != NULL)?&string->data[0]:NULL;
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 int String_compare(String string1, String string2, StringCompareFunction stringCompareFunction, void *userData)
 {
@@ -1418,15 +1304,6 @@ int String_compare(String string1, String string2, StringCompareFunction stringC
 
   return result;
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 bool String_equals(String string1, String string2)
 {
@@ -1493,15 +1370,6 @@ bool String_equalsChar(String string, char ch)
     return FALSE;
   }
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 long String_find(String string, unsigned long index, String findString)
 {
@@ -1641,15 +1509,6 @@ long String_findLastChar(String string, long index, char ch)
   return (z >= 0)?z:-1;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 String String_iterate(String string, StringIterateFunction stringIterateFunction, void *userData)
 {
   unsigned long z;
@@ -1669,15 +1528,6 @@ String String_iterate(String string, StringIterateFunction stringIterateFunction
   return string;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 String String_toLower(String string)
 {
   unsigned long z;
@@ -1694,15 +1544,6 @@ String String_toLower(String string)
 
   return string;
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 String String_toUpper(String string)
 {
@@ -1721,15 +1562,6 @@ String String_toUpper(String string)
   return string;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 String String_rightPad(String string, unsigned long length, char ch)
 {
   unsigned long n;
@@ -1747,15 +1579,6 @@ String String_rightPad(String string, unsigned long length, char ch)
 
   return string;
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 String String_leftPad(String string, unsigned long length, char ch)
 {
@@ -1776,15 +1599,6 @@ String String_leftPad(String string, unsigned long length, char ch)
   return string;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 String String_format(String string, const char *format, ...)
 {
   va_list arguments;
@@ -1796,34 +1610,22 @@ String String_format(String string, const char *format, ...)
   return string;
 }
 
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void String_initTokenizer(StringTokenizer *stringTokenizer, const String string, const char *separatorChars, const char *stringChars)
+void String_initTokenizer(StringTokenizer *stringTokenizer,
+                          const String    string,
+                          const char      *separatorChars,
+                          const char      *stringChars,
+                          bool            skipEmptyTokens
+                         )
 {
   assert(stringTokenizer != NULL);
 
-  stringTokenizer->string         = string;
-  stringTokenizer->index          = 0;
-  stringTokenizer->separatorChars = separatorChars;
-  stringTokenizer->stringChars    = stringChars;
-  stringTokenizer->token          = String_new();
+  stringTokenizer->string          = string;
+  stringTokenizer->index           = 0;
+  stringTokenizer->separatorChars  = separatorChars;
+  stringTokenizer->stringChars     = stringChars;
+  stringTokenizer->skipEmptyTokens = skipEmptyTokens;
+  stringTokenizer->token           = String_new();
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 void String_doneTokenizer(StringTokenizer *stringTokenizer)
 {
@@ -1832,15 +1634,6 @@ void String_doneTokenizer(StringTokenizer *stringTokenizer)
 
   String_delete(stringTokenizer->token);
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, long *tokenIndex)
 {
@@ -1854,30 +1647,33 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
     return FALSE;
   }
 
-  /* skip separator chars */
-  while ((stringTokenizer->index < stringTokenizer->string->length) &&
-         (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) != NULL)
-        )
+  if (stringTokenizer->skipEmptyTokens)
   {
-    stringTokenizer->index++;
+    /* skip separator chars */
+    while (   (stringTokenizer->index < stringTokenizer->string->length)
+           && (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) != NULL)
+          )
+    {
+      stringTokenizer->index++;
+    }
+    if (stringTokenizer->index >= stringTokenizer->string->length) return FALSE;
   }
-  if (stringTokenizer->index >= stringTokenizer->string->length) return FALSE;
 
   /* get token */
   if (tokenIndex != NULL) (*tokenIndex) = stringTokenizer->index;
   String_clear(stringTokenizer->token);
   if (stringTokenizer->stringChars != NULL)
   {
-    while ((stringTokenizer->index < stringTokenizer->string->length) &&
-           (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) == NULL)
+    while (   (stringTokenizer->index < stringTokenizer->string->length)
+           && (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) == NULL)
           )
     {
       s = strchr(stringTokenizer->stringChars,stringTokenizer->string->data[stringTokenizer->index]);
       if (s != NULL)
       {
         stringTokenizer->index++;
-        while ((stringTokenizer->index < stringTokenizer->string->length) &&
-               (stringTokenizer->string->data[stringTokenizer->index] != (*s))
+        while (   (stringTokenizer->index < stringTokenizer->string->length)
+               && (stringTokenizer->string->data[stringTokenizer->index] != (*s))
               )
         {
           String_appendChar(stringTokenizer->token,stringTokenizer->string->data[stringTokenizer->index]);
@@ -1896,8 +1692,8 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   }
   else
   {
-    while ((stringTokenizer->index < stringTokenizer->string->length) &&
-           (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) == NULL)
+    while (   (stringTokenizer->index < stringTokenizer->string->length)
+           && (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) == NULL)
           )
     {
       String_appendChar(stringTokenizer->token,stringTokenizer->string->data[stringTokenizer->index]);
@@ -1906,17 +1702,16 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   }
   if (token != NULL) (*token) = stringTokenizer->token;
 
+  /* skip token separator */
+  if (   (stringTokenizer->index < stringTokenizer->string->length)
+      && (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) != NULL)
+     )
+  {
+    stringTokenizer->index++;
+  }
+
   return TRUE;
 }
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 bool String_parse(String string, const char *format, ...)
 {

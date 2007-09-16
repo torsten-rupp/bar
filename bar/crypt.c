@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems : all
@@ -221,13 +221,11 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
 
         if (password == NULL)
         {
-          printError("No password given for cipher!\n");
           return ERROR_NO_PASSWORD;
         }
         passwordLength = strlen(password);
         if (passwordLength <= 0)
         {
-          printError("Passwort is empty!\n");
           return ERROR_NO_PASSWORD;
         }
 

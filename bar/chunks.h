@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems : all
@@ -90,21 +90,31 @@ typedef struct ChunkInfo
 #endif
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
+* Name   : Chunks_init
+* Purpose: init chunks functions
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Chunks_init(bool(*endOfFile)(void *userData),
+                   bool(*readFile)(void *userData, void *buffer, ulong length),
+                   bool(*writeFile)(void *userData, const void *buffer, ulong length),
+                   bool(*tellFile)(void *userData, uint64 *offset),
+                   bool(*seekFile)(void *userData, uint64 offset)
+                  );
+
+/***********************************************************************\
+* Name   : Chunks_done
+* Purpose: done chunks functions
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-bool Chunks_initF(bool(*endOfFile)(void *userData),
-                  bool(*readFile)(void *userData, void *buffer, ulong length),
-                  bool(*writeFile)(void *userData, const void *buffer, ulong length),
-                  bool(*tellFile)(void *userData, uint64 *offset),
-                  bool(*seekFile)(void *userData, uint64 offset)
-                );
-void Chunks_doneF(void);
+void Chunks_done(void);
 
 /***********************************************************************\
 * Name   : Chunks_getSize

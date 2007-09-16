@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems :
@@ -281,7 +281,7 @@ bool cmdOptions_parse(const char              *argv[],
             {
               if ((z+1) >= (*argc))
               {
-                if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sNo value given to option '--%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
+                if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sNo value given for option '--%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
                 return FALSE;
               }
               z++;
@@ -346,7 +346,7 @@ bool cmdOptions_parse(const char              *argv[],
               /* next argument is option value */
               if ((z+1) >= (*argc))
               {
-                if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sNo value given to option '-%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
+                if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sNo value given for option '-%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
                 return FALSE;
               }
               z++;

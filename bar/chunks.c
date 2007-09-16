@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -32,10 +32,11 @@
 /***************************** Constants *******************************/
 
 /* number of padding bytes in C-structs */
-#define PADDING_INT8  1
-#define PADDING_INT16 0
-#define PADDING_INT32 0
-#define PADDING_INT64 0
+#define PADDING_INT8    3
+#define PADDING_INT16   2
+#define PADDING_INT32   0
+#define PADDING_INT64   0
+#define PADDING_ADDRESS 0
 
 /* chunk header definition */
 LOCAL int CHUNK_DEFINITION[] = {
@@ -148,7 +149,7 @@ LOCAL bool readDefinition(void      *userData,
             assert(p+1 <= buffer+bufferLength);
             n = (*(uint8*)p); p+=1;
 
-            (*((uint8*)data)) = n; data = ((char*)data) + 4;
+            (*((uint8*)data)) = n; data = ((char*)data)+1+PADDING_INT8;
           }
           break;
         case CHUNK_DATATYPE_UINT16:
@@ -159,7 +160,7 @@ LOCAL bool readDefinition(void      *userData,
             assert(p+2 <= buffer+bufferLength);
             n = ntohs(*((uint16*)p)); p+=2;
 
-            (*((uint16*)data)) = n; data = ((char*)data) + 4;
+            (*((uint16*)data)) = n; data = ((char*)data)+2+PADDING_INT16;
           }
           break;
         case CHUNK_DATATYPE_UINT32:
@@ -170,7 +171,7 @@ LOCAL bool readDefinition(void      *userData,
             assert(p+4 <= buffer+bufferLength);
             n = ntohl(*((uint32*)p)); p+=4;
 
-            (*((uint32*)data)) = n; data = ((char*)data) + 4;
+            (*((uint32*)data)) = n; data = ((char*)data)+4+PADDING_INT32;
           }
           break;
         case CHUNK_DATATYPE_UINT64:
@@ -184,7 +185,7 @@ LOCAL bool readDefinition(void      *userData,
             l[1] = ntohl(*((uint32*)p)); p+=4;
             n = (((uint64)l[0]) << 32) | (((uint64)l[1] << 0));
 
-            (*((uint64*)data)) = n; data = ((char*)data) + 8;
+            (*((uint64*)data)) = n; data = ((char*)data)+8+PADDING_INT64;
           }
           break;
         case CHUNK_DATATYPE_NAME:
@@ -198,7 +199,7 @@ LOCAL bool readDefinition(void      *userData,
             s = String_newBuffer(p,length); p += length;
 
 //pointer size???
-            (*((String*)data)) = s; data = ((char*)data) + 4;
+            (*((String*)data)) = s; data = ((char*)data)+4+PADDING_ADDRESS;
           }
           break;
         case CHUNK_DATATYPE_DATA:
@@ -286,7 +287,7 @@ LOCAL bool writeDefinition(void       *userData,
           {
             uint8 n;
 
-            n = (*((uint8*)data)); data = ((char*)data) + 4;
+            n = (*((uint8*)data)); data = ((char*)data)+1+PADDING_INT8;
 
             assert(p+1 <= buffer+bufferLength);
             (*((uint8*)p)) = n; p += 1;
@@ -297,7 +298,7 @@ LOCAL bool writeDefinition(void       *userData,
           {
             uint16 n;
 
-            n = htons(*((uint16*)data)); data = ((char*)data) + 4;
+            n = htons(*((uint16*)data)); data = ((char*)data)+2+PADDING_INT16;
 
             assert(p+2 <= buffer+bufferLength);
             (*((uint16*)p)) = n; p += 2;
@@ -308,7 +309,7 @@ LOCAL bool writeDefinition(void       *userData,
           {
             uint32 n;
 
-            n = htonl(*((uint32*)data)); data = ((char*)data) + 4;
+            n = htonl(*((uint32*)data)); data = ((char*)data)+4+PADDING_INT32;
 
             assert(p+4 <= buffer+bufferLength);
             (*((uint32*)p)) = n; p += 4;       
@@ -320,7 +321,7 @@ LOCAL bool writeDefinition(void       *userData,
             uint64 n;
             uint32 l[2];
 
-            n = (*((uint64*)data)); data = ((char*)data) + 8;
+            n = (*((uint64*)data)); data = ((char*)data)+8+PADDING_INT64;
 
             assert(p+8 <= buffer+bufferLength);
             l[0] = htonl((n & 0xFFFFffff00000000LL) >> 32);
@@ -336,7 +337,7 @@ LOCAL bool writeDefinition(void       *userData,
             uint16 n;
 
 //pointer size???    
-            s = (*((String*)data)); data = ((char*)data) + 4;
+            s = (*((String*)data)); data = ((char*)data)+4+PADDING_ADDRESS;
             length = String_length(s);
 
             assert(p+2 <= buffer+bufferLength);
@@ -400,20 +401,26 @@ LOCAL bool writeDefinition(void       *userData,
 
 /*---------------------------------------------------------------------*/
 
-bool Chunks_initF(bool(*endOfFile)(void *userData),
-                  bool(*readFile)(void *userData, void *buffer, ulong length),
-                  bool(*writeFile)(void *userData, const void *buffer, ulong length),
-                  bool(*tellFile)(void *userData, uint64 *offset),
-                  bool(*seekFile)(void *userData, uint64 offset)
-                )
+Errors Chunks_init(bool(*endOfFile)(void *userData),
+                   bool(*readFile)(void *userData, void *buffer, ulong length),
+                   bool(*writeFile)(void *userData, const void *buffer, ulong length),
+                   bool(*tellFile)(void *userData, uint64 *offset),
+                   bool(*seekFile)(void *userData, uint64 offset)
+                 )
 {
+  assert(endOfFile != NULL);
+  assert(readFile != NULL);
+  assert(writeFile != NULL);
+  assert(tellFile != NULL);
+  assert(seekFile != NULL);
+
   IO.endOfFile = endOfFile;
   IO.readFile  = readFile;
   IO.writeFile = writeFile;
   IO.tellFile  = tellFile;
   IO.seekFile  = seekFile;
 
-  return TRUE;
+  return ERROR_NONE;
 }
 
 void Chunks_doneF(void)

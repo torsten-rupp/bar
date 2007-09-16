@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -75,6 +75,7 @@ SOURCES =       bar.c \
                 cmdoptions.c \
                 lists.c \
                 strings.c \
+                stringlists.c \
 
 OBJECTS = 	$(foreach z,$(SOURCES),$(subst .c,.o,$z)) \
                 archive_format.o \

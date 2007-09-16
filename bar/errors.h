@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/errors.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver errors
 * Systems : all
@@ -42,6 +42,7 @@ typedef enum
   ERROR_UNSUPPORTED_BLOCK_SIZE,
   ERROR_INIT_CRYPT,
   ERROR_NO_PASSWORD,
+  ERROR_INVALID_PASSWORD,
   ERROR_INIT_CIPHER,
   ERROR_ENCRYPT_FAIL,
   ERROR_DECRYPT_FAIL,

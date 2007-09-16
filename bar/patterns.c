@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -164,28 +164,56 @@ void Patterns_freeList(PatternList *patternList)
 {
 }
 
-bool Patterns_match(PatternNode *patternNode,
-                    String      s
+bool Patterns_match(PatternNode       *patternNode,
+                    String            s,
+                    PatternMatchModes patternMatchMode
                    )
 {
+  String  matchString;
   regex_t regex;
   bool    matchFlag;
 
   assert(patternNode != NULL);
   assert(s != NULL);
 
-  if (regcomp(&regex,String_cString(patternNode->matchString),patternNode->matchFlags) != 0)
+  /* get match string */
+  matchString = String_copy(patternNode->matchString);
+  switch (patternMatchMode)
+  {
+    case PATTERN_MATCH_MODE_BEGIN:
+      if (String_index(matchString,STRING_BEGIN) != '^') String_insertChar(matchString,STRING_BEGIN,'^');
+      break;
+    case PATTERN_MATCH_MODE_END:
+      if (String_index(matchString,STRING_END) != '$') String_insertChar(matchString,STRING_BEGIN,'$');
+      break;
+    case PATTERN_MATCH_MODE_EXACT:
+      if (String_index(matchString,STRING_BEGIN) != '^') String_insertChar(matchString,STRING_BEGIN,'^');
+      if (String_index(matchString,STRING_END) != '$') String_insertChar(matchString,STRING_END,'$');
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  /* match */
+  if (regcomp(&regex,String_cString(matchString),patternNode->matchFlags) != 0)
   {
     HALT(EXITCODE_FATAL_ERROR,"cannot compile regular expression '%s'!",String_cString(patternNode->pattern));
   }
   matchFlag = (regexec(&regex,String_cString(s),0,NULL,0) == 0);
   regfree(&regex);
 
+  /* free resources */
+  String_delete(matchString);
+
   return matchFlag;
 }
 
-bool Patterns_matchList(PatternList *patternList,
-                        String      s
+bool Patterns_matchList(PatternList       *patternList,
+                        String            s,
+                        PatternMatchModes patternMatchMode
                        )
 {
   bool        matchFlag;
@@ -198,7 +226,7 @@ bool Patterns_matchList(PatternList *patternList,
   patternNode = patternList->head;
   while ((patternNode != NULL) && !matchFlag)
   {
-    matchFlag = Patterns_match(patternNode,s);
+    matchFlag = Patterns_match(patternNode,s,patternMatchMode);
     patternNode = patternNode->next;
   }
 

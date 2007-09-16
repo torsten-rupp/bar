@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -44,8 +44,8 @@ typedef struct
   LIST_HEADER(Node);
 } List;
 
-typedef void(*NodeFreeFunction)(void *Node, void *userData);
-typedef int(*NodeCompareFunction)(void *Node, void *userData);
+typedef void(*NodeFreeFunction)(void *node, void *userData);
+typedef int(*NodeCompareFunction)(void *node, void *userData);
 
 /****************************** Macros *********************************/
 
@@ -60,9 +60,9 @@ typedef int(*NodeCompareFunction)(void *Node, void *userData);
 /***********************************************************************\
 * Name   : Lists_init
 * Purpose: initialise list
-* Input  : -
+* Input  : list - list to initialize
 * Output : -
-* Return : list or NULL on insufficient memory
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
@@ -70,7 +70,7 @@ void Lists_init(void *list);
 
 /***********************************************************************\
 * Name   : Lists_done
-* Purpose: deinitialize list
+* Purpose: free all nodes
 * Input  : list             - list to free
 *          nodeFreeFunction - free function for single node or NULL
 *          userData         - user data for free function
@@ -94,7 +94,7 @@ List *Lists_new(void);
 
 /***********************************************************************\
 * Name   : Lists_delete
-* Purpose: free all node and delete list
+* Purpose: free all nodes and delete list
 * Input  : list             - list to free
 *          nodeFreeFunction - free function for single node or NULL
 *          userData         - user data for free function
@@ -135,7 +135,7 @@ unsigned long Lists_empty(void *list);
 /***********************************************************************\
 * Name   : Lists_count
 * Purpose: get number of elements in list
-* Input  : list - list to free
+* Input  : list - list
 * Output : -
 * Return : number of elements
 * Notes  : -
