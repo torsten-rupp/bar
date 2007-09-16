@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -56,17 +56,19 @@
 /***********************************************************************\
 * Name   : printFileInfo
 * Purpose: print file information
-* Input  : archiveFileInfo - file info
+* Input  : 
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printFileInfo(const String   fileName,
-                         const FileInfo *fileInfo,
-                         uint64         partOffset,
-                         uint64         partSize,
-                         uint64         fileSize
+LOCAL void printFileInfo(const String       fileName,
+                         const FileInfo     *fileInfo,
+                         CompressAlgorithms compressAlgorithm,
+                         CryptAlgorithms    cryptAlgorithm,
+                         uint64             partOffset,
+                         uint64             partSize,
+                         uint64             archiveFileSize
                         )
 {
   double ratio;
@@ -75,7 +77,7 @@ LOCAL void printFileInfo(const String   fileName,
 
   if (partSize > 0)
   {
-    ratio = 100.0-fileSize*100.0/partSize;
+    ratio = 100.0-archiveFileSize*100.0/partSize;
   }
   else
   {
@@ -86,9 +88,9 @@ LOCAL void printFileInfo(const String   fileName,
          fileInfo->size,
          partOffset,
          (partSize > 0)?partOffset+partSize-1:partOffset,
-         Compress_getAlgorithmName(fileInfo->compressAlgorithm),
+         Compress_getAlgorithmName(compressAlgorithm),
          ratio,
-         Crypt_getAlgorithmName(fileInfo->cryptAlgorithm),
+         Crypt_getAlgorithmName(cryptAlgorithm),
          String_cString(fileName)
         );
 }
@@ -101,15 +103,17 @@ bool command_list(FileNameList *archiveFileNameList,
                   const char   *password
                  )
 {
-  String          fileName;
-  bool            failFlag;
-  ulong           fileCount;
-  Errors          error;
-  FileNameNode    *archiveFileNameNode;
-  ArchiveInfo     archiveInfo;
-  ArchiveFileInfo archiveFileInfo;
-  FileInfo        fileInfo;
-  uint64          partOffset,partSize;
+  String             fileName;
+  bool               failFlag;
+  ulong              fileCount;
+  Errors             error;
+  FileNameNode       *archiveFileNameNode;
+  ArchiveInfo        archiveInfo;
+  ArchiveFileInfo    archiveFileInfo;
+  FileInfo           fileInfo;
+  CompressAlgorithms compressAlgorithm;
+  CryptAlgorithms    cryptAlgorithm;
+  uint64             partOffset,partSize;
 
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
@@ -151,6 +155,8 @@ bool command_list(FileNameList *archiveFileNameList,
                                &archiveFileInfo,
                                fileName,
                                &fileInfo,
+                               &compressAlgorithm,
+                               &cryptAlgorithm,
                                &partOffset,
                                &partSize
                               );
@@ -168,6 +174,8 @@ bool command_list(FileNameList *archiveFileNameList,
         /* output file info */
         printFileInfo(fileName,
                       &fileInfo,
+                      compressAlgorithm,
+                      cryptAlgorithm,
                       partOffset,
                       partSize,
                       archiveFileInfo.chunkInfoFileData.size

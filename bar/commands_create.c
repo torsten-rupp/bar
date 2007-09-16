@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -479,7 +479,7 @@ bool command_create(const char      *archiveFileName,
     info(0,"Store '%s'...",String_cString(fileName));
 
     /* get file info */
-    error = Files_getInfo(fileName,&fileInfo);
+    error = Files_getFileInfo(fileName,&fileInfo);
     if (error != ERROR_NONE)
     {
       info(0,"fail\n");

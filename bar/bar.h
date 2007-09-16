@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -75,9 +75,11 @@ extern GlobalOptions globalOptions;
 #endif
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : info
+* Purpose: output info
+* Input  : verboseLevel - verbosity level
+*          format       - format string (like printf)
+*          ...          - optional arguments (like printf)
 * Output : -
 * Return : -
 * Notes  : -
@@ -86,20 +88,21 @@ extern GlobalOptions globalOptions;
 void info(uint verboseLevel, const char *format, ...);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : getErrorText
+* Purpose: get errror text of error code
+* Input  : error - error
 * Output : -
-* Return : -
+* Return : error text (read only!)
 * Notes  : -
 \***********************************************************************/
 
 const char *getErrorText(Errors error);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : printError
+* Purpose: print error message
+*          text - format string (like printf)
+*          ...  - optional arguments (like printf)
 * Output : -
 * Return : -
 * Notes  : -

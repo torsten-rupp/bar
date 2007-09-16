@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems : all
@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <utime.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -42,7 +43,51 @@
   extern "C" {
 #endif
 
-String Files_getFilePath(String fileName, String pathName)
+String Files_setFileName(String fileName, String name)
+{
+  return String_set(fileName,name);
+}
+
+String Files_setFileNameCString(String fileName, const char *name)
+{
+  return String_setCString(fileName,name);
+}
+
+String Files_appendFileName(String fileName, String name)
+{
+  assert(fileName != NULL);
+  assert(name != NULL);
+
+  if (String_length(fileName) > 0)
+  {
+    if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
+    {
+      String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+    }
+  }
+  String_append(fileName,name);
+  
+  return fileName;
+}
+
+String Files_appendFileNameCString(String fileName, const char *name)
+{
+  assert(fileName != NULL);
+  assert(name != NULL);
+
+  if (String_length(fileName) > 0)
+  {
+    if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
+    {
+      String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+    }
+  }
+  String_appendCString(fileName,name);
+  
+  return fileName;
+}
+
+String Files_getFilePathName(String fileName, String pathName)
 {
   long lastPathSeparatorIndex;
 
@@ -78,7 +123,7 @@ String Files_getFileBaseName(String fileName, String baseName)
   /* get path */
   if (lastPathSeparatorIndex >= 0)
   {
-    String_sub(baseName,fileName,lastPathSeparatorIndex,STRING_END);
+    String_sub(baseName,fileName,lastPathSeparatorIndex+1,STRING_END);
   }
   else
   {
@@ -88,22 +133,36 @@ String Files_getFileBaseName(String fileName, String baseName)
   return baseName;
 }
 
-
-String Files_appendFileName(String fileName, String name)
+void Files_splitFileName(String fileName, String *pathName, String *baseName)
 {
   assert(fileName != NULL);
+  assert(pathName != NULL);
+  assert(baseName != NULL);
+
+  (*pathName) = Files_getFilePathName(fileName,String_new());
+  (*baseName) = Files_getFileBaseName(fileName,String_new());
+}
+
+void Files_initSplitFileName(StringTokenizer *stringTokenizer, String fileName)
+{
+  assert(stringTokenizer != NULL);
+  assert(fileName != NULL);
+
+  String_initTokenizer(stringTokenizer,fileName,FILES_PATHNAME_SEPARATOR_CHARS,NULL);
+}
+
+void Files_doneSplitFileName(StringTokenizer *stringTokenizer)
+{
+  assert(stringTokenizer != NULL);
+  String_doneTokenizer(stringTokenizer);
+}
+
+bool Files_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const name)
+{
+  assert(stringTokenizer != NULL);
   assert(name != NULL);
 
-  if (String_length(fileName) > 0)
-  {
-    if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
-    {
-      String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
-    }
-  }
-  String_append(fileName,name);
-  
-  return fileName;
+  return String_getNextToken(stringTokenizer,name,NULL);
 }
 
 /*---------------------------------------------------------------------*/
@@ -160,7 +219,7 @@ Errors Files_open(FileHandle    *fileHandle,
       break;
     case FILE_OPENMODE_WRITE:
       /* create directory if needed */
-      pathName = Files_getFilePath(fileName,String_new());
+      pathName = Files_getFilePathName(fileName,String_new());
       if (!Files_exist(pathName))
       {
         error = Files_makeDirectory(pathName);
@@ -429,9 +488,9 @@ bool Files_exist(String fileName)
   return (stat(String_cString(fileName),&fileStat) == 0);
 }
 
-Errors Files_getInfo(String   fileName,
-                     FileInfo *fileInfo
-                    )
+Errors Files_getFileInfo(String   fileName,
+                         FileInfo *fileInfo
+                        )
 {
   struct stat fileStat;
 
@@ -454,13 +513,29 @@ Errors Files_getInfo(String   fileName,
   return ERROR_NONE;
 }
 
-Errors Files_setInfo(String   fileName,
-                     FileInfo *fileInfo
-                    )
+Errors Files_setFileInfo(String   fileName,
+                         FileInfo *fileInfo
+                        )
 {
+  struct utimbuf utimeBuffer;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
+
+  utimeBuffer.actime  = fileInfo->timeLastAccess;
+  utimeBuffer.modtime = fileInfo->timeModified;
+  if (utime(String_cString(fileName),&utimeBuffer) != 0)
+  {
+    return ERROR_IO_ERROR;
+  }
+  if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+  {
+    return ERROR_IO_ERROR;
+  }
+  if (chmod(String_cString(fileName),fileInfo->permission) != 0)
+  {
+    return ERROR_IO_ERROR;
+  }
 
   return ERROR_NONE;
 }

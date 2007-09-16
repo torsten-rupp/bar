@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -169,12 +169,14 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readFile(ArchiveInfo     *archiveInfo,
-                        ArchiveFileInfo *archiveFileInfo,
-                        String          fileName,
-                        FileInfo        *fileInfo,
-                        uint64          *partOffset,
-                        uint64          *partSize
+Errors Archive_readFile(ArchiveInfo        *archiveInfo,
+                        ArchiveFileInfo    *archiveFileInfo,
+                        String             fileName,
+                        FileInfo           *fileInfo,
+                        CompressAlgorithms *compressAlgorithm,
+                        CryptAlgorithms    *cryptAlgorithm,
+                        uint64             *partOffset,
+                        uint64             *partSize
                        );
 
 /***********************************************************************\

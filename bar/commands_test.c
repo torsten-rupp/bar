@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -146,6 +146,8 @@ bool command_test(FileNameList *archiveFileNameList,
                                &archiveFileInfo,
                                fileName,
                                &fileInfo,
+                               NULL,
+                               NULL,
                                &partOffset,
                                &partSize
                               );
@@ -168,7 +170,7 @@ bool command_test(FileNameList *archiveFileNameList,
         if (error != ERROR_NONE)
         {
           info(0,"fail\n");
-          printf("Cannot open file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+          printError("Cannot open file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
           Archive_closeFile(&archiveFileInfo);
           failFlag = TRUE;
           continue;
@@ -177,7 +179,7 @@ bool command_test(FileNameList *archiveFileNameList,
         if (error != ERROR_NONE)
         {
           info(0,"fail\n");
-          printf("Cannot read file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+          printError("Cannot read file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
           Archive_closeFile(&archiveFileInfo);
           Files_close(&fileHandle);
           failFlag = TRUE;
@@ -205,7 +207,7 @@ bool command_test(FileNameList *archiveFileNameList,
             if (error != ERROR_NONE)
             {
               info(0,"fail\n");
-              printf("Cannot read file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+              printError("Cannot read file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
               failFlag = TRUE;
               break;
             }

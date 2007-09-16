@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems : all
@@ -70,16 +70,13 @@ typedef struct
 /* file info data */
 typedef struct
 {
-  uint64             size;
-  uint64             timeLastAccess;
-  uint64             timeModified;
-  uint64             timeLastChanged;
-  uint32             userId;
-  uint32             groupId;
-  uint32             permission;
-
-  CompressAlgorithms compressAlgorithm;
-  CryptAlgorithms    cryptAlgorithm;
+  uint64 size;
+  uint64 timeLastAccess;
+  uint64 timeModified;
+  uint64 timeLastChanged;
+  uint32 userId;
+  uint32 groupId;
+  uint32 permission;
 } FileInfo;
 
 /***************************** Variables *******************************/
@@ -95,7 +92,33 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Files_getFilePath
+* Name   : Files_setFileName
+* Purpose: set name to file name
+* Input  : fileName - file name
+*          name     - name to set
+* Output : -
+* Return : file name
+* Notes  : -
+\***********************************************************************/
+
+String Files_setFileName(String fileName, String name);
+String Files_setFileNameCString(String fileName, const char *name);
+
+/***********************************************************************\
+* Name   : Files_fileNameAppend
+* Purpose: append name to file name
+* Input  : fileName - file name
+*          name     - name to append
+* Output : -
+* Return : file name
+* Notes  : -
+\***********************************************************************/
+
+String Files_appendFileName(String fileName, String name);
+String Files_appendFileNameCString(String fileName, const char *name);
+
+/***********************************************************************\
+* Name   : Files_getFilePathName
 * Purpose: get path of filename
 * Input  : fileName - file name
 *          path     - path variable
@@ -104,7 +127,7 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-String Files_getFilePath(String fileName, String path);
+String Files_getFilePathName(String fileName, String path);
 
 /***********************************************************************\
 * Name   : Files_getFileBaseName
@@ -119,16 +142,40 @@ String Files_getFilePath(String fileName, String path);
 String Files_getFileBaseName(String fileName, String baseName);
 
 /***********************************************************************\
-* Name   : Files_fileNameAppend
-* Purpose: append name to file name
+* Name   : Files_splitFileName
+* Purpose: split file name into path name and base name
 * Input  : fileName - file name
-*          name     - name to append
-* Output : -
-* Return : file name
+* Output : pathName - path name
+*          baseName - base name
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-String Files_appendFileName(String fileName, String name);
+void Files_splitFileName(String fileName, String *pathName, String *baseName);
+
+/***********************************************************************\
+* Name   : Files_initSplitFileName, Files_doneSplitFileName
+* Purpose: init/done file name splitter
+* Input  : stringTokenizer - string tokenizer (see strings.h)
+*          fileName        - file name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Files_initSplitFileName(StringTokenizer *stringTokenizer, String fileName);
+void Files_doneSplitFileName(StringTokenizer *stringTokenizer);
+
+/***********************************************************************\
+* Name   : Files_getNextFileName
+* Purpose: get next part of file name 
+* Input  : stringTokenizer - string tokenizer (see strings.h)
+* Output : name - next name (internal reference; do not delete!)
+* Return : TRUE if file name found, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Files_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const name);
 
 /*---------------------------------------------------------------------*/
 
@@ -241,22 +288,23 @@ Errors Files_seek(FileHandle *fileHandle, uint64 offset);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_makeDirectory
+* Purpose: create directory including intermedate directories
+* Input  : pathName - path name
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Files_makeDirectory(const String pathName);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_openDirectory
+* Purpose: open directory for reading
+* Input  : directoryHandle - directory handle
+*          pathName        - path name
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -264,9 +312,9 @@ Errors Files_openDirectory(DirectoryHandle *directoryHandle,
                            const String    pathName);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_closeDirectory
+* Purpose: close directory
+* Input  : directoryHandle - directory handle
 * Output : -
 * Return : -
 * Notes  : -
@@ -275,22 +323,23 @@ Errors Files_openDirectory(DirectoryHandle *directoryHandle,
 void Files_closeDirectory(DirectoryHandle *directoryHandle);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_endOfDirectory
+* Purpose: check if end of directory reached
+* Input  : directoryHandle - directory handle
 * Output : -
-* Return : -
+* Return : TRUE if not more diretory entries to read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Files_endOfDirectory(DirectoryHandle *directoryHandle);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
+* Name   : Files_readDirectory
+* Purpose: read next directory entry
+* Input  : directoryHandle - directory handle
+*          fileName        - file name variable
+* Output : fileName - next file name
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -321,30 +370,31 @@ FileTypes Files_getType(String fileName);
 bool Files_exist(String fileName);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
+* Name   : Files_getInfo
+* Purpose: get file info
+* Input  : fileName - file name
+* Output : fileInfo - file info
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_getInfo(String   fileName,
-                     FileInfo *fileInfo
-                    );
+Errors Files_getFileInfo(String   fileName,
+                         FileInfo *fileInfo
+                        );
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Files_setInfo
+* Purpose: set file info
+* Input  : fileName - file name
+*          fileInfo - file info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_setInfo(String   fileName,
-                     FileInfo *fileInfo
-                    );
+Errors Files_setFileInfo(String   fileName,
+                         FileInfo *fileInfo
+                        );
 
 #ifdef __cplusplus
   }

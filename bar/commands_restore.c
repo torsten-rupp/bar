@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -71,6 +71,9 @@ bool command_restore(FileNameList *archiveFileNameList,
   FileInfo        fileInfo;
   uint64          partOffset,partSize;
   String          destinationFileName;
+  StringTokenizer fileNameTokenizer;
+  String          pathName,baseName,name;
+  int             z;
   FileHandle      fileHandle;
   uint64          length;
   ulong           n;
@@ -110,6 +113,8 @@ bool command_restore(FileNameList *archiveFileNameList,
                                &archiveFileInfo,
                                fileName,
                                &fileInfo,
+                               NULL,
+                               NULL,
                                &partOffset,
                                &partSize
                               );
@@ -125,24 +130,35 @@ bool command_restore(FileNameList *archiveFileNameList,
           && !Patterns_matchList(excludePatternList,fileName)
          )
       {
-        info(0,"Restore '%s'...",String_cString(fileName));
-
         /* get destination filename */
         destinationFileName = String_new();
-        if (directory != NULL) String_setCString(destinationFileName,directory);
-        if (directoryStripCount > 0)
+        if (directory != NULL) Files_setFileNameCString(destinationFileName,directory);
+        Files_splitFileName(fileName,&pathName,&baseName);
+        Files_initSplitFileName(&fileNameTokenizer,pathName);
+        z = 0;
+        while ((z< directoryStripCount) && Files_getNextSplitFileName(&fileNameTokenizer,&name))
         {
-  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          z++;
         }
-        Files_appendFileName(destinationFileName,fileName);
+        while (Files_getNextSplitFileName(&fileNameTokenizer,&name))
+        {
+          Files_appendFileName(destinationFileName,name);
+        }     
+        Files_doneSplitFileName(&fileNameTokenizer);
+        Files_appendFileName(destinationFileName,baseName);
+        String_delete(pathName);
+        String_delete(baseName);
+
+        info(0,"Restore '%s'...",String_cString(destinationFileName));
 
         /* write file */
         error = Files_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
         if (error != ERROR_NONE)
         {
           info(0,"fail\n");
-          printf("Cannot open file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+          printError("Cannot open file '%s' (error: %s)\n",String_cString(destinationFileName),getErrorText(error));
           Archive_closeFile(&archiveFileInfo);
+          String_delete(destinationFileName);
           failFlag = TRUE;
           continue;
         }
@@ -150,9 +166,10 @@ bool command_restore(FileNameList *archiveFileNameList,
         if (error != ERROR_NONE)
         {
           info(0,"fail\n");
-          printf("Cannot write file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+          printError("Cannot write file '%s' (error: %s)\n",String_cString(destinationFileName),getErrorText(error));
           Archive_closeFile(&archiveFileInfo);
           Files_close(&fileHandle);
+          String_delete(destinationFileName);
           failFlag = TRUE;
           continue;
         }
@@ -174,7 +191,7 @@ bool command_restore(FileNameList *archiveFileNameList,
           if (error != ERROR_NONE)
           {
             info(0,"fail\n");
-            printf("Cannot write file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+            printError("Cannot write file '%s' (error: %s)\n",String_cString(destinationFileName),getErrorText(error));
             failFlag = TRUE;
             break;
           }
@@ -186,10 +203,22 @@ bool command_restore(FileNameList *archiveFileNameList,
         {
           Archive_closeFile(&archiveFileInfo);
           Files_close(&fileHandle);
+          String_delete(destinationFileName);
           continue;
         }
 
-        /* set file permissions, file owner/group */
+        /* set file time, permissions, file owner/group */
+        error = Files_setFileInfo(destinationFileName,&fileInfo);
+        if (error != ERROR_NONE)
+        {
+          info(0,"fail\n");
+          printError("Cannot set file info of '%s' (error: %s)\n",String_cString(destinationFileName),getErrorText(error));
+          Archive_closeFile(&archiveFileInfo);
+          Files_close(&fileHandle);
+          String_delete(destinationFileName);
+          failFlag = TRUE;
+          continue;
+        }
 
         /* free resources */
         String_delete(destinationFileName);

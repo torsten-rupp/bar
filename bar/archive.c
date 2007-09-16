@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -751,12 +751,14 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_readFile(ArchiveInfo     *archiveInfo,
-                        ArchiveFileInfo *archiveFileInfo,
-                        String          fileName,
-                        FileInfo        *fileInfo,
-                        uint64          *partOffset,
-                        uint64          *partSize
+Errors Archive_readFile(ArchiveInfo        *archiveInfo,
+                        ArchiveFileInfo    *archiveFileInfo,
+                        String             fileName,
+                        FileInfo           *fileInfo,
+                        CompressAlgorithms *compressAlgorithm,
+                        CryptAlgorithms    *cryptAlgorithm,
+                        uint64             *partOffset,
+                        uint64             *partSize
                        )
 {
   Errors      error;
@@ -768,10 +770,9 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
   assert(fileInfo != NULL);
 
   /* init archive file info */
-  archiveFileInfo->archiveInfo   = archiveInfo;
-  archiveFileInfo->mode          = FILE_MODE_READ;
-
-  archiveFileInfo->bufferLength  = 0;
+  archiveFileInfo->archiveInfo  = archiveInfo;
+  archiveFileInfo->mode         = FILE_MODE_READ;
+  archiveFileInfo->bufferLength = 0;
 
   /* init file chunk */
   if (!Chunks_new(&archiveFileInfo->chunkInfoFile,
@@ -821,8 +822,8 @@ Errors Archive_readFile(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->chunkInfoFile);
     return ERROR_IO_ERROR;
   }
-  fileInfo->compressAlgorithm = archiveFileInfo->chunkFile.compressAlgorithm;
-  fileInfo->cryptAlgorithm    = archiveFileInfo->chunkFile.cryptAlgorithm;
+  if (compressAlgorithm != NULL) (*compressAlgorithm) = archiveFileInfo->chunkFile.compressAlgorithm;
+  if (cryptAlgorithm != NULL)    (*cryptAlgorithm)    = archiveFileInfo->chunkFile.cryptAlgorithm;
 
   /* detect block length of use crypt algorithm */
   error = Crypt_getBlockLength(archiveFileInfo->chunkFile.cryptAlgorithm,&archiveFileInfo->blockLength);

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems : all
@@ -27,8 +27,10 @@
 
 /***************************** Variables *******************************/
 
+/* string */
 typedef struct __String* String;
 
+/* internal tokenizer data */
 typedef struct
 {
   String     string;
@@ -38,6 +40,7 @@ typedef struct
   String     token;
 } StringTokenizer;
 
+/* comparison, iteration functions */
 typedef int(*StringCompareFunction)(void *userData, char ch1, char ch2);
 typedef char(*StringIterateFunction)(void *userData, char ch);
 
@@ -355,7 +358,7 @@ void String_doneTokenizer(StringTokenizer *stringTokenizer);
 * Name   : String_getNextToken
 * Purpose: find next token
 * Input  : stringTokenizer - string tokenizer
-* Output : token      - token
+* Output : token      - token (internal reference; do not delete!)
 *          tokenIndex - token index (could be NULL)
 * Return : TRUE if token found, FALSE otherwise
 * Notes  : -
