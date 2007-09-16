@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -54,6 +54,7 @@ bool command_create(const char         *archiveFileName,
                     const char         *tmpDirectory,
                     ulong              partSize,
                     CompressAlgorithms compressAlgorithm,
+                    ulong              compressMinFileSize,
                     CryptAlgorithms    cryptAlgorithm,
                     const char         *password
                    );

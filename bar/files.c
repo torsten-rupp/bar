@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems : all
@@ -45,12 +45,23 @@
 
 String Files_setFileName(String fileName, String name)
 {
+  assert(fileName != NULL);
+
   return String_set(fileName,name);
 }
 
 String Files_setFileNameCString(String fileName, const char *name)
 {
+  assert(fileName != NULL);
+
   return String_setCString(fileName,name);
+}
+
+String Files_setFileNameChar(String fileName, char ch)
+{
+  assert(fileName != NULL);
+
+  return String_setChar(fileName,ch);
 }
 
 String Files_appendFileName(String fileName, String name)
@@ -84,6 +95,22 @@ String Files_appendFileNameCString(String fileName, const char *name)
   }
   String_appendCString(fileName,name);
   
+  return fileName;
+}
+
+String Files_appendFileNameChar(String fileName, char ch)
+{
+  assert(fileName != NULL);
+
+  if (String_length(fileName) > 0)
+  {
+    if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
+    {
+      String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+    }
+  }
+  String_appendChar(fileName,ch);
+
   return fileName;
 }
 
@@ -148,7 +175,7 @@ void Files_initSplitFileName(StringTokenizer *stringTokenizer, String fileName)
   assert(stringTokenizer != NULL);
   assert(fileName != NULL);
 
-  String_initTokenizer(stringTokenizer,fileName,FILES_PATHNAME_SEPARATOR_CHARS,NULL);
+  String_initTokenizer(stringTokenizer,fileName,FILES_PATHNAME_SEPARATOR_CHARS,NULL,FALSE);
 }
 
 void Files_doneSplitFileName(StringTokenizer *stringTokenizer)
@@ -344,33 +371,43 @@ Errors Files_seek(FileHandle *fileHandle, uint64 offset)
 Errors Files_makeDirectory(const String pathName)
 {
   StringTokenizer pathNameTokenizer;
+  String          directoryName;
   String          name;
-  String          s;
 
   assert(pathName != NULL);
 
-  name = String_new();
-  String_initTokenizer(&pathNameTokenizer,pathName,FILES_PATHNAME_SEPARATOR_CHARS,NULL);
-  while (String_getNextToken(&pathNameTokenizer,&s,NULL))
+  directoryName = String_new();
+  Files_initSplitFileName(&pathNameTokenizer,pathName);
+  if (Files_getNextSplitFileName(&pathNameTokenizer,&name))
   {
-    if (String_length(s) > 0)
+    if (String_length(name) > 0)
     {
-      if (String_length(name) > 0) String_appendChar(name,FILES_PATHNAME_SEPARATOR_CHAR);
-      String_append(name,s);
+      Files_setFileName(directoryName,name);
+    }
+    else
+    {
+      Files_setFileNameChar(directoryName,FILES_PATHNAME_SEPARATOR_CHAR);
+    }
+  }
+  while (Files_getNextSplitFileName(&pathNameTokenizer,&name))
+  {
+    if (String_length(name) > 0)
+    {     
+      Files_appendFileName(directoryName,name);
 
-      if (!Files_exist(name))
+      if (!Files_exist(directoryName))
       {
-        if (mkdir(String_cString(name),0700) != 0)
+        if (mkdir(String_cString(directoryName),0700) != 0)
         {
-          String_delete(s);
-          String_delete(name);
+          Files_doneSplitFileName(&pathNameTokenizer);
+          String_delete(directoryName);
           return ERROR_IO_ERROR;
         }
       }
     }
   }
-  String_doneTokenizer(&pathNameTokenizer);
-  String_delete(name);
+  Files_doneSplitFileName(&pathNameTokenizer);
+  String_delete(directoryName);
 
   return ERROR_NONE;
 }

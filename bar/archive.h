@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -37,8 +37,14 @@ typedef struct
   String             fileName;             // archive basename
   uint64             partSize;
   CompressAlgorithms compressAlgorithm;    // compression algorithm
+  ulong              compressMinFileSize;  // min. file size to use compression
   CryptAlgorithms    cryptAlgorithm;       // crypt algorithm
   const char         *password;            // password
+
+  uint               blockLength;          /* block length for file entry/file
+                                              data (depend on used crypt
+                                              algorithm)
+                                           */
 
   int                partNumber;           // file part number
   FileHandle         fileHandle;           // file handle
@@ -46,12 +52,7 @@ typedef struct
 
 typedef struct
 {
-  ArchiveInfo    *archiveInfo;
-
-  uint           blockLength;              /* block length for file entry/file
-                                              data (depend on used crypt
-                                              algorithm)
-                                            */
+  ArchiveInfo        *archiveInfo;
 
   enum
   {
@@ -59,25 +60,31 @@ typedef struct
     FILE_MODE_WRITE,
   } mode;
 
-  ChunkInfo      chunkInfoFile;            // chunk info block for file
-  ChunkFile      chunkFile;                // file
+  CompressAlgorithms compressAlgorithm;    // compression algorithm
+  uint               blockLength;          /* block length for file entry/file
+                                              data (depend on used crypt
+                                              algorithm)
+                                           */
 
-  ChunkInfo      chunkInfoFileEntry;       // chunk info block for file entry
-  ChunkFileEntry chunkFileEntry;           // file entry
-  CryptInfo      cryptInfoFileEntry;       // file entry cryption info (without data elements)
+  ChunkInfo          chunkInfoFile;        // chunk info block for file
+  ChunkFile          chunkFile;            // file
 
-  ChunkInfo      chunkInfoFileData;        // chunk info block for file data
-  ChunkFileData  chunkFileData;            // file data
-  CryptInfo      cryptInfoFileData;        // file data cryption info (without data elements)
+  ChunkInfo          chunkInfoFileEntry;   // chunk info block for file entry
+  ChunkFileEntry     chunkFileEntry;       // file entry
+  CryptInfo          cryptInfoFileEntry;   // file entry cryption info (without data elements)
 
-  CompressInfo   compressInfoData;         // data compress info
-  CryptInfo      cryptInfoData;            // data cryption info
+  ChunkInfo          chunkInfoFileData;    // chunk info block for file data
+  ChunkFileData      chunkFileData;        // file data
+  CryptInfo          cryptInfoFileData;    // file data cryption info (without data elements)
 
-  uint           headerLength;             // length of header
-  bool           headerWrittenFlag;        // TRUE iff header written
+  CompressInfo       compressInfoData;     // data compress info
+  CryptInfo          cryptInfoData;        // data cryption info
 
-  byte           *buffer;
-  ulong          bufferLength;
+  uint               headerLength;         // length of header
+  bool               headerWrittenFlag;    // TRUE iff header written
+
+  byte               *buffer;
+  ulong              bufferLength;
 } ArchiveFileInfo;
 
 /***************************** Variables *******************************/
@@ -93,11 +100,39 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Archive_create
-* Purpose: create archive
+* Name   : Archive_init
+* Purpose: init archive functions
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_init(void);
+
+/***********************************************************************\
+* Name   : Archive_done
+* Purpose: done archive functions
 * Input  : -
 * Output : -
 * Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Archive_done(void);
+
+/***********************************************************************\
+* Name   : Archive_create
+* Purpose: create archive
+* Input  : archiveInfo         - archive info block
+*          archiveFileName     - archive file name
+*          partSize            - part size (in bytes)
+*          compressAlgorithm   - compression algorithm to use
+*          compressMinFileSize - min. size of file to use compression
+*          cryptAlgorithm      - crypt algorithm to use
+*          password            - crypt password
+* Output : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
@@ -105,6 +140,7 @@ Errors Archive_create(ArchiveInfo        *archiveInfo,
                       const char         *archiveFileName,
                       uint64             partSize,
                       CompressAlgorithms compressAlgorithm,
+                      ulong              compressMinFileSize,
                       CryptAlgorithms    cryptAlgorithm,
                       const char         *password
                      );
@@ -112,9 +148,11 @@ Errors Archive_create(ArchiveInfo        *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_open
 * Purpose: open archive
-* Input  : -
+* Input  : archiveInfo     - archive info block
+*          archiveFileName - archive file name
+*          password        - crypt password
 * Output : -
-* Return : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
@@ -124,22 +162,22 @@ Errors Archive_open(ArchiveInfo *archiveInfo,
                    );
 
 /***********************************************************************\
-* Name   : Archive_done
+* Name   : Archive_close
 * Purpose: close archive
-* Input  : -
+* Input  : archiveInfo - archive info block
 * Output : -
-* Return : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_done(ArchiveInfo *archiveInfo);
+Errors Archive_close(ArchiveInfo *archiveInfo);
 
 /***********************************************************************\
 * Name   : Archive_eof
 * Purpose: check if end-of-archive file
-* Input  : -
+* Input  : archiveInfo - archive info block
 * Output : -
-* Return : -
+* Return : TRUE if end-of-archive, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -148,9 +186,12 @@ bool Archive_eof(ArchiveInfo *archiveInfo);
 /***********************************************************************\
 * Name   : Archive_newFile
 * Purpose: add new file to archive
-* Input  : -
+* Input  : archiveInfo     - archive info block
+*          archiveFileInfo - archive file info block
+*          fileName        - file name
+*          fileInfo        - file info
 * Output : -
-* Return : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
@@ -163,9 +204,15 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_readFile
 * Purpose: read file info from archive
-* Input  : -
-* Output : -
-* Return : -
+* Input  : archiveInfo     - archive info block
+*          archiveFileInfo - archive file info block
+* Output : fileName          - file name
+*          fileInfo          - file info
+*          compressAlgorithm - used compression algorithm (can be NULL)
+*          cryptAlgorithm    - use crypt algorithm (can be NULL)
+*          partOffset        - part offset (can be NULL)
+*          partSize          - part size in bytes (can be NULL)
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
@@ -182,9 +229,9 @@ Errors Archive_readFile(ArchiveInfo        *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_closeFile
 * Purpose: clsoe file in archive
-* Input  : -
+* Input  : archiveFileInfo - archive file info block
 * Output : -
-* Return : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
@@ -193,9 +240,11 @@ Errors Archive_closeFile(ArchiveFileInfo *archiveFileInfo);
 /***********************************************************************\
 * Name   : Archive_writeFileData
 * Purpose: write data to file in archive
-* Input  : -
+* Input  : archiveFileInfo - archive file info block
+*          buffer          - data buffer
+*          bufferLength    - length of data buffer
 * Output : -
-* Return : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
@@ -207,9 +256,11 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo,
 /***********************************************************************\
 * Name   : Archive_readFileData
 * Purpose: read data from file in archive
-* Input  : -
+* Input  : archiveFileInfo - archive file info block
+*          buffer          - data buffer
+*          bufferLength    - length of data buffer
 * Output : -
-* Return : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 

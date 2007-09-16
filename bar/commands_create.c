@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -22,6 +22,8 @@
 
 #include "global.h"
 #include "strings.h"
+#include "lists.h"
+#include "stringlists.h"
 
 #include "errors.h"
 #include "patterns.h"
@@ -35,26 +37,41 @@
 
 /***************************** Constants *******************************/
 
-#define BUFFER_SIZE (64*1024)
+#define MAX_FILENAME_LIST_ENTRIES 256
+#define BUFFER_SIZE               (64*1024)
 
 /***************************** Datatypes *******************************/
 
-/***************************** Variables *******************************/
-LOCAL pthread_mutex_t    fileNameListLock;
-LOCAL pthread_cond_t     fileNameListNew;
-LOCAL FileNameList       fileNameList;
+typedef struct FileNode
+{
+  NODE_HEADER(struct FileNode);
 
-LOCAL PatternList        *collectorThreadIncludePatternList;
-LOCAL PatternList        *collectorThreadExcludePatternList;
-LOCAL bool               collectorThreadExitFlag;
-LOCAL pthread_t          collectorThread;
+  String    fileName;
+  FileTypes fileType;
+} FileNode;
+
+typedef struct
+{
+  LIST_HEADER(FileNode);
+} FileList;
+
+/***************************** Variables *******************************/
+LOCAL pthread_mutex_t fileListLock;
+LOCAL pthread_cond_t  fileListModified;
+LOCAL FileList        fileList;
+
+LOCAL PatternList     *collectorThreadIncludePatternList;
+LOCAL PatternList     *collectorThreadExcludePatternList;
+LOCAL bool            collectorThreadExitFlag;
+LOCAL pthread_t       collectorThread;
 
 LOCAL struct
 {
-  ulong includedCount;
-  ulong excludedCount;
-  ulong skippedCount;
-  ulong errorCount;
+  ulong  includedCount;
+  uint64 includedByteSum;
+  ulong  excludedCount;
+  ulong  skippedCount;
+  ulong  errorCount;
 } statistics;
 
 /****************************** Macros *********************************/
@@ -68,21 +85,21 @@ LOCAL struct
 #endif
 
 /***********************************************************************\
-* Name   : lockFileNameList
-* Purpose: lock filename list
+* Name   : lockFileList
+* Purpose: lock file list
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void lockFileNameList(void)
+LOCAL void lockFileList(void)
 {
-  pthread_mutex_lock(&fileNameListLock);
+  pthread_mutex_lock(&fileListLock);
 }
 
 /***********************************************************************\
-* Name   : unlockFileNameList
+* Name   : unlockFileList
 * Purpose: unlock filename list
 * Input  : -
 * Output : -
@@ -90,9 +107,37 @@ LOCAL void lockFileNameList(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void unlockFileNameList(void)
+LOCAL void unlockFileList(void)
 {
-  pthread_mutex_unlock(&fileNameListLock);
+  pthread_mutex_unlock(&fileListLock);
+}
+
+/***********************************************************************\
+* Name   : waitFileListModified
+* Purpose: wait until file name list is modified
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void waitFileListModified(void)
+{
+  pthread_cond_wait(&fileListModified,&fileListLock);
+}
+
+/***********************************************************************\
+* Name   : signalFileListModified
+* Purpose: signal file name list modified
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void signalFileListModified(void)
+{
+  pthread_cond_broadcast(&fileListModified);
 }
 
 /***********************************************************************\
@@ -112,7 +157,7 @@ LOCAL bool checkIsIncluded(PatternNode *includePatternNode,
   assert(includePatternNode != NULL);
   assert(fileName != NULL);
 
-  return Patterns_match(includePatternNode,fileName);
+  return Patterns_match(includePatternNode,fileName,PATTERN_MATCH_MODE_BEGIN);
 }
 
 /***********************************************************************\
@@ -132,92 +177,107 @@ LOCAL bool checkIsExcluded(PatternList *excludePatternList,
   assert(excludePatternList != NULL);
   assert(fileName != NULL);
 
-  return Patterns_matchList(excludePatternList,fileName);
+  return Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_BEGIN);
 }
 
 /***********************************************************************\
 * Name   : appendFileNameToList
 * Purpose: append a filename to a filename list
-* Input  : fileNameList - filename list
-*          fileName     - filename to add (will be copied!)
+* Input  : fileList - filename list
+*          fileName - file name (will be copied!)
+*          fileType - file type
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendFileNameToList(FileNameList *fileNameList, String fileName)
+LOCAL void appendFileToList(FileList  *fileList,
+                            String    fileName,
+                            FileTypes fileType
+                           )
 {
-  FileNameNode *fileNameNode;
+  FileNode *fileNode;
 
-  assert(fileNameList != NULL);
+  assert(fileList != NULL);
   assert(fileName != NULL);
 
   /* allocate node */
-  fileNameNode = (FileNameNode*)malloc(sizeof(FileNameNode));
-  if (fileNameNode == NULL)
+  fileNode = (FileNode*)malloc(sizeof(FileNode));
+  if (fileNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  fileNameNode->fileName = String_copy(fileName);
+  fileNode->fileName = String_copy(fileName);
+  fileNode->fileType = fileType;
 
   /* add */
-  lockFileNameList();
-  Lists_add(fileNameList,fileNameNode);
-  unlockFileNameList();
+  lockFileList();
+  if (Lists_count(fileList) >= MAX_FILENAME_LIST_ENTRIES)
+  {
+    waitFileListModified();
+  }
+  Lists_add(fileList,fileNode);
+  unlockFileList();
 
   /* send signal to waiting threads */
-  pthread_cond_broadcast(&fileNameListNew);
+  signalFileListModified();
 }
 
 /***********************************************************************\
-* Name   : freeFileNameNode
-* Purpose: free filename node
-* Input  : fileNameNode - filename node
+* Name   : freeFileNode
+* Purpose: free file node
+* Input  : fileNode - file node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeFileNameNode(FileNameNode *fileNameNode, void *userData)
+LOCAL void freeFileNode(FileNode *fileNode, void *userData)
 {
-  assert(fileNameNode != NULL);
+  assert(fileNode != NULL);
 
-  String_delete(fileNameNode->fileName);
+  String_delete(fileNode->fileName);
 }
 
 /***********************************************************************\
 * Name   : getNextFile
 * Purpose: get next file from list of files to pack
-* Input  : fileName - filename
-* Output : -
-* Return : filename or NULL of no more file available
+* Input  : fileName - file name variable
+* Output : fileName - file name
+*          fileType - file type
+* Return : TRUE if file available, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String getNextFile(String fileName)
+LOCAL bool getNextFile(String fileName, FileTypes *fileType)
 {
-  FileNameNode *fileNameNode;
+  FileNode *fileNode;
 
-  lockFileNameList();
-  fileNameNode = (FileNameNode*)Lists_getFirst(&fileNameList);
-  while ((fileNameNode == NULL) && !collectorThreadExitFlag)
+  assert(fileName != NULL);
+  assert(fileType != NULL);
+
+  lockFileList();
+  fileNode = (FileNode*)Lists_getFirst(&fileList);
+  while ((fileNode == NULL) && !collectorThreadExitFlag)
   {
-    pthread_cond_wait(&fileNameListNew,&fileNameListLock);
-    fileNameNode = (FileNameNode*)Lists_getFirst(&fileNameList);
+    waitFileListModified();
+    fileNode = (FileNode*)Lists_getFirst(&fileList);
   }
-  unlockFileNameList();
-  if (fileNameNode != NULL)
+  unlockFileList();
+  signalFileListModified();
+
+  if (fileNode != NULL)
   {
-    String_set(fileName,fileNameNode->fileName);
-    freeFileNameNode(fileNameNode,NULL);
-    free(fileNameNode);
+    String_set(fileName,fileNode->fileName);
+    (*fileType) = fileNode->fileType;
+    freeFileNode(fileNode,NULL);
+    free(fileNode);
+    return TRUE;
   }
   else
   {
-    fileName = NULL;
+    return FALSE;
   }
-
-  return fileName;
 }
 
 /***********************************************************************\
@@ -231,12 +291,12 @@ LOCAL String getNextFile(String fileName)
 
 LOCAL void collector(void)
 {
+  StringList      nameList;
+  String          name;
   PatternNode     *includePatternNode;
   StringTokenizer fileNameTokenizer;
-  String          s;
   String          basePath;
-  FileNameList    directoryList;
-  FileNameNode    *fileNameNode;
+  String          s;
   Errors          error;
   String          fileName;
   DirectoryHandle directoryHandle;
@@ -244,135 +304,125 @@ LOCAL void collector(void)
   assert(collectorThreadIncludePatternList != NULL);
   assert(collectorThreadExcludePatternList != NULL);
 
+  StringLists_init(&nameList);
+  name = String_new();
+
   includePatternNode = collectorThreadIncludePatternList->head;
   while (!collectorThreadExitFlag && (includePatternNode != NULL))
   {
     /* find base path */
     basePath = String_new();
-    String_initTokenizer(&fileNameTokenizer,includePatternNode->pattern,FILES_PATHNAME_SEPARATOR_CHARS,NULL);
-    while (String_getNextToken(&fileNameTokenizer,&s,NULL) && !Patterns_checkIsPattern(s))
+    Files_initSplitFileName(&fileNameTokenizer,includePatternNode->pattern);
+    if (Files_getNextSplitFileName(&fileNameTokenizer,&s) && !Patterns_checkIsPattern(name))
+    {
+      if (String_length(s) > 0)
+      {
+        Files_setFileName(basePath,s);
+      }
+      else
+      {
+        Files_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
+      }
+    }
+    while (Files_getNextSplitFileName(&fileNameTokenizer,&s) && !Patterns_checkIsPattern(name))
     {
       Files_appendFileName(basePath,s);
     }
+    Files_doneSplitFileName(&fileNameTokenizer);
 
     /* find files */
-    Lists_init(&directoryList);
-    appendFileNameToList(&directoryList,basePath);
-    while (!collectorThreadExitFlag && !Lists_empty(&directoryList))
+    StringLists_append(&nameList,basePath);
+    while (!collectorThreadExitFlag && !StringLists_empty(&nameList))
     {
       /* get next directory to process */
-      fileNameNode = (FileNameNode*)Lists_getFirst(&directoryList);
-      switch (Files_getType(fileNameNode->fileName))
+      name = StringLists_getFirst(&nameList,name);
+      if (   checkIsIncluded(includePatternNode,name)
+          && !checkIsExcluded(collectorThreadExcludePatternList,name)
+         )
       {
-        case FILETYPE_FILE:
-          if (   checkIsIncluded(includePatternNode,fileNameNode->fileName)
-              && !checkIsExcluded(collectorThreadExcludePatternList,fileNameNode->fileName)
-             )
-          {
+        switch (Files_getType(name))
+        {
+          case FILETYPE_FILE:
             /* add to file list */
-            appendFileNameToList(&fileNameList,fileNameNode->fileName);
-            statistics.includedCount++;
-//fprintf(stderr,"%s,%d: collect %s\n",__FILE__,__LINE__,String_cString(fileName));
-          }
-          else
-          {
-            statistics.excludedCount++;
-          }
-          break;
-        case FILETYPE_DIRECTORY:
-          /* read directory contents */
-          error = Files_openDirectory(&directoryHandle,fileNameNode->fileName);
-          if (error == ERROR_NONE)
-          {
-            fileName = String_new();
-            while (!Files_endOfDirectory(&directoryHandle))
+            appendFileToList(&fileList,name,FILETYPE_FILE);
+            break;
+          case FILETYPE_DIRECTORY:
+            /* add to file list */
+            appendFileToList(&fileList,name,FILETYPE_DIRECTORY);
+
+            /* read directory contents */
+            error = Files_openDirectory(&directoryHandle,name);
+            if (error == ERROR_NONE)
             {
-              /* read next directory entry */
-              error = Files_readDirectory(&directoryHandle,fileName);
-              if (error != ERROR_NONE)
+              fileName = String_new();
+              while (!Files_endOfDirectory(&directoryHandle))
               {
-                printError("Cannot read directory '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
-                statistics.errorCount++;
-                continue;
-              }
+                /* read next directory entry */
+                error = Files_readDirectory(&directoryHandle,fileName);
+                if (error != ERROR_NONE)
+                {
+                  printError("Cannot read directory '%s' (error: %s)\n",String_cString(name),getErrorText(error));
+                  statistics.errorCount++;
+                  continue;
+                }
 
-              /* detect file type */
-              switch (Files_getType(fileName))
-              {
-                case FILETYPE_FILE:
-                  if (   checkIsIncluded(includePatternNode,fileName)
-                      && !checkIsExcluded(collectorThreadExcludePatternList,fileName)
-                     )
+                if (   checkIsIncluded(includePatternNode,fileName)
+                    && !checkIsExcluded(collectorThreadExcludePatternList,fileName)
+                   )
+                {
+                  /* detect file type */
+                  switch (Files_getType(fileName))
                   {
-                    /* add to file list */
-                    appendFileNameToList(&fileNameList,fileName);
-                    statistics.includedCount++;
-                  }
-                  else
-                  {
-                    statistics.excludedCount++;
-                  }
-                  break;
-                case FILETYPE_DIRECTORY:
-                  /* add to directory list */
-                  appendFileNameToList(&directoryList,fileName);
-                  break;
-                case FILETYPE_LINK:
-                  if (   checkIsIncluded(includePatternNode,fileName)
-                      && !checkIsExcluded(collectorThreadExcludePatternList,fileName)
-                     )
-                  {
-                    /* add to file list */
-                    appendFileNameToList(&fileNameList,fileName);
-                    statistics.includedCount++;
-                  }
-                  else
-                  {
-                    statistics.excludedCount++;
-                  }
-                  break;
-                default:
-                  info(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
-                  statistics.skippedCount++;
-                  break;
-              }
+                    case FILETYPE_FILE:
+                      /* add to file list */
+                      appendFileToList(&fileList,fileName,FILETYPE_FILE);
+                      break;
+                    case FILETYPE_DIRECTORY:
+                      /* add to file list */
+                      appendFileToList(&fileList,name,FILETYPE_DIRECTORY);
 
+                      /* add to name list */
+                      StringLists_append(&nameList,fileName);
+                      break;
+                    case FILETYPE_LINK:
+                      /* add to file list */
+                      appendFileToList(&fileList,fileName,FILETYPE_LINK);
+                      break;
+                    default:
+                      info(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
+                      statistics.skippedCount++;
+                      break;
+                  }
+                }
+                else
+                {
+                  statistics.excludedCount++;
+                }
+              }
+              String_delete(fileName);
+              Files_closeDirectory(&directoryHandle);
             }
-            String_delete(fileName);
-
-            Files_closeDirectory(&directoryHandle);
-          }
-          else
-          {
-            printError("Cannot open directory '%s' (error: %s)\n",String_cString(fileNameNode->fileName),getErrorText(error));
-            statistics.errorCount++;
-          }
-          break;
-        case FILETYPE_LINK:
-          if (   checkIsIncluded(includePatternNode,fileNameNode->fileName)
-              && !checkIsExcluded(collectorThreadExcludePatternList,fileNameNode->fileName)
-             )
-          {
+            else
+            {
+              printError("Cannot open directory '%s' (error: %s)\n",String_cString(name),getErrorText(error));
+              statistics.errorCount++;
+            }
+            break;
+          case FILETYPE_LINK:
             /* add to file list */
-            appendFileNameToList(&fileNameList,fileName);
-            statistics.includedCount++;
-          }
-          else
-          {
-            statistics.excludedCount++;
-          }
-          break;
-        default:
-          info(2,"Unknown type of file '%s' - skipped\n",String_cString(fileNameNode->fileName));
-          statistics.skippedCount++;
-          break;
+            appendFileToList(&fileList,name,FILETYPE_LINK);
+            break;
+          default:
+            info(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
+            statistics.skippedCount++;
+            break;
+        }
       }
-
-      /* free resources */
-      freeFileNameNode(fileNameNode,NULL);
-      free(fileNameNode);
+      else
+      {
+        statistics.excludedCount++;
+      }
     }
-    Lists_done(&directoryList,NULL,NULL);
 
     /* free resources */
     String_delete(basePath);
@@ -383,7 +433,11 @@ LOCAL void collector(void)
   collectorThreadExitFlag = TRUE;
 
   /* send signal to waiting threads */
-  pthread_cond_broadcast(&fileNameListNew);
+  signalFileListModified();
+
+  /* free resoures */
+  String_delete(name);
+  StringLists_done(&nameList,NULL);
 }
 
 /*---------------------------------------------------------------------*/
@@ -394,15 +448,17 @@ bool command_create(const char      *archiveFileName,
                     const char      *tmpDirectory,
                     ulong           partSize,
                     uint            compressAlgorithm,
+                    ulong           compressMinFileSize,
                     CryptAlgorithms cryptAlgorithm,
                     const char      *password
                    )
 {
   bool            failFlag;
   ArchiveInfo     archiveInfo;
-  Errors          error;
   byte            *buffer;
   String          fileName;
+  Errors          error;
+  FileTypes       fileType;
   FileInfo        fileInfo;
   ArchiveFileInfo archiveFileInfo;
   FileHandle      fileHandle;
@@ -414,9 +470,10 @@ bool command_create(const char      *archiveFileName,
   assert(excludePatternList != NULL);
 
   /* initialise variables */
-  statistics.includedCount = 0;
-  statistics.excludedCount = 0;
-  statistics.skippedCount  = 0;
+  statistics.includedCount   = 0;
+  statistics.includedByteSum = 0;
+  statistics.excludedCount   = 0;
+  statistics.skippedCount    = 0;
 
   /* allocate resources */
   buffer = malloc(BUFFER_SIZE);
@@ -427,12 +484,12 @@ bool command_create(const char      *archiveFileName,
   fileName = String_new();
 
   /* init file name list, list locka and list signal */
-  Lists_init(&fileNameList);
-  if (pthread_mutex_init(&fileNameListLock,NULL) != 0)
+  Lists_init(&fileList);
+  if (pthread_mutex_init(&fileListLock,NULL) != 0)
   {
     HALT_FATAL_ERROR("Cannot initialise filename list lock semaphore!");
   }
-  if (pthread_cond_init(&fileNameListNew,NULL) != 0)
+  if (pthread_cond_init(&fileListModified,NULL) != 0)
   {
     HALT_FATAL_ERROR("Cannot initialise filename list new event!");
   }
@@ -451,6 +508,7 @@ bool command_create(const char      *archiveFileName,
                          archiveFileName,
                          partSize,
                          compressAlgorithm,
+                         compressMinFileSize,
                          cryptAlgorithm,
                          password
                         );
@@ -463,9 +521,9 @@ bool command_create(const char      *archiveFileName,
     pthread_join(collectorThread,NULL);
 
     /* free resources */
-    Lists_done(&fileNameList,(NodeFreeFunction)freeFileNameNode,NULL);
-    pthread_cond_destroy(&fileNameListNew);
-    pthread_mutex_destroy(&fileNameListLock);
+    Lists_done(&fileList,(NodeFreeFunction)freeFileNode,NULL);
+    pthread_cond_destroy(&fileListModified);
+    pthread_mutex_destroy(&fileListLock);
     String_delete(fileName);
     free(buffer);
 
@@ -474,7 +532,7 @@ bool command_create(const char      *archiveFileName,
 
   /* store files */
   failFlag = FALSE;
-  while (getNextFile(fileName) != NULL)
+  while (getNextFile(fileName,&fileType))
   {
     info(0,"Store '%s'...",String_cString(fileName));
 
@@ -488,79 +546,93 @@ bool command_create(const char      *archiveFileName,
       continue;
     }
 
-    /* new file */
-    error = Archive_newFile(&archiveInfo,
-                            &archiveFileInfo,
-                            fileName,
-                            &fileInfo
-                           );
-    if (error != ERROR_NONE)
+    switch (fileType)
     {
-      info(0,"fail\n");
-      printError("Cannot create new archive file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
-      failFlag = TRUE;
-      continue;
-    }
+      case FILETYPE_FILE:
+        /* new file */
+        error = Archive_newFile(&archiveInfo,
+                                &archiveFileInfo,
+                                fileName,
+                                &fileInfo
+                               );
+        if (error != ERROR_NONE)
+        {
+          info(0,"fail\n");
+          printError("Cannot create new archive file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+          failFlag = TRUE;
+          break;
+        }
 
-    /* write file content into archive */  
-    error = Files_open(&fileHandle,fileName,FILE_OPENMODE_READ);
-    if (error != ERROR_NONE)
-    {
-      info(0,"fail\n");
-      printError("Cannot open file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
-      failFlag = TRUE;
-      continue;
-    }
-    error = ERROR_NONE;
-    do
-    {
-      Files_read(&fileHandle,buffer,BUFFER_SIZE,&n);
-      if (n > 0)
-      {
-        error = Archive_writeFileData(&archiveFileInfo,buffer,n);
-      }
-    }
-    while ((n > 0) && (error == ERROR_NONE));
-    Files_close(&fileHandle);
-    if (error != ERROR_NONE)
-    {
-      Archive_closeFile(&archiveFileInfo);
-      info(0,"fail\n");
-      printError("Cannot create archive file!\n");
-      failFlag = TRUE;
-      break;
-    }
+        /* write file content into archive */  
+        error = Files_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+        if (error != ERROR_NONE)
+        {
+          info(0,"fail\n");
+          printError("Cannot open file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
+          failFlag = TRUE;
+          continue;
+        }
+        error = ERROR_NONE;
+        do
+        {
+          Files_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+          if (n > 0)
+          {
+            error = Archive_writeFileData(&archiveFileInfo,buffer,n);
+          }
+        }
+        while ((n > 0) && (error == ERROR_NONE));
+        Files_close(&fileHandle);
+        if (error != ERROR_NONE)
+        {
+          Archive_closeFile(&archiveFileInfo);
+          info(0,"fail\n");
+          printError("Cannot create archive file!\n");
+          failFlag = TRUE;
+          break;
+        }
 
-    /* close archive file */
-    Archive_closeFile(&archiveFileInfo);
+        /* close archive file */
+        Archive_closeFile(&archiveFileInfo);
 
-    if (archiveFileInfo.chunkFileData.partSize > 0)
-    {
-      ratio = 100.0-archiveFileInfo.chunkInfoFileData.size*100.0/archiveFileInfo.chunkFileData.partSize;
-    }
-    else
-    {
-      ratio = 0;
-    }
+        if ((archiveFileInfo.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveFileInfo.chunkFileData.partSize > 0))
+        {
+          ratio = 100.0-archiveFileInfo.chunkInfoFileData.size*100.0/archiveFileInfo.chunkFileData.partSize;
+        }
+        else
+        {
+          ratio = 0;
+        }
 
-    info(0,"ok (ratio %.1f%%)\n",ratio);
+        info(0,"ok (ratio %.1f%%)\n",ratio);
+        break;
+      case FILETYPE_DIRECTORY:
+        info(0,"ok\n");
+        break;
+      case FILETYPE_LINK:
+        info(0,"ok\n");
+        break;
+    }
+    statistics.includedCount++;
+    statistics.includedByteSum += fileInfo.size;
   }
+  collectorThreadExitFlag = TRUE;
 
   /* close archive */
-  Archive_done(&archiveInfo);
+  Archive_close(&archiveInfo);
 
   /* wait for collector thread */
   pthread_join(collectorThread,NULL);
 
   /* free resources */
-  Lists_done(&fileNameList,(NodeFreeFunction)freeFileNameNode,NULL);
-  pthread_cond_destroy(&fileNameListNew);
-  pthread_mutex_destroy(&fileNameListLock);
+  Lists_done(&fileList,(NodeFreeFunction)freeFileNode,NULL);
+  pthread_cond_destroy(&fileListModified);
+  pthread_mutex_destroy(&fileListLock);
   String_delete(fileName);
   free(buffer);
 
   /* output statics */
-  info(0,"%lu file(s) included\n",statistics.includedCount);
+  info(0,"%lu file(s)/%llu bytes(s) included\n",statistics.includedCount,statistics.includedByteSum);
   info(1,"%lu file(s) excluded\n",statistics.excludedCount);
   info(1,"%lu file(s) skipped\n",statistics.skippedCount);
   info(1,"%lu error(s)\n",statistics.errorCount);

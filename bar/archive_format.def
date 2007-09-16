@@ -1,16 +1,16 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/archive_format.def,v $
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems : all
 #
 #***********************************************************************
 
-CHUNK NAME "NAME" Name
-  uint32 id
-  name   name
+#CHUNK NAME "NAME" Name
+#  uint32 id
+#  name   name
 
 CHUNK FILE "FIL0" File
   uint16 compressAlgorithm;
@@ -32,6 +32,19 @@ CHUNK FILE_DATA "FDAT" FileData
   uint64 partSize
   data   data
 
-CHUNK PERMISSION "PER0" Permission
+CHUNK LINK "LNK0" Link
+  uint16 cryptAlgorithm;
+
+CHUNK LINK_DATA "LDAT" LinkData
+  name   linkName
+  name   name
+
+CHUNK DIRECTORY "DIR0" Directory
+  uint16 cryptAlgorithm;
+
+CHUNK DIRECTORY_DATA "DDAT" DirectoryData
+  name   name
+
+#CHUNK PERMISSION "PER0" Permission
 
 # end of file

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -44,21 +44,10 @@ typedef enum
 typedef struct
 {
   const char    *tmpDirectory;
+  bool          overwriteFlag;
   bool          quietFlag;
   uint          verboseLevel;
 } GlobalOptions;
-
-typedef struct FileNameNode
-{
-  NODE_HEADER(struct FileNameNode);
-
-  String fileName;
-} FileNameNode;
-
-typedef struct
-{
-  LIST_HEADER(FileNameNode);
-} FileNameList;
 
 /***************************** Variables *******************************/
 

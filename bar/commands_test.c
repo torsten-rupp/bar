@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -23,6 +23,7 @@
 
 #include "global.h"
 #include "strings.h"
+#include "stringlists.h"
 
 #include "errors.h"
 #include "patterns.h"
@@ -83,16 +84,16 @@ LOCAL ulong compare(const void *p0, const void *p1, ulong length)
 
 /*---------------------------------------------------------------------*/
 
-bool command_test(FileNameList *archiveFileNameList,
-                  PatternList  *includePatternList,
-                  PatternList  *excludePatternList,
-                  const char   *password
+bool command_test(StringList  *archiveFileNameList,
+                  PatternList *includePatternList,
+                  PatternList *excludePatternList,
+                  const char  *password
                  )
 {
   byte            *archiveBuffer,*fileBuffer;
+  String          archiveFileName;
   String          fileName;
   bool            failFlag;
-  FileNameNode    *archiveFileNameNode;
   Errors          error;
   ArchiveInfo     archiveInfo;
   ArchiveFileInfo archiveFileInfo;
@@ -121,19 +122,22 @@ bool command_test(FileNameList *archiveFileNameList,
     free(archiveBuffer);
     HALT_INSUFFICIENT_MEMORY();
   }
+  archiveFileName = String_new();
   fileName = String_new();
 
   failFlag = FALSE;
-  for (archiveFileNameNode = archiveFileNameList->head; archiveFileNameNode != NULL; archiveFileNameNode = archiveFileNameNode->next)
+  while (!StringLists_empty(archiveFileNameList))
   {
+    StringLists_getFirst(archiveFileNameList,archiveFileName);
+
     /* open archive */
     error = Archive_open(&archiveInfo,
-                         String_cString(archiveFileNameNode->fileName),
+                         String_cString(archiveFileName),
                          password
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open archive file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+      printError("Cannot open archive file '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
       failFlag = TRUE;
       continue;
     }
@@ -153,14 +157,14 @@ bool command_test(FileNameList *archiveFileNameList,
                               );
       if (error != ERROR_NONE)
       {
-        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
         Archive_closeFile(&archiveFileInfo);
         failFlag = TRUE;
         break;
       }
 
-      if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName))
-          && !Patterns_matchList(excludePatternList,fileName)
+      if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+          && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
          )
       {
         info(0,"Test '%s'...",String_cString(fileName));
@@ -199,7 +203,7 @@ bool command_test(FileNameList *archiveFileNameList,
             if (error != ERROR_NONE)
             {
               info(0,"fail\n");
-              printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
               failFlag = TRUE;
               break;
             }
@@ -271,11 +275,12 @@ bool command_test(FileNameList *archiveFileNameList,
     }
 
     /* close archive */
-    Archive_done(&archiveInfo);
+    Archive_close(&archiveInfo);
   }
 
   /* free resources */
   String_delete(fileName);
+  String_delete(archiveFileName);
   free(fileBuffer);
   free(archiveBuffer);
 

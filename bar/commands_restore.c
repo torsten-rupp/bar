@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -23,6 +23,7 @@
 
 #include "global.h"
 #include "strings.h"
+#include "stringlists.h"
 
 #include "errors.h"
 #include "patterns.h"
@@ -53,19 +54,19 @@
 
 /*---------------------------------------------------------------------*/
 
-bool command_restore(FileNameList *archiveFileNameList,
-                     PatternList  *includePatternList,
-                     PatternList  *excludePatternList,
-                     uint         directoryStripCount,
-                     const char   *directory,
-                     const char   *password
+bool command_restore(StringList  *archiveFileNameList,
+                     PatternList *includePatternList,
+                     PatternList *excludePatternList,
+                     uint        directoryStripCount,
+                     const char  *directory,
+                     const char  *password
                     )
 {
   byte            *buffer;
+  String          archiveFileName;
   String          fileName;
   bool            failFlag;
   Errors          error;
-  FileNameNode    *archiveFileNameNode;
   ArchiveInfo     archiveInfo;
   ArchiveFileInfo archiveFileInfo;
   FileInfo        fileInfo;
@@ -88,19 +89,22 @@ bool command_restore(FileNameList *archiveFileNameList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  archiveFileName = String_new();
   fileName = String_new();
 
   failFlag = FALSE;
-  for (archiveFileNameNode = archiveFileNameList->head; archiveFileNameNode != NULL; archiveFileNameNode = archiveFileNameNode->next)
+  while (!StringLists_empty(archiveFileNameList))
   {
+    StringLists_getFirst(archiveFileNameList,archiveFileName);
+
     /* open archive */
     error = Archive_open(&archiveInfo,
-                         String_cString(archiveFileNameNode->fileName),
+                         String_cString(archiveFileName),
                          password
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open archive file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+      printError("Cannot open archive file '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
       failFlag = TRUE;
       continue;
     }
@@ -120,14 +124,14 @@ bool command_restore(FileNameList *archiveFileNameList,
                               );
       if (error != ERROR_NONE)
       {
-        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
         Archive_closeFile(&archiveFileInfo);
         failFlag = TRUE;
         break;
       }
 
-      if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName))
-          && !Patterns_matchList(excludePatternList,fileName)
+      if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+          && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
          )
       {
         /* get destination filename */
@@ -152,6 +156,14 @@ bool command_restore(FileNameList *archiveFileNameList,
         info(0,"Restore '%s'...",String_cString(destinationFileName));
 
         /* write file */
+        if (Files_exist(destinationFileName) && !globalOptions.overwriteFlag)
+        {
+          info(0,"skipped (file exists)\n");
+          Archive_closeFile(&archiveFileInfo);
+          String_delete(destinationFileName);
+          failFlag = TRUE;
+          continue;
+        }
         error = Files_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
         if (error != ERROR_NONE)
         {
@@ -183,7 +195,7 @@ bool command_restore(FileNameList *archiveFileNameList,
           if (error != ERROR_NONE)
           {
             info(0,"fail\n");
-            printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+            printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
             failFlag = TRUE;
             break;
           }
@@ -236,11 +248,12 @@ bool command_restore(FileNameList *archiveFileNameList,
     }
 
     /* close archive */
-    Archive_done(&archiveInfo);
+    Archive_close(&archiveInfo);
   }
 
   /* free resources */
   String_delete(fileName);
+  String_delete(archiveFileName);
   free(buffer);
 
   return !failFlag;

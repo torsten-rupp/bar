@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems : all
@@ -103,6 +103,7 @@ typedef struct
 
 String Files_setFileName(String fileName, String name);
 String Files_setFileNameCString(String fileName, const char *name);
+String Files_setFileNameChar(String fileName, char ch);
 
 /***********************************************************************\
 * Name   : Files_fileNameAppend
@@ -116,6 +117,7 @@ String Files_setFileNameCString(String fileName, const char *name);
 
 String Files_appendFileName(String fileName, String name);
 String Files_appendFileNameCString(String fileName, const char *name);
+String Files_appendFileNameChar(String fileName, char ch);
 
 /***********************************************************************\
 * Name   : Files_getFilePathName

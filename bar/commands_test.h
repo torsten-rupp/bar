@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+
+#include "stringlists.h"
 
 #include "bar.h"
 #include "patterns.h"
@@ -47,10 +49,10 @@
 * Notes  : -
 \***********************************************************************/
 
-bool command_test(FileNameList *fileNameList,
-                  PatternList  *includeList,
-                  PatternList  *excludeList,
-                  const char   *password
+bool command_test(StringList  *fileNameList,
+                  PatternList *includeList,
+                  PatternList *excludeList,
+                  const char  *password
                  );
 
 #ifdef __cplusplus

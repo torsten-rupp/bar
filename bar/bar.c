@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -16,6 +16,7 @@
 
 #include "global.h"
 #include "cmdoptions.h"
+#include "stringlists.h"
 
 #include "errors.h"
 #include "files.h"
@@ -26,6 +27,7 @@
 #include "command_list.h"
 #include "command_restore.h"
 #include "command_test.h"
+
 
 #include "bar.h"
 
@@ -63,6 +65,7 @@ LOCAL PatternList        includePatternList;
 LOCAL PatternList        excludePatternList;
 LOCAL CompressAlgorithms compressAlgorithm;
 LOCAL CryptAlgorithms    cryptAlgorithm;
+LOCAL ulong              compressMinFileSize;
 LOCAL const char         *password;
 LOCAL bool               versionFlag;
 LOCAL bool               helpFlag;
@@ -115,32 +118,34 @@ LOCAL bool parseIncludeExclude(void *variable, const char *value, const void *de
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM   ("create",         'c',0,command,                   COMMAND_NONE,COMMAND_CREATE,                                    "create new archive"), 
-  CMD_OPTION_ENUM   ("list",           'l',0,command,                   COMMAND_NONE,COMMAND_LIST,                                      "list contents of archive"), 
-  CMD_OPTION_ENUM   ("test",           't',0,command,                   COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"), 
-  CMD_OPTION_ENUM   ("extract",        'x',0,command,                   COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"), 
+  CMD_OPTION_ENUM   ("create",           'c',0,command,                      COMMAND_NONE,COMMAND_CREATE,                                    "create new archive"                       ),
+  CMD_OPTION_ENUM   ("list",             'l',0,command,                      COMMAND_NONE,COMMAND_LIST,                                      "list contents of archive"                 ),
+  CMD_OPTION_ENUM   ("test",             't',0,command,                      COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"                 ),
+  CMD_OPTION_ENUM   ("extract",          'x',0,command,                      COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"                          ),
 
-//  CMD_OPTION_STRING ("archive",        'a',0,archiveFileName,           NULL,                                                           "archive filename"),
-  CMD_OPTION_INTEGER("part-size",      's',0,partSize,                  0,                                                              "approximated part size"),
-  CMD_OPTION_STRING ("tmp-directory",  0,  0,globalOptions.tmpDirectory,"/tmp",                                                         "temporary directory"),
-  CMD_OPTION_INTEGER("directory-strip",'p',0,directoryStripCount,       0,                                                              "number of directories to strip on extract"),
-  CMD_OPTION_STRING ("directory",      0,  0,directory,                 NULL,                                                           "directory to restore files"),
+  CMD_OPTION_INTEGER("part-size",        's',0,partSize,                     0,                                                              "approximated part size"                   ),
+  CMD_OPTION_STRING ("tmp-directory",    0,  0,globalOptions.tmpDirectory,   "/tmp",                                                         "temporary directory"                      ),
+  CMD_OPTION_INTEGER("directory-strip",  'p',0,directoryStripCount,          0,                                                              "number of directories to strip on extract"),
+  CMD_OPTION_STRING ("directory",        0,  0,directory,                    NULL,                                                           "directory to restore files"               ),
 
-  CMD_OPTION_SELECT ("pattern-type",   0,  0,patternType,               PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,            "select pattern type"),
+  CMD_OPTION_SELECT ("pattern-type",     0,  0,patternType,                  PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,            "select pattern type"                      ),
 
-  CMD_OPTION_SPECIAL("include",        'i',1,includePatternList,        NULL,parseIncludeExclude,NULL,                                  "include pattern"),
-  CMD_OPTION_SPECIAL("exclude",        0,  1,excludePatternList,        NULL,parseIncludeExclude,NULL,                                  "exclude pattern"),
+  CMD_OPTION_SPECIAL("include",          'i',1,includePatternList,           NULL,parseIncludeExclude,NULL,                                  "include pattern"                          ),
+  CMD_OPTION_SPECIAL("exclude",          '!',1,excludePatternList,           NULL,parseIncludeExclude,NULL,                                  "exclude pattern"                          ),
+ 
+  CMD_OPTION_SELECT ("compress",         0,  0,compressAlgorithm,            COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"         ),
+  CMD_OPTION_INTEGER("compress-min-size",0,  0,compressMinFileSize,          0,                                                              "minimal size of file for compression"     ),
 
-  CMD_OPTION_SELECT ("compress",       0,  0,compressAlgorithm,         COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"),
+  CMD_OPTION_SELECT ("crypt",            0,  0,cryptAlgorithm,               CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"            ),
+  CMD_OPTION_STRING ("password",         0,  0,password,                     NULL,                                                           "crypt password"                           ),
 
-  CMD_OPTION_SELECT ("crypt",          0,  0,cryptAlgorithm,            CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"),
-  CMD_OPTION_STRING ("password",       0,  0,password,                  NULL,                                                           "crypt password"),
+//  CMD_OPTION_BOOLEAN("incremental",      0,  0,globalOptions.incrementalFlag,FALSE,                                                          "overwrite existing files"                 ),
+  CMD_OPTION_BOOLEAN("overwrite",        0,  0,globalOptions.overwriteFlag,  FALSE,                                                          "overwrite existing files"                 ),
+  CMD_OPTION_BOOLEAN("quiet",            'q',0,globalOptions.quietFlag,      FALSE,                                                          "surpress any output"                      ),
+  CMD_OPTION_INTEGER("verbose",          'v',0,globalOptions.verboseLevel,   0,                                                              "verbosity level"                          ),
 
-  CMD_OPTION_BOOLEAN("quiet",          'q',0,globalOptions.quietFlag,   FALSE,                                                          "surpress any output"),
-  CMD_OPTION_INTEGER("verbose",        'v',0,globalOptions.verboseLevel,0,                                                              "verbosity level"),
-
-  CMD_OPTION_BOOLEAN("version",        0  ,0,versionFlag,               FALSE,                                                          "print version"),
-  CMD_OPTION_BOOLEAN("help",           'h',0,helpFlag,                  FALSE,                                                          "print this help"),
+  CMD_OPTION_BOOLEAN("version",          0  ,0,versionFlag,                  FALSE,                                                          "print version"                            ),
+  CMD_OPTION_BOOLEAN("help",             'h',0,helpFlag,                     FALSE,                                                          "print this help"                          ),
 };
 
 /****************************** Macros *********************************/
@@ -159,7 +164,7 @@ void info(uint verboseLevel, const char *format, ...)
 
   assert(format != NULL);
 
-  if (!globalOptions.quietFlag && (globalOptions.verboseLevel>=verboseLevel))
+  if (!globalOptions.quietFlag && (globalOptions.verboseLevel >= verboseLevel))
   {
     va_start(arguments,format);
     vprintf(format,arguments);
@@ -175,36 +180,37 @@ const char *getErrorText(Errors error)
 
   switch (error)
   {
-    CASE(ERROR_NONE,                   "none"                  );
-                                                  
-    CASE(ERROR_INSUFFICIENT_MEMORY,    "insufficient memory"   );
-    CASE(ERROR_INIT,                   "init"                  );
+    CASE(ERROR_NONE,                   "none"                        );
 
-    CASE(ERROR_INVALID_PATTERN,        "init pattern matching" );
+    CASE(ERROR_INSUFFICIENT_MEMORY,    "insufficient memory"         );
+    CASE(ERROR_INIT,                   "init"                        );
 
-    CASE(ERROR_INIT_COMPRESS,          "init compress"         );
-    CASE(ERROR_COMPRESS_ERROR,         "compress"              );
-    CASE(ERROR_DEFLATE_ERROR,          "deflate"               );
-    CASE(ERROR_INFLATE_ERROR,          "inflate"               );
+    CASE(ERROR_INVALID_PATTERN,        "init pattern matching"       );
 
-    CASE(ERROR_UNSUPPORTED_BLOCK_SIZE, "unsupported block size");
-    CASE(ERROR_INIT_CRYPT,             "init crypt"            );
-    CASE(ERROR_NO_PASSWORD,            "no password"           );
-    CASE(ERROR_INIT_CIPHER,            "init cipher"           );
-    CASE(ERROR_ENCRYPT_FAIL,           "encrypt"               );
-    CASE(ERROR_DECRYPT_FAIL,           "decrypt"               );
+    CASE(ERROR_INIT_COMPRESS,          "init compress"               );
+    CASE(ERROR_COMPRESS_ERROR,         "compress"                    );
+    CASE(ERROR_DEFLATE_ERROR,          "deflate"                     );
+    CASE(ERROR_INFLATE_ERROR,          "inflate"                     );
 
-    CASE(ERROR_CREATE_FILE,            "create file"           );
-    CASE(ERROR_OPEN_FILE,              "open file"             );
-    CASE(ERROR_OPEN_DIRECTORY,         "open directory"        );
-    CASE(ERROR_IO_ERROR,               "input/output"          );
+    CASE(ERROR_UNSUPPORTED_BLOCK_SIZE, "unsupported block size"      );
+    CASE(ERROR_INIT_CRYPT,             "init crypt"                  );
+    CASE(ERROR_NO_PASSWORD,            "no password given for cipher");
+    CASE(ERROR_INVALID_PASSWORD,       "invalid password"            );
+    CASE(ERROR_INIT_CIPHER,            "init cipher"                 );
+    CASE(ERROR_ENCRYPT_FAIL,           "encrypt"                     );
+    CASE(ERROR_DECRYPT_FAIL,           "decrypt"                     );
 
-    CASE(ERROR_END_OF_ARCHIVE,         "end of archive"        );
-    CASE(ERROR_NO_FILE_ENTRY,          "no file entry"         );
-    CASE(ERROR_NO_FILE_DATA,           "no data entry"         );
-    CASE(ERROR_END_OF_DATA,            "end of data"           );
+    CASE(ERROR_CREATE_FILE,            "create file"                 );
+    CASE(ERROR_OPEN_FILE,              "open file"                   );
+    CASE(ERROR_OPEN_DIRECTORY,         "open directory"              );
+    CASE(ERROR_IO_ERROR,               "input/output"                );
 
-    DEFAULT(                           "unknown"               );
+    CASE(ERROR_END_OF_ARCHIVE,         "end of archive"              );
+    CASE(ERROR_NO_FILE_ENTRY,          "no file entry"               );
+    CASE(ERROR_NO_FILE_DATA,           "no data entry"               );
+    CASE(ERROR_END_OF_DATA,            "end of data"                 );
+
+    DEFAULT(                           "unknown"                     );
   }
 
   #undef DEFAULT
@@ -268,6 +274,13 @@ LOCAL bool init(void)
     Crypt_done();
     return FALSE;
   }
+  error = Archive_init();
+  if (error != ERROR_NONE)
+  {
+    Patterns_done();
+    Crypt_done();
+    return FALSE;
+  }
 
   return TRUE;
 }
@@ -283,35 +296,19 @@ LOCAL bool init(void)
 
 LOCAL void done(void)
 {
+  Archive_done();
   Patterns_done();
   Crypt_done();
-}
-
-/***********************************************************************\
-* Name   : freeFileNameNode
-* Purpose: free allocated filename node
-* Input  : fileNameNode - filename node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeFileNameNode(FileNameNode *fileNameNode, void *userData)
-{
-  assert(fileNameNode != NULL);
-
-  String_delete(((FileNameNode*)fileNameNode)->fileName);
 }
 
 /*---------------------------------------------------------------------*/
 
 int main(int argc, const char *argv[])
  {
-  int          z;
-  FileNameList fileNameList;
-  FileNameNode *fileNameNode;
-  Errors       error;
-  int          exitcode;
+  int        z;
+  StringList fileNameList;
+  Errors     error;
+  int        exitcode;
 
   /* init */
   if (!init())
@@ -369,6 +366,7 @@ int main(int argc, const char *argv[])
                                    globalOptions.tmpDirectory,
                                    partSize,
                                    compressAlgorithm,
+                                   compressMinFileSize,
                                    cryptAlgorithm,
                                    password
                                   )
@@ -380,16 +378,10 @@ int main(int argc, const char *argv[])
     case COMMAND_RESTORE:
       {
         /* get archive files */
-        Lists_init(&fileNameList);
+        StringLists_init(&fileNameList);
         for (z = 1; z < argc; z++)
         {
-          fileNameNode = (FileNameNode*)malloc(sizeof(FileNameNode));
-          if (fileNameNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          fileNameNode->fileName = String_newCString(argv[z]);
-          Lists_add(&fileNameList,fileNameNode);
+          StringLists_append(&fileNameList,String_newCString(argv[z]));
         }
 
         switch (command)
@@ -425,7 +417,7 @@ int main(int argc, const char *argv[])
         }
 
         /* free resources */
-        Lists_done(&fileNameList,(NodeFreeFunction)freeFileNameNode,NULL);
+        StringLists_done(&fileNameList,NULL);
       }
       break;
     default:

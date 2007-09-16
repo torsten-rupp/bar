@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+
+#include "stringlists.h"
 
 #include "bar.h"
 #include "patterns.h"
@@ -47,12 +49,12 @@
 * Notes  : -
 \***********************************************************************/
 
-bool command_restore(FileNameList *fileNameList,
-                     PatternList  *includeList,
-                     PatternList  *excludeList,
-                     uint         directoryStripCount,
-                     const char   *directory,
-                     const char   *password
+bool command_restore(StringList  *fileNameList,
+                     PatternList *includeList,
+                     PatternList *excludeList,
+                     uint        directoryStripCount,
+                     const char  *directory,
+                     const char  *password
                     );
 
 #ifdef __cplusplus

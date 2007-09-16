@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -148,7 +148,7 @@ LOCAL bool seekFile(void *userData, uint64 offset)
 /***********************************************************************\
 * Name   : writeBlock
 * Purpose: write block to file: encrypt and split file
-* Input  : archiveFileInfo - archive file info
+* Input  : archiveFileInfo - archive file info block
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -443,7 +443,7 @@ LOCAL Errors writeBlock(ArchiveFileInfo *archiveFileInfo)
 /***********************************************************************\
 * Name   : readBlock
 * Purpose: read block: decrypt
-* Input  : -
+* Input  : archiveFileInfo - archive file info block
 * Output : -
 * Return : -
 * Notes  : -
@@ -492,37 +492,65 @@ LOCAL Errors readBlock(ArchiveFileInfo *archiveFileInfo)
 
 /*---------------------------------------------------------------------*/
 
+Errors Archive_init(void)
+{
+  Errors error;
+
+  /* init chunks*/
+  error = Chunks_init(endOfFile,
+                      readFile,
+                      writeFile,
+                      tellFile,
+                      seekFile
+                     );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+void Archive_done(void)
+{
+}
+
 Errors Archive_create(ArchiveInfo        *archiveInfo,
                       const char         *archiveFileName,
                       uint64             partSize,
                       CompressAlgorithms compressAlgorithm,
+                      ulong              compressMinFileSize,
                       CryptAlgorithms    cryptAlgorithm,
                       const char         *password
                      )
 {
+  Errors error;
+
   assert(archiveInfo != NULL);
   assert(archiveFileName != NULL);
 
-  if (!Chunks_initF(endOfFile,
-                   readFile,
-                   writeFile,
-                   tellFile,
-                   seekFile
-                  )
-     )
+  /* detect block length of use crypt algorithm */
+  error = Crypt_getBlockLength(cryptAlgorithm,&archiveInfo->blockLength);
+  if (error != ERROR_NONE)
   {
-    return ERROR_INIT;
+    return error;
+  }
+  assert(archiveInfo->blockLength > 0);
+  if (archiveInfo->blockLength > MAX_BUFFER_SIZE)
+  {
+    return ERROR_UNSUPPORTED_BLOCK_SIZE;
   }
 
-  archiveInfo->fileName          = String_newCString(archiveFileName); 
-  archiveInfo->partSize          = partSize;                           
-  archiveInfo->compressAlgorithm = compressAlgorithm;
-  archiveInfo->cryptAlgorithm    = cryptAlgorithm;                           
-  archiveInfo->password          = password;  
+  archiveInfo->fileName            = String_newCString(archiveFileName); 
+  archiveInfo->partSize            = partSize;                           
+  archiveInfo->compressAlgorithm   = compressAlgorithm;
+  archiveInfo->compressMinFileSize = compressMinFileSize;
+  archiveInfo->cryptAlgorithm      = cryptAlgorithm;                           
+  archiveInfo->password            = password;  
 
-  archiveInfo->partNumber        = 0;
-  archiveInfo->fileHandle.handle = -1;
-  archiveInfo->fileHandle.size   = 0;
+  archiveInfo->partNumber          = 0;
+  archiveInfo->fileHandle.handle   = -1;
+  archiveInfo->fileHandle.size     = 0;
 
   return ERROR_NONE;
 }
@@ -536,17 +564,6 @@ Errors Archive_open(ArchiveInfo *archiveInfo,
 
   assert(archiveInfo != NULL);
   assert(archiveFileName != NULL);
-
-  if (!Chunks_initF(endOfFile,
-                   readFile,
-                   writeFile,
-                   tellFile,
-                   seekFile
-                  )
-     )
-  {
-    return ERROR_INIT;
-  }
 
   /* init */
   archiveInfo->fileName          = String_newCString(archiveFileName);
@@ -576,14 +593,12 @@ bool Archive_eof(ArchiveInfo *archiveInfo)
   return Files_eof(&archiveInfo->fileHandle);
 }
 
-Errors Archive_done(ArchiveInfo *archiveInfo)
+Errors Archive_close(ArchiveInfo *archiveInfo)
 {
   assert(archiveInfo != NULL);
   assert(archiveInfo->fileName != NULL);
 
   String_delete(archiveInfo->fileName);
-
-  Chunks_doneF();
 
   return ERROR_NONE;
 }
@@ -604,7 +619,10 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
   archiveFileInfo->archiveInfo                    = archiveInfo;
   archiveFileInfo->mode                           = FILE_MODE_WRITE;
 
-  archiveFileInfo->chunkFile.compressAlgorithm    = archiveInfo->compressAlgorithm;
+  archiveFileInfo->compressAlgorithm              = (fileInfo->size > archiveFileInfo->archiveInfo->compressMinFileSize)?archiveInfo->compressAlgorithm:COMPRESS_ALGORITHM_NONE;
+  archiveFileInfo->blockLength                    = archiveInfo->blockLength;
+
+  archiveFileInfo->chunkFile.compressAlgorithm    = archiveFileInfo->compressAlgorithm;
   archiveFileInfo->chunkFile.cryptAlgorithm       = archiveInfo->cryptAlgorithm;
 
   archiveFileInfo->chunkFileEntry.fileType        = 0;
@@ -625,14 +643,6 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
 
   archiveFileInfo->bufferLength                   = 0;
 
-  /* detect block length of use crypt algorithm */
-  error = Crypt_getBlockLength(archiveInfo->cryptAlgorithm,&archiveFileInfo->blockLength);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  assert(archiveFileInfo->blockLength > 0);
-
   /* init file-chunk */
   if (!Chunks_new(&archiveFileInfo->chunkInfoFile,
                   NULL,
@@ -646,10 +656,6 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
   }
 
   /* allocate buffer */
-  if (archiveFileInfo->blockLength > MAX_BUFFER_SIZE)
-  {
-    return ERROR_UNSUPPORTED_BLOCK_SIZE;
-  }
   archiveFileInfo->bufferLength = (MAX_BUFFER_SIZE/archiveFileInfo->blockLength)*archiveFileInfo->blockLength;
   archiveFileInfo->buffer = (byte*)malloc(archiveFileInfo->bufferLength);
   if (archiveFileInfo->buffer == NULL)
@@ -692,10 +698,10 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
     return error;
   }
 
-  /* init compress info */
+  /* init compress */
   error = Compress_new(&archiveFileInfo->compressInfoData,
                        COMPRESS_MODE_DEFLATE,
-                       archiveFileInfo->archiveInfo->compressAlgorithm,
+                       archiveFileInfo->compressAlgorithm,
                        archiveFileInfo->blockLength
                       );
   if (error != ERROR_NONE)

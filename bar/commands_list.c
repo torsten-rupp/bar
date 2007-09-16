@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -23,6 +23,7 @@
 
 #include "global.h"
 #include "strings.h"
+#include "stringlists.h"
 
 #include "bar.h"
 #include "errors.h"
@@ -75,7 +76,7 @@ LOCAL void printFileInfo(const String       fileName,
 
   assert(fileInfo != NULL);
 
-  if (partSize > 0)
+  if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (partSize > 0))
   {
     ratio = 100.0-archiveFileSize*100.0/partSize;
   }
@@ -97,17 +98,17 @@ LOCAL void printFileInfo(const String       fileName,
 
 /*---------------------------------------------------------------------*/
 
-bool command_list(FileNameList *archiveFileNameList,
-                  PatternList  *includePatternList,
-                  PatternList  *excludePatternList,
-                  const char   *password
+bool command_list(StringList  *archiveFileNameList,
+                  PatternList *includePatternList,
+                  PatternList *excludePatternList,
+                  const char  *password
                  )
 {
+  String             archiveFileName;
   String             fileName;
   bool               failFlag;
   ulong              fileCount;
   Errors             error;
-  FileNameNode       *archiveFileNameNode;
   ArchiveInfo        archiveInfo;
   ArchiveFileInfo    archiveFileInfo;
   FileInfo           fileInfo;
@@ -119,6 +120,7 @@ bool command_list(FileNameList *archiveFileNameList,
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
 
+  archiveFileName = String_new();
   fileName = String_new();
 
   failFlag  = FALSE;
@@ -133,16 +135,18 @@ bool command_list(FileNameList *archiveFileNameList,
        "Name"
       );
   info(0,"--------------------------------------------------------------------------------\n");
-  for (archiveFileNameNode = archiveFileNameList->head; archiveFileNameNode != NULL; archiveFileNameNode = archiveFileNameNode->next)
+  while (!StringLists_empty(archiveFileNameList))
   {
+    StringLists_getFirst(archiveFileNameList,archiveFileName);
+
     /* open archive */
     error = Archive_open(&archiveInfo,
-                         String_cString(archiveFileNameNode->fileName),
+                         String_cString(archiveFileName),
                          password
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open file '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+      printError("Cannot open file '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
       failFlag = TRUE;
       continue;
     }
@@ -162,13 +166,13 @@ bool command_list(FileNameList *archiveFileNameList,
                               );
       if (error != ERROR_NONE)
       {
-        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileNameNode->fileName),getErrorText(error));
+        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
         failFlag = TRUE;
         break;
       }
 
-      if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName))
-          && !Patterns_matchList(excludePatternList,fileName)
+      if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+          && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
          )
       {
         /* output file info */
@@ -188,13 +192,14 @@ bool command_list(FileNameList *archiveFileNameList,
     }
 
     /* close archive */
-    Archive_done(&archiveInfo);
+    Archive_close(&archiveInfo);
   }
   info(0,"--------------------------------------------------------------------------------\n");
   info(0,"%lu file(s)\n",fileCount);
 
   /* free resources */
   String_delete(fileName);
+  String_delete(archiveFileName);
 
   return !failFlag;
 }
