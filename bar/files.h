@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems : all
@@ -37,8 +37,8 @@ typedef enum
   FILETYPE_NONE,
 
   FILETYPE_FILE,
-  FILETYPE_LINK,
   FILETYPE_DIRECTORY,
+  FILETYPE_LINK,
 
   FILETYPE_UNKNOWN
 } FileTypes;
@@ -56,6 +56,7 @@ typedef enum
 typedef struct
 {
   int    handle;
+  uint64 index;
   uint64 size;
 } FileHandle;
 
@@ -147,8 +148,8 @@ String Files_getFileBaseName(String fileName, String baseName);
 * Name   : Files_splitFileName
 * Purpose: split file name into path name and base name
 * Input  : fileName - file name
-* Output : pathName - path name
-*          baseName - base name
+* Output : pathName - path name (allocated string)
+*          baseName - base name (allocated string)
 * Return : -
 * Notes  : -
 \***********************************************************************/
@@ -260,7 +261,7 @@ Errors Files_write(FileHandle *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
-uint64 Files_size(FileHandle *fileHandle);
+uint64 Files_getSize(FileHandle *fileHandle);
 
 /***********************************************************************\
 * Name   : Files_tell
@@ -376,7 +377,7 @@ bool Files_exist(String fileName);
 * Purpose: get file info
 * Input  : fileName - file name
 * Output : fileInfo - file info
-* Return : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
@@ -390,13 +391,40 @@ Errors Files_getFileInfo(String   fileName,
 * Input  : fileName - file name
 *          fileInfo - file info
 * Output : -
-* Return : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Files_setFileInfo(String   fileName,
                          FileInfo *fileInfo
                         );
+
+/***********************************************************************\
+* Name   : Files_readLink
+* Purpose: read link
+* Input  : linkName - link name
+* Output : fileName - file name link references
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Files_readLink(String linkName,
+                      String fileName
+                     );
+
+/***********************************************************************\
+* Name   : Files_link
+* Purpose: create link
+* Input  : linkName - link name
+*          fileName - file name
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Files_link(String linkName,
+                  String fileName
+                 );
 
 #ifdef __cplusplus
   }

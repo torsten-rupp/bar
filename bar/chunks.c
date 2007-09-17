@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -205,7 +205,7 @@ LOCAL bool readDefinition(void      *userData,
         case CHUNK_DATATYPE_DATA:
           break;
         default:
-          HALT_INTERAL_ERROR_UNHANDLED_SWITCH_CASE();
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break;
       }
     }
@@ -350,7 +350,7 @@ LOCAL bool writeDefinition(void       *userData,
         case CHUNK_DATATYPE_DATA:
           break;
         default:
-          HALT_INTERAL_ERROR_UNHANDLED_SWITCH_CASE();
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break;
       }
     }
@@ -480,7 +480,7 @@ ulong Chunks_getSize(const int  *definition,
       case CHUNK_DATATYPE_DATA:
         break;
       default:
-        HALT_INTERAL_ERROR_UNHANDLED_SWITCH_CASE();
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
         break;
     }
   }

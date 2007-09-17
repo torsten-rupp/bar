@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -350,10 +350,11 @@ LOCAL void collector(void)
             /* add to file list */
             appendFileToList(&fileList,name,FILETYPE_DIRECTORY);
 
-            /* read directory contents */
+            /* open directory contents */
             error = Files_openDirectory(&directoryHandle,name);
             if (error == ERROR_NONE)
             {
+              /* read directory contents */
               fileName = String_new();
               while (!Files_endOfDirectory(&directoryHandle))
               {
@@ -361,7 +362,10 @@ LOCAL void collector(void)
                 error = Files_readDirectory(&directoryHandle,fileName);
                 if (error != ERROR_NONE)
                 {
-                  printError("Cannot read directory '%s' (error: %s)\n",String_cString(name),getErrorText(error));
+                  printError("Cannot read directory '%s' (error: %s)\n",
+                             String_cString(name),
+                             getErrorText(error)
+                            );
                   statistics.errorCount++;
                   continue;
                 }
@@ -399,12 +403,17 @@ LOCAL void collector(void)
                   statistics.excludedCount++;
                 }
               }
+
+              /* close directory, free resources */
               String_delete(fileName);
               Files_closeDirectory(&directoryHandle);
             }
             else
             {
-              printError("Cannot open directory '%s' (error: %s)\n",String_cString(name),getErrorText(error));
+              printError("Cannot open directory '%s' (error: %s)\n",
+                         String_cString(name),
+                         getErrorText(error)
+                        );
               statistics.errorCount++;
             }
             break;
@@ -456,14 +465,10 @@ bool command_create(const char      *archiveFileName,
   bool            failFlag;
   ArchiveInfo     archiveInfo;
   byte            *buffer;
-  String          fileName;
   Errors          error;
+  String          fileName;
   FileTypes       fileType;
-  FileInfo        fileInfo;
   ArchiveFileInfo archiveFileInfo;
-  FileHandle      fileHandle;
-  ulong           n;
-  double          ratio;
 
   assert(archiveFileName != NULL);
   assert(includePatternList != NULL);
@@ -481,7 +486,6 @@ bool command_create(const char      *archiveFileName,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  fileName = String_new();
 
   /* init file name list, list locka and list signal */
   Lists_init(&fileList);
@@ -514,7 +518,10 @@ bool command_create(const char      *archiveFileName,
                         );
   if (error != ERROR_NONE)
   {
-    printError("Cannot create archive file '%s' (error: %s)\n",archiveFileName,getErrorText(error));
+    printError("Cannot create archive file '%s' (error: %s)\n",
+               archiveFileName,
+               getErrorText(error)
+              );
 
     /* stop collector thread */
     collectorThreadExitFlag = TRUE;
@@ -524,99 +531,185 @@ bool command_create(const char      *archiveFileName,
     Lists_done(&fileList,(NodeFreeFunction)freeFileNode,NULL);
     pthread_cond_destroy(&fileListModified);
     pthread_mutex_destroy(&fileListLock);
-    String_delete(fileName);
     free(buffer);
 
     return FALSE;
   }
 
   /* store files */
+  fileName = String_new();
   failFlag = FALSE;
   while (getNextFile(fileName,&fileType))
   {
     info(0,"Store '%s'...",String_cString(fileName));
 
-    /* get file info */
-    error = Files_getFileInfo(fileName,&fileInfo);
-    if (error != ERROR_NONE)
-    {
-      info(0,"fail\n");
-      printError("Cannot get info for file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
-      failFlag = TRUE;
-      continue;
-    }
-
     switch (fileType)
     {
       case FILETYPE_FILE:
-        /* new file */
-        error = Archive_newFile(&archiveInfo,
-                                &archiveFileInfo,
-                                fileName,
-                                &fileInfo
-                               );
-        if (error != ERROR_NONE)
         {
-          info(0,"fail\n");
-          printError("Cannot create new archive file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
-          failFlag = TRUE;
-          break;
-        }
+          FileInfo   fileInfo;
+          FileHandle fileHandle;
+          ulong      n;
+          double     ratio;
 
-        /* write file content into archive */  
-        error = Files_open(&fileHandle,fileName,FILE_OPENMODE_READ);
-        if (error != ERROR_NONE)
-        {
-          info(0,"fail\n");
-          printError("Cannot open file '%s' (error: %s)\n",String_cString(fileName),getErrorText(error));
-          failFlag = TRUE;
-          continue;
-        }
-        error = ERROR_NONE;
-        do
-        {
-          Files_read(&fileHandle,buffer,BUFFER_SIZE,&n);
-          if (n > 0)
+          /* get file info */
+          error = Files_getFileInfo(fileName,&fileInfo);
+          if (error != ERROR_NONE)
           {
-            error = Archive_writeFileData(&archiveFileInfo,buffer,n);
+            info(0,"fail\n");
+            printError("Cannot get info for file '%s' (error: %s)\n",
+                       String_cString(fileName),
+                       getErrorText(error)
+                      );
+            failFlag = TRUE;
+            continue;
           }
-        }
-        while ((n > 0) && (error == ERROR_NONE));
-        Files_close(&fileHandle);
-        if (error != ERROR_NONE)
-        {
-          Archive_closeFile(&archiveFileInfo);
-          info(0,"fail\n");
-          printError("Cannot create archive file!\n");
-          failFlag = TRUE;
-          break;
-        }
 
-        /* close archive file */
-        Archive_closeFile(&archiveFileInfo);
+          /* new file */
+          error = Archive_newFileEntry(&archiveInfo,
+                                       &archiveFileInfo,
+                                       fileName,
+                                       &fileInfo
+                                      );
+          if (error != ERROR_NONE)
+          {
+            info(0,"fail\n");
+            printError("Cannot create new archive file '%s' (error: %s)\n",
+                       String_cString(fileName),
+                       getErrorText(error)
+                      );
+            failFlag = TRUE;
+            break;
+          }
 
-        if ((archiveFileInfo.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveFileInfo.chunkFileData.partSize > 0))
-        {
-          ratio = 100.0-archiveFileInfo.chunkInfoFileData.size*100.0/archiveFileInfo.chunkFileData.partSize;
-        }
-        else
-        {
-          ratio = 0;
-        }
+          /* write file content into archive */  
+          error = Files_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+          if (error != ERROR_NONE)
+          {
+            info(0,"fail\n");
+            printError("Cannot open file '%s' (error: %s)\n",
+                       String_cString(fileName),
+                       getErrorText(error)
+                      );
+            failFlag = TRUE;
+            continue;
+          }
+          error = ERROR_NONE;
+          do
+          {
+            Files_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+            if (n > 0)
+            {
+              error = Archive_writeFileData(&archiveFileInfo,buffer,n);
+            }
+          }
+          while ((n > 0) && (error == ERROR_NONE));
+          Files_close(&fileHandle);
+          if (error != ERROR_NONE)
+          {
+            info(0,"fail\n");
+            printError("Cannot create archive file!\n");
+            Archive_closeEntry(&archiveFileInfo);
+            failFlag = TRUE;
+            break;
+          }
 
-        info(0,"ok (ratio %.1f%%)\n",ratio);
+          /* close archive entry */
+          Archive_closeEntry(&archiveFileInfo);
+
+          /* update statistics */
+          statistics.includedCount++;
+          statistics.includedByteSum += fileInfo.size;
+
+          if ((archiveFileInfo.file.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveFileInfo.file.chunkFileData.partSize > 0))
+          {
+            ratio = 100.0-archiveFileInfo.file.chunkInfoFileData.size*100.0/archiveFileInfo.file.chunkFileData.partSize;
+          }
+          else
+          {
+            ratio = 0;
+          }
+          info(0,"ok (ratio %.1f%%)\n",ratio);
+        }
         break;
       case FILETYPE_DIRECTORY:
-        info(0,"ok\n");
+        {
+          info(0,"still not supported - skipped\n");
+        }
         break;
       case FILETYPE_LINK:
-        info(0,"ok\n");
+        {
+          FileInfo fileInfo;
+          String   name;
+
+          /* get file info */
+          error = Files_getFileInfo(fileName,&fileInfo);
+          if (error != ERROR_NONE)
+          {
+            info(0,"fail\n");
+            printError("Cannot get info for file '%s' (error: %s)\n",
+                       String_cString(fileName),
+                       getErrorText(error)
+                      );
+            failFlag = TRUE;
+            continue;
+          }
+
+          /* read link */
+          name = String_new();
+          error = Files_readLink(fileName,name);
+          if (error != ERROR_NONE)
+          {
+            info(0,"fail\n");
+            printError("Cannot read link '%s' (error: %s)\n",
+                       String_cString(fileName),
+                       getErrorText(error)
+                      );
+            String_delete(name);
+            failFlag = TRUE;
+            continue;
+          }
+
+          /* new link */
+          error = Archive_newLinkEntry(&archiveInfo,
+                                       &archiveFileInfo,
+                                       fileName,
+                                       name,
+                                       &fileInfo
+                                      );
+          if (error != ERROR_NONE)
+          {
+            info(0,"fail\n");
+            printError("Cannot create new archive file '%s' (error: %s)\n",
+                       String_cString(fileName),
+                       getErrorText(error)
+                      );
+            String_delete(name);
+            failFlag = TRUE;
+            break;
+          }
+
+          /* close archive entry */
+          Archive_closeEntry(&archiveFileInfo);
+
+          /* free resources */
+          String_delete(name);
+
+          /* update statistics */
+          statistics.includedCount++;
+
+          info(0,"ok\n");
+        }
         break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
     }
-    statistics.includedCount++;
-    statistics.includedByteSum += fileInfo.size;
   }
   collectorThreadExitFlag = TRUE;
+  String_delete(fileName);
 
   /* close archive */
   Archive_close(&archiveInfo);
@@ -628,7 +721,6 @@ bool command_create(const char      *archiveFileName,
   Lists_done(&fileList,(NodeFreeFunction)freeFileNode,NULL);
   pthread_cond_destroy(&fileListModified);
   pthread_mutex_destroy(&fileListLock);
-  String_delete(fileName);
   free(buffer);
 
   /* output statics */

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -34,20 +34,24 @@
 
 typedef struct
 {
-  String             fileName;             // archive basename
-  uint64             partSize;
-  CompressAlgorithms compressAlgorithm;    // compression algorithm
-  ulong              compressMinFileSize;  // min. file size to use compression
-  CryptAlgorithms    cryptAlgorithm;       // crypt algorithm
-  const char         *password;            // password
+  String             fileName;                       // archive basename
+  uint64             partSize;                       // approximated part size
+  CompressAlgorithms compressAlgorithm;              // default compression algorithm
+  ulong              compressMinFileSize;            // min. file size to use compression
+  CryptAlgorithms    cryptAlgorithm;                 // default crypt algorithm
+  const char         *password;                      // password
 
-  uint               blockLength;          /* block length for file entry/file
-                                              data (depend on used crypt
-                                              algorithm)
-                                           */
+  uint               blockLength;                    /* block length for file entry/file
+                                                        data (depend on used crypt
+                                                        algorithm)
+                                                     */
 
-  int                partNumber;           // file part number
-  FileHandle         fileHandle;           // file handle
+  int                partNumber;                     // file part number
+  bool               fileOpenFlag;                   // TRUE iff file is open
+  FileHandle         fileHandle;                     // file handle
+
+  bool               nextChunkHeaderReadFlag;        // TRUE iff next chunk header read
+  ChunkHeader        nextChunkHeader;                // next file, directory, link chunk header
 } ArchiveInfo;
 
 typedef struct
@@ -60,31 +64,58 @@ typedef struct
     FILE_MODE_WRITE,
   } mode;
 
-  CompressAlgorithms compressAlgorithm;    // compression algorithm
-  uint               blockLength;          /* block length for file entry/file
-                                              data (depend on used crypt
-                                              algorithm)
-                                           */
+  CryptAlgorithms    cryptAlgorithm;                 // crypt algorithm for file entry
+  uint               blockLength;                    /* block length for file entry/file
+                                                        data (depend on used crypt
+                                                        algorithm)
+                                                     */
 
-  ChunkInfo          chunkInfoFile;        // chunk info block for file
-  ChunkFile          chunkFile;            // file
+  FileTypes          fileType;
+  union
+  {
+    struct
+    {
+      CompressAlgorithms  compressAlgorithm;         // compression algorithm for file entry
 
-  ChunkInfo          chunkInfoFileEntry;   // chunk info block for file entry
-  ChunkFileEntry     chunkFileEntry;       // file entry
-  CryptInfo          cryptInfoFileEntry;   // file entry cryption info (without data elements)
+      ChunkInfo           chunkInfoFile;             // chunk info block for file
+      ChunkFile           chunkFile;                 // file
 
-  ChunkInfo          chunkInfoFileData;    // chunk info block for file data
-  ChunkFileData      chunkFileData;        // file data
-  CryptInfo          cryptInfoFileData;    // file data cryption info (without data elements)
+      ChunkInfo           chunkInfoFileEntry;        // chunk info block for file entry
+      ChunkFileEntry      chunkFileEntry;            // file entry
+      CryptInfo           cryptInfoFileEntry;        // file entry cryption info (without data elements)
 
-  CompressInfo       compressInfoData;     // data compress info
-  CryptInfo          cryptInfoData;        // data cryption info
+      ChunkInfo           chunkInfoFileData;         // chunk info block for file data
+      ChunkFileData       chunkFileData;             // file data
+      CryptInfo           cryptInfoFileData;         // file data cryption info (without data elements)
 
-  uint               headerLength;         // length of header
-  bool               headerWrittenFlag;    // TRUE iff header written
+      CompressInfo        compressInfoData;          // data compress info
+      CryptInfo           cryptInfoData;             // data cryption info
 
-  byte               *buffer;
-  ulong              bufferLength;
+      byte                *buffer;
+      ulong               bufferLength;
+    } file;
+    struct
+    {
+      ChunkInfo           chunkInfoDirectory;        // chunk info block for directory
+      ChunkDirectory      chunkDirectory;            // directory
+
+      ChunkInfo           chunkInfoDirectoryEntry;   // chunk info block for directory entry
+      ChunkDirectoryEntry chunkDirectoryEntry;       // directory entry
+      CryptInfo           cryptInfoDirectoryEntry;   // directory entry cryption info
+    } directory;
+    struct
+    {
+      ChunkInfo           chunkInfoLink;             // chunk info block for link
+      ChunkLink           chunkLink;                 // link
+
+      ChunkInfo           chunkInfoLinkEntry;        // chunk info block for link entry
+      ChunkLinkEntry      chunkLinkEntry;            // link entry
+      CryptInfo           cryptInfoLinkEntry;        // link entry
+    } link;
+
+  };
+  uint                headerLength;                  // length of header
+  bool                headerWrittenFlag;             // TRUE iff header written
 } ArchiveFileInfo;
 
 /***************************** Variables *******************************/
@@ -195,20 +226,73 @@ bool Archive_eof(ArchiveInfo *archiveInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newFile(ArchiveInfo     *archiveInfo,
-                       ArchiveFileInfo *archiveFileInfo,
-                       const String    fileName,
-                       const FileInfo  *fileInfo
-                      );
+Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
+                            ArchiveFileInfo *archiveFileInfo,
+                            const String    fileName,
+                            const FileInfo  *fileInfo
+                           );
+
+/***********************************************************************\
+* Name   : Archive_newDirectoryEntry
+* Purpose: add new directory to archive
+* Input  : archiveInfo     - archive info block
+*          archiveFileInfo - archive file info block
+*          directoryName   - directory name
+*          fileInfo        - file info
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
+                                 ArchiveFileInfo *archiveFileInfo,
+                                 const String    directoryName,
+                                 FileInfo        *fileInfo
+                                );
+
+/***********************************************************************\
+* Name   : Archive_newLinkEntry
+* Purpose: add new link to archive
+* Input  : archiveInfo     - archive info block
+*          archiveFileInfo - archive file info block
+*          name            - link name
+*          fileName        - link reference name
+*          fileInfo        - file info
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
+                            ArchiveFileInfo *archiveFileInfo,
+                            const String    name,
+                            const String    fileName,
+                            FileInfo        *fileInfo
+                           );
+
+/***********************************************************************\
+* Name   : Archive_getNextFileType
+* Purpose: get type of next entry in archive
+* Input  : archiveInfo     - archive info block
+*          archiveFileInfo - archive file info block
+* Output : FileTypes - file type
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
+                               ArchiveFileInfo *archiveFileInfo,
+                               FileTypes       *fileType
+                              );
 
 /***********************************************************************\
 * Name   : Archive_readFile
 * Purpose: read file info from archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
-* Output : fileName          - file name
+* Output : compressAlgorithm - used compression algorithm (can be NULL)
+*          fileName          - file name
 *          fileInfo          - file info
-*          compressAlgorithm - used compression algorithm (can be NULL)
 *          cryptAlgorithm    - use crypt algorithm (can be NULL)
 *          partOffset        - part offset (can be NULL)
 *          partSize          - part size in bytes (can be NULL)
@@ -216,18 +300,58 @@ Errors Archive_newFile(ArchiveInfo     *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readFile(ArchiveInfo        *archiveInfo,
-                        ArchiveFileInfo    *archiveFileInfo,
-                        String             fileName,
-                        FileInfo           *fileInfo,
-                        CompressAlgorithms *compressAlgorithm,
-                        CryptAlgorithms    *cryptAlgorithm,
-                        uint64             *partOffset,
-                        uint64             *partSize
-                       );
+Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
+                             ArchiveFileInfo    *archiveFileInfo,
+                             CompressAlgorithms *compressAlgorithm,
+                             CryptAlgorithms    *cryptAlgorithm,
+                             String             fileName,
+                             FileInfo           *fileInfo,
+                             uint64             *partOffset,
+                             uint64             *partSize
+                            );
 
 /***********************************************************************\
-* Name   : Archive_closeFile
+* Name   : Archive_readFile
+* Purpose: read file info from archive
+* Input  : archiveInfo     - archive info block
+*          archiveFileInfo - archive file info block
+* Output : cryptAlgorithm    - use crypt algorithm (can be NULL)
+*          directoryName     - directory name
+*          fileInfo          - file info
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
+                                  ArchiveFileInfo *archiveFileInfo,
+                                  CryptAlgorithms *cryptAlgorithm,
+                                  String          directoryName,
+                                  FileInfo        *fileInfo
+                                 );
+
+/***********************************************************************\
+* Name   : Archive_readFile
+* Purpose: read file info from archive
+* Input  : archiveInfo     - archive info block
+*          archiveFileInfo - archive file info block
+* Output : cryptAlgorithm - use crypt algorithm (can be NULL)
+*          name           - link name
+*          fileName       - link reference name
+*          fileInfo       - file info
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
+                             ArchiveFileInfo *archiveFileInfo,
+                             CryptAlgorithms *cryptAlgorithm,
+                             String          name,
+                             String          fileName,
+                             FileInfo        *fileInfo
+                            );
+
+/***********************************************************************\
+* Name   : Archive_closeEntry
 * Purpose: clsoe file in archive
 * Input  : archiveFileInfo - archive file info block
 * Output : -
@@ -235,7 +359,7 @@ Errors Archive_readFile(ArchiveInfo        *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_closeFile(ArchiveFileInfo *archiveFileInfo);
+Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo);
 
 /***********************************************************************\
 * Name   : Archive_writeFileData

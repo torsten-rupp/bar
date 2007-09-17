@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -52,6 +52,44 @@
   extern "C" {
 #endif
 
+LOCAL String getDestinationFileName(String     destinationFileName,
+                                    String     fileName,
+                                    const char *directory,
+                                    uint       directoryStripCount
+                                   )
+{
+  String          pathName,baseName,name;
+  StringTokenizer fileNameTokenizer;
+  int             z;
+
+  if (directory != NULL)
+  {
+    Files_setFileNameCString(destinationFileName,directory);
+  }
+  else
+  {
+    String_clear(destinationFileName);
+  }
+  Files_splitFileName(fileName,&pathName,&baseName);
+  Files_initSplitFileName(&fileNameTokenizer,pathName);
+  z = 0;
+  while ((z< directoryStripCount) && Files_getNextSplitFileName(&fileNameTokenizer,&name))
+  {
+    z++;
+  }
+  while (Files_getNextSplitFileName(&fileNameTokenizer,&name))
+  {
+    Files_appendFileName(destinationFileName,name);
+  }     
+  Files_doneSplitFileName(&fileNameTokenizer);
+  Files_appendFileName(destinationFileName,baseName);
+  String_delete(pathName);
+  String_delete(baseName);
+
+  return destinationFileName;
+}
+
+
 /*---------------------------------------------------------------------*/
 
 bool command_restore(StringList  *archiveFileNameList,
@@ -64,20 +102,11 @@ bool command_restore(StringList  *archiveFileNameList,
 {
   byte            *buffer;
   String          archiveFileName;
-  String          fileName;
   bool            failFlag;
   Errors          error;
   ArchiveInfo     archiveInfo;
   ArchiveFileInfo archiveFileInfo;
-  FileInfo        fileInfo;
-  uint64          partOffset,partSize;
-  String          destinationFileName;
-  StringTokenizer fileNameTokenizer;
-  String          pathName,baseName,name;
-  int             z;
-  FileHandle      fileHandle;
-  uint64          length;
-  ulong           n;
+  FileTypes       fileType;
 
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
@@ -90,7 +119,6 @@ bool command_restore(StringList  *archiveFileNameList,
     HALT_INSUFFICIENT_MEMORY();
   }
   archiveFileName = String_new();
-  fileName = String_new();
 
   failFlag = FALSE;
   while (!StringLists_empty(archiveFileNameList))
@@ -104,7 +132,10 @@ bool command_restore(StringList  *archiveFileNameList,
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open archive file '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
+      printError("Cannot open archive file '%s' (error: %s)!\n",
+                 String_cString(archiveFileName),
+                 getErrorText(error)
+                );
       failFlag = TRUE;
       continue;
     }
@@ -112,139 +143,281 @@ bool command_restore(StringList  *archiveFileNameList,
     /* read files */
     while (!Archive_eof(&archiveInfo))
     {
-      /* get next file from archive */
-      error = Archive_readFile(&archiveInfo,
-                               &archiveFileInfo,
-                               fileName,
-                               &fileInfo,
-                               NULL,
-                               NULL,
-                               &partOffset,
-                               &partSize
-                              );
+      /* get next file type */
+      error = Archive_getNextFileType(&archiveInfo,
+                                      &archiveFileInfo,
+                                      &fileType
+                                     );
       if (error != ERROR_NONE)
       {
-        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
-        Archive_closeFile(&archiveFileInfo);
+        printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                   String_cString(archiveFileName),
+                   getErrorText(error)
+                  );
         failFlag = TRUE;
         break;
       }
 
-      if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-          && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-         )
+      switch (fileType)
       {
-        /* get destination filename */
-        destinationFileName = String_new();
-        if (directory != NULL) Files_setFileNameCString(destinationFileName,directory);
-        Files_splitFileName(fileName,&pathName,&baseName);
-        Files_initSplitFileName(&fileNameTokenizer,pathName);
-        z = 0;
-        while ((z< directoryStripCount) && Files_getNextSplitFileName(&fileNameTokenizer,&name))
-        {
-          z++;
-        }
-        while (Files_getNextSplitFileName(&fileNameTokenizer,&name))
-        {
-          Files_appendFileName(destinationFileName,name);
-        }     
-        Files_doneSplitFileName(&fileNameTokenizer);
-        Files_appendFileName(destinationFileName,baseName);
-        String_delete(pathName);
-        String_delete(baseName);
-
-        info(0,"Restore '%s'...",String_cString(destinationFileName));
-
-        /* write file */
-        if (Files_exist(destinationFileName) && !globalOptions.overwriteFlag)
-        {
-          info(0,"skipped (file exists)\n");
-          Archive_closeFile(&archiveFileInfo);
-          String_delete(destinationFileName);
-          failFlag = TRUE;
-          continue;
-        }
-        error = Files_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
-        if (error != ERROR_NONE)
-        {
-          info(0,"fail\n");
-          printError("Cannot open file '%s' (error: %s)\n",String_cString(destinationFileName),getErrorText(error));
-          Archive_closeFile(&archiveFileInfo);
-          String_delete(destinationFileName);
-          failFlag = TRUE;
-          continue;
-        }
-        error = Files_seek(&fileHandle,partOffset);
-        if (error != ERROR_NONE)
-        {
-          info(0,"fail\n");
-          printError("Cannot write file '%s' (error: %s)\n",String_cString(destinationFileName),getErrorText(error));
-          Archive_closeFile(&archiveFileInfo);
-          Files_close(&fileHandle);
-          String_delete(destinationFileName);
-          failFlag = TRUE;
-          continue;
-        }
-
-        length = 0;
-        while (length < partSize)
-        {
-          n = ((partSize-length) > BUFFER_SIZE)?BUFFER_SIZE:partSize-length;
-
-          error = Archive_readFileData(&archiveFileInfo,buffer,n);
-          if (error != ERROR_NONE)
+        case FILETYPE_FILE:
           {
-            info(0,"fail\n");
-            printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
-            failFlag = TRUE;
-            break;
+            String     fileName;
+            FileInfo   fileInfo;
+            uint64     partOffset,partSize;
+            String     destinationFileName;
+            FileInfo   localFileInfo;
+            FileHandle fileHandle;
+            uint64     length;
+            ulong      n;
+
+            /* get next file from archive */
+            fileName = String_new();
+            error = Archive_readFileEntry(&archiveInfo,
+                                          &archiveFileInfo,
+                                          NULL,
+                                          NULL,
+                                          fileName,
+                                          &fileInfo,
+                                          &partOffset,
+                                          &partSize
+                                         );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         getErrorText(error)
+                        );
+              String_delete(fileName);
+              failFlag = TRUE;
+              break;
+            }
+
+            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              /* get destination filename */
+              destinationFileName = getDestinationFileName(String_new(),
+                                                           fileName,
+                                                           directory,
+                                                           directoryStripCount
+                                                          );
+
+              info(0,"Restore '%s'...",String_cString(destinationFileName));
+
+              /* check if file exists */
+              if (Files_exist(destinationFileName) && !globalOptions.overwriteFlag)
+              {
+                info(0,"skipped (file exists)\n");
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                failFlag = TRUE;
+                continue;
+              }
+
+              /* write file data */
+              error = Files_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
+              if (error != ERROR_NONE)
+              {
+                info(0,"fail\n");
+                printError("Cannot open file '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           getErrorText(error)
+                          );
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                failFlag = TRUE;
+                continue;
+              }
+              error = Files_seek(&fileHandle,partOffset);
+              if (error != ERROR_NONE)
+              {
+                info(0,"fail\n");
+                printError("Cannot write file '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           getErrorText(error)
+                          );
+                Files_close(&fileHandle);
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                failFlag = TRUE;
+                continue;
+              }
+              length = 0;
+              while (length < partSize)
+              {
+                n = ((partSize-length) > BUFFER_SIZE)?BUFFER_SIZE:partSize-length;
+
+                error = Archive_readFileData(&archiveFileInfo,buffer,n);
+                if (error != ERROR_NONE)
+                {
+                  info(0,"fail\n");
+                  printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                             String_cString(archiveFileName),
+                             getErrorText(error)
+                            );
+                  failFlag = TRUE;
+                  break;
+                }
+                error = Files_write(&fileHandle,buffer,n);
+                if (error != ERROR_NONE)
+                {
+                  info(0,"fail\n");
+                  printError("Cannot write file '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             getErrorText(error)
+                            );
+                  failFlag = TRUE;
+                  break;
+                }
+
+                length += n;
+              }
+              Files_close(&fileHandle);
+              if (failFlag)
+              {
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                continue;
+              }
+
+              /* set file time, permissions, file owner/group */
+              error = Files_setFileInfo(destinationFileName,&fileInfo);
+              if (error != ERROR_NONE)
+              {
+                info(0,"fail\n");
+                printError("Cannot set file info of '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           getErrorText(error)
+                          );
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                failFlag = TRUE;
+                continue;
+              }
+
+              /* free resources */
+              String_delete(destinationFileName);
+
+              info(0,"ok\n");
+            }
+            else
+            {
+              /* skip */
+              info(1,"Restore '%s'...skipped\n",String_cString(fileName));
+            }
+
+            /* close archive file, free resources */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(fileName);
           }
-          error = Files_write(&fileHandle,buffer,n);
-          if (error != ERROR_NONE)
+          break;
+        case FILETYPE_DIRECTORY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          break;
+        case FILETYPE_LINK:
           {
-            info(0,"fail\n");
-            printError("Cannot write file '%s' (error: %s)\n",String_cString(destinationFileName),getErrorText(error));
-            failFlag = TRUE;
-            break;
+            String   linkName;
+            String   fileName;
+            FileInfo fileInfo;
+            String   destinationFileName;
+            FileInfo localFileInfo;
+
+            /* open archive link */
+            linkName = String_new();
+            fileName = String_new();
+            error = Archive_readLinkEntry(&archiveInfo,
+                                          &archiveFileInfo,
+                                          NULL,
+                                          linkName,
+                                          fileName,
+                                          &fileInfo
+                                         );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         getErrorText(error)
+                        );
+              String_delete(fileName);
+              String_delete(linkName);
+              failFlag = TRUE;
+              break;
+            }
+
+            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                && !Patterns_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              /* get destination filename */
+              destinationFileName = getDestinationFileName(String_new(),
+                                                           linkName,
+                                                           directory,
+                                                           directoryStripCount
+                                                          );
+
+              /* create link */
+              error = Files_link(destinationFileName,fileName);
+              if (error != ERROR_NONE)
+              {
+                info(0,"fail\n");
+                printError("Cannot create link '%s' -> '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                String_delete(linkName);
+                failFlag = TRUE;
+                continue;
+              }
+
+              /* set file time, permissions, file owner/group */
+              error = Files_setFileInfo(destinationFileName,&fileInfo);
+              if (error != ERROR_NONE)
+              {
+                info(0,"fail\n");
+                printError("Cannot set file info of '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           getErrorText(error)
+                          );
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                String_delete(linkName);
+                failFlag = TRUE;
+                continue;
+              }
+
+              /* free resources */
+              String_delete(destinationFileName);
+            }
+            else
+            {
+              /* skip */
+              info(1,"Restore '%s'...skipped\n",String_cString(linkName));
+            }
+
+            /* close archive file */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(fileName);
+            String_delete(linkName);
           }
-
-          length += n;
-        }
-        Files_close(&fileHandle);
-        if (failFlag)
-        {
-          Archive_closeFile(&archiveFileInfo);
-          Files_close(&fileHandle);
-          String_delete(destinationFileName);
-          continue;
-        }
-
-        /* set file time, permissions, file owner/group */
-        error = Files_setFileInfo(destinationFileName,&fileInfo);
-        if (error != ERROR_NONE)
-        {
-          info(0,"fail\n");
-          printError("Cannot set file info of '%s' (error: %s)\n",String_cString(destinationFileName),getErrorText(error));
-          Archive_closeFile(&archiveFileInfo);
-          Files_close(&fileHandle);
-          String_delete(destinationFileName);
-          failFlag = TRUE;
-          continue;
-        }
-
-        /* free resources */
-        String_delete(destinationFileName);
-
-        info(0,"ok\n");
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
       }
-      else
-      {
-        /* skip */
-        info(1,"Restore '%s'...skipped\n",String_cString(fileName));
-      }
-
-      /* close archive file */
-      Archive_closeFile(&archiveFileInfo);
     }
 
     /* close archive */
@@ -252,7 +425,6 @@ bool command_restore(StringList  *archiveFileNameList,
   }
 
   /* free resources */
-  String_delete(fileName);
   String_delete(archiveFileName);
   free(buffer);
 

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -466,7 +466,7 @@ JAMAICA_HALT_NOT_YET_IMPLEMENTED();
           String_appendChar(string,'%');
           break;
         default:
-HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE("convertion character (0x%x) in token '%s'",formatToken.conversionChar,formatToken.token);
+HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           length = snprintf(buffer,sizeof(buffer),formatToken.token);
           if (length < sizeof(buffer))
           {
@@ -802,7 +802,7 @@ JAMAICA_HALT_NOT_YET_IMPLEMENTED();
           index++;
           break;
         default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE("convertion character (0x%x) in token '%s'",formatToken.conversionChar,formatToken.token);
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break;
       }
     }

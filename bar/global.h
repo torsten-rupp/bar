@@ -246,25 +246,19 @@ typedef void               void32;
      __abort(__FILE__, __LINE__, "INTERNAL ERROR: ", format, ## args); \
   } \
   while (0)
-#define HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED(args...) \
+#define HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED() \
   do \
   { \
-     HALT_INTERNAL_ERROR("still not implemented: ", ## args); \
+     HALT_INTERNAL_ERROR("still not implemented"); \
   } \
   while (0)
-#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE(args...) \
+#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE() \
   do \
   { \
-     HALT_INTERNAL_ERROR("unhandled switch case: ", ## args); \
+     HALT_INTERNAL_ERROR("unhandled switch case"); \
   } \
   while (0)
 
-#define HALT_INTERAL_ERROR_UNHANDLED_SWITCH_CASE(args...) \
-  do \
-  { \
-     HALT_INTERNAL_ERROR("unhandled switch-case: ", ## args); \
-  } \
- while (0)
 
 /* 2 macros necessary, because of "string"-construction */
 #define _FAIL_STRING1(z) _FAIL_STRING2(z) 

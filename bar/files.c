@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems : all
@@ -215,7 +215,9 @@ Errors Files_open(FileHandle    *fileHandle,
       {
         return ERROR_CREATE_FILE;
       }
-      fileHandle->size = 0;
+
+      fileHandle->index = 0;
+      fileHandle->size  = 0;
       break;
     case FILE_OPENMODE_READ:
       /* open file for reading */
@@ -243,6 +245,8 @@ Errors Files_open(FileHandle    *fileHandle,
         close(fileHandle->handle);
         return ERROR_IO_ERROR;
       }
+
+      fileHandle->index = 0;
       break;
     case FILE_OPENMODE_WRITE:
       /* create directory if needed */
@@ -263,7 +267,9 @@ Errors Files_open(FileHandle    *fileHandle,
       {
         return ERROR_OPEN_FILE;
       }
-      fileHandle->size = 0;
+
+      fileHandle->index = 0;
+      fileHandle->size  = 0;
       break;
     #ifndef NDEBUG
       default:
@@ -307,10 +313,19 @@ Errors Files_read(FileHandle *fileHandle,
                   ulong      *readBytes
                  )
 {
+  ssize_t n;
+
   assert(fileHandle != NULL);
   assert(readBytes != NULL);
 
-  (*readBytes) = read(fileHandle->handle,buffer,bufferLength);
+  n = read(fileHandle->handle,buffer,bufferLength);
+  if (n > 0) fileHandle->index += n;
+  if (n < 0)
+  {
+    return ERROR_IO_ERROR;
+  }
+
+  (*readBytes) = n;
 
   return ERROR_NONE;
 }
@@ -320,9 +335,14 @@ Errors Files_write(FileHandle *fileHandle,
                    ulong      bufferLength
                   )
 {
+  ssize_t n;
+
   assert(fileHandle != NULL);
 
-  if (write(fileHandle->handle,buffer,bufferLength) != bufferLength)
+  n = write(fileHandle->handle,buffer,bufferLength);
+  if (n > 0) fileHandle->index += n;
+  if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
+  if (n != bufferLength)
   {
     return ERROR_IO_ERROR;
   }
@@ -330,7 +350,7 @@ Errors Files_write(FileHandle *fileHandle,
   return ERROR_NONE;
 }
 
-uint64 Files_size(FileHandle *fileHandle)
+uint64 Files_getSize(FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
 
@@ -349,7 +369,9 @@ Errors Files_tell(FileHandle *fileHandle, uint64 *offset)
   {
     return ERROR_IO_ERROR;
   }
-  (*offset) = (uint64)n;
+assert(n == (off64_t)fileHandle->index);
+
+  (*offset) = fileHandle->index;
 
   return ERROR_NONE;
 }
@@ -362,6 +384,7 @@ Errors Files_seek(FileHandle *fileHandle, uint64 offset)
   {
     return ERROR_IO_ERROR;
   }
+  fileHandle->index = offset;
 
   return ERROR_NONE;
 }
@@ -570,6 +593,68 @@ Errors Files_setFileInfo(String   fileName,
     return ERROR_IO_ERROR;
   }
   if (chmod(String_cString(fileName),fileInfo->permission) != 0)
+  {
+    return ERROR_IO_ERROR;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Files_readLink(String linkName,
+                      String fileName
+                     )
+{
+  #define BUFFER_SIZE  256
+  #define BUFFER_DELTA 128
+
+  char *buffer;
+  uint bufferSize;
+  int  result;
+
+  assert(linkName != NULL);
+  assert(fileName != NULL);
+
+  /* allocate initial buffer for name */
+  buffer = (char*)malloc(BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }  
+  bufferSize = BUFFER_SIZE;
+
+  /* try to read link, increase buffer if needed */
+  while ((result = readlink(String_cString(linkName),buffer,bufferSize)) == bufferSize)
+  {
+    bufferSize += BUFFER_DELTA;
+    buffer = realloc(buffer,bufferSize);
+    if (buffer == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }  
+  }
+
+  if (result != -1)
+  {
+    String_setBuffer(fileName,buffer,result);
+    free(buffer);
+    return ERROR_NONE;
+  }
+  else
+  {
+    free(buffer);
+    return ERROR_IO_ERROR;
+  }
+}
+
+Errors Files_link(String linkName,
+                  String fileName
+                 )
+{
+  assert(linkName != NULL);
+  assert(fileName != NULL);
+
+  unlink(String_cString(linkName));
+  if (symlink(String_cString(fileName),String_cString(linkName)) != 0)
   {
     return ERROR_IO_ERROR;
   }

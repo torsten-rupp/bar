@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -74,6 +74,7 @@ LOCAL void printFileInfo(const String       fileName,
 {
   double ratio;
 
+  assert(fileName != NULL);
   assert(fileInfo != NULL);
 
   if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (partSize > 0))
@@ -96,6 +97,32 @@ LOCAL void printFileInfo(const String       fileName,
         );
 }
 
+/***********************************************************************\
+* Name   : printLinkInfo
+* Purpose: print link information
+* Input  : 
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printLinkInfo(const String    linkName,
+                         const String    fileName,
+                         const FileInfo  *fileInfo,
+                         CryptAlgorithms cryptAlgorithm
+                        )
+{
+  assert(linkName != NULL);
+  assert(fileName != NULL);
+  assert(fileInfo != NULL);
+
+  printf("                                                     %-10s %s -> %s\n",
+         Crypt_getAlgorithmName(cryptAlgorithm),
+         String_cString(linkName),
+         String_cString(fileName)
+        );
+}
+
 /*---------------------------------------------------------------------*/
 
 bool command_list(StringList  *archiveFileNameList,
@@ -105,23 +132,19 @@ bool command_list(StringList  *archiveFileNameList,
                  )
 {
   String             archiveFileName;
-  String             fileName;
   bool               failFlag;
   ulong              fileCount;
   Errors             error;
   ArchiveInfo        archiveInfo;
   ArchiveFileInfo    archiveFileInfo;
-  FileInfo           fileInfo;
-  CompressAlgorithms compressAlgorithm;
+  FileTypes          fileType;
   CryptAlgorithms    cryptAlgorithm;
-  uint64             partOffset,partSize;
 
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
 
   archiveFileName = String_new();
-  fileName = String_new();
 
   failFlag  = FALSE;
   fileCount = 0;
@@ -146,7 +169,10 @@ bool command_list(StringList  *archiveFileNameList,
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open file '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
+      printError("Cannot open file '%s' (error: %s)!\n",
+                 String_cString(archiveFileName),
+                 getErrorText(error)
+                );
       failFlag = TRUE;
       continue;
     }
@@ -154,41 +180,130 @@ bool command_list(StringList  *archiveFileNameList,
     /* list contents */
     while (!Archive_eof(&archiveInfo))
     {
-      /* open archive file */
-      error = Archive_readFile(&archiveInfo,
-                               &archiveFileInfo,
-                               fileName,
-                               &fileInfo,
-                               &compressAlgorithm,
-                               &cryptAlgorithm,
-                               &partOffset,
-                               &partSize
-                              );
+      /* get next file type */
+      error = Archive_getNextFileType(&archiveInfo,
+                                      &archiveFileInfo,
+                                      &fileType
+                                     );
       if (error != ERROR_NONE)
       {
-        printError("Cannot not read content of archive '%s' (error: %s)!\n",String_cString(archiveFileName),getErrorText(error));
+        printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                   String_cString(archiveFileName),
+                   getErrorText(error)
+                  );
         failFlag = TRUE;
         break;
       }
 
-      if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-          && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-         )
+      switch (fileType)
       {
-        /* output file info */
-        printFileInfo(fileName,
-                      &fileInfo,
-                      compressAlgorithm,
-                      cryptAlgorithm,
-                      partOffset,
-                      partSize,
-                      archiveFileInfo.chunkInfoFileData.size
-                     );
-        fileCount++;
-      }
+        case FILETYPE_FILE:
+          {
+            ArchiveFileInfo    archiveFileInfo;
+            CompressAlgorithms compressAlgorithm;
+            String             fileName;
+            FileInfo           fileInfo;
+            uint64             partOffset,partSize;
 
-      /* close archive file */
-      Archive_closeFile(&archiveFileInfo);
+            /* open archive file */
+            fileName = String_new();
+            error = Archive_readFileEntry(&archiveInfo,
+                                          &archiveFileInfo,
+                                          &compressAlgorithm,
+                                          &cryptAlgorithm,
+                                          fileName,
+                                          &fileInfo,
+                                          &partOffset,
+                                          &partSize
+                                         );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         getErrorText(error)
+                        );
+              String_delete(fileName);
+              failFlag = TRUE;
+              break;
+            }
+
+            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              /* output file info */
+              printFileInfo(fileName,
+                            &fileInfo,
+                            compressAlgorithm,
+                            cryptAlgorithm,
+                            partOffset,
+                            partSize,
+                            archiveFileInfo.file.chunkInfoFileData.size
+                           );
+              fileCount++;
+            }
+
+            /* close archive file, free resources */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(fileName);
+          }
+          break;
+        case FILETYPE_DIRECTORY:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          break;
+        case FILETYPE_LINK:
+          {
+            String   linkName;
+            String   fileName;
+            FileInfo fileInfo;
+
+            /* open archive lin */
+            linkName = String_new();
+            fileName = String_new();
+            error = Archive_readLinkEntry(&archiveInfo,
+                                          &archiveFileInfo,
+                                          &cryptAlgorithm,
+                                          linkName,
+                                          fileName,
+                                          &fileInfo
+                                         );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         getErrorText(error)
+                        );
+              String_delete(fileName);
+              String_delete(linkName);
+              failFlag = TRUE;
+              break;
+            }
+
+            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                && !Patterns_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              /* output file info */
+              printLinkInfo(linkName,
+                            fileName,
+                            &fileInfo,
+                            cryptAlgorithm
+                           );
+              fileCount++;
+            }
+
+            /* close archive file, free resources */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(fileName);
+            String_delete(linkName);
+          }
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
+      }
     }
 
     /* close archive */
@@ -198,7 +313,6 @@ bool command_list(StringList  *archiveFileNameList,
   info(0,"%lu file(s)\n",fileCount);
 
   /* free resources */
-  String_delete(fileName);
   String_delete(archiveFileName);
 
   return !failFlag;

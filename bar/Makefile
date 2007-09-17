@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -152,9 +152,9 @@ standard_test: bar
 	@./bar -c test/test.bar test/data $(OPTIONS) 1>/dev/null
 	@./bar -l test/test.bar* $(OPTIONS) 1>/dev/null
 	@./bar -t test/test.bar* $(OPTIONS) 1>/dev/null
-	@./bar -x test/test.bar* $(OPTIONS) --directory test/data-restore 1>/dev/null
-	@$(DIFF) -r test/data test/data-restore/test/data
-	@$(RMRF) test/test.bar* test/data-restore
+	@./bar -x test/test.bar* $(OPTIONS) --directory test/restore 1>/dev/null
+	@$(DIFF) -r test/data test/restore/test/data
+	@$(RMRF) test/test.bar* test/restore
         
 -include Makefile.depend
 
