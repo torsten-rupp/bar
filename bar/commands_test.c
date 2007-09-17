@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -169,7 +169,7 @@ bool command_test(StringList  *archiveFileNameList,
             ulong      readBytes;
             ulong      diffIndex;
 
-            /* get next file from archive */
+            /* readt file */
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveFileInfo,
@@ -195,7 +195,30 @@ bool command_test(StringList  *archiveFileNameList,
                 && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              info(0,"Test '%s'...",String_cString(fileName));
+              info(0,"Test file '%s'...",String_cString(fileName));
+
+              /* check file */
+              if (!Files_exist(fileName))
+              {
+                info(0,"File '%s' does not exists!\n",
+                     String_cString(fileName)
+                    );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                failFlag = TRUE;
+                break;
+              }
+              if (Files_getType(fileName) != FILETYPE_FILE)
+              {
+                info(0,"Not a file '%s'!\n",
+                     String_cString(fileName)
+                    );
+                failFlag = TRUE;
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                failFlag = TRUE;
+                break;
+              }
 
               /* open file */
               error = Files_open(&fileHandle,fileName,FILE_OPENMODE_READ);
@@ -212,7 +235,7 @@ bool command_test(StringList  *archiveFileNameList,
                 continue;
               }
 
-              /* compare file size */
+              /* check file size */
               if (fileInfo.size != Files_getSize(&fileHandle))
               {
                 info(0,"differ in size: expected %lld bytes, found %lld bytes\n",
@@ -226,7 +249,7 @@ bool command_test(StringList  *archiveFileNameList,
                 continue;
               }
 
-              /* compare file content */
+              /* check file content */
               error = Files_seek(&fileHandle,partOffset);
               if (error != ERROR_NONE)
               {
@@ -327,7 +350,93 @@ bool command_test(StringList  *archiveFileNameList,
           }
           break;
         case FILETYPE_DIRECTORY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          {
+            String   directoryName;
+            FileInfo fileInfo;
+            String   localFileName;
+//            FileInfo localFileInfo;
+
+            /* read link */
+            directoryName = String_new();
+            error = Archive_readDirectoryEntry(&archiveInfo,
+                                               &archiveFileInfo,
+                                               NULL,
+                                               directoryName,
+                                               &fileInfo
+                                              );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         getErrorText(error)
+                        );
+              String_delete(directoryName);
+              failFlag = TRUE;
+              break;
+            }
+
+            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                && !Patterns_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              info(0,"Test directory '%s'...",String_cString(directoryName));
+
+              /* check directory */
+              if (!Files_exist(directoryName))
+              {
+                info(0,"Directory '%s' does not exists!\n",
+                     String_cString(directoryName)
+                    );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(directoryName);
+                failFlag = TRUE;
+                break;
+              }
+              if (Files_getType(directoryName) != FILETYPE_DIRECTORY)
+              {
+                info(0,"Not a directory '%s'!\n",
+                     String_cString(directoryName)
+                    );
+                failFlag = TRUE;
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(directoryName);
+                failFlag = TRUE;
+                break;
+              }
+
+#if 0
+              /* get local file info */
+              error = Files_getFileInfo(directoryName,&localFileInfo);
+              if (error != ERROR_NONE)
+              {
+                printError("Cannot not read local directory '%s' (error: %s)!\n",
+                           String_cString(directoryName),
+                           getErrorText(error)
+                          );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(directoryName);
+                failFlag = TRUE;
+                break;
+              }
+
+              /* check file time, permissions, file owner/group */
+#endif /* 0 */
+              info(0,"ok\n",
+                   String_cString(directoryName)
+                  );
+
+              /* free resources */
+            }
+            else
+            {
+              /* skip */
+              info(1,"Restore '%s'...skipped\n",String_cString(directoryName));
+            }
+
+            /* close archive file */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(directoryName);
+          }
           break;
         case FILETYPE_LINK:
           {
@@ -337,7 +446,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String   localFileName;
 //            FileInfo localFileInfo;
 
-            /* open archive link */
+            /* read link */
             linkName = String_new();
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
@@ -363,7 +472,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 && !Patterns_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              info(0,"Test '%s'...",String_cString(linkName));
+              info(0,"Test link '%s'...",String_cString(linkName));
 
               /* check link */
               if (!Files_exist(linkName))
@@ -379,7 +488,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               }
               if (Files_getType(linkName) != FILETYPE_LINK)
               {
-                info(0,"File is not a link '%s'!\n",
+                info(0,"Not a link '%s'!\n",
                      String_cString(linkName)
                     );
                 failFlag = TRUE;

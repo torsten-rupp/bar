@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -86,7 +86,7 @@ LOCAL void printFileInfo(const String       fileName,
     ratio = 0;
   }
 
-  printf("%10llu %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
+  printf("FILE %10llu %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
          fileInfo->size,
          partOffset,
          (partSize > 0)?partOffset+partSize-1:partOffset,
@@ -94,6 +94,29 @@ LOCAL void printFileInfo(const String       fileName,
          ratio,
          Crypt_getAlgorithmName(cryptAlgorithm),
          String_cString(fileName)
+        );
+}
+
+/***********************************************************************\
+* Name   : printLinkInfo
+* Purpose: print link information
+* Input  : 
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printDirectoryInfo(const String    directoryName,
+                              const FileInfo  *fileInfo,
+                              CryptAlgorithms cryptAlgorithm
+                             )
+{
+  assert(directoryName != NULL);
+  assert(fileInfo != NULL);
+
+  printf("DIR                                                       %-10s %s\n",
+         Crypt_getAlgorithmName(cryptAlgorithm),
+         String_cString(directoryName)
         );
 }
 
@@ -116,7 +139,7 @@ LOCAL void printLinkInfo(const String    linkName,
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
-  printf("                                                     %-10s %s -> %s\n",
+  printf("LINK                                                      %-10s %s -> %s\n",
          Crypt_getAlgorithmName(cryptAlgorithm),
          String_cString(linkName),
          String_cString(fileName)
@@ -149,7 +172,8 @@ bool command_list(StringList  *archiveFileNameList,
   failFlag  = FALSE;
   fileCount = 0;
   info(0,
-       "%-10s %-22s %-10s %-7s %-10s %s\n",
+       "%4s %-10s %-22s %-10s %-7s %-10s %s\n",
+       "Type",
        "Size",
        "Part",
        "Compress",
@@ -157,7 +181,7 @@ bool command_list(StringList  *archiveFileNameList,
        "Crypt",
        "Name"
       );
-  info(0,"--------------------------------------------------------------------------------\n");
+  info(0,"--------------------------------------------------------------------------------------------------------------\n");
   while (!StringLists_empty(archiveFileNameList))
   {
     StringLists_getFirst(archiveFileNameList,archiveFileName);
@@ -249,7 +273,45 @@ bool command_list(StringList  *archiveFileNameList,
           }
           break;
         case FILETYPE_DIRECTORY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          {
+            String   directoryName;
+            FileInfo fileInfo;
+
+            /* open archive lin */
+            directoryName = String_new();
+            error = Archive_readDirectoryEntry(&archiveInfo,
+                                               &archiveFileInfo,
+                                               &cryptAlgorithm,
+                                               directoryName,
+                                               &fileInfo
+                                              );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         getErrorText(error)
+                        );
+              String_delete(directoryName);
+              failFlag = TRUE;
+              break;
+            }
+
+            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                && !Patterns_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              /* output file info */
+              printDirectoryInfo(directoryName,
+                                 &fileInfo,
+                                 cryptAlgorithm
+                                );
+              fileCount++;
+            }
+
+            /* close archive file, free resources */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(directoryName);
+          }
           break;
         case FILETYPE_LINK:
           {
@@ -309,7 +371,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     /* close archive */
     Archive_close(&archiveInfo);
   }
-  info(0,"--------------------------------------------------------------------------------\n");
+  info(0,"--------------------------------------------------------------------------------------------------------------\n");
   info(0,"%lu file(s)\n",fileCount);
 
   /* free resources */

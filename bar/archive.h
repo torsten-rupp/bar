@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -219,7 +219,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo);
 * Purpose: add new file to archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
-*          fileName        - file name
+*          name            - file name
 *          fileInfo        - file info
 * Output : -
 * Return : ERROR_NONE or errorcode
@@ -228,7 +228,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo);
 
 Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
                             ArchiveFileInfo *archiveFileInfo,
-                            const String    fileName,
+                            const String    name,
                             const FileInfo  *fileInfo
                            );
 
@@ -237,7 +237,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
 * Purpose: add new directory to archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
-*          directoryName   - directory name
+*          name            - directory name
 *          fileInfo        - file info
 * Output : -
 * Return : ERROR_NONE or errorcode
@@ -246,7 +246,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
 
 Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
                                  ArchiveFileInfo *archiveFileInfo,
-                                 const String    directoryName,
+                                 const String    name,
                                  FileInfo        *fileInfo
                                 );
 
@@ -291,7 +291,7 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
 * Output : compressAlgorithm - used compression algorithm (can be NULL)
-*          fileName          - file name
+*          name              - file name
 *          fileInfo          - file info
 *          cryptAlgorithm    - use crypt algorithm (can be NULL)
 *          partOffset        - part offset (can be NULL)
@@ -304,7 +304,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                              ArchiveFileInfo    *archiveFileInfo,
                              CompressAlgorithms *compressAlgorithm,
                              CryptAlgorithms    *cryptAlgorithm,
-                             String             fileName,
+                             String             name,
                              FileInfo           *fileInfo,
                              uint64             *partOffset,
                              uint64             *partSize
@@ -315,9 +315,9 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 * Purpose: read file info from archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
-* Output : cryptAlgorithm    - use crypt algorithm (can be NULL)
-*          directoryName     - directory name
-*          fileInfo          - file info
+* Output : cryptAlgorithm - use crypt algorithm (can be NULL)
+*          name           - directory name
+*          fileInfo       - file info
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
@@ -325,7 +325,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
                                   ArchiveFileInfo *archiveFileInfo,
                                   CryptAlgorithms *cryptAlgorithm,
-                                  String          directoryName,
+                                  String          name,
                                   FileInfo        *fileInfo
                                  );
 

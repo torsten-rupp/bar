@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/archive_format.def,v $
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems : all
@@ -35,6 +35,12 @@ CHUNK DIRECTORY "DIR0" Directory
   uint16 cryptAlgorithm;
 
 CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
+  uint64 timeLastAccess
+  uint64 timeModified
+  uint64 timeLastChanged
+  uint32 userId
+  uint32 groupId
+  uint32 permission
   name name
 
 CHUNK LINK "LNK0" Link

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -382,9 +382,6 @@ LOCAL void collector(void)
                       appendFileToList(&fileList,fileName,FILETYPE_FILE);
                       break;
                     case FILETYPE_DIRECTORY:
-                      /* add to file list */
-                      appendFileToList(&fileList,name,FILETYPE_DIRECTORY);
-
                       /* add to name list */
                       StringLists_append(&nameList,fileName);
                       break;
@@ -574,7 +571,7 @@ bool command_create(const char      *archiveFileName,
           if (error != ERROR_NONE)
           {
             info(0,"fail\n");
-            printError("Cannot create new archive file '%s' (error: %s)\n",
+            printError("Cannot create new archive entry '%s' (error: %s)\n",
                        String_cString(fileName),
                        getErrorText(error)
                       );
@@ -634,7 +631,47 @@ bool command_create(const char      *archiveFileName,
         break;
       case FILETYPE_DIRECTORY:
         {
-          info(0,"still not supported - skipped\n");
+          FileInfo fileInfo;
+
+          /* get directory info */
+          error = Files_getFileInfo(fileName,&fileInfo);
+          if (error != ERROR_NONE)
+          {
+            info(0,"fail\n");
+            printError("Cannot get info for directory '%s' (error: %s)\n",
+                       String_cString(fileName),
+                       getErrorText(error)
+                      );
+            failFlag = TRUE;
+            continue;
+          }
+
+          /* new directory */
+          error = Archive_newDirectoryEntry(&archiveInfo,
+                                            &archiveFileInfo,
+                                            fileName,
+                                            &fileInfo
+                                           );
+          if (error != ERROR_NONE)
+          {
+            info(0,"fail\n");
+            printError("Cannot create new archive entry '%s' (error: %s)\n",
+                       String_cString(fileName),
+                       getErrorText(error)
+                      );
+            failFlag = TRUE;
+            break;
+          }
+
+          /* close archive entry */
+          Archive_closeEntry(&archiveFileInfo);
+
+          /* free resources */
+
+          /* update statistics */
+          statistics.includedCount++;
+
+          info(0,"ok\n");
         }
         break;
       case FILETYPE_LINK:
@@ -680,7 +717,7 @@ bool command_create(const char      *archiveFileName,
           if (error != ERROR_NONE)
           {
             info(0,"fail\n");
-            printError("Cannot create new archive file '%s' (error: %s)\n",
+            printError("Cannot create new archive entry '%s' (error: %s)\n",
                        String_cString(fileName),
                        getErrorText(error)
                       );

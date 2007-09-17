@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -171,7 +171,7 @@ bool command_restore(StringList  *archiveFileNameList,
             uint64     length;
             ulong      n;
 
-            /* get next file from archive */
+            /* read file */
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveFileInfo,
@@ -204,7 +204,7 @@ bool command_restore(StringList  *archiveFileNameList,
                                                            directoryStripCount
                                                           );
 
-              info(0,"Restore '%s'...",String_cString(destinationFileName));
+              info(0,"Restore file '%s'...",String_cString(destinationFileName));
 
               /* check if file exists */
               if (Files_exist(destinationFileName) && !globalOptions.overwriteFlag)
@@ -319,7 +319,91 @@ bool command_restore(StringList  *archiveFileNameList,
           }
           break;
         case FILETYPE_DIRECTORY:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          {
+            String   directoryName;
+            FileInfo fileInfo;
+            String   destinationFileName;
+            FileInfo localFileInfo;
+
+            /* read directory */
+            directoryName = String_new();
+            error = Archive_readDirectoryEntry(&archiveInfo,
+                                               &archiveFileInfo,
+                                               NULL,
+                                               directoryName,
+                                               &fileInfo
+                                              );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         getErrorText(error)
+                        );
+              String_delete(directoryName);
+              failFlag = TRUE;
+              break;
+            }
+
+            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                && !Patterns_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              /* get destination filename */
+              destinationFileName = getDestinationFileName(String_new(),
+                                                           directoryName,
+                                                           directory,
+                                                           directoryStripCount
+                                                          );
+
+              info(0,"Restore directory '%s'...",String_cString(destinationFileName));
+
+              /* create directory */
+              error = Files_makeDirectory(destinationFileName);
+              if (error != ERROR_NONE)
+              {
+                info(0,"fail\n");
+                printError("Cannot create directory '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           getErrorText(error)
+                          );
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(directoryName);
+                failFlag = TRUE;
+                continue;
+              }
+
+              /* set file time, permissions, file owner/group */
+              error = Files_setFileInfo(destinationFileName,&fileInfo);
+              if (error != ERROR_NONE)
+              {
+                info(0,"fail\n");
+                printError("Cannot set directory info of '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           getErrorText(error)
+                          );
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(directoryName);
+                failFlag = TRUE;
+                continue;
+              }
+
+              /* free resources */
+              String_delete(destinationFileName);
+
+              info(0,"ok\n");
+            }
+            else
+            {
+              /* skip */
+              info(1,"Restore '%s'...skipped\n",String_cString(directoryName));
+            }
+
+            /* close archive file */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(directoryName);
+          }
           break;
         case FILETYPE_LINK:
           {
@@ -329,7 +413,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String   destinationFileName;
             FileInfo localFileInfo;
 
-            /* open archive link */
+            /* read link */
             linkName = String_new();
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
@@ -361,6 +445,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                                                            directory,
                                                            directoryStripCount
                                                           );
+
+              info(0,"Restore link '%s'...",String_cString(destinationFileName));
 
               /* create link */
               error = Files_link(destinationFileName,fileName);
@@ -399,6 +485,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
               /* free resources */
               String_delete(destinationFileName);
+
+              info(0,"ok\n");
             }
             else
             {
