@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -182,9 +182,9 @@ bool command_list(StringList  *archiveFileNameList,
        "Name"
       );
   info(0,"--------------------------------------------------------------------------------------------------------------\n");
-  while (!StringLists_empty(archiveFileNameList))
+  while (!StringList_empty(archiveFileNameList))
   {
-    StringLists_getFirst(archiveFileNameList,archiveFileName);
+    StringList_getFirst(archiveFileNameList,archiveFileName);
 
     /* open archive */
     error = Archive_open(&archiveInfo,
@@ -251,7 +251,7 @@ bool command_list(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -296,7 +296,7 @@ bool command_list(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !Patterns_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -341,7 +341,7 @@ bool command_list(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !Patterns_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {

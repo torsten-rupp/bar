@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -378,10 +378,10 @@ int main(int argc, const char *argv[])
     case COMMAND_RESTORE:
       {
         /* get archive files */
-        StringLists_init(&fileNameList);
+        StringList_init(&fileNameList);
         for (z = 1; z < argc; z++)
         {
-          StringLists_append(&fileNameList,String_newCString(argv[z]));
+          StringList_append(&fileNameList,String_newCString(argv[z]));
         }
 
         switch (command)
@@ -417,7 +417,7 @@ int main(int argc, const char *argv[])
         }
 
         /* free resources */
-        StringLists_done(&fileNameList,NULL);
+        StringList_done(&fileNameList,NULL);
       }
       break;
     default:

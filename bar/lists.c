@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -33,16 +33,7 @@
   extern "C" {
 #endif
 
-/***********************************************************************\
-* Name   : Lists_init
-* Purpose: initialise list
-* Input  : -
-* Output : -
-* Return : list or NULL on insufficient memory
-* Notes  : -
-\***********************************************************************/
-
-void Lists_init(void *list)
+void List_init(void *list)
 {
   assert(list != NULL);
 
@@ -51,18 +42,7 @@ void Lists_init(void *list)
   ((List*)list)->count = 0;
 }
 
-/***********************************************************************\
-* Name   : Lists_done
-* Purpose: deinitialize list
-* Input  : list             - list to free
-*          nodeFreeFunction - free function for single node or NULL
-*          userData         - user data for free function
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Lists_done(void *list, NodeFreeFunction nodeFreeFunction, void *userData)
+void List_done(void *list, NodeFreeFunction nodeFreeFunction, void *userData)
 {
   Node *node;
 
@@ -83,69 +63,34 @@ void Lists_done(void *list, NodeFreeFunction nodeFreeFunction, void *userData)
     {
       node = ((List*)list)->head;
       ((List*)list)->head = ((List*)list)->head->next;
-      free(node);
+      LIST_DELETE_NODE(node);
     }
   }
   ((List*)list)->tail  = NULL;
   ((List*)list)->count = 0;
 }
 
-/***********************************************************************\
-* Name   : Lists_new
-* Purpose: allocate new list
-* Input  : -
-* Output : -
-* Return : list or NULL on insufficient memory
-* Notes  : -
-\***********************************************************************/
-
-List *Lists_new(void)
+List *List_new(void)
 {
   List *list;
 
   list = (List*)malloc(sizeof(List));
   if (list == NULL) return NULL;
 
-  Lists_init(list);
-//fprintf(stderr,"%s,%d: new list %p\n",__FILE__,__LINE__,list);
+  List_init(list);
 
   return list;
 }
 
-/***********************************************************************\
-* Name   : Lists_delete
-* Purpose: free list
-* Input  : list             - list to free
-*          nodeFreeFunction - free function for single node or NULL
-*          userData         - user data for free function
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Lists_delete(void *list, NodeFreeFunction nodeFreeFunction, void *userData)
+void List_delete(void *list, NodeFreeFunction nodeFreeFunction, void *userData)
 {
   assert(list != NULL);
 
-  Lists_done(list,nodeFreeFunction,userData);\
+  List_done(list,nodeFreeFunction,userData);\
   free(list);
 }
 
-/***********************************************************************\
-* Name   : Lists_move
-* Purpose: move contents of list
-* Input  : fromList                        - from list
-*          toList                          - to list
-*          fromListFromNode,fromListToNode - from/to node (could be
-*                                            NULL)
-*          toListNextNode                  - insert node before nextNode
-*                                            (could be NULL)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Lists_move(void *fromList, void *toList, void *fromListFromNode, void *fromListToNode, void *toListNextNode)
+void List_move(void *fromList, void *toList, void *fromListFromNode, void *fromListToNode, void *toListNextNode)
 {
   Node *node;
   Node *nextNode;
@@ -159,27 +104,18 @@ void Lists_move(void *fromList, void *toList, void *fromListFromNode, void *from
   while (node != fromListToNode)
   {
     nextNode = node->next;
-    Lists_rem(fromList,node);
-    Lists_ins(toList,node,toListNextNode);
+    List_remove(fromList,node);
+    List_insert(toList,node,toListNextNode);
     node = nextNode;
   }
   if (node != NULL)
   {
-    Lists_rem(fromList,node);
-    Lists_ins(toList,node,toListNextNode);
+    List_remove(fromList,node);
+    List_insert(toList,node,toListNextNode);
   }
 }
 
-/***********************************************************************\
-* Name   : Lists_empty
-* Purpose: check if list is empty
-* Input  : list - list
-* Output : -
-* Return : TRUE if list is empty, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-unsigned long Lists_empty(void *list)
+unsigned long List_empty(void *list)
 {
   assert(list != NULL);
   assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
@@ -189,16 +125,7 @@ unsigned long Lists_empty(void *list)
   return (((List*)list)->count == 0);
 }
 
-/***********************************************************************\
-* Name   : Lists_count
-* Purpose: get number of elements in list
-* Input  : list - list to free
-* Output : -
-* Return : number of elements
-* Notes  : -
-\***********************************************************************/
-
-unsigned long Lists_count(void *list)
+unsigned long List_count(void *list)
 {
   assert(list != NULL);
   assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
@@ -208,18 +135,7 @@ unsigned long Lists_count(void *list)
   return ((List*)list)->count;
 }
 
-/***********************************************************************\
-* Name   : Lists_ins
-* Purpose: insert node into list
-* Input  : list     - list
-*          node     - node to insert
-*          nextNode - insert node before nextNode (could be NULL)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Lists_ins(void *list, void *node, void *nextNode)
+void List_insert(void *list, void *node, void *nextNode)
 {
   assert(list != NULL);
 
@@ -262,35 +178,15 @@ void Lists_ins(void *list, void *node, void *nextNode)
         );
 }
 
-/***********************************************************************\
-* Name   : Lists_add
-* Purpose: add node to end of list
-* Input  : list - list
-*          node - node to add
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Lists_add(void *list, void *node)
+void List_append(void *list, void *node)
 {
   assert(list != NULL);
   assert(node != NULL);
 
-  Lists_ins(list,node,NULL);
+  List_insert(list,node,NULL);
 }
 
-/***********************************************************************\
-* Name   : Lists_rem
-* Purpose: remove node from list
-* Input  : list - list
-*          node - node to remove
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Lists_rem(void *list, void *node)
+void List_remove(void *list, void *node)
 {
   assert(list != NULL);
   assert(((List*)list)->head != NULL);
@@ -309,50 +205,32 @@ void Lists_rem(void *list, void *node)
         );
 }
 
-/***********************************************************************\
-* Name   : Lists_getFirst
-* Purpose: remove first node from list
-* Input  : list - list
-* Output : -
-* Return : removed node or NULL if list is empty
-* Notes  : -
-\***********************************************************************/
-
-Node *Lists_getFirst(void *list)
+Node *List_getFirst(void *list)
 {
   Node *node;
 
   assert(list != NULL);
 
   node = ((List*)list)->head;
-  if (node != NULL) Lists_rem(list,node);
+  if (node != NULL) List_remove(list,node);
 
   return node;
 }
 
-/***********************************************************************\
-* Name   : Lists_getLast
-* Purpose: remove last node from list
-* Input  : list - list
-* Output : -
-* Return : removed node or NULL if list is empty
-* Notes  : -
-\***********************************************************************/
-
-Node *Lists_getLast(void *list)
+Node *List_getLast(void *list)
 {
   Node *node;
 
   assert(list != NULL);
 
   node = ((List*)list)->tail;
-  if (node != NULL) Lists_rem(list,node);
+  if (node != NULL) List_remove(list,node);
 
   return node;
 }
 
 /***********************************************************************\
-* Name   : Lists_findFirst
+* Name   : List_findFirst
 * Purpose: find node in list
 * Input  : list                - list
 *          nodeCompareFunction - compare function
@@ -362,7 +240,7 @@ Node *Lists_getLast(void *list)
 * Notes  : -
 \***********************************************************************/
 
-Node *Lists_findFirst(void *list, NodeCompareFunction nodeCompareFunction, void *userData)
+Node *List_findFirst(void *list, NodeCompareFunction nodeCompareFunction, void *userData)
 {
   Node *node;
 
@@ -378,19 +256,7 @@ Node *Lists_findFirst(void *list, NodeCompareFunction nodeCompareFunction, void 
   return node;
 }
 
-/***********************************************************************\
-* Name   : Lists_findNext
-* Purpose: find next node in list
-* Input  : list                - list
-*          node                - previous found node
-*          nodeCompareFunction - compare function
-*          userData            - user data for compare function
-* Output : -
-* Return : next node or NULL if no next node found
-* Notes  : -
-\***********************************************************************/
-
-Node *Lists_findNext(void *list, void *node, NodeCompareFunction nodeCompareFunction, void *userData)
+Node *List_findNext(void *list, void *node, NodeCompareFunction nodeCompareFunction, void *userData)
 {
   assert(list != NULL);
   assert(nodeCompareFunction != NULL);

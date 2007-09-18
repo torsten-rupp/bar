@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -180,6 +180,34 @@ LOCAL Errors getNextChunkHeader(ArchiveInfo *archiveInfo, ChunkHeader *chunkHead
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : ungetNextChunkHeader
+* Purpose: restore chunk header for next read
+* Input  : archiveInfo - archive info block
+*          chunkHeader - read chunk header
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void ungetNextChunkHeader(ArchiveInfo *archiveInfo, ChunkHeader *chunkHeader)
+{
+  assert(archiveInfo != NULL);
+  assert(chunkHeader != NULL);
+
+  archiveInfo->nextChunkHeaderReadFlag = TRUE;
+  archiveInfo->nextChunkHeader         = (*chunkHeader);
+}
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo, ulong headerLength, bool headerWrittenFlag)
 {
   bool   newPartFlag;
@@ -211,6 +239,15 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo, ulong headerLength, bool
   return newPartFlag;
 }
 
+/***********************************************************************\
+* Name   : openArchiveFile
+* Purpose: create and open new archive file
+* Input  : archiveInfo - archive info block
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
 {
   String fileName;
@@ -219,7 +256,6 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
   assert(archiveInfo != NULL);
   assert(!archiveInfo->fileOpenFlag);
 
-  /* open file */
   /* get output filename */
   if (archiveInfo->partSize > 0)
   {
@@ -246,6 +282,15 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
 
   return ERROR_NONE;
 }
+
+/***********************************************************************\
+* Name   : closeArchiveFile
+* Purpose: close archive file
+* Input  : archiveInfo - archive info block
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
 
 LOCAL void closeArchiveFile(ArchiveInfo *archiveInfo)
 {
@@ -278,6 +323,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
   assert(archiveFileInfo != NULL);
 
   /* check if split necessary */
+#if 0
   newPartFlag = FALSE;
   if (archiveFileInfo->archiveInfo->partSize > 0)
   {
@@ -301,6 +347,9 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
       }
     }
   }
+#else
+  newPartFlag = checkNewPartNeeded(archiveFileInfo->archiveInfo,archiveFileInfo->headerLength,archiveFileInfo->headerWrittenFlag);
+#endif /* 0 */
 
   /* split */
   if (newPartFlag)
@@ -447,7 +496,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
     /* calculate max. length of data which can be written into this part */
 //        freeBlocks = (archiveFileInfo->archiveInfo->partSize-(size+n))/archiveFileInfo->blockLength;
 
-    /* open file */
+    /* create file */
     if (!archiveFileInfo->archiveInfo->fileOpenFlag)
     {
       error = openArchiveFile(archiveFileInfo->archiveInfo);
@@ -1184,8 +1233,7 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
   }
 
   /* store chunk header for read */
-  archiveInfo->nextChunkHeaderReadFlag = TRUE;
-  archiveInfo->nextChunkHeader         = chunkHeader;
+  ungetNextChunkHeader(archiveInfo,&chunkHeader);
 
   return ERROR_NONE;
 }

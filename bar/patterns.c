@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -73,14 +73,14 @@ void Patterns_newList(PatternList *patternList)
 {
   assert(patternList != NULL);
 
-  Lists_init(patternList);
+  List_init(patternList);
 }
 
 void Patterns_deleteList(PatternList *patternList)
 {
   assert(patternList != NULL);
 
-  Lists_done(patternList,(void(*)(void *,void *))freePatternNode,NULL);
+  List_done(patternList,(void(*)(void *,void *))freePatternNode,NULL);
 }
 
 Errors Patterns_addList(PatternList  *patternList,
@@ -96,7 +96,7 @@ Errors Patterns_addList(PatternList  *patternList,
   assert(pattern != NULL);
 
   /* allocate pattern node */
-  patternNode = (PatternNode*)malloc(sizeof(PatternNode));
+  patternNode = LIST_NEW_NODE(PatternNode);
   if (patternNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -155,7 +155,7 @@ Errors Patterns_addList(PatternList  *patternList,
   regfree(&regex);
 
   /* add to list */
-  Lists_add(patternList,patternNode);
+  List_append(patternList,patternNode);
 
   return ERROR_NONE;
 }

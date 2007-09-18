@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -202,7 +202,7 @@ LOCAL void appendFileToList(FileList  *fileList,
   assert(fileName != NULL);
 
   /* allocate node */
-  fileNode = (FileNode*)malloc(sizeof(FileNode));
+  fileNode = LIST_NEW_NODE(FileNode);
   if (fileNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -212,11 +212,11 @@ LOCAL void appendFileToList(FileList  *fileList,
 
   /* add */
   lockFileList();
-  if (Lists_count(fileList) >= MAX_FILENAME_LIST_ENTRIES)
+  if (List_count(fileList) >= MAX_FILENAME_LIST_ENTRIES)
   {
     waitFileListModified();
   }
-  Lists_add(fileList,fileNode);
+  List_append(fileList,fileNode);
   unlockFileList();
 
   /* send signal to waiting threads */
@@ -235,6 +235,8 @@ LOCAL void appendFileToList(FileList  *fileList,
 LOCAL void freeFileNode(FileNode *fileNode, void *userData)
 {
   assert(fileNode != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   String_delete(fileNode->fileName);
 }
@@ -257,11 +259,11 @@ LOCAL bool getNextFile(String fileName, FileTypes *fileType)
   assert(fileType != NULL);
 
   lockFileList();
-  fileNode = (FileNode*)Lists_getFirst(&fileList);
+  fileNode = (FileNode*)List_getFirst(&fileList);
   while ((fileNode == NULL) && !collectorThreadExitFlag)
   {
     waitFileListModified();
-    fileNode = (FileNode*)Lists_getFirst(&fileList);
+    fileNode = (FileNode*)List_getFirst(&fileList);
   }
   unlockFileList();
   signalFileListModified();
@@ -304,7 +306,7 @@ LOCAL void collector(void)
   assert(collectorThreadIncludePatternList != NULL);
   assert(collectorThreadExcludePatternList != NULL);
 
-  StringLists_init(&nameList);
+  StringList_init(&nameList);
   name = String_new();
 
   includePatternNode = collectorThreadIncludePatternList->head;
@@ -331,11 +333,11 @@ LOCAL void collector(void)
     Files_doneSplitFileName(&fileNameTokenizer);
 
     /* find files */
-    StringLists_append(&nameList,basePath);
-    while (!collectorThreadExitFlag && !StringLists_empty(&nameList))
+    StringList_append(&nameList,basePath);
+    while (!collectorThreadExitFlag && !StringList_empty(&nameList))
     {
       /* get next directory to process */
-      name = StringLists_getFirst(&nameList,name);
+      name = StringList_getFirst(&nameList,name);
       if (   checkIsIncluded(includePatternNode,name)
           && !checkIsExcluded(collectorThreadExcludePatternList,name)
          )
@@ -383,7 +385,7 @@ LOCAL void collector(void)
                       break;
                     case FILETYPE_DIRECTORY:
                       /* add to name list */
-                      StringLists_append(&nameList,fileName);
+                      StringList_append(&nameList,fileName);
                       break;
                     case FILETYPE_LINK:
                       /* add to file list */
@@ -443,7 +445,7 @@ LOCAL void collector(void)
 
   /* free resoures */
   String_delete(name);
-  StringLists_done(&nameList,NULL);
+  StringList_done(&nameList,NULL);
 }
 
 /*---------------------------------------------------------------------*/
@@ -485,7 +487,7 @@ bool command_create(const char      *archiveFileName,
   }
 
   /* init file name list, list locka and list signal */
-  Lists_init(&fileList);
+  List_init(&fileList);
   if (pthread_mutex_init(&fileListLock,NULL) != 0)
   {
     HALT_FATAL_ERROR("Cannot initialise filename list lock semaphore!");
@@ -525,7 +527,7 @@ bool command_create(const char      *archiveFileName,
     pthread_join(collectorThread,NULL);
 
     /* free resources */
-    Lists_done(&fileList,(NodeFreeFunction)freeFileNode,NULL);
+    List_done(&fileList,(NodeFreeFunction)freeFileNode,NULL);
     pthread_cond_destroy(&fileListModified);
     pthread_mutex_destroy(&fileListLock);
     free(buffer);
@@ -755,7 +757,7 @@ bool command_create(const char      *archiveFileName,
   pthread_join(collectorThread,NULL);
 
   /* free resources */
-  Lists_done(&fileList,(NodeFreeFunction)freeFileNode,NULL);
+  List_done(&fileList,(NodeFreeFunction)freeFileNode,NULL);
   pthread_cond_destroy(&fileListModified);
   pthread_mutex_destroy(&fileListLock);
   free(buffer);

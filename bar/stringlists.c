@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -57,90 +57,90 @@ LOCAL void freeStringNode(StringNode *stringNode, void *userData)
 
 /*---------------------------------------------------------------------*/
 
-void StringLists_init(StringList *stringList)
+void StringList_init(StringList *stringList)
 {
   assert(stringList != NULL);
 
-  Lists_init(stringList);
+  List_init(stringList);
 }
 
-void StringLists_done(StringList *stringList, void *userData)
+void StringList_done(StringList *stringList, void *userData)
 {
   assert(stringList != NULL);
 
-  Lists_done(stringList,(NodeFreeFunction)freeStringNode,userData);
+  List_done(stringList,(NodeFreeFunction)freeStringNode,userData);
 }
 
-StringList *StringLists_new(void)
+StringList *StringList_new(void)
 {
-  return (StringList*)Lists_new();
+  return (StringList*)List_new();
 }
 
-void StringLists_delete(StringList *stringList, void *userData)
-{
-  assert(stringList != NULL);
-
-  Lists_delete(stringList,(NodeFreeFunction)freeStringNode,userData);
-}
-
-unsigned long StringLists_empty(StringList *stringList)
+void StringList_delete(StringList *stringList, void *userData)
 {
   assert(stringList != NULL);
 
-  return Lists_empty(stringList);
+  List_delete(stringList,(NodeFreeFunction)freeStringNode,userData);
 }
 
-unsigned long StringLists_count(StringList *stringList)
+unsigned long StringList_empty(StringList *stringList)
 {
   assert(stringList != NULL);
 
-  return Lists_count(stringList);
+  return List_empty(stringList);
 }
 
-void StringLists_insert(StringList *stringList, String string, void *nextNode)
+unsigned long StringList_count(StringList *stringList)
+{
+  assert(stringList != NULL);
+
+  return List_count(stringList);
+}
+
+void StringList_insert(StringList *stringList, String string, void *nextNode)
 {
   StringNode *stringNode;
 
   assert(stringList != NULL);
 
-  stringNode = (StringNode*)malloc(sizeof(StringNode));
+  stringNode = LIST_NEW_NODE(StringNode);
   if (stringNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   stringNode->string = String_copy(string);
-  Lists_ins(stringList,stringNode,nextNode);
+  List_insert(stringList,stringNode,nextNode);
 }
 
-void StringLists_append(StringList *stringList, String string)
+void StringList_append(StringList *stringList, String string)
 {
   StringNode *stringNode;
 
   assert(stringList != NULL);
 
-  stringNode = (StringNode*)malloc(sizeof(StringNode));
+  stringNode = LIST_NEW_NODE(StringNode);
   if (stringNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   stringNode->string = String_copy(string);
-  Lists_add(stringList,stringNode);
+  List_append(stringList,stringNode);
 }
 
-void StringLists_remove(StringList *stringList, StringNode *stringNode)
+void StringList_remove(StringList *stringList, StringNode *stringNode)
 {
   assert(stringList != NULL);
   assert(stringNode != NULL);
 }
 
-String StringLists_getFirst(StringList *stringList, String string)
+String StringList_getFirst(StringList *stringList, String string)
 {
   StringNode *stringNode;
   assert(string != NULL);
 
   assert(stringList != NULL);
 
-  stringNode = (StringNode*)Lists_getFirst(stringList);
+  stringNode = (StringNode*)List_getFirst(stringList);
   if (stringNode != NULL)
   {
     String_set(string,stringNode->string);
@@ -155,14 +155,14 @@ String StringLists_getFirst(StringList *stringList, String string)
   return string;
 }
 
-String StringLists_getLast(StringList *stringList, String string)
+String StringList_getLast(StringList *stringList, String string)
 {
   StringNode *stringNode;
 
   assert(stringList != NULL);
   assert(string != NULL);
 
-  stringNode = (StringNode*)Lists_getLast(stringList);
+  stringNode = (StringNode*)List_getLast(stringList);
   if (stringNode != NULL)
   {
     String_set(string,stringNode->string);

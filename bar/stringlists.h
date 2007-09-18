@@ -1,15 +1,15 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems : all
 *
 \***********************************************************************/
 
-#ifndef __STRINGLISTS__
-#define __STRINGLISTS__
+#ifndef __STRING_LISTS__
+#define __STRING_LISTS__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -50,7 +50,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : StringLists_init
+* Name   : StringList_init
 * Purpose: initialise string list
 * Input  : stringList - string list to initialize
 * Output : -
@@ -58,10 +58,10 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-void StringLists_init(StringList *stringList);
+void StringList_init(StringList *stringList);
 
 /***********************************************************************\
-* Name   : StringLists_done
+* Name   : StringList_done
 * Purpose: free a strings in list
 * Input  : list     - list to free
 *          userData - user data for free function
@@ -70,10 +70,10 @@ void StringLists_init(StringList *stringList);
 * Notes  : -
 \***********************************************************************/
 
-void StringLists_done(StringList *stringList, void *userData);
+void StringList_done(StringList *stringList, void *userData);
 
 /***********************************************************************\
-* Name   : StringLists_new
+* Name   : StringList_new
 * Purpose: allocate new string list
 * Input  : -
 * Output : -
@@ -81,10 +81,10 @@ void StringLists_done(StringList *stringList, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-StringList *StringLists_new(void);
+StringList *StringList_new(void);
 
 /***********************************************************************\
-* Name   : StringLists_delete
+* Name   : StringList_delete
 * Purpose: free all strings and delete string list
 * Input  : stringList - list to free
 *          userData   - user data for free function
@@ -93,10 +93,10 @@ StringList *StringLists_new(void);
 * Notes  : -
 \***********************************************************************/
 
-void StringLists_delete(StringList *stringList, void *userData);
+void StringList_delete(StringList *stringList, void *userData);
 
 /***********************************************************************\
-* Name   : StringLists_empty
+* Name   : StringList_empty
 * Purpose: check if list is empty
 * Input  : stringList - string list
 * Output : -
@@ -104,10 +104,10 @@ void StringLists_delete(StringList *stringList, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-unsigned long StringLists_empty(StringList *stringList);
+unsigned long StringList_empty(StringList *stringList);
 
 /***********************************************************************\
-* Name   : StringLists_count
+* Name   : StringList_count
 * Purpose: get number of elements in list
 * Input  : stringList - string list
 * Output : -
@@ -115,10 +115,10 @@ unsigned long StringLists_empty(StringList *stringList);
 * Notes  : -
 \***********************************************************************/
 
-unsigned long StringLists_count(StringList *stringList);
+unsigned long StringList_count(StringList *stringList);
 
 /***********************************************************************\
-* Name   : StringLists_insert
+* Name   : StringList_insert
 * Purpose: insert string into list
 * Input  : stringList - string list
 *          string     - string to insert
@@ -128,10 +128,10 @@ unsigned long StringLists_count(StringList *stringList);
 * Notes  : -
 \***********************************************************************/
 
-void StringLists_insert(StringList *stringList, String string, void *nextNode);
+void StringList_insert(StringList *stringList, String string, void *nextNode);
 
 /***********************************************************************\
-* Name   : StringLists_append
+* Name   : StringList_append
 * Purpose: add string to end of list
 * Input  : stringList - string list
 *          string     - string to append to list
@@ -140,10 +140,10 @@ void StringLists_insert(StringList *stringList, String string, void *nextNode);
 * Notes  : -
 \***********************************************************************/
 
-void StringLists_append(StringList *stringList, String string);
+void StringList_append(StringList *stringList, String string);
 
 /***********************************************************************\
-* Name   : StringLists_remove
+* Name   : StringList_remove
 * Purpose: remove string node from list
 * Input  : stringList - string list
 *          stringNode - string node to remove
@@ -152,10 +152,10 @@ void StringLists_append(StringList *stringList, String string);
 * Notes  : -
 \***********************************************************************/
 
-void StringLists_remove(StringList *stringList, StringNode *stringNode);
+void StringList_remove(StringList *stringList, StringNode *stringNode);
 
 /***********************************************************************\
-* Name   : StringLists_getFirst
+* Name   : StringList_getFirst
 * Purpose: remove first string from list
 * Input  : stringList - string list
 *          string     - string variable
@@ -164,10 +164,10 @@ void StringLists_remove(StringList *stringList, StringNode *stringNode);
 * Notes  : -
 \***********************************************************************/
 
-String StringLists_getFirst(StringList *stringList, String string);
+String StringList_getFirst(StringList *stringList, String string);
 
 /***********************************************************************\
-* Name   : StringLists_getLast
+* Name   : StringList_getLast
 * Purpose: remove last string from list
 * Input  : stringList - string list
 *          string     - string variable
@@ -176,12 +176,12 @@ String StringLists_getFirst(StringList *stringList, String string);
 * Notes  : -
 \***********************************************************************/
 
-String StringLists_getLast(StringList *stringList, String string);
+String StringList_getLast(StringList *stringList, String string);
 
 #ifdef __cplusplus
   }
 #endif
 
-#endif /* __STRINGLISTS__ */
+#endif /* __STRING_LISTS__ */
 
 /* end of file */

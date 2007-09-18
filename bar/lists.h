@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -49,6 +49,9 @@ typedef int(*NodeCompareFunction)(void *node, void *userData);
 
 /****************************** Macros *********************************/
 
+#define LIST_NEW_NODE(Type) (Type*)malloc(sizeof(Type))
+#define LIST_DELETE_NODE(node) free(node)
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -58,7 +61,7 @@ typedef int(*NodeCompareFunction)(void *node, void *userData);
 #endif
 
 /***********************************************************************\
-* Name   : Lists_init
+* Name   : List_init
 * Purpose: initialise list
 * Input  : list - list to initialize
 * Output : -
@@ -66,10 +69,10 @@ typedef int(*NodeCompareFunction)(void *node, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-void Lists_init(void *list);
+void List_init(void *list);
 
 /***********************************************************************\
-* Name   : Lists_done
+* Name   : List_done
 * Purpose: free all nodes
 * Input  : list             - list to free
 *          nodeFreeFunction - free function for single node or NULL
@@ -79,10 +82,10 @@ void Lists_init(void *list);
 * Notes  : -
 \***********************************************************************/
 
-void Lists_done(void *list, NodeFreeFunction nodeFreeFunction, void *userData);
+void List_done(void *list, NodeFreeFunction nodeFreeFunction, void *userData);
 
 /***********************************************************************\
-* Name   : Lists_new
+* Name   : List_new
 * Purpose: allocate new list
 * Input  : -
 * Output : -
@@ -90,10 +93,10 @@ void Lists_done(void *list, NodeFreeFunction nodeFreeFunction, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-List *Lists_new(void);
+List *List_new(void);
 
 /***********************************************************************\
-* Name   : Lists_delete
+* Name   : List_delete
 * Purpose: free all nodes and delete list
 * Input  : list             - list to free
 *          nodeFreeFunction - free function for single node or NULL
@@ -103,10 +106,10 @@ List *Lists_new(void);
 * Notes  : -
 \***********************************************************************/
 
-void Lists_delete(void *list, NodeFreeFunction nodeFreeFunction, void *userData);
+void List_delete(void *list, NodeFreeFunction nodeFreeFunction, void *userData);
 
 /***********************************************************************\
-* Name   : Lists_move
+* Name   : List_move
 * Purpose: move contents of list
 * Input  : fromList                        - from list
 *          toList                          - to list
@@ -119,10 +122,10 @@ void Lists_delete(void *list, NodeFreeFunction nodeFreeFunction, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-void Lists_move(void *fromList, void *toList, void *fromListFromNode, void *fromListToNode, void *toListNextNode);
+void List_move(void *fromList, void *toList, void *fromListFromNode, void *fromListToNode, void *toListNextNode);
 
 /***********************************************************************\
-* Name   : Lists_empty
+* Name   : List_empty
 * Purpose: check if list is empty
 * Input  : list - list
 * Output : -
@@ -130,10 +133,10 @@ void Lists_move(void *fromList, void *toList, void *fromListFromNode, void *from
 * Notes  : -
 \***********************************************************************/
 
-unsigned long Lists_empty(void *list);
+unsigned long List_empty(void *list);
 
 /***********************************************************************\
-* Name   : Lists_count
+* Name   : List_count
 * Purpose: get number of elements in list
 * Input  : list - list
 * Output : -
@@ -141,10 +144,10 @@ unsigned long Lists_empty(void *list);
 * Notes  : -
 \***********************************************************************/
 
-unsigned long Lists_count(void *list);
+unsigned long List_count(void *list);
 
 /***********************************************************************\
-* Name   : Lists_ins
+* Name   : List_ins
 * Purpose: insert node into list
 * Input  : list     - list
 *          node     - node to insert
@@ -154,11 +157,11 @@ unsigned long Lists_count(void *list);
 * Notes  : -
 \***********************************************************************/
 
-void Lists_ins(void *list, void *node, void *nextNode);
+void List_insert(void *list, void *node, void *nextNode);
 
 /***********************************************************************\
-* Name   : Lists_add
-* Purpose: add node to end of list
+* Name   : List_append
+* Purpose: append node to end of list
 * Input  : list - list
 *          node - node to add
 * Output : -
@@ -166,10 +169,10 @@ void Lists_ins(void *list, void *node, void *nextNode);
 * Notes  : -
 \***********************************************************************/
 
-void Lists_add(void *list, void *node);
+void List_append(void *list, void *node);
 
 /***********************************************************************\
-* Name   : Lists_rem
+* Name   : List_remove
 * Purpose: remove node from list
 * Input  : list - list
 *          node - node to remove
@@ -178,10 +181,10 @@ void Lists_add(void *list, void *node);
 * Notes  : -
 \***********************************************************************/
 
-void Lists_rem(void *list, void *node);
+void List_remove(void *list, void *node);
 
 /***********************************************************************\
-* Name   : Lists_getFirst
+* Name   : List_getFirst
 * Purpose: remove first node from list
 * Input  : list - list
 * Output : -
@@ -189,10 +192,10 @@ void Lists_rem(void *list, void *node);
 * Notes  : -
 \***********************************************************************/
 
-Node *Lists_getFirst(void *list);
+Node *List_getFirst(void *list);
 
 /***********************************************************************\
-* Name   : Lists_getLast
+* Name   : List_getLast
 * Purpose: remove last node from list
 * Input  : list - list
 * Output : -
@@ -200,10 +203,10 @@ Node *Lists_getFirst(void *list);
 * Notes  : -
 \***********************************************************************/
 
-Node *Lists_getLast(void *list);
+Node *List_getLast(void *list);
 
 /***********************************************************************\
-* Name   : Lists_findFirst
+* Name   : List_findFirst
 * Purpose: find node in list
 * Input  : list                - list
 *          nodeCompareFunction - compare function
@@ -213,10 +216,10 @@ Node *Lists_getLast(void *list);
 * Notes  : -
 \***********************************************************************/
 
-Node *Lists_findFirst(void *list, NodeCompareFunction nodeCompareFunction, void *userData);
+Node *List_findFirst(void *list, NodeCompareFunction nodeCompareFunction, void *userData);
 
 /***********************************************************************\
-* Name   : Lists_findNext
+* Name   : List_findNext
 * Purpose: find next node in list
 * Input  : list                - list
 *          node                - previous found node
@@ -227,7 +230,7 @@ Node *Lists_findFirst(void *list, NodeCompareFunction nodeCompareFunction, void 
 * Notes  : -
 \***********************************************************************/
 
-Node *Lists_findNext(void *list, void *node, NodeCompareFunction nodeCompareFunction, void *userData);
+Node *List_findNext(void *list, void *node, NodeCompareFunction nodeCompareFunction, void *userData);
 
 #ifdef __cplusplus
   }

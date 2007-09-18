@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.16 $
+# $Revision: 1.17 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -46,7 +46,7 @@ TEST_PASSWORD=franz_kafka
 #---------------------------------- rules ------------------------------------
 
 %.o:%.c
-	$(CC) $(CC_FLAGS) $(CC_DEFINES) $(for z,$(CC_INCLUDES),-I$z) -o $*.o -c $*.c
+	$(CC) $(CC_FLAGS) $(CC_DEFINES) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 %:%.o
 	$(LD) \
@@ -76,6 +76,7 @@ SOURCES =       bar.c \
                 lists.c \
                 strings.c \
                 stringlists.c \
+                filefragmentlists.c \
 
 OBJECTS = 	$(foreach z,$(SOURCES),$(subst .c,.o,$z)) \
                 archive_format.o \
@@ -112,7 +113,7 @@ archive_format.c: archive_format.def
 # do test
 .PHONY: test test1 test2 test3 test4 test_all
 test:
-	@$(MAKE) -s test1 test2 test3 test4 test_all
+	@$(MAKE) QUIET=1 -s test1 test2 test3 test4 test_all
 
 test1: bar
 	@$(ECHO_NO_LF) "Test 1: basic..."
@@ -150,10 +151,10 @@ test_all: bar
 .PHONY: standard_test
 standard_test: bar
 	$(RMRF) test/test.bar* test/restore
-	./bar -c test/test.bar test/data $(OPTIONS) 1>/dev/null
-	./bar -l test/test.bar* $(OPTIONS) 1>/dev/null
-	./bar -t test/test.bar* $(OPTIONS) 1>/dev/null
-	./bar -x test/test.bar* $(OPTIONS) --directory test/restore 1>/dev/null
+	./bar -c test/test.bar test/data $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -l test/test.bar* $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -t test/test.bar* $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -x test/test.bar* $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r test/data test/restore/test/data
         
 -include Makefile.depend
@@ -202,4 +203,5 @@ p3 pack3: bar
 	./bar -a data/data.bar -c "demo/abc*.dat"
 
 clean_data:
-	$(RMF) data/data.bar*
+	$(RMF) test/test.bar*
+	$(RMRF) test/restore
