@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -33,6 +33,12 @@
 #define MAX_BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
+
+typedef enum
+{
+  BLOCK_MODE_WRITE,
+  BLOCK_MODE_FLUSH,
+} BlockModes;
 
 /***************************** Variables *******************************/
 
@@ -200,11 +206,14 @@ LOCAL void ungetNextChunkHeader(ArchiveInfo *archiveInfo, ChunkHeader *chunkHead
 }
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : checkNewPartNeeded
+* Purpose: check if new file part should be created
+* Input  : archiveInfo - archive info block
+*          headerLength      - length of header data to write
+*          headerWrittenFlag - TRUE iff header already written
+*          minBytes          - additional space needed in archive file
 * Output : -
-* Return : -
+* Return : TRUE if new file part should be created, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -351,12 +360,14 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
 * Name   : writeDataBlock
 * Purpose: write data block to file: encrypt and split file
 * Input  : archiveFileInfo - archive file info block
+*          flushDataFlag   - TRUE iff remaining data is flushed to
+*                            archive
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
+LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockModes)
 {
   ulong  length;
   bool   newPartFlag;
@@ -366,11 +377,30 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
 
   assert(archiveFileInfo != NULL);
 
+  /* get compressed block */
+  Compress_getBlock(&archiveFileInfo->file.compressInfoData,
+                    archiveFileInfo->file.buffer,
+                    &length
+                   );         
+
+  if ((length > 0) || (blockModes == BLOCK_MODE_WRITE))
+  {
+    /* encrypt block */
+    error = Crypt_encrypt(&archiveFileInfo->file.cryptInfoData,
+                          archiveFileInfo->file.buffer,
+                          archiveFileInfo->blockLength
+                         );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
   /* check if split necessary */
   newPartFlag = checkNewPartNeeded(archiveFileInfo->archiveInfo,
                                    archiveFileInfo->file.headerLength,
                                    archiveFileInfo->file.headerWrittenFlag,
-                                   archiveFileInfo->archiveInfo->blockLength
+                                   ((length > 0) || (blockModes == BLOCK_MODE_WRITE))?archiveFileInfo->archiveInfo->blockLength:0
                                   );
 
   /* split */
@@ -415,30 +445,17 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
       archiveFileInfo->file.headerWrittenFlag = TRUE;
     }
 
-    /* get compressed block */
-    Compress_getBlock(&archiveFileInfo->file.compressInfoData,
-                      archiveFileInfo->file.buffer,
-                      &length
-                     );         
-
-    /* encrypt block */
-    error = Crypt_encrypt(&archiveFileInfo->file.cryptInfoData,
-                          archiveFileInfo->file.buffer,
-                          archiveFileInfo->blockLength
-                         );
-    if (error != ERROR_NONE)
+    if (length > 0)
     {
-      return error;
-    }
-
-    /* write block */
-    if (!Chunks_writeData(&archiveFileInfo->file.chunkInfoFileData,
-                          archiveFileInfo->file.buffer,
-                          archiveFileInfo->blockLength
-                         )
-       )
-    {
-      return ERROR_IO_ERROR;
+      /* write block */
+      if (!Chunks_writeData(&archiveFileInfo->file.chunkInfoFileData,
+                            archiveFileInfo->file.buffer,
+                            archiveFileInfo->blockLength
+                           )
+         )
+      {
+        return ERROR_IO_ERROR;
+      }
     }
 
     /* flush compress buffer */
@@ -577,30 +594,17 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
       archiveFileInfo->file.headerWrittenFlag = TRUE;
     }
 
-    /* get compressed block */
-    Compress_getBlock(&archiveFileInfo->file.compressInfoData,
-                      archiveFileInfo->file.buffer,
-                      &length
-                     );         
-
-    /* encrypt block */
-    error = Crypt_encrypt(&archiveFileInfo->file.cryptInfoData,
-                          archiveFileInfo->file.buffer,
-                          archiveFileInfo->blockLength
-                         );
-    if (error != ERROR_NONE)
+    if (length > 0)
     {
-      return error;
-    }
-
-    /* write block */
-    if (!Chunks_writeData(&archiveFileInfo->file.chunkInfoFileData,
-                          archiveFileInfo->file.buffer,
-                          archiveFileInfo->blockLength
-                         )
-       )
-    {
-      return ERROR_IO_ERROR;
+      /* write block */
+      if (!Chunks_writeData(&archiveFileInfo->file.chunkInfoFileData,
+                            archiveFileInfo->file.buffer,
+                            archiveFileInfo->blockLength
+                           )
+         )
+      {
+        return ERROR_IO_ERROR;
+      }
     }
   }
 
@@ -1914,11 +1918,16 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           Compress_flush(&archiveFileInfo->file.compressInfoData);
           while (!Compress_checkBlockIsEmpty(&archiveFileInfo->file.compressInfoData))
           {
-            error = writeDataBlock(archiveFileInfo);
+            error = writeDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
             if (error != ERROR_NONE)
             {
               return error;
             }
+          }
+          error = writeDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH);
+          if (error != ERROR_NONE)
+          {
+            return error;
           }
 
           /* update part size */
@@ -2066,7 +2075,7 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
     /* check if block can be encrypted and written */
     while (Compress_checkBlockIsFull(&archiveFileInfo->file.compressInfoData))
     {
-      error = writeDataBlock(archiveFileInfo);
+      error = writeDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
       if (error != ERROR_NONE)
       {
         return error;
