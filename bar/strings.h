@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -47,6 +47,14 @@ typedef char(*StringIterateFunction)(void *userData, char ch);
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define String_new()                          __String_new(__FILE__,__LINE__)
+  #define String_newCString(s)                  __String_newCString(__FILE__,__LINE__,s)
+  #define String_newChar(ch)                    __String_newChar(__FILE__,__LINE__,ch)
+  #define String_newBuffer(buffer,bufferLength) __String_newBuffer(__FILE__,__LINE__,buffer,bufferLength)
+  #define String_copy(fromString)               __String_copy(__FILE__,__LINE__,fromString)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -68,10 +76,17 @@ typedef char(*StringIterateFunction)(void *userData, char ch);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 String String_new(void);
 String String_newCString(const char *s);
 String String_newChar(char ch);
 String String_newBuffer(char *buffer, ulong bufferLength);
+#else /* not NDEBUG */
+String __String_new(const char *fileName, unsigned long lineNb);
+String __String_newCString(const char *fileName, unsigned long lineNb, const char *s);
+String __String_newChar(const char *fileName, unsigned long lineNb, char ch);
+String __String_newBuffer(const char *fileName, unsigned long lineNb, char *buffer, ulong bufferLength);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : String_delete
@@ -124,7 +139,11 @@ String String_setBuffer(String string, const char *buffer, ulong bufferLength);
 * Notes  : -
 \***********************************************************************/
 
-String String_copy(const String fromString);
+#ifdef NDEBUG
+String String_copy(String fromString);
+#else /* not NDEBUG */
+String __String_copy(const char *fileName, unsigned long lineNb, String fromString);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : String_sub
@@ -386,6 +405,10 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
 \***********************************************************************/
 
 bool String_parse(String string, const char *format, ...);
+
+#ifndef NDEBUG
+void String_debug(void);
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }

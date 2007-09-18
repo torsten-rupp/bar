@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -16,14 +16,17 @@
 #include <assert.h>
 
 #include "global.h"
+#ifndef NDEBUG
+  #include "lists.h"
+#endif /* not NDEBUG */
 
 #include "strings.h"
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define STRING_START_LENGTH 64 // string start length
-#define STRING_DELTA_LENGTH 32 // string delta increasing/decreasing
+#define STRING_START_LENGTH 64   // string start length
+#define STRING_DELTA_LENGTH 32   // string delta increasing/decreasing
 
 /***************************** Datatypes *******************************/
 typedef enum
@@ -58,7 +61,26 @@ struct __String
   char          *data;
 };
 
+#ifndef NDEBUG
+  typedef struct DebugStringNode
+  {
+    NODE_HEADER(struct DebugStringNode);
+
+    const char      *fileName;
+    unsigned long   lineNb;
+    struct __String *string;
+  } DebugStringNode;
+
+  typedef struct
+  {
+    LIST_HEADER(DebugStringNode);
+  } DebugStringList;
+#endif /* not NDEBUG */
+
 /***************************** Variables *******************************/
+#ifndef NDEBUG
+  DebugStringList debugStringList = LIST_STATIC_INIT;
+#endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
 
@@ -820,11 +842,21 @@ JAMAICA_HALT_NOT_YET_IMPLEMENTED();
   return TRUE;
 }
 
+#ifndef NDEBUG
+#endif /* not NDEBUG */
+
 /*---------------------------------------------------------------------*/
 
+#ifdef NDEBUG
 String String_new(void)
+#else /* not DEBUG */
+String __String_new(const char *fileName, unsigned long lineNb)
+#endif /* NDEBUG */
 {
   struct __String *string;
+  #ifndef NDEBUG
+    DebugStringNode *debugStringNode;;
+  #endif /* not NDEBUG */
 
   string = (struct __String*)malloc(sizeof(struct __String));
   if (string == NULL)
@@ -842,34 +874,70 @@ String String_new(void)
   string->maxLength = STRING_START_LENGTH;
   string->data[0]   = '\0';
 
+  #ifndef NDEBUG
+    debugStringNode = LIST_NEW_NODE(DebugStringNode);
+    if (debugStringNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    debugStringNode->fileName = fileName;
+    debugStringNode->lineNb   = lineNb;
+    debugStringNode->string   = string;
+    List_append(&debugStringList,debugStringNode);
+  #endif /* not NDEBUG */
+
   return string;
 }
 
+#ifdef NDEBUG
 String String_newCString(const char *s)
+#else /* not NDEBUG */
+String __String_newCString(const char *fileName, unsigned long lineNb, const char *s)
+#endif /* NDEBUG */
 {
   String string;
 
-  string = String_new();
+  #ifdef NDEBUG
+    string = String_new();
+  #else /* not DEBUG */
+    string = __String_new(fileName,lineNb);
+  #endif /* NDEBUG */
   String_setCString(string,s);
 
   return string;
 }
 
+#ifdef NDEBUG
 String String_newChar(char ch)
+#else /* not NDEBUG */
+String __String_newChar(const char *fileName, unsigned long lineNb, char ch)
+#endif /* NDEBUG */
 {
   String string;
 
-  string = String_new();
+  #ifdef NDEBUG
+    string = String_new();
+  #else /* not DEBUG */
+    string = __String_new(fileName,lineNb);
+  #endif /* NDEBUG */
   String_setChar(string,ch);
 
   return string;
 }
 
+#ifdef NDEBUG
 String String_newBuffer(char *buffer, ulong bufferLength)
+#else /* not NDEBUG */
+String __String_newBuffer(const char *fileName, unsigned long lineNb, char *buffer, ulong bufferLength)
+#endif /* NDEBUG */
 {
   String string;
 
-  string = String_new();
+  #ifdef NDEBUG
+    string = String_new();
+  #else /* not DEBUG */
+    string = __String_new(fileName,lineNb);
+  #endif /* NDEBUG */
   String_setBuffer(string,buffer,bufferLength);
 
   return string;
@@ -877,9 +945,31 @@ String String_newBuffer(char *buffer, ulong bufferLength)
 
 void String_delete(String string)
 {
+  #ifndef NDEBUG
+    DebugStringNode *debugStringNode;;
+  #endif /* not NDEBUG */
+
   if (string != NULL)
   {
     assert(string->data != NULL);
+
+    #ifndef NDEBUG
+      debugStringNode = debugStringList.head;
+      while ((debugStringNode != NULL) && (debugStringNode->string != string))
+      {
+        debugStringNode = debugStringNode->next;
+      }
+      if (debugStringNode != NULL)
+      {
+        List_remove(&debugStringList,debugStringNode);
+      }
+      else
+      {
+        fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list!\n",
+                string->data
+               );
+      }
+    #endif /* not NDEBUG */
 
     free(string->data);
     free(string);
@@ -979,7 +1069,11 @@ String String_setBuffer(String string, const char *buffer, ulong bufferLength)
   return string;
 }
 
+#ifdef NDEBUG
 String String_copy(String fromString)
+#else /* not NDEBUG */
+String __String_copy(const char *fileName, unsigned long lineNb, String fromString)
+#endif /* NDEBUG */
 {
   struct __String *string;
 
@@ -987,7 +1081,11 @@ String String_copy(String fromString)
   {
     assert(fromString->data != NULL);
 
-    string = String_new();
+    #ifdef NDEBUG
+      string = String_new();
+    #else /* not DEBUG */
+      string = __String_new(fileName,lineNb);
+    #endif /* NDEBUG */
     if (string == NULL)
     {
       return NULL;
@@ -1624,7 +1722,11 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
   stringTokenizer->separatorChars  = separatorChars;
   stringTokenizer->stringChars     = stringChars;
   stringTokenizer->skipEmptyTokens = skipEmptyTokens;
-  stringTokenizer->token           = String_new();
+  #ifdef NDEBUG
+    stringTokenizer->token         = String_new();
+  #else /* not DEBUG */
+    stringTokenizer->token         = __String_new(__FILE__,__LINE__);
+  #endif /* NDEBUG */
 }
 
 void String_doneTokenizer(StringTokenizer *stringTokenizer)
@@ -1724,6 +1826,26 @@ bool String_parse(String string, const char *format, ...)
 
   return result;
 }
+
+#ifndef NDEBUG
+void String_debug(void)
+{
+  #ifndef NDEBUG
+    DebugStringNode *debugStringNode;;
+  #endif /* not NDEBUG */
+
+  #ifndef NDEBUG
+    for (debugStringNode = debugStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
+    {
+      fprintf(stderr,"DEBUG WARNING: string '%s' allocated at %s, %ld!\n",
+              debugStringNode->string->data,
+              debugStringNode->fileName,
+              debugStringNode->lineNb
+             );
+    }
+  #endif /* not NDEBUG */
+}
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }
