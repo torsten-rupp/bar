@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -360,8 +360,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
 * Name   : writeDataBlock
 * Purpose: write data block to file: encrypt and split file
 * Input  : archiveFileInfo - archive file info block
-*          flushDataFlag   - TRUE iff remaining data is flushed to
-*                            archive
+*          blockModes      - block write mode; see BlockModes
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -382,19 +381,6 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMo
                     archiveFileInfo->file.buffer,
                     &length
                    );         
-
-  if ((length > 0) || (blockModes == BLOCK_MODE_WRITE))
-  {
-    /* encrypt block */
-    error = Crypt_encrypt(&archiveFileInfo->file.cryptInfoData,
-                          archiveFileInfo->file.buffer,
-                          archiveFileInfo->blockLength
-                         );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
 
   /* check if split necessary */
   newPartFlag = checkNewPartNeeded(archiveFileInfo->archiveInfo,
@@ -447,6 +433,16 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMo
 
     if (length > 0)
     {
+      /* encrypt block */
+      error = Crypt_encrypt(&archiveFileInfo->file.cryptInfoData,
+                            archiveFileInfo->file.buffer,
+                            archiveFileInfo->blockLength
+                           );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
       /* write block */
       if (!Chunks_writeData(&archiveFileInfo->file.chunkInfoFileData,
                             archiveFileInfo->file.buffer,
@@ -596,6 +592,16 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMo
 
     if (length > 0)
     {
+      /* encrypt block */
+      error = Crypt_encrypt(&archiveFileInfo->file.cryptInfoData,
+                            archiveFileInfo->file.buffer,
+                            archiveFileInfo->blockLength
+                           );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
       /* write block */
       if (!Chunks_writeData(&archiveFileInfo->file.chunkInfoFileData,
                             archiveFileInfo->file.buffer,
