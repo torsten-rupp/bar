@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -144,6 +144,10 @@ test_all: bar
 	for compress in $(COMPRESS_NAMES); do \
           for crypt in $(CRYPT_NAMES); do \
             $(MAKE) OPTIONS="--compress=$$compress --crypt=$$crypt --password=$(TEST_PASSWORD) -s 100000" standard_test; \
+            rc=$$?; \
+            if test $$rc -ne 0; then \
+              exit 1; \
+            fi; \
           done; \
         done
 	@$(ECHO) "ok"
