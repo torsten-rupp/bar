@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -48,6 +48,8 @@ typedef void(*NodeFreeFunction)(void *node, void *userData);
 typedef int(*NodeCompareFunction)(void *node, void *userData);
 
 /****************************** Macros *********************************/
+
+#define LIST_STATIC_INIT {NULL,NULL}
 
 #define LIST_NEW_NODE(Type) (Type*)malloc(sizeof(Type))
 #define LIST_DELETE_NODE(node) free(node)
