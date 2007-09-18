@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -29,6 +29,7 @@
 #include "patterns.h"
 #include "files.h"
 #include "archive.h"
+#include "filefragmentlists.h"
 
 #include "command_restore.h"
 
@@ -100,13 +101,15 @@ bool command_restore(StringList  *archiveFileNameList,
                      const char  *password
                     )
 {
-  byte            *buffer;
-  String          archiveFileName;
-  bool            failFlag;
-  Errors          error;
-  ArchiveInfo     archiveInfo;
-  ArchiveFileInfo archiveFileInfo;
-  FileTypes       fileType;
+  byte             *buffer;
+  FileFragmentList fileFragmentList;
+  String           archiveFileName;
+  bool             failFlag;
+  Errors           error;
+  ArchiveInfo      archiveInfo;
+  ArchiveFileInfo  archiveFileInfo;
+  FileTypes        fileType;
+  FileFragmentNode *fileFragmentNode;
 
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
@@ -118,12 +121,13 @@ bool command_restore(StringList  *archiveFileNameList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  FileFragmentList_init(&fileFragmentList);
   archiveFileName = String_new();
 
   failFlag = FALSE;
-  while (!StringLists_empty(archiveFileNameList))
+  while (!StringList_empty(archiveFileNameList))
   {
-    StringLists_getFirst(archiveFileNameList,archiveFileName);
+    StringList_getFirst(archiveFileNameList,archiveFileName);
 
     /* open archive */
     error = Archive_open(&archiveInfo,
@@ -162,14 +166,15 @@ bool command_restore(StringList  *archiveFileNameList,
       {
         case FILETYPE_FILE:
           {
-            String     fileName;
-            FileInfo   fileInfo;
-            uint64     partOffset,partSize;
-            String     destinationFileName;
-            FileInfo   localFileInfo;
-            FileHandle fileHandle;
-            uint64     length;
-            ulong      n;
+            String       fileName;
+            FileInfo     fileInfo;
+            uint64       partOffset,partSize;
+            FragmentList *fragmentList;
+            String       destinationFileName;
+            FileInfo     localFileInfo;
+            FileHandle   fileHandle;
+            uint64       length;
+            ulong        n;
 
             /* read file */
             fileName = String_new();
@@ -193,7 +198,7 @@ bool command_restore(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -206,16 +211,34 @@ bool command_restore(StringList  *archiveFileNameList,
 
               info(0,"Restore file '%s'...",String_cString(destinationFileName));
 
-              /* check if file exists */
-              if (Files_exist(destinationFileName) && !globalOptions.overwriteFlag)
+              /* check if file fragment exists */
+              fragmentList = FileFragmentList_findFragmentList(&fileFragmentList,fileName);
+              if (fragmentList != NULL)
               {
-                info(0,"skipped (file exists)\n");
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(fileName);
-                failFlag = TRUE;
-                continue;
+                if (!globalOptions.overwriteFlag && FileFragmentList_check(fragmentList,partOffset,partSize))
+                {
+                  info(0,"skipped (file part exists)\n");
+                  String_delete(destinationFileName);
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(fileName);
+                  failFlag = TRUE;
+                  continue;
+                }
               }
+              else
+              {
+                if (!globalOptions.overwriteFlag && Files_exist(destinationFileName))
+                {
+                  info(0,"skipped (file exists)\n");
+                  String_delete(destinationFileName);
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(fileName);
+                  failFlag = TRUE;
+                  continue;
+                }
+                fragmentList = FileFragmentList_addFile(&fileFragmentList,fileName,fileInfo.size);
+              }
+//FileFragmentList_print(fragmentList,String_cString(fileName));
 
               /* write file data */
               error = Files_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
@@ -285,6 +308,7 @@ bool command_restore(StringList  *archiveFileNameList,
                 String_delete(fileName);
                 continue;
               }
+              FileFragmentList_add(fragmentList,partOffset,partSize);
 
               /* set file time, permissions, file owner/group */
               error = Files_setFileInfo(destinationFileName,&fileInfo);
@@ -344,7 +368,7 @@ bool command_restore(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !Patterns_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -435,7 +459,7 @@ bool command_restore(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !Patterns_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -512,8 +536,19 @@ bool command_restore(StringList  *archiveFileNameList,
     Archive_close(&archiveInfo);
   }
 
+  /* check fragment lists */
+  for (fileFragmentNode = fileFragmentList.head; fileFragmentNode != NULL; fileFragmentNode = fileFragmentNode->next)
+  {
+    if (!FileFragmentList_checkComplete(fileFragmentNode))
+    {
+      info(0,"Warning: incomplete file '%s'\n",String_cString(fileFragmentNode->fileName));
+      failFlag = TRUE;
+    }
+  }
+
   /* free resources */
   String_delete(archiveFileName);
+  FileFragmentList_done(&fileFragmentList);
   free(buffer);
 
   return !failFlag;
