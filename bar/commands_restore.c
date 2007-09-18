@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -168,7 +168,7 @@ bool command_restore(StringList  *archiveFileNameList,
           {
             String           fileName;
             FileInfo         fileInfo;
-            uint64           partOffset,partSize;
+            uint64           fragmentOffset,fragmentSize;
             FileFragmentNode *fileFragmentNode;
             String           destinationFileName;
             FileInfo         localFileInfo;
@@ -184,8 +184,8 @@ bool command_restore(StringList  *archiveFileNameList,
                                           NULL,
                                           fileName,
                                           &fileInfo,
-                                          &partOffset,
-                                          &partSize
+                                          &fragmentOffset,
+                                          &fragmentSize
                                          );
             if (error != ERROR_NONE)
             {
@@ -215,7 +215,7 @@ bool command_restore(StringList  *archiveFileNameList,
               fileFragmentNode = FileFragmentList_findFile(&fileFragmentList,fileName);
               if (fileFragmentNode != NULL)
               {
-                if (!globalOptions.overwriteFlag && FileFragmentList_checkExists(fileFragmentNode,partOffset,partSize))
+                if (!globalOptions.overwriteFlag && FileFragmentList_checkExists(fileFragmentNode,fragmentOffset,fragmentSize))
                 {
                   info(0,"skipped (file part exists)\n");
                   String_delete(destinationFileName);
@@ -255,7 +255,7 @@ bool command_restore(StringList  *archiveFileNameList,
                 failFlag = TRUE;
                 continue;
               }
-              error = Files_seek(&fileHandle,partOffset);
+              error = Files_seek(&fileHandle,fragmentOffset);
               if (error != ERROR_NONE)
               {
                 info(0,"fail\n");
@@ -271,9 +271,9 @@ bool command_restore(StringList  *archiveFileNameList,
                 continue;
               }
               length = 0;
-              while (length < partSize)
+              while (length < fragmentSize)
               {
-                n = ((partSize-length) > BUFFER_SIZE)?BUFFER_SIZE:partSize-length;
+                n = MIN(fragmentSize-length,BUFFER_SIZE);
 
                 error = Archive_readFileData(&archiveFileInfo,buffer,n);
                 if (error != ERROR_NONE)
@@ -310,7 +310,7 @@ bool command_restore(StringList  *archiveFileNameList,
               }
 
               /* add fragment to file fragment list */
-              FileFragmentList_add(fileFragmentNode,partOffset,partSize);
+              FileFragmentList_add(fileFragmentNode,fragmentOffset,fragmentSize);
 
               /* set file time, permissions, file owner/group */
               error = Files_setFileInfo(destinationFileName,&fileInfo);

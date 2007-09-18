@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -164,7 +164,7 @@ bool command_test(StringList  *archiveFileNameList,
           {
             String           fileName;
             FileInfo         fileInfo;
-            uint64           partOffset,partSize;
+            uint64           fragmentOffset,fragmentSize;
             FileFragmentNode *fileFragmentNode;
 //            FileInfo   localFileInfo;
             FileHandle       fileHandle;
@@ -182,8 +182,8 @@ bool command_test(StringList  *archiveFileNameList,
                                           NULL,
                                           fileName,
                                           &fileInfo,
-                                          &partOffset,
-                                          &partSize
+                                          &fragmentOffset,
+                                          &fragmentSize
                                          );
             if (error != ERROR_NONE)
             {
@@ -263,7 +263,7 @@ bool command_test(StringList  *archiveFileNameList,
               }
 
               /* check file content */
-              error = Files_seek(&fileHandle,partOffset);
+              error = Files_seek(&fileHandle,fragmentOffset);
               if (error != ERROR_NONE)
               {
                 info(0,"fail\n");
@@ -279,9 +279,9 @@ bool command_test(StringList  *archiveFileNameList,
               }
               length    = 0;
               equalFlag = TRUE;
-              while ((length < partSize) && equalFlag)
+              while ((length < fragmentSize) && equalFlag)
               {
-                n = ((partSize-length) > BUFFER_SIZE)?BUFFER_SIZE:partSize-length;
+                n = MIN(fragmentSize-length,BUFFER_SIZE);
 
                 /* read archive, file */
                 error = Archive_readFileData(&archiveFileInfo,archiveBuffer,n);
@@ -342,16 +342,17 @@ bool command_test(StringList  *archiveFileNameList,
               }
               else
               {
-                info(0,"differ at offset %lld\n",
-                     String_cString(fileName),
-                     partOffset+length+diffIndex
+                info(0,"differ at offset %llu\n",
+                     fragmentOffset+length+diffIndex
                     );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
                 failFlag = TRUE;
                 continue;
               }
 
               /* add fragment to file fragment list */
-              FileFragmentList_add(fileFragmentNode,partOffset,partSize);
+              FileFragmentList_add(fileFragmentNode,fragmentOffset,fragmentSize);
 
               /* discard fragment list if file is complete */
               if (FileFragmentList_checkComplete(fileFragmentNode))

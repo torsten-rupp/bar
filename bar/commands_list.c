@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -67,8 +67,8 @@ LOCAL void printFileInfo(const String       fileName,
                          const FileInfo     *fileInfo,
                          CompressAlgorithms compressAlgorithm,
                          CryptAlgorithms    cryptAlgorithm,
-                         uint64             partOffset,
-                         uint64             partSize,
+                         uint64             fragmentOffset,
+                         uint64             fragmentSize,
                          uint64             archiveFileSize
                         )
 {
@@ -77,9 +77,9 @@ LOCAL void printFileInfo(const String       fileName,
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
-  if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (partSize > 0))
+  if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (fragmentSize > 0))
   {
-    ratio = 100.0-archiveFileSize*100.0/partSize;
+    ratio = 100.0-archiveFileSize*100.0/fragmentSize;
   }
   else
   {
@@ -88,8 +88,8 @@ LOCAL void printFileInfo(const String       fileName,
 
   printf("FILE %10llu %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
          fileInfo->size,
-         partOffset,
-         (partSize > 0)?partOffset+partSize-1:partOffset,
+         fragmentOffset,
+         (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset,
          Compress_getAlgorithmName(compressAlgorithm),
          ratio,
          Crypt_getAlgorithmName(cryptAlgorithm),
@@ -227,7 +227,7 @@ bool command_list(StringList  *archiveFileNameList,
             CompressAlgorithms compressAlgorithm;
             String             fileName;
             FileInfo           fileInfo;
-            uint64             partOffset,partSize;
+            uint64             fragmentOffset,fragmentSize;
 
             /* open archive file */
             fileName = String_new();
@@ -237,8 +237,8 @@ bool command_list(StringList  *archiveFileNameList,
                                           &cryptAlgorithm,
                                           fileName,
                                           &fileInfo,
-                                          &partOffset,
-                                          &partSize
+                                          &fragmentOffset,
+                                          &fragmentSize
                                          );
             if (error != ERROR_NONE)
             {
@@ -260,8 +260,8 @@ bool command_list(StringList  *archiveFileNameList,
                             &fileInfo,
                             compressAlgorithm,
                             cryptAlgorithm,
-                            partOffset,
-                            partSize,
+                            fragmentOffset,
+                            fragmentSize,
                             archiveFileInfo.file.chunkInfoFileData.size
                            );
               fileCount++;
