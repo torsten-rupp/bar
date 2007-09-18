@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/archive_format.def,v $
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems : all
@@ -27,8 +27,8 @@ CHUNK FILE_ENTRY "FENT" FileEntry
   name   name
 
 CHUNK FILE_DATA "FDAT" FileData
-  uint64 partOffset
-  uint64 partSize
+  uint64 fragmentOffset
+  uint64 fragmentSize
   data   data
 
 CHUNK DIRECTORY "DIR0" Directory

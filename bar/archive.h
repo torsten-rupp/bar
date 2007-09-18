@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -35,7 +35,7 @@
 typedef struct
 {
   String             fileName;                       // archive basename
-  uint64             partSize;                       // approximated part size
+  uint64             partSize;                       // approximated size of file part
   CompressAlgorithms compressAlgorithm;              // default compression algorithm
   ulong              compressMinFileSize;            // min. file size to use compression
   CryptAlgorithms    cryptAlgorithm;                 // default crypt algorithm
@@ -91,6 +91,9 @@ typedef struct
       CompressInfo        compressInfoData;          // data compress info
       CryptInfo           cryptInfoData;             // data cryption info
 
+      uint                headerLength;              // length of header
+      bool                headerWrittenFlag;         // TRUE iff header written
+
       byte                *buffer;
       ulong               bufferLength;
     } file;
@@ -110,12 +113,9 @@ typedef struct
 
       ChunkInfo           chunkInfoLinkEntry;        // chunk info block for link entry
       ChunkLinkEntry      chunkLinkEntry;            // link entry
-      CryptInfo           cryptInfoLinkEntry;        // link entry
+      CryptInfo           cryptInfoLinkEntry;        // link entry cryption info
     } link;
-
   };
-  uint                headerLength;                  // length of header
-  bool                headerWrittenFlag;             // TRUE iff header written
 } ArchiveFileInfo;
 
 /***************************** Variables *******************************/
@@ -294,8 +294,8 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
 *          name              - file name
 *          fileInfo          - file info
 *          cryptAlgorithm    - use crypt algorithm (can be NULL)
-*          partOffset        - part offset (can be NULL)
-*          partSize          - part size in bytes (can be NULL)
+*          fragmentOffset    - fragment offset (can be NULL)
+*          fragmentSize      - fragment size in bytes (can be NULL)
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
@@ -306,8 +306,8 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                              CryptAlgorithms    *cryptAlgorithm,
                              String             name,
                              FileInfo           *fileInfo,
-                             uint64             *partOffset,
-                             uint64             *partSize
+                             uint64             *fragmentOffset,
+                             uint64             *fragmentSize
                             );
 
 /***********************************************************************\

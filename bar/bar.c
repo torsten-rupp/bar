@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -305,10 +305,7 @@ LOCAL void done(void)
 
 int main(int argc, const char *argv[])
  {
-  int        z;
-  StringList fileNameList;
-  Errors     error;
-  int        exitcode;
+  int exitcode;
 
   /* init */
   if (!init())
@@ -345,6 +342,9 @@ int main(int argc, const char *argv[])
   {
     case COMMAND_CREATE:
       {
+        int    z;
+        Errors error;
+
         /* get archive filename */
         if (argc < 1)
         {
@@ -377,11 +377,14 @@ int main(int argc, const char *argv[])
     case COMMAND_TEST:
     case COMMAND_RESTORE:
       {
+        StringList fileNameList;
+        int        z;
+
         /* get archive files */
         StringList_init(&fileNameList);
         for (z = 1; z < argc; z++)
         {
-          StringList_append(&fileNameList,String_newCString(argv[z]));
+          StringList_appendCString(&fileNameList,argv[z]);
         }
 
         switch (command)
@@ -432,6 +435,10 @@ int main(int argc, const char *argv[])
 
   /* done */
   done();
+
+  #ifndef NDEBUG
+    String_debug();
+  #endif /* not NDEBUG */
 
   return exitcode;
  }

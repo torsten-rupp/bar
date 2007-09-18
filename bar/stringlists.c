@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -38,6 +38,32 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : insertString
+* Purpose: insert string in string list
+* Input  : stringList - string list
+*          string     - string to insert
+*          nextNode   - next string list node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void insertString(StringList *stringList, String string, StringNode *nextStringNode)
+{
+  StringNode *stringNode;
+
+  assert(stringList != NULL);
+
+  stringNode = LIST_NEW_NODE(StringNode);
+  if (stringNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  stringNode->string = string;
+  List_insert(stringList,stringNode,nextStringNode);
+}
 
 /***********************************************************************\
 * Name   : freeStringNode
@@ -97,34 +123,44 @@ unsigned long StringList_count(StringList *stringList)
   return List_count(stringList);
 }
 
-void StringList_insert(StringList *stringList, String string, void *nextNode)
+void StringList_insert(StringList *stringList, String string, StringNode *nextStringNode)
 {
-  StringNode *stringNode;
+  insertString(stringList,String_copy(string),nextStringNode);
+}
 
-  assert(stringList != NULL);
+void StringList_insertCString(StringList *stringList, const char *s, StringNode *nextStringNode)
+{
+  insertString(stringList,String_newCString(s),nextStringNode);
+}
 
-  stringNode = LIST_NEW_NODE(StringNode);
-  if (stringNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  stringNode->string = String_copy(string);
-  List_insert(stringList,stringNode,nextNode);
+void StringList_insertChar(StringList *stringList, char ch, StringNode *nextStringNode)
+{
+  insertString(stringList,String_newChar(ch),nextStringNode);
+}
+
+void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode)
+{
+  insertString(stringList,String_newBuffer(buffer,bufferLength),nextStringNode);
 }
 
 void StringList_append(StringList *stringList, String string)
 {
-  StringNode *stringNode;
+  insertString(stringList,String_copy(string),NULL);
+}
 
-  assert(stringList != NULL);
+void StringList_appendCString(StringList *stringList, const char *s)
+{
+  insertString(stringList,String_newCString(s),NULL);
+}
 
-  stringNode = LIST_NEW_NODE(StringNode);
-  if (stringNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  stringNode->string = String_copy(string);
-  List_append(stringList,stringNode);
+void StringList_appendChar(StringList *stringList, char ch)
+{
+  insertString(stringList,String_newChar(ch),NULL);
+}
+
+void StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferLength)
+{
+  insertString(stringList,String_newBuffer(buffer,bufferLength),NULL);
 }
 
 void StringList_remove(StringList *stringList, StringNode *stringNode)

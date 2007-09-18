@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -208,7 +208,11 @@ LOCAL void ungetNextChunkHeader(ArchiveInfo *archiveInfo, ChunkHeader *chunkHead
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo, ulong headerLength, bool headerWrittenFlag)
+LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
+                              ulong       headerLength,
+                              bool        headerWrittenFlag,
+                              ulong       minBytes
+                             )
 {
   bool   newPartFlag;
   uint64 fileSize;
@@ -228,9 +232,9 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo, ulong headerLength, bool
         /* file header cannot be written without fragmentation -> new part */
         newPartFlag = TRUE;
       }
-      else if ((fileSize+archiveInfo->blockLength) >= archiveInfo->partSize)
+      else if ((fileSize+minBytes) >= archiveInfo->partSize)
       {
-        /* less than one block left in part -> new part */
+        /* less than min. number of bytes left in part -> new part */
         newPartFlag = TRUE;
       }
     }
@@ -303,6 +307,47 @@ LOCAL void closeArchiveFile(ArchiveInfo *archiveInfo)
 }
 
 /***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
+                                ulong       minBytes
+                               )
+{
+  Errors error;
+
+  /* check if split necessary */
+  if (checkNewPartNeeded(archiveInfo,
+                         0,
+                         FALSE,
+                         minBytes
+                        )
+     )
+  {
+    /* split needed -> close file */
+    closeArchiveFile(archiveInfo);
+  }
+
+  /* open file if needed */
+  if (!archiveInfo->fileOpenFlag)
+  {
+    /* create file */
+    error = openArchiveFile(archiveInfo);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : writeDataBlock
 * Purpose: write data block to file: encrypt and split file
 * Input  : archiveFileInfo - archive file info block
@@ -314,7 +359,6 @@ LOCAL void closeArchiveFile(ArchiveInfo *archiveInfo)
 LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
 {
   ulong  length;
-  uint64 fileSize;
   bool   newPartFlag;
 //  ulong  n;
 //  ulong  freeBlocks;
@@ -323,39 +367,17 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
   assert(archiveFileInfo != NULL);
 
   /* check if split necessary */
-#if 0
-  newPartFlag = FALSE;
-  if (archiveFileInfo->archiveInfo->partSize > 0)
-  {
-    /* check if new file-part is needed */
-    if (archiveFileInfo->archiveInfo->fileOpenFlag)
-    {
-      /* get total file size */
-      fileSize = archiveFileInfo->file.chunkInfoFileData.offset+CHUNK_HEADER_SIZE+archiveFileInfo->file.chunkInfoFileData.size;
-
-      if      (   !archiveFileInfo->headerWrittenFlag
-               && (fileSize+archiveFileInfo->headerLength >= archiveFileInfo->archiveInfo->partSize)
-              )
-      {
-        /* file header cannot be written without fragmentation -> new part */
-        newPartFlag = TRUE;
-      }
-      else if ((fileSize+archiveFileInfo->blockLength) >= archiveFileInfo->archiveInfo->partSize)
-      {
-        /* less than one block left in part -> new part */
-        newPartFlag = TRUE;
-      }
-    }
-  }
-#else
-  newPartFlag = checkNewPartNeeded(archiveFileInfo->archiveInfo,archiveFileInfo->headerLength,archiveFileInfo->headerWrittenFlag);
-#endif /* 0 */
+  newPartFlag = checkNewPartNeeded(archiveFileInfo->archiveInfo,
+                                   archiveFileInfo->file.headerLength,
+                                   archiveFileInfo->file.headerWrittenFlag,
+                                   archiveFileInfo->archiveInfo->blockLength
+                                  );
 
   /* split */
   if (newPartFlag)
   {
     /* create chunk-headers */
-    if (!archiveFileInfo->headerWrittenFlag)
+    if (!archiveFileInfo->file.headerWrittenFlag)
     {
       if (!Chunks_create(&archiveFileInfo->file.chunkInfoFile,
                          CHUNK_ID_FILE,
@@ -390,7 +412,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
         return ERROR_IO_ERROR;
       }
 
-      archiveFileInfo->headerWrittenFlag = TRUE;
+      archiveFileInfo->file.headerWrittenFlag = TRUE;
     }
 
     /* get compressed block */
@@ -451,7 +473,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
     }
 
     /* update part size */
-    archiveFileInfo->file.chunkFileData.partSize = Compress_getInputLength(&archiveFileInfo->file.compressInfoData);
+    archiveFileInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveFileInfo->file.compressInfoData);
     if (!Chunks_update(&archiveFileInfo->file.chunkInfoFileData,
                        &archiveFileInfo->file.chunkFileData
                       )
@@ -473,7 +495,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
     {
       return ERROR_IO_ERROR;
     }
-    archiveFileInfo->headerWrittenFlag = FALSE;
+    archiveFileInfo->file.headerWrittenFlag = FALSE;
 
     /* close file */
     closeArchiveFile(archiveFileInfo->archiveInfo);
@@ -484,7 +506,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
   else
   {
     /* get size of space to reserve for chunk-header */
-    if (!archiveFileInfo->headerWrittenFlag || newPartFlag)
+    if (!archiveFileInfo->file.headerWrittenFlag || newPartFlag)
     {
 //      n = archiveFileInfo->headerLength;
     }
@@ -496,9 +518,10 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
     /* calculate max. length of data which can be written into this part */
 //        freeBlocks = (archiveFileInfo->archiveInfo->partSize-(size+n))/archiveFileInfo->blockLength;
 
-    /* create file */
+    /* open file if needed */
     if (!archiveFileInfo->archiveInfo->fileOpenFlag)
     {
+      /* create file */
       error = openArchiveFile(archiveFileInfo->archiveInfo);
       if (error != ERROR_NONE)
       {
@@ -506,17 +529,17 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
       }
 
       /* initialise variables */
-      archiveFileInfo->headerWrittenFlag = FALSE;
+      archiveFileInfo->file.headerWrittenFlag = FALSE;
 
-      archiveFileInfo->file.chunkFileData.partOffset = archiveFileInfo->file.chunkFileData.partOffset+archiveFileInfo->file.chunkFileData.partSize;
-      archiveFileInfo->file.chunkFileData.partSize   = 0;
+      archiveFileInfo->file.chunkFileData.fragmentOffset = archiveFileInfo->file.chunkFileData.fragmentOffset+archiveFileInfo->file.chunkFileData.fragmentSize;
+      archiveFileInfo->file.chunkFileData.fragmentSize   = 0;
   
       /* reset data crypt */
       Crypt_reset(&archiveFileInfo->file.cryptInfoData,0);
     }
 
     /* create chunk-headers */
-    if (!archiveFileInfo->headerWrittenFlag)
+    if (!archiveFileInfo->file.headerWrittenFlag)
     {
       if (!Chunks_create(&archiveFileInfo->file.chunkInfoFile,
                          CHUNK_ID_FILE,
@@ -551,7 +574,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo)
         return ERROR_IO_ERROR;
       }
 
-      archiveFileInfo->headerWrittenFlag = TRUE;
+      archiveFileInfo->file.headerWrittenFlag = TRUE;
     }
 
     /* get compressed block */
@@ -789,14 +812,14 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->file.chunkFileEntry.permission      = fileInfo->permission;
   archiveFileInfo->file.chunkFileEntry.name            = String_copy(name);
 
-  archiveFileInfo->file.chunkFileData.partOffset       = 0;
-  archiveFileInfo->file.chunkFileData.partSize         = 0;
+  archiveFileInfo->file.chunkFileData.fragmentOffset   = 0;
+  archiveFileInfo->file.chunkFileData.fragmentSize     = 0;
+
+  archiveFileInfo->file.headerLength                   = 0;
+  archiveFileInfo->file.headerWrittenFlag              = FALSE;
 
   archiveFileInfo->file.buffer                         = NULL;
   archiveFileInfo->file.bufferLength                   = 0;
-
-  archiveFileInfo->headerLength                        = 0;
-  archiveFileInfo->headerWrittenFlag                   = FALSE;
 
   /* init file-chunk */
   if (!Chunks_new(&archiveFileInfo->file.chunkInfoFile,
@@ -905,9 +928,9 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   }
 
   /* calculate header length */
-  archiveFileInfo->headerLength = Chunks_getSize(CHUNK_DEFINITION_FILE,      0,                           &archiveFileInfo->file.chunkFile     )+
-                                  Chunks_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->file.chunkFileEntry)+
-                                  Chunks_getSize(CHUNK_DEFINITION_FILE_DATA, archiveFileInfo->blockLength,&archiveFileInfo->file.chunkFileData );
+  archiveFileInfo->file.headerLength = Chunks_getSize(CHUNK_DEFINITION_FILE,      0,                           &archiveFileInfo->file.chunkFile     )+
+                                       Chunks_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->file.chunkFileEntry)+
+                                       Chunks_getSize(CHUNK_DEFINITION_FILE_DATA, archiveFileInfo->blockLength,&archiveFileInfo->file.chunkFileData );
 
   return ERROR_NONE;
 }
@@ -919,6 +942,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
                                 )
 {
   Errors error;
+  ulong  length;
 
   assert(archiveInfo != NULL);
   assert(archiveFileInfo != NULL);
@@ -943,9 +967,6 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->directory.chunkDirectoryEntry.permission      = fileInfo->permission;
   archiveFileInfo->directory.chunkDirectoryEntry.name            = String_copy(name);
 
-  archiveFileInfo->headerLength                                  = 0;
-  archiveFileInfo->headerWrittenFlag                             = FALSE;
-
   /* init directory chunk */
   if (!Chunks_new(&archiveFileInfo->directory.chunkInfoDirectory,
                   NULL,
@@ -955,6 +976,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
                  )
      )
   {
+    String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
     return ERROR_IO_ERROR;
   }
 
@@ -966,6 +988,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectory);
+    String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
     return error;
   }
 
@@ -980,24 +1003,25 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   {
     Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
     Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectory);
+    String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
     return ERROR_IO_ERROR;
   }
 
   /* calculate header length */
-  archiveFileInfo->headerLength = Chunks_getSize(CHUNK_DEFINITION_DIRECTORY,      0,                           &archiveFileInfo->directory.chunkDirectory     )+
-                                  Chunks_getSize(CHUNK_DEFINITION_DIRECTORY_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->directory.chunkDirectoryEntry);
+  length = Chunks_getSize(CHUNK_DEFINITION_DIRECTORY,      0,                           &archiveFileInfo->directory.chunkDirectory     )+
+           Chunks_getSize(CHUNK_DEFINITION_DIRECTORY_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->directory.chunkDirectoryEntry);
 
-  /* open file */
-  if (!archiveFileInfo->archiveInfo->fileOpenFlag)
+  /* ensure space in archive */
+  error = ensureArchiveSpace(archiveFileInfo->archiveInfo,
+                             length
+                            );
+  if (error != ERROR_NONE)
   {
-    error = openArchiveFile(archiveFileInfo->archiveInfo);
-    if (error != ERROR_NONE)
-    {
-      Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
-      Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
-      Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectory);
-      return error;
-    }
+    Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
+    Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
+    Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectory);
+    String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
+    return error;
   }
 
   /* write directory chunk */
@@ -1012,6 +1036,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
     Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
     Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectory);
+    String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
     return ERROR_IO_ERROR;
   }
   if (!Chunks_create(&archiveFileInfo->directory.chunkInfoDirectoryEntry,
@@ -1025,6 +1050,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
     Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
     Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectory);
+    String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
     return ERROR_IO_ERROR;
   }
 
@@ -1034,6 +1060,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
     Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
     Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectory);
+    String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
     return ERROR_IO_ERROR;
   }
   if (!Chunks_close(&archiveFileInfo->directory.chunkInfoDirectory))
@@ -1041,6 +1068,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
     Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
     Chunks_delete(&archiveFileInfo->directory.chunkInfoDirectory);
+    String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
     return ERROR_IO_ERROR;
   }
 
@@ -1055,6 +1083,7 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
                            )
 {
   Errors error;
+  ulong  length;
 
   assert(archiveInfo != NULL);
   assert(archiveFileInfo != NULL);
@@ -1080,9 +1109,6 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->link.chunkLinkEntry.name            = String_copy(name);
   archiveFileInfo->link.chunkLinkEntry.fileName        = String_copy(fileName);
 
-  archiveFileInfo->headerLength                        = 0;
-  archiveFileInfo->headerWrittenFlag                   = FALSE;
-
   /* init link-chunk */
   if (!Chunks_new(&archiveFileInfo->link.chunkInfoLink,
                   NULL,
@@ -1092,6 +1118,8 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
                  )
      )
   {
+    String_delete(archiveFileInfo->link.chunkLinkEntry.name);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
     return ERROR_IO_ERROR;
   }
 
@@ -1103,6 +1131,8 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunks_delete(&archiveFileInfo->link.chunkInfoLink);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.name);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
     return error;
   }
 
@@ -1117,24 +1147,27 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   {
     Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
     Chunks_delete(&archiveFileInfo->link.chunkInfoLink);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.name);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
     return ERROR_IO_ERROR;
   }
 
-  /* calculate header length */
-  archiveFileInfo->headerLength = Chunks_getSize(CHUNK_DEFINITION_LINK,      0,                           &archiveFileInfo->link.chunkLink     )+
-                                  Chunks_getSize(CHUNK_DEFINITION_LINK_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->link.chunkLinkEntry);
+  /* calculate length */
+  length = Chunks_getSize(CHUNK_DEFINITION_LINK,      0,                           &archiveFileInfo->link.chunkLink     )+
+           Chunks_getSize(CHUNK_DEFINITION_LINK_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->link.chunkLinkEntry);
 
-  /* open file */
-  if (!archiveFileInfo->archiveInfo->fileOpenFlag)
+  /* ensure space in archive */
+  error = ensureArchiveSpace(archiveFileInfo->archiveInfo,
+                             length
+                            );
+  if (error != ERROR_NONE)
   {
-    error = openArchiveFile(archiveFileInfo->archiveInfo);
-    if (error != ERROR_NONE)
-    {
-      Chunks_delete(&archiveFileInfo->link.chunkInfoLinkEntry);
-      Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
-      Chunks_delete(&archiveFileInfo->link.chunkInfoLink);
-      return error;
-    }
+    Chunks_delete(&archiveFileInfo->link.chunkInfoLinkEntry);
+    Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
+    Chunks_delete(&archiveFileInfo->link.chunkInfoLink);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.name);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
+    return error;
   }
 
   /* write link chunks */
@@ -1149,6 +1182,8 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->link.chunkInfoLinkEntry);
     Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
     Chunks_delete(&archiveFileInfo->link.chunkInfoLink);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.name);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
     return ERROR_IO_ERROR;
   }
   if (!Chunks_create(&archiveFileInfo->link.chunkInfoLinkEntry,
@@ -1162,6 +1197,8 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->link.chunkInfoLinkEntry);
     Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
     Chunks_delete(&archiveFileInfo->link.chunkInfoLink);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.name);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
     return ERROR_IO_ERROR;
   }
 
@@ -1171,6 +1208,8 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->link.chunkInfoLinkEntry);
     Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
     Chunks_delete(&archiveFileInfo->link.chunkInfoLink);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.name);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
     return ERROR_IO_ERROR;
   }
   if (!Chunks_close(&archiveFileInfo->link.chunkInfoLink))
@@ -1178,6 +1217,8 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
     Chunks_delete(&archiveFileInfo->link.chunkInfoLinkEntry);
     Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
     Chunks_delete(&archiveFileInfo->link.chunkInfoLink);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.name);
+    String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
     return ERROR_IO_ERROR;
   }
 
@@ -1244,8 +1285,8 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                              CryptAlgorithms    *cryptAlgorithm,
                              String             name,
                              FileInfo           *fileInfo,
-                             uint64             *partOffset,
-                             uint64             *partSize
+                             uint64             *fragmentOffset,
+                             uint64             *fragmentSize
                             )
 {
   Errors      error;
@@ -1489,8 +1530,8 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
           return ERROR_IO_ERROR;
         }
 
-        if (partOffset != NULL) (*partOffset) = archiveFileInfo->file.chunkFileData.partOffset;
-        if (partSize   != NULL) (*partSize)   = archiveFileInfo->file.chunkFileData.partSize;
+        if (fragmentOffset != NULL) (*fragmentOffset) = archiveFileInfo->file.chunkFileData.fragmentOffset;
+        if (fragmentSize   != NULL) (*fragmentSize)   = archiveFileInfo->file.chunkFileData.fragmentSize;
 
         foundFileData = TRUE;
         break;
@@ -1881,7 +1922,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           }
 
           /* update part size */
-          archiveFileInfo->file.chunkFileData.partSize = Compress_getInputLength(&archiveFileInfo->file.compressInfoData);
+          archiveFileInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveFileInfo->file.compressInfoData);
           if (!Chunks_update(&archiveFileInfo->file.chunkInfoFileData,
                              &archiveFileInfo->file.chunkFileData
                             )
@@ -1916,6 +1957,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           String_delete(archiveFileInfo->file.chunkFileEntry.name);
           break;
         case FILETYPE_DIRECTORY:
+          String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
           break;
         case FILETYPE_LINK:
           /* close chunks */
@@ -1932,8 +1974,8 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           Chunks_delete(&archiveFileInfo->link.chunkInfoLinkEntry);
           Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
           Chunks_delete(&archiveFileInfo->link.chunkInfoLink);
-          String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
           String_delete(archiveFileInfo->link.chunkLinkEntry.name);
+          String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
           break;
         #ifndef NDEBUG
           default:
@@ -1969,8 +2011,10 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           Crypt_delete(&archiveFileInfo->file.cryptInfoFileEntry);
           Chunks_delete(&archiveFileInfo->file.chunkInfoFile);
           free(archiveFileInfo->file.buffer);
+          String_delete(archiveFileInfo->file.chunkFileEntry.name);
           break;
         case FILETYPE_DIRECTORY:
+          String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
           break;
         case FILETYPE_LINK:
           /* close chunks */
@@ -1987,8 +2031,8 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           Chunks_delete(&archiveFileInfo->link.chunkInfoLinkEntry);
           Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
           Chunks_delete(&archiveFileInfo->link.chunkInfoLink);
-          String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
           String_delete(archiveFileInfo->link.chunkLinkEntry.name);
+          String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
           break;
         #ifndef NDEBUG
           default:

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems : all
@@ -118,7 +118,8 @@ unsigned long StringList_empty(StringList *stringList);
 unsigned long StringList_count(StringList *stringList);
 
 /***********************************************************************\
-* Name   : StringList_insert
+* Name   : StringList_insert/StringList_insertCString/
+*          StringList_insertChar/StringList_insertBuffer
 * Purpose: insert string into list
 * Input  : stringList - string list
 *          string     - string to insert
@@ -128,10 +129,14 @@ unsigned long StringList_count(StringList *stringList);
 * Notes  : -
 \***********************************************************************/
 
-void StringList_insert(StringList *stringList, String string, void *nextNode);
+void StringList_insert(StringList *stringList, String string, StringNode *nextStringNode);
+void StringList_insertCString(StringList *stringList, const char *s, StringNode *nextStringNode);
+void StringList_insertChar(StringList *stringList, char ch, StringNode *nextStringNode);
+void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
 
 /***********************************************************************\
-* Name   : StringList_append
+* Name   : StringList_append/StringList_appendCString
+*          StringList_appendChar/StringList_appendBuffer
 * Purpose: add string to end of list
 * Input  : stringList - string list
 *          string     - string to append to list
@@ -141,6 +146,9 @@ void StringList_insert(StringList *stringList, String string, void *nextNode);
 \***********************************************************************/
 
 void StringList_append(StringList *stringList, String string);
+void StringList_appendCString(StringList *stringList, const char *s);
+void StringList_appendChar(StringList *stringList, char ch);
+void StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : StringList_remove
