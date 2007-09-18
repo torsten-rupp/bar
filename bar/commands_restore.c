@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -166,15 +166,15 @@ bool command_restore(StringList  *archiveFileNameList,
       {
         case FILETYPE_FILE:
           {
-            String       fileName;
-            FileInfo     fileInfo;
-            uint64       partOffset,partSize;
-            FragmentList *fragmentList;
-            String       destinationFileName;
-            FileInfo     localFileInfo;
-            FileHandle   fileHandle;
-            uint64       length;
-            ulong        n;
+            String           fileName;
+            FileInfo         fileInfo;
+            uint64           partOffset,partSize;
+            FileFragmentNode *fileFragmentNode;
+            String           destinationFileName;
+            FileInfo         localFileInfo;
+            FileHandle       fileHandle;
+            uint64           length;
+            ulong            n;
 
             /* read file */
             fileName = String_new();
@@ -212,10 +212,10 @@ bool command_restore(StringList  *archiveFileNameList,
               info(0,"Restore file '%s'...",String_cString(destinationFileName));
 
               /* check if file fragment exists */
-              fragmentList = FileFragmentList_findFragmentList(&fileFragmentList,fileName);
-              if (fragmentList != NULL)
+              fileFragmentNode = FileFragmentList_findFile(&fileFragmentList,fileName);
+              if (fileFragmentNode != NULL)
               {
-                if (!globalOptions.overwriteFlag && FileFragmentList_check(fragmentList,partOffset,partSize))
+                if (!globalOptions.overwriteFlag && FileFragmentList_checkExists(fileFragmentNode,partOffset,partSize))
                 {
                   info(0,"skipped (file part exists)\n");
                   String_delete(destinationFileName);
@@ -227,7 +227,7 @@ bool command_restore(StringList  *archiveFileNameList,
               }
               else
               {
-                if (!globalOptions.overwriteFlag && Files_exist(destinationFileName))
+                if (!globalOptions.overwriteFlag && Files_exists(destinationFileName))
                 {
                   info(0,"skipped (file exists)\n");
                   String_delete(destinationFileName);
@@ -236,7 +236,7 @@ bool command_restore(StringList  *archiveFileNameList,
                   failFlag = TRUE;
                   continue;
                 }
-                fragmentList = FileFragmentList_addFile(&fileFragmentList,fileName,fileInfo.size);
+                fileFragmentNode = FileFragmentList_addFile(&fileFragmentList,fileName,fileInfo.size);
               }
 //FileFragmentList_print(fragmentList,String_cString(fileName));
 
@@ -308,7 +308,9 @@ bool command_restore(StringList  *archiveFileNameList,
                 String_delete(fileName);
                 continue;
               }
-              FileFragmentList_add(fragmentList,partOffset,partSize);
+
+              /* add fragment to file fragment list */
+              FileFragmentList_add(fileFragmentNode,partOffset,partSize);
 
               /* set file time, permissions, file owner/group */
               error = Files_setFileInfo(destinationFileName,&fileInfo);
@@ -324,6 +326,12 @@ bool command_restore(StringList  *archiveFileNameList,
                 String_delete(fileName);
                 failFlag = TRUE;
                 continue;
+              }
+
+              /* discard fragment list if file is complete */
+              if (FileFragmentList_checkComplete(fileFragmentNode))
+              {
+                FileFragmentList_removeFile(&fileFragmentList,fileFragmentNode);
               }
 
               /* free resources */

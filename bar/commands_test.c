@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -29,6 +29,7 @@
 #include "patterns.h"
 #include "files.h"
 #include "archive.h"
+#include "filefragmentlists.h"
 
 #include "command_test.h"
 
@@ -90,13 +91,15 @@ bool command_test(StringList  *archiveFileNameList,
                   const char  *password
                  )
 {
-  byte            *archiveBuffer,*fileBuffer;
-  String          archiveFileName;
-  bool            failFlag;
-  Errors          error;
-  ArchiveInfo     archiveInfo;
-  ArchiveFileInfo archiveFileInfo;
-  FileTypes       fileType;
+  byte             *archiveBuffer,*fileBuffer;
+  FileFragmentList fileFragmentList;
+  String           archiveFileName;
+  bool             failFlag;
+  Errors           error;
+  ArchiveInfo      archiveInfo;
+  ArchiveFileInfo  archiveFileInfo;
+  FileTypes        fileType;
+  FileFragmentNode *fileFragmentNode;
 
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
@@ -114,12 +117,13 @@ bool command_test(StringList  *archiveFileNameList,
     free(archiveBuffer);
     HALT_INSUFFICIENT_MEMORY();
   }
+  FileFragmentList_init(&fileFragmentList);
   archiveFileName = String_new();
 
   failFlag = FALSE;
-  while (!StringLists_empty(archiveFileNameList))
+  while (!StringList_empty(archiveFileNameList))
   {
-    StringLists_getFirst(archiveFileNameList,archiveFileName);
+    StringList_getFirst(archiveFileNameList,archiveFileName);
 
     /* open archive */
     error = Archive_open(&archiveInfo,
@@ -158,16 +162,17 @@ bool command_test(StringList  *archiveFileNameList,
       {
         case FILETYPE_FILE:
           {
-            String     fileName;
-            FileInfo   fileInfo;
-            uint64     partOffset,partSize;
+            String           fileName;
+            FileInfo         fileInfo;
+            uint64           partOffset,partSize;
+            FileFragmentNode *fileFragmentNode;
 //            FileInfo   localFileInfo;
-            FileHandle fileHandle;
-            bool       equalFlag;
-            uint64     length;
-            ulong      n;
-            ulong      readBytes;
-            ulong      diffIndex;
+            FileHandle       fileHandle;
+            bool             equalFlag;
+            uint64           length;
+            ulong            n;
+            ulong            readBytes;
+            ulong            diffIndex;
 
             /* readt file */
             fileName = String_new();
@@ -191,14 +196,14 @@ bool command_test(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               info(0,"Test file '%s'...",String_cString(fileName));
 
               /* check file */
-              if (!Files_exist(fileName))
+              if (!Files_exists(fileName))
               {
                 info(0,"File '%s' does not exists!\n",
                      String_cString(fileName)
@@ -219,6 +224,14 @@ bool command_test(StringList  *archiveFileNameList,
                 failFlag = TRUE;
                 break;
               }
+
+              /* get file fragment list */
+              fileFragmentNode = FileFragmentList_findFile(&fileFragmentList,fileName);
+              if (fileFragmentNode == NULL)
+              {
+                fileFragmentNode = FileFragmentList_addFile(&fileFragmentList,fileName,fileInfo.size);
+              }
+//FileFragmentList_print(fragmentList,String_cString(fileName));
 
               /* open file */
               error = Files_open(&fileHandle,fileName,FILE_OPENMODE_READ);
@@ -334,6 +347,16 @@ bool command_test(StringList  *archiveFileNameList,
                      partOffset+length+diffIndex
                     );
                 failFlag = TRUE;
+                continue;
+              }
+
+              /* add fragment to file fragment list */
+              FileFragmentList_add(fileFragmentNode,partOffset,partSize);
+
+              /* discard fragment list if file is complete */
+              if (FileFragmentList_checkComplete(fileFragmentNode))
+              {
+                FileFragmentList_removeFile(&fileFragmentList,fileFragmentNode);
               }
 
               /* free resources */
@@ -375,14 +398,14 @@ bool command_test(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !Patterns_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               info(0,"Test directory '%s'...",String_cString(directoryName));
 
               /* check directory */
-              if (!Files_exist(directoryName))
+              if (!Files_exists(directoryName))
               {
                 info(0,"Directory '%s' does not exists!\n",
                      String_cString(directoryName)
@@ -468,14 +491,14 @@ bool command_test(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (Lists_empty(includePatternList) || Patterns_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !Patterns_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               info(0,"Test link '%s'...",String_cString(linkName));
 
               /* check link */
-              if (!Files_exist(linkName))
+              if (!Files_exists(linkName))
               {
                 info(0,"Link '%s' does not exists!\n",
                      String_cString(linkName)
@@ -578,8 +601,19 @@ bool command_test(StringList  *archiveFileNameList,
     Archive_close(&archiveInfo);
   }
 
+  /* check fragment lists */
+  for (fileFragmentNode = fileFragmentList.head; fileFragmentNode != NULL; fileFragmentNode = fileFragmentNode->next)
+  {
+    if (!FileFragmentList_checkComplete(fileFragmentNode))
+    {
+      info(0,"Warning: incomplete file '%s'\n",String_cString(fileFragmentNode->fileName));
+      failFlag = TRUE;
+    }
+  }
+
   /* free resources */
   String_delete(archiveFileName);
+  FileFragmentList_done(&fileFragmentList);
   free(fileBuffer);
   free(archiveBuffer);
 

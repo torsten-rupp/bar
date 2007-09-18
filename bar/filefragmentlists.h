@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/filefragmentlists.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver file fragment list functions
 * Systems: all
@@ -68,15 +68,15 @@ typedef struct
 void FileFragmentList_init(FileFragmentList *fileFragmentList);
 void FileFragmentList_done(FileFragmentList *fileFragmentList);
 
-FragmentList *FileFragmentList_addFile(FileFragmentList *fileFragmentList, String fileName, uint64 size);
+FileFragmentNode *FileFragmentList_addFile(FileFragmentList *fileFragmentList, String fileName, uint64 size);
+void FileFragmentList_removeFile(FileFragmentList *fileFragmentList, FileFragmentNode *fileFragmentNode);
+FileFragmentNode *FileFragmentList_findFile(FileFragmentList *fileFragmentList, String fileName);
 
-FragmentList *FileFragmentList_findFragmentList(FileFragmentList *fileFragmentList, String fileName);
+void FileFragmentList_clear(FileFragmentNode *fileFragmentNode);
 
-void FileFragmentList_clear(FragmentList *fragmentList);
+void FileFragmentList_add(FileFragmentNode *fileFragmentNode, uint64 offset, uint64 length);
 
-void FileFragmentList_add(FragmentList *fragmentList, uint64 offset, uint64 length);
-
-bool FileFragmentList_check(FragmentList *fragmentList, uint64 offset, uint64 length);
+bool FileFragmentList_check(FileFragmentNode *fileFragmentNode, uint64 offset, uint64 length);
 
 bool FileFragmentList_checkComplete(FileFragmentNode *fileFragmentNode);
 

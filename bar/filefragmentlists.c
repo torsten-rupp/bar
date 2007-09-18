@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/filefragmentlists.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver file fragment list functions
 * Systems: all
@@ -77,7 +77,7 @@ void FileFragmentList_done(FileFragmentList *fileFragmentList)
   List_done(fileFragmentList,(NodeFreeFunction)freeFileFragmentNode,NULL);
 }
 
-FragmentList *FileFragmentList_addFile(FileFragmentList *fileFragmentList, String fileName, uint64 size)
+FileFragmentNode *FileFragmentList_addFile(FileFragmentList *fileFragmentList, String fileName, uint64 size)
 {
   FileFragmentNode *fileFragmentNode;
 
@@ -95,10 +95,20 @@ FragmentList *FileFragmentList_addFile(FileFragmentList *fileFragmentList, Strin
 
   List_append(fileFragmentList,fileFragmentNode);
 
-  return &fileFragmentNode->fragmentList;
+  return fileFragmentNode;
 }
 
-FragmentList *FileFragmentList_findFragmentList(FileFragmentList *fileFragmentList, String fileName)
+void FileFragmentList_removeFile(FileFragmentList *fileFragmentList, FileFragmentNode *fileFragmentNode)
+{
+  assert(fileFragmentList != NULL);
+  assert(fileFragmentNode != NULL);
+
+  List_remove(fileFragmentList,fileFragmentNode);
+  freeFileFragmentNode(fileFragmentNode,NULL);
+  LIST_DELETE_NODE(fileFragmentNode);
+}
+
+FileFragmentNode *FileFragmentList_findFile(FileFragmentList *fileFragmentList, String fileName)
 {
   FileFragmentNode *fileFragmentNode;
 
@@ -111,32 +121,32 @@ FragmentList *FileFragmentList_findFragmentList(FileFragmentList *fileFragmentLi
     fileFragmentNode = fileFragmentNode->next;
   }
 
-  return (fileFragmentNode !=NULL)?&fileFragmentNode->fragmentList:NULL;
+  return fileFragmentNode;
 }
 
-void FileFragmentList_clear(FragmentList *fragmentList)
+void FileFragmentList_clear(FileFragmentNode *fileFragmentNode)
 {
-  assert(fragmentList != NULL);
+  assert(fileFragmentNode != NULL);
 
-  List_done(fragmentList,NULL,NULL);
+  List_done(&fileFragmentNode->fragmentList,NULL,NULL);
 }
 
-void FileFragmentList_add(FragmentList *fragmentList, uint64 offset, uint64 length)
+void FileFragmentList_add(FileFragmentNode *fileFragmentNode, uint64 offset, uint64 length)
 {
   FragmentNode *fragmentNode,*deleteFragmentNode;
   FragmentNode *prevFragmentNode,*nextFragmentNode;
 
-  assert(fragmentList != NULL);
+  assert(fileFragmentNode != NULL);
 
   /* remove all fragments which are completely covered by new fragment */
-  fragmentNode = fragmentList->head;
+  fragmentNode = fileFragmentNode->fragmentList.head;
   while (fragmentNode != NULL)
   {
     if ((F0(fragmentNode) >= I0(offset,length)) && (F1(fragmentNode) <= I1(offset,length)))
     {
       deleteFragmentNode = fragmentNode;
       fragmentNode = fragmentNode->next;
-      List_remove(fragmentList,deleteFragmentNode);
+      List_remove(&fileFragmentNode->fragmentList,deleteFragmentNode);
       LIST_DELETE_NODE(deleteFragmentNode);
     }
     else
@@ -147,14 +157,14 @@ void FileFragmentList_add(FragmentList *fragmentList, uint64 offset, uint64 leng
 
   /* find prev/next fragment */
   prevFragmentNode = NULL;
-  fragmentNode = fragmentList->head;
+  fragmentNode = fileFragmentNode->fragmentList.head;
   while ((fragmentNode != NULL) && (F1(fragmentNode) < I1(offset,length)))
   {
     prevFragmentNode = fragmentNode;
     fragmentNode = fragmentNode->next;
   }
   nextFragmentNode = NULL;
-  fragmentNode = fragmentList->tail;
+  fragmentNode = fileFragmentNode->fragmentList.tail;
   while ((fragmentNode != NULL) && (F0(fragmentNode) > I0(offset,length)))
   {
     nextFragmentNode = fragmentNode;
@@ -184,15 +194,33 @@ void FileFragmentList_add(FragmentList *fragmentList, uint64 offset, uint64 leng
     }
     fragmentNode->offset = offset;
     fragmentNode->length = length;
-    List_insert(fragmentList,fragmentNode,nextFragmentNode);
+    List_insert(&fileFragmentNode->fragmentList,fragmentNode,nextFragmentNode);
   }
 }
 
-
-bool FileFragmentList_check(FragmentList *fragmentList, uint64 offset, uint64 length)
+bool FileFragmentList_checkExists(FileFragmentNode *fileFragmentNode, uint64 offset, uint64 length)
 {
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-return FALSE;
+  bool         existsFlag;
+  uint64       i0,i1;
+  FragmentNode *fragmentNode;
+
+  assert(fileFragmentNode != NULL);
+
+  i0 = I0(offset,length);
+  i1 = I1(offset,length);
+
+  existsFlag = FALSE;
+  for (fragmentNode = fileFragmentNode->fragmentList.head; (fragmentNode != NULL) && !existsFlag; fragmentNode = fragmentNode->next)
+  {
+    if (   ((F0(fragmentNode) <= i0) && (i0 <= F1(fragmentNode)) )
+        || ((F0(fragmentNode) <= i1) && (i1 <= F1(fragmentNode)))
+       )
+    {
+      existsFlag = TRUE;
+    }
+  }
+
+  return existsFlag;
 }
 
 bool FileFragmentList_checkComplete(FileFragmentNode *fileFragmentNode)
@@ -210,7 +238,6 @@ void FileFragmentList_print(FragmentList *fragmentList, const char *name)
   FragmentNode *fragmentNode;
 
   printf("Fragments '%s':\n",name);
-  fragmentNode = fragmentList->head;
   for (fragmentNode = fragmentList->head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
   {
     printf("  %8llu..%8llu\n",F0(fragmentNode),F1(fragmentNode));

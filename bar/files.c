@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -251,7 +251,7 @@ Errors Files_open(FileHandle    *fileHandle,
     case FILE_OPENMODE_WRITE:
       /* create directory if needed */
       pathName = Files_getFilePathName(fileName,String_new());
-      if (!Files_exist(pathName))
+      if (!Files_exists(pathName))
       {
         error = Files_makeDirectory(pathName);
         if (error != ERROR_NONE)
@@ -418,7 +418,7 @@ Errors Files_makeDirectory(const String pathName)
     {     
       Files_appendFileName(directoryName,name);
 
-      if (!Files_exist(directoryName))
+      if (!Files_exists(directoryName))
       {
         if (mkdir(String_cString(directoryName),0700) != 0)
         {
@@ -539,7 +539,7 @@ FileTypes Files_getType(String fileName)
   }
 }
 
-bool Files_exist(String fileName)
+bool Files_exists(String fileName)
 {
   struct stat fileStat;
 

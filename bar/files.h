@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -362,15 +362,15 @@ Errors Files_readDirectory(DirectoryHandle *directoryHandle,
 FileTypes Files_getType(String fileName);
 
 /***********************************************************************\
-* Name   : Files_exist
-* Purpose: check if file exist
+* Name   : Files_exists
+* Purpose: check if file exists
 * Input  : fileName - file name
 * Output : -
 * Return : TRUE if file exists, FALSE otherweise
 * Notes  : -
 \***********************************************************************/
 
-bool Files_exist(String fileName);
+bool Files_exists(String fileName);
 
 /***********************************************************************\
 * Name   : Files_getInfo
