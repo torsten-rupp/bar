@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -271,7 +271,11 @@ const char *String_cString(String string);
 * Notes  : -
 \***********************************************************************/
 
-int String_compare(String string1, String string2, StringCompareFunction stringCompareFunction, void *userData);
+int String_compare(String                string1,
+                   String                string2,
+                   StringCompareFunction stringCompareFunction,
+                   void                  *userData
+                  );
 
 /***********************************************************************\
 * Name   : String_equals
@@ -317,7 +321,10 @@ long String_findLastChar(String string, long index, char ch);
 * Notes  : -
 \***********************************************************************/
 
-String String_iterate(String string, StringIterateFunction stringIterateFunction, void *userData);
+String String_iterate(String                string,
+                      StringIterateFunction stringIterateFunction,
+                      void                  *userData
+                     );
 
 /***********************************************************************\
 * Name   : String_toLower, String_toUpper
@@ -391,7 +398,10 @@ void String_doneTokenizer(StringTokenizer *stringTokenizer);
 * Notes  : -
 \***********************************************************************/
 
-bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, long *tokenIndex);
+bool String_getNextToken(StringTokenizer *stringTokenizer,
+                         String *const   token,
+                         long            *tokenIndex
+                        );
 
 /***********************************************************************\
 * Name   : String_parse

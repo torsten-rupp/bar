@@ -9,7 +9,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/archive_format.pl,v $
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # $Author: torsten $
 # Contents: create header/c file definition from format definition
 # Systems : all
@@ -47,6 +47,7 @@ my $DEFINITION_TYPES =
    "int64"  => "CHUNK_DATATYPE_INT64",
    "name"   => "CHUNK_DATATYPE_NAME",
    "data"   => "CHUNK_DATATYPE_DATA",
+   "crc32"  => "CHUNK_DATATYPE_CRC32",
   };
 
 my $cFileName,$hFileName;
@@ -144,14 +145,19 @@ while ($line=<STDIN>)
         writeHFile("  $1 $2;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
       }
-      elsif ($line =~ /^\s*(name)\s+(\w+)/)
+      elsif ($line =~ /^\s*name\s+(\w+)/)
       {
-        writeHFile("  String $2;\n");
-        push(@parseDefinitions,$DEFINITION_TYPES->{$1});
+        writeHFile("  String $1;\n");
+        push(@parseDefinitions,$DEFINITION_TYPES->{name});
       }
-      elsif ($line =~ /^\s*(data)\s+(\w+)/)
+      elsif ($line =~ /^\s*data\s+(\w+)/)
       {
-        push(@parseDefinitions,$DEFINITION_TYPES->{$1});
+        push(@parseDefinitions,$DEFINITION_TYPES->{data});
+      }
+      elsif ($line =~ /^\s*crc32\s+(\w+)/)
+      {
+        writeHFile("  uint32 $1;\n");
+        push(@parseDefinitions,$DEFINITION_TYPES->{crc32});
       }
       else
       {

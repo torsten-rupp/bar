@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.18 $
+# $Revision: 1.19 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -84,6 +84,7 @@ OBJECTS = 	$(foreach z,$(SOURCES),$(subst .c,.o,$z)) \
 INTERMEDIATE =  archive_format.c archive_format.h \
 
 TARGETS = 	bar \
+                destroyer \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -104,6 +105,10 @@ depend: archive_format.h
 
 # create Backup Archiver
 bar: $(OBJECTS)
+
+# create destroyer
+destroyer: destroyer.o cmdoptions.o global.o lists.o strings.o
+	$(LD) $(LD_FLAGS) -o $@ $^
 
 archive_format.h: archive_format.def
 	$(PERL) archive_format.pl < $^ -h $@

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -209,6 +209,7 @@ const char *getErrorText(Errors error)
     CASE(ERROR_NO_FILE_ENTRY,          "no file entry"               );
     CASE(ERROR_NO_FILE_DATA,           "no data entry"               );
     CASE(ERROR_END_OF_DATA,            "end of data"                 );
+    CASE(ERROR_CRC_ERROR,              "CRC error"                   );
 
     DEFAULT(                           "unknown"                     );
   }
