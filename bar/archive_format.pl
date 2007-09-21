@@ -9,7 +9,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/archive_format.pl,v $
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # $Author: torsten $
 # Contents: create header/c file definition from format definition
 # Systems : all
@@ -156,7 +156,6 @@ while ($line=<STDIN>)
       }
       elsif ($line =~ /^\s*crc32\s+(\w+)/)
       {
-        writeHFile("  uint32 $1;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{crc32});
       }
       else
