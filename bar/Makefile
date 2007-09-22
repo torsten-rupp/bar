@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -106,7 +106,7 @@ depend: archive_format.h
 # create Backup Archiver
 bar: $(OBJECTS)
 
-# create destroyer
+# create destroyer (for testing only!)
 destroyer: destroyer.o cmdoptions.o global.o lists.o strings.o
 	$(LD) $(LD_FLAGS) -o $@ $^
 
@@ -165,7 +165,17 @@ standard_test: bar
 	./bar -t test/test.bar* $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -x test/test.bar* $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r test/data test/restore/test/data
-        
+
+.PHONY: standard_test_destroy
+standard_test_destroy: bar destroyer
+	$(RMRF) test/test.bar* test/restore
+	./bar -c test/test.bar test/data/zero1024.dat $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./destroyer test/test.bar m:0 > test/test.bar_destroyed
+	./bar -l test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -t test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -x test/test.bar_destroyed $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
+	$(DIFF) -r test/data test/restore/test/data
+
 -include Makefile.depend
 
 .PHONY: p0 pack0 l0 list0 r0 restore0 t0 c0 compare0

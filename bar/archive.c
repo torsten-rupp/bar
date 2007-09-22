@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -774,9 +774,45 @@ Errors Archive_open(ArchiveInfo *archiveInfo,
 
 bool Archive_eof(ArchiveInfo *archiveInfo)
 {
+  bool        chunkHeaderFoundFlag;
+  Errors      error;
+  ChunkHeader chunkHeader;
+
   assert(archiveInfo != NULL);
 
-  return Files_eof(&archiveInfo->fileHandle);
+  /* find next file, directory, link chunk */
+  chunkHeaderFoundFlag = FALSE;
+  while (!Files_eof(&archiveInfo->fileHandle) && !chunkHeaderFoundFlag)
+  {
+    error = getNextChunkHeader(archiveInfo,&chunkHeader);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    chunkHeaderFoundFlag = (   (chunkHeader.id == CHUNK_ID_FILE)
+                            || (chunkHeader.id == CHUNK_ID_DIRECTORY)
+                            || (chunkHeader.id == CHUNK_ID_LINK)
+                           );
+
+    if (!chunkHeaderFoundFlag)
+    {
+      error = Chunks_skip(archiveInfo,&chunkHeader);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      warning("Skipped unexpected chunk '%s'\n",Chunks_idToString(chunkHeader.id));
+    }
+  }
+
+  if (chunkHeaderFoundFlag)
+  {
+    /* store chunk header for read */
+    ungetNextChunkHeader(archiveInfo,&chunkHeader);
+  }
+
+  return !chunkHeaderFoundFlag;
 }
 
 Errors Archive_close(ArchiveInfo *archiveInfo)

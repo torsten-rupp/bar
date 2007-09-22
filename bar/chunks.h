@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems : all
@@ -118,6 +118,17 @@ Errors Chunks_init(bool(*endOfFile)(void *userData),
 void Chunks_done(void);
 
 /***********************************************************************\
+* Name   : Chunks_idToString
+* Purpose: convert chunk id to string
+* Input  : chunkId - chunk id
+* Output : -
+* Return : string
+* Notes  : non-reentrant function!
+\***********************************************************************/
+
+const char *Chunks_idToString(ChunkId chunkId);
+
+/***********************************************************************\
 * Name   : Chunks_getSize
 * Purpose: get size of chunk in bytes (without header and data elements)
 * Input  : definition - chunk definition
@@ -184,13 +195,13 @@ Errors Chunks_next(void        *userData,
 * Input  : userData    - user data for file i/o
 *          chunkHeader - chunk header
 * Output : -
-* Return : TRUE if no error, FALSE otherwise
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-bool Chunks_skip(void        *userData,
-                 ChunkHeader *chunkHeader
-                );
+Errors Chunks_skip(void        *userData,
+                   ChunkHeader *chunkHeader
+                  );
 
 /***********************************************************************\
 * Name   : Chunks_eof

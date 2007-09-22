@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -11,7 +11,7 @@
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
-#include <pthread.h>
+#include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -450,6 +450,20 @@ void Chunks_doneF(void)
 {
 }
 
+const char *Chunks_idToString(ChunkId chunkId)
+{
+  static char s[5];
+  char   ch;
+
+  ch = (char)((chunkId & 0xFF000000) >> 24); s[0] = (isprint(ch))?ch:'.';
+  ch = (char)((chunkId & 0x00FF0000) >> 16); s[1] = (isprint(ch))?ch:'.';
+  ch = (char)((chunkId & 0x0000FF00) >>  8); s[2] = (isprint(ch))?ch:'.';
+  ch = (char)((chunkId & 0x000000FF) >>  0); s[3] = (isprint(ch))?ch:'.';
+  s[4] = '\0';
+
+  return s;
+}
+
 ulong Chunks_getSize(const int  *definition,
                      ulong      alignment,
                      const void *data
@@ -582,18 +596,18 @@ Errors Chunks_next(void        *userData,
   return ERROR_NONE;
 }
 
-bool Chunks_skip(void        *userData,
-                 ChunkHeader *chunkHeader
-                )
+Errors Chunks_skip(void        *userData,
+                   ChunkHeader *chunkHeader
+                  )
 {
   assert(chunkHeader != NULL);
 
   if (!IO.seekFile(userData,chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size))
   {
-    return FALSE;
+    return ERROR_IO_ERROR;
   }
 
-  return TRUE;
+  return ERROR_NONE;
 }
 
 bool Chunks_eof(void *userData)

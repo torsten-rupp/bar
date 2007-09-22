@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -171,6 +171,19 @@ void info(uint verboseLevel, const char *format, ...)
     va_end(arguments);
     fflush(stdout);
   }
+}
+
+void warning(const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  printf("Warning: ");
+  va_start(arguments,format);
+  vprintf(format,arguments);
+  va_end(arguments);
+  fflush(stdout);
 }
 
 const char *getErrorText(Errors error)
