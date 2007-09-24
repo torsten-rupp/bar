@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/msgqueues.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
@@ -66,7 +66,7 @@ bool MsgQueue_init(MsgQueue *msgQueue, ulong maxMsgs)
   return TRUE;
 }
 
-void MsgQueue_done(MsgQueue *msgQueue, MsgFreeFunction msgFreeFunction, void *userData)
+void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *userData)
 {
   MsgNode *msgNode;
 
@@ -80,9 +80,9 @@ void MsgQueue_done(MsgQueue *msgQueue, MsgFreeFunction msgFreeFunction, void *us
   {
     msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
 
-    if (msgFreeFunction != NULL)
+    if (msgQueueMsgFreeFunction != NULL)
     {
-      msgFreeFunction(msgNode->data,userData);
+      msgQueueMsgFreeFunction(msgNode->data,userData);
     }
     free(msgNode);
   }
@@ -113,15 +113,15 @@ MsgQueue *MsgQueue_new(ulong maxMsgs)
   return msgQueue;
 }
 
-void MsgQueue_delete(MsgQueue *msgQueue, MsgFreeFunction msgFreeFunction, void *userData)
+void MsgQueue_delete(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *userData)
 {
   assert(msgQueue != NULL);
 
-  MsgQueue_done(msgQueue,msgFreeFunction,userData);
+  MsgQueue_done(msgQueue,msgQueueMsgFreeFunction,userData);
   free(msgQueue);
 }
 
-void MsgQueue_clear(MsgQueue *msgQueue, MsgFreeFunction msgFreeFunction, void *userData)
+void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *userData)
 {
   MsgNode *msgNode;
 
@@ -135,9 +135,9 @@ void MsgQueue_clear(MsgQueue *msgQueue, MsgFreeFunction msgFreeFunction, void *u
   {
     msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
 
-    if (msgFreeFunction != NULL)
+    if (msgQueueMsgFreeFunction != NULL)
     {
-      msgFreeFunction(msgNode->data,userData);
+      msgQueueMsgFreeFunction(msgNode->data,userData);
     }
     free(msgNode);
   }
@@ -153,7 +153,6 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize)
 
   assert(msgQueue != NULL);
 
-fprintf(stderr,"%s,%d: get \n",__FILE__,__LINE__);
   /* lock */
   pthread_mutex_lock(&msgQueue->lock);
 
@@ -191,7 +190,6 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
 
   assert(msgQueue != NULL);
 
-fprintf(stderr,"%s,%d: put \n",__FILE__,__LINE__);
   /* allocate message */
   msgNode = (MsgNode*)malloc(sizeof(MsgNode)+size);
   if (msgNode == NULL)
@@ -284,8 +282,10 @@ void MsgQueue_setEndOfMsg(MsgQueue *msgQueue)
 
   /* unlock */
   pthread_mutex_unlock(&msgQueue->lock);
-}
 
+  /* signal modify */
+  pthread_cond_broadcast(&msgQueue->modified);
+}
 
 #ifdef __cplusplus
   }

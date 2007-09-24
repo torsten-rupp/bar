@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -94,7 +94,7 @@ void StringList_done(StringList *stringList, void *userData)
 {
   assert(stringList != NULL);
 
-  List_done(stringList,(NodeFreeFunction)freeStringNode,userData);
+  List_done(stringList,(ListNodeFreeFunction)freeStringNode,userData);
 }
 
 StringList *StringList_new(void)
@@ -106,7 +106,7 @@ void StringList_delete(StringList *stringList, void *userData)
 {
   assert(stringList != NULL);
 
-  List_delete(stringList,(NodeFreeFunction)freeStringNode,userData);
+  List_delete(stringList,(ListNodeFreeFunction)freeStringNode,userData);
 }
 
 unsigned long StringList_empty(StringList *stringList)

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/msgqueues.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
@@ -36,7 +36,7 @@ typedef struct
   List            list;
 } MsgQueue;
 
-typedef void(*MsgFreeFunction)(void *msg, void *userData);
+typedef void(*MsgQueueMsgFreeFunction)(void *msg, void *userData);
 
 /***************************** Variables *******************************/
 
@@ -64,15 +64,15 @@ bool MsgQueue_init(MsgQueue *msgQueue, ulong maxMsgs);
 /***********************************************************************\
 * Name   : MsgQueue_done
 * Purpose: free all remaining message in queue and deinitialize 
-* Input  : msgQueue        - message queue
-*          msgFreeFunction - message free function or NULL
-*          userData        - user data
+* Input  : msgQueue                - message queue
+*          msgQueueMsgFreeFunction - message free function or NULL
+*          userData                - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void MsgQueue_done(MsgQueue *msgQueue, MsgFreeFunction msgFreeFunction, void *userData);
+void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *userData);
 
 /***********************************************************************\
 * Name   : MsgQueue_new
@@ -88,28 +88,28 @@ MsgQueue *MsgQueue_new(ulong maxMsgs);
 /***********************************************************************\
 * Name   : MsgQueue_delete
 * Purpose: delete message queue
-* Input  : msgQueue        - message queue
-*          msgFreeFunction - message free function or NULL
-*          userData        - user data
+* Input  : msgQueue                - message queue
+*          msgQueueMsgFreeFunction - message free function or NULL
+*          userData                - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void MsgQueue_delete(MsgQueue *msgQueue, MsgFreeFunction msgFreeFunction, void *userData);
+void MsgQueue_delete(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *userData);
 
 /***********************************************************************\
 * Name   : MsgQueue_clear
 * Purpose: discard all message in queue
-* Input  : msgQueue        - message queue
-*          msgFreeFunction - message free function or NULL
-*          userData        - user data
+* Input  : msgQueue                - message queue
+*          msgQueueMsgFreeFunction - message free function or NULL
+*          userData                - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void MsgQueue_clear(MsgQueue *msgQueue, MsgFreeFunction msgFreeFunction, void *userData);
+void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *userData);
 
 /***********************************************************************\
 * Name   : MsgQueue_get

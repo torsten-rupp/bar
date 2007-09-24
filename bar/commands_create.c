@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -88,62 +88,6 @@ LOCAL struct
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-/***********************************************************************\
-* Name   : lockFileList
-* Purpose: lock file list
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void lockFileList(void)
-{
-//  pthread_mutex_lock(&fileListLock);
-}
-
-/***********************************************************************\
-* Name   : unlockFileList
-* Purpose: unlock filename list
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void unlockFileList(void)
-{
-//  pthread_mutex_unlock(&fileListLock);
-}
-
-/***********************************************************************\
-* Name   : waitFileListModified
-* Purpose: wait until file name list is modified
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void waitFileListModified(void)
-{
-//  pthread_cond_wait(&fileListModified,&fileListLock);
-}
-
-/***********************************************************************\
-* Name   : signalFileListModified
-* Purpose: signal file name list modified
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void signalFileListModified(void)
-{
-//  pthread_cond_broadcast(&fileListModified);
-}
 
 /***********************************************************************\
 * Name   : checkIsIncluded
@@ -424,12 +368,27 @@ LOCAL void collector(void)
   MsgQueue_setEndOfMsg(&fileMsgQueue);
   collectorThreadExitFlag = TRUE;
 
-  /* send signal to waiting threads */
-  signalFileListModified();
-
   /* free resoures */
   String_delete(name);
   StringList_done(&nameList,NULL);
+}
+
+/***********************************************************************\
+* Name   : freeStorageMsg
+* Purpose: free storage msg
+* Input  : storageMsg - storage message
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
+{
+  assert(storageMsg != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(storageMsg->fileName);
 }
 
 /***********************************************************************\
@@ -443,20 +402,14 @@ LOCAL void collector(void)
 
 LOCAL void storage(void)
 {
-  Errors          error;
+  StorageMsg storageMsg;
+  Errors     error;
 
-return;
-  while (!storageThreadExitFlag)
+  while (MsgQueue_get(&storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg)))
   {
-    /* store archive files */
-    while (!collectorThreadExitFlag )
-    {
-    }
+fprintf(stderr,"%s,%d: storage \n",__FILE__,__LINE__);
   }
   storageThreadExitFlag = TRUE;
-
-  /* send signal to waiting threads */
-  signalFileListModified();
 
   /* free resoures */
 }
@@ -481,6 +434,7 @@ bool command_create(const char      *archiveFileName,
   String          fileName;
   FileTypes       fileType;
   ArchiveFileInfo archiveFileInfo;
+  StorageMsg      storageMsg;
 
   assert(archiveFileName != NULL);
   assert(includePatternList != NULL);
@@ -764,8 +718,9 @@ bool command_create(const char      *archiveFileName,
       #endif /* NDEBUG */
     }
   }
-  collectorThreadExitFlag = TRUE;
   String_delete(fileName);
+  collectorThreadExitFlag = TRUE;
+  MsgQueue_setEndOfMsg(&storageMsgQueue);
 
   /* close archive */
   Archive_close(&archiveInfo);

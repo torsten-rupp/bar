@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/filefragmentlists.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver file fragment list functions
 * Systems: all
@@ -74,7 +74,7 @@ void FileFragmentList_done(FileFragmentList *fileFragmentList)
 {
   assert(fileFragmentList != NULL);
 
-  List_done(fileFragmentList,(NodeFreeFunction)freeFileFragmentNode,NULL);
+  List_done(fileFragmentList,(ListNodeFreeFunction)freeFileFragmentNode,NULL);
 }
 
 FileFragmentNode *FileFragmentList_addFile(FileFragmentList *fileFragmentList, String fileName, uint64 size)

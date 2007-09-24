@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -44,8 +44,8 @@ typedef struct
   LIST_HEADER(Node);
 } List;
 
-typedef void(*NodeFreeFunction)(void *node, void *userData);
-typedef int(*NodeCompareFunction)(void *node, void *userData);
+typedef void(*ListNodeFreeFunction)(void *node, void *userData);
+typedef int(*ListNodeCompareFunction)(void *node, void *userData);
 
 /****************************** Macros *********************************/
 
@@ -76,15 +76,15 @@ void List_init(void *list);
 /***********************************************************************\
 * Name   : List_done
 * Purpose: free all nodes
-* Input  : list             - list to free
-*          nodeFreeFunction - free function for single node or NULL
-*          userData         - user data for free function
+* Input  : list                 - list to free
+*          listNodeFreeFunction - free function for single node or NULL
+*          userData             - user data for free function
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void List_done(void *list, NodeFreeFunction nodeFreeFunction, void *userData);
+void List_done(void *list, ListNodeFreeFunction listNodeFreeFunction, void *userData);
 
 /***********************************************************************\
 * Name   : List_new
@@ -100,15 +100,15 @@ List *List_new(void);
 /***********************************************************************\
 * Name   : List_delete
 * Purpose: free all nodes and delete list
-* Input  : list             - list to free
-*          nodeFreeFunction - free function for single node or NULL
-*          userData         - user data for free function
+* Input  : list                 - list to free
+*          listNodeFreeFunction - free function for single node or NULL
+*          userData             - user data for free function
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void List_delete(void *list, NodeFreeFunction nodeFreeFunction, void *userData);
+void List_delete(void *list, ListNodeFreeFunction listNodeFreeFunction, void *userData);
 
 /***********************************************************************\
 * Name   : List_move
@@ -210,29 +210,29 @@ Node *List_getLast(void *list);
 /***********************************************************************\
 * Name   : List_findFirst
 * Purpose: find node in list
-* Input  : list                - list
-*          nodeCompareFunction - compare function
-*          userData            - user data for compare function
+* Input  : list                    - list
+*          listNodeCompareFunction - compare function
+*          userData                - user data for compare function
 * Output : -
 * Return : node or NULL if not found
 * Notes  : -
 \***********************************************************************/
 
-Node *List_findFirst(void *list, NodeCompareFunction nodeCompareFunction, void *userData);
+Node *List_findFirst(void *list, ListNodeCompareFunction listNodeCompareFunction, void *userData);
 
 /***********************************************************************\
 * Name   : List_findNext
 * Purpose: find next node in list
-* Input  : list                - list
-*          node                - previous found node
-*          nodeCompareFunction - compare function
-*          userData            - user data for compare function
+* Input  : list                    - list
+*          node                    - previous found node
+*          listNodeCompareFunction - compare function
+*          userData                - user data for compare function
 * Output : -
 * Return : next node or NULL if no next node found
 * Notes  : -
 \***********************************************************************/
 
-Node *List_findNext(void *list, void *node, NodeCompareFunction nodeCompareFunction, void *userData);
+Node *List_findNext(void *list, void *node, ListNodeCompareFunction listNodeCompareFunction, void *userData);
 
 #ifdef __cplusplus
   }
