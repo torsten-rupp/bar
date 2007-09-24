@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -24,6 +24,7 @@
 #include "strings.h"
 #include "lists.h"
 #include "stringlists.h"
+#include "msgqueues.h"
 
 #include "errors.h"
 #include "patterns.h"
@@ -37,33 +38,37 @@
 
 /***************************** Constants *******************************/
 
-#define MAX_FILENAME_LIST_ENTRIES 256
+#define MAX_FILE_MSG_QUEUE_ENTRIES    256
+#define MAX_STORAGE_MSG_QUEUE_ENTRIES 256
+
 #define BUFFER_SIZE               (64*1024)
 
 /***************************** Datatypes *******************************/
 
-typedef struct FileNode
+typedef struct
 {
-  NODE_HEADER(struct FileNode);
-
   String    fileName;
   FileTypes fileType;
-} FileNode;
+} FileMsg;
 
 typedef struct
 {
-  LIST_HEADER(FileNode);
-} FileList;
+  String fileName;
+  uint64 length;
+  bool   completeFlag;
+} StorageMsg;
 
 /***************************** Variables *******************************/
-LOCAL pthread_mutex_t fileListLock;
-LOCAL pthread_cond_t  fileListModified;
-LOCAL FileList        fileList;
+LOCAL MsgQueue    fileMsgQueue;
 
-LOCAL PatternList     *collectorThreadIncludePatternList;
-LOCAL PatternList     *collectorThreadExcludePatternList;
-LOCAL bool            collectorThreadExitFlag;
-LOCAL pthread_t       collectorThread;
+LOCAL PatternList *collectorThreadIncludePatternList;
+LOCAL PatternList *collectorThreadExcludePatternList;
+LOCAL bool        collectorThreadExitFlag;
+LOCAL pthread_t   collectorThread;
+
+LOCAL MsgQueue    storageMsgQueue;
+LOCAL bool        storageThreadExitFlag;
+LOCAL pthread_t   storageThread;
 
 LOCAL struct
 {
@@ -95,7 +100,7 @@ LOCAL struct
 
 LOCAL void lockFileList(void)
 {
-  pthread_mutex_lock(&fileListLock);
+//  pthread_mutex_lock(&fileListLock);
 }
 
 /***********************************************************************\
@@ -109,7 +114,7 @@ LOCAL void lockFileList(void)
 
 LOCAL void unlockFileList(void)
 {
-  pthread_mutex_unlock(&fileListLock);
+//  pthread_mutex_unlock(&fileListLock);
 }
 
 /***********************************************************************\
@@ -123,7 +128,7 @@ LOCAL void unlockFileList(void)
 
 LOCAL void waitFileListModified(void)
 {
-  pthread_cond_wait(&fileListModified,&fileListLock);
+//  pthread_cond_wait(&fileListModified,&fileListLock);
 }
 
 /***********************************************************************\
@@ -137,7 +142,7 @@ LOCAL void waitFileListModified(void)
 
 LOCAL void signalFileListModified(void)
 {
-  pthread_cond_broadcast(&fileListModified);
+//  pthread_cond_broadcast(&fileListModified);
 }
 
 /***********************************************************************\
@@ -183,97 +188,75 @@ LOCAL bool checkIsExcluded(PatternList *excludePatternList,
 /***********************************************************************\
 * Name   : appendFileNameToList
 * Purpose: append a filename to a filename list
-* Input  : fileList - filename list
-*          fileName - file name (will be copied!)
-*          fileType - file type
+* Input  : fileMsgQueue - file message queue
+*          fileName     - file name (will be copied!)
+*          fileType     - file type
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendFileToList(FileList  *fileList,
+LOCAL void appendFileToList(MsgQueue  *fileMsgQueue,
                             String    fileName,
                             FileTypes fileType
                            )
 {
-  FileNode *fileNode;
+  FileMsg fileMsg;
 
-  assert(fileList != NULL);
+  assert(fileMsgQueue != NULL);
   assert(fileName != NULL);
 
-  /* allocate node */
-  fileNode = LIST_NEW_NODE(FileNode);
-  if (fileNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  fileNode->fileName = String_copy(fileName);
-  fileNode->fileType = fileType;
+  /* init */
+  fileMsg.fileName = String_copy(fileName);
+  fileMsg.fileType = fileType;
 
-  /* add */
-  lockFileList();
-  if (List_count(fileList) >= MAX_FILENAME_LIST_ENTRIES)
-  {
-    waitFileListModified();
-  }
-  List_append(fileList,fileNode);
-  unlockFileList();
-
-  /* send signal to waiting threads */
-  signalFileListModified();
+  /* put into message queue */
+  MsgQueue_put(fileMsgQueue,&fileMsg,sizeof(fileMsg));
 }
 
 /***********************************************************************\
-* Name   : freeFileNode
-* Purpose: free file node
-* Input  : fileNode - file node
+* Name   : freeFileMsg
+* Purpose: free file msg
+* Input  : fileMsg - file message
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeFileNode(FileNode *fileNode, void *userData)
+LOCAL void freeFileMsg(FileMsg *fileMsg, void *userData)
 {
-  assert(fileNode != NULL);
+  assert(fileMsg != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(fileNode->fileName);
+  String_delete(fileMsg->fileName);
 }
 
 /***********************************************************************\
 * Name   : getNextFile
 * Purpose: get next file from list of files to pack
-* Input  : fileName - file name variable
+* Input  : fileMsgQueue - file message queue
+           fileName - file name variable
 * Output : fileName - file name
 *          fileType - file type
 * Return : TRUE if file available, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool getNextFile(String fileName, FileTypes *fileType)
+LOCAL bool getNextFile(MsgQueue  *fileMsgQueue,
+                       String    fileName,
+                       FileTypes *fileType
+                      )
 {
-  FileNode *fileNode;
+  FileMsg fileMsg;
 
   assert(fileName != NULL);
   assert(fileType != NULL);
 
-  lockFileList();
-  fileNode = (FileNode*)List_getFirst(&fileList);
-  while ((fileNode == NULL) && !collectorThreadExitFlag)
+  if (MsgQueue_get(fileMsgQueue,&fileMsg,NULL,sizeof(fileMsg)))
   {
-    waitFileListModified();
-    fileNode = (FileNode*)List_getFirst(&fileList);
-  }
-  unlockFileList();
-  signalFileListModified();
-
-  if (fileNode != NULL)
-  {
-    String_set(fileName,fileNode->fileName);
-    (*fileType) = fileNode->fileType;
-    freeFileNode(fileNode,NULL);
-    free(fileNode);
+    String_set(fileName,fileMsg.fileName);
+    (*fileType) = fileMsg.fileType;
     return TRUE;
   }
   else
@@ -346,11 +329,11 @@ LOCAL void collector(void)
         {
           case FILETYPE_FILE:
             /* add to file list */
-            appendFileToList(&fileList,name,FILETYPE_FILE);
+            appendFileToList(&fileMsgQueue,name,FILETYPE_FILE);
             break;
           case FILETYPE_DIRECTORY:
             /* add to file list */
-            appendFileToList(&fileList,name,FILETYPE_DIRECTORY);
+            appendFileToList(&fileMsgQueue,name,FILETYPE_DIRECTORY);
 
             /* open directory contents */
             error = Files_openDirectory(&directoryHandle,name);
@@ -381,7 +364,7 @@ LOCAL void collector(void)
                   {
                     case FILETYPE_FILE:
                       /* add to file list */
-                      appendFileToList(&fileList,fileName,FILETYPE_FILE);
+                      appendFileToList(&fileMsgQueue,fileName,FILETYPE_FILE);
                       break;
                     case FILETYPE_DIRECTORY:
                       /* add to name list */
@@ -389,7 +372,7 @@ LOCAL void collector(void)
                       break;
                     case FILETYPE_LINK:
                       /* add to file list */
-                      appendFileToList(&fileList,fileName,FILETYPE_LINK);
+                      appendFileToList(&fileMsgQueue,fileName,FILETYPE_LINK);
                       break;
                     default:
                       info(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
@@ -418,7 +401,7 @@ LOCAL void collector(void)
             break;
           case FILETYPE_LINK:
             /* add to file list */
-            appendFileToList(&fileList,name,FILETYPE_LINK);
+            appendFileToList(&fileMsgQueue,name,FILETYPE_LINK);
             break;
           default:
             info(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
@@ -438,6 +421,7 @@ LOCAL void collector(void)
     /* next include pattern */
     includePatternNode = includePatternNode->next;
   }
+  MsgQueue_setEndOfMsg(&fileMsgQueue);
   collectorThreadExitFlag = TRUE;
 
   /* send signal to waiting threads */
@@ -446,6 +430,35 @@ LOCAL void collector(void)
   /* free resoures */
   String_delete(name);
   StringList_done(&nameList,NULL);
+}
+
+/***********************************************************************\
+* Name   : storage
+* Purpose: archive storage thread
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void storage(void)
+{
+  Errors          error;
+
+return;
+  while (!storageThreadExitFlag)
+  {
+    /* store archive files */
+    while (!collectorThreadExitFlag )
+    {
+    }
+  }
+  storageThreadExitFlag = TRUE;
+
+  /* send signal to waiting threads */
+  signalFileListModified();
+
+  /* free resoures */
 }
 
 /*---------------------------------------------------------------------*/
@@ -487,23 +500,26 @@ bool command_create(const char      *archiveFileName,
   }
 
   /* init file name list, list locka and list signal */
-  List_init(&fileList);
-  if (pthread_mutex_init(&fileListLock,NULL) != 0)
+  if (!MsgQueue_init(&fileMsgQueue,MAX_FILE_MSG_QUEUE_ENTRIES))
   {
-    HALT_FATAL_ERROR("Cannot initialise filename list lock semaphore!");
+    HALT_FATAL_ERROR("Cannot initialise file message queue!");
   }
-  if (pthread_cond_init(&fileListModified,NULL) != 0)
+  if (!MsgQueue_init(&storageMsgQueue,MAX_STORAGE_MSG_QUEUE_ENTRIES))
   {
-    HALT_FATAL_ERROR("Cannot initialise filename list new event!");
+    HALT_FATAL_ERROR("Cannot initialise storage message queue!");
   }
 
-  /* start file collector thread */
+  /* start threads */
   collectorThreadIncludePatternList = includePatternList;
   collectorThreadExcludePatternList = excludePatternList;
   collectorThreadExitFlag           = FALSE;
   if (pthread_create(&collectorThread,NULL,(void*(*)(void*))collector,NULL) != 0)
   {
     HALT_FATAL_ERROR("Cannot initialise collector thread!");
+  }
+  if (pthread_create(&storageThread,NULL,(void*(*)(void*))storage,NULL) != 0)
+  {
+    HALT_FATAL_ERROR("Cannot initialise storage thread!");
   }
 
   /* create new archive */
@@ -522,14 +538,15 @@ bool command_create(const char      *archiveFileName,
                getErrorText(error)
               );
 
-    /* stop collector thread */
+    /* stop threads */
     collectorThreadExitFlag = TRUE;
+    storageThreadExitFlag = TRUE;
     pthread_join(collectorThread,NULL);
+    pthread_join(storageThread,NULL);
 
     /* free resources */
-    List_done(&fileList,(NodeFreeFunction)freeFileNode,NULL);
-    pthread_cond_destroy(&fileListModified);
-    pthread_mutex_destroy(&fileListLock);
+    MsgQueue_done(&storageMsgQueue,NULL,NULL);
+    MsgQueue_done(&fileMsgQueue,NULL,NULL);
     free(buffer);
 
     return FALSE;
@@ -538,7 +555,7 @@ bool command_create(const char      *archiveFileName,
   /* store files */
   fileName = String_new();
   failFlag = FALSE;
-  while (getNextFile(fileName,&fileType))
+  while (getNextFile(&fileMsgQueue,fileName,&fileType))
   {
     info(0,"Store '%s'...",String_cString(fileName));
 
@@ -753,13 +770,13 @@ bool command_create(const char      *archiveFileName,
   /* close archive */
   Archive_close(&archiveInfo);
 
-  /* wait for collector thread */
+  /* wait for threads */
   pthread_join(collectorThread,NULL);
+  pthread_join(storageThread,NULL);
 
   /* free resources */
-  List_done(&fileList,(NodeFreeFunction)freeFileNode,NULL);
-  pthread_cond_destroy(&fileListModified);
-  pthread_mutex_destroy(&fileListLock);
+  MsgQueue_done(&storageMsgQueue,NULL,NULL);
+  MsgQueue_done(&fileMsgQueue,NULL,NULL);
   free(buffer);
 
   /* output statics */
