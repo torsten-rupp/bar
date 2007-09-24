@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: dynamic list functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
