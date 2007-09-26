@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -32,26 +32,47 @@
 
 /***************************** Datatypes *******************************/
 
+/***********************************************************************\
+* Name   : ArchiveNewFileFunction
+* Purpose: call back when archive file is created/written
+* Input  : fileName   - archive file name
+*          partNumber - part number or -1 if no parts
+*          userData   - user data
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*ArchiveNewFileFunction)(String fileName,
+                                        uint64 length,
+                                        bool   completeFlag,
+                                        int    partNumber,
+                                        void   *userData
+                                       );
+
 typedef struct
 {
-  String             fileName;                       // archive basename
-  uint64             partSize;                       // approximated size of file part
-  CompressAlgorithms compressAlgorithm;              // default compression algorithm
-  ulong              compressMinFileSize;            // min. file size to use compression
-  CryptAlgorithms    cryptAlgorithm;                 // default crypt algorithm
-  const char         *password;                      // password
+  ArchiveNewFileFunction archiveNewFileFunction;     // new archive file call back function
+  void                   *archiveNewFileUserData;    // user data for new archive file call back function
+  const char             *tmpDirectory;              // temporary directory
+  uint64                 partSize;                   // approximated size of file part
+  CompressAlgorithms     compressAlgorithm;          // default compression algorithm
+  ulong                  compressMinFileSize;        // min. file size to use compression
+  CryptAlgorithms        cryptAlgorithm;             // default crypt algorithm
+  const char             *password;                  // password
 
-  uint               blockLength;                    /* block length for file entry/file
+  uint                   blockLength;                /* block length for file entry/file
                                                         data (depend on used crypt
                                                         algorithm)
                                                      */
 
-  int                partNumber;                     // file part number
-  bool               fileOpenFlag;                   // TRUE iff file is open
-  FileHandle         fileHandle;                     // file handle
+  uint                   partNumber;                 // file part number
+  bool                   fileOpenFlag;               // TRUE iff file is open
+  String                 fileName;                   // file anme
+  FileHandle             fileHandle;                 // file handle
 
-  bool               nextChunkHeaderReadFlag;        // TRUE iff next chunk header read
-  ChunkHeader        nextChunkHeader;                // next file, directory, link chunk header
+  bool                   nextChunkHeaderReadFlag;    // TRUE iff next chunk header read
+  ChunkHeader            nextChunkHeader;            // next file, directory, link chunk header
 } ArchiveInfo;
 
 typedef struct
@@ -155,25 +176,29 @@ void Archive_done(void);
 /***********************************************************************\
 * Name   : Archive_create
 * Purpose: create archive
-* Input  : archiveInfo         - archive info block
-*          archiveFileName     - archive file name
-*          partSize            - part size (in bytes)
-*          compressAlgorithm   - compression algorithm to use
-*          compressMinFileSize - min. size of file to use compression
-*          cryptAlgorithm      - crypt algorithm to use
-*          password            - crypt password
+* Input  : archiveInfo            - archive info block
+*          archiveNewFileFunction -
+*          archiveNewFileUserData -
+*          partSize               - part size (in bytes)
+*          archiveFileName        - archive file name                    
+*          compressAlgorithm      - compression algorithm to use         
+*          compressMinFileSize    - min. size of file to use compression 
+*          cryptAlgorithm         - crypt algorithm to use               
+*          password               - crypt password                       
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_create(ArchiveInfo        *archiveInfo,
-                      const char         *archiveFileName,
-                      uint64             partSize,
-                      CompressAlgorithms compressAlgorithm,
-                      ulong              compressMinFileSize,
-                      CryptAlgorithms    cryptAlgorithm,
-                      const char         *password
+Errors Archive_create(ArchiveInfo            *archiveInfo,
+                      ArchiveNewFileFunction archiveNewFileFunction,
+                      void                   *archiveNewFileUserData,
+                      const char             *tmpDirectory,
+                      uint64                 partSize,
+                      CompressAlgorithms     compressAlgorithm,
+                      ulong                  compressMinFileSize,
+                      CryptAlgorithms        cryptAlgorithm,
+                      const char             *password
                      );
 
 /***********************************************************************\
@@ -187,9 +212,9 @@ Errors Archive_create(ArchiveInfo        *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_open(ArchiveInfo *archiveInfo,
-                    const char  *archiveFileName,
-                    const char  *password
+Errors Archive_open(ArchiveInfo  *archiveInfo,
+                    const String archiveFileName,
+                    const char   *password
                    );
 
 /***********************************************************************\

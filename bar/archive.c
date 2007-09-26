@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -67,7 +67,7 @@ LOCAL bool endOfFile(void *userData)
 
   assert(archiveInfo != NULL);
 
-  return Files_eof(&archiveInfo->fileHandle);
+  return File_eof(&archiveInfo->fileHandle);
 }
 
 /***********************************************************************\
@@ -86,7 +86,7 @@ LOCAL bool readFile(void *userData, void *buffer, ulong bufferLength)
 
   assert(archiveInfo != NULL);
 
-  if (Files_read(&archiveInfo->fileHandle,buffer,bufferLength,&readBytes) != ERROR_NONE)
+  if (File_read(&archiveInfo->fileHandle,buffer,bufferLength,&readBytes) != ERROR_NONE)
   {
     return FALSE;
   }
@@ -109,7 +109,7 @@ LOCAL bool writeFile(void *userData, const void *buffer, ulong bufferLength)
 
   assert(archiveInfo != NULL);
 
-  return (Files_write(&archiveInfo->fileHandle,buffer,bufferLength) == ERROR_NONE);
+  return (File_write(&archiveInfo->fileHandle,buffer,bufferLength) == ERROR_NONE);
 }
 
 /***********************************************************************\
@@ -128,7 +128,7 @@ LOCAL bool tellFile(void *userData, uint64 *offset)
   assert(archiveInfo != NULL);
   assert(offset != NULL);
 
-  return (Files_tell(&archiveInfo->fileHandle,offset) == ERROR_NONE);
+  return (File_tell(&archiveInfo->fileHandle,offset) == ERROR_NONE);
 }
 
 /***********************************************************************\
@@ -146,7 +146,7 @@ LOCAL bool seekFile(void *userData, uint64 offset)
 
   assert(archiveInfo != NULL);
 
-  return (Files_seek(&archiveInfo->fileHandle,offset) == ERROR_NONE);
+  return (File_seek(&archiveInfo->fileHandle,offset) == ERROR_NONE);
 }
 
 /*---------------------------------------------------------------------*/
@@ -235,7 +235,7 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
     if (archiveInfo->fileOpenFlag)
     {
       /* get file size */
-      fileSize = Files_getSize(&archiveInfo->fileHandle);
+      fileSize = File_getSize(&archiveInfo->fileHandle);
 
       if      (   !headerWrittenFlag
                && (fileSize+headerLength >= archiveInfo->partSize)
@@ -266,33 +266,25 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
 
 LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
 {
-  String fileName;
   Errors error;
 
   assert(archiveInfo != NULL);
   assert(!archiveInfo->fileOpenFlag);
 
   /* get output filename */
-  if (archiveInfo->partSize > 0)
+  archiveInfo->fileName = String_new();
+  if (!File_getTmpFileName(archiveInfo->tmpDirectory,archiveInfo->fileName))
   {
-    fileName = String_format(String_new(),"%S.%06d",archiveInfo->fileName,archiveInfo->partNumber);
-    archiveInfo->partNumber++;
-  }
-  else
-  {
-    fileName = String_copy(archiveInfo->fileName);
+    return ERROR_IO_ERROR;
   }
 
   /* create file */
-  error = Files_open(&archiveInfo->fileHandle,fileName,FILE_OPENMODE_CREATE);
+  error = File_open(&archiveInfo->fileHandle,archiveInfo->fileName,FILE_OPENMODE_CREATE);
   if (error != ERROR_NONE)
   {
-    String_delete(fileName);
+    String_delete(archiveInfo->fileName);
     return error;
   }
-
-  /* free resources */
-  String_delete(fileName);
 
   archiveInfo->fileOpenFlag = TRUE;
 
@@ -308,14 +300,45 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void closeArchiveFile(ArchiveInfo *archiveInfo)
+LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo)
 {
+  uint64 size;
+  Errors error;
+
   assert(archiveInfo != NULL);
   assert(archiveInfo->fileOpenFlag);
 
-  Files_close(&archiveInfo->fileHandle);
+  /* close file */
+  size = File_getSize(&archiveInfo->fileHandle);
+  File_close(&archiveInfo->fileHandle);
+
+  if (archiveInfo->archiveNewFileFunction != NULL)
+  {
+    /* call back */
+    error = archiveInfo->archiveNewFileFunction(archiveInfo->fileName,
+                                                size,
+                                                TRUE,
+                                                (archiveInfo->partSize > 0)?archiveInfo->partNumber:-1,
+                                                archiveInfo->archiveNewFileUserData
+                                               );
+    if (error != ERROR_NONE)
+    {
+      String_delete(archiveInfo->fileName);
+      archiveInfo->fileOpenFlag = FALSE;
+      return error;
+    }
+  }
+  if (archiveInfo->partSize > 0)
+  {
+    archiveInfo->partNumber++;
+  }
+
+  /* free resources */
+  String_delete(archiveInfo->fileName);
 
   archiveInfo->fileOpenFlag = FALSE;
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -698,19 +721,21 @@ void Archive_done(void)
 {
 }
 
-Errors Archive_create(ArchiveInfo        *archiveInfo,
-                      const char         *archiveFileName,
-                      uint64             partSize,
-                      CompressAlgorithms compressAlgorithm,
-                      ulong              compressMinFileSize,
-                      CryptAlgorithms    cryptAlgorithm,
-                      const char         *password
+Errors Archive_create(ArchiveInfo            *archiveInfo,
+                      ArchiveNewFileFunction archiveNewFileFunction,
+                      void                   *archiveNewFileUserData,
+                      const char             *tmpDirectory,
+                      uint64                 partSize,
+                      CompressAlgorithms     compressAlgorithm,
+                      ulong                  compressMinFileSize,
+                      CryptAlgorithms        cryptAlgorithm,
+                      const char             *password
                      )
 {
   Errors error;
 
   assert(archiveInfo != NULL);
-  assert(archiveFileName != NULL);
+  assert(archiveNewFileFunction != NULL);
 
   /* detect block length of use crypt algorithm */
   error = Crypt_getBlockLength(cryptAlgorithm,&archiveInfo->blockLength);
@@ -724,7 +749,9 @@ Errors Archive_create(ArchiveInfo        *archiveInfo,
     return ERROR_UNSUPPORTED_BLOCK_SIZE;
   }
 
-  archiveInfo->fileName                = String_newCString(archiveFileName); 
+  archiveInfo->archiveNewFileFunction  = archiveNewFileFunction;  
+  archiveInfo->archiveNewFileUserData  = archiveNewFileUserData;  
+  archiveInfo->tmpDirectory            = tmpDirectory; 
   archiveInfo->partSize                = partSize;                           
   archiveInfo->compressAlgorithm       = compressAlgorithm;
   archiveInfo->compressMinFileSize     = compressMinFileSize;
@@ -733,15 +760,16 @@ Errors Archive_create(ArchiveInfo        *archiveInfo,
 
   archiveInfo->partNumber              = 0;
   archiveInfo->fileOpenFlag            = FALSE;
+  archiveInfo->fileName                = NULL;
 
   archiveInfo->nextChunkHeaderReadFlag = FALSE;
 
   return ERROR_NONE;
 }
 
-Errors Archive_open(ArchiveInfo *archiveInfo,
-                    const char  *archiveFileName,
-                    const char  *password
+Errors Archive_open(ArchiveInfo  *archiveInfo,
+                    const String archiveFileName,
+                    const char   *password
                    )
 {
   Errors error;
@@ -750,7 +778,9 @@ Errors Archive_open(ArchiveInfo *archiveInfo,
   assert(archiveFileName != NULL);
 
   /* init */
-  archiveInfo->fileName                = String_newCString(archiveFileName);
+  archiveInfo->archiveNewFileFunction  = NULL;  
+  archiveInfo->archiveNewFileUserData  = NULL;  
+  archiveInfo->tmpDirectory            = NULL;
   archiveInfo->partSize                = 0;
   archiveInfo->compressAlgorithm       = 0;
   archiveInfo->compressMinFileSize     = 0;
@@ -758,14 +788,16 @@ Errors Archive_open(ArchiveInfo *archiveInfo,
   archiveInfo->password                = password;
 
   archiveInfo->partNumber              = 0;
-  archiveInfo->fileOpenFlag            = FALSE;
+  archiveInfo->fileOpenFlag            = TRUE;
+  archiveInfo->fileName                = String_copy(archiveFileName);
 
   archiveInfo->nextChunkHeaderReadFlag = FALSE;
 
   /* open file */
-  error = Files_open(&archiveInfo->fileHandle,archiveInfo->fileName,FILE_OPENMODE_READ);
+  error = File_open(&archiveInfo->fileHandle,archiveInfo->fileName,FILE_OPENMODE_READ);
   if (error != ERROR_NONE)
   {
+    String_delete(archiveInfo->fileName);
     return error;
   }
 
@@ -782,7 +814,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo)
 
   /* find next file, directory, link chunk */
   chunkHeaderFoundFlag = FALSE;
-  while (!Files_eof(&archiveInfo->fileHandle) && !chunkHeaderFoundFlag)
+  while (!File_eof(&archiveInfo->fileHandle) && !chunkHeaderFoundFlag)
   {
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (error != ERROR_NONE)
@@ -818,13 +850,11 @@ bool Archive_eof(ArchiveInfo *archiveInfo)
 Errors Archive_close(ArchiveInfo *archiveInfo)
 {
   assert(archiveInfo != NULL);
-  assert(archiveInfo->fileName != NULL);
 
   if (archiveInfo->fileOpenFlag)
   {
-    Files_close(&archiveInfo->fileHandle);
+    closeArchiveFile(archiveInfo);
   }
-  String_delete(archiveInfo->fileName);
 
   return ERROR_NONE;
 }

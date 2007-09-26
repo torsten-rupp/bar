@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -44,6 +44,12 @@ typedef enum
 typedef struct
 {
   const char    *tmpDirectory;
+
+  uint          sshPort;
+  const char    *sshPublicKeyFile;
+  const char    *sshPrivatKeyFile;
+  const char    *sshPassword;
+
   bool          overwriteFlag;
   bool          quietFlag;
   uint          verboseLevel;
@@ -62,6 +68,17 @@ extern GlobalOptions globalOptions;
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : getErrorText
+* Purpose: get errror text of error code
+* Input  : error - error
+* Output : -
+* Return : error text (read only!)
+* Notes  : -
+\***********************************************************************/
+
+const char *getErrorText(Errors error);
 
 /***********************************************************************\
 * Name   : info
@@ -87,17 +104,6 @@ void info(uint verboseLevel, const char *format, ...);
 \***********************************************************************/
 
 void warning(const char *format, ...);
-
-/***********************************************************************\
-* Name   : getErrorText
-* Purpose: get errror text of error code
-* Input  : error - error
-* Output : -
-* Return : error text (read only!)
-* Notes  : -
-\***********************************************************************/
-
-const char *getErrorText(Errors error);
 
 /***********************************************************************\
 * Name   : printError

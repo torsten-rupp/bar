@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -188,7 +188,7 @@ bool command_list(StringList  *archiveFileNameList,
 
     /* open archive */
     error = Archive_open(&archiveInfo,
-                         String_cString(archiveFileName),
+                         archiveFileName,
                          password
                         );
     if (error != ERROR_NONE)

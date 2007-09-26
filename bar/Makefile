@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.21 $
+# $Revision: 1.22 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -20,8 +20,8 @@ CC_INCLUDES         =
 LD                  = gcc
 LD_FLAGS            =
 LD_LIBRARY_PATHS    = /usr/local/lib
-LD_LIBRARIES        = pthread z
-LD_STATIC_LIBRARIES = gcrypt gpg-error
+LD_LIBRARIES        = pthread z gcrypt gpg-error ssh2
+LD_STATIC_LIBRARIES = 
 
 #---------------------------------- commands----------------------------------
 
@@ -55,7 +55,8 @@ TEST_PASSWORD=franz_kafka
           $^ \
           $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(foreach z,$(LD_LIBRARIES),-l$z) \
-          -Wl,-static $(foreach z,$(LD_STATIC_LIBRARIES),-l$z)
+
+#          -Wl,-static $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) -Wl,-dynamic
 
 #--------------------------------- objects -----------------------------------
 
@@ -70,6 +71,8 @@ SOURCES =       bar.c \
                 patterns.c \
                 compress.c \
                 crypt.c \
+                storage.c \
+                network.c \
                 \
                 global.c \
                 cmdoptions.c \
@@ -123,33 +126,33 @@ test:
 
 test1: bar
 	@$(ECHO_NO_LF) "Test 1: basic..."
-	$(MAKE) COMPRESS=none CRYPT=none OPTIONS="" standard_test
+	$(MAKE) BAR_FILE="test.bar" OPTIONS="--compress=none --crypt=none" standard_test
 	@$(ECHO) "ok"
 
-test2: bar
+test2 test_compress: bar
 	@$(ECHO_NO_LF) "Test 2: compress..."
 	for compress in $(COMPRESS_NAMES); do \
-          $(MAKE) OPTIONS="--compress=$$compress" standard_test; \
+          $(MAKE) BAR_FILE="test.bar" OPTIONS="--compress=$$compress" standard_test; \
         done
 	@$(ECHO) "ok"
 
-test3: bar
+test3 test_crypt: bar
 	@$(ECHO_NO_LF) "Test 3: crypt..."
 	for crypt in $(CRYPT_NAMES); do \
-          $(MAKE) OPTIONS="--crypt=$$crypt --password=$(TEST_PASSWORD)" standard_test; \
+          $(MAKE) BAR_FILE="test.bar" OPTIONS="--crypt=$$crypt --password=$(TEST_PASSWORD)" standard_test; \
         done
 	@$(ECHO) "ok"
 
-test4: bar
+test4 test_split: bar
 	@$(ECHO_NO_LF) "Test 4: split..."
-	$(MAKE) OPTIONS="-s 100000" standard_test
+	$(MAKE) BAR_FILE="test-###.bar" OPTIONS="-s 100000" standard_test
 	@$(ECHO) "ok"
 
 test_all: bar
 	@$(ECHO_NO_LF) "Test all..."
 	for compress in $(COMPRESS_NAMES); do \
           for crypt in $(CRYPT_NAMES); do \
-            $(MAKE) OPTIONS="--compress=$$compress --crypt=$$crypt --password=$(TEST_PASSWORD) -s 100000" standard_test; \
+            $(MAKE) BAR_FILE=test.bar OPTIONS="--compress=$$compress --crypt=$$crypt --password=$(TEST_PASSWORD) -s 100000" standard_test; \
             rc=$$?; \
             if test $$rc -ne 0; then \
               exit 1; \
@@ -160,17 +163,17 @@ test_all: bar
 
 .PHONY: standard_test
 standard_test: bar
-	$(RMRF) test/test.bar* test/restore
-	./bar -c test/test.bar test/data $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -l test/test.bar* $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -t test/test.bar* $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -x test/test.bar* $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
+	$(RMRF) test/test*.bar test/restore
+	./bar -c test/$(BAR_FILE) test/data $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -x test/test*.bar $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r test/data test/restore/test/data
 
 .PHONY: standard_test_destroy
 standard_test_destroy: bar destroyer
-	$(RMRF) test/test.bar* test/restore
-	./bar -c test/test.bar test/data/zero1024.dat $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	$(RMRF) test/test*.bar test/restore
+	./bar -c test/$(BAR_FILE) test/data/zero1024.dat $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./destroyer test/test.bar m:0 > test/test.bar_destroyed
 	./bar -l test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -t test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)

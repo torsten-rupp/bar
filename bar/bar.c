@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -23,11 +23,12 @@
 #include "patterns.h"
 #include "crypt.h"
 #include "archive.h"
+#include "network.h"
+
 #include "command_create.h"
 #include "command_list.h"
 #include "command_restore.h"
 #include "command_test.h"
-
 
 #include "bar.h"
 
@@ -118,34 +119,39 @@ LOCAL bool parseIncludeExclude(void *variable, const char *value, const void *de
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM   ("create",           'c',0,command,                      COMMAND_NONE,COMMAND_CREATE,                                    "create new archive"                       ),
-  CMD_OPTION_ENUM   ("list",             'l',0,command,                      COMMAND_NONE,COMMAND_LIST,                                      "list contents of archive"                 ),
-  CMD_OPTION_ENUM   ("test",             't',0,command,                      COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"                 ),
-  CMD_OPTION_ENUM   ("extract",          'x',0,command,                      COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"                          ),
+  CMD_OPTION_ENUM   ("create",           'c',0,command,                       COMMAND_NONE,COMMAND_CREATE,                                    "create new archive"                       ),
+  CMD_OPTION_ENUM   ("list",             'l',0,command,                       COMMAND_NONE,COMMAND_LIST,                                      "list contents of archive"                 ),
+  CMD_OPTION_ENUM   ("test",             't',0,command,                       COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"                 ),
+  CMD_OPTION_ENUM   ("extract",          'x',0,command,                       COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"                          ),
 
-  CMD_OPTION_INTEGER("part-size",        's',0,partSize,                     0,                                                              "approximated part size"                   ),
-  CMD_OPTION_STRING ("tmp-directory",    0,  0,globalOptions.tmpDirectory,   "/tmp",                                                         "temporary directory"                      ),
-  CMD_OPTION_INTEGER("directory-strip",  'p',0,directoryStripCount,          0,                                                              "number of directories to strip on extract"),
-  CMD_OPTION_STRING ("directory",        0,  0,directory,                    NULL,                                                           "directory to restore files"               ),
+  CMD_OPTION_INTEGER("part-size",        's',0,partSize,                      0,                                                              "approximated part size"                   ),
+  CMD_OPTION_STRING ("tmp-directory",    0,  0,globalOptions.tmpDirectory,    "/tmp",                                                         "temporary directory"                      ),
+  CMD_OPTION_INTEGER("directory-strip",  'p',0,directoryStripCount,           0,                                                              "number of directories to strip on extract"),
+  CMD_OPTION_STRING ("directory",        0,  0,directory,                     NULL,                                                           "directory to restore files"               ),
 
-  CMD_OPTION_SELECT ("pattern-type",     0,  0,patternType,                  PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,            "select pattern type"                      ),
+  CMD_OPTION_SELECT ("pattern-type",     0,  0,patternType,                   PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,            "select pattern type"                      ),
 
-  CMD_OPTION_SPECIAL("include",          'i',1,includePatternList,           NULL,parseIncludeExclude,NULL,                                  "include pattern"                          ),
-  CMD_OPTION_SPECIAL("exclude",          '!',1,excludePatternList,           NULL,parseIncludeExclude,NULL,                                  "exclude pattern"                          ),
+  CMD_OPTION_SPECIAL("include",          'i',1,includePatternList,            NULL,parseIncludeExclude,NULL,                                  "include pattern"                          ),
+  CMD_OPTION_SPECIAL("exclude",          '!',1,excludePatternList,            NULL,parseIncludeExclude,NULL,                                  "exclude pattern"                          ),
  
-  CMD_OPTION_SELECT ("compress",         0,  0,compressAlgorithm,            COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"         ),
-  CMD_OPTION_INTEGER("compress-min-size",0,  0,compressMinFileSize,          0,                                                              "minimal size of file for compression"     ),
+  CMD_OPTION_SELECT ("compress",         0,  0,compressAlgorithm,             COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"         ),
+  CMD_OPTION_INTEGER("compress-min-size",0,  0,compressMinFileSize,           0,                                                              "minimal size of file for compression"     ),
 
-  CMD_OPTION_SELECT ("crypt",            0,  0,cryptAlgorithm,               CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"            ),
-  CMD_OPTION_STRING ("password",         0,  0,password,                     NULL,                                                           "crypt password"                           ),
+  CMD_OPTION_SELECT ("crypt",            0,  0,cryptAlgorithm,                CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"            ),
+  CMD_OPTION_STRING ("password",         0,  0,password,                      NULL,                                                           "crypt password"                           ),
 
-//  CMD_OPTION_BOOLEAN("incremental",      0,  0,globalOptions.incrementalFlag,FALSE,                                                          "overwrite existing files"                 ),
-  CMD_OPTION_BOOLEAN("overwrite",        0,  0,globalOptions.overwriteFlag,  FALSE,                                                          "overwrite existing files"                 ),
-  CMD_OPTION_BOOLEAN("quiet",            'q',0,globalOptions.quietFlag,      FALSE,                                                          "surpress any output"                      ),
-  CMD_OPTION_INTEGER("verbose",          'v',0,globalOptions.verboseLevel,   0,                                                              "verbosity level"                          ),
+  CMD_OPTION_INTEGER("ssh-port",         0,  0,globalOptions.sshPort,         0,                                                              "ssh port"                                 ),
+  CMD_OPTION_STRING ("ssh-public-key",   0,  0,globalOptions.sshPublicKeyFile,NULL,                                                           "ssh public key file name"                 ),
+  CMD_OPTION_STRING ("ssh-privat-key",   0,  0,globalOptions.sshPrivatKeyFile,NULL,                                                           "ssh privat key file name"                 ),
+  CMD_OPTION_STRING ("ssh-password",     0,  0,globalOptions.sshPassword,     NULL,                                                           "ssh password"                             ),
 
-  CMD_OPTION_BOOLEAN("version",          0  ,0,versionFlag,                  FALSE,                                                          "print version"                            ),
-  CMD_OPTION_BOOLEAN("help",             'h',0,helpFlag,                     FALSE,                                                          "print this help"                          ),
+//  CMD_OPTION_BOOLEAN("incremental",      0,  0,globalOptions.incrementalFlag, FALSE,                                                          "overwrite existing files"                 ),
+  CMD_OPTION_BOOLEAN("overwrite",        0,  0,globalOptions.overwriteFlag,   FALSE,                                                          "overwrite existing files"                 ),
+  CMD_OPTION_BOOLEAN("quiet",            'q',0,globalOptions.quietFlag,       FALSE,                                                          "surpress any output"                      ),
+  CMD_OPTION_INTEGER("verbose",          'v',0,globalOptions.verboseLevel,    0,                                                              "verbosity level"                          ),
+
+  CMD_OPTION_BOOLEAN("version",          0  ,0,versionFlag,                   FALSE,                                                          "print version"                            ),
+  CMD_OPTION_BOOLEAN("help",             'h',0,helpFlag,                      FALSE,                                                          "print this help"                          ),
 };
 
 /****************************** Macros *********************************/
@@ -157,34 +163,6 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-void info(uint verboseLevel, const char *format, ...)
-{
-  va_list arguments;
-
-  assert(format != NULL);
-
-  if (!globalOptions.quietFlag && (globalOptions.verboseLevel >= verboseLevel))
-  {
-    va_start(arguments,format);
-    vprintf(format,arguments);
-    va_end(arguments);
-    fflush(stdout);
-  }
-}
-
-void warning(const char *format, ...)
-{
-  va_list arguments;
-
-  assert(format != NULL);
-
-  printf("Warning: ");
-  va_start(arguments,format);
-  vprintf(format,arguments);
-  va_end(arguments);
-  fflush(stdout);
-}
 
 const char *getErrorText(Errors error)
 {
@@ -229,6 +207,34 @@ const char *getErrorText(Errors error)
 
   #undef DEFAULT
   #undef CASE
+}
+
+void info(uint verboseLevel, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  if (!globalOptions.quietFlag && (globalOptions.verboseLevel >= verboseLevel))
+  {
+    va_start(arguments,format);
+    vprintf(format,arguments);
+    va_end(arguments);
+    fflush(stdout);
+  }
+}
+
+void warning(const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  printf("Warning: ");
+  va_start(arguments,format);
+  vprintf(format,arguments);
+  va_end(arguments);
+  fflush(stdout);
 }
 
 void printError(const char *text, ...)
@@ -295,6 +301,23 @@ LOCAL bool init(void)
     Crypt_done();
     return FALSE;
   }
+  error = Storage_init();
+  if (error != ERROR_NONE)
+  {
+    Archive_done();
+    Patterns_done();
+    Crypt_done();
+    return FALSE;
+  }
+  error = Network_init();
+  if (error != ERROR_NONE)
+  {
+    Storage_done();
+    Archive_done();
+    Patterns_done();
+    Crypt_done();
+    return FALSE;
+  }
 
   return TRUE;
 }
@@ -310,6 +333,8 @@ LOCAL bool init(void)
 
 LOCAL void done(void)
 {
+  Network_done();
+  Storage_done();
   Archive_done();
   Patterns_done();
   Crypt_done();
@@ -320,12 +345,6 @@ LOCAL void done(void)
 int main(int argc, const char *argv[])
  {
   int exitcode;
-
-  /* init */
-  if (!init())
-  {
-    exit(EXITCODE_INIT_FAIL);
-  }
 
   /* initialise variables */
   Patterns_newList(&includePatternList);
@@ -349,6 +368,12 @@ int main(int argc, const char *argv[])
   {
     printUsage(argv[0]);
     return EXITCODE_OK;
+  }
+
+  /* init */
+  if (!init())
+  {
+    exit(EXITCODE_INIT_FAIL);
   }
 
   exitcode = EXITCODE_UNKNOWN;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -127,7 +127,7 @@ bool command_test(StringList  *archiveFileNameList,
 
     /* open archive */
     error = Archive_open(&archiveInfo,
-                         String_cString(archiveFileName),
+                         archiveFileName,
                          password
                         );
     if (error != ERROR_NONE)
@@ -203,7 +203,7 @@ bool command_test(StringList  *archiveFileNameList,
               info(0,"Test file '%s'...",String_cString(fileName));
 
               /* check file */
-              if (!Files_exists(fileName))
+              if (!File_exists(fileName))
               {
                 info(0,"File '%s' does not exists!\n",
                      String_cString(fileName)
@@ -213,7 +213,7 @@ bool command_test(StringList  *archiveFileNameList,
                 failFlag = TRUE;
                 break;
               }
-              if (Files_getType(fileName) != FILETYPE_FILE)
+              if (File_getType(fileName) != FILETYPE_FILE)
               {
                 info(0,"Not a file '%s'!\n",
                      String_cString(fileName)
@@ -234,7 +234,7 @@ bool command_test(StringList  *archiveFileNameList,
 //FileFragmentList_print(fragmentList,String_cString(fileName));
 
               /* open file */
-              error = Files_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+              error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
               if (error != ERROR_NONE)
               {
                 info(0,"fail\n");
@@ -249,13 +249,13 @@ bool command_test(StringList  *archiveFileNameList,
               }
 
               /* check file size */
-              if (fileInfo.size != Files_getSize(&fileHandle))
+              if (fileInfo.size != File_getSize(&fileHandle))
               {
                 info(0,"differ in size: expected %lld bytes, found %lld bytes\n",
                      fileInfo.size,
-                     Files_getSize(&fileHandle)
+                     File_getSize(&fileHandle)
                     );
-                Files_close(&fileHandle);
+                File_close(&fileHandle);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 failFlag = TRUE;
@@ -263,7 +263,7 @@ bool command_test(StringList  *archiveFileNameList,
               }
 
               /* check file content */
-              error = Files_seek(&fileHandle,fragmentOffset);
+              error = File_seek(&fileHandle,fragmentOffset);
               if (error != ERROR_NONE)
               {
                 info(0,"fail\n");
@@ -271,7 +271,7 @@ bool command_test(StringList  *archiveFileNameList,
                            String_cString(fileName),
                            getErrorText(error)
                           );
-                Files_close(&fileHandle);
+                File_close(&fileHandle);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 failFlag = TRUE;
@@ -295,7 +295,7 @@ bool command_test(StringList  *archiveFileNameList,
                   failFlag = TRUE;
                   break;
                 }
-                error = Files_read(&fileHandle,fileBuffer,n,&readBytes);
+                error = File_read(&fileHandle,fileBuffer,n,&readBytes);
                 if (error != ERROR_NONE)
                 {
                   info(0,"fail\n");
@@ -322,7 +322,7 @@ bool command_test(StringList  *archiveFileNameList,
 
                 length += n;
               }
-              Files_close(&fileHandle);
+              File_close(&fileHandle);
               if (failFlag)
               {
                 Archive_closeEntry(&archiveFileInfo);
@@ -377,7 +377,7 @@ bool command_test(StringList  *archiveFileNameList,
           {
             String   directoryName;
             FileInfo fileInfo;
-            String   localFileName;
+//            String   localFileName;
 //            FileInfo localFileInfo;
 
             /* read link */
@@ -406,7 +406,7 @@ bool command_test(StringList  *archiveFileNameList,
               info(0,"Test directory '%s'...",String_cString(directoryName));
 
               /* check directory */
-              if (!Files_exists(directoryName))
+              if (!File_exists(directoryName))
               {
                 info(0,"Directory '%s' does not exists!\n",
                      String_cString(directoryName)
@@ -416,7 +416,7 @@ bool command_test(StringList  *archiveFileNameList,
                 failFlag = TRUE;
                 break;
               }
-              if (Files_getType(directoryName) != FILETYPE_DIRECTORY)
+              if (File_getType(directoryName) != FILETYPE_DIRECTORY)
               {
                 info(0,"Not a directory '%s'!\n",
                      String_cString(directoryName)
@@ -430,7 +430,7 @@ bool command_test(StringList  *archiveFileNameList,
 
 #if 0
               /* get local file info */
-              error = Files_getFileInfo(directoryName,&localFileInfo);
+              error = File_getFileInfo(directoryName,&localFileInfo);
               if (error != ERROR_NONE)
               {
                 printError("Cannot not read local directory '%s' (error: %s)!\n",
@@ -499,7 +499,7 @@ bool command_test(StringList  *archiveFileNameList,
               info(0,"Test link '%s'...",String_cString(linkName));
 
               /* check link */
-              if (!Files_exists(linkName))
+              if (!File_exists(linkName))
               {
                 info(0,"Link '%s' does not exists!\n",
                      String_cString(linkName)
@@ -510,7 +510,7 @@ bool command_test(StringList  *archiveFileNameList,
                 failFlag = TRUE;
                 break;
               }
-              if (Files_getType(linkName) != FILETYPE_LINK)
+              if (File_getType(linkName) != FILETYPE_LINK)
               {
                 info(0,"Not a link '%s'!\n",
                      String_cString(linkName)
@@ -525,7 +525,7 @@ bool command_test(StringList  *archiveFileNameList,
 
               /* check link content */
               localFileName = String_new();
-              error = Files_readLink(linkName,localFileName);
+              error = File_readLink(linkName,localFileName);
               if (error != ERROR_NONE)
               {
                 printError("Cannot not read local file '%s' (error: %s)!\n",
@@ -556,7 +556,7 @@ bool command_test(StringList  *archiveFileNameList,
 
 #if 0
               /* get local file info */
-              error = Files_getFileInfo(linkName,&localFileInfo);
+              error = File_getFileInfo(linkName,&localFileInfo);
               if (error != ERROR_NONE)
               {
                 printError("Cannot not read local file '%s' (error: %s)!\n",

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -446,7 +446,7 @@ Errors Chunks_init(bool(*endOfFile)(void *userData),
   return ERROR_NONE;
 }
 
-void Chunks_doneF(void)
+void Chunks_done(void)
 {
 }
 
