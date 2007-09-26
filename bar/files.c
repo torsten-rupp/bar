@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -43,28 +43,28 @@
   extern "C" {
 #endif
 
-String Files_setFileName(String fileName, String name)
+String File_setFileName(String fileName, String name)
 {
   assert(fileName != NULL);
 
   return String_set(fileName,name);
 }
 
-String Files_setFileNameCString(String fileName, const char *name)
+String File_setFileNameCString(String fileName, const char *name)
 {
   assert(fileName != NULL);
 
   return String_setCString(fileName,name);
 }
 
-String Files_setFileNameChar(String fileName, char ch)
+String File_setFileNameChar(String fileName, char ch)
 {
   assert(fileName != NULL);
 
   return String_setChar(fileName,ch);
 }
 
-String Files_appendFileName(String fileName, String name)
+String File_appendFileName(String fileName, String name)
 {
   assert(fileName != NULL);
   assert(name != NULL);
@@ -81,7 +81,7 @@ String Files_appendFileName(String fileName, String name)
   return fileName;
 }
 
-String Files_appendFileNameCString(String fileName, const char *name)
+String File_appendFileNameCString(String fileName, const char *name)
 {
   assert(fileName != NULL);
   assert(name != NULL);
@@ -98,7 +98,7 @@ String Files_appendFileNameCString(String fileName, const char *name)
   return fileName;
 }
 
-String Files_appendFileNameChar(String fileName, char ch)
+String File_appendFileNameChar(String fileName, char ch)
 {
   assert(fileName != NULL);
 
@@ -114,7 +114,7 @@ String Files_appendFileNameChar(String fileName, char ch)
   return fileName;
 }
 
-String Files_getFilePathName(String fileName, String pathName)
+String File_getFilePathName(String fileName, String pathName)
 {
   long lastPathSeparatorIndex;
 
@@ -137,7 +137,7 @@ String Files_getFilePathName(String fileName, String pathName)
   return pathName;
 }
 
-String Files_getFileBaseName(String fileName, String baseName)
+String File_getFileBaseName(String fileName, String baseName)
 {
   long lastPathSeparatorIndex;
 
@@ -160,17 +160,17 @@ String Files_getFileBaseName(String fileName, String baseName)
   return baseName;
 }
 
-void Files_splitFileName(String fileName, String *pathName, String *baseName)
+void File_splitFileName(String fileName, String *pathName, String *baseName)
 {
   assert(fileName != NULL);
   assert(pathName != NULL);
   assert(baseName != NULL);
 
-  (*pathName) = Files_getFilePathName(fileName,String_new());
-  (*baseName) = Files_getFileBaseName(fileName,String_new());
+  (*pathName) = File_getFilePathName(fileName,String_new());
+  (*baseName) = File_getFileBaseName(fileName,String_new());
 }
 
-void Files_initSplitFileName(StringTokenizer *stringTokenizer, String fileName)
+void File_initSplitFileName(StringTokenizer *stringTokenizer, String fileName)
 {
   assert(stringTokenizer != NULL);
   assert(fileName != NULL);
@@ -178,13 +178,14 @@ void Files_initSplitFileName(StringTokenizer *stringTokenizer, String fileName)
   String_initTokenizer(stringTokenizer,fileName,FILES_PATHNAME_SEPARATOR_CHARS,NULL,FALSE);
 }
 
-void Files_doneSplitFileName(StringTokenizer *stringTokenizer)
+void File_doneSplitFileName(StringTokenizer *stringTokenizer)
 {
   assert(stringTokenizer != NULL);
+
   String_doneTokenizer(stringTokenizer);
 }
 
-bool Files_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const name)
+bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const name)
 {
   assert(stringTokenizer != NULL);
   assert(name != NULL);
@@ -194,10 +195,81 @@ bool Files_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const 
 
 /*---------------------------------------------------------------------*/
 
-Errors Files_open(FileHandle    *fileHandle,
-                  const String  fileName,
-                  FileOpenModes fileOpenMode
-                 )
+bool File_getTmpFileName(const char *directory, String fileName)
+{
+  char *s;
+  int  handle;
+
+  assert(fileName != NULL);
+
+  if (directory != NULL)
+  {
+    String_format(fileName,"%s%cbar-XXXXXXX",directory,FILES_PATHNAME_SEPARATOR_CHAR);
+  }
+  else
+  {
+    String_format(fileName,"bar-XXXXXXX");
+  }
+  s = String_toCString(fileName);
+  if (s == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  handle = mkstemp(s);
+  if (handle == -1)
+  {
+    free(s);
+    return FALSE;
+  }
+  close(handle);
+
+  String_setBuffer(fileName,s,strlen(s));
+
+  free(s);
+
+  return TRUE;
+}
+
+bool File_getTmpDirectoryName(const char *directory, String fileName)
+{
+  char *s;
+
+  assert(fileName != NULL);
+
+  if (directory != NULL)
+  {
+    String_format(fileName,"%s%cbar-XXXXXXX",directory,FILES_PATHNAME_SEPARATOR_CHAR);
+  }
+  else
+  {
+    String_format(fileName,"bar-XXXXXXX");
+  }
+  s = String_toCString(fileName);
+  if (s == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  if (mkdtemp(s) == NULL)
+  {
+    free(s);
+    return FALSE;
+  }
+
+  String_setBuffer(fileName,s,strlen(s));
+
+  free(s);
+
+  return TRUE;
+}
+
+/*---------------------------------------------------------------------*/
+
+Errors File_open(FileHandle    *fileHandle,
+                 const String  fileName,
+                 FileOpenModes fileOpenMode
+                )
 {
   off64_t n;
   Errors  error;
@@ -250,10 +322,10 @@ Errors Files_open(FileHandle    *fileHandle,
       break;
     case FILE_OPENMODE_WRITE:
       /* create directory if needed */
-      pathName = Files_getFilePathName(fileName,String_new());
-      if (!Files_exists(pathName))
+      pathName = File_getFilePathName(fileName,String_new());
+      if (!File_exists(pathName))
       {
-        error = Files_makeDirectory(pathName);
+        error = File_makeDirectory(pathName);
         if (error != ERROR_NONE)
         {
           return error;
@@ -281,7 +353,7 @@ Errors Files_open(FileHandle    *fileHandle,
   return ERROR_NONE;
 }
 
-Errors Files_close(FileHandle *fileHandle)
+Errors File_close(FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
   assert(fileHandle->handle >= 0);
@@ -292,7 +364,7 @@ Errors Files_close(FileHandle *fileHandle)
   return ERROR_NONE;
 }
 
-bool Files_eof(FileHandle *fileHandle)
+bool File_eof(FileHandle *fileHandle)
 {
   off64_t n;
 
@@ -307,11 +379,11 @@ bool Files_eof(FileHandle *fileHandle)
   return (n >= fileHandle->size);
 }
 
-Errors Files_read(FileHandle *fileHandle,
-                  void       *buffer,
-                  ulong      bufferLength,
-                  ulong      *readBytes
-                 )
+Errors File_read(FileHandle *fileHandle,
+                 void       *buffer,
+                 ulong      bufferLength,
+                 ulong      *readBytes
+                )
 {
   ssize_t n;
 
@@ -330,10 +402,10 @@ Errors Files_read(FileHandle *fileHandle,
   return ERROR_NONE;
 }
 
-Errors Files_write(FileHandle *fileHandle,
-                   const void *buffer,
-                   ulong      bufferLength
-                  )
+Errors File_write(FileHandle *fileHandle,
+                  const void *buffer,
+                  ulong      bufferLength
+                 )
 {
   ssize_t n;
 
@@ -350,14 +422,14 @@ Errors Files_write(FileHandle *fileHandle,
   return ERROR_NONE;
 }
 
-uint64 Files_getSize(FileHandle *fileHandle)
+uint64 File_getSize(FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
 
   return fileHandle->size;
 }
 
-Errors Files_tell(FileHandle *fileHandle, uint64 *offset)
+Errors File_tell(FileHandle *fileHandle, uint64 *offset)
 {
   off64_t n;
 
@@ -376,7 +448,7 @@ assert(n == (off64_t)fileHandle->index);
   return ERROR_NONE;
 }
 
-Errors Files_seek(FileHandle *fileHandle, uint64 offset)
+Errors File_seek(FileHandle *fileHandle, uint64 offset)
 {
   assert(fileHandle != NULL);
 
@@ -391,7 +463,7 @@ Errors Files_seek(FileHandle *fileHandle, uint64 offset)
 
 /*---------------------------------------------------------------------*/
 
-Errors Files_makeDirectory(const String pathName)
+Errors File_makeDirectory(const String pathName)
 {
   StringTokenizer pathNameTokenizer;
   String          directoryName;
@@ -400,43 +472,44 @@ Errors Files_makeDirectory(const String pathName)
   assert(pathName != NULL);
 
   directoryName = String_new();
-  Files_initSplitFileName(&pathNameTokenizer,pathName);
-  if (Files_getNextSplitFileName(&pathNameTokenizer,&name))
+  File_initSplitFileName(&pathNameTokenizer,pathName);
+  if (File_getNextSplitFileName(&pathNameTokenizer,&name))
   {
     if (String_length(name) > 0)
     {
-      Files_setFileName(directoryName,name);
+      File_setFileName(directoryName,name);
     }
     else
     {
-      Files_setFileNameChar(directoryName,FILES_PATHNAME_SEPARATOR_CHAR);
+      File_setFileNameChar(directoryName,FILES_PATHNAME_SEPARATOR_CHAR);
     }
   }
-  while (Files_getNextSplitFileName(&pathNameTokenizer,&name))
+  while (File_getNextSplitFileName(&pathNameTokenizer,&name))
   {
     if (String_length(name) > 0)
     {     
-      Files_appendFileName(directoryName,name);
+      File_appendFileName(directoryName,name);
 
-      if (!Files_exists(directoryName))
+      if (!File_exists(directoryName))
       {
         if (mkdir(String_cString(directoryName),0700) != 0)
         {
-          Files_doneSplitFileName(&pathNameTokenizer);
+          File_doneSplitFileName(&pathNameTokenizer);
           String_delete(directoryName);
           return ERROR_IO_ERROR;
         }
       }
     }
   }
-  Files_doneSplitFileName(&pathNameTokenizer);
+  File_doneSplitFileName(&pathNameTokenizer);
   String_delete(directoryName);
 
   return ERROR_NONE;
 }
 
-Errors Files_openDirectory(DirectoryHandle *directoryHandle,
-                           const String    pathName)
+Errors File_openDirectory(DirectoryHandle *directoryHandle,
+                          const String    pathName
+                         )
 {
   assert(directoryHandle != NULL);
   assert(pathName != NULL);
@@ -453,7 +526,7 @@ Errors Files_openDirectory(DirectoryHandle *directoryHandle,
   return ERROR_NONE;
 }
 
-void Files_closeDirectory(DirectoryHandle *directoryHandle)
+void File_closeDirectory(DirectoryHandle *directoryHandle)
 {
   assert(directoryHandle != NULL);
 
@@ -461,7 +534,7 @@ void Files_closeDirectory(DirectoryHandle *directoryHandle)
   String_delete(directoryHandle->name);
 }
 
-bool Files_endOfDirectory(DirectoryHandle *directoryHandle)
+bool File_endOfDirectory(DirectoryHandle *directoryHandle)
 {
   assert(directoryHandle != NULL);
 
@@ -484,9 +557,9 @@ bool Files_endOfDirectory(DirectoryHandle *directoryHandle)
   return directoryHandle->entry == NULL;
 }
 
-Errors Files_readDirectory(DirectoryHandle *directoryHandle,
-                           String          fileName
-                          )
+Errors File_readDirectory(DirectoryHandle *directoryHandle,
+                          String          fileName
+                         )
 {
   assert(directoryHandle != NULL);
   assert(fileName != NULL);
@@ -520,7 +593,7 @@ Errors Files_readDirectory(DirectoryHandle *directoryHandle,
   return ERROR_NONE;
 }
 
-FileTypes Files_getType(String fileName)
+FileTypes File_getType(String fileName)
 {
   struct stat fileStat;
 
@@ -539,7 +612,118 @@ FileTypes Files_getType(String fileName)
   }
 }
 
-bool Files_exists(String fileName)
+bool File_delete(String fileName)
+{
+  struct stat fileStat;
+
+  assert(fileName != NULL);
+
+  if (lstat(String_cString(fileName),&fileStat) == 0)
+  {
+    if      (   S_ISREG(fileStat.st_mode)
+             || S_ISLNK(fileStat.st_mode)
+            )
+    {
+      return (unlink(String_cString(fileName)) == 0);
+    }
+    else if (S_ISDIR(fileStat.st_mode))
+    {
+      return (rmdir(String_cString(fileName)) == 0);
+    }
+    else
+    {
+      return FALSE;
+    }
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool File_rename(String oldFileName,
+                 String newFileName
+                )
+{
+  assert(oldFileName != NULL);
+  assert(newFileName != NULL);
+
+  return (rename(String_cString(oldFileName),String_cString(newFileName)) == 0);
+}
+
+bool File_copy(String sourceFileName,
+               String destinationFileName
+              )
+{
+  #define BUFFER_SIZE (1024*1024)
+
+  byte   *buffer;
+  int    sourceHandle,destinationHandle;
+  size_t n;
+
+  assert(sourceFileName != NULL);
+  assert(destinationFileName != NULL);
+
+  /* allocate buffer */
+  buffer = (byte*)malloc(BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    return FALSE;
+  }
+
+  /* open files */
+  sourceHandle = open(String_cString(sourceFileName),O_RDONLY|O_LARGEFILE);
+  if (sourceHandle == -1)
+  {
+    free(buffer);
+    return FALSE;
+  }
+  destinationHandle = open(String_cString(destinationFileName),O_RDWR|O_CREAT|O_TRUNC|O_LARGEFILE,0666);
+  if (destinationHandle == -1)
+  {
+    close(sourceHandle);
+    free(buffer);
+    return FALSE;
+  }
+
+  /* copy data */
+  do
+  {
+    n = read(sourceHandle,buffer,BUFFER_SIZE);
+    if (n > 0)
+    {
+      if (write(destinationHandle,buffer,n) != n)
+      {
+        close(destinationHandle);
+        close(sourceHandle);
+        free(buffer);
+        return FALSE;
+      }
+    }
+  }
+  while (n >= BUFFER_SIZE);
+  if (n < 0)
+  {
+    close(destinationHandle);
+    close(sourceHandle);
+    free(buffer);
+    return FALSE;
+  }
+
+  /* close files */
+  close(destinationHandle);
+  close(sourceHandle);
+  
+
+  /* free resources */
+  free(buffer);
+
+  return TRUE;
+
+  #undef BUFFER_SIZE
+}
+
+bool File_exists(String fileName)
 {
   struct stat fileStat;
 
@@ -548,9 +732,9 @@ bool Files_exists(String fileName)
   return (stat(String_cString(fileName),&fileStat) == 0);
 }
 
-Errors Files_getFileInfo(String   fileName,
-                         FileInfo *fileInfo
-                        )
+Errors File_getFileInfo(String   fileName,
+                        FileInfo *fileInfo
+                       )
 {
   struct stat fileStat;
 
@@ -573,9 +757,9 @@ Errors Files_getFileInfo(String   fileName,
   return ERROR_NONE;
 }
 
-Errors Files_setFileInfo(String   fileName,
-                         FileInfo *fileInfo
-                        )
+Errors File_setFileInfo(String   fileName,
+                        FileInfo *fileInfo
+                       )
 {
   struct utimbuf utimeBuffer;
 
@@ -600,9 +784,9 @@ Errors Files_setFileInfo(String   fileName,
   return ERROR_NONE;
 }
 
-Errors Files_readLink(String linkName,
-                      String fileName
-                     )
+Errors File_readLink(String linkName,
+                     String fileName
+                    )
 {
   #define BUFFER_SIZE  256
   #define BUFFER_DELTA 128
@@ -646,9 +830,9 @@ Errors Files_readLink(String linkName,
   }
 }
 
-Errors Files_link(String linkName,
-                  String fileName
-                 )
+Errors File_link(String linkName,
+                 String fileName
+                )
 {
   assert(linkName != NULL);
   assert(fileName != NULL);

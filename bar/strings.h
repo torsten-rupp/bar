@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -80,12 +80,12 @@ typedef char(*StringIterateFunction)(void *userData, char ch);
 String String_new(void);
 String String_newCString(const char *s);
 String String_newChar(char ch);
-String String_newBuffer(char *buffer, ulong bufferLength);
+String String_newBuffer(const char *buffer, ulong bufferLength);
 #else /* not NDEBUG */
 String __String_new(const char *fileName, unsigned long lineNb);
 String __String_newCString(const char *fileName, unsigned long lineNb, const char *s);
 String __String_newChar(const char *fileName, unsigned long lineNb, char ch);
-String __String_newBuffer(const char *fileName, unsigned long lineNb, char *buffer, ulong bufferLength);
+String __String_newBuffer(const char *fileName, unsigned long lineNb, const char *buffer, ulong bufferLength);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -263,7 +263,9 @@ const char *String_cString(String string);
 /***********************************************************************\
 * Name   : String_compare
 * Purpose: compare two strings
-* Input  : string1,string2 - strings to compare
+* Input  : string1,string2       - strings to compare
+*          stringCompareFunction - string compare function
+*          stringCompareUserData - user data for compare function
 * Output : -
 * Return : -1 if string1 <  string2
 *           0 if string1 == string2
@@ -274,7 +276,7 @@ const char *String_cString(String string);
 int String_compare(String                string1,
                    String                string2,
                    StringCompareFunction stringCompareFunction,
-                   void                  *userData
+                   void                  *stringCompareUserData
                   );
 
 /***********************************************************************\
@@ -315,7 +317,7 @@ long String_findLastChar(String string, long index, char ch);
 * Purpose: iterate over string
 * Input  : string                - string
 *          stringIterateFunction - iterator function
-*          userData              - user data for iterator function
+*          stringIterateUserData - user data for iterator function
 * Output : -
 * Return : string
 * Notes  : -
@@ -323,7 +325,7 @@ long String_findLastChar(String string, long index, char ch);
 
 String String_iterate(String                string,
                       StringIterateFunction stringIterateFunction,
-                      void                  *userData
+                      void                  *stringIterateUserData
                      );
 
 /***********************************************************************\
@@ -406,7 +408,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 /***********************************************************************\
 * Name   : String_parse
 * Purpose: parse string
-* Input  : String - string
+* Input  : string - string
 *          format - format (like scanf)
 *          ...    - optional variables
 * Output : -
@@ -416,7 +418,27 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 
 bool String_parse(String string, const char *format, ...);
 
+/***********************************************************************\
+* Name   : String_toCString
+* Purpose: allocate memory and convert to C-string
+* Input  : string - string
+* Output : -
+* Return : C-string or NULL on insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+char* String_toCString(String string);
+
 #ifndef NDEBUG
+/***********************************************************************\
+* Name   : String_debug
+* Purpose: string debug function: output not deallocated strings
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void String_debug(void);
 #endif /* not NDEBUG */
 

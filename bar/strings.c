@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -518,7 +518,11 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
 *          arguments - arguments
 * Output : TRUE if parsing sucessful, FALSE otherwise
 * Return : -
-* Notes  : -
+* Notes  : Additional conversion chars:
+*            S - string
+*          Not implemented conversion chars:
+*            p
+*            n
 \***********************************************************************/
 
 LOCAL bool parseString(struct __String *string,
@@ -926,9 +930,9 @@ String __String_newChar(const char *fileName, unsigned long lineNb, char ch)
 }
 
 #ifdef NDEBUG
-String String_newBuffer(char *buffer, ulong bufferLength)
+String String_newBuffer(const char *buffer, ulong bufferLength)
 #else /* not NDEBUG */
-String __String_newBuffer(const char *fileName, unsigned long lineNb, char *buffer, ulong bufferLength)
+String __String_newBuffer(const char *fileName, unsigned long lineNb, const char *buffer, ulong bufferLength)
 #endif /* NDEBUG */
 {
   String string;
@@ -1299,7 +1303,13 @@ String String_remove(String string, unsigned long index, unsigned long length)
   {
     assert(string->data != NULL);
 
-    if (index < string->length)
+    if      (index == STRING_END)
+    {
+      n = (string->length > length)?string->length-length:0;
+      string->data[n] = '\0';
+      string->length = n;
+    }
+    else if (index < string->length)
     {
       if ((index + length) < string->length)
       {
@@ -1357,7 +1367,29 @@ unsigned long String_length(String string)
 
 char String_index(String string, unsigned long index)
 {
-  return ((string != NULL) && (index < string->length))?string->data[index]:'\0';
+  char ch;
+
+  if (string != NULL)
+  {
+    if      (index == STRING_END)
+    {
+      ch = (string->length > 0)?string->data[string->length-1]:'\0';
+    }
+    else if (index < string->length)
+    {
+      ch = string->data[index];
+    }
+    else
+    {
+      ch = '\0';
+    }
+  }
+  else
+  {
+    ch = '\0';
+  }
+
+  return ch;
 }
 
 const char *String_cString(String string)
@@ -1365,7 +1397,7 @@ const char *String_cString(String string)
   return (string != NULL)?&string->data[0]:NULL;
 }
 
-int String_compare(String string1, String string2, StringCompareFunction stringCompareFunction, void *userData)
+int String_compare(String string1, String string2, StringCompareFunction stringCompareFunction, void *stringCompareUserData)
 {
   unsigned long n;
   unsigned long z;
@@ -1381,7 +1413,7 @@ int String_compare(String string1, String string2, StringCompareFunction stringC
   {
     while ((result == 0) && (z < n))
     {
-      result = stringCompareFunction(userData,string1->data[z],string2->data[z]);
+      result = stringCompareFunction(stringCompareUserData,string1->data[z],string2->data[z]);
       z++;
     }
   }
@@ -1607,7 +1639,7 @@ long String_findLastChar(String string, long index, char ch)
   return (z >= 0)?z:-1;
 }
 
-String String_iterate(String string, StringIterateFunction stringIterateFunction, void *userData)
+String String_iterate(String string, StringIterateFunction stringIterateFunction, void *stringIterateUserData)
 {
   unsigned long z;
 
@@ -1619,7 +1651,7 @@ String String_iterate(String string, StringIterateFunction stringIterateFunction
 
     for (z = 0; z < string->length; z++)
     {
-      string->data[z] = stringIterateFunction(userData,string->data[z]);
+      string->data[z] = stringIterateFunction(stringIterateUserData,string->data[z]);
     }
   }
 
@@ -1716,6 +1748,7 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
                          )
 {
   assert(stringTokenizer != NULL);
+  assert(string != NULL);
 
   stringTokenizer->string          = string;
   stringTokenizer->index           = 0;
@@ -1820,11 +1853,31 @@ bool String_parse(String string, const char *format, ...)
   va_list arguments;
   bool    result;
 
+  assert(string != NULL);
+
   va_start(arguments,format);
   result = parseString(string,format,arguments);
   va_end(arguments);
 
   return result;
+}
+
+char* String_toCString(String string)
+{
+  char *cString;
+
+  assert(string != NULL);
+
+  cString = (char*)malloc(string->length+1);
+  if (cString == NULL)
+  {
+    return NULL;
+  }
+
+  memcpy(cString,string->data,string->length);
+  cString[string->length] = '\0';
+
+  return cString;
 }
 
 #ifndef NDEBUG

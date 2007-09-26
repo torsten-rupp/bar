@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -93,7 +93,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Files_setFileName
+* Name   : File_setFileName
 * Purpose: set name to file name
 * Input  : fileName - file name
 *          name     - name to set
@@ -102,12 +102,12 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-String Files_setFileName(String fileName, String name);
-String Files_setFileNameCString(String fileName, const char *name);
-String Files_setFileNameChar(String fileName, char ch);
+String File_setFileName(String fileName, String name);
+String File_setFileNameCString(String fileName, const char *name);
+String File_setFileNameChar(String fileName, char ch);
 
 /***********************************************************************\
-* Name   : Files_fileNameAppend
+* Name   : File_fileNameAppend
 * Purpose: append name to file name
 * Input  : fileName - file name
 *          name     - name to append
@@ -116,12 +116,12 @@ String Files_setFileNameChar(String fileName, char ch);
 * Notes  : -
 \***********************************************************************/
 
-String Files_appendFileName(String fileName, String name);
-String Files_appendFileNameCString(String fileName, const char *name);
-String Files_appendFileNameChar(String fileName, char ch);
+String File_appendFileName(String fileName, String name);
+String File_appendFileNameCString(String fileName, const char *name);
+String File_appendFileNameChar(String fileName, char ch);
 
 /***********************************************************************\
-* Name   : Files_getFilePathName
+* Name   : File_getFilePathName
 * Purpose: get path of filename
 * Input  : fileName - file name
 *          path     - path variable
@@ -130,10 +130,10 @@ String Files_appendFileNameChar(String fileName, char ch);
 * Notes  : -
 \***********************************************************************/
 
-String Files_getFilePathName(String fileName, String path);
+String File_getFilePathName(String fileName, String path);
 
 /***********************************************************************\
-* Name   : Files_getFileBaseName
+* Name   : File_getFileBaseName
 * Purpose: get basename of file
 * Input  : fileName - file name
 *          baseName - basename variable
@@ -142,10 +142,10 @@ String Files_getFilePathName(String fileName, String path);
 * Notes  : -
 \***********************************************************************/
 
-String Files_getFileBaseName(String fileName, String baseName);
+String File_getFileBaseName(String fileName, String baseName);
 
 /***********************************************************************\
-* Name   : Files_splitFileName
+* Name   : File_splitFileName
 * Purpose: split file name into path name and base name
 * Input  : fileName - file name
 * Output : pathName - path name (allocated string)
@@ -154,10 +154,10 @@ String Files_getFileBaseName(String fileName, String baseName);
 * Notes  : -
 \***********************************************************************/
 
-void Files_splitFileName(String fileName, String *pathName, String *baseName);
+void File_splitFileName(String fileName, String *pathName, String *baseName);
 
 /***********************************************************************\
-* Name   : Files_initSplitFileName, Files_doneSplitFileName
+* Name   : File_initSplitFileName, File_doneSplitFileName
 * Purpose: init/done file name splitter
 * Input  : stringTokenizer - string tokenizer (see strings.h)
 *          fileName        - file name
@@ -166,11 +166,11 @@ void Files_splitFileName(String fileName, String *pathName, String *baseName);
 * Notes  : -
 \***********************************************************************/
 
-void Files_initSplitFileName(StringTokenizer *stringTokenizer, String fileName);
-void Files_doneSplitFileName(StringTokenizer *stringTokenizer);
+void File_initSplitFileName(StringTokenizer *stringTokenizer, String fileName);
+void File_doneSplitFileName(StringTokenizer *stringTokenizer);
 
 /***********************************************************************\
-* Name   : Files_getNextFileName
+* Name   : File_getNextFileName
 * Purpose: get next part of file name 
 * Input  : stringTokenizer - string tokenizer (see strings.h)
 * Output : name - next name (internal reference; do not delete!)
@@ -178,12 +178,38 @@ void Files_doneSplitFileName(StringTokenizer *stringTokenizer);
 * Notes  : -
 \***********************************************************************/
 
-bool Files_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const name);
+bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const name);
 
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : Files_openCreate
+* Name   : File_getTmpFileName
+* Purpose: create and get a temporary file name
+* Input  : directory - directory to create temporary file
+*          fileName  - variable for temporary file name
+* Output : -
+* Return : TRUE iff temporary file created, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool File_getTmpFileName(const char *directory, String fileName);
+
+/***********************************************************************\
+* Name   : File_getTmpDirectoryName
+* Purpose: create and get a temporary directory name
+* Input  : directory - directory to create temporary file
+*          fileName  - variable for temporary file name
+* Output : -
+* Return : TRUE iff temporary directory created, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool File_getTmpDirectoryName(const char *directory, String fileName);
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : File_open
 * Purpose: create new file
 * Input  : fileHandle - file handle
 *          fileName   - file name
@@ -192,13 +218,13 @@ bool Files_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const 
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_open(FileHandle    *fileHandle,
+Errors File_open(FileHandle    *fileHandle,
                   const String  fileName,
                   FileOpenModes fileOpenMode
                  );
 
 /***********************************************************************\
-* Name   : Files_close
+* Name   : File_close
 * Purpose: close file
 * Input  : fileHandle - file handle
 * Output : -
@@ -206,10 +232,10 @@ Errors Files_open(FileHandle    *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_close(FileHandle *fileHandle);
+Errors File_close(FileHandle *fileHandle);
 
 /***********************************************************************\
-* Name   : Files_eof
+* Name   : File_eof
 * Purpose: check if end-of-file
 * Input  : fileHandle - file handle
 * Output : -
@@ -217,10 +243,10 @@ Errors Files_close(FileHandle *fileHandle);
 * Notes  : -
 \***********************************************************************/
 
-bool Files_eof(FileHandle *fileHandle);
+bool File_eof(FileHandle *fileHandle);
 
 /***********************************************************************\
-* Name   : Files_read
+* Name   : File_read
 * Purpose: read data from file
 * Input  : fileHandle   - file handle
 *          buffer       - buffer for data to read
@@ -230,14 +256,14 @@ bool Files_eof(FileHandle *fileHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_read(FileHandle *fileHandle,
-                  void       *buffer,
-                  ulong      bufferLength,
-                  ulong      *readBytes
-                 );
+Errors File_read(FileHandle *fileHandle,
+                 void       *buffer,
+                 ulong      bufferLength,
+                 ulong      *readBytes
+                );
 
 /***********************************************************************\
-* Name   : Files_write
+* Name   : File_write
 * Purpose: write data into file
 * Input  : fileHandle   - file handle
 *          buffer       - buffer for data to write
@@ -247,13 +273,13 @@ Errors Files_read(FileHandle *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_write(FileHandle *fileHandle,
-                   const void *buffer,
-                   ulong      bufferLength
-                  );
+Errors File_write(FileHandle *fileHandle,
+                  const void *buffer,
+                  ulong      bufferLength
+                 );
 
 /***********************************************************************\
-* Name   : Files_size
+* Name   : File_size
 * Purpose: get file size
 * Input  : fileHandle - file handle
 * Output : -
@@ -261,10 +287,10 @@ Errors Files_write(FileHandle *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
-uint64 Files_getSize(FileHandle *fileHandle);
+uint64 File_getSize(FileHandle *fileHandle);
 
 /***********************************************************************\
-* Name   : Files_tell
+* Name   : File_tell
 * Purpose: get current position in file
 * Input  : fileHandle - file handle
 * Output : offset - offset (0..n-1)
@@ -272,12 +298,12 @@ uint64 Files_getSize(FileHandle *fileHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_tell(FileHandle *fileHandle,
-                  uint64     *offset
-                 );
+Errors File_tell(FileHandle *fileHandle,
+                 uint64     *offset
+                );
 
 /***********************************************************************\
-* Name   : Files_seek
+* Name   : File_seek
 * Purpose: seek in file
 * Input  : fileHandle - file handle
 *          offset     - offset (0..n-1)
@@ -286,12 +312,12 @@ Errors Files_tell(FileHandle *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_seek(FileHandle *fileHandle, uint64 offset);
+Errors File_seek(FileHandle *fileHandle, uint64 offset);
 
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : Files_makeDirectory
+* Name   : File_makeDirectory
 * Purpose: create directory including intermedate directories
 * Input  : pathName - path name
 * Output : -
@@ -299,10 +325,10 @@ Errors Files_seek(FileHandle *fileHandle, uint64 offset);
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_makeDirectory(const String pathName);
+Errors File_makeDirectory(const String pathName);
 
 /***********************************************************************\
-* Name   : Files_openDirectory
+* Name   : File_openDirectory
 * Purpose: open directory for reading
 * Input  : directoryHandle - directory handle
 *          pathName        - path name
@@ -311,11 +337,12 @@ Errors Files_makeDirectory(const String pathName);
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_openDirectory(DirectoryHandle *directoryHandle,
-                           const String    pathName);
+Errors File_openDirectory(DirectoryHandle *directoryHandle,
+                          const String    pathName
+                         );
 
 /***********************************************************************\
-* Name   : Files_closeDirectory
+* Name   : File_closeDirectory
 * Purpose: close directory
 * Input  : directoryHandle - directory handle
 * Output : -
@@ -323,10 +350,10 @@ Errors Files_openDirectory(DirectoryHandle *directoryHandle,
 * Notes  : -
 \***********************************************************************/
 
-void Files_closeDirectory(DirectoryHandle *directoryHandle);
+void File_closeDirectory(DirectoryHandle *directoryHandle);
 
 /***********************************************************************\
-* Name   : Files_endOfDirectory
+* Name   : File_endOfDirectory
 * Purpose: check if end of directory reached
 * Input  : directoryHandle - directory handle
 * Output : -
@@ -334,10 +361,10 @@ void Files_closeDirectory(DirectoryHandle *directoryHandle);
 * Notes  : -
 \***********************************************************************/
 
-bool Files_endOfDirectory(DirectoryHandle *directoryHandle);
+bool File_endOfDirectory(DirectoryHandle *directoryHandle);
 
 /***********************************************************************\
-* Name   : Files_readDirectory
+* Name   : File_readDirectory
 * Purpose: read next directory entry
 * Input  : directoryHandle - directory handle
 *          fileName        - file name variable
@@ -346,12 +373,12 @@ bool Files_endOfDirectory(DirectoryHandle *directoryHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_readDirectory(DirectoryHandle *directoryHandle,
-                           String          fileName
-                          );
+Errors File_readDirectory(DirectoryHandle *directoryHandle,
+                          String          fileName
+                         );
 
 /***********************************************************************\
-* Name   : Files_getType
+* Name   : File_getType
 * Purpose: get file type
 * Input  : fileName - file name
 * Output : -
@@ -359,10 +386,49 @@ Errors Files_readDirectory(DirectoryHandle *directoryHandle,
 * Notes  : -
 \***********************************************************************/
 
-FileTypes Files_getType(String fileName);
+FileTypes File_getType(String fileName);
 
 /***********************************************************************\
-* Name   : Files_exists
+* Name   : File_delete
+* Purpose: delete file/directory/link
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if file/directory/link deleted, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool File_delete(String fileName);
+
+/***********************************************************************\
+* Name   : File_rename
+* Purpose: rename file/directory/link
+* Input  : oldFileName - old file name
+*          newFileName - new file name
+* Output : -
+* Return : TRUE if file/directory/link renamed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool File_rename(String oldFileName,
+                 String newFileName
+                );
+
+/***********************************************************************\
+* Name   : File_copy
+* Purpose: copy files
+* Input  : sourceFileName      - source file name
+*          destinationFileName - destination file name
+* Output : -
+* Return : TRUE if file/directory/link copied, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool File_copy(String sourceFileName,
+               String destinationFileName
+              );
+
+/***********************************************************************\
+* Name   : File_exists
 * Purpose: check if file exists
 * Input  : fileName - file name
 * Output : -
@@ -370,10 +436,10 @@ FileTypes Files_getType(String fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool Files_exists(String fileName);
+bool File_exists(String fileName);
 
 /***********************************************************************\
-* Name   : Files_getInfo
+* Name   : File_getInfo
 * Purpose: get file info
 * Input  : fileName - file name
 * Output : fileInfo - file info
@@ -381,12 +447,12 @@ bool Files_exists(String fileName);
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_getFileInfo(String   fileName,
-                         FileInfo *fileInfo
-                        );
+Errors File_getFileInfo(String   fileName,
+                        FileInfo *fileInfo
+                       );
 
 /***********************************************************************\
-* Name   : Files_setInfo
+* Name   : File_setInfo
 * Purpose: set file info
 * Input  : fileName - file name
 *          fileInfo - file info
@@ -395,12 +461,12 @@ Errors Files_getFileInfo(String   fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_setFileInfo(String   fileName,
-                         FileInfo *fileInfo
-                        );
+Errors File_setFileInfo(String   fileName,
+                        FileInfo *fileInfo
+                       );
 
 /***********************************************************************\
-* Name   : Files_readLink
+* Name   : File_readLink
 * Purpose: read link
 * Input  : linkName - link name
 * Output : fileName - file name link references
@@ -408,12 +474,12 @@ Errors Files_setFileInfo(String   fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_readLink(String linkName,
-                      String fileName
-                     );
+Errors File_readLink(String linkName,
+                     String fileName
+                    );
 
 /***********************************************************************\
-* Name   : Files_link
+* Name   : File_link
 * Purpose: create link
 * Input  : linkName - link name
 *          fileName - file name
@@ -422,9 +488,9 @@ Errors Files_readLink(String linkName,
 * Notes  : -
 \***********************************************************************/
 
-Errors Files_link(String linkName,
-                  String fileName
-                 );
+Errors File_link(String linkName,
+                 String fileName
+                );
 
 #ifdef __cplusplus
   }

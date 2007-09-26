@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/msgqueues.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
@@ -66,7 +66,7 @@ bool MsgQueue_init(MsgQueue *msgQueue, ulong maxMsgs)
   return TRUE;
 }
 
-void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *userData)
+void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData)
 {
   MsgNode *msgNode;
 
@@ -82,7 +82,7 @@ void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFu
 
     if (msgQueueMsgFreeFunction != NULL)
     {
-      msgQueueMsgFreeFunction(msgNode->data,userData);
+      msgQueueMsgFreeFunction(msgNode->data,msgQueueMsgFreeUserData);
     }
     free(msgNode);
   }
@@ -113,15 +113,15 @@ MsgQueue *MsgQueue_new(ulong maxMsgs)
   return msgQueue;
 }
 
-void MsgQueue_delete(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *userData)
+void MsgQueue_delete(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData)
 {
   assert(msgQueue != NULL);
 
-  MsgQueue_done(msgQueue,msgQueueMsgFreeFunction,userData);
+  MsgQueue_done(msgQueue,msgQueueMsgFreeFunction,msgQueueMsgFreeUserData);
   free(msgQueue);
 }
 
-void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *userData)
+void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData)
 {
   MsgNode *msgNode;
 
@@ -137,7 +137,7 @@ void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeF
 
     if (msgQueueMsgFreeFunction != NULL)
     {
-      msgQueueMsgFreeFunction(msgNode->data,userData);
+      msgQueueMsgFreeFunction(msgNode->data,msgQueueMsgFreeUserData);
     }
     free(msgNode);
   }

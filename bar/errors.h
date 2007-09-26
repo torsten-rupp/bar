@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/errors.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver errors
 * Systems : all
@@ -59,6 +59,14 @@ typedef enum
   ERROR_NO_FILE_DATA,
   ERROR_END_OF_DATA,
   ERROR_CRC_ERROR,
+
+  /* network errors */
+  ERROR_HOST_NOT_FOUND,
+  ERROR_CONNECT_FAIL,
+  ERROR_SSH_SESSION_FAIL,
+  ERROR_SSH_AUTHENTIFICATION,
+  ERROR_NETWORK_SEND,
+  ERROR_NETWORK_RECEIVE,
 
   /* others */
   ERROR_UNKNOWN,

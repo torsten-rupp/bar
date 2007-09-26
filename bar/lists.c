@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -42,7 +42,7 @@ void List_init(void *list)
   ((List*)list)->count = 0;
 }
 
-void List_done(void *list, ListNodeFreeFunction listNodeFreeFunction, void *userData)
+void List_done(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData)
 {
   Node *node;
 
@@ -54,7 +54,7 @@ void List_done(void *list, ListNodeFreeFunction listNodeFreeFunction, void *user
     {
       node = ((List*)list)->head;
       ((List*)list)->head = ((List*)list)->head->next;
-      listNodeFreeFunction(node,userData);
+      listNodeFreeFunction(node,listNodeFreeUserData);
     }
   }
   else
@@ -82,11 +82,11 @@ List *List_new(void)
   return list;
 }
 
-void List_delete(void *list, ListNodeFreeFunction listNodeFreeFunction, void *userData)
+void List_delete(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData)
 {
   assert(list != NULL);
 
-  List_done(list,listNodeFreeFunction,userData);\
+  List_done(list,listNodeFreeFunction,listNodeFreeUserData);\
   free(list);
 }
 
@@ -229,7 +229,7 @@ Node *List_getLast(void *list)
   return node;
 }
 
-Node *List_findFirst(void *list, ListNodeCompareFunction listNodeCompareFunction, void *userData)
+Node *List_findFirst(void *list, ListNodeCompareFunction listNodeCompareFunction, void *listNodeCompareUserData)
 {
   Node *node;
 
@@ -237,7 +237,7 @@ Node *List_findFirst(void *list, ListNodeCompareFunction listNodeCompareFunction
   assert(listNodeCompareFunction != NULL);
 
   node = ((List*)list)->head;
-  while ((node != NULL) && (listNodeCompareFunction(node,userData) != 0))
+  while ((node != NULL) && (listNodeCompareFunction(node,listNodeCompareUserData) != 0))
   {
     node = node->next;
   }
@@ -245,7 +245,7 @@ Node *List_findFirst(void *list, ListNodeCompareFunction listNodeCompareFunction
   return node;
 }
 
-Node *List_findNext(void *list, void *node, ListNodeCompareFunction listNodeCompareFunction, void *userData)
+Node *List_findNext(void *list, void *node, ListNodeCompareFunction listNodeCompareFunction, void *listNodeCompareUserData)
 {
   assert(list != NULL);
   assert(listNodeCompareFunction != NULL);
@@ -253,7 +253,7 @@ Node *List_findNext(void *list, void *node, ListNodeCompareFunction listNodeComp
   if (node != NULL)
   {
     node = (((Node*)node))->next;
-    while ((node != NULL) && (listNodeCompareFunction(node,userData) != 0))
+    while ((node != NULL) && (listNodeCompareFunction(node,listNodeCompareUserData) != 0))
     {
       node = (((Node*)node))->next;
     }
