@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/mailboxes.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for inter-process mailboxes
 * Systems: all POSIX
@@ -43,18 +43,13 @@ LOCAL void lock(Mailbox *mailbox)
 {
   assert(mailbox != NULL);
 
-  if (pthread_equal(mailbox->lockThread,pthread_self() == 0))
-  {
-    pthread_mutex_lock(&mailbox->lock);
-    mailbox->lockThread = pthread_self();
-  }
+  pthread_mutex_lock(&mailbox->lock);
   mailbox->lockCount++;
 }
 
 LOCAL void unlock(Mailbox *mailbox)
 {
   assert(mailbox != NULL);
-  assert(mailbox->lockThread == pthread_self());
   assert(mailbox->lockCount > 0);
 
   if (mailbox->lockCount == 1)
@@ -65,7 +60,6 @@ LOCAL void unlock(Mailbox *mailbox)
   mailbox->lockCount--;
   if (mailbox->lockCount == 0)
   {
-    mailbox->lockThread = 0;
     pthread_mutex_unlock(&mailbox->lock);
   }
 }
@@ -73,17 +67,18 @@ LOCAL void unlock(Mailbox *mailbox)
 LOCAL void waitModified(Mailbox *mailbox)
 {
   uint lockCount;
+  uint z;
 
   assert(mailbox != NULL);
-  assert(mailbox->lockThread == pthread_self());
   assert(mailbox->lockCount > 0);
 
   lockCount = mailbox->lockCount;
-  mailbox->lockCount  = 0;
-  mailbox->lockThread = 0;
+
+  for (z = 1; z < lockCount; z++) pthread_mutex_unlock(&mailbox->lock);
+  mailbox->lockCount = 0;
   pthread_cond_wait(&mailbox->modified,&mailbox->lock); 
-  mailbox->lockCount  = lockCount;
-  mailbox->lockThread = pthread_self();
+  mailbox->lockCount = lockCount;
+  for (z = 1; z < lockCount; z++) pthread_mutex_lock(&mailbox->lock);
 }
 
 /*---------------------------------------------------------------------*/
@@ -92,7 +87,9 @@ bool Mailbox_init(Mailbox *mailbox)
 {
   assert(mailbox != NULL);
 
-  if (pthread_mutex_init(&mailbox->lock,NULL) != 0)
+  pthread_mutexattr_init(&mailbox->lockAttributes);
+  pthread_mutexattr_settype(&mailbox->lockAttributes,PTHREAD_MUTEX_RECURSIVE);
+  if (pthread_mutex_init(&mailbox->lock,&mailbox->lockAttributes) != 0)
   {
     return FALSE;
   }
@@ -102,7 +99,6 @@ bool Mailbox_init(Mailbox *mailbox)
     return FALSE;
   }
   mailbox->lockCount     = 0;
-  mailbox->lockThread    = 0;
   mailbox->endOfMailFlag = FALSE;
 
   return TRUE;
@@ -118,6 +114,7 @@ void Mailbox_done(Mailbox *mailbox)
   /* free resources */
   pthread_cond_destroy(&mailbox->modified);
   pthread_mutex_destroy(&mailbox->lock);
+  pthread_mutexattr_destroy(&mailbox->lockAttributes);
 }
 
 Mailbox *Mailbox_new(void)

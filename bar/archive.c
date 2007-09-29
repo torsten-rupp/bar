@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -2206,7 +2208,11 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
   while (length < bufferLength)
   {
     /* compress */
-    Compress_deflate(&archiveFileInfo->file.compressInfoData,*p);
+    error = Compress_deflate(&archiveFileInfo->file.compressInfoData,*p);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
     /* check if block can be encrypted and written */
     while (Compress_checkBlockIsFull(&archiveFileInfo->file.compressInfoData))
@@ -2263,7 +2269,11 @@ Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulon
     while (n <= 0);
 
     /* decompress data */
-    Compress_inflate(&archiveFileInfo->file.compressInfoData,p);
+    error = Compress_inflate(&archiveFileInfo->file.compressInfoData,p);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
     /* next byte */
     p++;

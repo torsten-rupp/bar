@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/mailboxes.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for inter-process mailboxes
 * Systems: all POSIX
@@ -29,11 +29,11 @@
 
 typedef struct
 {
-  pthread_mutex_t lock;
-  pthread_cond_t  modified;
-  uint            lockCount;
-  pthread_t       lockThread;
-  bool            endOfMailFlag;
+  pthread_mutex_t     lock;
+  pthread_mutexattr_t lockAttributes;
+  uint                lockCount;
+  pthread_cond_t      modified;
+  bool                endOfMailFlag;
 } Mailbox;
 
 /***************************** Variables *******************************/

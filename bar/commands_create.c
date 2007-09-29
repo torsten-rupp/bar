@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -511,24 +511,27 @@ LOCAL Errors storeArchiveFile(String fileName,
       destinationName = String_newCString(createInfo->archiveFileName);
     }
 
-    /* send to storage controller, wait for space in temporary directory */
+    /* send to storage controller */
     Mailbox_lock(&createInfo->storageMailbox);
+    createInfo->storageCount += 1;
+    createInfo->storageSize  += fileSize;
     appendToStorageList(&createInfo->storageMsgQueue,
                         fileName,
                         fileSize,
                         destinationName
                        );
-    createInfo->storageCount += 1;
-    createInfo->storageSize  += fileSize;
+    Mailbox_unlock(&createInfo->storageMailbox);
+
+    /* wait for space in temporary directory */
     if (globalOptions.maxTmpSize > 0)
     {
+      Mailbox_lock(&createInfo->storageMailbox);
       while ((createInfo->storageCount > 2) && (createInfo->storageSize > globalOptions.maxTmpSize))
       {
-fprintf(stderr,"%s,%d: createInfo->storageCount=%d createInfo->storageSize=%lld\n",__FILE__,__LINE__,createInfo->storageCount,createInfo->storageSize);
         Mailbox_wait(&createInfo->storageMailbox);
       }
+      Mailbox_unlock(&createInfo->storageMailbox);
     }
-    Mailbox_unlock(&createInfo->storageMailbox);
 
     /* free resources */
     String_delete(destinationName);

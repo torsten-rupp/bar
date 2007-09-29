@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/msgqueues.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
@@ -29,14 +29,14 @@
 
 typedef struct
 {
-  ulong           maxMsgs;
-  pthread_mutex_t lock;
-  pthread_cond_t  modified;
-  bool            modifiedFlag;
-  uint            lockCount;
-  pthread_t       lockThread;
-  bool            endOfMsgFlag;
-  List            list;
+  ulong               maxMsgs;
+  pthread_mutex_t     lock;
+  pthread_mutexattr_t lockAttributes;
+  uint                lockCount;
+  pthread_cond_t      modified;
+  bool                modifiedFlag;
+  bool                endOfMsgFlag;
+  List                list;
 } MsgQueue;
 
 typedef void(*MsgQueueMsgFreeFunction)(void *msg, void *userData);

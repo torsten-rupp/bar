@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -88,17 +90,28 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPE[] =
 
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM[] =
 {
-  {"none",COMPRESS_ALGORITHM_NONE,"no compression"         },
-  {"zip0",COMPRESS_ALGORITHM_ZIP0,"ZIP compression level 0"},
-  {"zip1",COMPRESS_ALGORITHM_ZIP1,"ZIP compression level 1"},
-  {"zip2",COMPRESS_ALGORITHM_ZIP2,"ZIP compression level 2"},
-  {"zip3",COMPRESS_ALGORITHM_ZIP3,"ZIP compression level 3"},
-  {"zip4",COMPRESS_ALGORITHM_ZIP4,"ZIP compression level 4"},
-  {"zip5",COMPRESS_ALGORITHM_ZIP5,"ZIP compression level 5"},
-  {"zip6",COMPRESS_ALGORITHM_ZIP6,"ZIP compression level 6"},
-  {"zip7",COMPRESS_ALGORITHM_ZIP7,"ZIP compression level 7"},
-  {"zip8",COMPRESS_ALGORITHM_ZIP8,"ZIP compression level 8"},
-  {"zip9",COMPRESS_ALGORITHM_ZIP9,"ZIP compression level 9"},
+  {"none",COMPRESS_ALGORITHM_NONE,    "no compression"           },
+
+  {"zip0", COMPRESS_ALGORITHM_ZIP_0,  "ZIP compression level 0"  },
+  {"zip1", COMPRESS_ALGORITHM_ZIP_1,  "ZIP compression level 1"  },
+  {"zip2", COMPRESS_ALGORITHM_ZIP_2,  "ZIP compression level 2"  },
+  {"zip3", COMPRESS_ALGORITHM_ZIP_3,  "ZIP compression level 3"  },
+  {"zip4", COMPRESS_ALGORITHM_ZIP_4,  "ZIP compression level 4"  },
+  {"zip5", COMPRESS_ALGORITHM_ZIP_5,  "ZIP compression level 5"  },
+  {"zip6", COMPRESS_ALGORITHM_ZIP_6,  "ZIP compression level 6"  },
+  {"zip7", COMPRESS_ALGORITHM_ZIP_7,  "ZIP compression level 7"  },
+  {"zip8", COMPRESS_ALGORITHM_ZIP_8,  "ZIP compression level 8"  },
+  {"zip9", COMPRESS_ALGORITHM_ZIP_9,  "ZIP compression level 9"  },
+
+  {"bzip1",COMPRESS_ALGORITHM_BZIP2_1,"BZIP2 compression level 1"},
+  {"bzip2",COMPRESS_ALGORITHM_BZIP2_2,"BZIP2 compression level 2"},
+  {"bzip3",COMPRESS_ALGORITHM_BZIP2_3,"BZIP2 compression level 3"},
+  {"bzip4",COMPRESS_ALGORITHM_BZIP2_4,"BZIP2 compression level 4"},
+  {"bzip5",COMPRESS_ALGORITHM_BZIP2_5,"BZIP2 compression level 5"},
+  {"bzip6",COMPRESS_ALGORITHM_BZIP2_6,"BZIP2 compression level 6"},
+  {"bzip7",COMPRESS_ALGORITHM_BZIP2_7,"BZIP2 compression level 7"},
+  {"bzip8",COMPRESS_ALGORITHM_BZIP2_8,"BZIP2 compression level 8"},
+  {"bzip9",COMPRESS_ALGORITHM_BZIP2_9,"BZIP2 compression level 9"},
 };
 
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM[] =

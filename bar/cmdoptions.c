@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems :
@@ -83,27 +83,30 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
 
       /* find factor */
-      if (commandLineOption->integerOption.units != NULL)
+      if (unit[0] != '\0')
       {
-        i = 0;
-        while ((i < commandLineOption->integerOption.unitCount) && (strcmp(commandLineOption->integerOption.units[i].name,unit) != 0))
+        if (commandLineOption->integerOption.units != NULL)
         {
-          i++;
+          i = 0;
+          while ((i < commandLineOption->integerOption.unitCount) && (strcmp(commandLineOption->integerOption.units[i].name,unit) != 0))
+          {
+            i++;
+          }
+          if (i >= commandLineOption->integerOption.unitCount)
+          {
+            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Invalid unit in integer value '%s'!\n",value);
+            return FALSE;
+          }
+          factor = commandLineOption->integerOption.units[i].factor;
         }
-        if (i >= commandLineOption->integerOption.unitCount)
-        {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Invalid unit in integer value '%s'!\n",value);
-          return FALSE;
-        }
-        factor = commandLineOption->integerOption.units[i].factor;
-      }
-      else
-      {
-        if (unit[0] != '\0')
+        else
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Unexpected unit in value '%s'!\n",value);
           return FALSE;
         }
+      }
+      else
+      {
         factor = 1;
       }
 
@@ -141,27 +144,30 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
 
       /* find factor */
-      if (commandLineOption->integer64Option.units != NULL)
+      if (unit[0] != '\0')
       {
-        i = 0;
-        while ((i < commandLineOption->integer64Option.unitCount) && (strcmp(commandLineOption->integer64Option.units[i].name,unit) != 0))
+        if (commandLineOption->integer64Option.units != NULL)
         {
-          i++;
+          i = 0;
+          while ((i < commandLineOption->integer64Option.unitCount) && (strcmp(commandLineOption->integer64Option.units[i].name,unit) != 0))
+          {
+            i++;
+          }
+          if (i >= commandLineOption->integer64Option.unitCount)
+          {
+            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Invalid unit in integer value '%s'!\n",value);
+            return FALSE;
+          }
+          factor = commandLineOption->integer64Option.units[i].factor;
         }
-        if (i >= commandLineOption->integer64Option.unitCount)
-        {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Invalid unit in integer value '%s'!\n",value);
-          return FALSE;
-        }
-        factor = commandLineOption->integer64Option.units[i].factor;
-      }
-      else
-      {
-        if (unit[0] != '\0')
+        else
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Unexpected unit in value '%s'!\n",value);
           return FALSE;
         }
+      }
+      else
+      {
         factor = 1;
       }
 

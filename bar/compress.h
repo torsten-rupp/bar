@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -12,9 +12,12 @@
 #define __COMPRESS__
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <zlib.h>
+#include <bzlib.h>
 #include <assert.h>
 
 #include "global.h"
@@ -36,16 +39,26 @@ typedef enum
 {
   COMPRESS_ALGORITHM_NONE,
 
-  COMPRESS_ALGORITHM_ZIP0,
-  COMPRESS_ALGORITHM_ZIP1,
-  COMPRESS_ALGORITHM_ZIP2,
-  COMPRESS_ALGORITHM_ZIP3,
-  COMPRESS_ALGORITHM_ZIP4,
-  COMPRESS_ALGORITHM_ZIP5,
-  COMPRESS_ALGORITHM_ZIP6,
-  COMPRESS_ALGORITHM_ZIP7,
-  COMPRESS_ALGORITHM_ZIP8,
-  COMPRESS_ALGORITHM_ZIP9,
+  COMPRESS_ALGORITHM_ZIP_0,
+  COMPRESS_ALGORITHM_ZIP_1,
+  COMPRESS_ALGORITHM_ZIP_2,
+  COMPRESS_ALGORITHM_ZIP_3,
+  COMPRESS_ALGORITHM_ZIP_4,
+  COMPRESS_ALGORITHM_ZIP_5,
+  COMPRESS_ALGORITHM_ZIP_6,
+  COMPRESS_ALGORITHM_ZIP_7,
+  COMPRESS_ALGORITHM_ZIP_8,
+  COMPRESS_ALGORITHM_ZIP_9,
+
+  COMPRESS_ALGORITHM_BZIP2_1,
+  COMPRESS_ALGORITHM_BZIP2_2,
+  COMPRESS_ALGORITHM_BZIP2_3,
+  COMPRESS_ALGORITHM_BZIP2_4,
+  COMPRESS_ALGORITHM_BZIP2_5,
+  COMPRESS_ALGORITHM_BZIP2_6,
+  COMPRESS_ALGORITHM_BZIP2_7,
+  COMPRESS_ALGORITHM_BZIP2_8,
+  COMPRESS_ALGORITHM_BZIP2_9,
 } CompressAlgorithms;
 
 /***************************** Datatypes *******************************/
@@ -70,6 +83,11 @@ typedef struct
     {
       z_stream stream;
     } zlib;
+    struct
+    {
+      uint      compressionLevel;
+      bz_stream stream;
+    } bzlib;
   };
 
   byte               *dataBuffer;               // buffer for uncompressed data

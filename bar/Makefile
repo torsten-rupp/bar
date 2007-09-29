@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.23 $
+# $Revision: 1.24 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -14,13 +14,13 @@
 
 CC                  = gcc
 CC_FLAGS            = -Wall -g -O0
-CC_DEFINES          = -D_LARGEFILE64_SOURCE
+CC_DEFINES          = -D_LARGEFILE64_SOURCE -D_GNU_SOURCE
 CC_INCLUDES         =
 
 LD                  = gcc
 LD_FLAGS            =
 LD_LIBRARY_PATHS    = /usr/local/lib
-LD_LIBRARIES        = pthread z gcrypt gpg-error ssh2
+LD_LIBRARIES        = pthread z bz2 gcrypt gpg-error ssh2
 LD_STATIC_LIBRARIES = 
 
 #---------------------------------- commands----------------------------------
@@ -35,7 +35,7 @@ DIFF = diff
 #------------------------ specific variables/settings ------------------------
 
 CRYPT_NAMES    = none 3des cast5 blowfish aes128 aes192 aes256 twofish128 twofish256
-COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
+COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
 
 CRYPT=none
 COMPRESS=none
@@ -139,7 +139,7 @@ test2 test_compress: bar
 test3 test_crypt: bar
 	@$(ECHO_NO_LF) "Test 3: crypt..."
 	for crypt in $(CRYPT_NAMES); do \
-          $(MAKE) BAR_FILE="test.bar" OPTIONS="--crypt=$$crypt --password=$(TEST_PASSWORD)" standard_test; \
+          $(MAKE) BAR_FILE="test-###.bar" OPTIONS="--crypt=$$crypt --password=$(TEST_PASSWORD)" standard_test; \
         done
 	@$(ECHO) "ok"
 
@@ -152,7 +152,7 @@ test_all: bar
 	@$(ECHO_NO_LF) "Test all..."
 	for compress in $(COMPRESS_NAMES); do \
           for crypt in $(CRYPT_NAMES); do \
-            $(MAKE) BAR_FILE=test.bar OPTIONS="--compress=$$compress --crypt=$$crypt --password=$(TEST_PASSWORD) -s 100000" standard_test; \
+            $(MAKE) BAR_FILE=test-###.bar OPTIONS="--compress=$$compress --crypt=$$crypt --password=$(TEST_PASSWORD) -s 100000" standard_test; \
             rc=$$?; \
             if test $$rc -ne 0; then \
               exit 1; \
