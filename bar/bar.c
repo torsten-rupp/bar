@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -24,6 +24,7 @@
 #include "crypt.h"
 #include "archive.h"
 #include "network.h"
+#include "storage.h"
 
 #include "command_create.h"
 #include "command_list.h"
@@ -70,6 +71,13 @@ LOCAL ulong              compressMinFileSize;
 LOCAL const char         *password;
 LOCAL bool               versionFlag;
 LOCAL bool               helpFlag;
+
+const CommandLineUnit COMMAND_LINE_UNITS[] =
+{
+  {"K",1024},
+  {"M",1024*1024},
+  {"G",1024*1024*1024},
+};
 
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPE[] =
 {
@@ -124,9 +132,10 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM   ("test",             't',0,command,                       COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"                 ),
   CMD_OPTION_ENUM   ("extract",          'x',0,command,                       COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"                          ),
 
-  CMD_OPTION_INTEGER("part-size",        's',0,partSize,                      0,                                                              "approximated part size"                   ),
+  CMD_OPTION_INTEGER("part-size",        's',0,partSize,                      0,0,LONG_MAX,COMMAND_LINE_UNITS,                                "approximated part size"                   ),
   CMD_OPTION_STRING ("tmp-directory",    0,  0,globalOptions.tmpDirectory,    "/tmp",                                                         "temporary directory"                      ),
-  CMD_OPTION_INTEGER("directory-strip",  'p',0,directoryStripCount,           0,                                                              "number of directories to strip on extract"),
+  CMD_OPTION_INTEGER("max-tmp-size",     0,  0,globalOptions.maxTmpSize,      0,0,LONG_MAX,COMMAND_LINE_UNITS,                                "max. size of temporary files"             ),
+  CMD_OPTION_INTEGER("directory-strip",  'p',0,directoryStripCount,           0,0,LONG_MAX,NULL,                                              "number of directories to strip on extract"),
   CMD_OPTION_STRING ("directory",        0,  0,directory,                     NULL,                                                           "directory to restore files"               ),
 
   CMD_OPTION_SELECT ("pattern-type",     0,  0,patternType,                   PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,            "select pattern type"                      ),
@@ -135,20 +144,20 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL("exclude",          '!',1,excludePatternList,            NULL,parseIncludeExclude,NULL,                                  "exclude pattern"                          ),
  
   CMD_OPTION_SELECT ("compress",         0,  0,compressAlgorithm,             COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"         ),
-  CMD_OPTION_INTEGER("compress-min-size",0,  0,compressMinFileSize,           0,                                                              "minimal size of file for compression"     ),
+  CMD_OPTION_INTEGER("compress-min-size",0,  0,compressMinFileSize,           0,0,LONG_MAX,COMMAND_LINE_UNITS,                                "minimal size of file for compression"     ),
 
   CMD_OPTION_SELECT ("crypt",            0,  0,cryptAlgorithm,                CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"            ),
-  CMD_OPTION_STRING ("password",         0,  0,password,                      NULL,                                                           "crypt password"                           ),
+  CMD_OPTION_STRING ("password",         0,  0,password,                      NULL,                                                           "crypt password (use with care!)"          ),
 
-  CMD_OPTION_INTEGER("ssh-port",         0,  0,globalOptions.sshPort,         0,                                                              "ssh port"                                 ),
+  CMD_OPTION_INTEGER("ssh-port",         0,  0,globalOptions.sshPort,         0,0,65535,NULL,                                                 "ssh port"                                 ),
   CMD_OPTION_STRING ("ssh-public-key",   0,  0,globalOptions.sshPublicKeyFile,NULL,                                                           "ssh public key file name"                 ),
   CMD_OPTION_STRING ("ssh-privat-key",   0,  0,globalOptions.sshPrivatKeyFile,NULL,                                                           "ssh privat key file name"                 ),
-  CMD_OPTION_STRING ("ssh-password",     0,  0,globalOptions.sshPassword,     NULL,                                                           "ssh password"                             ),
+  CMD_OPTION_STRING ("ssh-password",     0,  0,globalOptions.sshPassword,     NULL,                                                           "ssh password (use with care!)"            ),
 
 //  CMD_OPTION_BOOLEAN("incremental",      0,  0,globalOptions.incrementalFlag, FALSE,                                                          "overwrite existing files"                 ),
   CMD_OPTION_BOOLEAN("overwrite",        0,  0,globalOptions.overwriteFlag,   FALSE,                                                          "overwrite existing files"                 ),
   CMD_OPTION_BOOLEAN("quiet",            'q',0,globalOptions.quietFlag,       FALSE,                                                          "surpress any output"                      ),
-  CMD_OPTION_INTEGER("verbose",          'v',0,globalOptions.verboseLevel,    0,                                                              "verbosity level"                          ),
+  CMD_OPTION_INTEGER_RANGE("verbose",          'v',0,globalOptions.verboseLevel,    1,0,3,NULL,                                                         "verbosity level"                          ),
 
   CMD_OPTION_BOOLEAN("version",          0  ,0,versionFlag,                   FALSE,                                                          "print version"                            ),
   CMD_OPTION_BOOLEAN("help",             'h',0,helpFlag,                      FALSE,                                                          "print this help"                          ),
@@ -201,6 +210,14 @@ const char *getErrorText(Errors error)
     CASE(ERROR_NO_FILE_DATA,           "no data entry"               );
     CASE(ERROR_END_OF_DATA,            "end of data"                 );
     CASE(ERROR_CRC_ERROR,              "CRC error"                   );
+
+    CASE(ERROR_HOST_NOT_FOUND,         "host not found"              );
+    CASE(ERROR_CONNECT_FAIL,           "connect fail"                );
+    CASE(ERROR_NO_SSH_PASSWORD,        "no ssh password given"       );
+    CASE(ERROR_SSH_SESSION_FAIL,       "initialize ssh session fail" );
+    CASE(ERROR_SSH_AUTHENTIFICATION,   "invalid ssh password"        );
+    CASE(ERROR_NETWORK_SEND,           "sending data fail"           );
+    CASE(ERROR_NETWORK_RECEIVE,        "receiving data fail"         );
 
     DEFAULT(                           "unknown"                     );
   }
@@ -263,7 +280,7 @@ LOCAL void printUsage(const char *programName)
 {
   assert(programName != NULL);
 
-  printf("Usage: %s [<options>] [--] <archive name>... [<files>...]\n",programName);
+  printf("Usage: %s [<options>] [--] <archive name>|scp:<name>@<host name>:<archive name>... [<files>...]\n",programName);
   printf("\n");
   cmdOptions_printHelp(stdout,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS)

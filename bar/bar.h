@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -43,6 +43,8 @@ typedef enum
 
 typedef struct
 {
+  uint64        maxTmpSize;
+
   const char    *tmpDirectory;
 
   uint          sshPort;
@@ -52,7 +54,7 @@ typedef struct
 
   bool          overwriteFlag;
   bool          quietFlag;
-  uint          verboseLevel;
+  long          verboseLevel;
 } GlobalOptions;
 
 /***************************** Variables *******************************/

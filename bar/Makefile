@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.22 $
+# $Revision: 1.23 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -38,7 +38,6 @@ CRYPT_NAMES    = none 3des cast5 blowfish aes128 aes192 aes256 twofish128 twofis
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
 
 CRYPT=none
-#CRYPT=aes128
 COMPRESS=none
 
 TEST_PASSWORD=franz_kafka
@@ -80,6 +79,7 @@ SOURCES =       bar.c \
                 strings.c \
                 stringlists.c \
                 msgqueues.c \
+                mailboxes.c \
                 filefragmentlists.c \
 
 OBJECTS = 	$(foreach z,$(SOURCES),$(subst .c,.o,$z)) \
@@ -228,3 +228,15 @@ p3 pack3: bar
 clean_data:
 	$(RMF) test/test.bar*
 	$(RMRF) test/restore
+
+.PHONY: backup-home
+backup-home: bar
+	./bar \
+          -c scp:torsten@tooru.dyndns.org:backup-torsten-###.bar \
+          --ssh-port=49856 \
+          --compress=zip9 \
+          --crypt=aes256 \
+          --password=franz \
+          -s 128M \
+          --max-tmp-size=512M \
+          /home/torsten/tmp

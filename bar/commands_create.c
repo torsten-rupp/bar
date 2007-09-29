@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -25,6 +25,7 @@
 #include "lists.h"
 #include "stringlists.h"
 #include "msgqueues.h"
+#include "mailboxes.h"
 
 #include "errors.h"
 #include "patterns.h"
@@ -72,6 +73,9 @@ typedef struct
   pthread_t   collectorThread;
 
   MsgQueue    storageMsgQueue;
+  Mailbox     storageMailbox;
+  uint        storageCount;
+  uint64      storageSize;
   bool        storageThreadExitFlag;
   pthread_t   storageThread;
 
@@ -471,6 +475,7 @@ LOCAL Errors storeArchiveFile(String fileName,
 
   if (completeFlag)
   {
+    /* get destination file name */
     if (partNumber >= 0)
     {
       i0 = strchr(createInfo->archiveFileName,'#');
@@ -503,15 +508,27 @@ LOCAL Errors storeArchiveFile(String fileName,
     }
     else
     {
-      /* get destination file name */
       destinationName = String_newCString(createInfo->archiveFileName);
     }
 
+    /* send to storage controller, wait for space in temporary directory */
+    Mailbox_lock(&createInfo->storageMailbox);
     appendToStorageList(&createInfo->storageMsgQueue,
                         fileName,
                         fileSize,
                         destinationName
                        );
+    createInfo->storageCount += 1;
+    createInfo->storageSize  += fileSize;
+    if (globalOptions.maxTmpSize > 0)
+    {
+      while ((createInfo->storageCount > 2) && (createInfo->storageSize > globalOptions.maxTmpSize))
+      {
+fprintf(stderr,"%s,%d: createInfo->storageCount=%d createInfo->storageSize=%lld\n",__FILE__,__LINE__,createInfo->storageCount,createInfo->storageSize);
+        Mailbox_wait(&createInfo->storageMailbox);
+      }
+    }
+    Mailbox_unlock(&createInfo->storageMailbox);
 
     /* free resources */
     String_delete(destinationName);
@@ -548,13 +565,14 @@ LOCAL void storage(CreateInfo *createInfo)
 
   while (!createInfo->storageThreadExitFlag && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg)))
   {
-//fprintf(stderr,"%s,%d: XXXXXXX storage %s -> %s\n",__FILE__,__LINE__,String_cString(storageMsg.fileName),
-//String_cString(storageMsg.destinationFileName));
+    info(0,"Store '%s'...",String_cString(storageMsg.destinationFileName));
+
     /* open storage */
     error = Storage_create(&storageInfo,storageMsg.destinationFileName,storageMsg.fileSize);
     if (error != ERROR_NONE)
     {
-      printError("Cannot store file '%s'\n",
+      info(0,"FAIL!\n");
+      printError("Cannot store file '%s' (error: %s)\n",
                  String_cString(storageMsg.destinationFileName),
                  getErrorText(error)
                 );
@@ -569,6 +587,7 @@ LOCAL void storage(CreateInfo *createInfo)
     error = File_open(&fileHandle,storageMsg.fileName,FILE_OPENMODE_READ);
     if (error != ERROR_NONE)
     {
+      info(0,"FAIL!\n");
       printError("Cannot open file '%s' (error: %s)!\n",
                  String_cString(storageMsg.fileName),
                  getErrorText(error)
@@ -584,6 +603,7 @@ LOCAL void storage(CreateInfo *createInfo)
       error = File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
       if (error != ERROR_NONE)
       {
+        info(0,"FAIL!\n");
         printError("Cannot read file '%s' (error: %s)!\n",
                    String_cString(storageMsg.fileName),
                    getErrorText(error)
@@ -594,6 +614,7 @@ LOCAL void storage(CreateInfo *createInfo)
       error = Storage_write(&storageInfo,buffer,n);
       if (error != ERROR_NONE)
       {
+        info(0,"FAIL!\n");
         printError("Cannot write file '%s' (error: %s)!\n",
                    String_cString(storageMsg.destinationFileName),
                    getErrorText(error)
@@ -608,6 +629,11 @@ LOCAL void storage(CreateInfo *createInfo)
     /* close storage */
     Storage_close(&storageInfo);
 
+    if (!createInfo->failFlag)
+    {
+      info(0,"ok\n");
+    }
+
     /* delete source file */
     if (!File_delete(storageMsg.fileName))
     {
@@ -615,6 +641,14 @@ LOCAL void storage(CreateInfo *createInfo)
               String_cString(storageMsg.fileName)
              );
     }
+
+    /* update mailbox */
+    Mailbox_lock(&createInfo->storageMailbox);
+    assert(createInfo->storageCount > 0);
+    assert(createInfo->storageSize >= storageMsg.fileSize);
+    createInfo->storageCount -= 1;
+    createInfo->storageSize  -= storageMsg.fileSize;
+    Mailbox_unlock(&createInfo->storageMailbox);
 
     /* free resources */
     String_delete(storageMsg.fileName);
@@ -658,6 +692,8 @@ bool command_create(const char      *archiveFileName,
   createInfo.excludePatternList         = excludePatternList;
   createInfo.failFlag                   = FALSE;
   createInfo.collectorThreadExitFlag    = FALSE;
+  createInfo.storageCount               = 0;
+  createInfo.storageSize                = 0;
   createInfo.storageThreadExitFlag      = FALSE;
   createInfo.statistics.includedCount   = 0;
   createInfo.statistics.includedByteSum = 0;
@@ -670,15 +706,37 @@ bool command_create(const char      *archiveFileName,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  fileName = String_new();
 
   /* init file name list, list locka and list signal */
   if (!MsgQueue_init(&createInfo.fileMsgQueue,MAX_FILE_MSG_QUEUE_ENTRIES))
   {
     HALT_FATAL_ERROR("Cannot initialise file message queue!");
   }
-  if (!MsgQueue_init(&createInfo.storageMsgQueue,MAX_STORAGE_MSG_QUEUE_ENTRIES))
+  if (!MsgQueue_init(&createInfo.storageMsgQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialise storage message queue!");
+  }
+  if (!Mailbox_init(&createInfo.storageMailbox))
+  {
+    HALT_FATAL_ERROR("Cannot initialise storage mailbox!");
+  }
+
+  /* prepare storage */
+  error = Storage_prepare(String_setCString(fileName,archiveFileName));
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot prepare storage of file '%s' (error: %s)\n",
+               archiveFileName,
+               getErrorText(error)
+              );
+    Mailbox_done(&createInfo.storageMailbox);
+    MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
+    MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
+    String_delete(fileName);
+    free(buffer);
+
+    return FALSE;
   }
 
   /* create new archive */
@@ -698,8 +756,10 @@ bool command_create(const char      *archiveFileName,
                archiveFileName,
                getErrorText(error)
               );
+    Mailbox_done(&createInfo.storageMailbox);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
     MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
+    String_delete(fileName);
     free(buffer);
 
     return FALSE;
@@ -716,10 +776,9 @@ bool command_create(const char      *archiveFileName,
   }
 
   /* store files */
-  fileName = String_new();
   while (getNextFile(&createInfo.fileMsgQueue,fileName,&fileType))
   {
-    info(0,"Store '%s'...",String_cString(fileName));
+    info(1,"Add '%s'...",String_cString(fileName));
 
     switch (fileType)
     {
@@ -734,7 +793,7 @@ bool command_create(const char      *archiveFileName,
           error = File_getFileInfo(fileName,&fileInfo);
           if (error != ERROR_NONE)
           {
-            info(0,"fail\n");
+            info(1,"FAIL\n");
             printError("Cannot get info for file '%s' (error: %s)\n",
                        String_cString(fileName),
                        getErrorText(error)
@@ -751,7 +810,7 @@ bool command_create(const char      *archiveFileName,
                                       );
           if (error != ERROR_NONE)
           {
-            info(0,"fail\n");
+            info(1,"FAIL\n");
             printError("Cannot create new archive entry '%s' (error: %s)\n",
                        String_cString(fileName),
                        getErrorText(error)
@@ -764,7 +823,7 @@ bool command_create(const char      *archiveFileName,
           error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
           if (error != ERROR_NONE)
           {
-            info(0,"fail\n");
+            info(1,"FAIL\n");
             printError("Cannot open file '%s' (error: %s)\n",
                        String_cString(fileName),
                        getErrorText(error)
@@ -785,8 +844,10 @@ bool command_create(const char      *archiveFileName,
           File_close(&fileHandle);
           if (error != ERROR_NONE)
           {
-            info(0,"fail\n");
-            printError("Cannot create archive file!\n");
+            info(1,"FAIL\n");
+            printError("Cannot create archive file (error: %s)!\n",
+                       getErrorText(error)
+                      );
             Archive_closeEntry(&archiveFileInfo);
             createInfo.failFlag = TRUE;
             break;
@@ -807,7 +868,7 @@ bool command_create(const char      *archiveFileName,
           {
             ratio = 0;
           }
-          info(0,"ok (ratio %.1f%%)\n",ratio);
+          info(1,"ok (ratio %.1f%%)\n",ratio);
         }
         break;
       case FILETYPE_DIRECTORY:
@@ -818,7 +879,7 @@ bool command_create(const char      *archiveFileName,
           error = File_getFileInfo(fileName,&fileInfo);
           if (error != ERROR_NONE)
           {
-            info(0,"fail\n");
+            info(1,"FAIL\n");
             printError("Cannot get info for directory '%s' (error: %s)\n",
                        String_cString(fileName),
                        getErrorText(error)
@@ -835,7 +896,7 @@ bool command_create(const char      *archiveFileName,
                                            );
           if (error != ERROR_NONE)
           {
-            info(0,"fail\n");
+            info(1,"FAIL\n");
             printError("Cannot create new archive entry '%s' (error: %s)\n",
                        String_cString(fileName),
                        getErrorText(error)
@@ -852,7 +913,7 @@ bool command_create(const char      *archiveFileName,
           /* update statistics */
           createInfo.statistics.includedCount++;
 
-          info(0,"ok\n");
+          info(1,"ok\n");
         }
         break;
       case FILETYPE_LINK:
@@ -864,7 +925,7 @@ bool command_create(const char      *archiveFileName,
           error = File_getFileInfo(fileName,&fileInfo);
           if (error != ERROR_NONE)
           {
-            info(0,"fail\n");
+            info(1,"FAIL\n");
             printError("Cannot get info for file '%s' (error: %s)\n",
                        String_cString(fileName),
                        getErrorText(error)
@@ -878,7 +939,7 @@ bool command_create(const char      *archiveFileName,
           error = File_readLink(fileName,name);
           if (error != ERROR_NONE)
           {
-            info(0,"fail\n");
+            info(1,"FAIL\n");
             printError("Cannot read link '%s' (error: %s)\n",
                        String_cString(fileName),
                        getErrorText(error)
@@ -897,7 +958,7 @@ bool command_create(const char      *archiveFileName,
                                       );
           if (error != ERROR_NONE)
           {
-            info(0,"fail\n");
+            info(1,"FAIL\n");
             printError("Cannot create new archive entry '%s' (error: %s)\n",
                        String_cString(fileName),
                        getErrorText(error)
@@ -916,7 +977,7 @@ bool command_create(const char      *archiveFileName,
           /* update statistics */
           createInfo.statistics.includedCount++;
 
-          info(0,"ok\n");
+          info(1,"ok\n");
         }
         break;
       #ifndef NDEBUG
@@ -926,7 +987,6 @@ bool command_create(const char      *archiveFileName,
       #endif /* NDEBUG */
     }
   }
-  String_delete(fileName);
 
   /* close archive */
   Archive_close(&archiveInfo);
@@ -937,15 +997,17 @@ bool command_create(const char      *archiveFileName,
   pthread_join(createInfo.storageThread,NULL);
 
   /* free resources */
+  Mailbox_done(&createInfo.storageMailbox);
   MsgQueue_done(&createInfo.storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
   MsgQueue_done(&createInfo.fileMsgQueue,(MsgQueueMsgFreeFunction)freeFileMsg,NULL);
+  String_delete(fileName);
   free(buffer);
 
   /* output statics */
   info(0,"%lu file(s)/%llu bytes(s) included\n",createInfo.statistics.includedCount,createInfo.statistics.includedByteSum);
-  info(1,"%lu file(s) excluded\n",createInfo.statistics.excludedCount);
-  info(1,"%lu file(s) skipped\n",createInfo.statistics.skippedCount);
-  info(1,"%lu error(s)\n",createInfo.statistics.errorCount);
+  info(2,"%lu file(s) excluded\n",createInfo.statistics.excludedCount);
+  info(2,"%lu file(s) skipped\n",createInfo.statistics.skippedCount);
+  info(2,"%lu error(s)\n",createInfo.statistics.errorCount);
 
   return !createInfo.failFlag;
 }
