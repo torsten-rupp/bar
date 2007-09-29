@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/msgqueues.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
@@ -46,6 +46,56 @@ typedef struct MsgNode
   extern "C" {
 #endif
 
+LOCAL void lock(MsgQueue *msgQueue)
+{
+  assert(msgQueue != NULL);
+
+  if (pthread_equal(msgQueue->lockThread,pthread_self() == 0))
+  {
+    pthread_mutex_lock(&msgQueue->lock);
+    msgQueue->lockThread = pthread_self();
+  }
+  msgQueue->lockCount++;
+}
+
+LOCAL void unlock(MsgQueue *msgQueue)
+{
+  assert(msgQueue != NULL);
+  assert(msgQueue->lockThread == pthread_self());
+  assert(msgQueue->lockCount > 0);
+
+  if (msgQueue->modifiedFlag && (msgQueue->lockCount == 1))
+  {
+    pthread_cond_broadcast(&msgQueue->modified);
+  }
+
+  msgQueue->lockCount--;
+  if (msgQueue->lockCount == 0)
+  {
+    msgQueue->modifiedFlag = FALSE;
+    msgQueue->lockThread = 0;
+    pthread_mutex_unlock(&msgQueue->lock);
+  }
+}
+
+LOCAL void waitModified(MsgQueue *msgQueue)
+{
+  uint lockCount;
+
+  assert(msgQueue != NULL);
+  assert(msgQueue->lockThread == pthread_self());
+  assert(msgQueue->lockCount > 0);
+
+  lockCount = msgQueue->lockCount;
+  msgQueue->lockCount  = 0;
+  msgQueue->lockThread = 0;
+  pthread_cond_wait(&msgQueue->modified,&msgQueue->lock); 
+  msgQueue->lockCount  = lockCount;
+  msgQueue->lockThread = pthread_self();
+}
+
+/*---------------------------------------------------------------------*/
+
 bool MsgQueue_init(MsgQueue *msgQueue, ulong maxMsgs)
 {
   assert(msgQueue != NULL);
@@ -60,6 +110,9 @@ bool MsgQueue_init(MsgQueue *msgQueue, ulong maxMsgs)
     pthread_mutex_destroy(&msgQueue->lock);
     return FALSE;
   }
+  msgQueue->modifiedFlag = FALSE;
+  msgQueue->lockCount    = 0;
+  msgQueue->lockThread   = 0;
   msgQueue->endOfMsgFlag = FALSE;
   List_init(&msgQueue->list);
 
@@ -73,7 +126,7 @@ void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFu
   assert(msgQueue != NULL);
 
   /* lock */
-  pthread_mutex_lock(&msgQueue->lock);
+  lock(msgQueue);
 
   /* discard all remaining messages */
   while (!List_empty(&msgQueue->list))
@@ -128,7 +181,7 @@ void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeF
   assert(msgQueue != NULL);
 
   /* lock */
-  pthread_mutex_lock(&msgQueue->lock);
+  lock(msgQueue);
 
   /* discard all remaining messages */
   while (!List_empty(&msgQueue->list))
@@ -143,7 +196,21 @@ void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeF
   }
 
   /* unlock */
-  pthread_mutex_unlock(&msgQueue->lock);
+  unlock(msgQueue);
+}
+
+void MsgQueue_lock(MsgQueue *msgQueue)
+{
+  assert(msgQueue != NULL);
+
+  lock(msgQueue);
+}
+
+void MsgQueue_unlock(MsgQueue *msgQueue)
+{
+  assert(msgQueue != NULL);
+
+  unlock(msgQueue);
 }
 
 bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize)
@@ -154,19 +221,19 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize)
   assert(msgQueue != NULL);
 
   /* lock */
-  pthread_mutex_lock(&msgQueue->lock);
+  lock(msgQueue);
 
   /* wait for message */
   while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
   {
-    pthread_cond_wait(&msgQueue->modified,&msgQueue->lock); 
+    waitModified(msgQueue); 
   }
 
   /* get message */
   msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
 
   /* unlock */
-  pthread_mutex_unlock(&msgQueue->lock);
+  unlock(msgQueue);
 
   /* copy data, free message */
   if (msgNode == NULL)
@@ -200,13 +267,13 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
   memcpy(msgNode->data,msg,size);
 
   /* lock */
-  pthread_mutex_lock(&msgQueue->lock);
+  lock(msgQueue);
 
   /* check if end of message */
   if (msgQueue->endOfMsgFlag)
   {
     free(msgNode);
-    pthread_mutex_unlock(&msgQueue->lock);
+    unlock(msgQueue);
     return FALSE;
   }
 
@@ -215,12 +282,12 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
   {
     while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) >= msgQueue->maxMsgs))
     {
-      pthread_cond_wait(&msgQueue->modified,&msgQueue->lock); 
+      waitModified(msgQueue); 
     }
     if (List_count(&msgQueue->list) >= msgQueue->maxMsgs)
     {
       free(msgNode);
-      pthread_mutex_unlock(&msgQueue->lock);
+      unlock(msgQueue);
       return FALSE;
     }
   }
@@ -228,11 +295,11 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
   /* put message */
   List_append(&msgQueue->list,msgNode);
 
-  /* unlock */
-  pthread_mutex_unlock(&msgQueue->lock);
-
   /* signal modify */
-  pthread_cond_broadcast(&msgQueue->modified);
+  msgQueue->modifiedFlag = TRUE;
+
+  /* unlock */
+  unlock(msgQueue);
 
   return TRUE;
 }
@@ -244,13 +311,13 @@ ulong MsgQueue_count(MsgQueue *msgQueue)
   assert(msgQueue != NULL);
 
   /* lock */
-  pthread_mutex_lock(&msgQueue->lock);
+  lock(msgQueue);
 
   /* get count */
   count = List_count(&msgQueue->list);
 
   /* unlock */
-  pthread_mutex_unlock(&msgQueue->lock);
+  unlock(msgQueue);
 
   return count;
 }
@@ -260,15 +327,15 @@ void MsgQueue_wait(MsgQueue *msgQueue)
   assert(msgQueue != NULL);
 
   /* lock */
-  pthread_mutex_lock(&msgQueue->lock);
+  lock(msgQueue);
 
   if (!msgQueue->endOfMsgFlag)
   {
-    pthread_cond_wait(&msgQueue->modified,&msgQueue->lock); 
+    waitModified(msgQueue); 
   }
 
   /* unlock */
-  pthread_mutex_unlock(&msgQueue->lock);
+  unlock(msgQueue);
 }
 
 void MsgQueue_setEndOfMsg(MsgQueue *msgQueue)
@@ -276,12 +343,12 @@ void MsgQueue_setEndOfMsg(MsgQueue *msgQueue)
   assert(msgQueue != NULL);
 
   /* lock */
-  pthread_mutex_lock(&msgQueue->lock);
+  lock(msgQueue);
 
   msgQueue->endOfMsgFlag = TRUE;
 
   /* unlock */
-  pthread_mutex_unlock(&msgQueue->lock);
+  unlock(msgQueue);
 
   /* signal modify */
   pthread_cond_broadcast(&msgQueue->modified);

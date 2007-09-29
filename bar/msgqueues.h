@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/msgqueues.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
@@ -32,6 +32,9 @@ typedef struct
   ulong           maxMsgs;
   pthread_mutex_t lock;
   pthread_cond_t  modified;
+  bool            modifiedFlag;
+  uint            lockCount;
+  pthread_t       lockThread;
   bool            endOfMsgFlag;
   List            list;
 } MsgQueue;
@@ -110,6 +113,28 @@ void MsgQueue_delete(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFree
 \***********************************************************************/
 
 void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData);
+
+/***********************************************************************\
+* Name   : MsgQueue_lock
+* Purpose: lock message queue
+* Input  : msgQueue - message queue
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void MsgQueue_lock(MsgQueue *msgQueue);
+
+/***********************************************************************\
+* Name   : MsgQueue_unlock
+* Purpose: unlock message queue
+* Input  : msgQueue - message queue
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void MsgQueue_unlock(MsgQueue *msgQueue);
 
 /***********************************************************************\
 * Name   : MsgQueue_get

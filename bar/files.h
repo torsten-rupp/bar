@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -102,7 +102,7 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-String File_setFileName(String fileName, String name);
+String File_setFileName(String fileName, const String name);
 String File_setFileNameCString(String fileName, const char *name);
 String File_setFileNameChar(String fileName, char ch);
 
@@ -116,7 +116,7 @@ String File_setFileNameChar(String fileName, char ch);
 * Notes  : -
 \***********************************************************************/
 
-String File_appendFileName(String fileName, String name);
+String File_appendFileName(String fileName, const String name);
 String File_appendFileNameCString(String fileName, const char *name);
 String File_appendFileNameChar(String fileName, char ch);
 
@@ -130,7 +130,7 @@ String File_appendFileNameChar(String fileName, char ch);
 * Notes  : -
 \***********************************************************************/
 
-String File_getFilePathName(String fileName, String path);
+String File_getFilePathName(const String fileName, String path);
 
 /***********************************************************************\
 * Name   : File_getFileBaseName
@@ -142,7 +142,7 @@ String File_getFilePathName(String fileName, String path);
 * Notes  : -
 \***********************************************************************/
 
-String File_getFileBaseName(String fileName, String baseName);
+String File_getFileBaseName(const String fileName, String baseName);
 
 /***********************************************************************\
 * Name   : File_splitFileName
@@ -154,7 +154,7 @@ String File_getFileBaseName(String fileName, String baseName);
 * Notes  : -
 \***********************************************************************/
 
-void File_splitFileName(String fileName, String *pathName, String *baseName);
+void File_splitFileName(const String fileName, String *pathName, String *baseName);
 
 /***********************************************************************\
 * Name   : File_initSplitFileName, File_doneSplitFileName
@@ -166,7 +166,7 @@ void File_splitFileName(String fileName, String *pathName, String *baseName);
 * Notes  : -
 \***********************************************************************/
 
-void File_initSplitFileName(StringTokenizer *stringTokenizer, String fileName);
+void File_initSplitFileName(StringTokenizer *stringTokenizer, const String fileName);
 void File_doneSplitFileName(StringTokenizer *stringTokenizer);
 
 /***********************************************************************\

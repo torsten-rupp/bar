@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -125,7 +125,7 @@ String String_clear(String string);
 * Notes  : -
 \***********************************************************************/
 
-String String_set(String string, String sourceString);
+String String_set(String string, const String sourceString);
 String String_setCString(String string, const char *s);
 String String_setChar(String string, char ch);
 String String_setBuffer(String string, const char *buffer, ulong bufferLength);
@@ -189,7 +189,7 @@ String String_appendChar(String string, char ch);
 * Notes  : -
 \***********************************************************************/
 
-String String_insert(String string, unsigned long index, String insertString);
+String String_insert(String string, unsigned long index, const String insertString);
 String String_insertBuffer(String string, unsigned long index, const char *buffer, ulong bufferLength);
 String String_insertCString(String string, unsigned long index, const char *s);
 String String_insertChar(String string, unsigned long index, char ch);
@@ -198,7 +198,8 @@ String String_insertChar(String string, unsigned long index, char ch);
 * Name   : String_remove
 * Purpose: remove part of string
 * Input  : string - string
-*          index  - index of first character to remove
+*          index  - index of first character to remove or STRING_END to
+*                   remove characters from end
 *          length - length to remove
 * Output : -
 * Return : string
@@ -221,7 +222,7 @@ String String_remove(String string, unsigned long index, unsigned long length);
 * Notes  : -
 \***********************************************************************/
 
-String String_replace(String string, unsigned long index, unsigned long length, String insertString);
+String String_replace(String string, unsigned long index, unsigned long length, const String insertString);
 String String_replaceBuffer(String string, unsigned long index, unsigned long length, const char *buffer, ulong bufferLength);
 String String_replaceCString(String string, unsigned long index, unsigned long length, const char *s);
 String String_replaceChar(String string, unsigned long index, unsigned long length, char ch);
@@ -241,13 +242,14 @@ unsigned long String_length(String string);
 * Name   : String_index
 * Purpose: get char at index
 * Input  : string - string
-*          index  - index (0..n-1)
+*          index  - index (0..n-1) or STRING_END to get last
+*                   character
 * Output : -
-* Return : character position position "index"
+* Return : character at position "index"
 * Notes  : -
 \***********************************************************************/
 
-char String_index(String string, unsigned long index);
+char String_index(const String string, unsigned long index);
 
 /***********************************************************************\
 * Name   : String_cString
@@ -258,7 +260,7 @@ char String_index(String string, unsigned long index);
 * Notes  : -
 \***********************************************************************/
 
-const char *String_cString(String string);
+const char *String_cString(const String string);
 
 /***********************************************************************\
 * Name   : String_compare
@@ -273,8 +275,8 @@ const char *String_cString(String string);
 * Notes  : -
 \***********************************************************************/
 
-int String_compare(String                string1,
-                   String                string2,
+int String_compare(const String          string1,
+                   const String          string2,
                    StringCompareFunction stringCompareFunction,
                    void                  *stringCompareUserData
                   );
@@ -289,9 +291,9 @@ int String_compare(String                string1,
 * Notes  : -
 \***********************************************************************/
 
-bool String_equals(String string1, String string2);
-bool String_equalsCString(String string, const char *s);
-bool String_equalsChar(String string, char ch);
+bool String_equals(const String string1, const String string2);
+bool String_equalsCString(const String string, const char *s);
+bool String_equalsChar(const String string, char ch);
 
 /***********************************************************************\
 * Name   : String_find, String_findCString, String_findChar
@@ -305,12 +307,12 @@ bool String_equalsChar(String string, char ch);
 * Notes  : -
 \***********************************************************************/
 
-long String_find(String string, unsigned long index, String findString);
-long String_findCString(String string, unsigned long index, const char *s);
-long String_findChar(String string, unsigned long index, char ch);
-long String_findLast(String string, long index, String findString);
-long String_findLastCString(String string, long index, const char *s);
-long String_findLastChar(String string, long index, char ch);
+long String_find(const String string, unsigned long index, const String findString);
+long String_findCString(const String string, unsigned long index, const char *s);
+long String_findChar(const String string, unsigned long index, char ch);
+long String_findLast(const String string, long index, const String findString);
+long String_findLastCString(const String string, long index, const char *s);
+long String_findLastChar(const String string, long index, char ch);
 
 /***********************************************************************\
 * Name   : String_iterate
@@ -323,7 +325,7 @@ long String_findLastChar(String string, long index, char ch);
 * Notes  : -
 \***********************************************************************/
 
-String String_iterate(String                string,
+String String_iterate(const String          string,
                       StringIterateFunction stringIterateFunction,
                       void                  *stringIterateUserData
                      );
@@ -416,7 +418,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 * Notes  : -
 \***********************************************************************/
 
-bool String_parse(String string, const char *format, ...);
+bool String_parse(const String string, const char *format, ...);
 
 /***********************************************************************\
 * Name   : String_toCString
@@ -427,7 +429,7 @@ bool String_parse(String string, const char *format, ...);
 * Notes  : -
 \***********************************************************************/
 
-char* String_toCString(String string);
+char* String_toCString(const String string);
 
 #ifndef NDEBUG
 /***********************************************************************\

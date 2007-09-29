@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/filefragmentlists.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver file fragment list functions
 * Systems: all
@@ -98,7 +98,7 @@ void FileFragmentList_done(FileFragmentList *fileFragmentList);
 * Notes  : -
 \***********************************************************************/
 
-FileFragmentNode *FileFragmentList_addFile(FileFragmentList *fileFragmentList, String fileName, uint64 size);
+FileFragmentNode *FileFragmentList_addFile(FileFragmentList *fileFragmentList, const String fileName, uint64 size);
 
 /***********************************************************************\
 * Name   : FileFragmentList_removeFile
@@ -122,7 +122,7 @@ void FileFragmentList_removeFile(FileFragmentList *fileFragmentList, FileFragmen
 * Notes  : -
 \***********************************************************************/
 
-FileFragmentNode *FileFragmentList_findFile(FileFragmentList *fileFragmentList, String fileName);
+FileFragmentNode *FileFragmentList_findFile(FileFragmentList *fileFragmentList, const String fileName);
 
 /***********************************************************************\
 * Name   : FileFragmentList_clear

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -43,7 +43,7 @@
   extern "C" {
 #endif
 
-String File_setFileName(String fileName, String name)
+String File_setFileName(String fileName, const String name)
 {
   assert(fileName != NULL);
 
@@ -64,7 +64,7 @@ String File_setFileNameChar(String fileName, char ch)
   return String_setChar(fileName,ch);
 }
 
-String File_appendFileName(String fileName, String name)
+String File_appendFileName(String fileName, const String name)
 {
   assert(fileName != NULL);
   assert(name != NULL);
@@ -114,7 +114,7 @@ String File_appendFileNameChar(String fileName, char ch)
   return fileName;
 }
 
-String File_getFilePathName(String fileName, String pathName)
+String File_getFilePathName(const String fileName, String pathName)
 {
   long lastPathSeparatorIndex;
 
@@ -137,7 +137,7 @@ String File_getFilePathName(String fileName, String pathName)
   return pathName;
 }
 
-String File_getFileBaseName(String fileName, String baseName)
+String File_getFileBaseName(const String fileName, String baseName)
 {
   long lastPathSeparatorIndex;
 
@@ -160,7 +160,7 @@ String File_getFileBaseName(String fileName, String baseName)
   return baseName;
 }
 
-void File_splitFileName(String fileName, String *pathName, String *baseName)
+void File_splitFileName(const String fileName, String *pathName, String *baseName)
 {
   assert(fileName != NULL);
   assert(pathName != NULL);

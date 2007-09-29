@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -76,16 +76,108 @@ typedef struct
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : Storage_init
+* Purpose: initialize storage functions
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
 Errors Storage_init(void);
+
+/***********************************************************************\
+* Name   : Storage_done
+* Purpose: deinitialize storage functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Storage_done(void);
 
-Errors Storage_create(StorageInfo *storageInfo, String storageName, uint64 fileSize);
-Errors Storage_open(StorageInfo *storageInfo, String storageName);
+/***********************************************************************\
+* Name   : Storage_prepare
+* Purpose: prepare storage: read password, init files
+* Input  : storageName - storage name
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_prepare(const String storageName);
+
+/***********************************************************************\
+* Name   : Storage_create
+* Purpose: create new storage
+* Input  : storageName - storage name
+*          fileSize    - storage file size
+* Output : storageInfo - initialized storage info
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_create(StorageInfo *storageInfo, const String storageName, uint64 fileSize);
+
+/***********************************************************************\
+* Name   : Storage_open
+* Purpose: open storage
+* Input  : storageName - storage name
+* Output : storageInfo - initialized storage info
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_open(StorageInfo *storageInfo, const String storageName);
+
+/***********************************************************************\
+* Name   : Storage_close
+* Purpose: close storage
+* Input  : storageInfo - storage info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Storage_close(StorageInfo *storageInfo);
+
+/***********************************************************************\
+* Name   : Storage_getSize
+* Purpose: get storage file size
+* Input  : storageInfo - storage info block
+* Output : -
+* Return : size of storage
+* Notes  : -
+\***********************************************************************/
 
 uint64 Storage_getSize(StorageInfo *storageInfo);
 
+/***********************************************************************\
+* Name   : Storage_read
+* Purpose: read from storage 
+* Input  : storageInfo - storage info block
+*          buffer      - buffer with data to write
+*          size        - data size
+* Output : readBytes - number of bytes read
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
 Errors Storage_read(StorageInfo *storageInfo, void *buffer, ulong size, ulong *readBytes);
+
+/***********************************************************************\
+* Name   : Storage_write
+* Purpose: write into storage
+* Input  : storageInfo - storage info block
+*          buffer      - buffer with data to write
+*          size        - data size
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
 Errors Storage_write(StorageInfo *storageInfo, const void *buffer, ulong size);
 
 #ifdef __cplusplus

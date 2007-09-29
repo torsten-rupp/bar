@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -25,20 +25,12 @@
 
 /***************************** Constants *******************************/
 
-typedef enum
-{
-  SSH_PASSWORD_STATE_ASK,
-  SSH_PASSWORD_STATE_INIT,
-  SSH_PASSWORD_STATE_FAIL,
-} SSHPasswordStates;
-
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL SSHPasswordStates sshPasswordState;
-LOCAL String            sshPassword;
-LOCAL String            sshPublicKeyFileName;
-LOCAL String            sshPrivatKeyFileName;
+LOCAL String sshPassword;
+LOCAL String sshPublicKeyFileName;
+LOCAL String sshPrivatKeyFileName;
 
 /****************************** Macros *********************************/
 
@@ -51,85 +43,132 @@ LOCAL String            sshPrivatKeyFileName;
 #endif
 
 /***********************************************************************\
-* Name   : getSSHPassword
-* Purpose: get ssh password
-* Input  : -
-* Output : -
-* Return : ssh password or NULL if not found/failure
+* Name   : getStorageType
+* Purpose: get storage type from storage name
+* Input  : storageName - storage name
+* Output : storageSpecifier - storage specific data (can be NULL)
+* Return : storage type
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const char *getSSHPassword(void)
+LOCAL StorageTypes getStorageType(const String storageName, String storageSpecifier)
+{
+  if      (String_findCString(storageName,STRING_BEGIN,"scp:") == 0)
+  {
+    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,4,STRING_END);
+    return STORAGE_TYPE_SCP;
+  }
+  else if (String_findCString(storageName,STRING_BEGIN,"sftp:") == 0)
+  {
+    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,5,STRING_END);
+    return STORAGE_TYPE_SFTP;
+  }
+  else
+  {
+    if (storageSpecifier != NULL) String_set(storageSpecifier,storageName);
+    return STORAGE_TYPE_FILE;
+  }
+}
+
+/***********************************************************************\
+* Name   : initSSHPassword
+* Purpose: init ssh password
+* Input  : -
+* Output : -
+* Return : TRUE if ssh password intialized, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool initSSHPassword(void)
 {
   const char *sshAskPassword;
-  const char *password;
 
-  switch (sshPasswordState)
+  if      (globalOptions.sshPassword != NULL)
   {
-    case SSH_PASSWORD_STATE_ASK:
-      if      (globalOptions.sshPassword != NULL)
-      {
-        /* use command line argument */
-        String_setCString(sshPassword,globalOptions.sshPassword);
+    /* use command line argument */
+    String_setCString(sshPassword,globalOptions.sshPassword);
 
-        password = String_cString(sshPassword);
-        sshPasswordState = SSH_PASSWORD_STATE_INIT;
-      }
-      else if ((sshAskPassword = getenv("SSH_ASKPASS")) != NULL)
-      {
-        /* call external password program */
-        FILE *inputHandle;
-        int  ch;
-
-        /* open pipe to external password program */
-        inputHandle = popen(sshAskPassword,"r");
-        if (inputHandle == NULL)
-        {
-          sshPasswordState = SSH_PASSWORD_STATE_FAIL;
-          return NULL;
-        }
-
-        /* read password, discard last LF */
-        while ((ch = getc(inputHandle)) != EOF)
-        {
-          String_appendChar(sshPassword,(char)ch);
-        }
-        if (String_index(sshPassword,STRING_END) == '\n') String_remove(sshPassword,STRING_END,1);
-
-        /* close pipe */
-        pclose(inputHandle);
-
-        password = String_cString(sshPassword);
-        sshPasswordState = SSH_PASSWORD_STATE_INIT;
-      }
-      else 
-      {
-        password = NULL;
-        sshPasswordState = SSH_PASSWORD_STATE_FAIL;
-        return NULL;
-      }
-      break;
-    case SSH_PASSWORD_STATE_INIT:
-      password = String_cString(sshPassword);
-      break;
-    case SSH_PASSWORD_STATE_FAIL:
-      password = NULL;
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+    return TRUE;
   }
+  else if ((sshAskPassword = getenv("SSH_ASKPASS")) != NULL)
+  {
+    /* call external password program */
+    FILE *inputHandle;
+    int  ch;
 
-  return password;
+    /* open pipe to external password program */
+    inputHandle = popen(sshAskPassword,"r");
+    if (inputHandle == NULL)
+    {
+      return FALSE;
+    }
+
+    /* read password, discard last LF */
+    while ((ch = getc(inputHandle)) != EOF)
+    {
+      String_appendChar(sshPassword,(char)ch);
+    }
+    if (String_index(sshPassword,STRING_END) == '\n') String_remove(sshPassword,STRING_END,1);
+
+    /* close pipe */
+    pclose(inputHandle);
+
+    return (String_length(sshPassword) > 0);
+  }
+  else 
+  {
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
+* Name   : parseSSHSpecifier
+* Purpose: parse ssh specifier: <user name>@<host name>:<host file name>
+* Input  : sshSpecifier - ssh specifier string
+* Output : userName     - user name (can be NULL)
+*          hostName     - host name (can be NULL)
+*          hostFileName - host file name (can be NULL)
+* Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool parseSSHSpecifier(const String sshSpecifier,
+                             String       userName,
+                             String       hostName,
+                             String       hostFileName
+                            )
+{
+  long i0,i1;
+
+  assert(sshSpecifier != NULL);
+
+  /* parse connection string */
+  i0 = 0;
+  i1 = String_findChar(sshSpecifier,i0,'@');
+  if (i1 < 0)
+  {
+    printError("No user name given in 'scp' string!\n");
+    return FALSE;
+  }
+  if (userName != NULL) String_sub(userName,sshSpecifier,i0,i1-i0);
+  i0 = i1+1;
+  i1 = String_findChar(sshSpecifier,i0,':');
+  if (i1 < 0)
+  {
+    printError("No host name given in 'scp' string!\n");
+    return FALSE;
+  }
+  if (hostName != NULL) String_sub(hostName,sshSpecifier,i0,i1-i0);
+  i0 = i1+1;
+  if (hostFileName != NULL) String_sub(hostFileName,sshSpecifier,i0,STRING_END);
+
+  return TRUE;
 }
 
 /*---------------------------------------------------------------------*/
 
 Errors Storage_init(void)
 {
-  sshPasswordState     = SSH_PASSWORD_STATE_ASK;
   sshPassword          = String_new();
   sshPublicKeyFileName = String_new();
   sshPrivatKeyFileName = String_new();
@@ -164,177 +203,207 @@ void Storage_done(void)
   String_delete(sshPassword);
 }
 
+Errors Storage_prepare(const String storageName)
+{
+  String storageSpecifier;
+
+  assert(storageName != NULL);
+
+  storageSpecifier = String_new();
+  switch (getStorageType(storageName,storageSpecifier))
+  {
+    case STORAGE_TYPE_FILE:
+      break;
+    case STORAGE_TYPE_SCP:
+    case STORAGE_TYPE_SFTP:
+      if (!parseSSHSpecifier(storageSpecifier,NULL,NULL,NULL))
+      {
+        String_delete(storageSpecifier);
+        return ERROR_SSH_SESSION_FAIL;
+      }
+
+      if (!initSSHPassword())
+      {
+        String_delete(storageSpecifier);
+        return ERROR_NO_SSH_PASSWORD;
+      }
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+  String_delete(storageSpecifier);
+
+  return ERROR_NONE;
+}
+
 Errors Storage_create(StorageInfo *storageInfo,
                       String      storageName,
                       uint64      fileSize
                      )
 {
+  String storageSpecifier;
   Errors error;
 
   assert(storageInfo != NULL);
   assert(storageName != NULL);
 
-  if      (String_findCString(storageName,STRING_BEGIN,"scp:") == 0)
+  storageSpecifier = String_new();
+  switch (getStorageType(storageName,storageSpecifier))
   {
-    long       i0,i1;
-    String     userName;
-    String     hostName;
-    String     hostFileName;
-    const char *sshPassword;
+    case STORAGE_TYPE_FILE:
+      /* init variables */
+      storageInfo->mode          = STORAGE_MODE_WRITE;
+      storageInfo->type          = STORAGE_TYPE_FILE;
+      storageInfo->file.fileName = String_copy(storageSpecifier);
 
-    /* init variables */
-    storageInfo->mode = STORAGE_MODE_WRITE;
-    storageInfo->type = STORAGE_TYPE_SCP;
+      /* open file */
+      error = File_open(&storageInfo->file.fileHandle,storageInfo->file.fileName,FILE_OPENMODE_CREATE);
+      if (error != ERROR_NONE)
+      {
+        String_delete(storageInfo->file.fileName);
+        String_delete(storageSpecifier);
+        return error;
+      }
+      break;
+    case STORAGE_TYPE_SCP:
+      {
+        String userName;
+        String hostName;
+        String hostFileName;
 
-    /* parse connection string */
-    i0 = 4;
-    i1 = String_findChar(storageName,i0,'@');
-    if (i1 < 0)
-    {
-      printError("No user name given in 'scp' string!\n");
-      return ERROR_SSH_SESSION_FAIL;
-    }
-    userName = String_sub(String_new(),storageName,i0,i1-i0);
-    i0 = i1+1;
-    i1 = String_findChar(storageName,i0,':');
-    if (i1 < 0)
-    {
-      printError("No host name given in 'scp' string!\n");
-      String_delete(userName);
-      return ERROR_SSH_SESSION_FAIL;
-    }
-    hostName = String_sub(String_new(),storageName,i0,i1-i0);
-    i0 = i1+1;
-    hostFileName = String_sub(String_new(),storageName,i0,STRING_END);
+        /* init variables */
+        storageInfo->mode = STORAGE_MODE_WRITE;
+        storageInfo->type = STORAGE_TYPE_SCP;
 
-#if 1
-    /* get password */
-    sshPassword = getSSHPassword();
-    if (sshPassword == NULL)
-    {
-      printError("No ssh password given!\n");
-      String_delete(hostFileName);
-      String_delete(hostName);
-      String_delete(userName);
-      return ERROR_SSH_SESSION_FAIL;
-    }
-#endif /* 0 */
+        /* parse connection string */
+        userName = String_new();
+        hostName = String_new();
+        hostFileName = String_new();
+        if (!parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
+        {
+          String_delete(hostFileName);
+          String_delete(hostName);
+          String_delete(userName);
+          String_delete(storageSpecifier);
+          return ERROR_SSH_SESSION_FAIL;
+        }
 
-    /* open network connection */
-    error = Network_connect(&storageInfo->scp.socketHandle,hostName,globalOptions.sshPort);
-    if (error != ERROR_NONE)
-    {
-      String_delete(hostFileName);
-      String_delete(hostName);
-      String_delete(userName);
-      return error;
-    }
+        /* open network connection */
+        error = Network_connect(&storageInfo->scp.socketHandle,hostName,globalOptions.sshPort);
+        if (error != ERROR_NONE)
+        {
+          String_delete(hostFileName);
+          String_delete(hostName);
+          String_delete(userName);
+          String_delete(storageSpecifier);
+          return error;
+        }
 
-    /* init session */
-    storageInfo->scp.session = libssh2_session_init();
-    if (storageInfo->scp.session == NULL)
-    {
-      printError("Init ssh session fail!\n");
-      Network_disconnect(storageInfo->scp.socketHandle);
-      String_delete(hostFileName);
-      String_delete(hostName);
-      String_delete(userName);
-      return ERROR_SSH_SESSION_FAIL;
-    }
-    if (libssh2_session_startup(storageInfo->scp.session,storageInfo->scp.socketHandle) != 0)
-    {
-      printError("Startup ssh session fail!\n");
-      libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
-      libssh2_session_free(storageInfo->scp.session);
-      Network_disconnect(storageInfo->scp.socketHandle);
-      String_delete(hostFileName);
-      String_delete(hostName);
-      String_delete(userName);
-      return ERROR_SSH_SESSION_FAIL;
-    }
+        /* init session */
+        storageInfo->scp.session = libssh2_session_init();
+        if (storageInfo->scp.session == NULL)
+        {
+          printError("Init ssh session fail!\n");
+          Network_disconnect(storageInfo->scp.socketHandle);
+          String_delete(hostFileName);
+          String_delete(hostName);
+          String_delete(userName);
+          String_delete(storageSpecifier);
+          return ERROR_SSH_SESSION_FAIL;
+        }
+        if (libssh2_session_startup(storageInfo->scp.session,storageInfo->scp.socketHandle) != 0)
+        {
+          printError("Startup ssh session fail!\n");
+          libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
+          libssh2_session_free(storageInfo->scp.session);
+          Network_disconnect(storageInfo->scp.socketHandle);
+          String_delete(hostFileName);
+          String_delete(hostName);
+          String_delete(userName);
+          String_delete(storageSpecifier);
+          return ERROR_SSH_SESSION_FAIL;
+        }
 
-#if 1
-    if (libssh2_userauth_publickey_fromfile(storageInfo->scp.session,
-// NYI
-                                            String_cString(userName),
-                                            String_cString(sshPublicKeyFileName),
-                                            String_cString(sshPrivatKeyFileName),
-                                            getSSHPassword()
-                                           ) != 0
-       )
-    {
-      printError("ssh authentification fail!\n");
-      libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
-      libssh2_session_free(storageInfo->scp.session);
-      Network_disconnect(storageInfo->scp.socketHandle);
-      String_delete(hostFileName);
-      String_delete(hostName);
-      String_delete(userName);
-      return ERROR_SSH_AUTHENTIFICATION;
-    }
-#else
-    if (libssh2_userauth_keyboard_interactive(storageInfo->scp.session,
-                                              String_cString(userName),
-                                              NULL
-                                            ) != 0
-       )
-    {
-      printError("ssh authentification fail!\n");
-      libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
-      libssh2_session_free(storageInfo->scp.session);
-      Network_disconnect(storageInfo->scp.socketHandle);
-      String_delete(hostFileName);
-      String_delete(hostName);
-      String_delete(userName);
-      return ERROR_SSH_AUTHENTIFICATION;
-    }
-#endif /* 0 */
+    #if 1
+        if (libssh2_userauth_publickey_fromfile(storageInfo->scp.session,
+    // NYI
+                                                String_cString(userName),
+                                                String_cString(sshPublicKeyFileName),
+                                                String_cString(sshPrivatKeyFileName),
+                                                String_cString(sshPassword)
+                                               ) != 0
+           )
+        {
+          printError("ssh authentification fail!\n");
+          libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
+          libssh2_session_free(storageInfo->scp.session);
+          Network_disconnect(storageInfo->scp.socketHandle);
+          String_delete(hostFileName);
+          String_delete(hostName);
+          String_delete(userName);
+          String_delete(storageSpecifier);
+          return ERROR_SSH_AUTHENTIFICATION;
+        }
+    #else
+        if (libssh2_userauth_keyboard_interactive(storageInfo->scp.session,
+                                                  String_cString(userName),
+                                                  NULL
+                                                ) != 0
+           )
+        {
+          printError("ssh authentification fail!\n");
+          libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
+          libssh2_session_free(storageInfo->scp.session);
+          Network_disconnect(storageInfo->scp.socketHandle);
+          String_delete(hostFileName);
+          String_delete(hostName);
+          String_delete(userName);
+          String_delete(storageSpecifier);
+          return ERROR_SSH_AUTHENTIFICATION;
+        }
+    #endif /* 0 */
 
-    /* open channel */
-    storageInfo->scp.channel = libssh2_scp_send(storageInfo->scp.session,
-                                                String_cString(hostFileName),
-                              0600,
-                                                fileSize
-                                               );
-    if (storageInfo->scp.channel == NULL)
-    {
-      printError("Init ssh channel fail!\n");
-      libssh2_session_disconnect(storageInfo->scp.session, "Errror");
-      libssh2_session_free(storageInfo->scp.session);
-      Network_disconnect(storageInfo->scp.socketHandle);
-      String_delete(hostFileName);
-      String_delete(hostName);
-      String_delete(userName);
-      return ERROR_SSH_SESSION_FAIL;
-    }
+        /* open channel */
+        storageInfo->scp.channel = libssh2_scp_send(storageInfo->scp.session,
+                                                    String_cString(hostFileName),
+                                  0600,
+                                                    fileSize
+                                                   );
+        if (storageInfo->scp.channel == NULL)
+        {
+          printError("Init ssh channel fail!\n");
+          libssh2_session_disconnect(storageInfo->scp.session, "Errror");
+          libssh2_session_free(storageInfo->scp.session);
+          Network_disconnect(storageInfo->scp.socketHandle);
+          String_delete(hostFileName);
+          String_delete(hostName);
+          String_delete(userName);
+          String_delete(storageSpecifier);
+          return ERROR_SSH_SESSION_FAIL;
+        }
 
-    /* free resources */
-    String_delete(hostFileName);
-    String_delete(hostName);
-    String_delete(userName);
-  }
-  else if (String_findCString(storageName,STRING_BEGIN,"sftp:") == 0)
-  {
-    /* init variables */
-    storageInfo->mode = STORAGE_MODE_WRITE;
-    storageInfo->type = STORAGE_TYPE_SFTP;
+        /* free resources */
+        String_delete(hostFileName);
+        String_delete(hostName);
+        String_delete(userName);
+      }
+      break;
+    case STORAGE_TYPE_SFTP:
+      /* init variables */
+      storageInfo->mode = STORAGE_MODE_WRITE;
+      storageInfo->type = STORAGE_TYPE_SFTP;
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
   }
-  else
-  {
-    /* init variables */
-    storageInfo->mode          = STORAGE_MODE_WRITE;
-    storageInfo->type          = STORAGE_TYPE_FILE;
-    storageInfo->file.fileName = String_copy(storageName);
-
-    /* open file */
-    error = File_open(&storageInfo->file.fileHandle,storageInfo->file.fileName,FILE_OPENMODE_CREATE);
-    if (error != ERROR_NONE)
-    {
-      String_delete(storageInfo->file.fileName);
-      return error;
-    }
-  }
+  String_delete(storageSpecifier);
 
   return ERROR_NONE;
 }
@@ -358,9 +427,21 @@ void Storage_close(StorageInfo *storageInfo)
       String_delete(storageInfo->file.fileName);
       break;
     case STORAGE_TYPE_SCP:
-      libssh2_channel_send_eof(storageInfo->scp.channel);
-      libssh2_channel_wait_eof(storageInfo->scp.channel);
-      libssh2_channel_wait_closed(storageInfo->scp.channel);
+      switch (storageInfo->mode)
+      {
+        case STORAGE_MODE_WRITE:
+          libssh2_channel_send_eof(storageInfo->scp.channel);
+          libssh2_channel_wait_eof(storageInfo->scp.channel);
+          libssh2_channel_wait_closed(storageInfo->scp.channel);
+          break;
+        case STORAGE_MODE_READ:
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
+      }
       libssh2_channel_free(storageInfo->scp.channel);
       libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
       libssh2_session_free(storageInfo->scp.session);
@@ -407,6 +488,7 @@ Errors Storage_read(StorageInfo *storageInfo, void *buffer, ulong size, ulong *r
   Errors error;
 
   assert(storageInfo != NULL);
+  assert(storageInfo->mode == STORAGE_MODE_READ);
   assert(buffer != NULL);
   assert(readBytes != NULL);
 
@@ -440,6 +522,7 @@ Errors Storage_write(StorageInfo *storageInfo, const void *buffer, ulong size)
   Errors error;
 
   assert(storageInfo != NULL);
+  assert(storageInfo->mode == STORAGE_MODE_WRITE);
   assert(buffer != NULL);
 
   switch (storageInfo->type)

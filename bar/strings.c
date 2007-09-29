@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -993,7 +993,7 @@ String String_clear(String string)
   return string;
 }
 
-String String_set(String string, String sourceString)
+String String_set(String string, const String sourceString)
 {
   unsigned long n;
 
@@ -1074,7 +1074,7 @@ String String_setBuffer(String string, const char *buffer, ulong bufferLength)
 }
 
 #ifdef NDEBUG
-String String_copy(String fromString)
+String String_copy(const String fromString)
 #else /* not NDEBUG */
 String __String_copy(const char *fileName, unsigned long lineNb, String fromString)
 #endif /* NDEBUG */
@@ -1104,7 +1104,7 @@ String __String_copy(const char *fileName, unsigned long lineNb, String fromStri
   return string;
 }
 
-String String_sub(String string, String fromString, unsigned long index, long length)
+String String_sub(String string, const String fromString, unsigned long index, long length)
 {
   unsigned long n;
 
@@ -1135,7 +1135,7 @@ String String_sub(String string, String fromString, unsigned long index, long le
   return string;
 }
 
-String String_append(String string, String appendString)
+String String_append(String string, const String appendString)
 {
   unsigned long n;
 
@@ -1202,7 +1202,7 @@ String String_appendChar(String string, char ch)
   return string;
 }
 
-String String_insert(String string, unsigned long index, String insertString)
+String String_insert(String string, unsigned long index, const String insertString)
 {
   unsigned long n;
 
@@ -1328,7 +1328,7 @@ String String_remove(String string, unsigned long index, unsigned long length)
   return string;
 }
 
-String String_replace(String string, unsigned long index, unsigned long length, String insertString)
+String String_replace(String string, unsigned long index, unsigned long length, const String insertString)
 {
   String_remove(string,index,length);
   String_insert(string,index,insertString);
@@ -1360,12 +1360,12 @@ String String_replaceChar(String string, unsigned long index, unsigned long leng
   return string;
 }
 
-unsigned long String_length(String string)
+unsigned long String_length(const String string)
 {
   return (string != NULL)?string->length:0;
 }
 
-char String_index(String string, unsigned long index)
+char String_index(const String string, unsigned long index)
 {
   char ch;
 
@@ -1397,7 +1397,11 @@ const char *String_cString(String string)
   return (string != NULL)?&string->data[0]:NULL;
 }
 
-int String_compare(String string1, String string2, StringCompareFunction stringCompareFunction, void *stringCompareUserData)
+int String_compare(const String          string1,
+                   const String          string2,
+                   StringCompareFunction stringCompareFunction,
+                   void                  *stringCompareUserData
+                  )
 {
   unsigned long n;
   unsigned long z;
@@ -1435,7 +1439,7 @@ int String_compare(String string1, String string2, StringCompareFunction stringC
   return result;
 }
 
-bool String_equals(String string1, String string2)
+bool String_equals(const String string1, const String string2)
 {
   bool          equalFlag;
   unsigned long z;
@@ -1461,7 +1465,7 @@ bool String_equals(String string1, String string2)
   return equalFlag;
 }
 
-bool String_equalsCString(String string, const char *s)
+bool String_equalsCString(const String string, const char *s)
 {
   struct __String cString;
 
@@ -1487,7 +1491,7 @@ bool String_equalsCString(String string, const char *s)
   }
 }
 
-bool String_equalsChar(String string, char ch)
+bool String_equalsChar(const String string, char ch)
 {
   if (string != NULL)
   {
@@ -1501,7 +1505,7 @@ bool String_equalsChar(String string, char ch)
   }
 }
 
-long String_find(String string, unsigned long index, String findString)
+long String_find(const String string, unsigned long index, const String findString)
 {
   long z,i;
   long findIndex;
@@ -1527,7 +1531,7 @@ long String_find(String string, unsigned long index, String findString)
   return findIndex;
 }
 
-long String_findCString(String string, unsigned long index, const char *s)
+long String_findCString(const String string, unsigned long index, const char *s)
 {
   long findIndex;
   long sLength;
@@ -1555,7 +1559,7 @@ long String_findCString(String string, unsigned long index, const char *s)
   return findIndex;
 }
 
-long String_findChar(String string, unsigned long index, char ch)
+long String_findChar(const String string, unsigned long index, char ch)
 {
   long z;
 
@@ -1570,7 +1574,7 @@ long String_findChar(String string, unsigned long index, char ch)
   return (z < string->length)?z:-1;
 }
 
-long String_findLast(String string, long index, String findString)
+long String_findLast(const String string, long index, String findString)
 {
   long z,i;
   long findIndex;
@@ -1596,7 +1600,7 @@ long String_findLast(String string, long index, String findString)
   return findIndex;
 }
 
-long String_findLastCString(String string, long index, const char *s)
+long String_findLastCString(const String string, long index, const char *s)
 {
   long findIndex;
   long sLength;
@@ -1624,7 +1628,7 @@ long String_findLastCString(String string, long index, const char *s)
   return findIndex;
 }
 
-long String_findLastChar(String string, long index, char ch)
+long String_findLastChar(const String string, long index, char ch)
 {
   long z;
 
@@ -1639,7 +1643,10 @@ long String_findLastChar(String string, long index, char ch)
   return (z >= 0)?z:-1;
 }
 
-String String_iterate(String string, StringIterateFunction stringIterateFunction, void *stringIterateUserData)
+String String_iterate(const                 String string,
+                      StringIterateFunction stringIterateFunction,
+                      void                  *stringIterateUserData
+                     )
 {
   unsigned long z;
 
@@ -1848,7 +1855,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   return TRUE;
 }
 
-bool String_parse(String string, const char *format, ...)
+bool String_parse(const String string, const char *format, ...)
 {
   va_list arguments;
   bool    result;
@@ -1862,7 +1869,7 @@ bool String_parse(String string, const char *format, ...)
   return result;
 }
 
-char* String_toCString(String string)
+char* String_toCString(const String string)
 {
   char *cString;
 
