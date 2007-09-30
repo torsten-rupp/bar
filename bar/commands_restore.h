@@ -1,15 +1,15 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
 *
 \***********************************************************************/
 
-#ifndef __COMMAND_RESTORE__
-#define __COMMAND_RESTORE__
+#ifndef __COMMANDS_RESTORE__
+#define __COMMANDS_RESTORE__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -41,15 +41,20 @@
 #endif
 
 /***********************************************************************\
-* Name   : command_restore
-* Purpose: 
-* Input  : -
+* Name   : Command_restore
+* Purpose: restore archive content
+* Input  : fileNameList        - list with archive files
+*          includeList         - include list
+*          excludeList         - exclude list
+*          directoryStripCount - number of directories to discard or 0
+*          directory           - destination directory or NULL
+*          password            - crypt password
 * Output : -
-* Return : -
+* Return : TRUE if archive restored, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool command_restore(StringList  *fileNameList,
+bool Command_restore(StringList  *fileNameList,
                      PatternList *includeList,
                      PatternList *excludeList,
                      uint        directoryStripCount,
@@ -61,6 +66,6 @@ bool command_restore(StringList  *fileNameList,
   }
 #endif
 
-#endif /* __COMMAND_RESTORE__ */
+#endif /* __COMMANDS_RESTORE__ */
 
 /* end of file */

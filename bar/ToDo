@@ -1,0 +1,12 @@
+ToDo
+
+- network command interface
+- graphical frontend
+- check if file date/permission/owner/group is correct
+- internal pipeling of commands for e. g. repacking, remove/add encryption
+- passwort input for crypt password
+- support storage controller for reading archives
+- support sftp
+- suppport ssh-agent (extend libssh2?)
+- reading configuration from file
+- configure

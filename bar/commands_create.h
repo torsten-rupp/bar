@@ -1,15 +1,15 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
 *
 \***********************************************************************/
 
-#ifndef __COMMAND_CREATE__
-#define __COMMAND_CREATE__
+#ifndef __COMMANDS_CREATE__
+#define __COMMANDS_CREATE__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -40,15 +40,23 @@
 #endif
 
 /***********************************************************************\
-* Name   : command_create
-* Purpose: 
-* Input  : -
+* Name   : Command_create
+* Purpose: create archive
+* Input  : archiveFileName     - archive file name
+*          includeList         - include list
+*          excludeList         - exclude list
+*          tmpDirectory        - temporary directory
+*          partSize            - part size or 0
+*          compressAlgorithm   - compression algorithm to use
+*          compressMinFileSize - min. file size for compression
+*          cryptAlgorithm      - crypt algorithm to use
+*          password            - crypt password
 * Output : -
-* Return : -
+* Return : TRUE if archive created, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool command_create(const char         *archiveFileName,
+bool Command_create(const char         *archiveFileName,
                     PatternList        *includePatternList,
                     PatternList        *excludePatternList,
                     const char         *tmpDirectory,
@@ -63,6 +71,6 @@ bool command_create(const char         *archiveFileName,
   }
 #endif
 
-#endif /* __COMMAND_CREATE__ */
+#endif /* __COMMANDS_CREATE__ */
 
 /* end of file */

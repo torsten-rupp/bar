@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -186,14 +186,17 @@ void List_append(void *list, void *node)
   List_insert(list,node,NULL);
 }
 
-void List_remove(void *list, void *node)
+void *List_remove(void *list, void *node)
 {
+  void *nextNode;
+
   assert(list != NULL);
   assert(((List*)list)->head != NULL);
   assert(((List*)list)->tail != NULL);
   assert(((List*)list)->count > 0);
   assert((Node*)node != NULL);
 
+  nextNode = ((Node*)node)->next;
   if (((Node*)node)->prev != NULL) ((Node*)node)->prev->next = ((Node*)node)->next;
   if (((Node*)node)->next != NULL) ((Node*)node)->next->prev = ((Node*)node)->prev;
   if ((Node*)node == ((List*)list)->head) ((List*)list)->head = ((Node*)node)->next;
@@ -203,6 +206,8 @@ void List_remove(void *list, void *node)
   assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
          ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
         );
+
+  return nextNode;
 }
 
 Node *List_getFirst(void *list)

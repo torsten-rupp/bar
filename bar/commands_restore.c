@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -31,7 +31,7 @@
 #include "archive.h"
 #include "filefragmentlists.h"
 
-#include "command_restore.h"
+#include "commands_restore.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -93,7 +93,7 @@ LOCAL String getDestinationFileName(String     destinationFileName,
 
 /*---------------------------------------------------------------------*/
 
-bool command_restore(StringList  *archiveFileNameList,
+bool Command_restore(StringList  *archiveFileNameList,
                      PatternList *includePatternList,
                      PatternList *excludePatternList,
                      uint        directoryStripCount,

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -179,11 +179,11 @@ void List_append(void *list, void *node);
 * Input  : list - list
 *          node - node to remove
 * Output : -
-* Return : -
+* Return : next node in list or NULL
 * Notes  : -
 \***********************************************************************/
 
-void List_remove(void *list, void *node);
+void *List_remove(void *list, void *node);
 
 /***********************************************************************\
 * Name   : List_getFirst

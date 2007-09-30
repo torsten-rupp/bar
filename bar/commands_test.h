@@ -1,15 +1,15 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
 *
 \***********************************************************************/
 
-#ifndef __COMMAND_TEST__
-#define __COMMAND_TEST__
+#ifndef __COMMANDS_TEST__
+#define __COMMANDS_TEST__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -41,15 +41,18 @@
 #endif
 
 /***********************************************************************\
-* Name   : command_test
-* Purpose: 
-* Input  : -
+* Name   : Commands_test
+* Purpose: compare archive and file system content
+* Input  : fileNameList - list with archive files
+*          includeList  - include list
+*          excludeList  - exclude list
+*          password     - crypt password
 * Output : -
-* Return : -
+* Return : TRUE if archive ok, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool command_test(StringList  *fileNameList,
+bool Command_test(StringList  *fileNameList,
                   PatternList *includeList,
                   PatternList *excludeList,
                   const char  *password
@@ -59,6 +62,6 @@ bool command_test(StringList  *fileNameList,
   }
 #endif
 
-#endif /* __COMMAND_TEST__ */
+#endif /* __COMMANDS_TEST__ */
 
 /* end of file */

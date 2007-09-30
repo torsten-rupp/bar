@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -31,7 +31,7 @@
 #include "files.h"
 #include "archive.h"
 
-#include "command_list.h"
+#include "commands_list.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -148,7 +148,7 @@ LOCAL void printLinkInfo(const String    linkName,
 
 /*---------------------------------------------------------------------*/
 
-bool command_list(StringList  *archiveFileNameList,
+bool Command_list(StringList  *archiveFileNameList,
                   PatternList *includePatternList,
                   PatternList *excludePatternList,
                   const char  *password

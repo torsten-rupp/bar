@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -34,7 +34,7 @@
 #include "crypt.h"
 #include "storage.h"
 
-#include "command_create.h"
+#include "commands_create.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -678,7 +678,7 @@ LOCAL void storage(CreateInfo *createInfo)
 
 /*---------------------------------------------------------------------*/
 
-bool command_create(const char      *archiveFileName,
+bool Command_create(const char      *archiveFileName,
                     PatternList     *includePatternList,
                     PatternList     *excludePatternList,
                     const char      *tmpDirectory,
@@ -897,7 +897,7 @@ bool command_create(const char      *archiveFileName,
             {
               ratio = 0;
             }
-            info(1,"ok (ratio %.1f%%)\n",ratio);
+            info(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
           }
           break;
         case FILETYPE_DIRECTORY:

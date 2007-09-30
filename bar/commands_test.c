@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -31,7 +31,7 @@
 #include "archive.h"
 #include "filefragmentlists.h"
 
-#include "command_test.h"
+#include "commands_test.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -85,7 +85,7 @@ LOCAL ulong compare(const void *p0, const void *p1, ulong length)
 
 /*---------------------------------------------------------------------*/
 
-bool command_test(StringList  *archiveFileNameList,
+bool Command_test(StringList  *archiveFileNameList,
                   PatternList *includePatternList,
                   PatternList *excludePatternList,
                   const char  *password
