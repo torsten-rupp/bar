@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/mailboxes.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: functions for inter-process mailboxes
 * Systems: all POSIX
@@ -58,10 +58,7 @@ LOCAL void unlock(Mailbox *mailbox)
   }
 
   mailbox->lockCount--;
-  if (mailbox->lockCount == 0)
-  {
-    pthread_mutex_unlock(&mailbox->lock);
-  }
+  pthread_mutex_unlock(&mailbox->lock);
 }
 
 LOCAL void waitModified(Mailbox *mailbox)
