@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.24 $
+# $Revision: 1.25 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -60,10 +60,10 @@ TEST_PASSWORD=franz_kafka
 #--------------------------------- objects -----------------------------------
 
 SOURCES =       bar.c \
-                command_create.c \
-                command_list.c \
-                command_restore.c \
-                command_test.c \
+                commands_create.c \
+                commands_list.c \
+                commands_restore.c \
+                commands_test.c \
                 files.c \
                 archive.c \
                 chunks.c \
@@ -230,13 +230,25 @@ clean_data:
 	$(RMRF) test/restore
 
 .PHONY: backup-home
-backup-home: bar
+backup-tooru: bar
 	./bar \
           -c scp:torsten@tooru.dyndns.org:backup-torsten-###.bar \
           --ssh-port=49856 \
-          --compress=zip9 \
+          --compress=bzip9 \
           --crypt=aes256 \
           --password=franz \
           -s 128M \
-          --max-tmp-size=512M \
+          --max-tmp-size=256M \
+          /home/torsten/tmp
+
+backup-itzo: bar
+	./bar \
+          -c scp:torsten@it-zo.de:backup/backup-torsten-###.bar \
+          --ssh-port=2222 \
+          --compress=bzip9 \
+          --crypt=aes256 \
+          --password=franz \
+          -s 128M \
+          --max-tmp-size=256M \
+          --verbose=0 \
           /home/torsten/tmp
