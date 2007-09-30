@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -21,6 +21,7 @@
 #include "strings.h"
 #include "files.h"
 #include "errors.h"
+#include "network.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -54,7 +55,7 @@ typedef struct
     } file;
     struct
     {
-      int             socketHandle;
+      SocketHandle    socketHandle;
       LIBSSH2_SESSION *session;
       LIBSSH2_CHANNEL *channel;
     } scp;

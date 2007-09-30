@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -17,12 +17,14 @@
 #include <assert.h>
 
 #include "global.h"
+#include "errors.h"
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
+typedef int SocketHandle;
 
 /***************************** Variables *******************************/
 
@@ -68,9 +70,9 @@ void Network_done(void);
 * Notes  : -
 \***********************************************************************/
 
-Errors Network_connect(int    *socketHandle,
-                       String hostName,
-                       uint   hostPort
+Errors Network_connect(SocketHandle *socketHandle,
+                       String       hostName,
+                       uint         hostPort
                       );
 
 /***********************************************************************\
@@ -82,7 +84,18 @@ Errors Network_connect(int    *socketHandle,
 * Notes  : -
 \***********************************************************************/
 
-void Network_disconnect(int socketHandle);
+void Network_disconnect(SocketHandle *socketHandle);
+
+/***********************************************************************\
+* Name   : Network_getSocket
+* Purpose: get socket from socket handle
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : socket
+* Notes  : -
+\***********************************************************************/
+
+int Network_getSocket(SocketHandle *socketHandle);
 
 /***********************************************************************\
 * Name   : Network_send
@@ -95,9 +108,9 @@ void Network_disconnect(int socketHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Network_send(int        socketHandle,
-                    const void *buffer,
-                    ulong      length
+Errors Network_send(SocketHandle *socketHandle,
+                    const void   *buffer,
+                    ulong        length
                    );
 
 /***********************************************************************\
@@ -111,11 +124,80 @@ Errors Network_send(int        socketHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Network_receive(int   socketHandle,
-                       void  *buffer,
-                       ulong maxLength,
-                       ulong *receivedBytes
+Errors Network_receive(SocketHandle *socketHandle,
+                       void         *buffer,
+                       ulong        maxLength,
+                       ulong        *receivedBytes
                       );
+
+/***********************************************************************\
+* Name   : Network_initServer
+* Purpose: initialize a server socket
+* Input  : serverPort - server port
+* Output : socketHandle - server socket handle
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_initServer(SocketHandle *socketHandle,
+                          uint         serverPort
+                         );
+
+/***********************************************************************\
+* Name   : Network_doneServer
+* Purpose: deinitialize server
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Network_doneServer(SocketHandle *socketHandle);
+
+/***********************************************************************\
+* Name   : Network_getLocalInfo
+* Purpose: get local socket info
+* Input  : socketHandle - socket handle
+*          name         - name variable
+* Output : name - local name
+*          port - local port
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Network_getLocalInfo(SocketHandle *socketHandle,
+                          String name,
+                          uint   *port
+                         );
+
+/***********************************************************************\
+* Name   : Network_getRemoteInfo
+* Purpose: get remove socket info
+* Input  : socketHandle - socket handle
+*          name         - name variable
+* Output : name - remote name
+*          port - remote port
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Network_getRemoteInfo(SocketHandle *socketHandle,
+                           String name,
+                           uint   *port
+                          );
+
+/***********************************************************************\
+* Name   : Network_accept
+* Purpose: accept client connection
+* Input  : serverSocketHandle - server socket handle
+* Output : socketHandle - server socket handle
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_accept(SocketHandle *socketHandle,
+                      SocketHandle *serverSocketHandle
+                     );
 
 #ifdef __cplusplus
   }

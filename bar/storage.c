@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -307,19 +307,22 @@ Errors Storage_create(StorageInfo *storageInfo,
         if (storageInfo->scp.session == NULL)
         {
           printError("Init ssh session fail!\n");
-          Network_disconnect(storageInfo->scp.socketHandle);
+          Network_disconnect(&storageInfo->scp.socketHandle);
           String_delete(hostFileName);
           String_delete(hostName);
           String_delete(userName);
           String_delete(storageSpecifier);
           return ERROR_SSH_SESSION_FAIL;
         }
-        if (libssh2_session_startup(storageInfo->scp.session,storageInfo->scp.socketHandle) != 0)
+        if (libssh2_session_startup(storageInfo->scp.session,
+                                    Network_getSocket(&storageInfo->scp.socketHandle)
+                                   ) != 0
+           )
         {
           printError("Startup ssh session fail!\n");
           libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
           libssh2_session_free(storageInfo->scp.session);
-          Network_disconnect(storageInfo->scp.socketHandle);
+          Network_disconnect(&storageInfo->scp.socketHandle);
           String_delete(hostFileName);
           String_delete(hostName);
           String_delete(userName);
@@ -340,7 +343,7 @@ Errors Storage_create(StorageInfo *storageInfo,
           printError("ssh authentification fail!\n");
           libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
           libssh2_session_free(storageInfo->scp.session);
-          Network_disconnect(storageInfo->scp.socketHandle);
+          Network_disconnect(&storageInfo->scp.socketHandle);
           String_delete(hostFileName);
           String_delete(hostName);
           String_delete(userName);
@@ -357,7 +360,7 @@ Errors Storage_create(StorageInfo *storageInfo,
           printError("ssh authentification fail!\n");
           libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
           libssh2_session_free(storageInfo->scp.session);
-          Network_disconnect(storageInfo->scp.socketHandle);
+          Network_disconnect(&storageInfo->scp.socketHandle);
           String_delete(hostFileName);
           String_delete(hostName);
           String_delete(userName);
@@ -377,7 +380,7 @@ Errors Storage_create(StorageInfo *storageInfo,
           printError("Init ssh channel fail!\n");
           libssh2_session_disconnect(storageInfo->scp.session, "Errror");
           libssh2_session_free(storageInfo->scp.session);
-          Network_disconnect(storageInfo->scp.socketHandle);
+          Network_disconnect(&storageInfo->scp.socketHandle);
           String_delete(hostFileName);
           String_delete(hostName);
           String_delete(userName);
@@ -445,7 +448,7 @@ void Storage_close(StorageInfo *storageInfo)
       libssh2_channel_free(storageInfo->scp.channel);
       libssh2_session_disconnect(storageInfo->scp.session, "Normal Shutdown, Thank you for playing");
       libssh2_session_free(storageInfo->scp.session);
-      Network_disconnect(storageInfo->scp.socketHandle);
+      Network_disconnect(&storageInfo->scp.socketHandle);
       break;
     case STORAGE_TYPE_SFTP:
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
