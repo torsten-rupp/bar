@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -424,7 +424,6 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMo
     /* create chunk-headers */
     if (!archiveFileInfo->file.headerWrittenFlag && (!archiveFileInfo->file.createdFlag || (length > 0)))
     {
-fprintf(stderr,"%s,%d: %d %d\n",__FILE__,__LINE__,archiveFileInfo->file.createdFlag,length);
       error = Chunks_create(&archiveFileInfo->file.chunkInfoFile,
                             CHUNK_ID_FILE,
                             CHUNK_DEFINITION_FILE,
