@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -255,7 +255,10 @@ LOCAL void collector(CreateInfo *createInfo)
   name = String_new();
 
   includePatternNode = createInfo->includePatternList->head;
-  while (!createInfo->collectorThreadExitFlag && (includePatternNode != NULL))
+  while (   !createInfo->collectorThreadExitFlag
+         && !createInfo->failFlag
+         && (includePatternNode != NULL)
+        )
   {
     /* find base path */
     basePath = String_new();
@@ -279,7 +282,10 @@ LOCAL void collector(CreateInfo *createInfo)
 
     /* find files */
     StringList_append(&nameList,basePath);
-    while (!createInfo->collectorThreadExitFlag && !StringList_empty(&nameList))
+    while (   !createInfo->collectorThreadExitFlag
+           && !createInfo->failFlag
+           && !StringList_empty(&nameList)
+          )
     {
       /* get next directory to process */
       name = StringList_getFirst(&nameList,name);
@@ -303,7 +309,10 @@ LOCAL void collector(CreateInfo *createInfo)
             {
               /* read directory contents */
               fileName = String_new();
-              while (!File_endOfDirectory(&directoryHandle))
+              while (   !createInfo->collectorThreadExitFlag
+                     && !createInfo->failFlag
+                     && !File_endOfDirectory(&directoryHandle)
+                    )
               {
                 /* read next directory entry */
                 error = File_readDirectory(&directoryHandle,fileName);
@@ -568,73 +577,76 @@ LOCAL void storage(CreateInfo *createInfo)
 
   while (!createInfo->storageThreadExitFlag && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg)))
   {
-    info(0,"Store '%s'...",String_cString(storageMsg.destinationFileName));
+    if (!createInfo->failFlag)
+    {
+      info(0,"Store '%s'...",String_cString(storageMsg.destinationFileName));
 
-    /* open storage */
-    error = Storage_create(&storageInfo,storageMsg.destinationFileName,storageMsg.fileSize);
-    if (error != ERROR_NONE)
-    {
-      info(0,"FAIL!\n");
-      printError("Cannot store file '%s' (error: %s)\n",
-                 String_cString(storageMsg.destinationFileName),
-                 getErrorText(error)
-                );
-      File_delete(storageMsg.fileName);
-      String_delete(storageMsg.fileName);
-      String_delete(storageMsg.destinationFileName);
-      createInfo->failFlag = TRUE;
-      continue;
-    }
-
-    /* store data */
-    error = File_open(&fileHandle,storageMsg.fileName,FILE_OPENMODE_READ);
-    if (error != ERROR_NONE)
-    {
-      info(0,"FAIL!\n");
-      printError("Cannot open file '%s' (error: %s)!\n",
-                 String_cString(storageMsg.fileName),
-                 getErrorText(error)
-                );
-      File_delete(storageMsg.fileName);
-      String_delete(storageMsg.fileName);
-      String_delete(storageMsg.destinationFileName);
-      createInfo->failFlag = TRUE;
-      continue;
-    }
-    do
-    {
-      error = File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+      /* open storage */
+      error = Storage_create(&storageInfo,storageMsg.destinationFileName,storageMsg.fileSize);
       if (error != ERROR_NONE)
       {
         info(0,"FAIL!\n");
-        printError("Cannot read file '%s' (error: %s)!\n",
-                   String_cString(storageMsg.fileName),
-                   getErrorText(error)
-                  );
-        createInfo->failFlag = TRUE;
-        break;
-      }        
-      error = Storage_write(&storageInfo,buffer,n);
-      if (error != ERROR_NONE)
-      {
-        info(0,"FAIL!\n");
-        printError("Cannot write file '%s' (error: %s)!\n",
+        printError("Cannot store file '%s' (error: %s)\n",
                    String_cString(storageMsg.destinationFileName),
                    getErrorText(error)
                   );
+        File_delete(storageMsg.fileName);
+        String_delete(storageMsg.fileName);
+        String_delete(storageMsg.destinationFileName);
         createInfo->failFlag = TRUE;
-        break;
-      }        
-    }  
-    while (!createInfo->storageThreadExitFlag && !File_eof(&fileHandle));
-    File_close(&fileHandle);
+        continue;
+      }
 
-    /* close storage */
-    Storage_close(&storageInfo);
+      /* store data */
+      error = File_open(&fileHandle,storageMsg.fileName,FILE_OPENMODE_READ);
+      if (error != ERROR_NONE)
+      {
+        info(0,"FAIL!\n");
+        printError("Cannot open file '%s' (error: %s)!\n",
+                   String_cString(storageMsg.fileName),
+                   getErrorText(error)
+                  );
+        File_delete(storageMsg.fileName);
+        String_delete(storageMsg.fileName);
+        String_delete(storageMsg.destinationFileName);
+        createInfo->failFlag = TRUE;
+        continue;
+      }
+      do
+      {
+        error = File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+        if (error != ERROR_NONE)
+        {
+          info(0,"FAIL!\n");
+          printError("Cannot read file '%s' (error: %s)!\n",
+                     String_cString(storageMsg.fileName),
+                     getErrorText(error)
+                    );
+          createInfo->failFlag = TRUE;
+          break;
+        }        
+        error = Storage_write(&storageInfo,buffer,n);
+        if (error != ERROR_NONE)
+        {
+          info(0,"FAIL!\n");
+          printError("Cannot write file '%s' (error: %s)!\n",
+                     String_cString(storageMsg.destinationFileName),
+                     getErrorText(error)
+                    );
+          createInfo->failFlag = TRUE;
+          break;
+        }        
+      }  
+      while (!createInfo->storageThreadExitFlag && !File_eof(&fileHandle));
+      File_close(&fileHandle);
 
-    if (!createInfo->failFlag)
-    {
-      info(0,"ok\n");
+      /* close storage */
+      Storage_close(&storageInfo);
+
+      if (!createInfo->failFlag)
+      {
+        info(0,"ok\n");
+      }
     }
 
     /* delete source file */
@@ -781,222 +793,228 @@ bool command_create(const char      *archiveFileName,
   /* store files */
   while (getNextFile(&createInfo.fileMsgQueue,fileName,&fileType))
   {
-    info(1,"Add '%s'...",String_cString(fileName));
-
-    switch (fileType)
+    if (!createInfo.failFlag)
     {
-      case FILETYPE_FILE:
-        {
-          FileInfo   fileInfo;
-          FileHandle fileHandle;
-          ulong      n;
-          double     ratio;
+      info(1,"Add '%s'...",String_cString(fileName));
 
-          /* get file info */
-          error = File_getFileInfo(fileName,&fileInfo);
-          if (error != ERROR_NONE)
+      switch (fileType)
+      {
+        case FILETYPE_FILE:
           {
-            info(1,"FAIL\n");
-            printError("Cannot get info for file '%s' (error: %s)\n",
-                       String_cString(fileName),
-                       getErrorText(error)
-                      );
-            createInfo.failFlag = TRUE;
-            continue;
-          }
+            FileInfo   fileInfo;
+            FileHandle fileHandle;
+            ulong      n;
+            double     ratio;
 
-          /* new file */
-          error = Archive_newFileEntry(&archiveInfo,
-                                       &archiveFileInfo,
-                                       fileName,
-                                       &fileInfo
-                                      );
-          if (error != ERROR_NONE)
-          {
-            info(1,"FAIL\n");
-            printError("Cannot create new archive entry '%s' (error: %s)\n",
-                       String_cString(fileName),
-                       getErrorText(error)
-                      );
-            createInfo.failFlag = TRUE;
-            break;
-          }
-
-          /* write file content into archive */  
-          error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
-          if (error != ERROR_NONE)
-          {
-            info(1,"FAIL\n");
-            printError("Cannot open file '%s' (error: %s)\n",
-                       String_cString(fileName),
-                       getErrorText(error)
-                      );
-            createInfo.failFlag = TRUE;
-            continue;
-          }
-          error = ERROR_NONE;
-          do
-          {
-            File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
-            if (n > 0)
+            /* get file info */
+            error = File_getFileInfo(fileName,&fileInfo);
+            if (error != ERROR_NONE)
             {
-              error = Archive_writeFileData(&archiveFileInfo,buffer,n);
+              info(1,"FAIL\n");
+              printError("Cannot get info for file '%s' (error: %s)\n",
+                         String_cString(fileName),
+                         getErrorText(error)
+                        );
+              createInfo.failFlag = TRUE;
+              continue;
             }
+
+            /* new file */
+            error = Archive_newFileEntry(&archiveInfo,
+                                         &archiveFileInfo,
+                                         fileName,
+                                         &fileInfo
+                                        );
+            if (error != ERROR_NONE)
+            {
+              info(1,"FAIL\n");
+              printError("Cannot create new archive entry '%s' (error: %s)\n",
+                         String_cString(fileName),
+                         getErrorText(error)
+                        );
+              createInfo.failFlag = TRUE;
+              break;
+            }
+
+            /* write file content into archive */  
+            error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+            if (error != ERROR_NONE)
+            {
+              info(1,"FAIL\n");
+              printError("Cannot open file '%s' (error: %s)\n",
+                         String_cString(fileName),
+                         getErrorText(error)
+                        );
+              createInfo.failFlag = TRUE;
+              continue;
+            }
+            error = ERROR_NONE;
+            do
+            {
+              File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+              if (n > 0)
+              {
+                error = Archive_writeFileData(&archiveFileInfo,buffer,n);
+              }
+            }
+            while (   (n > 0)
+                   && !createInfo.failFlag
+                   && (error == ERROR_NONE)
+                  );
+            File_close(&fileHandle);
+            if (error != ERROR_NONE)
+            {
+              info(1,"FAIL\n");
+              printError("Cannot create archive file (error: %s)!\n",
+                         getErrorText(error)
+                        );
+              Archive_closeEntry(&archiveFileInfo);
+              createInfo.failFlag = TRUE;
+              break;
+            }
+
+            /* close archive entry */
+            error = Archive_closeEntry(&archiveFileInfo);
+            if (error != ERROR_NONE)
+            {
+              info(1,"FAIL\n");
+              printError("Cannot close archive file (error: %s)!\n",
+                         getErrorText(error)
+                        );
+              createInfo.failFlag = TRUE;
+              break;
+            }
+
+            /* update statistics */
+            createInfo.statistics.includedCount++;
+            createInfo.statistics.includedByteSum += fileInfo.size;
+
+            if ((archiveFileInfo.file.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveFileInfo.file.chunkFileData.fragmentSize > 0))
+            {
+              ratio = 100.0-archiveFileInfo.file.chunkInfoFileData.size*100.0/archiveFileInfo.file.chunkFileData.fragmentSize;
+            }
+            else
+            {
+              ratio = 0;
+            }
+            info(1,"ok (ratio %.1f%%)\n",ratio);
           }
-          while ((n > 0) && (error == ERROR_NONE));
-          File_close(&fileHandle);
-          if (error != ERROR_NONE)
+          break;
+        case FILETYPE_DIRECTORY:
           {
-            info(1,"FAIL\n");
-            printError("Cannot create archive file (error: %s)!\n",
-                       getErrorText(error)
-                      );
+            FileInfo fileInfo;
+
+            /* get directory info */
+            error = File_getFileInfo(fileName,&fileInfo);
+            if (error != ERROR_NONE)
+            {
+              info(1,"FAIL\n");
+              printError("Cannot get info for directory '%s' (error: %s)\n",
+                         String_cString(fileName),
+                         getErrorText(error)
+                        );
+              createInfo.failFlag = TRUE;
+              continue;
+            }
+
+            /* new directory */
+            error = Archive_newDirectoryEntry(&archiveInfo,
+                                              &archiveFileInfo,
+                                              fileName,
+                                              &fileInfo
+                                             );
+            if (error != ERROR_NONE)
+            {
+              info(1,"FAIL\n");
+              printError("Cannot create new archive entry '%s' (error: %s)\n",
+                         String_cString(fileName),
+                         getErrorText(error)
+                        );
+              createInfo.failFlag = TRUE;
+              break;
+            }
+
+            /* close archive entry */
             Archive_closeEntry(&archiveFileInfo);
-            createInfo.failFlag = TRUE;
-            break;
+
+            /* free resources */
+
+            /* update statistics */
+            createInfo.statistics.includedCount++;
+
+            info(1,"ok\n");
           }
-
-          /* close archive entry */
-          error = Archive_closeEntry(&archiveFileInfo);
-          if (error != ERROR_NONE)
+          break;
+        case FILETYPE_LINK:
           {
-            info(1,"FAIL\n");
-            printError("Cannot close archive file (error: %s)!\n",
-                       getErrorText(error)
-                      );
-            createInfo.failFlag = TRUE;
-            break;
-          }
+            FileInfo fileInfo;
+            String   name;
 
-          /* update statistics */
-          createInfo.statistics.includedCount++;
-          createInfo.statistics.includedByteSum += fileInfo.size;
+            /* get file info */
+            error = File_getFileInfo(fileName,&fileInfo);
+            if (error != ERROR_NONE)
+            {
+              info(1,"FAIL\n");
+              printError("Cannot get info for file '%s' (error: %s)\n",
+                         String_cString(fileName),
+                         getErrorText(error)
+                        );
+              createInfo.failFlag = TRUE;
+              continue;
+            }
 
-          if ((archiveFileInfo.file.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveFileInfo.file.chunkFileData.fragmentSize > 0))
-          {
-            ratio = 100.0-archiveFileInfo.file.chunkInfoFileData.size*100.0/archiveFileInfo.file.chunkFileData.fragmentSize;
-          }
-          else
-          {
-            ratio = 0;
-          }
-          info(1,"ok (ratio %.1f%%)\n",ratio);
-        }
-        break;
-      case FILETYPE_DIRECTORY:
-        {
-          FileInfo fileInfo;
+            /* read link */
+            name = String_new();
+            error = File_readLink(fileName,name);
+            if (error != ERROR_NONE)
+            {
+              info(1,"FAIL\n");
+              printError("Cannot read link '%s' (error: %s)\n",
+                         String_cString(fileName),
+                         getErrorText(error)
+                        );
+              String_delete(name);
+              createInfo.failFlag = TRUE;
+              continue;
+            }
 
-          /* get directory info */
-          error = File_getFileInfo(fileName,&fileInfo);
-          if (error != ERROR_NONE)
-          {
-            info(1,"FAIL\n");
-            printError("Cannot get info for directory '%s' (error: %s)\n",
-                       String_cString(fileName),
-                       getErrorText(error)
-                      );
-            createInfo.failFlag = TRUE;
-            continue;
-          }
+            /* new link */
+            error = Archive_newLinkEntry(&archiveInfo,
+                                         &archiveFileInfo,
+                                         fileName,
+                                         name,
+                                         &fileInfo
+                                        );
+            if (error != ERROR_NONE)
+            {
+              info(1,"FAIL\n");
+              printError("Cannot create new archive entry '%s' (error: %s)\n",
+                         String_cString(fileName),
+                         getErrorText(error)
+                        );
+              String_delete(name);
+              createInfo.failFlag = TRUE;
+              break;
+            }
 
-          /* new directory */
-          error = Archive_newDirectoryEntry(&archiveInfo,
-                                            &archiveFileInfo,
-                                            fileName,
-                                            &fileInfo
-                                           );
-          if (error != ERROR_NONE)
-          {
-            info(1,"FAIL\n");
-            printError("Cannot create new archive entry '%s' (error: %s)\n",
-                       String_cString(fileName),
-                       getErrorText(error)
-                      );
-            createInfo.failFlag = TRUE;
-            break;
-          }
+            /* close archive entry */
+            Archive_closeEntry(&archiveFileInfo);
 
-          /* close archive entry */
-          Archive_closeEntry(&archiveFileInfo);
-
-          /* free resources */
-
-          /* update statistics */
-          createInfo.statistics.includedCount++;
-
-          info(1,"ok\n");
-        }
-        break;
-      case FILETYPE_LINK:
-        {
-          FileInfo fileInfo;
-          String   name;
-
-          /* get file info */
-          error = File_getFileInfo(fileName,&fileInfo);
-          if (error != ERROR_NONE)
-          {
-            info(1,"FAIL\n");
-            printError("Cannot get info for file '%s' (error: %s)\n",
-                       String_cString(fileName),
-                       getErrorText(error)
-                      );
-            createInfo.failFlag = TRUE;
-            continue;
-          }
-
-          /* read link */
-          name = String_new();
-          error = File_readLink(fileName,name);
-          if (error != ERROR_NONE)
-          {
-            info(1,"FAIL\n");
-            printError("Cannot read link '%s' (error: %s)\n",
-                       String_cString(fileName),
-                       getErrorText(error)
-                      );
+            /* free resources */
             String_delete(name);
-            createInfo.failFlag = TRUE;
-            continue;
+
+            /* update statistics */
+            createInfo.statistics.includedCount++;
+
+            info(1,"ok\n");
           }
-
-          /* new link */
-          error = Archive_newLinkEntry(&archiveInfo,
-                                       &archiveFileInfo,
-                                       fileName,
-                                       name,
-                                       &fileInfo
-                                      );
-          if (error != ERROR_NONE)
-          {
-            info(1,"FAIL\n");
-            printError("Cannot create new archive entry '%s' (error: %s)\n",
-                       String_cString(fileName),
-                       getErrorText(error)
-                      );
-            String_delete(name);
-            createInfo.failFlag = TRUE;
-            break;
-          }
-
-          /* close archive entry */
-          Archive_closeEntry(&archiveFileInfo);
-
-          /* free resources */
-          String_delete(name);
-
-          /* update statistics */
-          createInfo.statistics.includedCount++;
-
-          info(1,"ok\n");
-        }
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
-      #endif /* NDEBUG */
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
+      }
     }
   }
 
