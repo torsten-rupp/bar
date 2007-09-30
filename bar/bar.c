@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -28,10 +28,11 @@
 #include "network.h"
 #include "storage.h"
 
-#include "command_create.h"
-#include "command_list.h"
-#include "command_restore.h"
-#include "command_test.h"
+#include "commands_create.h"
+#include "commands_list.h"
+#include "commands_restore.h"
+#include "commands_test.h"
+#include "server.h"
 
 #include "bar.h"
 
@@ -40,6 +41,9 @@
 /***************************** Constants *******************************/
 
 #define VERSION "0.01"
+
+#define DEFAULT_COMPRESS_MIN_FILE_SIZE 32
+#define DEFAULT_SERVER_PORT            38523
 
 /***************************** Datatypes *******************************/
 
@@ -70,7 +74,10 @@ LOCAL PatternList        excludePatternList;
 LOCAL CompressAlgorithms compressAlgorithm;
 LOCAL CryptAlgorithms    cryptAlgorithm;
 LOCAL ulong              compressMinFileSize;
-LOCAL const char         *password;
+LOCAL const char         *cryptPassword;
+LOCAL bool               daemonFlag;
+LOCAL uint               serverPort;
+LOCAL const char         *serverPassword;
 LOCAL bool               versionFlag;
 LOCAL bool               helpFlag;
 
@@ -157,15 +164,19 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL("exclude",          '!',1,excludePatternList,            NULL,parseIncludeExclude,NULL,                                  "exclude pattern"                          ),
  
   CMD_OPTION_SELECT ("compress",         0,  0,compressAlgorithm,             COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"         ),
-  CMD_OPTION_INTEGER("compress-min-size",0,  0,compressMinFileSize,           0,0,LONG_MAX,COMMAND_LINE_UNITS,                                "minimal size of file for compression"     ),
+  CMD_OPTION_INTEGER("compress-min-size",0,  0,compressMinFileSize,           DEFAULT_COMPRESS_MIN_FILE_SIZE,0,LONG_MAX,COMMAND_LINE_UNITS,   "minimal size of file for compression"     ),
 
   CMD_OPTION_SELECT ("crypt",            0,  0,cryptAlgorithm,                CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"            ),
-  CMD_OPTION_STRING ("password",         0,  0,password,                      NULL,                                                           "crypt password (use with care!)"          ),
+  CMD_OPTION_STRING ("crypt-password",   0,  0,cryptPassword,                 NULL,                                                           "crypt password (use with care!)"          ),
 
   CMD_OPTION_INTEGER("ssh-port",         0,  0,globalOptions.sshPort,         0,0,65535,NULL,                                                 "ssh port"                                 ),
   CMD_OPTION_STRING ("ssh-public-key",   0,  0,globalOptions.sshPublicKeyFile,NULL,                                                           "ssh public key file name"                 ),
   CMD_OPTION_STRING ("ssh-privat-key",   0,  0,globalOptions.sshPrivatKeyFile,NULL,                                                           "ssh privat key file name"                 ),
   CMD_OPTION_STRING ("ssh-password",     0,  0,globalOptions.sshPassword,     NULL,                                                           "ssh password (use with care!)"            ),
+
+  CMD_OPTION_BOOLEAN("daemon",           0,  0,daemonFlag,                    FALSE,                                                          "run in daemon mode"                       ),
+  CMD_OPTION_INTEGER("port",             0,  0,serverPort,                    DEFAULT_SERVER_PORT,0,65535,NULL,                               "server port"                                 ),
+  CMD_OPTION_STRING ("password",         0,  0,serverPassword,                NULL,                                                           "server password (use with care!)"            ),
 
 //  CMD_OPTION_BOOLEAN("incremental",      0,  0,globalOptions.incrementalFlag, FALSE,                                                          "overwrite existing files"                 ),
   CMD_OPTION_BOOLEAN("overwrite",        0,  0,globalOptions.overwriteFlag,   FALSE,                                                          "overwrite existing files"                 ),
@@ -407,95 +418,106 @@ int main(int argc, const char *argv[])
   }
 
   exitcode = EXITCODE_UNKNOWN;
-  switch (command)
+  if (!daemonFlag)
   {
-    case COMMAND_CREATE:
-      {
-        int    z;
-        Errors error;
-
-        /* get archive filename */
-        if (argc < 1)
+    switch (command)
+    {
+      case COMMAND_CREATE:
         {
-          printError("no archive filename given!\n");
-          return EXITCODE_INVALID_ARGUMENT;
-        }
-        archiveFileName = argv[1];
+          int    z;
+          Errors error;
 
-        /* get include patterns */
-        for (z = 2; z < argc; z++)
-        {
-          error = Patterns_addList(&includePatternList,argv[z],patternType);
-        }
+          /* get archive filename */
+          if (argc < 1)
+          {
+            printError("no archive filename given!\n");
+            return EXITCODE_INVALID_ARGUMENT;
+          }
+          archiveFileName = argv[1];
 
-        /* create archive */
-        exitcode = (command_create(archiveFileName,
-                                   &includePatternList,
-                                   &excludePatternList,
-                                   globalOptions.tmpDirectory,
-                                   partSize,
-                                   compressAlgorithm,
-                                   compressMinFileSize,
-                                   cryptAlgorithm,
-                                   password
-                                  )
-                   )?EXITCODE_OK:EXITCODE_FAIL;
-      }
-      break;
-    case COMMAND_LIST:
-    case COMMAND_TEST:
-    case COMMAND_RESTORE:
-      {
-        StringList fileNameList;
-        int        z;
+          /* get include patterns */
+          for (z = 2; z < argc; z++)
+          {
+            error = Patterns_addList(&includePatternList,argv[z],patternType);
+          }
 
-        /* get archive files */
-        StringList_init(&fileNameList);
-        for (z = 1; z < argc; z++)
-        {
-          StringList_appendCString(&fileNameList,argv[z]);
-        }
-
-        switch (command)
-        {
-          case COMMAND_LIST:
-            exitcode = (command_list(&fileNameList,
+          /* create archive */
+          exitcode = (Command_create(archiveFileName,
                                      &includePatternList,
                                      &excludePatternList,
-                                     password
+                                     globalOptions.tmpDirectory,
+                                     partSize,
+                                     compressAlgorithm,
+                                     compressMinFileSize,
+                                     cryptAlgorithm,
+                                     cryptPassword
                                     )
-                       )?EXITCODE_OK:EXITCODE_FAIL;
-            break;
-          case COMMAND_TEST:
-            exitcode = (command_test(&fileNameList,
-                                     &includePatternList,
-                                     &excludePatternList,
-                                     password
-                                    )
-                       )?EXITCODE_OK:EXITCODE_FAIL;
-            break;
-          case COMMAND_RESTORE:
-            exitcode = (command_restore(&fileNameList,
-                                        &includePatternList,
-                                        &excludePatternList,
-                                        directoryStripCount,
-                                        directory,
-                                        password
-                                       )
-                       )?EXITCODE_OK:EXITCODE_FAIL;
-            break;
-          default:
-            break;
+                     )?EXITCODE_OK:EXITCODE_FAIL;
         }
+        break;
+      case COMMAND_LIST:
+      case COMMAND_TEST:
+      case COMMAND_RESTORE:
+        {
+          StringList fileNameList;
+          int        z;
 
-        /* free resources */
-        StringList_done(&fileNameList,NULL);
-      }
-      break;
-    default:
-      printError("No command given!\n");
-      return EXITCODE_INVALID_ARGUMENT;
-      break;
+          /* get archive files */
+          StringList_init(&fileNameList);
+          for (z = 1; z < argc; z++)
+          {
+            StringList_appendCString(&fileNameList,argv[z]);
+          }
+
+          switch (command)
+          {
+            case COMMAND_LIST:
+              exitcode = (Command_list(&fileNameList,
+                                       &includePatternList,
+                                       &excludePatternList,
+                                       cryptPassword
+                                      )
+                         )?EXITCODE_OK:EXITCODE_FAIL;
+              break;
+            case COMMAND_TEST:
+              exitcode = (Command_test(&fileNameList,
+                                       &includePatternList,
+                                       &excludePatternList,
+                                       cryptPassword
+                                      )
+                         )?EXITCODE_OK:EXITCODE_FAIL;
+              break;
+            case COMMAND_RESTORE:
+              exitcode = (Command_restore(&fileNameList,
+                                          &includePatternList,
+                                          &excludePatternList,
+                                          directoryStripCount,
+                                          directory,
+                                          cryptPassword
+                                         )
+                         )?EXITCODE_OK:EXITCODE_FAIL;
+              break;
+            default:
+              break;
+          }
+
+          /* free resources */
+          StringList_done(&fileNameList,NULL);
+        }
+        break;
+      default:
+        printError("No command given!\n");
+        return EXITCODE_INVALID_ARGUMENT;
+        break;
+    }
+  }
+  else
+  {
+    /* daemon mode -> run server */
+    exitcode = (Server_run(serverPort,
+                           serverPassword
+                          )
+               )?EXITCODE_OK:EXITCODE_FAIL;
   }
 
   /* free resources */
