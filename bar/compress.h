@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -34,6 +34,13 @@ typedef enum
   COMPRESS_MODE_DEFLATE,
   COMPRESS_MODE_INFLATE,
 } CompressModes;
+
+typedef enum
+{
+  COMPRESS_STATE_INIT,      // initialized, but no data in compress/decompress
+  COMPRESS_STATE_DONE,      // deinitialized
+  COMPRESS_STATE_RUNNING    // running, data available in internal compress/decompress buffers
+} CompressStates;
 
 typedef enum
 {
@@ -70,6 +77,7 @@ typedef struct
   CompressAlgorithms compressAlgorithm;
   ulong              blockLength;
 
+  CompressStates     compressState;             // compress/decompress state
   bool               endOfDataFlag;             // TRUE if end-of-data detected
   bool               flushFlag;                 // TRUE for flushing all buffers
 

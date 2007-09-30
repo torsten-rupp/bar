@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/filefragmentlists.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver file fragment list functions
 * Systems: all
@@ -173,7 +173,7 @@ bool FileFragmentList_checkExists(FileFragmentNode *fileFragmentNode, uint64 off
 bool FileFragmentList_checkComplete(FileFragmentNode *fileFragmentNode);
 
 #ifndef NDEBUG
-void FileFragmentList_print(FragmentList *fragmentList, const char *name);
+void FileFragmentList_print(FileFragmentNode *fileFragmentNode, const char *name);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

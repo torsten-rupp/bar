@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -231,7 +231,7 @@ bool command_test(StringList  *archiveFileNameList,
               {
                 fileFragmentNode = FileFragmentList_addFile(&fileFragmentList,fileName,fileInfo.size);
               }
-//FileFragmentList_print(fragmentList,String_cString(fileName));
+//FileFragmentList_print(fileFragmentNode,String_cString(fileName));
 
               /* open file */
               error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);

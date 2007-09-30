@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -217,7 +217,9 @@ bool command_restore(StringList  *archiveFileNameList,
               {
                 if (!globalOptions.overwriteFlag && FileFragmentList_checkExists(fileFragmentNode,fragmentOffset,fragmentSize))
                 {
-                  info(0,"skipped (file part exists)\n");
+                  info(0,"skipped (file part %ll..%ll exists)\n",
+                       fragmentOffset,
+                       (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset);
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveFileInfo);
                   String_delete(fileName);
@@ -238,7 +240,6 @@ bool command_restore(StringList  *archiveFileNameList,
                 }
                 fileFragmentNode = FileFragmentList_addFile(&fileFragmentList,fileName,fileInfo.size);
               }
-//FileFragmentList_print(fragmentList,String_cString(fileName));
 
               /* write file data */
               error = File_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
@@ -311,6 +312,7 @@ bool command_restore(StringList  *archiveFileNameList,
 
               /* add fragment to file fragment list */
               FileFragmentList_add(fileFragmentNode,fragmentOffset,fragmentSize);
+//FileFragmentList_print(fileFragmentNode,String_cString(fileName));
 
               /* set file time, permissions, file owner/group */
               error = File_setFileInfo(destinationFileName,&fileInfo);

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -112,6 +112,7 @@ typedef struct
       CompressInfo        compressInfoData;          // data compress info
       CryptInfo           cryptInfoData;             // data cryption info
 
+      bool                createdFlag;               // TRUE iff file created
       uint                headerLength;              // length of header
       bool                headerWrittenFlag;         // TRUE iff header written
 

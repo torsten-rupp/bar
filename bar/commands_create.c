@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -857,7 +857,16 @@ bool command_create(const char      *archiveFileName,
           }
 
           /* close archive entry */
-          Archive_closeEntry(&archiveFileInfo);
+          error = Archive_closeEntry(&archiveFileInfo);
+          if (error != ERROR_NONE)
+          {
+            info(1,"FAIL\n");
+            printError("Cannot close archive file (error: %s)!\n",
+                       getErrorText(error)
+                      );
+            createInfo.failFlag = TRUE;
+            break;
+          }
 
           /* update statistics */
           createInfo.statistics.includedCount++;

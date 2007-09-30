@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -83,6 +83,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                  compressInfo->dataBuffer,
                  n
                 );
+          compressInfo->compressState = COMPRESS_STATE_RUNNING;
           compressInfo->compressBufferLength += n;
 
           /* shift data buffer */
@@ -110,6 +111,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
             && !compressInfo->endOfDataFlag                                             // not end-of-data
            )
         {
+          /* compress available data */
           if      (compressInfo->dataBufferLength > 0)  // data available
           {
             /* compress */
@@ -126,6 +128,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
             {
               return ERROR_COMPRESS_ERROR;
             }
+            compressInfo->compressState = COMPRESS_STATE_RUNNING;
             compressInfo->compressBufferLength += maxCompressBytes-compressInfo->zlib.stream.avail_out;
 
             /* shift data buffer */
@@ -138,7 +141,10 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
             && !compressInfo->endOfDataFlag                                             // not end-of-data
            )
         {
-          if (compressInfo->flushFlag)  // flush data
+          /* finish compress, flush internal compress buffers */
+          if (   (compressInfo->flushFlag)                                // flush data requested
+              && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
+             )
           {
             /* compress with flush */
             maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
@@ -178,6 +184,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
             && !compressInfo->endOfDataFlag                                             // not end-of-data
            )
         {
+          /* compress available data */
           if      (compressInfo->dataBufferLength > 0)  // data available
           {
             /* compress */
@@ -192,6 +199,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
             {
               return ERROR_COMPRESS_ERROR;
             }
+            compressInfo->compressState = COMPRESS_STATE_RUNNING;
             compressInfo->compressBufferLength += maxCompressBytes-compressInfo->bzlib.stream.avail_out;
 
             /* shift data buffer */
@@ -204,7 +212,10 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
             && !compressInfo->endOfDataFlag                                             // not end-of-data
            )
         {
-          if (compressInfo->flushFlag)  // flush data
+          /* finish compress, flush internal compress buffers */
+          if (   (compressInfo->flushFlag)                                // flush data requested
+              && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
+             )
           {
             /* compress with flush */
             maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
@@ -277,6 +288,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                  compressInfo->compressBuffer+compressInfo->compressBufferIndex,
                  n
                 );
+          compressInfo->compressState = COMPRESS_STATE_RUNNING;
           compressInfo->compressBufferIndex += n;
 
           compressInfo->dataBufferLength = n;
@@ -305,6 +317,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
           if (!compressInfo->endOfDataFlag)
           {
+            /* decompress available data */
             if      (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
             {
               /* decompress */
@@ -325,6 +338,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               {
                 return ERROR_COMPRESS_ERROR;
               }
+              compressInfo->compressState = COMPRESS_STATE_RUNNING;
               compressInfo->compressBufferIndex += maxCompressBytes-compressInfo->zlib.stream.avail_in;
               compressInfo->dataBufferLength += maxDataBytes-compressInfo->zlib.stream.avail_out;
             }
@@ -337,7 +351,10 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
           if (!compressInfo->endOfDataFlag)
           {
-            if (compressInfo->flushFlag) // flush data
+            /* finish decompress, flush internal decompress buffers */
+            if (   (compressInfo->flushFlag)                                // flush data requested
+                && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
+               )
             {
               /* decompress with flush */
               maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
@@ -382,6 +399,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
           if (!compressInfo->endOfDataFlag)
           {
+            /* decompress available data */
             if      (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
             {
               /* decompress */
@@ -400,6 +418,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               {
                 return ERROR_COMPRESS_ERROR;
               }
+              compressInfo->compressState = COMPRESS_STATE_RUNNING;
               compressInfo->compressBufferIndex += maxCompressBytes-compressInfo->bzlib.stream.avail_in;
               compressInfo->dataBufferLength += maxDataBytes-compressInfo->bzlib.stream.avail_out;
             }
@@ -412,7 +431,10 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
           if (!compressInfo->endOfDataFlag)
           {
-            if (compressInfo->flushFlag) // flush data
+            /* finish decompress, flush internal decompress buffers */
+            if (   (compressInfo->flushFlag)                                // flush data requested
+                && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
+               )
             {
               /* decompress with flush */
               maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
@@ -498,12 +520,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
                    )
 {
   assert(compressInfo != NULL);
-//compressAlgorithm=COMPRESS_ALGORITHM_NONE;
+//compressAlgorithm = COMPRESS_ALGORITHM_NONE;
 
   /* init variables */
   compressInfo->compressMode         = compressMode; 
   compressInfo->compressAlgorithm    = compressAlgorithm; 
   compressInfo->blockLength          = blockLength;
+  compressInfo->compressState        = COMPRESS_STATE_INIT;
   compressInfo->endOfDataFlag        = FALSE;
   compressInfo->flushFlag            = FALSE;
   compressInfo->dataBufferIndex      = 0;
@@ -723,6 +746,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
   assert(compressInfo != NULL);
 
   /* init variables */
+  compressInfo->compressState        = COMPRESS_STATE_INIT;
   compressInfo->endOfDataFlag        = FALSE;
   compressInfo->flushFlag            = FALSE;
   compressInfo->dataBufferIndex      = 0;
@@ -1075,7 +1099,7 @@ void Compress_getBlock(CompressInfo *compressInfo,
          0,
          compressInfo->blockLength-compressInfo->compressBufferIndex
         );
-  (*bufferLength) = compressInfo->blockLength;
+  (*bufferLength) = compressInfo->compressBufferLength;
 
   compressInfo->compressBufferIndex  = 0;
   compressInfo->compressBufferLength = 0;

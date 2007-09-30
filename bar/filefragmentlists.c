@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/filefragmentlists.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver file fragment list functions
 * Systems: all
@@ -227,18 +227,20 @@ bool FileFragmentList_checkComplete(FileFragmentNode *fileFragmentNode)
 {
   assert(fileFragmentNode != NULL);
 
-  return    (List_count(&fileFragmentNode->fragmentList) == 1)
-         && (fileFragmentNode->fragmentList.tail->offset == 0)
-         && (fileFragmentNode->size <= fileFragmentNode->fragmentList.tail->length);
+  return    (fileFragmentNode->size == 0)
+         || (   (List_count(&fileFragmentNode->fragmentList) == 1)
+             && (fileFragmentNode->fragmentList.head->offset == 0)
+             && (fileFragmentNode->fragmentList.head->length >= fileFragmentNode->size)
+            );
 }
 
 #ifndef NDEBUG
-void FileFragmentList_print(FragmentList *fragmentList, const char *name)
+void FileFragmentList_print(FileFragmentNode *fileFragmentNode, const char *name)
 {
   FragmentNode *fragmentNode;
 
   printf("Fragments '%s':\n",name);
-  for (fragmentNode = fragmentList->head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
+  for (fragmentNode = fileFragmentNode->fragmentList.head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
   {
     printf("  %8llu..%8llu\n",F0(fragmentNode),F1(fragmentNode));
   }

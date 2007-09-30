@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -240,9 +240,11 @@ LOCAL Errors readDefinition(void      *userData,
             crc = crc32(0,Z_NULL,0);
           }
           break;
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
       }
     }
   }
@@ -391,9 +393,11 @@ LOCAL Errors writeDefinition(void       *userData,
             crc = crc32(0,Z_NULL,0);
           }
           break;
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
       }
     }
   }
@@ -517,9 +521,11 @@ ulong Chunks_getSize(const int  *definition,
         break;
       case CHUNK_DATATYPE_DATA:
         break;
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
     }
   }
 
@@ -786,12 +792,18 @@ Errors Chunks_close(ChunkInfo *chunkInfo)
       {
         return ERROR_IO_ERROR;
       }
+      break;
     case CHUNK_MODE_READ:
       if (!IO.seekFile(chunkInfo->userData,chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size))
       {
         return ERROR_IO_ERROR;
       }
       break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
   }
 
   return ERROR_NONE; 

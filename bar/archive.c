@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -344,11 +344,12 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo)
 }
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : ensureArchiveSpace
+* Purpose: ensure space is available in archive for not fragmented
+*          writting
+* Input  : minBytes - minimal number of bytes
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -421,8 +422,9 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMo
   if (newPartFlag)
   {
     /* create chunk-headers */
-    if (!archiveFileInfo->file.headerWrittenFlag)
+    if (!archiveFileInfo->file.headerWrittenFlag && (!archiveFileInfo->file.createdFlag || (length > 0)))
     {
+fprintf(stderr,"%s,%d: %d %d\n",__FILE__,__LINE__,archiveFileInfo->file.createdFlag,length);
       error = Chunks_create(&archiveFileInfo->file.chunkInfoFile,
                             CHUNK_ID_FILE,
                             CHUNK_DEFINITION_FILE,
@@ -456,6 +458,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMo
         return error;
       }
 
+      archiveFileInfo->file.createdFlag       = TRUE;
       archiveFileInfo->file.headerWrittenFlag = TRUE;
     }
 
@@ -562,85 +565,89 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMo
     /* calculate max. length of data which can be written into this part */
 //        freeBlocks = (archiveFileInfo->archiveInfo->partSize-(size+n))/archiveFileInfo->blockLength;
 
-    /* open file if needed */
-    if (!archiveFileInfo->archiveInfo->fileOpenFlag)
+    if (!archiveFileInfo->file.createdFlag || (length > 0))
     {
-      /* create file */
-      error = openArchiveFile(archiveFileInfo->archiveInfo);
-      if (error != ERROR_NONE)
+      /* open file if needed */
+      if (!archiveFileInfo->archiveInfo->fileOpenFlag)
       {
-        return error;
+        /* create file */
+        error = openArchiveFile(archiveFileInfo->archiveInfo);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        /* initialise variables */
+        archiveFileInfo->file.headerWrittenFlag = FALSE;
+
+        archiveFileInfo->file.chunkFileData.fragmentOffset = archiveFileInfo->file.chunkFileData.fragmentOffset+archiveFileInfo->file.chunkFileData.fragmentSize;
+        archiveFileInfo->file.chunkFileData.fragmentSize   = 0;
+
+        /* reset data crypt */
+        Crypt_reset(&archiveFileInfo->file.cryptInfoData,0);
       }
 
-      /* initialise variables */
-      archiveFileInfo->file.headerWrittenFlag = FALSE;
-
-      archiveFileInfo->file.chunkFileData.fragmentOffset = archiveFileInfo->file.chunkFileData.fragmentOffset+archiveFileInfo->file.chunkFileData.fragmentSize;
-      archiveFileInfo->file.chunkFileData.fragmentSize   = 0;
-  
-      /* reset data crypt */
-      Crypt_reset(&archiveFileInfo->file.cryptInfoData,0);
-    }
-
-    /* create chunk-headers */
-    if (!archiveFileInfo->file.headerWrittenFlag)
-    {
-      error = Chunks_create(&archiveFileInfo->file.chunkInfoFile,
-                            CHUNK_ID_FILE,
-                            CHUNK_DEFINITION_FILE,
-                            Chunks_getSize(CHUNK_DEFINITION_FILE,0,&archiveFileInfo->file.chunkFile),
-                            &archiveFileInfo->file.chunkFile
-                           );
-      if (error != ERROR_NONE)
+      /* create chunk-headers */
+      if (!archiveFileInfo->file.headerWrittenFlag)
       {
-        return error;
+        error = Chunks_create(&archiveFileInfo->file.chunkInfoFile,
+                              CHUNK_ID_FILE,
+                              CHUNK_DEFINITION_FILE,
+                              Chunks_getSize(CHUNK_DEFINITION_FILE,0,&archiveFileInfo->file.chunkFile),
+                              &archiveFileInfo->file.chunkFile
+                             );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        error = Chunks_create(&archiveFileInfo->file.chunkInfoFileEntry,
+                              CHUNK_ID_FILE_ENTRY,
+                              CHUNK_DEFINITION_FILE_ENTRY,
+                              Chunks_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->file.chunkFileEntry),
+                              &archiveFileInfo->file.chunkFileEntry
+                             );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        error = Chunks_create(&archiveFileInfo->file.chunkInfoFileData,
+                              CHUNK_ID_FILE_DATA,
+                              CHUNK_DEFINITION_FILE_DATA,
+                              Chunks_getSize(CHUNK_DEFINITION_FILE_DATA,archiveFileInfo->blockLength,&archiveFileInfo->file.chunkFileData),
+                              &archiveFileInfo->file.chunkFileData
+                             );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        archiveFileInfo->file.createdFlag       = TRUE;
+        archiveFileInfo->file.headerWrittenFlag = TRUE;
       }
 
-      error = Chunks_create(&archiveFileInfo->file.chunkInfoFileEntry,
-                            CHUNK_ID_FILE_ENTRY,
-                            CHUNK_DEFINITION_FILE_ENTRY,
-                            Chunks_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveFileInfo->blockLength,&archiveFileInfo->file.chunkFileEntry),
-                            &archiveFileInfo->file.chunkFileEntry
-                           );
-      if (error != ERROR_NONE)
+      if (length > 0)
       {
-        return error;
-      }
+        /* encrypt block */
+        error = Crypt_encrypt(&archiveFileInfo->file.cryptInfoData,
+                              archiveFileInfo->file.buffer,
+                              archiveFileInfo->blockLength
+                             );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
 
-      error = Chunks_create(&archiveFileInfo->file.chunkInfoFileData,
-                            CHUNK_ID_FILE_DATA,
-                            CHUNK_DEFINITION_FILE_DATA,
-                            Chunks_getSize(CHUNK_DEFINITION_FILE_DATA,archiveFileInfo->blockLength,&archiveFileInfo->file.chunkFileData),
-                            &archiveFileInfo->file.chunkFileData
-                           );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      archiveFileInfo->file.headerWrittenFlag = TRUE;
-    }
-
-    if (length > 0)
-    {
-      /* encrypt block */
-      error = Crypt_encrypt(&archiveFileInfo->file.cryptInfoData,
-                            archiveFileInfo->file.buffer,
-                            archiveFileInfo->blockLength
-                           );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      /* write block */
-      error = Chunks_writeData(&archiveFileInfo->file.chunkInfoFileData,
-                               archiveFileInfo->file.buffer,
-                               archiveFileInfo->blockLength
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
+        /* write block */
+        error = Chunks_writeData(&archiveFileInfo->file.chunkInfoFileData,
+                                 archiveFileInfo->file.buffer,
+                                 archiveFileInfo->blockLength
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
       }
     }
   }
@@ -899,6 +906,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->file.chunkFileData.fragmentOffset   = 0;
   archiveFileInfo->file.chunkFileData.fragmentSize     = 0;
 
+  archiveFileInfo->file.createdFlag                    = FALSE;
   archiveFileInfo->file.headerLength                   = 0;
   archiveFileInfo->file.headerWrittenFlag              = FALSE;
 
@@ -2044,45 +2052,52 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
         case FILETYPE_FILE:
           /* flush last blocks */
           Compress_flush(&archiveFileInfo->file.compressInfoData);
-          while (!Compress_checkBlockIsEmpty(&archiveFileInfo->file.compressInfoData))
+          if (!archiveFileInfo->file.createdFlag || !Compress_checkBlockIsEmpty(&archiveFileInfo->file.compressInfoData))
           {
-            error = writeDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
+            while (!Compress_checkBlockIsEmpty(&archiveFileInfo->file.compressInfoData))
+            {
+              error = writeDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
+              if (error != ERROR_NONE)
+              {
+                return error;
+              }
+            }
+            error = writeDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH);
             if (error != ERROR_NONE)
             {
               return error;
             }
           }
-          error = writeDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
 
-          /* update part size */
-          archiveFileInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveFileInfo->file.compressInfoData);
-          error = Chunks_update(&archiveFileInfo->file.chunkInfoFileData,
-                                &archiveFileInfo->file.chunkFileData
-                               );
-          if (error != ERROR_NONE)
+          /* update file and chunks if header is written */
+          if (archiveFileInfo->file.headerWrittenFlag)
           {
-            return error;
-          }
+            /* update part size */
+            archiveFileInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveFileInfo->file.compressInfoData);
+            error = Chunks_update(&archiveFileInfo->file.chunkInfoFileData,
+                                  &archiveFileInfo->file.chunkFileData
+                                 );
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
 
-          /* close chunks */
-          error = Chunks_close(&archiveFileInfo->file.chunkInfoFileData);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunks_close(&archiveFileInfo->file.chunkInfoFileEntry);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunks_close(&archiveFileInfo->file.chunkInfoFile);
-          if (error != ERROR_NONE)
-          {
-            return error;
+            /* close chunks */
+            error = Chunks_close(&archiveFileInfo->file.chunkInfoFileData);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+            error = Chunks_close(&archiveFileInfo->file.chunkInfoFileEntry);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+            error = Chunks_close(&archiveFileInfo->file.chunkInfoFile);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
 
           /* free resources */
