@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems :
@@ -608,7 +608,10 @@ void cmdOptions_printHelp(FILE                    *outputHandle,
         n+=4; /* =<n> */
         break;
       case CMD_OPTION_TYPE_BOOLEAN:
-        n+=4; /* =0|1 */
+        if (commandLineOptions[i].booleanOption.yesnoFlag) 
+        {
+          n+=9; /* [=yes|no] */
+        }
         break;
       case CMD_OPTION_TYPE_ENUM:
         break;
@@ -681,7 +684,10 @@ void cmdOptions_printHelp(FILE                    *outputHandle,
         strncat(name,"=<n>",sizeof(name)-strlen(name));
         break;
       case CMD_OPTION_TYPE_BOOLEAN:
-        strncat(name,"=0|1",sizeof(name)-strlen(name));
+        if (commandLineOptions[i].booleanOption.yesnoFlag) 
+        {
+          strncat(name,"[=yes|no]",sizeof(name)-strlen(name));
+        }
         break;
       case CMD_OPTION_TYPE_ENUM:
         break;
