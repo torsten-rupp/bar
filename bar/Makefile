@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.26 $
+# $Revision: 1.27 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -240,8 +240,11 @@ backup-tooru: bar
           --crypt-password=franz \
           -s 128M \
           --max-tmp-size=256M \
+          --skip-unreadable \
           -! /home/torsten/tmp \
           -! /home/torsten/aicas \
+          -! /home/torsten/public \
+          -! /home/torsten/trash \
           -! "*.mov" -! "*.avi" \
           /home/torsten
 
@@ -254,8 +257,11 @@ backup-itzo: bar
           --crypt-password=franz \
           -s 128M \
           --max-tmp-size=256M \
+          --skip-unreadable \
           --verbose=1 \
           -! /home/torsten/tmp \
           -! /home/torsten/aicas \
+          -! /home/torsten/public \
+          -! /home/torsten/trash \
           -! "*.mov" -! "*.avi" \
           /home/torsten

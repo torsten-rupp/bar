@@ -10,3 +10,5 @@ ToDo
 - suppport ssh-agent (extend libssh2?)
 - reading configuration from file
 - configure
+- network bandwidth limitation
+
