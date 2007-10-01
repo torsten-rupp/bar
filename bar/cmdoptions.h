@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems :
@@ -58,15 +58,15 @@ typedef struct CommandLineOption
   CommandLineOptionTypes type;
   union
   {
-    void       *pointer;
-    int        *n;
-    int64      *l;
-    double     *d;
-    bool       *b;
-    uint       *enumeration;
-    uint       *select;
-    const char **string;
-    void       *special;
+    void   *pointer;
+    int    *n;
+    int64  *l;
+    double *d;
+    bool   *b;
+    uint   *enumeration;
+    uint   *select;
+    char   **string;
+    void   *special;
   } variable;
   struct
   {
@@ -108,27 +108,41 @@ typedef struct CommandLineOption
   {
     bool                          yesnoFlag;            // TRUE iff yes/no should be printed in help
   } booleanOption;
-  uint                          enumerationValue;       // emumeration value for this enumeration
-  const CommandLineOptionSelect *selects;               // list with select values
-  uint                          selectCount;            // number of select values
-  bool(*parseSpecial)(void *variable, const char *value, const void *defaultValue, void *userData);
-  void                          *userData;              // user data for parse special
+  struct
+  {
+    uint                          enumerationValue;     // emumeration value for this enumeration
+  } enumOption;
+  struct
+  {
+    const CommandLineOptionSelect *selects;             // list with select values
+    uint                          selectCount;          // number of select values
+  } selectOption;
+  struct
+  {
+    const char                    *helpArgument;        // text for help argument
+  } stringOption;
+  struct
+  {
+    bool(*parseSpecial)(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
+    void                          *userData;            // user data for parse special
+    const char                    *helpArgument;        // text for help argument
+  } specialOption;
   const char                    *description;
 } CommandLineOption;
 
 /* example
 
-CMD_OPTION_INTEGER        (<long name>,<short name>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>)
-CMD_OPTION_INTEGER_RANGE  (<long name>,<short name>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>)
-CMD_OPTION_INTEGER64      (<long name>,<short name>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>)
-CMD_OPTION_INTEGER64_RANGE(<long name>,<short name>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>)
-CMD_OPTION_DOUBLE         (<long name>,<short name>,<priority>,<variable>,<default value>,                    <help text>)
-CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<priority>,<variable>,<default value>,<min>,<max>,        <help text>)
-CMD_OPTION_BOOLEAN        (<long name>,<short name>,<priority>,<variable>,<default value>,                    <help text>)
-CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<priority>,<variable>,<default value>,                    <help text>)
-CMD_OPTION_ENUM           (<long name>,<short name>,<priority>,<variable>,<default value>,<value>,            <help text>)
-CMD_OPTION_STRING         (<long name>,<short name>,<priority>,<variable>,<default value>,                    <help text>)
-CMD_OPTION_SPECIAL        (<long name>,<short name>,<priority>,<function>,<default value>,                    <help text>)
+CMD_OPTION_INTEGER        (<long name>,<short name>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>                )
+CMD_OPTION_INTEGER_RANGE  (<long name>,<short name>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>                )
+CMD_OPTION_INTEGER64      (<long name>,<short name>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>                )
+CMD_OPTION_INTEGER64_RANGE(<long name>,<short name>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>                )
+CMD_OPTION_DOUBLE         (<long name>,<short name>,<priority>,<variable>,<default value>,                    <help text>                )
+CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<priority>,<variable>,<default value>,<min>,<max>,        <help text>                )
+CMD_OPTION_BOOLEAN        (<long name>,<short name>,<priority>,<variable>,<default value>,                    <help text>                )
+CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<priority>,<variable>,<default value>,                    <help text>                )
+CMD_OPTION_ENUM           (<long name>,<short name>,<priority>,<variable>,<default value>,<value>,            <help text>                )
+CMD_OPTION_STRING         (<long name>,<short name>,<priority>,<variable>,<default value>,                    <help text>,<help argument>)
+CMD_OPTION_SPECIAL        (<long name>,<short name>,<priority>,<function>,<default value>,                    <help text>,<help argument>)
 
 const CommandLineUnit COMMAND_LINE_UNITS[] =
 {
@@ -155,7 +169,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN_YESNO("bool",   'b',0,boolValue,  FALSE,                                        "bool value 1"),
 
-  CMD_OPTION_SELECT       ("type",   't',0,outputType, 1,      COMMAND_LINE_OPTIONS_SELECT_OUTPUTYPE,"select value"),
+  CMD_OPTION_SELECT       ("type",   't',0,outputType, 1,      COMMAND_LINE_OPTIONS_SELECT_OUTPUTYPE,"select value",NULL),
 
   CMD_OPTION_STRING       ("string", 0,  0,stringValue,"",                                           "string value"),
 
@@ -164,7 +178,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("e3",     '3',0,enumValue,  0,ENUM3,                                      "enum 3"), 
   CMD_OPTION_ENUM         ("e4",     '4',0,enumValue,  0,ENUM4,                                      "enum 4"), 
 
-  CMD_OPTION_SPECIAL      ("special",'s',1,specialValue,parseSpecial,123,                            "special"), 
+  CMD_OPTION_SPECIAL      ("special",'s',1,specialValue,parseSpecial,123,                            "special","abc"), 
 
   CMD_OPTION_BOOLEAN      ("help",   'h',0,helpFlag,   FALSE,                                        "output this help"),
 };
@@ -175,36 +189,36 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
 /******************************* Macros *******************************/
 #define CMD_OPTION_INTEGER(name,shortName,priority,variable,defaultValue,min,max,units,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_INTEGER,{&variable},{defaultValue,0LL,0.0,FALSE,{0},{NULL}},{FALSE,min,max,units,sizeof(units)/sizeof(units[0])},{FALSE,0,0,NULL,0},{0.0,0.0},{FALSE},0,NULL,0,NULL,NULL,description }
+  { name,shortName,priority,CMD_OPTION_TYPE_INTEGER,{&variable},{defaultValue,0LL,0.0,FALSE,{0},{NULL}},{FALSE,min,max,units,sizeof(units)/sizeof(units[0])},{FALSE,0,0,NULL,0},{0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
 #define CMD_OPTION_INTEGER_RANGE(name,shortName,priority,variable,defaultValue,min,max,units,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_INTEGER,{&variable},{defaultValue,0LL,0.0,FALSE,{0},{NULL}},{TRUE,min,max,units,sizeof(units)/sizeof(units[0])},{FALSE,0,0,NULL,0},{0.0,0.0},{FALSE},0,NULL,0,NULL,NULL,description }
+  { name,shortName,priority,CMD_OPTION_TYPE_INTEGER,{&variable},{defaultValue,0LL,0.0,FALSE,{0},{NULL}},{TRUE,min,max,units,sizeof(units)/sizeof(units[0])},{FALSE,0,0,NULL,0},{0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
 
 #define CMD_OPTION_INTEGER64(name,shortName,priority,variable,defaultValue,min,max,units,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_INTEGER64,{&variable},{0,defaultValue,0.0,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,min,max,units,sizeof(units)/sizeof(units[0])},{0.0,0.0},{FALSE},0,NULL,0,NULL,NULL,description }
+  { name,shortName,priority,CMD_OPTION_TYPE_INTEGER64,{&variable},{0,defaultValue,0.0,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,min,max,units,sizeof(units)/sizeof(units[0])},{0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
 #define CMD_OPTION_INTEGER64_RANGE(name,shortName,priority,variable,defaultValue,min,max,units,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_INTEGER64,{&variable},{0,defaultValue,0.0,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{TRUE,min,max,units,sizeof(units)/sizeof(units[0])},{0.0,0.0},{FALSE},0,NULL,0,NULL,NULL,description }
+  { name,shortName,priority,CMD_OPTION_TYPE_INTEGER64,{&variable},{0,defaultValue,0.0,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{TRUE,min,max,units,sizeof(units)/sizeof(units[0])},{0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
 
 #define CMD_OPTION_DOUBLE(name,shortName,priority,variable,defaultValue,min,max,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_DOUBLE,{&variable},{0,0LL,defaultValue,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,min,max},{FALSE},0,NULL,0,NULL,NULL,description }
+  { name,shortName,priority,CMD_OPTION_TYPE_DOUBLE,{&variable},{0,0LL,defaultValue,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,min,max},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
 #define CMD_OPTION_DOUBLE_RANGE(name,shortName,priority,variable,defaultValue,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_DOUBLE,{&variable},{0,0LL,defaultValue,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{TRUE,min,max},{FALSE},0,NULL,0,NULL,NULL,description }
+  { name,shortName,priority,CMD_OPTION_TYPE_DOUBLE,{&variable},{0,0LL,defaultValue,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{TRUE,min,max},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
 
 #define CMD_OPTION_BOOLEAN(name,shortName,priority,variable,defaultValue,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_BOOLEAN,{&variable},{0,0LL,0.0,defaultValue,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},0,NULL,0,NULL,NULL,description }
+  { name,shortName,priority,CMD_OPTION_TYPE_BOOLEAN,{&variable},{0,0LL,0.0,defaultValue,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
 #define CMD_OPTION_BOOLEAN_YESNO(name,shortName,priority,variable,defaultValue,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_BOOLEAN,{&variable},{0,0LL,0.0,defaultValue,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{TRUE},0,NULL,0,NULL,NULL,description }
+  { name,shortName,priority,CMD_OPTION_TYPE_BOOLEAN,{&variable},{0,0LL,0.0,defaultValue,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{TRUE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
 
 #define CMD_OPTION_ENUM(name,shortName,priority,variable,defaultValue,value,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_ENUM,{&variable},{0,0LL,0.0,FALSE,{defaultValue},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},value,NULL,0,NULL,NULL,description }
+  { name,shortName,priority,CMD_OPTION_TYPE_ENUM,{&variable},{0,0LL,0.0,FALSE,{defaultValue},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},{value},{NULL,0},{NULL},{NULL,NULL,NULL},description }
 
 #define CMD_OPTION_SELECT(name,shortName,priority,variable,defaultValue,selects,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_SELECT,{&variable},{0,0LL,0.0,FALSE,{defaultValue},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},0,selects,sizeof(selects)/sizeof(selects[0]),NULL,NULL,description }
+  { name,shortName,priority,CMD_OPTION_TYPE_SELECT,{&variable},{0,0LL,0.0,FALSE,{defaultValue},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},{0},{selects,sizeof(selects)/sizeof(selects[0])},{NULL},{NULL,NULL,NULL},description }
 
-#define CMD_OPTION_STRING(name,shortName,priority,variable,defaultValue,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_STRING,{&variable},{0,0LL,0.0,FALSE,{0},{defaultValue}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},0,NULL,0,NULL,NULL,description }
+#define CMD_OPTION_STRING(name,shortName,priority,variable,defaultValue,description,helpArgument) \
+  { name,shortName,priority,CMD_OPTION_TYPE_STRING,{&variable},{0,0LL,0.0,FALSE,{0},{defaultValue}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},{0},{NULL,0},{helpArgument},{NULL,NULL,NULL},description }
 
-#define CMD_OPTION_SPECIAL(name,shortName,priority,variable,defaultValue,parseSpecial,userData,description) \
-  { name,shortName,priority,CMD_OPTION_TYPE_SPECIAL,{&variable},{0,0LL,0.0,FALSE,{0},{(void*)defaultValue}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},0,NULL,0,parseSpecial,userData,description }
+#define CMD_OPTION_SPECIAL(name,shortName,priority,variablePointer,defaultValue,parseSpecial,userData,description,helpArgument) \
+  { name,shortName,priority,CMD_OPTION_TYPE_SPECIAL,{variablePointer},{0,0LL,0.0,FALSE,{0},{(void*)defaultValue}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{parseSpecial,userData,helpArgument},description}
 
 /***************************** Functions ******************************/
 
@@ -213,7 +227,36 @@ extern "C" {
 #endif
 
 /***********************************************************************
-* Name   : cmdOptions_parse
+* Name   : CmdOption_init
+* Purpose: init command line options with default values
+* Input  : commandLineOptions     - array with command line options
+*                                   spezification
+*          commandLineOptionCount - size of command line options array
+* Output : -
+* Return : TRUE if command line parsed, FALSE on error
+* Notes  :
+***********************************************************************/
+
+bool CmdOption_init(const CommandLineOption commandLineOptions[],
+                    uint                    commandLineOptionCount
+                   );
+
+/***********************************************************************
+* Name   : CmdOption_init
+* Purpose: deinit command line options
+* Input  : commandLineOptions     - array with command line options
+*                                   spezification
+*          commandLineOptionCount - size of command line options array
+* Output : -
+* Return : -
+* Notes  :
+***********************************************************************/
+void CmdOption_done(const CommandLineOption commandLineOptions[],
+                    uint                    commandLineOptionCount
+                   );
+
+/***********************************************************************
+* Name   : CmdOption_parse
 * Purpose: parse command line options
 * Input  : argv                   - command line arguments
 *          argc                   - number of command line arguments
@@ -228,16 +271,47 @@ extern "C" {
 * Notes  :
 ***********************************************************************/
 
-bool cmdOptions_parse(const char              *argv[],
-                      int                     *argc,
-                      const CommandLineOption commandLineOptions[],
-                      uint                    commandLineOptionCount,
-                      FILE                    *errorOutputHandle,
-                      const char              *errorPrefix
-                     );
+bool CmdOption_parse(const char              *argv[],
+                     int                     *argc,
+                     const CommandLineOption commandLineOptions[],
+                     uint                    commandLineOptionCount,
+                     FILE                    *errorOutputHandle,
+                     const char              *errorPrefix
+                    );
 
 /***********************************************************************
-* Name   : cmdOptions_printHelp
+* Name   : CmdOption_find
+* Purpose: find command line option
+* Input  : name                   - command line option name
+*          commandLineOptions     - array with command line options
+*                                   spezification
+*          commandLineOptionCount - size of command line options array
+* Output : -
+* Return : command line option or NULL if not found
+* Notes  :
+***********************************************************************/
+
+const CommandLineOption *CmdOption_find(const char              *name,
+                                        const CommandLineOption commandLineOptions[],
+                                        uint                    commandLineOptionCount
+                                       );
+
+/***********************************************************************
+* Name   : CmdOption_parseString
+* Purpose: parse command line from string
+* Input  : commandLineOption - command line option
+*          value             - value
+* Output : -
+* Return : TRUE if command line option parsed, FALSE on error
+* Notes  :
+***********************************************************************/
+
+bool CmdOption_parseString(const CommandLineOption *commandLineOption,
+                           const char              *value
+                          );
+
+/***********************************************************************
+* Name   : CmdOption_printHelp
 * Purpose: print command line options help
 * Input  : outputHandle           - file handle to print to
 *          commandLineOptions     - array with command line options
@@ -248,10 +322,10 @@ bool cmdOptions_parse(const char              *argv[],
 * Notes  :
 ***********************************************************************/
 
-void cmdOptions_printHelp(FILE                    *outputHandle,
-                          const CommandLineOption commandLineOptions[],
-                          uint                    commandLineOptionCount
-                         );
+void CmdOption_printHelp(FILE                    *outputHandle,
+                         const CommandLineOption commandLineOptions[],
+                         uint                    commandLineOptionCount
+                        );
 
 #ifdef __GNUG__
 }

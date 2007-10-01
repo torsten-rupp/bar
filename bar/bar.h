@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -34,6 +34,7 @@ typedef enum
   EXITCODE_FAIL=1,
 
   EXITCODE_INVALID_ARGUMENT=5,
+  EXITCODE_CONFIG_ERROR,
 
   EXITCODE_INIT_FAIL=125,
   EXITCODE_FATAL_ERROR=126,
@@ -53,6 +54,7 @@ typedef struct
   const char    *sshPassword;
 
   bool          overwriteFlag;
+  bool          skipUnreadableFlag;
   bool          quietFlag;
   long          verboseLevel;
 } GlobalOptions;

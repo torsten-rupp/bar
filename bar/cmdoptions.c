@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems :
@@ -230,32 +230,42 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       break;
     case CMD_OPTION_TYPE_ENUM:
       assert(commandLineOption->variable.enumeration != NULL);
-      (*commandLineOption->variable.enumeration) = commandLineOption->enumerationValue;
+      (*commandLineOption->variable.enumeration) = commandLineOption->enumOption.enumerationValue;
       break;
     case CMD_OPTION_TYPE_SELECT:
       assert(commandLineOption->variable.select != NULL);
       i = 0;
-      while ((i < commandLineOption->selectCount) && (strcmp(commandLineOption->selects[i].name,value) != 0))
+      while ((i < commandLineOption->selectOption.selectCount) && (strcmp(commandLineOption->selectOption.selects[i].name,value) != 0))
       {
         i++;
       }
-      if (i >= commandLineOption->selectCount)
+      if (i >= commandLineOption->selectOption.selectCount)
       {
         if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Unknown value '%s' for option '%s%s'!\n",value,prefix,name);
         return FALSE;
       }
-      (*commandLineOption->variable.enumeration) = commandLineOption->selects[i].value;
+      (*commandLineOption->variable.enumeration) = commandLineOption->selectOption.selects[i].value;
       break;
     case CMD_OPTION_TYPE_STRING:
       assert(commandLineOption->variable.string != NULL);
-      (*commandLineOption->variable.string) = value;
+      if (   ((*commandLineOption->variable.string) != NULL)
+          && ((*commandLineOption->variable.string) != commandLineOption->defaultValue.string)
+         )
+      {
+        free(*commandLineOption->variable.string);
+      }
+      (*commandLineOption->variable.string) = strdup(value);
       break;
 
     case CMD_OPTION_TYPE_SPECIAL:
-      assert(commandLineOption->variable.special != NULL);
-      if (!commandLineOption->parseSpecial(commandLineOption->variable.special,value,commandLineOption->defaultValue.p,commandLineOption->userData))
+      if (!commandLineOption->specialOption.parseSpecial(commandLineOption->variable.special,
+                                                         commandLineOption->name,
+                                                         value,
+                                                         commandLineOption->defaultValue.p,
+                                                         commandLineOption->specialOption.userData
+                                                        )
+         )
       {
-        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Cannot parse value '%s' for option '%s%s'!\n",value,prefix,name);
         return FALSE;
       }
       break;
@@ -286,7 +296,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
   while ((z+8) < n)
   {
     fprintf(outputHandle,SPACES8);
-    z+=8;
+    z += 8;
   }
   while (z < n)
   {
@@ -297,31 +307,14 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 
 /*---------------------------------------------------------------------*/
 
-
-bool cmdOptions_parse(const char              *argv[],
-                      int                     *argc,
-                      const CommandLineOption commandLineOptions[],
-                      uint                    commandLineOptionCount,
-                      FILE                    *errorOutputHandle,
-                      const char              *errorPrefix
-                     )
+bool CmdOption_init(const CommandLineOption commandLineOptions[],
+                    uint                    commandLineOptionCount
+                   )
 {
-  unsigned int priority,maxPriority;
-  bool         endOfOptionsFlag;
-  uint         z;
-  const char   *s;
-  char         name[128];
-  const char   *optionChars;
-  const char   *value;
-  uint         i;
-  int          argumentsCount;
+  uint i;
 
-  assert(argv != NULL);
-  assert(argc != NULL);
-  assert((*argc) >= 1);
   assert(commandLineOptions != NULL);
 
-  /* set default values */
   for (i = 0; i < commandLineOptionCount; i++)
   {
     switch (commandLineOptions[i].type)
@@ -352,12 +345,90 @@ bool cmdOptions_parse(const char              *argv[],
         break;
       case CMD_OPTION_TYPE_STRING:
         assert(commandLineOptions[i].variable.string != NULL);
-        (*commandLineOptions[i].variable.string) = commandLineOptions[i].defaultValue.string;
+        (*commandLineOptions[i].variable.string) = (char*)commandLineOptions[i].defaultValue.string;
+        break;
+      case CMD_OPTION_TYPE_SPECIAL:
+        if (commandLineOptions[i].defaultValue.p != NULL)
+        {
+          if (!commandLineOptions[i].specialOption.parseSpecial(commandLineOptions[i].variable.special,
+                                                                commandLineOptions[i].name,
+                                                                commandLineOptions[i].defaultValue.p,
+                                                                NULL,
+                                                                commandLineOptions[i].specialOption.userData
+                                                               )
+             )
+          {
+            return FALSE;
+          }
+        }
+        break;
+    }
+  }
+
+  return TRUE;
+}
+
+void CmdOption_done(const CommandLineOption commandLineOptions[],
+                    uint                    commandLineOptionCount
+                   )
+{
+  uint i;
+
+  assert(commandLineOptions != NULL);
+
+  for (i = 0; i < commandLineOptionCount; i++)
+  {
+    switch (commandLineOptions[i].type)
+    {
+      case CMD_OPTION_TYPE_INTEGER:
+        break;
+      case CMD_OPTION_TYPE_INTEGER64:
+        break;
+      case CMD_OPTION_TYPE_DOUBLE:
+        break;
+      case CMD_OPTION_TYPE_BOOLEAN:
+        break;
+      case CMD_OPTION_TYPE_ENUM:
+        break;
+      case CMD_OPTION_TYPE_SELECT:
+        break;
+      case CMD_OPTION_TYPE_STRING:
+        assert(commandLineOptions[i].variable.string != NULL);
+        if (   ((*commandLineOptions[i].variable.string) != NULL)
+            && ((*commandLineOptions[i].variable.string) != commandLineOptions[i].defaultValue.string)
+           )
+        {
+          free(*commandLineOptions[i].variable.string);
+        }
         break;
       case CMD_OPTION_TYPE_SPECIAL:
         break;
     }
   }
+}
+
+bool CmdOption_parse(const char              *argv[],
+                     int                     *argc,
+                     const CommandLineOption commandLineOptions[],
+                     uint                    commandLineOptionCount,
+                     FILE                    *errorOutputHandle,
+                     const char              *errorPrefix
+                    )
+{
+  uint         i;
+  unsigned int priority,maxPriority;
+  bool         endOfOptionsFlag;
+  uint         z;
+  const char   *s;
+  char         name[128];
+  const char   *optionChars;
+  const char   *value;
+  int          argumentsCount;
+
+  assert(argv != NULL);
+  assert(argc != NULL);
+  assert((*argc) >= 1);
+  assert(commandLineOptions != NULL);
 
   /* get max. option priority */
   maxPriority = 0;
@@ -543,10 +614,38 @@ bool cmdOptions_parse(const char              *argv[],
   return TRUE;
 }
 
-void cmdOptions_printHelp(FILE                    *outputHandle,
-                          const CommandLineOption commandLineOptions[],
-                          uint                    commandLineOptionCount
-                         )
+const CommandLineOption *CmdOption_find(const char              *name,
+                                        const CommandLineOption commandLineOptions[],
+                                        uint                    commandLineOptionCount
+                                       )
+{
+  uint i;
+
+  assert(commandLineOptions != NULL);
+
+  i = 0;
+  while ((i < commandLineOptionCount) && (strcmp(commandLineOptions[i].name,name) != 0))
+  {
+    i++;
+  }
+
+  return (i < commandLineOptionCount)?&commandLineOptions[i]:NULL;
+}
+
+bool CmdOption_parseString(const CommandLineOption *commandLineOption,
+                           const char              *value
+                          )
+{
+  assert(commandLineOption != NULL);
+
+
+  return processOption(commandLineOption,"",commandLineOption->name,value,NULL,NULL);
+}
+
+void CmdOption_printHelp(FILE                    *outputHandle,
+                         const CommandLineOption commandLineOptions[],
+                         uint                    commandLineOptionCount
+                        )
 {
   #define PREFIX "Options: "
 
@@ -569,60 +668,79 @@ void cmdOptions_printHelp(FILE                    *outputHandle,
 
     if (commandLineOptions[i].shortName != '\0')
     {
-      n+=3; /* "-x|" */
+      n += 3; /* "-x|" */
     }
 
     assert(commandLineOptions[i].name != NULL);
 
     /* --name */
-    n+=2 + strlen(commandLineOptions[i].name);
+    n += 2 + strlen(commandLineOptions[i].name);
     switch (commandLineOptions[i].type)
     {
       case CMD_OPTION_TYPE_INTEGER:
-        n+=4; /* =<n> */
+        n += 4; /* =<n> */
         if (commandLineOptions[i].integerOption.units != NULL)
         {
-          n+=1; /* [ */
+          n += 1; /* [ */
           for (j = 0; j < commandLineOptions[i].integerOption.unitCount; j++)
           {
-            if (j > 0) n+=1;
-            n+=strlen(commandLineOptions[i].integerOption.units[j].name);
+            if (j > 0) n += 1;
+            n += strlen(commandLineOptions[i].integerOption.units[j].name);
           }       
-          n+=1; /* ] */
+          n += 1; /* ] */
         }
         break;
       case CMD_OPTION_TYPE_INTEGER64:
-        n+=4; /* =<n> */
+        n += 4; /* =<n> */
         if (commandLineOptions[i].integer64Option.units != NULL)
         {
-          n+=1; /* [ */
+          n += 1; /* [ */
           for (j = 0; j < commandLineOptions[i].integer64Option.unitCount; j++)
           {
-            if (j > 0) n+=1;
-            n+=strlen(commandLineOptions[i].integer64Option.units[j].name);
+            if (j > 0) n += 1;
+            n += strlen(commandLineOptions[i].integer64Option.units[j].name);
           }       
-          n+=1; /* ] */
+          n += 1; /* ] */
         }
         break;
       case CMD_OPTION_TYPE_DOUBLE:
-        n+=4; /* =<n> */
+        n += 4; /* =<n> */
         break;
       case CMD_OPTION_TYPE_BOOLEAN:
         if (commandLineOptions[i].booleanOption.yesnoFlag) 
         {
-          n+=9; /* [=yes|no] */
+          n += 9; /* [=yes|no] */
         }
         break;
       case CMD_OPTION_TYPE_ENUM:
         break;
       case CMD_OPTION_TYPE_SELECT:
-        n+=7; /* =<name> */
+        n += 7; /* =<name> */
         break;
       case CMD_OPTION_TYPE_STRING:
-        n+=9; /* =<string> */
+        n += 2; /* =< */
+        if (commandLineOptions[i].specialOption.helpArgument != NULL)
+        {
+          n += strlen(commandLineOptions[i].stringOption.helpArgument);
+        }
+        else
+        {
+          n += 6; /* string */
+        }
+        n += 1; /* > */
         break;
       case CMD_OPTION_TYPE_SPECIAL:
-        n+=6; /* =<...> */
+        n += 2; /* =< */
+        strncat(name,"=<",sizeof(name)-strlen(name));
+        if (commandLineOptions[i].specialOption.helpArgument != NULL)
+        {
+          n += strlen(commandLineOptions[i].specialOption.helpArgument);
+        }
+        else
+        {
+          n += 2; /* ... */
+        }
+        n += 1; /* > */
         break;
     }
 
@@ -695,10 +813,28 @@ void cmdOptions_printHelp(FILE                    *outputHandle,
         strncat(name,"=<name>",sizeof(name)-strlen(name));
         break;
       case CMD_OPTION_TYPE_STRING:
-        strncat(name,"=<string>",sizeof(name)-strlen(name));
+        strncat(name,"=<",sizeof(name)-strlen(name));
+        if (commandLineOptions[i].stringOption.helpArgument != NULL)
+        {
+          strncat(name,commandLineOptions[i].stringOption.helpArgument,sizeof(name)-strlen(name));
+        }
+        else
+        {
+          strncat(name,"string",sizeof(name)-strlen(name));
+        }
+        strncat(name,">",sizeof(name)-strlen(name));
         break;
       case CMD_OPTION_TYPE_SPECIAL:
-        strncat(name,"=<...>",sizeof(name)-strlen(name));
+        strncat(name,"=<",sizeof(name)-strlen(name));
+        if (commandLineOptions[i].specialOption.helpArgument != NULL)
+        {
+          strncat(name,commandLineOptions[i].specialOption.helpArgument,sizeof(name)-strlen(name));
+        }
+        else
+        {
+          strncat(name,"...",sizeof(name)-strlen(name));
+        }
+        strncat(name,">",sizeof(name)-strlen(name));
         break;
     }
     fprintf(outputHandle,"%s",name);
@@ -787,18 +923,18 @@ void cmdOptions_printHelp(FILE                    *outputHandle,
         break;
       case CMD_OPTION_TYPE_SELECT:
         maxValueLength = 0;
-        for (j = 0; j < commandLineOptions[i].selectCount; j++)
+        for (j = 0; j < commandLineOptions[i].selectOption.selectCount; j++)
         {
-          maxValueLength = MAX(strlen(commandLineOptions[i].selects[j].name),maxValueLength);
+          maxValueLength = MAX(strlen(commandLineOptions[i].selectOption.selects[j].name),maxValueLength);
         }
 
-        for (j = 0; j < commandLineOptions[i].selectCount; j++)
+        for (j = 0; j < commandLineOptions[i].selectOption.selectCount; j++)
         {
           printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?3:0)+1);
-          fprintf(outputHandle,"%s",commandLineOptions[i].selects[j].name);
-          printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].selects[j].name));
-          fprintf(outputHandle,": %s",commandLineOptions[i].selects[j].description);
-          if (commandLineOptions[i].selects[j].value == commandLineOptions[i].defaultValue.select)
+          fprintf(outputHandle,"%s",commandLineOptions[i].selectOption.selects[j].name);
+          printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].selectOption.selects[j].name));
+          fprintf(outputHandle,": %s",commandLineOptions[i].selectOption.selects[j].description);
+          if (commandLineOptions[i].selectOption.selects[j].value == commandLineOptions[i].defaultValue.select)
           {
             fprintf(outputHandle," (default)");
           }

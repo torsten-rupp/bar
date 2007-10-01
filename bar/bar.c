@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <errno.h>
 #include <assert.h>
 
 #include "global.h"
@@ -42,6 +43,8 @@
 
 #define VERSION "0.01"
 
+#define DEFAULT_CONFIG_FILE_NAME       "bar.cfg"
+#define DEFAULT_TMP_DIRECTORY          "/tmp"
 #define DEFAULT_COMPRESS_MIN_FILE_SIZE 32
 #define DEFAULT_SERVER_PORT            38523
 
@@ -134,57 +137,52 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM[] =
   {"twofish256",CRYPT_ALGORITHM_TWOFISH256,"Twofish cipher 256bit"},
 };
 
-LOCAL bool parseIncludeExclude(void *variable, const char *value, const void *defaultValue, void *userData)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(userData);
-
-  return Patterns_addList((PatternList*)variable,value,patternType) == ERROR_NONE;
-}
+LOCAL bool cmdParseConfigFile(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
+LOCAL bool cmdParseIncludeExclude(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM   ("create",           'c',0,command,                       COMMAND_NONE,COMMAND_CREATE,                                    "create new archive"                       ),
-  CMD_OPTION_ENUM   ("list",             'l',0,command,                       COMMAND_NONE,COMMAND_LIST,                                      "list contents of archive"                 ),
-  CMD_OPTION_ENUM   ("test",             't',0,command,                       COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"                 ),
-  CMD_OPTION_ENUM   ("extract",          'x',0,command,                       COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"                          ),
+  CMD_OPTION_ENUM   ("create",           'c',0,command,                         COMMAND_NONE,COMMAND_CREATE,                                    "create new archive"                       ),
+  CMD_OPTION_ENUM   ("list",             'l',0,command,                         COMMAND_NONE,COMMAND_LIST,                                      "list contents of archive"                 ),
+  CMD_OPTION_ENUM   ("test",             't',0,command,                         COMMAND_NONE,COMMAND_TEST,                                      "test contents of ardhive"                 ),
+  CMD_OPTION_ENUM   ("extract",          'x',0,command,                         COMMAND_NONE,COMMAND_RESTORE,                                   "restore archive"                          ),
 
-  CMD_OPTION_INTEGER("part-size",        's',0,partSize,                      0,0,LONG_MAX,COMMAND_LINE_UNITS,                                "approximated part size"                   ),
-  CMD_OPTION_STRING ("tmp-directory",    0,  0,globalOptions.tmpDirectory,    "/tmp",                                                         "temporary directory"                      ),
-  CMD_OPTION_INTEGER("max-tmp-size",     0,  0,globalOptions.maxTmpSize,      0,0,LONG_MAX,COMMAND_LINE_UNITS,                                "max. size of temporary files"             ),
-  CMD_OPTION_INTEGER("directory-strip",  'p',0,directoryStripCount,           0,0,LONG_MAX,NULL,                                              "number of directories to strip on extract"),
-  CMD_OPTION_STRING ("directory",        0,  0,directory,                     NULL,                                                           "directory to restore files"               ),
+  CMD_OPTION_SPECIAL("config",           0,  0,NULL,                            NULL,cmdParseConfigFile,NULL,                                   "configuration file","file name"           ),
 
-  CMD_OPTION_SELECT ("pattern-type",     0,  0,patternType,                   PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,            "select pattern type"                      ),
+  CMD_OPTION_INTEGER("archive-part-size",'s',0,partSize,                        0,0,LONG_MAX,COMMAND_LINE_UNITS,                                "approximated part size"                   ),
+  CMD_OPTION_STRING ("tmp-directory",    0,  0,globalOptions.tmpDirectory,      DEFAULT_TMP_DIRECTORY,                                          "temporary directory","path"               ),
+  CMD_OPTION_INTEGER("max-tmp-size",     0,  0,globalOptions.maxTmpSize,        0,0,LONG_MAX,COMMAND_LINE_UNITS,                                "max. size of temporary files"             ),
+  CMD_OPTION_INTEGER("directory-strip",  'p',0,directoryStripCount,             0,0,LONG_MAX,NULL,                                              "number of directories to strip on extract"),
+  CMD_OPTION_STRING ("directory",        0,  0,directory,                       NULL,                                                           "directory to restore files","path"        ),
 
-  CMD_OPTION_SPECIAL("include",          'i',1,includePatternList,            NULL,parseIncludeExclude,NULL,                                  "include pattern"                          ),
-  CMD_OPTION_SPECIAL("exclude",          '!',1,excludePatternList,            NULL,parseIncludeExclude,NULL,                                  "exclude pattern"                          ),
+  CMD_OPTION_SELECT ("pattern-type",     0,  0,patternType,                     PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,            "select pattern type"                      ),
+
+  CMD_OPTION_SPECIAL("include",          'i',1,&includePatternList,             NULL,cmdParseIncludeExclude,NULL,                               "include pattern","pattern"                ),
+  CMD_OPTION_SPECIAL("exclude",          '!',1,&excludePatternList,             NULL,cmdParseIncludeExclude,NULL,                               "exclude pattern","pattern"                ),
  
-  CMD_OPTION_SELECT ("compress",         0,  0,compressAlgorithm,             COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"         ),
-  CMD_OPTION_INTEGER("compress-min-size",0,  0,compressMinFileSize,           DEFAULT_COMPRESS_MIN_FILE_SIZE,0,LONG_MAX,COMMAND_LINE_UNITS,   "minimal size of file for compression"     ),
+  CMD_OPTION_SELECT ("compress",         0,  0,compressAlgorithm,               COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,"select compress algorithm to use"         ),
+  CMD_OPTION_INTEGER("compress-min-size",0,  0,compressMinFileSize,             DEFAULT_COMPRESS_MIN_FILE_SIZE,0,LONG_MAX,COMMAND_LINE_UNITS,   "minimal size of file for compression"     ),
 
-  CMD_OPTION_SELECT ("crypt",            0,  0,cryptAlgorithm,                CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"            ),
-  CMD_OPTION_STRING ("crypt-password",   0,  0,cryptPassword,                 NULL,                                                           "crypt password (use with care!)"          ),
+  CMD_OPTION_SELECT ("crypt",            0,  0,cryptAlgorithm,                  CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"            ),
+  CMD_OPTION_STRING ("crypt-password",   0,  0,cryptPassword,                   NULL,                                                           "crypt password (use with care!)",NULL     ),
 
-  CMD_OPTION_INTEGER("ssh-port",         0,  0,globalOptions.sshPort,         0,0,65535,NULL,                                                 "ssh port"                                 ),
-  CMD_OPTION_STRING ("ssh-public-key",   0,  0,globalOptions.sshPublicKeyFile,NULL,                                                           "ssh public key file name"                 ),
-  CMD_OPTION_STRING ("ssh-privat-key",   0,  0,globalOptions.sshPrivatKeyFile,NULL,                                                           "ssh privat key file name"                 ),
-  CMD_OPTION_STRING ("ssh-password",     0,  0,globalOptions.sshPassword,     NULL,                                                           "ssh password (use with care!)"            ),
+  CMD_OPTION_INTEGER("ssh-port",         0,  0,globalOptions.sshPort,           0,0,65535,NULL,                                                 "ssh port"                                 ),
+  CMD_OPTION_STRING ("ssh-public-key",   0,  0,globalOptions.sshPublicKeyFile,  NULL,                                                           "ssh public key file name","file name"     ),
+  CMD_OPTION_STRING ("ssh-privat-key",   0,  0,globalOptions.sshPrivatKeyFile,  NULL,                                                           "ssh privat key file name","file name"     ),
+  CMD_OPTION_STRING ("ssh-password",     0,  0,globalOptions.sshPassword,       NULL,                                                           "ssh password (use with care!)",NULL       ),
 
-  CMD_OPTION_BOOLEAN("daemon",           0,  0,daemonFlag,                    FALSE,                                                          "run in daemon mode"                       ),
-  CMD_OPTION_INTEGER("port",             0,  0,serverPort,                    DEFAULT_SERVER_PORT,0,65535,NULL,                               "server port"                                 ),
-  CMD_OPTION_STRING ("password",         0,  0,serverPassword,                NULL,                                                           "server password (use with care!)"            ),
+  CMD_OPTION_BOOLEAN("daemon",           0,  0,daemonFlag,                      FALSE,                                                          "run in daemon mode"                       ),
+  CMD_OPTION_INTEGER("port",             0,  0,serverPort,                      DEFAULT_SERVER_PORT,0,65535,NULL,                               "server port"                              ),
+  CMD_OPTION_STRING ("password",         0,  0,serverPassword,                  NULL,                                                           "server password (use with care!)",NULL    ),
 
 //  CMD_OPTION_BOOLEAN("incremental",      0,  0,globalOptions.incrementalFlag, FALSE,                                                          "overwrite existing files"                 ),
-  CMD_OPTION_BOOLEAN("overwrite",        0,  0,globalOptions.overwriteFlag,   FALSE,                                                          "overwrite existing files"                 ),
-  CMD_OPTION_BOOLEAN("quiet",            'q',0,globalOptions.quietFlag,       FALSE,                                                          "surpress any output"                      ),
+  CMD_OPTION_BOOLEAN("skip-unreadable",  0,  0,globalOptions.skipUnreadableFlag,FALSE,                                                          "skip unreadable files"                    ),
+  CMD_OPTION_BOOLEAN("overwrite",        0,  0,globalOptions.overwriteFlag,     FALSE,                                                          "overwrite existing files"                 ),
+  CMD_OPTION_BOOLEAN("quiet",            'q',0,globalOptions.quietFlag,         FALSE,                                                          "surpress any output"                      ),
   CMD_OPTION_INTEGER_RANGE("verbose",          'v',0,globalOptions.verboseLevel,    1,0,3,NULL,                                                         "verbosity level"                          ),
 
-  CMD_OPTION_BOOLEAN("version",          0  ,0,versionFlag,                   FALSE,                                                          "print version"                            ),
-  CMD_OPTION_BOOLEAN("help",             'h',0,helpFlag,                      FALSE,                                                          "print this help"                          ),
+  CMD_OPTION_BOOLEAN("version",          0  ,0,versionFlag,                     FALSE,                                                          "print version"                            ),
+  CMD_OPTION_BOOLEAN("help",             'h',0,helpFlag,                        FALSE,                                                          "print this help"                          ),
 };
 
 /****************************** Macros *********************************/
@@ -197,101 +195,177 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   extern "C" {
 #endif
 
-const char *getErrorText(Errors error)
+/***********************************************************************\
+* Name   : readConfigFile
+* Purpose: read configuration from file
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE iff configuration read, FALSE otherwise (error)
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool readConfigFile(String fileName)
 {
-  #define CASE(error,text) case error: return text; break;
-  #define DEFAULT(text) default: return text; break;
+  Errors                  error;
+  FileHandle              fileHandle;
+  bool                    failFlag;
+  uint                    lineNb;
+  String                  line;
+  String                  name,value;
+  const CommandLineOption *commandLineOption;
 
-  switch (error)
+  assert(fileName != NULL);
+
+  /* open file */
+  error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+  if (error != ERROR_NONE)
   {
-    CASE(ERROR_NONE,                   "none"                        );
-
-    CASE(ERROR_INSUFFICIENT_MEMORY,    "insufficient memory"         );
-    CASE(ERROR_INIT,                   "init"                        );
-
-    CASE(ERROR_INVALID_PATTERN,        "init pattern matching"       );
-
-    CASE(ERROR_INIT_COMPRESS,          "init compress"               );
-    CASE(ERROR_COMPRESS_ERROR,         "compress"                    );
-    CASE(ERROR_DEFLATE_ERROR,          "deflate"                     );
-    CASE(ERROR_INFLATE_ERROR,          "inflate"                     );
-
-    CASE(ERROR_UNSUPPORTED_BLOCK_SIZE, "unsupported block size"      );
-    CASE(ERROR_INIT_CRYPT,             "init crypt"                  );
-    CASE(ERROR_NO_PASSWORD,            "no password given for cipher");
-    CASE(ERROR_INVALID_PASSWORD,       "invalid password"            );
-    CASE(ERROR_INIT_CIPHER,            "init cipher"                 );
-    CASE(ERROR_ENCRYPT_FAIL,           "encrypt"                     );
-    CASE(ERROR_DECRYPT_FAIL,           "decrypt"                     );
-
-    CASE(ERROR_CREATE_FILE,            "create file"                 );
-    CASE(ERROR_OPEN_FILE,              "open file"                   );
-    CASE(ERROR_OPEN_DIRECTORY,         "open directory"              );
-    CASE(ERROR_IO_ERROR,               "input/output"                );
-
-    CASE(ERROR_END_OF_ARCHIVE,         "end of archive"              );
-    CASE(ERROR_NO_FILE_ENTRY,          "no file entry"               );
-    CASE(ERROR_NO_FILE_DATA,           "no data entry"               );
-    CASE(ERROR_END_OF_DATA,            "end of data"                 );
-    CASE(ERROR_CRC_ERROR,              "CRC error"                   );
-
-    CASE(ERROR_HOST_NOT_FOUND,         "host not found"              );
-    CASE(ERROR_CONNECT_FAIL,           "connect fail"                );
-    CASE(ERROR_NO_SSH_PASSWORD,        "no ssh password given"       );
-    CASE(ERROR_SSH_SESSION_FAIL,       "initialize ssh session fail" );
-    CASE(ERROR_SSH_AUTHENTIFICATION,   "invalid ssh password"        );
-    CASE(ERROR_NETWORK_SEND,           "sending data fail"           );
-    CASE(ERROR_NETWORK_RECEIVE,        "receiving data fail"         );
-
-    DEFAULT(                           "unknown"                     );
+    printError("Cannot open file '%s' (error: %s)!\n",
+               String_cString(fileName),
+               getErrorText(error)
+              );
+    return FALSE;
   }
 
-  #undef DEFAULT
-  #undef CASE
-}
-
-void info(uint verboseLevel, const char *format, ...)
-{
-  va_list arguments;
-
-  assert(format != NULL);
-
-  if (!globalOptions.quietFlag && (globalOptions.verboseLevel >= verboseLevel))
+  /* parse file */
+  failFlag = FALSE;
+  lineNb   = 0;
+  line     = String_new();
+  name     = String_new();
+  value    = String_new();
+  while (!File_eof(&fileHandle) && !failFlag)
   {
-    va_start(arguments,format);
-    vprintf(format,arguments);
-    va_end(arguments);
-    fflush(stdout);
+    /* read line */
+    error = File_readLine(&fileHandle,line);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot open file '%s' (error: %s)!\n",
+                 String_cString(fileName),
+                 getErrorText(error)
+                );
+      failFlag = TRUE;
+      break;
+    }
+    lineNb++;
+
+    /* skip comments, empty lines */
+    if ((String_length(line) == 0) || (String_index(line,0) == '#'))
+    {
+      continue;
+    }
+
+    /* parse line */
+    if (String_parse(line,"%S=%S",NULL,name,value))
+    {
+fprintf(stderr,"%s,%d: %s %s\n",__FILE__,__LINE__,String_cString(name),String_cString(value));
+      /* find command line option */
+      commandLineOption = CmdOption_find(String_cString(name),
+                                         COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS)
+                                        );
+      if (commandLineOption == NULL)
+      {
+        printError("Unknown option '%s' in %s, line %ld\n",
+                   String_cString(name),
+                   String_cString(fileName),
+                   lineNb
+                  );
+        failFlag = TRUE;
+        break;
+      }
+
+      /* parse command line option */
+      if (!CmdOption_parseString(commandLineOption,
+                                 String_cString(value)
+                                )
+         )
+      {
+        printError("Error in option '%s' in %s, line %ld\n",
+                   String_cString(name),
+                   String_cString(fileName),
+                   lineNb
+                  );
+        failFlag = TRUE;
+        break;
+      }
+    }
+    else
+    {
+      printError("Error in %s, line %ld: %s\n",
+                 String_cString(fileName),
+                 lineNb,
+                 String_cString(line)
+                );
+      failFlag = TRUE;
+      break;
+    }
   }
-}
+  String_delete(value);
+  String_delete(name);
+  String_delete(line);
 
-void warning(const char *format, ...)
-{
-  va_list arguments;
+  /* close file */
+  File_close(&fileHandle);
 
-  assert(format != NULL);
+  /* free resources */
 
-  printf("Warning: ");
-  va_start(arguments,format);
-  vprintf(format,arguments);
-  va_end(arguments);
-  fflush(stdout);
-}
-
-void printError(const char *text, ...)
-{
-  va_list arguments;
-
-  assert(text != NULL);
-
-  va_start(arguments,text);
-  fprintf(stderr,"ERROR: ");
-  vfprintf(stderr,text,arguments);
-  va_end(arguments);
+  return !failFlag;
 }
 
 /***********************************************************************\
-* Name       : PrintUsage
+* Name   : cmdParseConfigFile
+* Purpose: command line option call back for parsing config file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdParseConfigFile(void *variable, const char *name, const char *value, const void *defaultValue, void *userData)
+{
+  String fileName;
+  bool   result;
+
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
+
+  fileName = String_newCString(value);
+  result = readConfigFile(fileName);
+  String_delete(fileName);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdParseIncludeExclude
+* Purpose: command line option call back for parsing include/exclude
+*          patterns
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdParseIncludeExclude(void *variable, const char *name, const char *value, const void *defaultValue, void *userData)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
+
+  if (Patterns_addList((PatternList*)variable,value,patternType) != ERROR_NONE)
+  {
+    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name       : printUsage
 * Purpose    : print "usage" help
 * Input      : -
 * Output     : -
@@ -306,9 +380,9 @@ LOCAL void printUsage(const char *programName)
 
   printf("Usage: %s [<options>] [--] <archive name>|scp:<name>@<host name>:<archive name>... [<files>...]\n",programName);
   printf("\n");
-  cmdOptions_printHelp(stdout,
-                       COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS)
-                      );
+  CmdOption_printHelp(stdout,
+                      COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS)
+                     );
 }
 
 /***********************************************************************\
@@ -383,19 +457,139 @@ LOCAL void done(void)
 
 /*---------------------------------------------------------------------*/
 
+const char *getErrorText(Errors error)
+{
+  #define CASE(error,text) case error: return text; break;
+  #define DEFAULT(text) default: return text; break;
+
+  static char errorText[256];
+
+  switch (error)
+  {
+    CASE(ERROR_NONE,                   "none"                        );
+
+    CASE(ERROR_INSUFFICIENT_MEMORY,    "insufficient memory"         );
+    CASE(ERROR_INIT,                   "init"                        );
+
+    CASE(ERROR_INVALID_PATTERN,        "init pattern matching"       );
+
+    CASE(ERROR_INIT_COMPRESS,          "init compress"               );
+    CASE(ERROR_COMPRESS_ERROR,         "compress"                    );
+    CASE(ERROR_DEFLATE_ERROR,          "deflate"                     );
+    CASE(ERROR_INFLATE_ERROR,          "inflate"                     );
+
+    CASE(ERROR_UNSUPPORTED_BLOCK_SIZE, "unsupported block size"      );
+    CASE(ERROR_INIT_CRYPT,             "init crypt"                  );
+    CASE(ERROR_NO_PASSWORD,            "no password given for cipher");
+    CASE(ERROR_INVALID_PASSWORD,       "invalid password"            );
+    CASE(ERROR_INIT_CIPHER,            "init cipher"                 );
+    CASE(ERROR_ENCRYPT_FAIL,           "encrypt"                     );
+    CASE(ERROR_DECRYPT_FAIL,           "decrypt"                     );
+
+    case ERROR_CREATE_FILE:
+    case ERROR_OPEN_FILE:
+    case ERROR_OPEN_DIRECTORY:
+    case ERROR_IO_ERROR:
+      strncpy(errorText,strerror(errno),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+      return errorText;
+      break;
+
+    CASE(ERROR_END_OF_ARCHIVE,         "end of archive"              );
+    CASE(ERROR_NO_FILE_ENTRY,          "no file entry"               );
+    CASE(ERROR_NO_FILE_DATA,           "no data entry"               );
+    CASE(ERROR_END_OF_DATA,            "end of data"                 );
+    CASE(ERROR_CRC_ERROR,              "CRC error"                   );
+
+    CASE(ERROR_HOST_NOT_FOUND,         "host not found"              );
+    CASE(ERROR_CONNECT_FAIL,           "connect fail"                );
+    CASE(ERROR_NO_SSH_PASSWORD,        "no ssh password given"       );
+    CASE(ERROR_SSH_SESSION_FAIL,       "initialize ssh session fail" );
+    CASE(ERROR_SSH_AUTHENTIFICATION,   "invalid ssh password"        );
+    CASE(ERROR_NETWORK_SEND,           "sending data fail"           );
+    CASE(ERROR_NETWORK_RECEIVE,        "receiving data fail"         );
+
+    DEFAULT(                           "unknown"                     );
+  }
+
+  #undef DEFAULT
+  #undef CASE
+}
+
+void info(uint verboseLevel, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  if (!globalOptions.quietFlag && (globalOptions.verboseLevel >= verboseLevel))
+  {
+    va_start(arguments,format);
+    vprintf(format,arguments);
+    va_end(arguments);
+    fflush(stdout);
+  }
+}
+
+void warning(const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  printf("Warning: ");
+  va_start(arguments,format);
+  vprintf(format,arguments);
+  va_end(arguments);
+  fflush(stdout);
+}
+
+void printError(const char *text, ...)
+{
+  va_list arguments;
+
+  assert(text != NULL);
+
+  va_start(arguments,text);
+  fprintf(stderr,"ERROR: ");
+  vfprintf(stderr,text,arguments);
+  va_end(arguments);
+}
+
+/*---------------------------------------------------------------------*/
+
 int main(int argc, const char *argv[])
- {
-  int exitcode;
+{
+  String fileName;
+  int    exitcode;
 
   /* initialise variables */
+  CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   Patterns_newList(&includePatternList);
   Patterns_newList(&excludePatternList);
 
+  /* read default configuration from $HOME/.bar/bar.cfg (if exists) */
+  fileName = String_new();
+  File_setFileNameCString(fileName,getenv("HOME"));
+  File_appendFileNameCString(fileName,".bar");
+  File_appendFileNameCString(fileName,DEFAULT_CONFIG_FILE_NAME);
+  if (File_exists(fileName))
+  {
+    if (!readConfigFile(fileName))
+    {
+      String_delete(fileName);
+      #ifndef NDEBUG
+        String_debug();
+      #endif /* not NDEBUG */
+      return EXITCODE_CONFIG_ERROR;
+    }
+  }
+  String_delete(fileName);
+
   /* parse command line */
-  if (!cmdOptions_parse(argv,&argc,
-                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                        stderr,NULL
-                       )
+  if (!CmdOption_parse(argv,&argc,
+                       COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
+                       stderr,NULL
+                      )
      )
   {
     return EXITCODE_INVALID_ARGUMENT;
@@ -507,7 +701,7 @@ int main(int argc, const char *argv[])
         break;
       default:
         printError("No command given!\n");
-        return EXITCODE_INVALID_ARGUMENT;
+        exitcode = EXITCODE_INVALID_ARGUMENT;
         break;
     }
   }
@@ -526,6 +720,7 @@ int main(int argc, const char *argv[])
 
   /* done */
   done();
+  CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
   #ifndef NDEBUG
     String_debug();
