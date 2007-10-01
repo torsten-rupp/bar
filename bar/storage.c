@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -549,7 +549,7 @@ Errors Storage_write(StorageInfo *storageInfo, const void *buffer, ulong size)
                                    );
           if (n < 0)
           {
-            return ERROR_IO_ERROR;
+            return ERROR_NETWORK_SEND;
           }
           buffer = (byte*)buffer+n;
           size -= n;
