@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -277,6 +277,34 @@ Errors File_write(FileHandle *fileHandle,
                   const void *buffer,
                   ulong      bufferLength
                  );
+
+/***********************************************************************\
+* Name   : File_readLine
+* Purpose: read line from file (end of line: \n or \r\n)
+* Input  : fileHandle - file handle
+*          line       - string variable
+* Output : line - read line
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_readLine(FileHandle *fileHandle,
+                     String     line
+                    );
+
+/***********************************************************************\
+* Name   : File_writeLine
+* Purpose: write line into file
+* Input  : fileHandle - file handle
+*          line       - line to write
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_writeLine(FileHandle   *fileHandle,
+                      const String line
+                     );
 
 /***********************************************************************\
 * Name   : File_size

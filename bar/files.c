@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -420,6 +420,45 @@ Errors File_write(FileHandle *fileHandle,
   }
 
   return ERROR_NONE;
+}
+
+Errors File_readLine(FileHandle *fileHandle,
+                     String     line
+                    )
+{
+  ssize_t n;
+  char    ch;
+
+  assert(fileHandle != NULL);
+
+  // ??? optimize
+  String_clear(line);
+  do
+  {
+    n = read(fileHandle->handle,&ch,1);
+    if (n > 0) fileHandle->index += n;
+    if (n < 0)
+    {
+      return ERROR_IO_ERROR;
+    }
+    if ((ch != '\n') && (ch != '\r'))
+    {
+      String_appendChar(line,ch);
+    }
+  }
+  while ((ch != '\n') && (ch != '\r'));
+  if (ch == '\r') read(fileHandle->handle,&ch,1);
+
+  return ERROR_NONE;
+}
+
+Errors File_writeLine(FileHandle   *fileHandle,
+                      const String line
+                     )
+{
+  assert(fileHandle != NULL);
+
+  return File_write(fileHandle,String_cString(line),String_length(line));
 }
 
 uint64 File_getSize(FileHandle *fileHandle)
