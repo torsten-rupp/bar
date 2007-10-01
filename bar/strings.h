@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -22,6 +22,8 @@
 
 #define STRING_BEGIN 0
 #define STRING_END   -1
+
+#define STRING_WHITE_SPACES " \t\f\v\n\r"
 
 /***************************** Datatypes *******************************/
 
@@ -343,18 +345,32 @@ String String_toLower(String string);
 String String_toUpper(String string);
 
 /***********************************************************************\
-* Name   : String_rightPad, String_rightPad
-* Purpose: pad string right/left
+* Name   : String_trim, String_trimRight, String_trimLeft
+* Purpose: trim string right/left
 * Input  : string - string
-*          length - length to pad
-*          char   - padding char
+*          chs    - chars to trim
 * Output : -
 * Return : string
 * Notes  : -
 \***********************************************************************/
 
-String String_rightPad(String string, unsigned long length, char ch);
-String String_leftPad(String string, unsigned long length, char ch);
+String String_trim(String string, const char *chars);
+String String_trimRight(String string, const char *chars);
+String String_trimLeft(String string, const char *chars);
+
+/***********************************************************************\
+* Name   : String_rightPad, String_rightPad
+* Purpose: pad string right/left
+* Input  : string - string
+*          length - length to pad
+*          ch     - padding char
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+String String_padRight(String string, unsigned long length, char ch);
+String String_padLeft(String string, unsigned long length, char ch);
 
 /***********************************************************************\
 * Name   : String_format
@@ -408,17 +424,32 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
                         );
 
 /***********************************************************************\
+* Name   : String_scan
+* Purpose: scan string
+* Input  : string - string
+*          format - format (like scanf)
+*          ...    - optional variables
+* Output : -
+* Return : TRUE is scanned, FALSE on error
+* Notes  : -
+\***********************************************************************/
+
+bool String_scan(const String string, const char *format, ...);
+
+/***********************************************************************\
 * Name   : String_parse
 * Purpose: parse string
 * Input  : string - string
 *          format - format (like scanf)
 *          ...    - optional variables
-* Output : -
+* Output : nextIndex - index of next character in string not parsed (can
+*                      be NULL)
 * Return : TRUE is parsed, FALSE on error
-* Notes  : -
+* Notes  : %s and %S are parsed as strings which could be enclosed in
+*          "..." or '...'
 \***********************************************************************/
 
-bool String_parse(const String string, const char *format, ...);
+bool String_parse(const String string, const char *format, ulong *nextIndex, ...);
 
 /***********************************************************************\
 * Name   : String_toCString

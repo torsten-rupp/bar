@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -300,7 +300,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
 
 LOCAL void formatString(struct __String *string,
                         const char      *format,
-                        va_list         arguments)
+                        const va_list   arguments)
 {
   FormatToken  formatToken;
   union
@@ -512,12 +512,14 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
 
 /***********************************************************************\
 * Name   : parseString
-* Purpose: parse a string (like sscanf)
+* Purpose: parse a string (like scanf)
 * Input  : String    - string
 *          format    - format string
 *          arguments - arguments
-* Output : TRUE if parsing sucessful, FALSE otherwise
-* Return : -
+*          stringChars - string chars or NULL
+* Output : nextIndex - index of next character in string not parsed
+*                      (can be NULL)
+* Return : TRUE if parsing sucessful, FALSE otherwise
 * Notes  : Additional conversion chars:
 *            S - string
 *          Not implemented conversion chars:
@@ -525,9 +527,12 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
 *            n
 \***********************************************************************/
 
-LOCAL bool parseString(struct __String *string,
-                       const char      *format,
-                       va_list         arguments)
+LOCAL bool parseString(const struct __String *string,
+                       const char            *format,
+                       const va_list         arguments,
+                       const char            *stringChars,
+                       ulong                 *nextIndex
+                      )
 {
   unsigned long   index;
   FormatToken     formatToken;
@@ -544,18 +549,25 @@ LOCAL bool parseString(struct __String *string,
   } value;
   char          buffer[64];
   unsigned long z;
+  const char    *stringChar;
 
   index = 0;
   while ((*format) != '\0')
   {
+    /* skip white spaces in format */
+    while (((*format) != '\0') && isspace(*format))
+    {
+      format++;
+    }
+
+    /* skip white-spaces in string */
+    while ((index < string->length) && isspace(string->data[index]))
+    {
+      index++;
+    }
+
     if ((*format) == '%')
     {
-      /* skip white-spaces */
-      while ((index < string->length) && isspace(string->data[index]))
-      {
-        index++;
-      }
-
       /* get format token */
       format = parseNextFormatToken(format,&formatToken);
 
@@ -728,14 +740,58 @@ LOCAL bool parseString(struct __String *string,
           assert(value.s != NULL);
           z = 0;
           while (   (index < string->length)
-                 && ((formatToken.width == 0) || (z < formatToken.width-1))
                  && !isspace(string->data[index])
                  && (string->data[index] != (*format))
                 )
           {
-            value.s[z] = string->data[index];
-            z++;
-            index++;
+            stringChar = (stringChars != NULL)?strchr(stringChars,string->data[index]):NULL;
+            if (stringChar != NULL)
+            {
+              do
+              {
+                /* skip string-char */
+                index++;
+                /* get string */
+                while ((index < string->length) && (string->data[index] != (*stringChar)))
+                {
+                  if (string->data[index] == '\\')
+                  {
+                    if (index < string->length)
+                    {
+                      if ((formatToken.width == 0) || (z < formatToken.width-1))
+                      {
+                        value.s[z] = string->data[index];
+                        z++;
+                      }
+                      index++;
+                    }
+                  }
+                  else
+                  {
+                    if ((formatToken.width == 0) || (z < formatToken.width-1))
+                    {
+                      value.s[z] = string->data[index];
+                      z++;
+                    }
+                    index++;
+                  }
+                }
+                /* skip string-char */
+                index++;
+                /* next string char */
+                stringChar = ((stringChars != NULL) && (index < string->length))?strchr(stringChars,string->data[index]):NULL;
+              }
+              while (stringChar != NULL);
+            }
+            else
+            {
+              if ((formatToken.width == 0) || (z < formatToken.width-1))
+              {
+                value.s[z] = string->data[index];
+                z++;
+              }
+              index++;
+            }
           }
           value.s[z] = '\0';
           break;
@@ -749,8 +805,42 @@ LOCAL bool parseString(struct __String *string,
           String_clear(value.string);
           while ((index < string->length) && !isspace(string->data[index]))
           {
-            String_appendChar(value.string,string->data[index]);
-            index++;
+            stringChar = (stringChars != NULL)?strchr(stringChars,string->data[index]):NULL;
+            if (stringChar != NULL)
+            {
+              do
+              {
+                /* skip string-char */
+                index++;
+                /* get string */
+                while ((index < string->length) && (string->data[index] != (*stringChar)))
+                {
+                  if (string->data[index] == '\\')
+                  {
+                    if (index < string->length)
+                    {
+                      String_appendChar(value.string,string->data[index]);
+                      index++;
+                    }
+                  }
+                  else
+                  {
+                    String_appendChar(value.string,string->data[index]);
+                    index++;
+                  }
+                }
+                /* skip string-char */
+                index++;
+                /* next string char */
+                stringChar = ((stringChars != NULL) && (index < string->length))?strchr(stringChars,string->data[index]):NULL;
+              }
+              while (stringChar != NULL);
+            }
+            else
+            {
+              String_appendChar(value.string,string->data[index]);
+              index++;
+            }
           }
           break;
 #if 0
@@ -840,6 +930,17 @@ JAMAICA_HALT_NOT_YET_IMPLEMENTED();
       }
       index++;
       format++;
+    }
+  }
+  if (nextIndex != NULL)
+  {
+    (*nextIndex) = index;
+  }
+  else
+  {
+    if (index < string->length)
+    {
+      return FALSE;
     }
   }
 
@@ -1699,7 +1800,60 @@ String String_toUpper(String string)
   return string;
 }
 
-String String_rightPad(String string, unsigned long length, char ch)
+String String_trim(String string, const char *chars)
+{
+  String_trimRight(string,chars);
+  String_trimLeft(string,chars);
+
+  return string;
+}
+
+String String_trimRight(String string, const char *chars)
+{
+  unsigned long n;
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    n = string->length;
+    while ((n > 0) && (strchr(chars,string->data[n - 1]) != NULL))
+    {
+      n--;
+    }
+    string->data[n] = '\0';
+    string->length = n;
+  }
+
+  return string;
+}
+
+String String_trimLeft(String string, const char *chars)
+{
+  unsigned long z,n;
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    z = 0;
+    while ((z < string->length) && (strchr(chars,string->data[z]) != NULL))
+    {
+      z++;
+    }
+    if (z > 0)
+    {
+      n = string->length - z;
+      memmove(&string->data[0],&string->data[z],n);
+      string->data[n] = '\0';
+      string->length = n;
+    }
+  }
+
+  return string;
+}
+
+String String_padRight(String string, unsigned long length, char ch)
 {
   unsigned long n;
 
@@ -1717,7 +1871,7 @@ String String_rightPad(String string, unsigned long length, char ch)
   return string;
 }
 
-String String_leftPad(String string, unsigned long length, char ch)
+String String_padLeft(String string, unsigned long length, char ch)
 {
   unsigned long n;
 
@@ -1855,7 +2009,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   return TRUE;
 }
 
-bool String_parse(const String string, const char *format, ...)
+bool String_scan(const String string, const char *format, ...)
 {
   va_list arguments;
   bool    result;
@@ -1863,7 +2017,21 @@ bool String_parse(const String string, const char *format, ...)
   assert(string != NULL);
 
   va_start(arguments,format);
-  result = parseString(string,format,arguments);
+  result = parseString(string,format,arguments,NULL,NULL);
+  va_end(arguments);
+
+  return result;
+}
+
+bool String_parse(const String string, const char *format, ulong *nextIndex, ...)
+{
+  va_list arguments;
+  bool    result;
+
+  assert(string != NULL);
+
+  va_start(arguments,nextIndex);
+  result = parseString(string,format,arguments,"\"'",nextIndex);
   va_end(arguments);
 
   return result;
