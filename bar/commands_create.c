@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -442,6 +442,7 @@ LOCAL void appendToStorageList(MsgQueue  *storageMsgQueue,
 * Name   : freeStorageMsg
 * Purpose: free storage msg
 * Input  : storageMsg - storage message
+*          userData   - user data (ignored)
 * Output : -
 * Return : -
 * Notes  : -
@@ -522,6 +523,7 @@ LOCAL Errors storeArchiveFile(String fileName,
 
     /* send to storage controller */
     Mailbox_lock(&createInfo->storageMailbox);
+fprintf(stderr,"%s,%d: mailbox locked by main\n",__FILE__,__LINE__);
     createInfo->storageCount += 1;
     createInfo->storageSize  += fileSize;
     appendToStorageList(&createInfo->storageMsgQueue,
@@ -535,6 +537,7 @@ LOCAL Errors storeArchiveFile(String fileName,
     if (globalOptions.maxTmpSize > 0)
     {
       Mailbox_lock(&createInfo->storageMailbox);
+fprintf(stderr,"%s,%d: mailbox locked by main2\n",__FILE__,__LINE__);
       while ((createInfo->storageCount > 2) && (createInfo->storageSize > globalOptions.maxTmpSize))
       {
         Mailbox_wait(&createInfo->storageMailbox);
@@ -648,7 +651,10 @@ LOCAL void storage(CreateInfo *createInfo)
         info(0,"ok\n");
       }
     }
-
+else
+{
+fprintf(stderr,"%s,%d: FAIL - only delete files \n",__FILE__,__LINE__);
+}
     /* delete source file */
     if (!File_delete(storageMsg.fileName))
     {
@@ -659,6 +665,7 @@ LOCAL void storage(CreateInfo *createInfo)
 
     /* update mailbox */
     Mailbox_lock(&createInfo->storageMailbox);
+fprintf(stderr,"%s,%d: mailbox locked by storage\n",__FILE__,__LINE__);
     assert(createInfo->storageCount > 0);
     assert(createInfo->storageSize >= storageMsg.fileSize);
     createInfo->storageCount -= 1;
@@ -669,6 +676,7 @@ LOCAL void storage(CreateInfo *createInfo)
     String_delete(storageMsg.fileName);
     String_delete(storageMsg.destinationFileName);
   }
+fprintf(stderr,"%s,%d: storage end\n",__FILE__,__LINE__);
 
   /* free resoures */
   free(buffer);
@@ -819,6 +827,28 @@ bool Command_create(const char      *archiveFileName,
               continue;
             }
 
+            /* open file */  
+            error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+            if (error != ERROR_NONE)
+            {
+              if (globalOptions.skipUnreadableFlag)
+              {
+                info(1,"skipped (reason: %s)\n",
+                     getErrorText(error)
+                    );
+              }
+              else
+              {
+                info(1,"FAIL\n");
+                printError("Cannot open file '%s' (error: %s)\n",
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                createInfo.failFlag = TRUE;
+              }
+              continue;
+            }
+
             /* new file */
             error = Archive_newFileEntry(&archiveInfo,
                                          &archiveFileInfo,
@@ -837,17 +867,6 @@ bool Command_create(const char      *archiveFileName,
             }
 
             /* write file content into archive */  
-            error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
-            if (error != ERROR_NONE)
-            {
-              info(1,"FAIL\n");
-              printError("Cannot open file '%s' (error: %s)\n",
-                         String_cString(fileName),
-                         getErrorText(error)
-                        );
-              createInfo.failFlag = TRUE;
-              continue;
-            }
             error = ERROR_NONE;
             do
             {
@@ -860,18 +879,21 @@ bool Command_create(const char      *archiveFileName,
             while (   (n > 0)
                    && !createInfo.failFlag
                    && (error == ERROR_NONE)
-                  );
-            File_close(&fileHandle);
+                  );            
             if (error != ERROR_NONE)
             {
               info(1,"FAIL\n");
               printError("Cannot create archive file (error: %s)!\n",
                          getErrorText(error)
                         );
+              File_close(&fileHandle);
               Archive_closeEntry(&archiveFileInfo);
               createInfo.failFlag = TRUE;
               break;
             }
+
+            /* close file */
+            File_close(&fileHandle);
 
             /* close archive entry */
             error = Archive_closeEntry(&archiveFileInfo);

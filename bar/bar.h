@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -44,19 +44,19 @@ typedef enum
 
 typedef struct
 {
-  uint64        maxTmpSize;
+  uint64     maxTmpSize;
 
-  const char    *tmpDirectory;
+  const char *tmpDirectory;
 
-  uint          sshPort;
-  const char    *sshPublicKeyFile;
-  const char    *sshPrivatKeyFile;
-  const char    *sshPassword;
+  uint       sshPort;
+  const char *sshPublicKeyFile;
+  const char *sshPrivatKeyFile;
+  const char *sshPassword;
 
-  bool          overwriteFlag;
-  bool          skipUnreadableFlag;
-  bool          quietFlag;
-  long          verboseLevel;
+  bool       overwriteFlag;
+  bool       skipUnreadableFlag;
+  bool       quietFlag;
+  long       verboseLevel;
 } GlobalOptions;
 
 /***************************** Variables *******************************/

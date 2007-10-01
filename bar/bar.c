@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -257,7 +257,7 @@ LOCAL bool readConfigFile(String fileName)
     /* parse line */
     if (String_parse(line,"%S=%S",NULL,name,value))
     {
-fprintf(stderr,"%s,%d: %s %s\n",__FILE__,__LINE__,String_cString(name),String_cString(value));
+//fprintf(stderr,"%s,%d: %s %s\n",__FILE__,__LINE__,String_cString(name),String_cString(value));
       /* find command line option */
       commandLineOption = CmdOption_find(String_cString(name),
                                          COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS)
@@ -433,6 +433,16 @@ LOCAL bool init(void)
     Crypt_done();
     return FALSE;
   }
+  error = Server_init();
+  if (error != ERROR_NONE)
+  {
+    Network_done();
+    Storage_done();
+    Archive_done();
+    Patterns_done();
+    Crypt_done();
+    return FALSE;
+  }
 
   return TRUE;
 }
@@ -448,6 +458,7 @@ LOCAL bool init(void)
 
 LOCAL void done(void)
 {
+  Server_done();
   Network_done();
   Storage_done();
   Archive_done();
@@ -501,7 +512,10 @@ const char *getErrorText(Errors error)
     CASE(ERROR_CRC_ERROR,              "CRC error"                   );
 
     CASE(ERROR_HOST_NOT_FOUND,         "host not found"              );
-    CASE(ERROR_CONNECT_FAIL,           "connect fail"                );
+    case ERROR_CONNECT_FAIL:
+      strncpy(errorText,strerror(errno),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+      return errorText;
+      break;
     CASE(ERROR_NO_SSH_PASSWORD,        "no ssh password given"       );
     CASE(ERROR_SSH_SESSION_FAIL,       "initialize ssh session fail" );
     CASE(ERROR_SSH_AUTHENTIFICATION,   "invalid ssh password"        );

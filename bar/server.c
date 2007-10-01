@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -17,6 +17,8 @@
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
+#include "msgqueues.h"
+
 #include "network.h"
 #include "bar.h"
 
@@ -37,12 +39,21 @@ typedef struct ClientNode
   uint         port;
   SocketHandle socketHandle;
   bool         authentificationFlag;
+  MsgQueue     commandMsgQueue;
+  pthread_t    thread;
+  bool         exitFlag;
+  String       commandString;
 } ClientNode;
 
 typedef struct
 {
   LIST_HEADER(ClientNode);
 } ClientList;
+
+typedef struct
+{
+  String command;
+} CommandMsg;
 
 /***************************** Variables *******************************/
 LOCAL ClientList clientList;
@@ -58,6 +69,15 @@ LOCAL bool       quitFlag;
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors connectClient(const        String name,
                            SocketHandle socketHandle
                           )
@@ -67,6 +87,15 @@ LOCAL Errors connectClient(const        String name,
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void disconnectClient(ClientNode *clientNode)
 {
   assert(clientNode != NULL);
@@ -74,12 +103,30 @@ LOCAL void disconnectClient(ClientNode *clientNode)
   Network_disconnect(&clientNode->socketHandle);
 }
 
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void freeClientNode(ClientNode *clientNode)
 {
   assert(clientNode != NULL);
 
   String_delete(clientNode->name);
 }
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 LOCAL ClientNode *findClient(const String name)
 {
@@ -100,11 +147,78 @@ LOCAL ClientNode *findClient(const String name)
 
 /*---------------------------------------------------------------------*/
 
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void processCommand(String command)
 {
 }
 
+/***********************************************************************\
+* Name   : process
+* Purpose: client process thread
+* Input  : clientNode - client node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void process(ClientNode *clientNode)
+{
+  CommandMsg commandMsg;
+
+  assert(clientNode != NULL);
+
+  while (   !clientNode->exitFlag
+         && MsgQueue_get(&clientNode->commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg))
+        )
+  {
+fprintf(stderr,"%s,%d: command=%s\n",__FILE__,__LINE__,String_cString(commandMsg.command));
+
+Network_send(&clientNode->socketHandle,"Hello\n",6);
+
+    /* free resources */
+    String_delete(commandMsg.command);
+  }
+
+  clientNode->exitFlag = TRUE;
+}
+
+/***********************************************************************\
+* Name   : freeCommandMsg
+* Purpose: free command msg
+* Input  : commandMsg - command message
+*          userData   - user data (ignored)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeCommandMsg(CommandMsg *commandMsg, void *userData)
+{
+  assert(commandMsg != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(commandMsg->command);
+}
+
 /*---------------------------------------------------------------------*/
+
+Errors Server_init(void)
+{
+  return ERROR_NONE;
+}
+
+void Server_done(void)
+{
+}
 
 bool Server_run(uint       serverPort,
                 const char *serverPassword
@@ -119,6 +233,8 @@ bool Server_run(uint       serverPort,
   uint         port;
   char         buffer[256];
   ulong        receivedBytes;
+  ulong        z;
+  CommandMsg   commandMsg;
   ClientNode   *deleteClientNode;
 
   /* initialise variables */
@@ -129,6 +245,9 @@ bool Server_run(uint       serverPort,
   error = Network_initServer(&serverSocketHandle,serverPort);
   if (error != ERROR_NONE)
   {
+    printError("Cannot initialize server (error: %s)!\n",
+               getErrorText(error)
+              );
     return FALSE;
   }
 
@@ -166,6 +285,16 @@ bool Server_run(uint       serverPort,
         clientNode->port                 = port;
         clientNode->socketHandle         = socketHandle;
         clientNode->authentificationFlag = FALSE;
+        clientNode->exitFlag             = FALSE;
+        clientNode->commandString        = String_new();
+        if (!MsgQueue_init(&clientNode->commandMsgQueue,0))
+        {
+          HALT_FATAL_ERROR("Cannot initialise client command message queue!");
+        }
+        if (pthread_create(&clientNode->thread,NULL,(void*(*)(void*))process,clientNode) != 0)
+        {
+          HALT_FATAL_ERROR("Cannot initialise client thread!");
+        }
 
         List_append(&clientList,clientNode);
 
@@ -173,10 +302,13 @@ bool Server_run(uint       serverPort,
       }
       else
       {
+        printError("Cannot estable client connection (error: %s)!\n",
+                   getErrorText(error)
+                  );
       }
     }
 
-    /* process client command/disconnect clients */
+    /* process client commands/disconnect clients */
     clientNode = clientList.head;
     while (clientNode != NULL)
     {
@@ -188,6 +320,19 @@ bool Server_run(uint       serverPort,
           if (receivedBytes > 0)
           {
             /* received data -> process */
+            for (z = 0; z < receivedBytes; z++)
+            {
+              if (buffer[z] != '\n')
+              {
+                String_appendChar(clientNode->commandString,buffer[z]);
+              }
+              else
+              {
+                commandMsg.command = String_copy(clientNode->commandString);
+                MsgQueue_put(&clientNode->commandMsgQueue,&commandMsg,sizeof(commandMsg));
+                String_clear(clientNode->commandString);
+              }
+            }
 
             clientNode = clientNode->next;
           }
@@ -196,10 +341,19 @@ bool Server_run(uint       serverPort,
             /* disconnect */
             info(1,"Disconnected client '%s:%u'\n",String_cString(clientNode->name),clientNode->port);
 
+            /* remove from list */
             deleteClientNode = clientNode;
             clientNode = clientNode->next;
             List_remove(&clientList,deleteClientNode);
 
+            /* stop thread */
+            deleteClientNode->exitFlag = TRUE;
+            MsgQueue_setEndOfMsg(&deleteClientNode->commandMsgQueue);
+            pthread_join(deleteClientNode->thread,NULL);
+
+            /* delete */
+            String_delete(deleteClientNode->commandString);
+            MsgQueue_done(&deleteClientNode->commandMsgQueue,(MsgQueueMsgFreeFunction)freeCommandMsg,NULL);
             String_delete(deleteClientNode->name);
             LIST_DELETE_NODE(deleteClientNode);
           }
