@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -23,6 +23,7 @@
 #include "strings.h"
 
 /****************** Conditional compilation switches *******************/
+#define HALT_ON_INSUFFICIENT_MEMORY
 
 /***************************** Constants *******************************/
 #define STRING_START_LENGTH 64   // string start length
@@ -56,9 +57,9 @@ typedef struct
 
 struct __String
 {
-  unsigned long length;
-  unsigned long maxLength;
-  char          *data;
+  ulong length;
+  ulong maxLength;
+  char  *data;
 };
 
 #ifndef NDEBUG
@@ -67,7 +68,7 @@ struct __String
     NODE_HEADER(struct DebugStringNode);
 
     const char      *fileName;
-    unsigned long   lineNb;
+    ulong           lineNb;
     struct __String *string;
   } DebugStringNode;
 
@@ -102,10 +103,10 @@ struct __String
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void ensureStringLength(struct __String *string, unsigned long newLength)
+LOCAL void ensureStringLength(struct __String *string, ulong newLength)
 {
-  char          *newData;
-  unsigned long newMaxLength;
+  char  *newData;
+  ulong newMaxLength;
 
   if ((newLength + 1) > string->maxLength)
   {
@@ -289,7 +290,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
 
 /***********************************************************************\
 * Name   : formatString
-* Purpose: format a string (like printf)
+* Purpose: format a string and append (like printf)
 * Input  : String    - string
 *          format    - format string
 *          arguments - arguments
@@ -305,12 +306,16 @@ LOCAL void formatString(struct __String *string,
   FormatToken  formatToken;
   union
   {
-    long int          i;
-    unsigned long int u;
-    double            d;
-    const char        *s;
-    void              *p;
-    struct __String   *string;
+    int                i;
+    long               l;
+    long long          ll;
+    unsigned int       ui;
+    unsigned long      ul;
+    unsigned long long ull;
+    double             d;
+    const char         *s;
+    void               *p;
+    struct __String    *string;
   } data;
   char         buffer[64];
   unsigned int length;
@@ -325,8 +330,6 @@ LOCAL void formatString(struct __String *string,
       /* format and store string */
       switch (formatToken.conversionChar)
       {
-        case 'i':
-        case 'd':
         case 'c':
           data.i = va_arg(arguments,int);
           length = snprintf(buffer,sizeof(buffer),formatToken.token,data.i);
@@ -340,20 +343,122 @@ LOCAL void formatString(struct __String *string,
             snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.i);
           }
           break;
+        case 'i':
+        case 'd':
+          switch (formatToken.lengthType)
+          {
+            case FORMAT_LENGTH_TYPE_INTEGER:
+              {
+                data.i = va_arg(arguments,int);
+                length = snprintf(buffer,sizeof(buffer),formatToken.token,data.i);
+                if (length < sizeof(buffer))
+                {
+                  String_appendCString(string,buffer);
+                }
+                else
+                {
+                  ensureStringLength(string,string->length+length);
+                  snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.i);
+                }
+              }
+              break;
+            case FORMAT_LENGTH_TYPE_LONG:
+              {
+                data.l = va_arg(arguments,long);
+                length = snprintf(buffer,sizeof(buffer),formatToken.token,data.l);
+                if (length < sizeof(buffer))
+                {
+                  String_appendCString(string,buffer);
+                }
+                else
+                {
+                  ensureStringLength(string,string->length+length);
+                  snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.l);
+                }
+              }
+              break;
+            #ifdef _LONG_LONG
+              case FORMAT_LENGTH_TYPE_LONGLONG:
+                {
+                  data.ll = va_arg(arguments,long long);
+                  length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ll);
+                  if (length < sizeof(buffer))
+                  {
+                    String_appendCString(string,buffer);
+                  }
+                  else
+                  {
+                    ensureStringLength(string,string->length+length);
+                    snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.ll);
+                  }
+                }
+                break;
+            #endif /* HAVE_LONG_LONG */
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break; /* not reached */
+            #endif /* NDEBUG */
+          }
+          break;
         case 'o':
         case 'u':
         case 'x':
         case 'X':
-          data.u = va_arg(arguments,unsigned int);
-          length = snprintf(buffer,sizeof(buffer),formatToken.token,data.u);
-          if (length < sizeof(buffer))
+          switch (formatToken.lengthType)
           {
-            String_appendCString(string,buffer);
-          }
-          else
-          {
-            ensureStringLength(string,string->length+length);
-            snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.u);
+            case FORMAT_LENGTH_TYPE_INTEGER:
+              {
+                data.ui = va_arg(arguments,int);
+                length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ui);
+                if (length < sizeof(buffer))
+                {
+                  String_appendCString(string,buffer);
+                }
+                else
+                {
+                  ensureStringLength(string,string->length+length);
+                  snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.ui);
+                }
+              }
+              break;
+            case FORMAT_LENGTH_TYPE_LONG:
+              {
+                data.ul = va_arg(arguments,long);
+                length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ul);
+                if (length < sizeof(buffer))
+                {
+                  String_appendCString(string,buffer);
+                }
+                else
+                {
+                  ensureStringLength(string,string->length+length);
+                  snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.ul);
+                }
+              }
+              break;
+            #ifdef _LONG_LONG
+              case FORMAT_LENGTH_TYPE_LONGLONG:
+                {
+                  data.ull = va_arg(arguments,long long);
+                  length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ull);
+                  if (length < sizeof(buffer))
+                  {
+                    String_appendCString(string,buffer);
+                  }
+                  else
+                  {
+                    ensureStringLength(string,string->length+length);
+                    snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.ull);
+                  }
+                }
+                break;
+            #endif /* HAVE_LONG_LONG */
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break; /* not reached */
+            #endif /* NDEBUG */
           }
           break;
         case 'e':
@@ -534,8 +639,8 @@ LOCAL bool parseString(const struct __String *string,
                        ulong                 *nextIndex
                       )
 {
-  unsigned long   index;
-  FormatToken     formatToken;
+  ulong       index;
+  FormatToken formatToken;
   union
   {
     int             *i;
@@ -547,9 +652,9 @@ LOCAL bool parseString(const struct __String *string,
     void            *p;
     struct __String *string;
   } value;
-  char          buffer[64];
-  unsigned long z;
-  const char    *stringChar;
+  char        buffer[64];
+  ulong       z;
+  const char  *stringChar;
 
   index = 0;
   while ((*format) != '\0')
@@ -955,7 +1060,7 @@ JAMAICA_HALT_NOT_YET_IMPLEMENTED();
 #ifdef NDEBUG
 String String_new(void)
 #else /* not DEBUG */
-String __String_new(const char *fileName, unsigned long lineNb)
+String __String_new(const char *fileName, ulong lineNb)
 #endif /* NDEBUG */
 {
   struct __String *string;
@@ -966,13 +1071,21 @@ String __String_new(const char *fileName, unsigned long lineNb)
   string = (struct __String*)malloc(sizeof(struct __String));
   if (string == NULL)
   {
-    return NULL;
+    #ifdef HALT_ON_INSUFFICIENT_MEMORY
+      HALT_INSUFFICIENT_MEMORY();
+    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
+      return NULL;
+    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
   string->data = (char*)malloc(STRING_START_LENGTH);
   if (string->data == NULL)
   {
     free(string);
-    return NULL;
+    #ifdef HALT_ON_INSUFFICIENT_MEMORY
+      HALT_INSUFFICIENT_MEMORY();
+    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
+      return NULL;
+    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
 
   string->length    = 0;
@@ -997,7 +1110,7 @@ String __String_new(const char *fileName, unsigned long lineNb)
 #ifdef NDEBUG
 String String_newCString(const char *s)
 #else /* not NDEBUG */
-String __String_newCString(const char *fileName, unsigned long lineNb, const char *s)
+String __String_newCString(const char *fileName, ulong lineNb, const char *s)
 #endif /* NDEBUG */
 {
   String string;
@@ -1015,7 +1128,7 @@ String __String_newCString(const char *fileName, unsigned long lineNb, const cha
 #ifdef NDEBUG
 String String_newChar(char ch)
 #else /* not NDEBUG */
-String __String_newChar(const char *fileName, unsigned long lineNb, char ch)
+String __String_newChar(const char *fileName, ulong lineNb, char ch)
 #endif /* NDEBUG */
 {
   String string;
@@ -1033,7 +1146,7 @@ String __String_newChar(const char *fileName, unsigned long lineNb, char ch)
 #ifdef NDEBUG
 String String_newBuffer(const char *buffer, ulong bufferLength)
 #else /* not NDEBUG */
-String __String_newBuffer(const char *fileName, unsigned long lineNb, const char *buffer, ulong bufferLength)
+String __String_newBuffer(const char *fileName, ulong lineNb, const char *buffer, ulong bufferLength)
 #endif /* NDEBUG */
 {
   String string;
@@ -1096,7 +1209,7 @@ String String_clear(String string)
 
 String String_set(String string, const String sourceString)
 {
-  unsigned long n;
+  ulong n;
 
   if (string != NULL)
   {
@@ -1177,7 +1290,7 @@ String String_setBuffer(String string, const char *buffer, ulong bufferLength)
 #ifdef NDEBUG
 String String_copy(const String fromString)
 #else /* not NDEBUG */
-String __String_copy(const char *fileName, unsigned long lineNb, String fromString)
+String __String_copy(const char *fileName, ulong lineNb, String fromString)
 #endif /* NDEBUG */
 {
   struct __String *string;
@@ -1205,9 +1318,9 @@ String __String_copy(const char *fileName, unsigned long lineNb, String fromStri
   return string;
 }
 
-String String_sub(String string, const String fromString, unsigned long index, long length)
+String String_sub(String string, const String fromString, ulong index, long length)
 {
-  unsigned long n;
+  ulong n;
 
   if (string != NULL)
   {
@@ -1238,7 +1351,7 @@ String String_sub(String string, const String fromString, unsigned long index, l
 
 String String_append(String string, const String appendString)
 {
-  unsigned long n;
+  ulong n;
 
   if (string != NULL)
   {
@@ -1258,7 +1371,7 @@ String String_append(String string, const String appendString)
 
 String String_appendBuffer(String string, const char *buffer, ulong bufferLength)
 {
-  unsigned long n;
+  ulong n;
 
   if (string != NULL)
   {
@@ -1303,9 +1416,9 @@ String String_appendChar(String string, char ch)
   return string;
 }
 
-String String_insert(String string, unsigned long index, const String insertString)
+String String_insert(String string, ulong index, const String insertString)
 {
-  unsigned long n;
+  ulong n;
 
   if (string != NULL)
   {
@@ -1336,9 +1449,9 @@ String String_insert(String string, unsigned long index, const String insertStri
   return string;
 }
 
-String String_insertBuffer(String string, unsigned long index, const char *buffer, ulong bufferLength)
+String String_insertBuffer(String string, ulong index, const char *buffer, ulong bufferLength)
 {
-  unsigned long n;
+  ulong n;
 
   if (string != NULL)
   {
@@ -1369,7 +1482,7 @@ String String_insertBuffer(String string, unsigned long index, const char *buffe
   return string;
 }
 
-String String_insertCString(String string, unsigned long index, const char *s)
+String String_insertCString(String string, ulong index, const char *s)
 {
   if (string != NULL)
   {
@@ -1384,7 +1497,7 @@ String String_insertCString(String string, unsigned long index, const char *s)
   return string;
 }
 
-String String_insertChar(String string, unsigned long index, char ch)
+String String_insertChar(String string, ulong index, char ch)
 {
   if (string != NULL)
   {
@@ -1396,9 +1509,9 @@ String String_insertChar(String string, unsigned long index, char ch)
   return string;
 }
 
-String String_remove(String string, unsigned long index, unsigned long length)
+String String_remove(String string, ulong index, ulong length)
 {
-  unsigned long n;
+  ulong n;
 
   if (string != NULL)
   {
@@ -1429,7 +1542,7 @@ String String_remove(String string, unsigned long index, unsigned long length)
   return string;
 }
 
-String String_replace(String string, unsigned long index, unsigned long length, const String insertString)
+String String_replace(String string, ulong index, ulong length, const String insertString)
 {
   String_remove(string,index,length);
   String_insert(string,index,insertString);
@@ -1437,7 +1550,7 @@ String String_replace(String string, unsigned long index, unsigned long length, 
   return string;
 }
 
-String String_replaceBuffer(String string, unsigned long index, unsigned long length, const char *buffer, ulong bufferLength)
+String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength)
 {
   String_remove(string,index,length);
   String_insertBuffer(string,index,buffer,bufferLength);
@@ -1445,7 +1558,7 @@ String String_replaceBuffer(String string, unsigned long index, unsigned long le
   return string;
 }
 
-String String_replaceCString(String string, unsigned long index, unsigned long length, const char *s)
+String String_replaceCString(String string, ulong index, ulong length, const char *s)
 {
   String_remove(string,index,length);
   String_insertCString(string,index,s);
@@ -1453,7 +1566,7 @@ String String_replaceCString(String string, unsigned long index, unsigned long l
   return string;
 }
 
-String String_replaceChar(String string, unsigned long index, unsigned long length, char ch)
+String String_replaceChar(String string, ulong index, ulong length, char ch)
 {
   String_remove(string,index,length);
   String_insertChar(string,index,ch);
@@ -1461,12 +1574,12 @@ String String_replaceChar(String string, unsigned long index, unsigned long leng
   return string;
 }
 
-unsigned long String_length(const String string)
+ulong String_length(const String string)
 {
   return (string != NULL)?string->length:0;
 }
 
-char String_index(const String string, unsigned long index)
+char String_index(const String string, ulong index)
 {
   char ch;
 
@@ -1504,9 +1617,9 @@ int String_compare(const String          string1,
                    void                  *stringCompareUserData
                   )
 {
-  unsigned long n;
-  unsigned long z;
-  int           result;
+  ulong n;
+  ulong z;
+  int   result;
 
   assert(string1 != NULL);
   assert(string2 != NULL);
@@ -1542,8 +1655,8 @@ int String_compare(const String          string1,
 
 bool String_equals(const String string1, const String string2)
 {
-  bool          equalFlag;
-  unsigned long z;
+  bool  equalFlag;
+  ulong z;
 
   assert(string1 != NULL);
   assert(string2 != NULL);
@@ -1606,7 +1719,7 @@ bool String_equalsChar(const String string, char ch)
   }
 }
 
-long String_find(const String string, unsigned long index, const String findString)
+long String_find(const String string, ulong index, const String findString)
 {
   long z,i;
   long findIndex;
@@ -1632,7 +1745,7 @@ long String_find(const String string, unsigned long index, const String findStri
   return findIndex;
 }
 
-long String_findCString(const String string, unsigned long index, const char *s)
+long String_findCString(const String string, ulong index, const char *s)
 {
   long findIndex;
   long sLength;
@@ -1660,7 +1773,7 @@ long String_findCString(const String string, unsigned long index, const char *s)
   return findIndex;
 }
 
-long String_findChar(const String string, unsigned long index, char ch)
+long String_findChar(const String string, ulong index, char ch)
 {
   long z;
 
@@ -1749,7 +1862,7 @@ String String_iterate(const                 String string,
                       void                  *stringIterateUserData
                      )
 {
-  unsigned long z;
+  ulong z;
 
   assert(stringIterateFunction != NULL);
 
@@ -1768,7 +1881,7 @@ String String_iterate(const                 String string,
 
 String String_toLower(String string)
 {
-  unsigned long z;
+  ulong z;
 
   if (string != NULL)
   {
@@ -1785,7 +1898,7 @@ String String_toLower(String string)
 
 String String_toUpper(String string)
 {
-  unsigned long z;
+  ulong z;
 
   if (string != NULL)
   {
@@ -1810,7 +1923,7 @@ String String_trim(String string, const char *chars)
 
 String String_trimRight(String string, const char *chars)
 {
-  unsigned long n;
+  ulong n;
 
   if (string != NULL)
   {
@@ -1830,7 +1943,7 @@ String String_trimRight(String string, const char *chars)
 
 String String_trimLeft(String string, const char *chars)
 {
-  unsigned long z,n;
+  ulong z,n;
 
   if (string != NULL)
   {
@@ -1853,9 +1966,9 @@ String String_trimLeft(String string, const char *chars)
   return string;
 }
 
-String String_padRight(String string, unsigned long length, char ch)
+String String_padRight(String string, ulong length, char ch)
 {
-  unsigned long n;
+  ulong n;
 
   assert(string != NULL);
 
@@ -1871,9 +1984,9 @@ String String_padRight(String string, unsigned long length, char ch)
   return string;
 }
 
-String String_padLeft(String string, unsigned long length, char ch)
+String String_padLeft(String string, ulong length, char ch)
 {
-  unsigned long n;
+  ulong n;
 
   assert(string != NULL);
 
@@ -1897,6 +2010,13 @@ String String_format(String string, const char *format, ...)
   va_start(arguments,format);
   formatString(string,format,arguments);
   va_end(arguments);
+
+  return string;
+}
+
+String String_vformat(String string, const char *format, va_list arguments)
+{
+  formatString(string,format,arguments);
 
   return string;
 }
@@ -1982,8 +2102,6 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
         String_appendChar(stringTokenizer->token,stringTokenizer->string->data[stringTokenizer->index]);
         stringTokenizer->index++;
       }
-
-      stringTokenizer->index++;
     }
   }
   else
@@ -2023,6 +2141,54 @@ bool String_scan(const String string, const char *format, ...)
   return result;
 }
 
+int String_toInteger(const String string, long *nextIndex)
+{
+  int  n;
+  char *nextData;
+
+  assert(string != NULL);
+
+  n = strtol(string->data,&nextData,0);
+  if (nextIndex != NULL)
+  {
+    (*nextIndex) = ((ulong)(nextData-string->data) < string->length)?(ulong)(nextData-string->data):STRING_END;
+  }
+
+  return n;
+}
+
+int64 String_toInteger64(const String string, long *nextIndex)
+{
+  int64 n;
+  char  *nextData;
+
+  assert(string != NULL);
+
+  n = strtoll(string->data,&nextData,0);
+  if (nextIndex != NULL)
+  {
+    (*nextIndex) = ((ulong)(nextData-string->data) < string->length)?(ulong)(nextData-string->data):STRING_END;
+  }
+
+  return n;
+}
+
+double String_toDouble(const String string, long *nextIndex)
+{
+  double n;
+  char   *nextData;
+
+  assert(string != NULL);
+
+  n = strtod(string->data,&nextData);
+  if (nextIndex != NULL)
+  {
+    (*nextIndex) = ((ulong)(nextData-string->data) < string->length)?(ulong)(nextData-string->data):STRING_END;
+  }
+
+  return n;
+}
+
 bool String_parse(const String string, const char *format, ulong *nextIndex, ...)
 {
   va_list arguments;
@@ -2046,7 +2212,11 @@ char* String_toCString(const String string)
   cString = (char*)malloc(string->length+1);
   if (cString == NULL)
   {
-    return NULL;
+    #ifdef HALT_ON_INSUFFICIENT_MEMORY
+      HALT_INSUFFICIENT_MEMORY();
+    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
+      return NULL;
+    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
 
   memcpy(cString,string->data,string->length);
@@ -2059,7 +2229,7 @@ char* String_toCString(const String string)
 void String_debug(void)
 {
   #ifndef NDEBUG
-    DebugStringNode *debugStringNode;;
+    DebugStringNode *debugStringNode;
   #endif /* not NDEBUG */
 
   #ifndef NDEBUG

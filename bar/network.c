@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -98,6 +98,9 @@ Errors Network_connect(SocketHandle *socketHandle,
     return ERROR_CONNECT_FAIL;
   }
 
+  /* enable non-blocking */
+  fcntl(*socketHandle,F_SETFL,O_NONBLOCK);
+
   return ERROR_NONE;
 }
 
@@ -131,10 +134,13 @@ Errors Network_receive(SocketHandle *socketHandle,
                        ulong        *receivedBytes
                       )
 {
+  long n;
+
   assert(socketHandle != NULL);
   assert(receivedBytes != NULL);
 
-  (*receivedBytes) = recv((*socketHandle),buffer,maxLength,0);
+  n = recv((*socketHandle),buffer,maxLength,0);
+  (*receivedBytes) = (n >= 0)?n:0;
 
   return ((*receivedBytes) >= 0)?ERROR_NONE:ERROR_NETWORK_RECEIVE;
 }
@@ -183,6 +189,34 @@ void Network_doneServer(SocketHandle *socketHandle)
   assert(socketHandle != NULL);
 
   close((*socketHandle));
+}
+
+Errors Network_accept(SocketHandle *socketHandle,
+                      SocketHandle *serverSocketHandle
+                     )
+{
+  struct sockaddr_in socketAddress;
+  socklen_t          socketAddressLength;
+
+  assert(socketHandle != NULL);
+  assert(serverSocketHandle != NULL);
+
+  /* accept */
+  socketAddressLength = sizeof(socketAddress);
+  (*socketHandle) = accept((*serverSocketHandle),
+                           (struct sockaddr*)&socketAddress,
+                           &socketAddressLength
+                          );
+  if ((*socketHandle) == -1)
+  {
+    close(*socketHandle);
+    return ERROR_CONNECT_FAIL;
+  }
+
+  /* enable non-blocking */
+  fcntl(*socketHandle,F_SETFL,O_NONBLOCK);
+
+  return ERROR_NONE;
 }
 
 void Network_getLocalInfo(SocketHandle *socketHandle,
@@ -241,30 +275,6 @@ void Network_getRemoteInfo(SocketHandle *socketHandle,
     String_setCString(name,"unknown");
     (*port) = 0;
   }
-}
-
-Errors Network_accept(SocketHandle *socketHandle,
-                      SocketHandle *serverSocketHandle
-                     )
-{
-  struct sockaddr_in socketAddress;
-  socklen_t          socketAddressLength;
-
-  assert(socketHandle != NULL);
-  assert(serverSocketHandle != NULL);
-
-  socketAddressLength = sizeof(socketAddress);
-  (*socketHandle) = accept((*serverSocketHandle),
-                           (struct sockaddr*)&socketAddress,
-                           &socketAddressLength
-                          );
-  if ((*socketHandle) == -1)
-  {
-    close(*socketHandle);
-    return ERROR_CONNECT_FAIL;
-  }
-
-  return ERROR_NONE;
 }
 
 #ifdef __cplusplus

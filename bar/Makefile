@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.27 $
+# $Revision: 1.28 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -14,7 +14,7 @@
 
 CC                  = gcc
 CC_FLAGS            = -Wall -g -O0
-CC_DEFINES          = -D_LARGEFILE64_SOURCE -D_GNU_SOURCE
+CC_DEFINES          = -D_LARGEFILE64_SOURCE -D_GNU_SOURCE -D_LONG_LONG
 CC_INCLUDES         =
 
 LD                  = gcc
@@ -22,6 +22,9 @@ LD_FLAGS            =
 LD_LIBRARY_PATHS    = /usr/local/lib
 LD_LIBRARIES        = pthread z bz2 gcrypt gpg-error ssh2
 LD_STATIC_LIBRARIES = 
+
+YACC                = bison
+YACC_FLAGS          =
 
 #---------------------------------- commands----------------------------------
 
@@ -82,11 +85,15 @@ SOURCES =       bar.c \
                 msgqueues.c \
                 mailboxes.c \
                 filefragmentlists.c \
+                arrays.c \
 
 OBJECTS = 	$(foreach z,$(SOURCES),$(subst .c,.o,$z)) \
                 archive_format.o \
 
-INTERMEDIATE =  archive_format.c archive_format.h \
+INTERMEDIATE =  archive_format.c \
+                archive_format.h \
+                server_parser.c \
+                server_parser.h \
 
 TARGETS = 	bar \
                 destroyer \
@@ -110,6 +117,13 @@ depend: archive_format.h
 
 # create Backup Archiver
 bar: $(OBJECTS)
+
+server_parser.h server_parser.c: server_parser.y
+	$(YACC) $(YACCFLAGS) -d -o server_parser.c server_parser.y
+
+server_parser.o: server_parser.c server_parser.h server_scanner.h
+	$(CC) $(CC_FLAGS) $(CC_DEFINES) -Dyylex=ServerScanner_lex -Dyyparse=ServerParser_parse $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+
 
 # create destroyer (for testing only!)
 destroyer: destroyer.o cmdoptions.o global.o lists.o strings.o
@@ -245,6 +259,8 @@ backup-tooru: bar
           -! /home/torsten/aicas \
           -! /home/torsten/public \
           -! /home/torsten/trash \
+          -! /home/torsten/other \
+          -! /home/torsten/Mail/trash \
           -! "*.mov" -! "*.avi" \
           /home/torsten
 
@@ -263,5 +279,7 @@ backup-itzo: bar
           -! /home/torsten/aicas \
           -! /home/torsten/public \
           -! /home/torsten/trash \
+          -! /home/torsten/other \
+          -! /home/torsten/Mail/trash \
           -! "*.mov" -! "*.avi" \
           /home/torsten

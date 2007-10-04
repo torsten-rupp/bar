@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -155,6 +155,19 @@ Errors Network_initServer(SocketHandle *socketHandle,
 void Network_doneServer(SocketHandle *socketHandle);
 
 /***********************************************************************\
+* Name   : Network_accept
+* Purpose: accept client connection
+* Input  : serverSocketHandle - server socket handle
+* Output : socketHandle - server socket handle
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_accept(SocketHandle *socketHandle,
+                      SocketHandle *serverSocketHandle
+                     );
+
+/***********************************************************************\
 * Name   : Network_getLocalInfo
 * Purpose: get local socket info
 * Input  : socketHandle - socket handle
@@ -185,19 +198,6 @@ void Network_getRemoteInfo(SocketHandle *socketHandle,
                            String name,
                            uint   *port
                           );
-
-/***********************************************************************\
-* Name   : Network_accept
-* Purpose: accept client connection
-* Input  : serverSocketHandle - server socket handle
-* Output : socketHandle - server socket handle
-* Return : ERROR_NONE or errorcode
-* Notes  : -
-\***********************************************************************/
-
-Errors Network_accept(SocketHandle *socketHandle,
-                      SocketHandle *serverSocketHandle
-                     );
 
 #ifdef __cplusplus
   }

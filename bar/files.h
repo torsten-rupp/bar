@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -67,6 +67,14 @@ typedef struct
   DIR           *handle;
   struct dirent *entry;
 } DirectoryHandle;
+
+/* device read handle */
+typedef struct
+{
+  FILE *handle;
+  char buffer[128];
+  bool bufferFilledFlag;
+} DeviceHandle;
 
 /* file info data */
 typedef struct
@@ -404,6 +412,53 @@ bool File_endOfDirectory(DirectoryHandle *directoryHandle);
 Errors File_readDirectory(DirectoryHandle *directoryHandle,
                           String          fileName
                          );
+
+/***********************************************************************\
+* Name   : File_openDevices
+* Purpose: open devices for reading
+* Input  : deviceHandle - device handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_openDevices(DeviceHandle *deviceHandle);
+
+/***********************************************************************\
+* Name   : File_closeDevices
+* Purpose: close devices
+* Input  : deviceHandle - device handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_closeDevices(DeviceHandle *deviceHandle);
+
+/***********************************************************************\
+* Name   : File_endOfDevices
+* Purpose: check if end of devices reached
+* Input  : deviceHandle - device handle
+* Output : -
+* Return : TRUE if not more diretory entries to read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool File_endOfDevices(DeviceHandle *deviceHandle);
+
+/***********************************************************************\
+* Name   : File_readDevice
+* Purpose: read next device entry
+* Input  : deviceHandle - device handle
+*          deviceName   - device name variable
+* Output : deviceName - next device name
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_readDevice(DeviceHandle *deviceHandle,
+                       String       deviceName
+                      );
 
 /***********************************************************************\
 * Name   : File_getType

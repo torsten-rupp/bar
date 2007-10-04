@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -36,9 +36,37 @@
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : Server_init
+* Purpose: initialize server
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 Errors Server_init(void);
 
+/***********************************************************************\
+* Name   : Server_done
+* Purpose: deinitialize server
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Server_done(void);
+
+/***********************************************************************\
+* Name   : Server_run
+* Purpose: run server
+* Input  : serverPort     - server port
+*          serverPassword - server authenfication password
+* Output : -
+* Return : TRUE if no error, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
 
 bool Server_run(uint       serverPport,
                 const char *serverPassword

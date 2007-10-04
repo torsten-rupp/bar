@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -480,6 +480,7 @@ Errors File_tell(FileHandle *fileHandle, uint64 *offset)
   {
     return ERROR_IO_ERROR;
   }
+// NYI
 assert(n == (off64_t)fileHandle->index);
 
   (*offset) = fileHandle->index;
@@ -624,10 +625,84 @@ Errors File_readDirectory(DirectoryHandle *directoryHandle,
   }
 
   String_set(fileName,directoryHandle->name);
-  String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
-  String_appendCString(fileName,directoryHandle->entry->d_name);
+  File_appendFileNameCString(fileName,directoryHandle->entry->d_name);
 
   directoryHandle->entry = NULL;
+
+  return ERROR_NONE;
+}
+
+Errors File_openDevices(DeviceHandle *deviceHandle)
+{
+  assert(deviceHandle != NULL);
+
+  deviceHandle->handle = fopen("/etc/mtab","r");
+  if (deviceHandle->handle == NULL)
+  {
+    return ERROR_OPEN_FILE;
+  }
+  deviceHandle->bufferFilledFlag = FALSE;
+
+  return ERROR_NONE;
+}
+
+void File_closeDevices(DeviceHandle *deviceHandle)
+{
+  assert(deviceHandle != NULL);
+
+  fclose(deviceHandle->handle);
+}
+
+bool File_endOfDevices(DeviceHandle *deviceHandle)
+{
+  assert(deviceHandle != NULL);
+
+  if (!deviceHandle->bufferFilledFlag)
+  {
+    if (fgets(deviceHandle->buffer,sizeof(deviceHandle->buffer),deviceHandle->handle) == NULL)
+    {
+      return TRUE;
+    }
+    deviceHandle->bufferFilledFlag = TRUE;
+  }
+
+  return (feof(deviceHandle->handle) != 0);
+}
+
+Errors File_readDevice(DeviceHandle *deviceHandle,
+                       String       deviceName
+                      )
+{
+  char *s0,*s1;
+
+  assert(deviceHandle != NULL);
+  assert(deviceName != NULL);
+
+  if (!deviceHandle->bufferFilledFlag)
+  {
+    /* read line */
+    if (fgets(deviceHandle->buffer,sizeof(deviceHandle->buffer),deviceHandle->handle) == NULL)
+    {
+      return ERROR_IO_ERROR;
+    }
+    deviceHandle->bufferFilledFlag = TRUE;
+  }
+
+  /* parse */
+  s0 = strchr(&deviceHandle->buffer[0],' ');
+  if (s0 == NULL)
+  {
+    return ERROR_IO_ERROR;
+  }
+  s1 = strchr(s0+1,' ');
+  if (s1 == NULL)
+  {
+    return ERROR_IO_ERROR;
+  }
+  assert(s1 > s0);
+  String_setBuffer(deviceName,s0+1,s1-s0-1);
+
+  deviceHandle->bufferFilledFlag = FALSE;
 
   return ERROR_NONE;
 }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -172,20 +172,29 @@ void StringList_remove(StringList *stringList, StringNode *stringNode)
 String StringList_getFirst(StringList *stringList, String string)
 {
   StringNode *stringNode;
-  assert(string != NULL);
 
   assert(stringList != NULL);
 
   stringNode = (StringNode*)List_getFirst(stringList);
   if (stringNode != NULL)
   {
-    String_set(string,stringNode->string);
-    String_delete(stringNode->string);
+    if (string != NULL)
+    {
+      String_set(string,stringNode->string);
+      String_delete(stringNode->string);
+    }
+    else
+    {
+      string = stringNode->string;
+    }
     free(stringNode);
   }
   else
   {
-    String_clear(string);
+    if (string != NULL)
+    {
+      String_clear(string);
+    }
   }
 
   return string;
@@ -196,18 +205,27 @@ String StringList_getLast(StringList *stringList, String string)
   StringNode *stringNode;
 
   assert(stringList != NULL);
-  assert(string != NULL);
 
   stringNode = (StringNode*)List_getLast(stringList);
   if (stringNode != NULL)
   {
-    String_set(string,stringNode->string);
-    String_delete(stringNode->string);
+    if (string != NULL)
+    {
+      String_set(string,stringNode->string);
+      String_delete(stringNode->string);
+    }
+    else
+    {
+      string = stringNode->string;
+    }
     free(stringNode);
   }
   else
   {
-    String_clear(string);
+    if (string != NULL)
+    {
+      String_clear(string);
+    }
   }
 
   return string;

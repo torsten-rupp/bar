@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -13,6 +13,7 @@
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
+#include <stdarg.h>
 
 #include "global.h"
 
@@ -84,10 +85,10 @@ String String_newCString(const char *s);
 String String_newChar(char ch);
 String String_newBuffer(const char *buffer, ulong bufferLength);
 #else /* not NDEBUG */
-String __String_new(const char *fileName, unsigned long lineNb);
-String __String_newCString(const char *fileName, unsigned long lineNb, const char *s);
-String __String_newChar(const char *fileName, unsigned long lineNb, char ch);
-String __String_newBuffer(const char *fileName, unsigned long lineNb, const char *buffer, ulong bufferLength);
+String __String_new(const char *fileName, ulong lineNb);
+String __String_newCString(const char *fileName, ulong lineNb, const char *s);
+String __String_newChar(const char *fileName, ulong lineNb, char ch);
+String __String_newBuffer(const char *fileName, ulong lineNb, const char *buffer, ulong bufferLength);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -144,7 +145,7 @@ String String_setBuffer(String string, const char *buffer, ulong bufferLength);
 #ifdef NDEBUG
 String String_copy(String fromString);
 #else /* not NDEBUG */
-String __String_copy(const char *fileName, unsigned long lineNb, String fromString);
+String __String_copy(const char *fileName, ulong lineNb, String fromString);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -159,7 +160,7 @@ String __String_copy(const char *fileName, unsigned long lineNb, String fromStri
 * Notes  : -
 \***********************************************************************/
 
-String String_sub(String string, const String fromString, unsigned long index, long length);
+String String_sub(String string, const String fromString, ulong index, long length);
 
 /***********************************************************************\
 * Name   : String_append, String_appendCString, String_appendChar
@@ -191,10 +192,10 @@ String String_appendChar(String string, char ch);
 * Notes  : -
 \***********************************************************************/
 
-String String_insert(String string, unsigned long index, const String insertString);
-String String_insertBuffer(String string, unsigned long index, const char *buffer, ulong bufferLength);
-String String_insertCString(String string, unsigned long index, const char *s);
-String String_insertChar(String string, unsigned long index, char ch);
+String String_insert(String string, ulong index, const String insertString);
+String String_insertBuffer(String string, ulong index, const char *buffer, ulong bufferLength);
+String String_insertCString(String string, ulong index, const char *s);
+String String_insertChar(String string, ulong index, char ch);
 
 /***********************************************************************\
 * Name   : String_remove
@@ -208,7 +209,7 @@ String String_insertChar(String string, unsigned long index, char ch);
 * Notes  : -
 \***********************************************************************/
 
-String String_remove(String string, unsigned long index, unsigned long length);
+String String_remove(String string, ulong index, ulong length);
 
 /***********************************************************************\
 * Name   : String_replace, String_replaceCString, String_replaceChar
@@ -224,10 +225,10 @@ String String_remove(String string, unsigned long index, unsigned long length);
 * Notes  : -
 \***********************************************************************/
 
-String String_replace(String string, unsigned long index, unsigned long length, const String insertString);
-String String_replaceBuffer(String string, unsigned long index, unsigned long length, const char *buffer, ulong bufferLength);
-String String_replaceCString(String string, unsigned long index, unsigned long length, const char *s);
-String String_replaceChar(String string, unsigned long index, unsigned long length, char ch);
+String String_replace(String string, ulong index, ulong length, const String insertString);
+String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength);
+String String_replaceCString(String string, ulong index, ulong length, const char *s);
+String String_replaceChar(String string, ulong index, ulong length, char ch);
 
 /***********************************************************************\
 * Name   : String_length
@@ -238,7 +239,7 @@ String String_replaceChar(String string, unsigned long index, unsigned long leng
 * Notes  : -
 \***********************************************************************/
 
-unsigned long String_length(String string);
+ulong String_length(String string);
 
 /***********************************************************************\
 * Name   : String_index
@@ -251,7 +252,7 @@ unsigned long String_length(String string);
 * Notes  : -
 \***********************************************************************/
 
-char String_index(const String string, unsigned long index);
+char String_index(const String string, ulong index);
 
 /***********************************************************************\
 * Name   : String_cString
@@ -309,9 +310,9 @@ bool String_equalsChar(const String string, char ch);
 * Notes  : -
 \***********************************************************************/
 
-long String_find(const String string, unsigned long index, const String findString);
-long String_findCString(const String string, unsigned long index, const char *s);
-long String_findChar(const String string, unsigned long index, char ch);
+long String_find(const String string, ulong index, const String findString);
+long String_findCString(const String string, ulong index, const char *s);
+long String_findChar(const String string, ulong index, char ch);
 long String_findLast(const String string, long index, const String findString);
 long String_findLastCString(const String string, long index, const char *s);
 long String_findLastChar(const String string, long index, char ch);
@@ -369,12 +370,12 @@ String String_trimLeft(String string, const char *chars);
 * Notes  : -
 \***********************************************************************/
 
-String String_padRight(String string, unsigned long length, char ch);
-String String_padLeft(String string, unsigned long length, char ch);
+String String_padRight(String string, ulong length, char ch);
+String String_padLeft(String string, ulong length, char ch);
 
 /***********************************************************************\
-* Name   : String_format
-* Purpose: format string
+* Name   : String_format, String String_vformat
+* Purpose: format string and append
 * Input  : string - string
 *          format - printf-like format string
 *          ...    - arguments
@@ -385,6 +386,7 @@ String String_padLeft(String string, unsigned long length, char ch);
 \***********************************************************************/
 
 String String_format(String string, const char *format, ...);
+String String_vformat(String string, const char *format, va_list arguments);
 
 /***********************************************************************\
 * Name   : String_initTokenizer, String_doneTokenizer
@@ -435,6 +437,21 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 \***********************************************************************/
 
 bool String_scan(const String string, const char *format, ...);
+
+/***********************************************************************\
+* Name   : String_toInteger, String_toInteger64, String_toDouble
+* Purpose: convert string into integer, integer64 or double
+* Input  : string - string to convert
+* Output : nextIndex - index of next character in string not parsed or
+*                      STRING_END if string completely parsed (can be
+*                      NULL)
+* Return : integer/integer64/double value
+* Notes  : -
+\***********************************************************************/
+
+int String_toInteger(const String string, long *nextIndex);
+int64 String_toInteger64(const String string, long *nextIndex);
+double String_toDouble(const String string, long *nextIndex);
 
 /***********************************************************************\
 * Name   : String_parse

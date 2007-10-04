@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -19,7 +19,9 @@
 
 #include "global.h"
 #include "cmdoptions.h"
+#include "strings.h"
 #include "stringlists.h"
+#include "arrays.h"
 
 #include "errors.h"
 #include "files.h"
@@ -737,6 +739,7 @@ int main(int argc, const char *argv[])
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
   #ifndef NDEBUG
+    Array_debug();
     String_debug();
   #endif /* not NDEBUG */
 
