@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.28 $
+# $Revision: 1.29 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -83,7 +83,7 @@ SOURCES =       bar.c \
                 strings.c \
                 stringlists.c \
                 msgqueues.c \
-                mailboxes.c \
+                semaphores.c \
                 filefragmentlists.c \
                 arrays.c \
 

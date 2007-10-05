@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -25,7 +25,7 @@
 #include "lists.h"
 #include "stringlists.h"
 #include "msgqueues.h"
-#include "mailboxes.h"
+#include "semaphores.h"
 
 #include "errors.h"
 #include "patterns.h"
@@ -70,14 +70,14 @@ typedef struct
   MsgQueue    fileMsgQueue;
 
   bool        collectorThreadExitFlag;
-  pthread_t   collectorThread;
+  pthread_t   collectorThreadId;
 
   MsgQueue    storageMsgQueue;
-  Mailbox     storageMailbox;
+  Semaphore   storageSemaphore;
   uint        storageCount;
   uint64      storageSize;
   bool        storageThreadExitFlag;
-  pthread_t   storageThread;
+  pthread_t   storageThreadId;
 
   bool        failFlag;
 
@@ -235,7 +235,7 @@ LOCAL bool getNextFile(MsgQueue  *fileMsgQueue,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void collector(CreateInfo *createInfo)
+LOCAL void collectorThread(CreateInfo *createInfo)
 {
   StringList      nameList;
   String          name;
@@ -522,8 +522,8 @@ LOCAL Errors storeArchiveFile(String fileName,
     }
 
     /* send to storage controller */
-    Mailbox_lock(&createInfo->storageMailbox);
-fprintf(stderr,"%s,%d: mailbox locked by main\n",__FILE__,__LINE__);
+    Semaphore_lock(&createInfo->storageSemaphore);
+fprintf(stderr,"%s,%d: Semaphore locked by main\n",__FILE__,__LINE__);
     createInfo->storageCount += 1;
     createInfo->storageSize  += fileSize;
     appendToStorageList(&createInfo->storageMsgQueue,
@@ -531,18 +531,18 @@ fprintf(stderr,"%s,%d: mailbox locked by main\n",__FILE__,__LINE__);
                         fileSize,
                         destinationName
                        );
-    Mailbox_unlock(&createInfo->storageMailbox);
+    Semaphore_unlock(&createInfo->storageSemaphore);
 
     /* wait for space in temporary directory */
     if (globalOptions.maxTmpSize > 0)
     {
-      Mailbox_lock(&createInfo->storageMailbox);
-fprintf(stderr,"%s,%d: mailbox locked by main2\n",__FILE__,__LINE__);
+      Semaphore_lock(&createInfo->storageSemaphore);
+fprintf(stderr,"%s,%d: Semaphore locked by main2\n",__FILE__,__LINE__);
       while ((createInfo->storageCount > 2) && (createInfo->storageSize > globalOptions.maxTmpSize))
       {
-        Mailbox_wait(&createInfo->storageMailbox);
+        Semaphore_wait(&createInfo->storageSemaphore);
       }
-      Mailbox_unlock(&createInfo->storageMailbox);
+      Semaphore_unlock(&createInfo->storageSemaphore);
     }
 
     /* free resources */
@@ -561,7 +561,7 @@ fprintf(stderr,"%s,%d: mailbox locked by main2\n",__FILE__,__LINE__);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void storage(CreateInfo *createInfo)
+LOCAL void storageThread(CreateInfo *createInfo)
 {
   byte        *buffer;
   StorageMsg  storageMsg;
@@ -663,14 +663,14 @@ fprintf(stderr,"%s,%d: FAIL - only delete files \n",__FILE__,__LINE__);
              );
     }
 
-    /* update mailbox */
-    Mailbox_lock(&createInfo->storageMailbox);
-fprintf(stderr,"%s,%d: mailbox locked by storage\n",__FILE__,__LINE__);
+    /* update storage info */
+    Semaphore_lock(&createInfo->storageSemaphore);
+fprintf(stderr,"%s,%d: Semaphore locked by storage\n",__FILE__,__LINE__);
     assert(createInfo->storageCount > 0);
     assert(createInfo->storageSize >= storageMsg.fileSize);
     createInfo->storageCount -= 1;
     createInfo->storageSize  -= storageMsg.fileSize;
-    Mailbox_unlock(&createInfo->storageMailbox);
+    Semaphore_unlock(&createInfo->storageSemaphore);
 
     /* free resources */
     String_delete(storageMsg.fileName);
@@ -740,9 +740,9 @@ bool Command_create(const char      *archiveFileName,
   {
     HALT_FATAL_ERROR("Cannot initialise storage message queue!");
   }
-  if (!Mailbox_init(&createInfo.storageMailbox))
+  if (!Semaphore_init(&createInfo.storageSemaphore))
   {
-    HALT_FATAL_ERROR("Cannot initialise storage mailbox!");
+    HALT_FATAL_ERROR("Cannot initialise storage semaphore!");
   }
 
   /* prepare storage */
@@ -753,7 +753,7 @@ bool Command_create(const char      *archiveFileName,
                archiveFileName,
                getErrorText(error)
               );
-    Mailbox_done(&createInfo.storageMailbox);
+    Semaphore_done(&createInfo.storageSemaphore);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
     MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
     String_delete(fileName);
@@ -779,7 +779,7 @@ bool Command_create(const char      *archiveFileName,
                archiveFileName,
                getErrorText(error)
               );
-    Mailbox_done(&createInfo.storageMailbox);
+    Semaphore_done(&createInfo.storageSemaphore);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
     MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
     String_delete(fileName);
@@ -789,11 +789,11 @@ bool Command_create(const char      *archiveFileName,
   }
 
   /* start threads */
-  if (pthread_create(&createInfo.collectorThread,NULL,(void*(*)(void*))collector,&createInfo) != 0)
+  if (pthread_create(&createInfo.collectorThreadId,NULL,(void*(*)(void*))collectorThread,&createInfo) != 0)
   {
     HALT_FATAL_ERROR("Cannot initialise collector thread!");
   }
-  if (pthread_create(&createInfo.storageThread,NULL,(void*(*)(void*))storage,&createInfo) != 0)
+  if (pthread_create(&createInfo.storageThreadId,NULL,(void*(*)(void*))storageThread,&createInfo) != 0)
   {
     HALT_FATAL_ERROR("Cannot initialise storage thread!");
   }
@@ -1045,11 +1045,11 @@ bool Command_create(const char      *archiveFileName,
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
 
   /* wait for threads */
-  pthread_join(createInfo.collectorThread,NULL);
-  pthread_join(createInfo.storageThread,NULL);
+  pthread_join(createInfo.collectorThreadId,NULL);
+  pthread_join(createInfo.storageThreadId,NULL);
 
   /* free resources */
-  Mailbox_done(&createInfo.storageMailbox);
+  Semaphore_done(&createInfo.storageSemaphore);
   MsgQueue_done(&createInfo.storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
   MsgQueue_done(&createInfo.fileMsgQueue,(MsgQueueMsgFreeFunction)freeFileMsg,NULL);
   String_delete(fileName);

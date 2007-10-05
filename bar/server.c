@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -18,6 +18,7 @@
 #include "lists.h"
 #include "strings.h"
 #include "arrays.h"
+#include "semaphores.h"
 #include "msgqueues.h"
 #include "stringlists.h"
 
@@ -37,6 +38,22 @@
 #define PROTOCOL_VERSION_MINOR 0
 
 /***************************** Datatypes *******************************/
+
+typedef struct JobNode
+{
+  NODE_HEADER(struct JobNode);
+
+  uint   id;
+  bool   exitFlag;
+  Errors error;
+} JobNode;
+
+typedef struct
+{
+  LIST_HEADER(JobNode);
+
+  Semaphore lock;
+} JobList;
 
 typedef struct ClientNode
 {
@@ -67,6 +84,7 @@ typedef struct
 } CommandMsg;
 
 /***************************** Variables *******************************/
+LOCAL JobList    jobList;
 LOCAL ClientList clientList;
 LOCAL bool       quitFlag;
 
@@ -349,6 +367,29 @@ LOCAL void serverCommand_fileList(ClientNode *clientNode, uint id, const String 
   sendResult(clientNode,id,TRUE,0,"");
 }
 
+LOCAL void serverCommand_jobList(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+{
+  JobNode *jobNode;
+
+  assert(clientNode != NULL);
+  assert(arguments != NULL);
+
+  Semaphore_lock(&jobList.lock);
+  jobNode = jobList.head;
+  while (jobNode != NULL)
+  {
+    sendResult(clientNode,id,FALSE,0,
+               "%id",
+               jobNode->id
+              );
+
+    jobNode = jobNode->next;
+  }
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientNode,id,TRUE,0,"");
+}
+
 #if 0
 LOCAL uint serverCommand_new(ClientNode *clientNode, uint id, const String arguments[], uint argumentCoun)
 {
@@ -396,6 +437,7 @@ const struct { const char *name; ServerCommandFunction serverCommandFunction; } 
   {"AUTH",        serverCommand_auth       },
   {"DEVICE_LIST", serverCommand_deviceList },
   {"FILE_LIST",   serverCommand_fileList   },
+  {"JOB_LIST",    serverCommand_jobList    },
 //  {"NEW",    serverCommand_new    },
 //  {"INCLUDE",serverCommand_include},
 //  {"EXCLUDE",serverCommand_exclude},
@@ -587,6 +629,22 @@ sendResult(clientNode,0,TRUE,0,"ok\n");
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : freeJobNode
+* Purpose: free job node
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeJobNode(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  jobNode->exitFlag = TRUE;
+}
+
+/***********************************************************************\
 * Name   : freeCommandMsg
 * Purpose: free command msg
 * Input  : commandMsg - command message
@@ -657,6 +715,7 @@ bool Server_run(uint       serverPort,
   ClientNode   *deleteClientNode;
 
   /* initialise variables */
+  List_init(&jobList);
   List_init(&clientList);
   quitFlag = FALSE;
 
@@ -792,6 +851,7 @@ bool Server_run(uint       serverPort,
 
   /* free resources */
   List_done(&clientList,(ListNodeFreeFunction)freeClientNode,NULL);
+  List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);
 
   return TRUE;
 }
