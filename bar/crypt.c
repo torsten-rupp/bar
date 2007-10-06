@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems : all
@@ -115,6 +115,26 @@ const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
   }
 
   return s;
+}
+
+CryptAlgorithms Crypt_getAlgorithm(const char *name)
+{
+  CryptAlgorithms cryptAlgorithm;
+
+  assert(name != NULL);
+
+  if      (strcmp(name,"none"      ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_NONE;
+  else if (strcmp(name,"3DES"      ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_3DES;
+  else if (strcmp(name,"CAST5"     ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_CAST5;
+  else if (strcmp(name,"BLOWFISH"  ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_BLOWFISH;
+  else if (strcmp(name,"AES128"    ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_AES128;
+  else if (strcmp(name,"AES192"    ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_AES192;
+  else if (strcmp(name,"AES256"    ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_AES256;
+  else if (strcmp(name,"TWOFISH128") == 0) cryptAlgorithm = CRYPT_ALGORITHM_TWOFISH128;
+  else if (strcmp(name,"TWOFISH256") == 0) cryptAlgorithm = CRYPT_ALGORITHM_TWOFISH256;
+  else                                     cryptAlgorithm = CRYPT_ALGORITHM_UNKNOWN;
+
+  return cryptAlgorithm;
 }
 
 Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,

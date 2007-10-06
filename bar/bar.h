@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -52,6 +52,9 @@ typedef struct
   const char *sshPublicKeyFile;
   const char *sshPrivatKeyFile;
   const char *sshPassword;
+
+  uint       serverPort;
+  const char *serverPassword;
 
   bool       overwriteFlag;
   bool       skipUnreadableFlag;

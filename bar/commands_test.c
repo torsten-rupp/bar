@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -196,8 +196,8 @@ bool Command_test(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && !Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               info(0,"Test file '%s'...",String_cString(fileName));
@@ -399,8 +399,8 @@ bool Command_test(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
-                && !Patterns_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               info(0,"Test directory '%s'...",String_cString(directoryName));
@@ -492,8 +492,8 @@ bool Command_test(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Patterns_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
-                && !Patterns_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               info(0,"Test link '%s'...",String_cString(linkName));

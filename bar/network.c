@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
+
+#include <linux/tcp.h>
 
 #include "global.h"
 #include "strings.h"

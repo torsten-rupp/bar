@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -81,8 +81,6 @@ LOCAL CryptAlgorithms    cryptAlgorithm;
 LOCAL ulong              compressMinFileSize;
 LOCAL const char         *cryptPassword;
 LOCAL bool               daemonFlag;
-LOCAL uint               serverPort;
-LOCAL const char         *serverPassword;
 LOCAL bool               versionFlag;
 LOCAL bool               helpFlag;
 
@@ -174,8 +172,8 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING ("ssh-password",     0,  0,globalOptions.sshPassword,       NULL,                                                           "ssh password (use with care!)",NULL       ),
 
   CMD_OPTION_BOOLEAN("daemon",           0,  0,daemonFlag,                      FALSE,                                                          "run in daemon mode"                       ),
-  CMD_OPTION_INTEGER("port",             0,  0,serverPort,                      DEFAULT_SERVER_PORT,0,65535,NULL,                               "server port"                              ),
-  CMD_OPTION_STRING ("password",         0,  0,serverPassword,                  NULL,                                                           "server password (use with care!)",NULL    ),
+  CMD_OPTION_INTEGER("port",             0,  0,globalOptions.serverPort,        DEFAULT_SERVER_PORT,0,65535,NULL,                               "server port"                              ),
+  CMD_OPTION_STRING ("password",         0,  0,globalOptions.serverPassword,    NULL,                                                           "server password (use with care!)",NULL    ),
 
 //  CMD_OPTION_BOOLEAN("incremental",      0,  0,globalOptions.incrementalFlag, FALSE,                                                          "overwrite existing files"                 ),
   CMD_OPTION_BOOLEAN("skip-unreadable",  0,  0,globalOptions.skipUnreadableFlag,FALSE,                                                          "skip unreadable files"                    ),
@@ -357,7 +355,7 @@ LOCAL bool cmdParseIncludeExclude(void *variable, const char *name, const char *
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(userData);
 
-  if (Patterns_addList((PatternList*)variable,value,patternType) != ERROR_NONE)
+  if (Pattern_appendList((PatternList*)variable,value,patternType) != ERROR_NONE)
   {
     fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
     return FALSE;
@@ -405,7 +403,7 @@ LOCAL bool init(void)
   {
     return FALSE;
   }
-  error = Patterns_init();
+  error = Pattern_init();
   if (error != ERROR_NONE)
   {
     Crypt_done();
@@ -414,7 +412,7 @@ LOCAL bool init(void)
   error = Archive_init();
   if (error != ERROR_NONE)
   {
-    Patterns_done();
+    Pattern_done();
     Crypt_done();
     return FALSE;
   }
@@ -422,7 +420,7 @@ LOCAL bool init(void)
   if (error != ERROR_NONE)
   {
     Archive_done();
-    Patterns_done();
+    Pattern_done();
     Crypt_done();
     return FALSE;
   }
@@ -431,7 +429,7 @@ LOCAL bool init(void)
   {
     Storage_done();
     Archive_done();
-    Patterns_done();
+    Pattern_done();
     Crypt_done();
     return FALSE;
   }
@@ -441,7 +439,7 @@ LOCAL bool init(void)
     Network_done();
     Storage_done();
     Archive_done();
-    Patterns_done();
+    Pattern_done();
     Crypt_done();
     return FALSE;
   }
@@ -464,7 +462,7 @@ LOCAL void done(void)
   Network_done();
   Storage_done();
   Archive_done();
-  Patterns_done();
+  Pattern_done();
   Crypt_done();
 }
 
@@ -580,8 +578,8 @@ int main(int argc, const char *argv[])
 
   /* initialise variables */
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
-  Patterns_newList(&includePatternList);
-  Patterns_newList(&excludePatternList);
+  Pattern_initList(&includePatternList);
+  Pattern_initList(&excludePatternList);
 
   /* read default configuration from $HOME/.bar/bar.cfg (if exists) */
   fileName = String_new();
@@ -648,7 +646,7 @@ int main(int argc, const char *argv[])
           /* get include patterns */
           for (z = 2; z < argc; z++)
           {
-            error = Patterns_addList(&includePatternList,argv[z],patternType);
+            error = Pattern_appendList(&includePatternList,argv[z],patternType);
           }
 
           /* create archive */
@@ -712,7 +710,7 @@ int main(int argc, const char *argv[])
           }
 
           /* free resources */
-          StringList_done(&fileNameList,NULL);
+          StringList_done(&fileNameList);
         }
         break;
       default:
@@ -724,15 +722,15 @@ int main(int argc, const char *argv[])
   else
   {
     /* daemon mode -> run server */
-    exitcode = (Server_run(serverPort,
-                           serverPassword
+    exitcode = (Server_run(globalOptions.serverPort,
+                           globalOptions.serverPassword
                           )
                )?EXITCODE_OK:EXITCODE_FAIL;
   }
 
   /* free resources */
-  Patterns_deleteList(&excludePatternList);
-  Patterns_deleteList(&includePatternList);
+  Pattern_doneList(&excludePatternList);
+  Pattern_doneList(&includePatternList);
 
   /* done */
   done();

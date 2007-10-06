@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -52,6 +52,7 @@ typedef struct
   unsigned int     width;
   unsigned int     precision;
   FormatLengthType lengthType;
+  char             quotingChar;
   char             conversionChar;
 } FormatToken;
 
@@ -154,6 +155,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   formatToken->width            = 0;
   formatToken->precision        = 0;
   formatToken->lengthType       = FORMAT_LENGTH_TYPE_INTEGER;
+  formatToken->quotingChar      = '\0';
 
   /* format start character */
   assert((*format)=='%');
@@ -205,6 +207,13 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
       formatToken->precision=formatToken->precision*10+((*format)-'0');
       format++;
     }
+  }
+
+  /* quoting character */
+  if ((*(format+1) == 's') || (*((format+1)) == 'S'))
+  {
+    formatToken->quotingChar = (*format);
+    format++;
   }
 
   /* length modifier */
@@ -317,8 +326,11 @@ LOCAL void formatString(struct __String *string,
     void               *p;
     struct __String    *string;
   } data;
-  char         buffer[64];
-  unsigned int length;
+  char          buffer[64];
+  unsigned int  length;
+  const char    *s;
+  unsigned long i;
+  char          ch;
 
   while ((*format) != '\0')
   {
@@ -377,9 +389,9 @@ LOCAL void formatString(struct __String *string,
                 }
               }
               break;
-            #ifdef _LONG_LONG
-              case FORMAT_LENGTH_TYPE_LONGLONG:
-                {
+            case FORMAT_LENGTH_TYPE_LONGLONG:
+              {
+                #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
                   data.ll = va_arg(arguments,long long);
                   length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ll);
                   if (length < sizeof(buffer))
@@ -391,9 +403,11 @@ LOCAL void formatString(struct __String *string,
                     ensureStringLength(string,string->length+length);
                     snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.ll);
                   }
-                }
-                break;
-            #endif /* HAVE_LONG_LONG */
+                #else /* not _LONG_LONG || HAVE_LONG_LONG */
+                  HALT_INTERNAL_ERROR("long long not supported");
+                #endif /* _LONG_LONG || HAVE_LONG_LONG */
+              }
+              break;
             #ifndef NDEBUG
               default:
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -437,9 +451,9 @@ LOCAL void formatString(struct __String *string,
                 }
               }
               break;
-            #ifdef _LONG_LONG
-              case FORMAT_LENGTH_TYPE_LONGLONG:
-                {
+            case FORMAT_LENGTH_TYPE_LONGLONG:
+              {
+                #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
                   data.ull = va_arg(arguments,long long);
                   length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ull);
                   if (length < sizeof(buffer))
@@ -451,9 +465,11 @@ LOCAL void formatString(struct __String *string,
                     ensureStringLength(string,string->length+length);
                     snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.ull);
                   }
-                }
-                break;
-            #endif /* HAVE_LONG_LONG */
+                #else /* not _LONG_LONG || HAVE_LONG_LONG */
+                  HALT_INTERNAL_ERROR("long long not supported");
+                #endif /* _LONG_LONG || HAVE_LONG_LONG */
+              }
+              break;
             #ifndef NDEBUG
               default:
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -483,15 +499,35 @@ LOCAL void formatString(struct __String *string,
           break;
         case 's':
           data.s = va_arg(arguments,const char*);
-          length = snprintf(buffer,sizeof(buffer),formatToken.token,data.s);
-          if (length < sizeof(buffer))
+          if (formatToken.quotingChar != '\0')
           {
-            String_appendCString(string,buffer);
+            /* quoted string */
+            String_appendChar(string,formatToken.quotingChar);
+            s = data.s;
+            while ((ch = (*s)) != '\0')
+            {
+              if (ch == formatToken.quotingChar)
+              {
+                String_appendChar(string,'\\');
+              }
+              String_appendChar(string,ch);
+              s++;
+            }
+            String_appendChar(string,formatToken.quotingChar);
           }
           else
           {
-            ensureStringLength(string,string->length+length);
-            snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.d);
+            /* non quoted string */
+            length = snprintf(buffer,sizeof(buffer),formatToken.token,data.s);
+            if (length < sizeof(buffer))
+            {
+              String_appendCString(string,buffer);
+            }
+            else
+            {
+              ensureStringLength(string,string->length+length);
+              snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.d);
+            }
           }
           break;
         case 'p':
@@ -511,15 +547,36 @@ LOCAL void formatString(struct __String *string,
 
         case 'S':
           data.string = (struct __String*)va_arg(arguments,void*);
-          length = snprintf(buffer,sizeof(buffer),formatToken.token,String_cString(data.string));
-          if (length < sizeof(buffer))
+          if (formatToken.quotingChar != '\0')
           {
-            String_appendCString(string,buffer);
+            /* quoted string */
+            String_appendChar(string,formatToken.quotingChar);
+            i = 0;
+            while (i < String_length(data.string))
+            {
+              ch = String_index(data.string,i);
+              if (ch == formatToken.quotingChar)
+              {
+                String_appendChar(string,'\\');
+              }
+              String_appendChar(string,ch);
+              i++;
+            }
+            String_appendChar(string,formatToken.quotingChar);
           }
           else
           {
-            ensureStringLength(string,string->length + length);
-            snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,String_cString(data.string));
+            /* non quoted string */
+            length = snprintf(buffer,sizeof(buffer),formatToken.token,String_cString(data.string));
+            if (length < sizeof(buffer))
+            {
+              String_appendCString(string,buffer);
+            }
+            else
+            {
+              ensureStringLength(string,string->length + length);
+              snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,String_cString(data.string));
+            }
           }
           break;
 #if 0
@@ -569,15 +626,17 @@ still not implemented
                 bits = va_arg(arguments,unsigned long);
               }
               break;
-            #ifdef HAVE_LONG_LONG
-              case FORMAT_LENGTH_TYPE_LONGLONG:
-                {
+            case FORMAT_LENGTH_TYPE_LONGLONG:
+              {
+                #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
                   unsigned long long bits;
 
                   bits = va_arg(arguments,unsigned long long);
                 }
-                break;
-            #endif /* HAVE_LONG_LONG */
+                #else /* not _LONG_LONG || HAVE_LONG_LONG */
+                  HALT_INTERNAL_ERROR("long long not supported");
+                #endif /* _LONG_LONG || HAVE_LONG_LONG */
+              break;
             #ifndef NDEBUG
               default:
                 JAMAICA_HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -995,15 +1054,17 @@ still not implemented
                 bits = va_arg(arguments,unsigned long);
               }
               break;
-            #ifdef HAVE_LONG_LONG
-              case FORMAT_LENGTH_TYPE_LONGLONG:
-                {
+            case FORMAT_LENGTH_TYPE_LONGLONG:
+              {
+                #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
                   unsigned long long bits;
 
                   bits = va_arg(arguments,unsigned long long);
                 }
-                break;
-            #endif /* HAVE_LONG_LONG */
+                #else /* not _LONG_LONG || HAVE_LONG_LONG */
+                  HALT_INTERNAL_ERROR("long long not supported");
+                #endif /* _LONG_LONG || HAVE_LONG_LONG */
+              break;
             #ifndef NDEBUG
               default:
                 JAMAICA_HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();

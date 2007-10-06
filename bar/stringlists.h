@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems : all
@@ -63,14 +63,13 @@ void StringList_init(StringList *stringList);
 /***********************************************************************\
 * Name   : StringList_done
 * Purpose: free a strings in list
-* Input  : list     - list to free
-*          userData - user data for free function
+* Input  : stringList - string list to free
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void StringList_done(StringList *stringList, void *userData);
+void StringList_done(StringList *stringList);
 
 /***********************************************************************\
 * Name   : StringList_new
@@ -87,13 +86,35 @@ StringList *StringList_new(void);
 * Name   : StringList_delete
 * Purpose: free all strings and delete string list
 * Input  : stringList - list to free
-*          userData   - user data for free function
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void StringList_delete(StringList *stringList, void *userData);
+void StringList_delete(StringList *stringList);
+
+/***********************************************************************\
+* Name   : StringList_clear
+* Purpose: remove all entry in list
+* Input  : stringList - string list
+* Output : -
+* Return : -
+* Notes  : 
+\***********************************************************************/
+
+void StringList_clear(StringList *stringList);
+
+/***********************************************************************\
+* Name   : StringList_move
+* Purpose: move strings from soruce list to destination list
+* Input  : fromStringList - from string list
+*          toStringList   - to string list
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void StringList_move(StringList *fromStringList, StringList *toStringList);
 
 /***********************************************************************\
 * Name   : StringList_empty
@@ -104,7 +125,7 @@ void StringList_delete(StringList *stringList, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-unsigned long StringList_empty(StringList *stringList);
+bool StringList_empty(StringList *stringList);
 
 /***********************************************************************\
 * Name   : StringList_count
@@ -139,7 +160,7 @@ void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferL
 *          StringList_appendChar/StringList_appendBuffer
 * Purpose: add string to end of list
 * Input  : stringList - string list
-*          string     - string to append to list
+*          string     - string to append to list (will be copied!)
 * Output : -
 * Return : -
 * Notes  : -

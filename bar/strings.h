@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -382,7 +382,8 @@ String String_padLeft(String string, ulong length, char ch);
 * Output : -
 * Return : format string
 * Notes  : additional format characters
-*           %S  String
+*           %S   String
+*           %cS  String with quoting char c
 \***********************************************************************/
 
 String String_format(String string, const char *format, ...);

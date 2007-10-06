@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -60,33 +60,48 @@ LOCAL void freePatternNode(PatternNode *patternNode,
 
 /*---------------------------------------------------------------------*/
 
-Errors Patterns_init(void)
+Errors Pattern_init(void)
 {
   return ERROR_NONE;
 }
 
-void Patterns_done(void)
+void Pattern_done(void)
 {
 }
 
-void Patterns_newList(PatternList *patternList)
+void Pattern_initList(PatternList *patternList)
 {
   assert(patternList != NULL);
 
   List_init(patternList);
 }
 
-void Patterns_deleteList(PatternList *patternList)
+void Pattern_doneList(PatternList *patternList)
 {
   assert(patternList != NULL);
 
-  List_done(patternList,(void(*)(void *,void *))freePatternNode,NULL);
+  List_done(patternList,(ListNodeFreeFunction)freePatternNode,NULL);
 }
 
-Errors Patterns_addList(PatternList  *patternList,
-                        const char   *pattern,
-                        PatternTypes patternType
-                       )
+void Pattern_clearList(PatternList *patternList)
+{
+  assert(patternList != NULL);
+
+  List_clear(patternList,(ListNodeFreeFunction)freePatternNode,NULL);
+}
+
+void Pattern_moveList(PatternList *fromPatternList, PatternList *toPatternList)
+{
+  assert(fromPatternList != NULL);
+  assert(toPatternList != NULL);
+
+  List_move(fromPatternList,toPatternList,NULL,NULL,NULL);
+}
+
+Errors Pattern_appendList(PatternList  *patternList,
+                          const char   *pattern,
+                          PatternTypes patternType
+                         )
 {
   PatternNode *patternNode;
   long        z;
@@ -160,14 +175,14 @@ Errors Patterns_addList(PatternList  *patternList,
   return ERROR_NONE;
 }
 
-void Patterns_freeList(PatternList *patternList)
+void Pattern_freeList(PatternList *patternList)
 {
 }
 
-bool Patterns_match(PatternNode       *patternNode,
-                    String            s,
-                    PatternMatchModes patternMatchMode
-                   )
+bool Pattern_match(PatternNode       *patternNode,
+                   String            s,
+                   PatternMatchModes patternMatchMode
+                  )
 {
   String  matchString;
   regex_t regex;
@@ -211,10 +226,10 @@ bool Patterns_match(PatternNode       *patternNode,
   return matchFlag;
 }
 
-bool Patterns_matchList(PatternList       *patternList,
-                        String            s,
-                        PatternMatchModes patternMatchMode
-                       )
+bool Pattern_matchList(PatternList       *patternList,
+                       String            s,
+                       PatternMatchModes patternMatchMode
+                      )
 {
   bool        matchFlag;
   PatternNode *patternNode;
@@ -226,14 +241,14 @@ bool Patterns_matchList(PatternList       *patternList,
   patternNode = patternList->head;
   while ((patternNode != NULL) && !matchFlag)
   {
-    matchFlag = Patterns_match(patternNode,s,patternMatchMode);
+    matchFlag = Pattern_match(patternNode,s,patternMatchMode);
     patternNode = patternNode->next;
   }
 
   return matchFlag;
 }
 
-bool Patterns_checkIsPattern(String s)
+bool Pattern_checkIsPattern(String s)
 {
   const char *PATTERNS_CHARS = "*?[{";
 

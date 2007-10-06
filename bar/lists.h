@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -112,6 +112,19 @@ List *List_new(void);
 \***********************************************************************/
 
 void List_delete(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData);
+
+/***********************************************************************\
+* Name   : List_clear
+* Purpose: free all nodes in list
+* Input  : list                 - list
+*          listNodeFreeFunction - free function for single node or NULL
+*          listNodeFreeUserData - user data for free function
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void List_clear(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData);
 
 /***********************************************************************\
 * Name   : List_move

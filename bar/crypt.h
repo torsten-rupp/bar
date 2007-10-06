@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems : all
@@ -138,6 +138,17 @@ const char *Crypt_Password(PasswordInfo *passwordInfo, char *buffer, uint buffer
 \***********************************************************************/
 
 const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm);
+
+/***********************************************************************\
+* Name   : Crypt_getAlgorithm
+* Purpose: get crypt algorithm
+* Input  : name - name of crypt algorithm
+* Output : -
+* Return : crypt algorithm
+* Notes  : -
+\***********************************************************************/
+
+CryptAlgorithms Crypt_getAlgorithm(const char *name);
 
 /***********************************************************************\
 * Name   : Crypt_getBlockLength

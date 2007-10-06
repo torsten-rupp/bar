@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -58,6 +58,7 @@ if {[catch {package require Tix}]} \
   exit 104
 }
 package require tools
+package require mclistbox
 load "[pwd]/tcl/scanx.so"
 
 # ---------------------------- constants/variables ---------------------------
@@ -74,10 +75,13 @@ wm geometry . "600x600"
 
 # ------------------------ internal constants/variables ----------------------
 
+set config(JOB_LIST_UPDATE_TIME)    5000
+set config(CURRENT_JOB_UPDATE_TIME) 1000
+
 set server(socketHandle)  -1
 set server(lastCommandId) 0
 
-set configFilename ""
+set barConfigFilename ""
 
 set barConfig(storageType)                    "FILESYSTEM"
 set barConfig(storagePartSizeFlag)            0
@@ -95,10 +99,10 @@ set barConfig(cryptPassword)                  ""
 
 set currentJob(id)                            0
 set currentJob(doneFiles)                     0
-set currentJob(doneBytes)                      0
+set currentJob(doneBytes)                     0
 set currentJob(compressionRatio)              0
 set currentJob(totalFiles)                    0
-set currentJob(totalBytes)                     0
+set currentJob(totalBytes)                    0
 set currentJob(fileName)                      ""
 set currentJob(storageName)                   ""
 
@@ -152,6 +156,17 @@ proc Dialog:ok { message } \
   puts "OK: $message\n"
 }
 
+#***********************************************************************
+# Name   : progressbar
+# Purpose: progress bar
+# Input  : path - widget path
+#          args - optional arguments
+# Output : -
+# Return : -
+# Notes  : optional
+#            <path> update <value>
+#***********************************************************************
+
 proc progressbar { path args } \
 {
   if {[llength $args] == 0} \
@@ -171,7 +186,10 @@ proc progressbar { path args } \
   {
     if {[lindex $args 0] == "update"} \
     {
-      place configure $path.back.fill -relwidth [lindex $args 1]
+      set p [lindex $args 1]
+      place configure $path.back.fill -relwidth $p
+      $path.back.text configure -text "[expr {int($p*100)}]%"
+      $path.back.fill.text configure -text "[expr {int($p*100)}]%"
       update
     }
   } 
@@ -242,6 +260,7 @@ proc Server:connect { hostname port } \
   {
     return 0
   }
+  fconfigure $server(socketHandle) -buffering line -blocking 0 -translation lf
 
   return 1
 }
@@ -285,6 +304,7 @@ proc Server:sendCommand { command args } \
   set arguments [join $args]
 
   puts $server(socketHandle) "$command $server(lastCommandId) $arguments"; flush $server(socketHandle)
+#puts "sent [clock clicks]: $command $server(lastCommandId) $arguments"
 
   return $server(lastCommandId)
 }
@@ -306,19 +326,100 @@ proc Server:readResult { commandId _errorCode _result } \
   upvar $_errorCode errorCode
   upvar $_result    result
 
-  gets $server(socketHandle) line
-#puts "read: $line"
+  set id -1
+  while {$id != $commandId} \
+  {
+    gets $server(socketHandle) line
+#puts "received [clock clicks]: $line"
 
-  set completeFlag 0
-  set errorCode    -1
-  set result       ""
-  regexp {(\d+)\s+(\d+)\s+(\d+)\s+(.*)} $line * id completeFlag errorCode result
+    set completeFlag 0
+    set errorCode    -1
+    set result       ""
+    regexp {(\d+)\s+(\d+)\s+(\d+)\s+(.*)} $line * id completeFlag errorCode result
+  }
 #puts "$completeFlag $errorCode $result"
 
   return [expr {!$completeFlag}]
 }
 
 # ----------------------------------------------------------------------
+
+#***********************************************************************
+# Name   : updateJobList
+# Purpose: update job list
+# Input  : widget - list widget
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc updateJobList { widget } \
+{
+  global config
+
+  set selection [$widget curselection]
+
+  $widget delete 0 end
+  set commandId [Server:sendCommand "JOB_LIST"]
+  while {[Server:readResult $commandId errorCode result]} \
+  {
+    scanx $result "%d %s %d %d" \
+      id \
+      state \
+      startTime \
+      estimatedRestTime
+
+    set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
+    set estimatedRestHours   [expr {int($estimatedRestTime%(24*60*60)/(60*60))}]
+    set estimatedRestMinutes [expr {int($estimatedRestTime%(60*60   )/60     )}]
+    set estimatedRestSeconds [expr {int($estimatedRestTime%(60)              )}]
+
+    $widget insert end [list $id $state [clock format $startTime -format "%Y-%m-%d %H:%M:%S"] [format "%2d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds]]
+  }
+
+  after $config(JOB_LIST_UPDATE_TIME) "updateJobList $widget"
+}
+
+#***********************************************************************
+# Name   : updateCurrentJob
+# Purpose: update current job data
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc updateCurrentJob { } \
+{
+  global currentJob config
+
+  if {$currentJob(id) != 0} \
+  {
+    set commandId [Server:sendCommand "JOB_INFO" $currentJob(id)]
+    Server:readResult $commandId errorCode result
+    scanx $result "%s %d %d %f %d %d %S %S" \
+      state \
+      currentJob(doneFiles) \
+      currentJob(doneBytes) \
+      currentJob(compressionRatio) \
+      currentJob(totalFiles) \
+      currentJob(totalBytes) \
+      currentJob(fileName) \
+      currentJob(storageName)
+  } \
+  else \
+  {
+    set currentJob(doneFiles)        0
+    set currentJob(doneBytes)        0
+    set currentJob(compressionRatio) 0
+    set currentJob(totalFiles)       0
+    set currentJob(totalBytes)       0
+    set currentJob(fileName)         ""
+    set currentJob(storageName)      ""
+  }
+
+  after $config(CURRENT_JOB_UPDATE_TIME) "updateCurrentJob"
+}
 
 #***********************************************************************
 # Name       : itemPathToFileName
@@ -555,7 +656,7 @@ proc openCloseDirectory { widget itemPath } \
 }
 
 #***********************************************************************
-# Name   : openCloseDirectory
+# Name   : includeExcludeEntry
 # Purpose: include/exclude entry
 # Input  : widget      - tree widget
 #          itemPath    - item path
@@ -647,6 +748,24 @@ proc toggleIncludeExcludeEntry { widget itemPath } \
 }
 
 #***********************************************************************
+# Name   : quit
+# Purpose: quit program
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc quit {} \
+{
+  global server
+
+  Server:disconnect
+
+  destroy .
+}
+
+#***********************************************************************
 # Name   : addExcludePattern
 # Purpose: add exclude pattern
 # Input  : widget - exclude pattern list widget
@@ -728,21 +847,37 @@ proc remExcludePattern { widget index } \
 }
 
 #***********************************************************************
-# Name   : quit
-# Purpose: quit program
+# Name   : newJob
+# Purpose: add new job
 # Input  : -
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc quit {} \
+proc newJob { } \
 {
-  global server
+  set commandId [Server:sendCommand "NEW_JOB"]
 
-  Server:disconnect
+  set commandId [Server:sendCommand "ADD_FILENAME" '/']
+  set commandId [Server:sendCommand "ADD_INCLUDE_PATTERN" "'t*'"]
+  set commandId [Server:sendCommand "ADD_EXCLUDE_PATTERN" "'*.mpeg'"]
 
-  destroy .
+  set commandId [Server:sendCommand "ADD_JOB"]
+}
+
+#***********************************************************************
+# Name   : remJob
+# Purpose: remove job
+# Input  : id - job id
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc remJob { id } \
+{
+  set commandId [Server:sendCommand "REM_JOB" $id]
 }
 
 # ----------------------------- main program  -------------------------------
@@ -777,71 +912,71 @@ tixNoteBook $mainWindow.tabs
 pack $mainWindow.tabs -fill both -expand yes  -padx 3p -pady 3p
 
 frame .jobs
-  labelframe .jobs.current -text "Current"
-    label .jobs.current.idTitle -text "Id:"
-    grid .jobs.current.idTitle -row 0 -column 0 -sticky "w"
-    entry .jobs.current.id -width 5 -textvariable currentJob(id) -state readonly
-    grid .jobs.current.id -row 0 -column 1 -sticky "w" -padx 2p -pady 2p
+  labelframe .jobs.selected -text "Selected"
+    label .jobs.selected.idTitle -text "Id:"
+    grid .jobs.selected.idTitle -row 0 -column 0 -sticky "w"
+    entry .jobs.selected.id -width 5 -textvariable currentJob(id) -justify right -border 0 -state readonly
+    grid .jobs.selected.id -row 0 -column 1 -sticky "w" -padx 2p -pady 2p
 
-    label .jobs.current.doneTitle -text "Done:"
-    grid .jobs.current.doneTitle -row 0 -column 2 -sticky "w" 
-    frame .jobs.current.done
-      entry .jobs.current.done.files -width 10 -textvariable currentJob(doneFiles) -justify right -state readonly
-      grid .jobs.current.done.files -row 0 -column 0 -sticky "w" 
-      label .jobs.current.done.filesPostfix -text "files"
-      grid .jobs.current.done.filesPostfix -row 0 -column 1 -sticky "w" 
+    label .jobs.selected.doneTitle -text "Done:"
+    grid .jobs.selected.doneTitle -row 0 -column 2 -sticky "w" 
+    frame .jobs.selected.done
+      entry .jobs.selected.done.files -width 10 -textvariable currentJob(doneFiles) -justify right -border 0 -state readonly
+      grid .jobs.selected.done.files -row 0 -column 0 -sticky "w" 
+      label .jobs.selected.done.filesPostfix -text "files"
+      grid .jobs.selected.done.filesPostfix -row 0 -column 1 -sticky "w" 
 
-      entry .jobs.current.done.bytes -width 20 -textvariable currentJob(doneBytes) -justify right -state readonly
-      grid .jobs.current.done.bytes -row 0 -column 2 -sticky "w" 
-      label .jobs.current.done.bytesPostfix -text "bytes"
-      grid .jobs.current.done.bytesPostfix -row 0 -column 3 -sticky "w" 
+      entry .jobs.selected.done.bytes -width 20 -textvariable currentJob(doneBytes) -justify right -border 0 -state readonly
+      grid .jobs.selected.done.bytes -row 0 -column 2 -sticky "w" 
+      label .jobs.selected.done.bytesPostfix -text "bytes"
+      grid .jobs.selected.done.bytesPostfix -row 0 -column 3 -sticky "w" 
 
-      label .jobs.current.done.compressRatioTitle -text "Ratio"
-      grid .jobs.current.done.compressRatioTitle -row 0 -column 4 -sticky "w" 
-      entry .jobs.current.done.compressRatio -width 5 -textvariable currentJob(compressionRatio) -justify right -state readonly
-      grid .jobs.current.done.compressRatio -row 0 -column 5 -sticky "w" 
-      label .jobs.current.done.compressRatioPostfix -text "%"
-      grid .jobs.current.done.compressRatioPostfix -row 0 -column 6 -sticky "w" 
+      label .jobs.selected.done.compressRatioTitle -text "Ratio"
+      grid .jobs.selected.done.compressRatioTitle -row 0 -column 4 -sticky "w" 
+      entry .jobs.selected.done.compressRatio -width 5 -textvariable currentJob(compressionRatio) -justify right -border 0 -state readonly
+      grid .jobs.selected.done.compressRatio -row 0 -column 5 -sticky "w" 
+      label .jobs.selected.done.compressRatioPostfix -text "%"
+      grid .jobs.selected.done.compressRatioPostfix -row 0 -column 6 -sticky "w" 
 
-      grid rowconfigure    .jobs.current.done { 0 } -weight 1
-      grid columnconfigure .jobs.current.done { 7 } -weight 1
-    grid .jobs.current.done -row 0 -column 3 -sticky "we" -padx 2p -pady 2p
+      grid rowconfigure    .jobs.selected.done { 0 } -weight 1
+      grid columnconfigure .jobs.selected.done { 7 } -weight 1
+    grid .jobs.selected.done -row 0 -column 3 -sticky "we" -padx 2p -pady 2p
 
-    label .jobs.current.totalTitle -text "Total:"
-    grid .jobs.current.totalTitle -row 1 -column 2 -sticky "w" 
-    frame .jobs.current.total
-      entry .jobs.current.total.files -width 10 -textvariable currentJob(totalFiles) -justify right -state readonly
-      grid .jobs.current.total.files -row 0 -column 0 -sticky "w" 
-      label .jobs.current.total.filesPostfix -text "files"
-      grid .jobs.current.total.filesPostfix -row 0 -column 1 -sticky "w" 
+    label .jobs.selected.totalTitle -text "Total:"
+    grid .jobs.selected.totalTitle -row 1 -column 2 -sticky "w" 
+    frame .jobs.selected.total
+      entry .jobs.selected.total.files -width 10 -textvariable currentJob(totalFiles) -justify right -border 0 -state readonly
+      grid .jobs.selected.total.files -row 0 -column 0 -sticky "w" 
+      label .jobs.selected.total.filesPostfix -text "files"
+      grid .jobs.selected.total.filesPostfix -row 0 -column 1 -sticky "w" 
 
-      entry .jobs.current.total.bytes -width 20 -textvariable currentJob(totalBytes) -justify right -state readonly
-      grid .jobs.current.total.bytes -row 0 -column 2 -sticky "w" 
-      label .jobs.current.total.bytesPostfix -text "bytes"
-      grid .jobs.current.total.bytesPostfix -row 0 -column 3 -sticky "w" 
+      entry .jobs.selected.total.bytes -width 20 -textvariable currentJob(totalBytes) -justify right -border 0 -state readonly
+      grid .jobs.selected.total.bytes -row 0 -column 2 -sticky "w" 
+      label .jobs.selected.total.bytesPostfix -text "bytes"
+      grid .jobs.selected.total.bytesPostfix -row 0 -column 3 -sticky "w" 
 
-      grid rowconfigure    .jobs.current.total { 0 } -weight 1
-      grid columnconfigure .jobs.current.total { 4 } -weight 1
-    grid .jobs.current.total -row 1 -column 3 -sticky "we" -padx 2p -pady 2p
+      grid rowconfigure    .jobs.selected.total { 0 } -weight 1
+      grid columnconfigure .jobs.selected.total { 4 } -weight 1
+    grid .jobs.selected.total -row 1 -column 3 -sticky "we" -padx 2p -pady 2p
 
-    label .jobs.current.currentFileNameTitle -text "File:"
-    grid .jobs.current.currentFileNameTitle -row 2 -column 0 -sticky "w"
-    entry .jobs.current.currentFileName -textvariable currentJob(fileName) -state readonly
-#entry .jobs.current.done.percentageContainer.x
-#pack .jobs.current.done.percentageContainer.x -fill x -expand yes
-    grid .jobs.current.currentFileName -row 2 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    label .jobs.selected.currentFileNameTitle -text "File:"
+    grid .jobs.selected.currentFileNameTitle -row 2 -column 0 -sticky "w"
+    entry .jobs.selected.currentFileName -textvariable currentJob(fileName) -border 0 -state readonly
+#entry .jobs.selected.done.percentageContainer.x
+#pack .jobs.selected.done.percentageContainer.x -fill x -expand yes
+    grid .jobs.selected.currentFileName -row 2 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
 
-    label .jobs.current.currentStorageTitle -text "Storage:"
-    grid .jobs.current.currentStorageTitle -row 3 -column 0 -sticky "w"
-    entry .jobs.current.currentStorage -textvariable currentJob(storageName) -state readonly
-#entry .jobs.current.done.percentageContainer.x
-#pack .jobs.current.done.percentageContainer.x -fill x -expand yes
-    grid .jobs.current.currentStorage -row 3 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    label .jobs.selected.currentStorageTitle -text "Storage:"
+    grid .jobs.selected.currentStorageTitle -row 3 -column 0 -sticky "w"
+    entry .jobs.selected.currentStorage -textvariable currentJob(storageName) -border 0 -state readonly
+#entry .jobs.selected.done.percentageContainer.x
+#pack .jobs.selected.done.percentageContainer.x -fill x -expand yes
+    grid .jobs.selected.currentStorage -row 3 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
 
-    label .jobs.current.filesPercentageTitle -text "Files:"
-    grid .jobs.current.filesPercentageTitle -row 4 -column 0 -sticky "w"
-    progressbar .jobs.current.filesPercentage
-    grid .jobs.current.filesPercentage -row 4 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    label .jobs.selected.filesPercentageTitle -text "Files:"
+    grid .jobs.selected.filesPercentageTitle -row 4 -column 0 -sticky "w"
+    progressbar .jobs.selected.filesPercentage
+    grid .jobs.selected.filesPercentage -row 4 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(doneFiles) \
       "
         global currentJob
@@ -849,20 +984,63 @@ frame .jobs
         if {\$currentJob(totalFiles) > 0} \
         {
           set p \[expr {double(\$currentJob(doneFiles))/\$currentJob(totalFiles)}]
-          progressbar .jobs.current.filesPercentage update \$p
+          progressbar .jobs.selected.filesPercentage update \$p
+        }
+      "
+    addModifyTrace ::currentJob(totalFiles) \
+      "
+        global currentJob
+
+        if {\$currentJob(totalFiles) > 0} \
+        {
+          set p \[expr {double(\$currentJob(doneFiles))/\$currentJob(totalFiles)}]
+          progressbar .jobs.selected.filesPercentage update \$p
         }
       "
 
-    label .jobs.current.bytesPercentageTitle -text "Bytes:"
-    grid .jobs.current.bytesPercentageTitle -row 5 -column 0 -sticky "w"
-    progressbar .jobs.current.bytesPercentage
-    grid .jobs.current.bytesPercentage -row 5 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    label .jobs.selected.bytesPercentageTitle -text "Bytes:"
+    grid .jobs.selected.bytesPercentageTitle -row 5 -column 0 -sticky "w"
+    progressbar .jobs.selected.bytesPercentage
+    grid .jobs.selected.bytesPercentage -row 5 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    addModifyTrace ::currentJob(doneBytes) \
+      "
+        global currentJob
 
-#    grid rowconfigure    .jobs.current { 0 } -weight 1
-    grid columnconfigure .jobs.current { 4 } -weight 1
-  grid .jobs.current -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+        if {\$currentJob(totalBytes) > 0} \
+        {
+          set p \[expr {double(\$currentJob(doneBytes))/\$currentJob(totalBytes)}]
+          progressbar .jobs.selected.bytesPercentage update \$p
+        }
+      "
+    addModifyTrace ::currentJob(totalBytes) \
+      "
+        global currentJob
 
-  tixScrolledListBox .jobs.list -scrollbar both -options { listbox.background white }
+        if {\$currentJob(totalBytes) > 0} \
+        {
+          set p \[expr {double(\$currentJob(doneBytes))/\$currentJob(totalBytes)}]
+          progressbar .jobs.selected.bytesPercentage update \$p
+        }
+      "
+
+#    grid rowconfigure    .jobs.selected { 0 } -weight 1
+    grid columnconfigure .jobs.selected { 4 } -weight 1
+  grid .jobs.selected -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+
+  frame .jobs.list
+    mclistbox::mclistbox .jobs.list.data -bg white -fillcolumn storageName -labelanchor w -xscrollcommand ".jobs.list.xscroll set" -yscrollcommand ".jobs.list.yscroll set"
+    .jobs.list.data column add id                -label "Id"
+    .jobs.list.data column add state             -label "State"
+    .jobs.list.data column add startTime         -label "Started"
+    .jobs.list.data column add estimatedRestTime -label "Estimated time" -width 20
+    grid .jobs.list.data -row 0 -column 0 -sticky "nswe"
+    scrollbar .jobs.list.yscroll -orient vertical -command ".jobs.list.data yview"
+    grid .jobs.list.yscroll -row 0 -column 1 -sticky "ns"
+    scrollbar .jobs.list.xscroll -orient horizontal -command ".jobs.list.data xview"
+    grid .jobs.list.xscroll -row 1 -column 0 -sticky "we"
+
+    grid rowconfigure    .jobs.list { 0 } -weight 1
+    grid columnconfigure .jobs.list { 0 } -weight 1
   grid .jobs.list -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
 
   frame .jobs.buttons
@@ -870,8 +1048,9 @@ frame .jobs
     pack .jobs.buttons.rem -side left
   grid .jobs.buttons -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
 
-  bind [.jobs.list subwidget listbox] <KeyPress-Delete>    "event generate . <<Event_remJob>>"
-  bind [.jobs.list subwidget listbox] <KeyPress-KP_Delete> "event generate . <<Event_remJob>>"
+  bind .jobs.list.data <Button-1>           "event generate . <<Event_selectJob>>"
+  bind .jobs.list.data <KeyPress-Delete>    "event generate . <<Event_remJob>>"
+  bind .jobs.list.data <KeyPress-KP_Delete> "event generate . <<Event_remJob>>"
 
   grid rowconfigure    .jobs { 1 } -weight 1
   grid columnconfigure .jobs { 0 } -weight 1
@@ -1075,8 +1254,8 @@ pack .compressCrypt -side top -fill both -expand yes -in [$mainWindow.tabs subwi
 
 # buttons
 frame $mainWindow.buttons
-  button $mainWindow.buttons.start -text "Start" -command "event generate . <<Event_start>>"
-  pack $mainWindow.buttons.start -side left -padx 2p
+  button $mainWindow.buttons.startJob -text "Start job" -command "event generate . <<Event_newJob>>"
+  pack $mainWindow.buttons.startJob -side left -padx 2p
 
   button $mainWindow.buttons.quit -text "Quit" -command "event generate . <<Event_quit>>"
   pack $mainWindow.buttons.quit -side right
@@ -1136,6 +1315,30 @@ bind . <<Event_remExcludePattern>> \
   }
 }
 
+bind . <<Event_selectJob>> \
+{
+  set n [.jobs.list.data curselection]
+  if {$n != {}} \
+  {
+    set currentJob(id) [lindex [lindex [.jobs.list.data get $n $n] 0] 0]
+  }
+}
+
+bind . <<Event_newJob>> \
+{
+  newJob
+}
+
+bind . <<Event_remJob>> \
+{
+  set n [.jobs.list.data curselection]
+  if {$n != {}} \
+  {
+    set id [lindex [lindex [.jobs.list.data get $n $n] 0] 0]
+    remJob $id
+  }
+}
+
 set hostname "localhost"
 set port 38523
 if {![Server:connect $hostname $port]} \
@@ -1143,6 +1346,9 @@ if {![Server:connect $hostname $port]} \
   Dialog:error "Cannot connect to server '$hostname:$port'!"
   exit 1;
 }
+
+updateJobList .jobs.list.data
+updateCurrentJob
 
 # read devices
 #set commandId [Server:sendCommand "DEVICE_LIST"]
@@ -1153,20 +1359,5 @@ if {![Server:connect $hostname $port]} \
 addDevice [.files.list subwidget hlist] "/"
 
 .excludes.list subwidget listbox insert end "abc"
-
-update
-puts [.jobs.current configure -width]
-
-set currentJob(totalFiles) 10
-after 100; set currentJob(doneFiles) 1
-after 100; set currentJob(doneFiles) 2
-after 100; set currentJob(doneFiles) 3
-after 100; set currentJob(doneFiles) 4
-after 100; set currentJob(doneFiles) 5
-after 100; set currentJob(doneFiles) 6
-after 100; set currentJob(doneFiles) 7
-after 100; set currentJob(doneFiles) 8
-after 100; set currentJob(doneFiles) 9
-after 100; set currentJob(doneFiles) 10
 
 # end of file

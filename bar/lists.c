@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -44,6 +44,31 @@ void List_init(void *list)
 
 void List_done(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData)
 {
+  List_clear(list,listNodeFreeFunction,listNodeFreeUserData);
+}
+
+List *List_new(void)
+{
+  List *list;
+
+  list = (List*)malloc(sizeof(List));
+  if (list == NULL) return NULL;
+
+  List_init(list);
+
+  return list;
+}
+
+void List_delete(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData)
+{
+  assert(list != NULL);
+
+  List_done(list,listNodeFreeFunction,listNodeFreeUserData);\
+  free(list);
+}
+
+void List_clear(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData)
+{
   Node *node;
 
   assert(list != NULL);
@@ -68,26 +93,6 @@ void List_done(void *list, ListNodeFreeFunction listNodeFreeFunction, void *list
   }
   ((List*)list)->tail  = NULL;
   ((List*)list)->count = 0;
-}
-
-List *List_new(void)
-{
-  List *list;
-
-  list = (List*)malloc(sizeof(List));
-  if (list == NULL) return NULL;
-
-  List_init(list);
-
-  return list;
-}
-
-void List_delete(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData)
-{
-  assert(list != NULL);
-
-  List_done(list,listNodeFreeFunction,listNodeFreeUserData);\
-  free(list);
 }
 
 void List_move(void *fromList, void *toList, void *fromListFromNode, void *fromListToNode, void *toListNextNode)

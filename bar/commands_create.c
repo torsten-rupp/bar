@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -120,7 +120,7 @@ LOCAL bool checkIsIncluded(PatternNode *includePatternNode,
   assert(includePatternNode != NULL);
   assert(fileName != NULL);
 
-  return Patterns_match(includePatternNode,fileName,PATTERN_MATCH_MODE_BEGIN);
+  return Pattern_match(includePatternNode,fileName,PATTERN_MATCH_MODE_BEGIN);
 }
 
 /***********************************************************************\
@@ -140,7 +140,7 @@ LOCAL bool checkIsExcluded(PatternList *excludePatternList,
   assert(excludePatternList != NULL);
   assert(fileName != NULL);
 
-  return Patterns_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_BEGIN);
+  return Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_BEGIN);
 }
 
 /***********************************************************************\
@@ -263,7 +263,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
     /* find base path */
     basePath = String_new();
     File_initSplitFileName(&fileNameTokenizer,includePatternNode->pattern);
-    if (File_getNextSplitFileName(&fileNameTokenizer,&s) && !Patterns_checkIsPattern(name))
+    if (File_getNextSplitFileName(&fileNameTokenizer,&s) && !Pattern_checkIsPattern(name))
     {
       if (String_length(s) > 0)
       {
@@ -274,7 +274,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
         File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
       }
     }
-    while (File_getNextSplitFileName(&fileNameTokenizer,&s) && !Patterns_checkIsPattern(name))
+    while (File_getNextSplitFileName(&fileNameTokenizer,&s) && !Pattern_checkIsPattern(name))
     {
       File_appendFileName(basePath,s);
     }
@@ -396,7 +396,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
 
   /* free resoures */
   String_delete(name);
-  StringList_done(&nameList,NULL);
+  StringList_done(&nameList);
 
   createInfo->collectorThreadExitFlag = TRUE;
 }

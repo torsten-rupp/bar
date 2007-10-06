@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -66,6 +66,8 @@ typedef enum
   COMPRESS_ALGORITHM_BZIP2_7,
   COMPRESS_ALGORITHM_BZIP2_8,
   COMPRESS_ALGORITHM_BZIP2_9,
+
+  COMPRESS_ALGORITHM_UNKNOWN=0xFFFF,
 } CompressAlgorithms;
 
 /***************************** Datatypes *******************************/
@@ -149,11 +151,22 @@ void Compress_done(void);
 * Purpose: get name of compress algorithm
 * Input  : compressAlgorithm - compress algorithm
 * Output : -
-* Return : -
+* Return : compress algorithm name
 * Notes  : -
 \***********************************************************************/
 
 const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm);
+
+/***********************************************************************\
+* Name   : Compress_getAlgorithm
+* Purpose: get compress algorithm
+* Input  : name - algorithm name
+* Output : -
+* Return : compress algorithm
+* Notes  : -
+\***********************************************************************/
+
+CompressAlgorithms Compress_getAlgorithm(const char *name);
 
 /***********************************************************************\
 * Name   : Compress_new

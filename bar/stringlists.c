@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -90,11 +90,11 @@ void StringList_init(StringList *stringList)
   List_init(stringList);
 }
 
-void StringList_done(StringList *stringList, void *userData)
+void StringList_done(StringList *stringList)
 {
   assert(stringList != NULL);
 
-  List_done(stringList,(ListNodeFreeFunction)freeStringNode,userData);
+  List_done(stringList,(ListNodeFreeFunction)freeStringNode,NULL);
 }
 
 StringList *StringList_new(void)
@@ -102,14 +102,29 @@ StringList *StringList_new(void)
   return (StringList*)List_new();
 }
 
-void StringList_delete(StringList *stringList, void *userData)
+void StringList_delete(StringList *stringList)
 {
   assert(stringList != NULL);
 
-  List_delete(stringList,(ListNodeFreeFunction)freeStringNode,userData);
+  List_delete(stringList,(ListNodeFreeFunction)freeStringNode,NULL);
 }
 
-unsigned long StringList_empty(StringList *stringList)
+void StringList_clear(StringList *stringList)
+{
+  assert(stringList != NULL);
+
+  List_clear(stringList,(ListNodeFreeFunction)freeStringNode,NULL);
+}
+
+void StringList_move(StringList *fromStringList, StringList *toStringList)
+{
+  assert(fromStringList != NULL);
+  assert(toStringList != NULL);
+
+  List_move(fromStringList,toStringList,NULL,NULL,NULL);
+}
+
+bool StringList_empty(StringList *stringList)
 {
   assert(stringList != NULL);
 

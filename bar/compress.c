@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -29,6 +29,32 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+const struct { CompressAlgorithms compressAlgorithm; const char *name; } COMPRESS_ALGORITHMS[] =
+{
+  { COMPRESS_ALGORITHM_NONE,   "none"  },
+
+  { COMPRESS_ALGORITHM_ZIP_0,  "ZIP0"  },
+  { COMPRESS_ALGORITHM_ZIP_1,  "ZIP1"  },
+  { COMPRESS_ALGORITHM_ZIP_2,  "ZIP2"  },
+  { COMPRESS_ALGORITHM_ZIP_3,  "ZIP3"  },
+  { COMPRESS_ALGORITHM_ZIP_4,  "ZIP4"  },
+  { COMPRESS_ALGORITHM_ZIP_5,  "ZIP5"  },
+  { COMPRESS_ALGORITHM_ZIP_6,  "ZIP6"  },
+  { COMPRESS_ALGORITHM_ZIP_7,  "ZIP7"  },
+  { COMPRESS_ALGORITHM_ZIP_8,  "ZIP8"  },
+  { COMPRESS_ALGORITHM_ZIP_9,  "ZIP9"  },
+
+  { COMPRESS_ALGORITHM_BZIP2_1,"BZIP1" },
+  { COMPRESS_ALGORITHM_BZIP2_2,"BZIP2" },
+  { COMPRESS_ALGORITHM_BZIP2_3,"BZIP3" },
+  { COMPRESS_ALGORITHM_BZIP2_4,"BZIP4" },
+  { COMPRESS_ALGORITHM_BZIP2_5,"BZIP5" },
+  { COMPRESS_ALGORITHM_BZIP2_6,"BZIP6" },
+  { COMPRESS_ALGORITHM_BZIP2_7,"BZIP7" },
+  { COMPRESS_ALGORITHM_BZIP2_8,"BZIP8" },
+  { COMPRESS_ALGORITHM_BZIP2_9,"BZIP9" },
+};
 
 /***************************** Datatypes *******************************/
 
@@ -481,36 +507,52 @@ void Compress_done(void)
 
 const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm)
 {
+  int        z;
   const char *s;
 
-  switch (compressAlgorithm)
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
+         && (COMPRESS_ALGORITHMS[z].compressAlgorithm != compressAlgorithm)
+        )
   {
-    case COMPRESS_ALGORITHM_NONE:    s = "none";    break;
-
-    case COMPRESS_ALGORITHM_ZIP_0:   s = "ZIP0";    break;
-    case COMPRESS_ALGORITHM_ZIP_1:   s = "ZIP1";    break;
-    case COMPRESS_ALGORITHM_ZIP_2:   s = "ZIP2";    break;
-    case COMPRESS_ALGORITHM_ZIP_3:   s = "ZIP3";    break;
-    case COMPRESS_ALGORITHM_ZIP_4:   s = "ZIP4";    break;
-    case COMPRESS_ALGORITHM_ZIP_5:   s = "ZIP5";    break;
-    case COMPRESS_ALGORITHM_ZIP_6:   s = "ZIP6";    break;
-    case COMPRESS_ALGORITHM_ZIP_7:   s = "ZIP7";    break;
-    case COMPRESS_ALGORITHM_ZIP_8:   s = "ZIP8";    break;
-    case COMPRESS_ALGORITHM_ZIP_9:   s = "ZIP9";    break;
-
-    case COMPRESS_ALGORITHM_BZIP2_1: s = "BZIP1";   break;
-    case COMPRESS_ALGORITHM_BZIP2_2: s = "BZIP2";   break;
-    case COMPRESS_ALGORITHM_BZIP2_3: s = "BZIP3";   break;
-    case COMPRESS_ALGORITHM_BZIP2_4: s = "BZIP4";   break;
-    case COMPRESS_ALGORITHM_BZIP2_5: s = "BZIP5";   break;
-    case COMPRESS_ALGORITHM_BZIP2_6: s = "BZIP6";   break;
-    case COMPRESS_ALGORITHM_BZIP2_7: s = "BZIP7";   break;
-    case COMPRESS_ALGORITHM_BZIP2_8: s = "BZIP8";   break;
-    case COMPRESS_ALGORITHM_BZIP2_9: s = "BZIP9";   break;
-    default:                         s = "unknown"; break;
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
+  {
+    s = COMPRESS_ALGORITHMS[z].name;
+  }
+  else
+  {
+    s = "unknown";
   }
 
   return s;
+}
+
+CompressAlgorithms Compress_getAlgorithm(const char *name)
+{
+  int                z;
+  CompressAlgorithms compressAlgorithm;
+
+  assert(name != NULL);
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
+         && (strcmp(COMPRESS_ALGORITHMS[z].name,name) != 0)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
+  {
+    compressAlgorithm = COMPRESS_ALGORITHMS[z].compressAlgorithm;
+  }
+  else
+  {
+    compressAlgorithm = COMPRESS_ALGORITHM_UNKNOWN;
+  }
+
+  return compressAlgorithm;
 }
 
 Errors Compress_new(CompressInfo       *compressInfo,

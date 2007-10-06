@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems : all
@@ -71,7 +71,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Patterns_init
+* Name   : Pattern_init
 * Purpose: init patterns
 * Input  : -
 * Output : -
@@ -79,10 +79,10 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Patterns_init(void);
+Errors Pattern_init(void);
 
 /***********************************************************************\
-* Name   : Patterns_done
+* Name   : Pattern_done
 * Purpose: deinitialize patterns
 * Input  : -
 * Output : -
@@ -90,10 +90,10 @@ Errors Patterns_init(void);
 * Notes  : -
 \***********************************************************************/
 
-void Patterns_done(void);
+void Pattern_done(void);
 
 /***********************************************************************\
-* Name   : Patterns_initList
+* Name   : Pattern_initList
 * Purpose: init pattern list
 * Input  : patternList - pattern list
 * Output : -
@@ -101,10 +101,10 @@ void Patterns_done(void);
 * Notes  : -
 \***********************************************************************/
 
-void Patterns_newList(PatternList *patternList);
+void Pattern_initList(PatternList *patternList);
 
 /***********************************************************************\
-* Name   : Patterns_doneList
+* Name   : Pattern_doneList
 * Purpose: done pattern list
 * Input  : patternList - pattern list
 * Output : -
@@ -112,10 +112,33 @@ void Patterns_newList(PatternList *patternList);
 * Notes  : -
 \***********************************************************************/
 
-void Patterns_deleteList(PatternList *patternList);
+void Pattern_doneList(PatternList *patternList);
 
 /***********************************************************************\
-* Name   : Patterns_addList
+* Name   : Pattern_clearList
+* Purpose: remove all patterns in list
+* Input  : patternList - pattern list
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Pattern_clearList(PatternList *patternList);
+
+/***********************************************************************\
+* Name   : Pattern_moveList
+* Purpose: move all patterns from source list to destination list
+* Input  : fromPatternList - from pattern list (source)
+*          toPatternList   - to pattern list (destination)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Pattern_moveList(PatternList *fromPatternList, PatternList *toPatternList);
+
+/***********************************************************************\
+* Name   : Pattern_appendList
 * Purpose: add pattern to pattern list
 * Input  : patternList - pattern list
 *          pattern     - pattern
@@ -125,13 +148,13 @@ void Patterns_deleteList(PatternList *patternList);
 * Notes  : -
 \***********************************************************************/
 
-Errors Patterns_addList(PatternList  *patternList,
-                        const char   *pattern,
-                        PatternTypes patternType
-                       );
+Errors Pattern_appendList(PatternList  *patternList,
+                          const char   *pattern,
+                          PatternTypes patternType
+                         );
 
 /***********************************************************************\
-* Name   : Patterns_match
+* Name   : Pattern_match
 * Purpose: patch string with single pattern
 * Input  : patternNode      - pattern node
 *          s                - string
@@ -141,13 +164,13 @@ Errors Patterns_addList(PatternList  *patternList,
 * Notes  : -
 \***********************************************************************/
 
-bool Patterns_match(PatternNode       *patternNode,
-                    String            s,
-                    PatternMatchModes patternMatchMode
-                   );
+bool Pattern_match(PatternNode       *patternNode,
+                   String            s,
+                   PatternMatchModes patternMatchMode
+                  );
 
 /***********************************************************************\
-* Name   : Patterns_matchList
+* Name   : Pattern_matchList
 * Purpose: patch string with all patterns of list
 * Input  : patternList      - pattern list
 *          s                - string
@@ -157,13 +180,13 @@ bool Patterns_match(PatternNode       *patternNode,
 * Notes  : -
 \***********************************************************************/
 
-bool Patterns_matchList(PatternList       *patternList,
-                        String            s,
-                        PatternMatchModes patternMatchMode
-                       );
+bool Pattern_matchList(PatternList       *patternList,
+                       String            s,
+                       PatternMatchModes patternMatchMode
+                      );
 
 /***********************************************************************\
-* Name   : Patterns_checkIsPattern
+* Name   : Pattern_checkIsPattern
 * Purpose: check if string is a pattern
 * Input  : s - string
 * Output : -
@@ -171,7 +194,7 @@ bool Patterns_matchList(PatternList       *patternList,
 * Notes  : -
 \***********************************************************************/
 
-bool Patterns_checkIsPattern(String s);
+bool Pattern_checkIsPattern(String s);
 
 #ifdef __cplusplus
   }
