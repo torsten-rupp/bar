@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -47,6 +47,12 @@ typedef struct
 /* comparison, iteration functions */
 typedef int(*StringCompareFunction)(void *userData, char ch1, char ch2);
 typedef char(*StringIterateFunction)(void *userData, char ch);
+
+typedef struct
+{
+  const char *name;
+  uint64     factor;
+} StringUnit;
 
 /****************************** Macros *********************************/
 
@@ -450,9 +456,9 @@ bool String_scan(const String string, const char *format, ...);
 * Notes  : -
 \***********************************************************************/
 
-int String_toInteger(const String string, long *nextIndex);
-int64 String_toInteger64(const String string, long *nextIndex);
-double String_toDouble(const String string, long *nextIndex);
+int String_toInteger(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
+int64 String_toInteger64(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
+double String_toDouble(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
 
 /***********************************************************************\
 * Name   : String_parse

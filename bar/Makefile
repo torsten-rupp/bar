@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.29 $
+# $Revision: 1.30 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -20,7 +20,7 @@ CC_INCLUDES         =
 LD                  = gcc
 LD_FLAGS            =
 LD_LIBRARY_PATHS    = /usr/local/lib
-LD_LIBRARIES        = pthread z bz2 gcrypt gpg-error ssh2
+LD_LIBRARIES        = m pthread z bz2 gcrypt gpg-error ssh2
 LD_STATIC_LIBRARIES = 
 
 YACC                = bison
@@ -141,20 +141,20 @@ test:
 
 test1: bar
 	@$(ECHO_NO_LF) "Test 1: basic..."
-	$(MAKE) BAR_FILE="test.bar" OPTIONS="--compress=none --crypt=none" standard_test
+	$(MAKE) BAR_FILE="test.bar" OPTIONS="--compress-algorithm=none --crypt-algorithm=none" standard_test
 	@$(ECHO) "ok"
 
 test2 test_compress: bar
 	@$(ECHO_NO_LF) "Test 2: compress..."
 	for compress in $(COMPRESS_NAMES); do \
-          $(MAKE) BAR_FILE="test.bar" OPTIONS="--compress=$$compress" standard_test; \
+          $(MAKE) BAR_FILE="test.bar" OPTIONS="--compress-algorithm=$$compress" standard_test; \
         done
 	@$(ECHO) "ok"
 
 test3 test_crypt: bar
 	@$(ECHO_NO_LF) "Test 3: crypt..."
 	for crypt in $(CRYPT_NAMES); do \
-          $(MAKE) BAR_FILE="test-###.bar" OPTIONS="--crypt=$$crypt --crypt-password=$(TEST_PASSWORD)" standard_test; \
+          $(MAKE) BAR_FILE="test-###.bar" OPTIONS="--crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" standard_test; \
         done
 	@$(ECHO) "ok"
 
@@ -167,7 +167,7 @@ test_all: bar
 	@$(ECHO_NO_LF) "Test all..."
 	for compress in $(COMPRESS_NAMES); do \
           for crypt in $(CRYPT_NAMES); do \
-            $(MAKE) BAR_FILE=test-###.bar OPTIONS="--compress=$$compress --crypt=$$crypt --crypt-password=$(TEST_PASSWORD) -s 100000" standard_test; \
+            $(MAKE) BAR_FILE=test-###.bar OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) -s 100000" standard_test; \
             rc=$$?; \
             if test $$rc -ne 0; then \
               exit 1; \
@@ -199,7 +199,7 @@ standard_test_destroy: bar destroyer
 
 .PHONY: p0 pack0 l0 list0 r0 restore0 t0 c0 compare0
 p0 pack0: bar
-	./bar -c data/data.bar demo/1.dat --compress=$(COMPRESS) --crypt=$(CRYPT) --crypt-password=test
+	./bar -c data/data.bar demo/1.dat --compress-algorithm=$(COMPRESS) --crypt-algorithm=$(CRYPT) --crypt-password=test
 
 l0 list0: bar
 	./bar -l data/data.bar --crypt-password=test
@@ -212,7 +212,7 @@ t0 c0 compare0: bar
 
 .PHONY: p1 pack1 l1 list1 r1 restore1 t1 c1 compare1
 p1 pack1: bar
-	./bar -c data/data.bar demo --compress=$(COMPRESS) --crypt=$(CRYPT) --crypt-password=test
+	./bar -c data/data.bar demo --compress-algorithm=$(COMPRESS) --crypt-algorithm=$(CRYPT) --crypt-password=test
 
 l1 list1: bar
 	./bar -l data/data.bar --crypt-password=test
@@ -225,7 +225,7 @@ t1 c1 compare1: bar
 
 .PHONY: p2 pack2 l2 list2 r2 restore2
 p2 pack2: bar
-	./bar -c -s 1000000 data/data.bar demo --compress=$(COMPRESS) --crypt=$(CRYPT) --crypt-password=test
+	./bar -c -s 1000000 data/data.bar demo --compress-algorithm=$(COMPRESS) --crypt-algorithm=$(CRYPT) --crypt-password=test
 
 l2 list2: bar
 	./bar -l data/data.bar.* --crypt-password=test
@@ -249,8 +249,8 @@ backup-tooru: bar
 	./bar \
           -c scp:torsten@tooru.dyndns.org:backup-torsten-###.bar \
           --ssh-port=49856 \
-          --compress=bzip9 \
-          --crypt=aes256 \
+          --compress-algorithm=bzip9 \
+          --crypt-algorithm=aes256 \
           --crypt-password=franz \
           -s 128M \
           --max-tmp-size=256M \
@@ -268,8 +268,8 @@ backup-itzo: bar
 	./bar \
           -c scp:torsten@it-zo.de:backup/backup-torsten-###.bar \
           --ssh-port=2222 \
-          --compress=bzip9 \
-          --crypt=aes256 \
+          --compress-algorithm=bzip9 \
+          --crypt-algorithm=aes256 \
           --crypt-password=franz \
           -s 128M \
           --max-tmp-size=256M \

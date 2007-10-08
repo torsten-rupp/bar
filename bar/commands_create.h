@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -26,6 +26,18 @@
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
+typedef struct
+{
+  ulong  doneFiles;
+  uint64 doneBytes;
+  ulong  totalFiles;
+  uint64 totalBytes;
+  double compressionRatio;
+  String fileName;
+  String storageName;
+} CreateStatusInfo;
+
+typedef char(*CreateStatusInfoFunction)(const CreateStatusInfo *createStatusInfo, void *userData);
 
 /***************************** Variables *******************************/
 
@@ -45,8 +57,7 @@
 * Input  : archiveFileName     - archive file name
 *          includeList         - include list
 *          excludeList         - exclude list
-*          tmpDirectory        - temporary directory
-*          partSize            - part size or 0
+*          archivePartSize     - archive part size or 0
 *          compressAlgorithm   - compression algorithm to use
 *          compressMinFileSize - min. file size for compression
 *          cryptAlgorithm      - crypt algorithm to use
@@ -56,15 +67,16 @@
 * Notes  : -
 \***********************************************************************/
 
-bool Command_create(const char         *archiveFileName,
-                    PatternList        *includePatternList,
-                    PatternList        *excludePatternList,
-                    const char         *tmpDirectory,
-                    ulong              partSize,
-                    CompressAlgorithms compressAlgorithm,
-                    ulong              compressMinFileSize,
-                    CryptAlgorithms    cryptAlgorithm,
-                    const char         *password
+bool Command_create(const char               *archiveFileName,
+                    PatternList              *includePatternList,
+                    PatternList              *excludePatternList,
+                    ulong                    archivePartSize,
+                    CompressAlgorithms       compressAlgorithm,
+                    ulong                    compressMinFileSize,
+                    CryptAlgorithms          cryptAlgorithm,
+                    const char               *password,
+                    CreateStatusInfoFunction createStatusInfoFunction,
+                    void                     *createStatusInfoUserData
                    );
 
 #ifdef __cplusplus

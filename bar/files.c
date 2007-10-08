@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -709,11 +709,11 @@ Errors File_readDevice(DeviceHandle *deviceHandle,
 
 FileTypes File_getType(String fileName)
 {
-  struct stat fileStat;
+  struct stat64 fileStat;
 
   assert(fileName != NULL);
 
-  if (lstat(String_cString(fileName),&fileStat) == 0)
+  if (lstat64(String_cString(fileName),&fileStat) == 0)
   {
     if      (S_ISREG(fileStat.st_mode)) return FILETYPE_FILE;
     else if (S_ISDIR(fileStat.st_mode)) return FILETYPE_DIRECTORY;
@@ -728,11 +728,11 @@ FileTypes File_getType(String fileName)
 
 bool File_delete(String fileName)
 {
-  struct stat fileStat;
+  struct stat64 fileStat;
 
   assert(fileName != NULL);
 
-  if (lstat(String_cString(fileName),&fileStat) == 0)
+  if (lstat64(String_cString(fileName),&fileStat) == 0)
   {
     if      (   S_ISREG(fileStat.st_mode)
              || S_ISLNK(fileStat.st_mode)
@@ -850,12 +850,12 @@ Errors File_getFileInfo(String   fileName,
                         FileInfo *fileInfo
                        )
 {
-  struct stat fileStat;
+  struct stat64 fileStat;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
-  if (lstat(String_cString(fileName),&fileStat) != 0)
+  if (lstat64(String_cString(fileName),&fileStat) != 0)
   {
     return ERROR_IO_ERROR;
   }

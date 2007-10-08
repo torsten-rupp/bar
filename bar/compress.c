@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -30,30 +30,30 @@
 
 /***************************** Constants *******************************/
 
-const struct { CompressAlgorithms compressAlgorithm; const char *name; } COMPRESS_ALGORITHMS[] =
+LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } COMPRESS_ALGORITHMS[] =
 {
-  { COMPRESS_ALGORITHM_NONE,   "none"  },
+  { "none",  COMPRESS_ALGORITHM_NONE    },
 
-  { COMPRESS_ALGORITHM_ZIP_0,  "ZIP0"  },
-  { COMPRESS_ALGORITHM_ZIP_1,  "ZIP1"  },
-  { COMPRESS_ALGORITHM_ZIP_2,  "ZIP2"  },
-  { COMPRESS_ALGORITHM_ZIP_3,  "ZIP3"  },
-  { COMPRESS_ALGORITHM_ZIP_4,  "ZIP4"  },
-  { COMPRESS_ALGORITHM_ZIP_5,  "ZIP5"  },
-  { COMPRESS_ALGORITHM_ZIP_6,  "ZIP6"  },
-  { COMPRESS_ALGORITHM_ZIP_7,  "ZIP7"  },
-  { COMPRESS_ALGORITHM_ZIP_8,  "ZIP8"  },
-  { COMPRESS_ALGORITHM_ZIP_9,  "ZIP9"  },
+  { "zip0",  COMPRESS_ALGORITHM_ZIP_0   },
+  { "zip1",  COMPRESS_ALGORITHM_ZIP_1   },
+  { "zip2",  COMPRESS_ALGORITHM_ZIP_2   },
+  { "zip3",  COMPRESS_ALGORITHM_ZIP_3   },
+  { "zip4",  COMPRESS_ALGORITHM_ZIP_4   },
+  { "zip5",  COMPRESS_ALGORITHM_ZIP_5   },
+  { "zip6",  COMPRESS_ALGORITHM_ZIP_6   },
+  { "zip7",  COMPRESS_ALGORITHM_ZIP_7   },
+  { "zip8",  COMPRESS_ALGORITHM_ZIP_8   },
+  { "zip9",  COMPRESS_ALGORITHM_ZIP_9   },
 
-  { COMPRESS_ALGORITHM_BZIP2_1,"BZIP1" },
-  { COMPRESS_ALGORITHM_BZIP2_2,"BZIP2" },
-  { COMPRESS_ALGORITHM_BZIP2_3,"BZIP3" },
-  { COMPRESS_ALGORITHM_BZIP2_4,"BZIP4" },
-  { COMPRESS_ALGORITHM_BZIP2_5,"BZIP5" },
-  { COMPRESS_ALGORITHM_BZIP2_6,"BZIP6" },
-  { COMPRESS_ALGORITHM_BZIP2_7,"BZIP7" },
-  { COMPRESS_ALGORITHM_BZIP2_8,"BZIP8" },
-  { COMPRESS_ALGORITHM_BZIP2_9,"BZIP9" },
+  { "bzip1", COMPRESS_ALGORITHM_BZIP2_1 },
+  { "bzip2", COMPRESS_ALGORITHM_BZIP2_2 },
+  { "bzip3", COMPRESS_ALGORITHM_BZIP2_3 },
+  { "bzip4", COMPRESS_ALGORITHM_BZIP2_4 },
+  { "bzip5", COMPRESS_ALGORITHM_BZIP2_5 },
+  { "bzip6", COMPRESS_ALGORITHM_BZIP2_6 },
+  { "bzip7", COMPRESS_ALGORITHM_BZIP2_7 },
+  { "bzip8", COMPRESS_ALGORITHM_BZIP2_8 },
+  { "bzip9", COMPRESS_ALGORITHM_BZIP2_9 },
 };
 
 /***************************** Datatypes *******************************/

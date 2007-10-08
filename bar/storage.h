@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -102,7 +102,9 @@ void Storage_done(void);
 /***********************************************************************\
 * Name   : Storage_prepare
 * Purpose: prepare storage: read password, init files
-* Input  : storageName - storage name
+* Input  : storageName - storage name:
+*                          <file name>
+*                          scp:<user name>@<host name>:<file name>
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -113,7 +115,9 @@ Errors Storage_prepare(const String storageName);
 /***********************************************************************\
 * Name   : Storage_create
 * Purpose: create new storage
-* Input  : storageName - storage name
+* Input  : storageName - storage name:
+*                          <file name>
+*                          scp:<user name>@<host name>:<file name>
 *          fileSize    - storage file size
 * Output : storageInfo - initialized storage info
 * Return : ERROR_NONE or errorcode

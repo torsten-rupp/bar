@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems : all
@@ -30,6 +30,20 @@
 /***************************** Constants *******************************/
 
 #define MAX_KEY_SIZE 2048          // max. size of a key in bits
+
+LOCAL const struct { const char *name; CryptAlgorithms cryptAlgorithm; } CRYPT_ALGORITHMS[] =
+{
+  {"none",      CRYPT_ALGORITHM_NONE       },
+
+  {"3des",      CRYPT_ALGORITHM_3DES       },
+  {"cast5",     CRYPT_ALGORITHM_CAST5      },
+  {"blowfish",  CRYPT_ALGORITHM_BLOWFISH   },
+  {"aes128",    CRYPT_ALGORITHM_AES128     },
+  {"aes192",    CRYPT_ALGORITHM_AES192     },
+  {"aes256",    CRYPT_ALGORITHM_AES256     },
+  {"twofish128",CRYPT_ALGORITHM_TWOFISH128 },
+  {"twofish256",CRYPT_ALGORITHM_TWOFISH256 },
+};
 
 /***************************** Datatypes *******************************/
 
@@ -71,47 +85,23 @@ void Crypt_done(void)
 
 const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
 {
+  int        z;
   const char *s;
 
-  switch (cryptAlgorithm)
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+         && (CRYPT_ALGORITHMS[z].cryptAlgorithm != cryptAlgorithm)
+        )
   {
-    case CRYPT_ALGORITHM_NONE:
-      s = "none"; 
-      break;
-    case CRYPT_ALGORITHM_3DES:
-    case CRYPT_ALGORITHM_CAST5:
-    case CRYPT_ALGORITHM_BLOWFISH:
-    case CRYPT_ALGORITHM_AES128:
-    case CRYPT_ALGORITHM_AES192:
-    case CRYPT_ALGORITHM_AES256:
-    case CRYPT_ALGORITHM_TWOFISH128:
-    case CRYPT_ALGORITHM_TWOFISH256:
-      {
-        int gcryptAlgorithm;
-
-        switch (cryptAlgorithm)
-        {
-          case CRYPT_ALGORITHM_3DES:       gcryptAlgorithm = GCRY_CIPHER_3DES;       break;
-          case CRYPT_ALGORITHM_CAST5:      gcryptAlgorithm = GCRY_CIPHER_CAST5;      break;
-          case CRYPT_ALGORITHM_BLOWFISH:   gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;   break;
-          case CRYPT_ALGORITHM_AES128:     gcryptAlgorithm = GCRY_CIPHER_AES;        break;
-          case CRYPT_ALGORITHM_AES192:     gcryptAlgorithm = GCRY_CIPHER_AES192;     break;
-          case CRYPT_ALGORITHM_AES256:     gcryptAlgorithm = GCRY_CIPHER_AES256;     break;
-          case CRYPT_ALGORITHM_TWOFISH128: gcryptAlgorithm = GCRY_CIPHER_TWOFISH128; break;
-          case CRYPT_ALGORITHM_TWOFISH256: gcryptAlgorithm = GCRY_CIPHER_TWOFISH;    break;
-          #ifndef NDEBUG
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; /* not reached */
-          #endif /* NDEBUG */
-        }
-
-        s = gcry_cipher_algo_name(gcryptAlgorithm);
-      }
-      break;
-    default:
-      s = "unknown";
-      break;
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+  {
+    s = CRYPT_ALGORITHMS[z].name;
+  }
+  else
+  {
+    s = "unknown";
   }
 
   return s;
@@ -119,20 +109,26 @@ const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
 
 CryptAlgorithms Crypt_getAlgorithm(const char *name)
 {
+  int             z;
   CryptAlgorithms cryptAlgorithm;
 
   assert(name != NULL);
 
-  if      (strcmp(name,"none"      ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_NONE;
-  else if (strcmp(name,"3DES"      ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_3DES;
-  else if (strcmp(name,"CAST5"     ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_CAST5;
-  else if (strcmp(name,"BLOWFISH"  ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_BLOWFISH;
-  else if (strcmp(name,"AES128"    ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_AES128;
-  else if (strcmp(name,"AES192"    ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_AES192;
-  else if (strcmp(name,"AES256"    ) == 0) cryptAlgorithm = CRYPT_ALGORITHM_AES256;
-  else if (strcmp(name,"TWOFISH128") == 0) cryptAlgorithm = CRYPT_ALGORITHM_TWOFISH128;
-  else if (strcmp(name,"TWOFISH256") == 0) cryptAlgorithm = CRYPT_ALGORITHM_TWOFISH256;
-  else                                     cryptAlgorithm = CRYPT_ALGORITHM_UNKNOWN;
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+         && (strcmp(CRYPT_ALGORITHMS[z].name,name) != 0)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+  {
+    cryptAlgorithm = CRYPT_ALGORITHMS[z].cryptAlgorithm;
+  }
+  else
+  {
+    cryptAlgorithm = CRYPT_ALGORITHM_UNKNOWN;
+  }
 
   return cryptAlgorithm;
 }
