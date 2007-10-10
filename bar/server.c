@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -148,9 +148,10 @@ LOCAL bool       quitFlag;
 #endif
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : updateCreateStatus
+* Purpose: update create status
+* Input  : createStatusInfo - create status info data
+*          jobNode          - job node
 * Output : -
 * Return : -
 * Notes  : -
@@ -162,7 +163,11 @@ LOCAL void updateCreateStatus(const CreateStatusInfo *createStatusInfo,
 {
   ulong  elapsedTime;
   double filesPerSecond,bytesPerSecond;
+  ulong  restFiles;
+  uint64 restBytes;
   ulong  estimtedRestTime;
+  double sum;
+  uint   n;
 
   assert(createStatusInfo != NULL);
   assert(createStatusInfo->fileName != NULL);
@@ -173,11 +178,21 @@ LOCAL void updateCreateStatus(const CreateStatusInfo *createStatusInfo,
   elapsedTime = (ulong)(time(NULL)-jobNode->runningInfo.startTime);
   filesPerSecond = (elapsedTime > 0)?(double)createStatusInfo->doneFiles/(double)elapsedTime:0;
   bytesPerSecond = (elapsedTime > 0)?(double)createStatusInfo->doneBytes/(double)elapsedTime:0;
-  estimtedRestTime = (ulong)round(((double)jobNode->runningInfo.totalFiles*filesPerSecond+
-                                   (double)jobNode->runningInfo.totalBytes*bytesPerSecond
-                                  )/2
-                                 );
-
+  restFiles = (jobNode->runningInfo.totalFiles > createStatusInfo->doneFiles)?jobNode->runningInfo.totalFiles-createStatusInfo->doneFiles:0L;
+  restBytes = (jobNode->runningInfo.totalBytes > createStatusInfo->doneBytes)?jobNode->runningInfo.totalBytes-createStatusInfo->doneBytes:0LL;
+  sum = 0; n = 0;
+  if (filesPerSecond > 0) { sum += (double)restFiles/filesPerSecond; n++; }
+  if (bytesPerSecond > 0) { sum += (double)restBytes/bytesPerSecond; n++; }
+  if (n > 0)
+  estimtedRestTime = (n > 0)?(ulong)round(sum/n):0;
+/*
+fprintf(stderr,"%s,%d: createStatusInfo->doneFiles=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- elapsedTime=%lus filesPerSecond=%f bytesPerSecond=%f estimtedRestTime=%lus\n",__FILE__,__LINE__,
+createStatusInfo->doneFiles,
+createStatusInfo->doneBytes,
+jobNode->runningInfo.totalFiles,
+jobNode->runningInfo.totalBytes,
+elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
+*/
 
   jobNode->runningInfo.doneFiles  = createStatusInfo->doneFiles;
   jobNode->runningInfo.doneBytes  = createStatusInfo->doneBytes;
@@ -785,7 +800,7 @@ LOCAL void serverCommand_addIncludePattern(ClientNode *clientNode, uint id, cons
 
   if (clientNode->jobNode != NULL)
   {
-    Pattern_appendList(&clientNode->jobNode->includePatternList,String_cString(includePattern),PATTERN_TYPE_BASIC);
+    Pattern_appendList(&clientNode->jobNode->includePatternList,String_cString(includePattern),PATTERN_TYPE_GLOB);
     sendResult(clientNode,id,TRUE,0,"");
   }
   else
@@ -811,7 +826,7 @@ LOCAL void serverCommand_addExcludePattern(ClientNode *clientNode, uint id, cons
 
   if (clientNode->jobNode != NULL)
   {
-    Pattern_appendList(&clientNode->jobNode->excludePatternList,String_cString(excludePattern),PATTERN_TYPE_BASIC);
+    Pattern_appendList(&clientNode->jobNode->excludePatternList,String_cString(excludePattern),PATTERN_TYPE_GLOB);
     sendResult(clientNode,id,TRUE,0,"");
   }
   else

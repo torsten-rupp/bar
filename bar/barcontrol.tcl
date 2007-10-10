@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -44,16 +44,16 @@ if {[catch {package require Tix}]} \
   {
     puts "ERROR: Found '$l' (permission: [file attribute $l -permission]), but it seems not"
     puts "to be usable or accessable. Please check if"
-    puts " - version is correct,"
-    puts " - file is accessable (permission 755 or more),"
-    puts " - directory of file is included in search path of system linker."
+    puts "  - version is correct,"
+    puts "  - file is accessable (permission 755 or more),"
+    puts "  - directory of file is included in search path of system linker."
   } \
   else \
   {
     puts "Package 'Tix' cannot be found (library libtix*, libTix* not found). Please check if"
-    puts " - 'Tix*' package is installed in '$tcl_pkgPath',"
-    puts " - '$tcl_pkgPath/Tix*' is accessable,"
-    puts " - library libtix* or libTix* exists somewhere in '$tcl_pkgPath'."
+    puts "  - 'Tix*' package is installed in '$tcl_pkgPath',"
+    puts "  - '$tcl_pkgPath/Tix*' is accessable,"
+    puts "  - library libtix* or libTix* exists somewhere in '$tcl_pkgPath'."
   }
   exit 104
 }
@@ -71,7 +71,7 @@ load "[pwd]/tcl/scanx.so"
 set mainWindow ""
 wm title . "BAR control"
 wm iconname . "BAR"
-wm geometry . "600x600"
+wm geometry . "800x600"
 
 # ------------------------ internal constants/variables ----------------------
 
@@ -84,6 +84,8 @@ set server(lastCommandId) 0
 set barConfigFileName     ""
 set barConfigModifiedFlag 0
 
+set barConfig(included)                {}
+set barConfig(excluded)                {}
 set barConfig(storageType)             ""
 set barConfig(storageLoginName)        ""
 set barConfig(storageHostName)         ""
@@ -110,7 +112,11 @@ set currentJob(storageName)            ""
 set jobListTimerId    0
 set currentJobTimerId 0
 
-# file list data format
+set fileTreeWidget     ""
+set includedListWidget ""
+set excludedListWidget ""
+
+# format of data in file list
 #  {<type> [NONE|INCLUDED|EXCLUDED] <directory open flag>}
 
 # --------------------------------- images -----------------------------------
@@ -188,6 +194,132 @@ proc internalError { args } \
   error "INTERNAL ERROR: [join $args]"
 }
 
+proc Dialog:new { title } \
+{
+  set id "[info cmdcount]"
+  namespace eval "::dialog$id" \
+  {
+  }
+
+  set handle ".dialog$id"
+  catch {destroy $handle }
+  toplevel $handle
+  wm title $handle $title
+
+  return $handle
+}
+
+proc Dialog:delete { handle } \
+{
+  set id [string range $handle 7 end]
+  catch { wm destroy $handle }
+
+  namespace delete "::dialog$id"
+}
+
+proc Dialog:show { handle } \
+{
+  tkwait visibility $handle
+  set w [winfo width  $handle]
+  set h [winfo height $handle]
+  set x [expr {[winfo pointerx $handle]-$w/2}]; if {$x < 0} { set x 0 }
+  set y [expr {[winfo pointery $handle]-$h/2}]; if {$y < 0} { set y 0 }
+  wm geometry $handle +$x+$y
+  raise $handle
+  tkwait window $handle
+}
+
+proc Dialog:close { handle } \
+{
+  catch {destroy $handle}
+}
+
+proc Dialog:addVariable { handle name value } \
+{
+  set id [string range $handle 7 end]
+  namespace eval "::dialog$id" \
+  "
+    variable $name \"$value\"
+  "
+}
+
+proc Dialog:variable { handle name } \
+{
+  set id [string range $handle 7 end]
+  return "::dialog$id\:\:$name"
+}
+
+proc Dialog:set { handle name value } \
+{
+  set id [string range $handle 7 end]
+  eval "set ::dialog$id\:\:$name \"$value\""
+}
+
+proc Dialog:get { handle name } \
+{
+  set id [string range $handle 7 end]
+  eval "set result \$::dialog$id\:\:$name"
+
+  return $result
+}
+
+#***********************************************************************
+# Name   : Dialog:select
+# Purpose: display select dialog
+# Input  : title      - title text
+#          message    - message text
+#          image      - image or ""
+#          buttonList - list of buttons {{<text> [<key>]}...}
+#          default    - default button (0..n)
+# Output : -
+# Return : selected button
+# Notes  : -
+#***********************************************************************
+
+proc Dialog:select { title message image buttonList {default 0} } \
+{
+  set handle [Dialog:new $title]
+  Dialog:addVariable $handle result -1
+
+  frame $handle.message
+    if {$image != ""} \
+    {
+      label $handle.message.image -image $image
+      pack $handle.message.image -side left -fill y
+    }
+    message $handle.message.text -width 400 -text $message
+    pack $handle.message.text -side right -fill both -expand yes -padx 2p -pady 2p
+  pack $handle.message -padx 2p -pady 2p
+
+  frame $handle.buttons
+   set n 0
+   foreach button $buttonList \
+   {
+     set text [lindex $button 0]
+     set key  [lindex $button 1]
+
+     button $handle.buttons.button$n -text $text -command "Dialog:set $handle result $n; Dialog:close $handle"
+     pack $handle.buttons.button$n -side left -padx 2p
+     bind $handle.buttons.button$n <Return> "$handle.buttons.button$n invoke"
+     if {$key != ""} \
+     {
+       bind $handle.buttons.button$n <$key> "$handle.buttons.button$n invoke"
+     }
+
+     incr n
+   }
+  pack $handle.buttons -side bottom -padx 2p -pady 2p
+
+  focus $handle.buttons.button$default
+
+  Dialog:show $handle
+
+  set result [Dialog:get $handle result]
+  Dialog:delete $handle
+
+  return $result
+}
+
 #***********************************************************************
 # Name   : Dialog:error
 # Purpose: show error-dialog
@@ -207,25 +339,7 @@ proc Dialog:error { message } \
     o8OpuXnS2fU56mkK0ld3ganK2YChWgAAOw==
   }]
 
-  catch {destroy .dialog_error}
-  toplevel .dialog_error
-  wm title .dialog_error "Error/Alert"
-
-  frame .dialog_error.message
-    label .dialog_error.message.image -image $image
-    pack .dialog_error.message.image -side left -fill y
-    message .dialog_error.message.text -width 400 -text $message
-    pack .dialog_error.message.text -side right -fill both -expand yes -padx 2m -pady 2m
-  pack .dialog_error.message -padx 2m -pady 2m
-  button .dialog_error.ok -text " Ok " -command "destroy .dialog_error"
-  pack .dialog_error.ok -side bottom -padx 2m -pady 2m
-  bind .dialog_error.ok <Return> ".dialog_error.ok invoke"
-  bind .dialog_error.ok <Escape> ".dialog_error.ok invoke"
-
-  focus .dialog_error.ok
-  raise .dialog_error
-
-  catch {tkwait window .dialog_error}
+  Dialog:select "Error" $message $image {{"Ok" Escape}}
 }
 
 #***********************************************************************
@@ -239,7 +353,23 @@ proc Dialog:error { message } \
 
 proc Dialog:ok { message } \
 {
-  puts "OK: $message\n"
+  Dialog:select "Info" $message "" {{"Ok" Escape}}
+}
+
+#***********************************************************************
+# Name   : Dialog:confirm
+# Purpose: show confirm-dialog
+# Input  : message - message
+#          yesText - yes text
+#          noText  - no text
+# Output : -
+# Return : 1 for "yes", 0 for "no"
+# Notes  : -
+#***********************************************************************
+
+proc Dialog:confirm { message yesText noText } \
+{
+  return [expr {([Dialog:select "Confirm" $message "" [list [list $yesText] [list $noText Escape]]]==0)?1:0}]
 }
 
 #***********************************************************************
@@ -279,6 +409,15 @@ proc progressbar { path args } \
       update
     }
   } 
+}
+
+proc popupMenu { widget menuItemList } \
+{
+  tixPopupMenu $widget.popup -title "Command"
+  foreach menuItem $menuItemList \
+  {
+    $widget.popup subwidget menu add command -label [lindex $menuItem 0] -command "event generate $widget <<[lindex $menuItem 1]>>"
+  }
 }
 
 #***********************************************************************
@@ -514,7 +653,7 @@ proc Server:readResult { commandId _errorCode _result } \
   {
      if {[eof $server(socketHandle)]} { return 0 }
     gets $server(socketHandle) line
-puts "received [clock clicks] [eof $server(socketHandle)]: $line"
+#puts "received [clock clicks] [eof $server(socketHandle)]: $line"
 
     set completeFlag 0
     set errorCode    -1
@@ -684,17 +823,18 @@ proc updateCurrentJob { } \
 #***********************************************************************
 # Name       : itemPathToFileName
 # Purpose    : convert item path to file name
-# Input      : fileListWidget - file list widget
-#              itemPath       - item path
+# Input      : itemPath - item path
 # Output     : -
 # Return     : file name
 # Side-Effect: unknown
 # Notes      : -
 #***********************************************************************
 
-proc itemPathToFileName { fileListWidget itemPath } \
+proc itemPathToFileName { itemPath } \
  {
-  set separator [lindex [$fileListWidget configure -separator] 4]
+  global fileTreeWidget
+
+  set separator [lindex [$fileTreeWidget configure -separator] 4]
 #puts "$itemPath -> #[string range $itemPath [string length $Separator] end]#"
 
   return [string map [list $separator "/"] $itemPath]
@@ -703,19 +843,20 @@ proc itemPathToFileName { fileListWidget itemPath } \
 #***********************************************************************
 # Name       : fileNameToItemPath
 # Purpose    : convert file name to item path
-# Input      : fileListWidget - file list widget
-#              fileName       - file name
+# Input      : fileName - file name
 # Output     : -
 # Return     : item path
 # Side-Effect: unknown
 # Notes      : -
 #***********************************************************************
 
-proc fileNameToItemPath { fileListWidget fileName } \
+proc fileNameToItemPath { fileName } \
  {
+  global fileTreeWidget
+
   # get separator
   set separator "/"
-  catch {set separator [lindex [$fileListWidget configure -separator] 4]}
+  catch {set separator [lindex [$fileTreeWidget configure -separator] 4]}
 
   # get path name
    if {($fileName != ".") && ($fileName != "/")} \
@@ -730,70 +871,104 @@ proc fileNameToItemPath { fileListWidget fileName } \
 
 # ----------------------------------------------------------------------
 
+proc checkIncluded { fileName } \
+{
+  global barConfig
+
+  set includedFlag 0
+  foreach pattern $barConfig(included) \
+  {
+    if {($fileName == $pattern) || [string match $pattern $fileName]} \
+    {
+      set includedFlag 1
+      break
+    }
+  }
+
+  return $includedFlag
+}
+
+proc checkExcluded { fileName } \
+{
+  global barConfig
+
+  set excludedFlag 0
+  foreach pattern $barConfig(excluded) \
+  {
+    if {($fileName == $pattern) || [string match $pattern $fileName]} \
+    {
+      set excludedFlag 1
+      break
+    }
+  }
+
+  return $excludedFlag
+}
+
 #***********************************************************************
 # Name   : clearFileList
 # Purpose: clear file list
-# Input  : fileListWidget - file list widget
+# Input  : -
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc clearFileList { fileListWidget } \
+proc clearFileList { } \
 {
-  global images
+  global fileTreeWidget images
 
-  foreach itemPath [$fileListWidget info children ""] \
+  foreach itemPath [$fileTreeWidget info children ""] \
   {
-    $fileListWidget delete offsprings $itemPath
-    $fileListWidget item configure $itemPath 0 -image $images(folder)
+    $fileTreeWidget delete offsprings $itemPath
+    $fileTreeWidget item configure $itemPath 0 -image $images(folder)
   }
 }
 
 #***********************************************************************
 # Name   : addDevice
 # Purpose: add a device to tree-widget
-# Input  : fileListWidget - file list widget
-#          deviceName     - file name/directory name
+# Input  : deviceName - file name/directory name
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc addDevice { fileListWidget deviceName } \
+proc addDevice { deviceName } \
 {
-  catch {$fileListWidget delete entry $deviceName}
+  global fileTreeWidget
+
+  catch {$fileTreeWidget delete entry $deviceName}
 
   set n 0
-  set l [$fileListWidget info children ""]
-  while {($n < [llength $l]) && (([$fileListWidget info data [lindex $l $n]] != {}) || ($deviceName>[lindex $l $n]))} \
+  set l [$fileTreeWidget info children ""]
+  while {($n < [llength $l]) && (([$fileTreeWidget info data [lindex $l $n]] != {}) || ($deviceName>[lindex $l $n]))} \
   {
     incr n
   }
 
-  set style [tixDisplayStyle imagetext -refwindow $fileListWidget]
+  set style [tixDisplayStyle imagetext -refwindow $fileTreeWidget]
 
-  $fileListWidget add $deviceName -at $n -itemtype imagetext -text $deviceName -image [tix getimage folder] -style $style -data [list "DIRECTORY" "NONE" 0]
-  $fileListWidget item create $deviceName 1 -itemtype imagetext -style $style
-  $fileListWidget item create $deviceName 2 -itemtype imagetext -style $style
-  $fileListWidget item create $deviceName 3 -itemtype imagetext -style $style
+  $fileTreeWidget add $deviceName -at $n -itemtype imagetext -text $deviceName -image [tix getimage folder] -style $style -data [list "DIRECTORY" "NONE" 0]
+  $fileTreeWidget item create $deviceName 1 -itemtype imagetext -style $style
+  $fileTreeWidget item create $deviceName 2 -itemtype imagetext -style $style
+  $fileTreeWidget item create $deviceName 3 -itemtype imagetext -style $style
 }
 
 #***********************************************************************
 # Name   : addEntry
 # Purpose: add a file/directory/link entry to tree-widget
-# Input  : fileListWidget - file list widget
-#          fileName       - file name/directory name
-#          fileType       - FILE|DIRECTORY|LINK
-#          fileSize       - file size
+# Input  : fileName - file name/directory name
+#          fileType - FILE|DIRECTORY|LINK
+#          fileSize - file size
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc addEntry { fileListWidget fileName fileType fileSize } \
+proc addEntry { fileName fileType fileSize } \
 {
-  global images
+  global fileTreeWidget barConfig images
 
   # get parent directory
   if {[file tail $fileName] !=""} \
@@ -806,144 +981,148 @@ proc addEntry { fileListWidget fileName fileType fileSize } \
   }
 
   # get item path, parent item path
-  set itemPath       [fileNameToItemPath $fileListWidget $fileName       ]
-  set parentItemPath [fileNameToItemPath $fileListWidget $parentDirectory]
+  set itemPath       [fileNameToItemPath $fileName       ]
+  set parentItemPath [fileNameToItemPath $parentDirectory]
 #puts "f=$fileName"
 #puts "i=$itemPath"
 #puts "p=$parentItemPath"
 
-  catch {$fileListWidget delete entry $itemPath}
+  catch {$fileTreeWidget delete entry $itemPath}
 
   # create parent entry if it does not exists
-  if {($parentItemPath != "") && ![$fileListWidget info exists $parentItemPath]} \
+  if {($parentItemPath != "") && ![$fileTreeWidget info exists $parentItemPath]} \
   {
-puts "---"
-    addEntry $fileListWidget [file dirname $fileName] "DIRECTORY" 0
+    addEntry [file dirname $fileName] "DIRECTORY" 0
   }
 
-  set styleImage     [tixDisplayStyle imagetext -refwindow $fileListWidget -anchor w]
-  set styleTextLeft  [tixDisplayStyle text      -refwindow $fileListWidget -anchor w]
-  set styleTextRight [tixDisplayStyle text      -refwindow $fileListWidget -anchor e]
+  # get excluded flag of entry
+  set excludedFlag [checkExcluded $fileName]
+
+  # get styles
+  set styleImage     [tixDisplayStyle imagetext -refwindow $fileTreeWidget -anchor w]
+  set styleTextLeft  [tixDisplayStyle text      -refwindow $fileTreeWidget -anchor w]
+  set styleTextRight [tixDisplayStyle text      -refwindow $fileTreeWidget -anchor e]
 
    if     {$fileType=="FILE"} \
    {
 #puts "add file $fileName $itemPath - $parentItemPath - $SortedFlag -- [file tail $fileName]"
      # find insert position (sort)
      set n 0
-     set l [$fileListWidget info children $parentItemPath]
-     while {($n < [llength $l]) && (([lindex [$fileListWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     set l [$fileTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$fileTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
      {
        incr n
      }
 
      # add file item
-     $fileListWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $images(file) -style $styleImage -data [list "FILE" "NONE" 0]
-     $fileListWidget item create $itemPath 1 -itemtype text -text "FILE"    -style $styleTextLeft
-     $fileListWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
-     $fileListWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
+     if {!$excludedFlag} { set image $images(file) } else { set image $images(fileExcluded) }
+     $fileTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
+     $fileTreeWidget item create $itemPath 1 -itemtype text -text "FILE"    -style $styleTextLeft
+     $fileTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
+     $fileTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
    } \
    elseif {$fileType=="DIRECTORY"} \
    {
 #puts "add directory $fileName"
      # find insert position (sort)
      set n 0
-     set l [$fileListWidget info children $parentItemPath]
-     while {($n < [llength $l]) && ([lindex [$fileListWidget info data [lindex $l $n]] 0] != "DIRECTORY") && ($itemPath > [lindex $l $n])} \
+     set l [$fileTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && ([lindex [$fileTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") && ($itemPath > [lindex $l $n])} \
      {
        incr n
      }
 
      # add directory item
-     $fileListWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $images(folder) -style $styleImage -data [list "DIRECTORY" "NONE" 0]
-     $fileListWidget item create $itemPath 1 -itemtype text -style $styleTextLeft
-     $fileListWidget item create $itemPath 2 -itemtype text -style $styleTextLeft
-     $fileListWidget item create $itemPath 3 -itemtype text -style $styleTextLeft
+     if {!$excludedFlag} { set image $images(folder) } else { set image $images(folderExcluded) }
+     $fileTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "DIRECTORY" "NONE" 0]
+     $fileTreeWidget item create $itemPath 1 -itemtype text -style $styleTextLeft
+     $fileTreeWidget item create $itemPath 2 -itemtype text -style $styleTextLeft
+     $fileTreeWidget item create $itemPath 3 -itemtype text -style $styleTextLeft
    } \
    elseif {$fileType=="LINK"} \
    {
-     # add link item
 #puts "add link $fileName $RealFilename"
      set n 0
-     set l [$fileListWidget info children $parentItemPath]
-     while {($n < [llength $l]) && (([lindex [$fileListWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     set l [$fileTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$fileTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
      {
        incr n
      }
 
-     set style [tixDisplayStyle imagetext -refwindow $fileListWidget]
-
-     $fileListWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $images(link) -style $styleImage -data [list "LINK" "NONE" 0]
-     $fileListWidget item create $itemPath 1 -itemtype text -text "LINK" -style $styleTextLeft
-     $fileListWidget item create $itemPath 2 -itemtype text              -style $styleTextLeft
-     $fileListWidget item create $itemPath 3 -itemtype text              -style $styleTextLeft
+     # add link item
+     if {!$excludedFlag} { set image $images(link) } else { set image $images(linkExcluded) }
+     $fileTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "LINK" "NONE" 0]
+     $fileTreeWidget item create $itemPath 1 -itemtype text -text "LINK" -style $styleTextLeft
+     $fileTreeWidget item create $itemPath 2 -itemtype text              -style $styleTextLeft
+     $fileTreeWidget item create $itemPath 3 -itemtype text              -style $styleTextLeft
    }
-puts "$itemPath: [$fileListWidget info data $itemPath]"
 }
 
 #***********************************************************************
 # Name   : openCloseDirectory
 # Purpose: open/close directory
-# Input  : fileListWidget - file list widget
-#          itemPath       - item path
+# Input  : itemPath - item path
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc openCloseDirectory { fileListWidget itemPath } \
+proc openCloseDirectory { itemPath } \
 {
-  global images
+  global fileTreeWidget includedListWidget excludedListWidget images
 
   # get directory name
-  set directoryName [itemPathToFileName $fileListWidget $itemPath]
+  set directoryName [itemPathToFileName $itemPath]
 
   # check if existing, add if not exists
-  if {![$fileListWidget info exists $itemPath]} \
+  if {![$fileTreeWidget info exists $itemPath]} \
   {
-    addEntry $fileListWidget $directoryName "DIRECTORY" 0
+    addEntry $directoryName "DIRECTORY" 0
   }
 
   # check if parent exist and is open, open it if needed
-  set parentItemPath [$fileListWidget info parent $itemPath]
-  if {[$fileListWidget info exists $parentItemPath]} \
+  set parentItemPath [$fileTreeWidget info parent $itemPath]
+  if {[$fileTreeWidget info exists $parentItemPath]} \
   {
-    set data [$fileListWidget info data $parentItemPath]
+    set data [$fileTreeWidget info data $parentItemPath]
     if {[lindex $data 2] == 0} \
     {
-      openCloseDirectory $fileListWidget $parentItemPath
+      openCloseDirectory $parentItemPath
     }
   }
 
   # get data
-  set data [$fileListWidget info data $itemPath]
+  set data [$fileTreeWidget info data $itemPath]
+  set type              [lindex $data 0]
+  set directoryOpenFlag [lindex $data 2]
 
-  if {[lindex $data 0] == "DIRECTORY"} \
+  if {$type == "DIRECTORY"} \
   {
     # get open/closed flag
-    set directoryOpenFlag [lindex $data 2]
 
-    $fileListWidget delete offsprings $itemPath
+    $fileTreeWidget delete offsprings $itemPath
     if {!$directoryOpenFlag} \
     {
-      $fileListWidget item configure $itemPath 0 -image $images(folderOpen)
+      $fileTreeWidget item configure $itemPath 0 -image $images(folderOpen)
 
-      set fileName [itemPathToFileName $fileListWidget $itemPath]
+      set fileName [itemPathToFileName $itemPath]
       set commandId [Server:sendCommand "FILE_LIST" $fileName 0]
       while {[Server:readResult $commandId errorCode result]} \
       {
+#puts "add file $result"
         if     {[scanx $result "FILE %d %S" fileSize fileName]} \
         {
-          addEntry $fileListWidget $fileName "FILE" $fileSize
+          addEntry $fileName "FILE" $fileSize
         } \
-        elseif {[scanx $result "DIRECTORY %d %S" totalSize directoryName]} \
+        elseif {[scanx $result "DIRECTORY %ld %S" totalSize directoryName]} \
         {
-          addEntry $fileListWidget $directoryName "DIRECTORY" $totalSize
+          addEntry $directoryName "DIRECTORY" $totalSize
         } \
         elseif {[scanx $result "LINK %S" linkName]} \
         {
-          addEntry $fileListWidget $linkName "LINK" 0
+          addEntry $linkName "LINK" 0
         } else {
-  internalError "xxx"
+  internalError "unknown file type in openclosedirectory"
 }
       }
 
@@ -951,49 +1130,174 @@ proc openCloseDirectory { fileListWidget itemPath } \
     } \
     else \
     {
-      $fileListWidget item configure $itemPath 0 -image $images(folder)
+      $fileTreeWidget item configure $itemPath 0 -image $images(folder)
 
       set directoryOpenFlag 0
     }
 
     # update data
-    set data [lreplace $data 2 2 $directoryOpenFlag]
-    $fileListWidget entryconfigure $itemPath -data $data
+    lset data 2 $directoryOpenFlag
+    $fileTreeWidget entryconfigure $itemPath -data $data
   }
 }
 
 #***********************************************************************
-# Name   : setEntryState
-# Purpose: set entry state
-# Input  : fileListWidget - file list widget
-#          itemPath       - item path
-#          state         - NONE, INCLUDED, EXCLUDED
+# Name   : updateFileTreeStates
+# Purpose: update file tree states depending on include/exclude patterns
+# Input  : -
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc setEntryState { fileListWidget itemPath state } \
+proc updateFileTreeStates { } \
 {
-  global images
+  global fileTreeWidget barConfig images
+
+  set excludedList {}
+  set itemPathList [$fileTreeWidget info children ""]
+  while {[llength $itemPathList] > 0} \
+  {
+    set fileName [lindex $itemPathList 0]; set itemPathList [lreplace $itemPathList 0 0]
+    set itemPath [fileNameToItemPath $fileName]
+
+    set data [$fileTreeWidget info data $itemPath]
+    set type              [lindex $data 0]
+    set state             [lindex $data 1]
+    set directoryOpenFlag [lindex $data 2]
+
+    # add sub-directories to update
+    if {($type == "DIRECTORY") && ($state != "EXCLUDED") && $directoryOpenFlag} \
+    {
+      foreach z [$fileTreeWidget info children $itemPath] \
+      {
+        lappend itemPathList $z
+      }
+    }
+
+    # get excluded flag of entry
+    set includedFlag [checkIncluded $fileName]
+    set excludedFlag [checkExcluded $fileName]
+
+    # detect new state
+    if     {$excludedFlag} \
+    {
+      set state "EXCLUDED"
+    } \
+    elseif {($state == "EXCLUDED") && !$excludedFlag} \
+    {
+      if {$includedFlag} \
+      {
+        set state "INCLUDED"
+      } \
+      else \
+      {
+        set state "NONE"
+      }
+    }
+#puts "update $fileName $includedFlag $excludedFlag: $state"
+
+    # update image and state
+    if     {$state == "INCLUDED"} \
+    {
+      if     {$type == "FILE"} \
+      {
+        set image $images(fileIncluded)
+      } \
+      elseif {$type == "DIRECTORY"} \
+      {
+        if {$directoryOpenFlag} \
+        {
+          set image $images(folderIncludedOpen)
+        } \
+        else \
+        {
+          set image $images(folderIncluded)
+        }
+      } \
+      elseif {$type == "LINK"} \
+      {
+        set image $images(linkIncluded)
+      }
+    } \
+    elseif {$state == "EXCLUDED"} \
+    {
+      if     {$type == "FILE"} \
+      {
+        set image $images(fileExcluded)
+      } \
+      elseif {$type == "DIRECTORY"} \
+      {
+        set image $images(folderExcluded)
+        if {$directoryOpenFlag} \
+        {
+          $fileTreeWidget delete offsprings $itemPath
+          lset data 2 0
+        }
+      } \
+      elseif {$type == "LINK"} \
+      {
+        set image $images(linkExcluded)
+      }
+    } \
+    else  \
+    {
+      if     {$type == "FILE"} \
+      {
+        set image $images(file)
+      } \
+      elseif {$type == "DIRECTORY"} \
+      {
+        set image $images(folder)
+      } \
+      elseif {$type == "LINK"} \
+      {
+        set image $images(link)
+      }
+    }
+    $fileTreeWidget item configure [fileNameToItemPath $fileName] 0 -image $image
+
+    # update data
+    lset data 1 $state
+    $fileTreeWidget entryconfigure $itemPath -data $data
+  }
+
+  return $excludedList
+}
+
+#***********************************************************************
+# Name   : setEntryState
+# Purpose: set entry state
+# Input  : itemPath - item path
+#          state    - NONE, INCLUDED, EXCLUDED
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc setEntryState { itemPath state } \
+{
+  global fileTreeWidget barConfig images
+
+  # get file name
+  set fileName [itemPathToFileName $itemPath]
 
   # get data
-  set data [$fileListWidget info data $itemPath]
+  set data [$fileTreeWidget info data $itemPath]
+  set type              [lindex $data 0]
+  set directoryOpenFlag [lindex $data 2]
 #puts "$itemPath: $state"
 #puts $data
 
   # get type, exclude flag
-  set type [lindex $data 0]
-
   if     {$state == "INCLUDED"} \
   {
     if     {$type == "FILE"} \
     {
-      set image $images(file)
+      set image $images(fileIncluded)
     } \
     elseif {$type == "DIRECTORY"} \
     {
-      set directoryOpenFlag [lindex $data 2]
       if {$directoryOpenFlag} \
       {
         set image $images(folderIncludedOpen)
@@ -1005,8 +1309,9 @@ proc setEntryState { fileListWidget itemPath state } \
     } \
     elseif {$type == "LINK"} \
     {
-      set image $images(link)
+      set image $images(linkIncluded)
     }
+    lappend barConfig(included) $fileName; set barConfig(included) [lsort -uniq $barConfig(included)]
   } \
   elseif {$state == "EXCLUDED"} \
   {
@@ -1017,16 +1322,17 @@ proc setEntryState { fileListWidget itemPath state } \
     elseif {$type == "DIRECTORY"} \
     {
       set image $images(folderExcluded)
-      if {[lindex $data 2]} \
+      if {$directoryOpenFlag} \
       {
-        $fileListWidget delete offsprings $itemPath
-        set data [lreplace $data 2 2 0]
+        $fileTreeWidget delete offsprings $itemPath
+        lset data 2 0
       }
     } \
     elseif {$type == "LINK"} \
     {
       set image $images(linkExcluded)
     }
+    set index [lsearch -sorted -exact $barConfig(included) $fileName]; if {$index >= 0} { set barConfig(included) [lreplace $barConfig(included) $index $index] }
   } \
   else  \
   {
@@ -1042,12 +1348,14 @@ proc setEntryState { fileListWidget itemPath state } \
     {
       set image $images(link)
     }
+    set index [lsearch -sorted -exact $barConfig(included) $fileName]; if {$index >= 0} { set barConfig(included) [lreplace $barConfig(included) $index $index] }
+    set index [lsearch -sorted -exact $barConfig(excluded) $fileName]; if {$index >= 0} { set barConfig(excluded) [lreplace $barConfig(excluded) $index $index] }
   }
-  $fileListWidget item configure $itemPath 0 -image $image
+  $fileTreeWidget item configure $itemPath 0 -image $image
 
   # update data
-  set data [lreplace $data 1 1 $state]
-  $fileListWidget entryconfigure $itemPath -data $data
+  lset data 1 $state
+  $fileTreeWidget entryconfigure $itemPath -data $data
 
   setConfigModify
 }
@@ -1055,106 +1363,35 @@ proc setEntryState { fileListWidget itemPath state } \
 #***********************************************************************
 # Name   : toggleEntryIncludedExcluded
 # Purpose: toggle entry state: NONE, INCLUDED, EXCLUDED
-# Input  : fileListWidget - file list widget
-#          itemPath       - item path
+# Input  : itemPath - item path
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc toggleEntryIncludedExcluded { fileListWidget itemPath } \
+proc toggleEntryIncludedExcluded { itemPath } \
 {
-  # get data
-  set data [$fileListWidget info data $itemPath]
+  global fileTreeWidget
 
-  # get state
+  # get data
+  set data [$fileTreeWidget info data $itemPath]
+  set type  [lindex $data 0]
   set state [lindex $data 1]
 
   # set new state
-  if     {$state == "NONE"    } { set state "INCLUDED" } \
-  elseif {$state == "INCLUDED"} { set state "EXCLUDED" } \
-  else                          { set state "NONE"     }
-
-  setEntryState $fileListWidget $itemPath $state
-}
-
-#***********************************************************************
-# Name   : getIncludedList
-# Purpose: get list of included files/directories/links
-# Input  : fileListWidget - file list widget
-# Output : -
-# Return : list of included files/directories/links
-# Notes  : -
-#***********************************************************************
-
-proc getIncludedList { fileListWidget } \
-{
-  set includedList {}
-  set itemPathList [$fileListWidget info children ""]
-  while {[llength $itemPathList] > 0} \
+  if {$type == "DIRECTORY"} \
   {
-    set itemPath [lindex $itemPathList 0]; set itemPathList [lreplace $itemPathList 0 0]
-    set fileName [itemPathToFileName $fileListWidget $itemPath]
-
-    set data [$fileListWidget info data $itemPath]
-    set type  [lindex $data 0]
-    set state [lindex $data 1]
-
-    if {($type == "DIRECTORY") && ($state != "EXCLUDED")} \
-    {
-      foreach z [$fileListWidget info children $itemPath] \
-      {
-        lappend itemPathList $z
-      }
-    }
-
-    if {$state == "INCLUDED"} \
-    {
-      lappend includedList $fileName
-    }
+    if     {$state == "NONE"    } { set state "INCLUDED" } \
+    elseif {$state == "INCLUDED"} { set state "EXCLUDED" } \
+    else                          { set state "NONE"     }
+  } \
+  else \
+  {
+    if     {$state == "NONE"} { set state "EXCLUDED" } \
+    else                      { set state "NONE"     }
   }
 
-  return $includedList
-}
-
-#***********************************************************************
-# Name   : getExcludedList
-# Purpose: get list of excluded files/directories/links
-# Input  : fileListWidget - file list widget
-# Output : -
-# Return : list of excluded files/directories/links
-# Notes  : -
-#***********************************************************************
-
-proc getExcludedList { fileListWidget } \
-{
-  set excludedList {}
-  set itemPathList [$fileListWidget info children ""]
-  while {[llength $itemPathList] > 0} \
-  {
-    set fileName [lindex $itemPathList 0]; set itemPathList [lreplace $itemPathList 0 0]
-    set itemPath [fileNameToItemPath $fileListWidget $fileName]
-
-    set data [$fileListWidget info data $itemPath]
-    set type              [lindex $data 0]
-    set state             [lindex $data 1]
-    set directoryOpenFlag [lindex $data 2]
-
-    if {($type == "DIRECTORY") && ($state != "EXCLUDED") && $directoryOpenFlag} \
-    {
-      foreach z [$fileListWidget info children $itemPath] \
-      {
-        lappend itemPathList $z
-      }
-    }
-
-    if {$state == "EXCLUDED"} \
-    {
-      lappend excludedList $fileName
-    }
-  }
-
-  return $excludedList
+  setEntryState $itemPath $state
 }
 
 # ----------------------------------------------------------------------
@@ -1199,17 +1436,15 @@ proc setConfigModify { args } \
 #***********************************************************************
 # Name   : loadConfig
 # Purpose: load BAR config from file
-# Input  : configFileName    - config file name or ""
-#          fileListWidget    - file list widget
-#          patternListWidget - pattern list widget
+# Input  : configFileName - config file name or ""
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc loadConfig { configFileName fileListWidget patternListWidget } \
+proc loadConfig { configFileName } \
 {
-  global tk_strictMotif barConfigFileName barConfigModifiedFlag barConfig errorCode
+  global fileTreeWidget includedListWidget excludedListWidget tk_strictMotif barConfigFileName barConfigModifiedFlag barConfig errorCode
 
   # get file name
   if {$configFileName == ""} \
@@ -1230,9 +1465,10 @@ proc loadConfig { configFileName fileListWidget patternListWidget } \
 
   # reset variables
   resetBarConfig
-  clearFileList $fileListWidget
-  $patternListWidget delete 0 end
-  
+  clearFileList
+  $includedListWidget delete 0 end
+  $excludedListWidget delete 0 end
+
   # read file
   set lineNb 0
   while {![eof $handle]} \
@@ -1250,6 +1486,7 @@ proc loadConfig { configFileName fileListWidget patternListWidget } \
     # parse
     if {[scanx $line "archive-filename = %S" s]} \
     {
+      # archive-filename = <file name>
       if {[regexp {^scp:([^@])+@([^:]+):(.*)} $s * loginName hostName fileName]} \
       {
         set barConfig(storageType)      "SCP"
@@ -1268,69 +1505,70 @@ proc loadConfig { configFileName fileListWidget patternListWidget } \
     }
     if {[scanx $line "archive-part-size = %s" s]} \
     {
+      # archive-part-size = <size>
       set barConfig(archivePartSizeFlag) 1
       set barConfig(archivePartSize)     $s
       continue
     }
     if {[scanx $line "max-tmp-size = %d" s]} \
     {
+      # max-tmp-size = <size>
       set barConfig(maxTmpDirectorySizeFlag) 1
       set barConfig(maxTmpDirectorySize)     $s
       continue
     }
     if {[scanx $line "ssh-port = %d" n]} \
     {
+      # ssh-port = <port>
       set barConfig(sshPort) $s
       continue
     }
     if {[scanx $line "compress-algorithm = %S" s]} \
     {
+      # compress-algorithm = <algortihm>
       set barConfig(compressAlgorithm) $s
       continue
     }
     if {[scanx $line "crypt-algorithm = %S" s]} \
     {
+      # crypt-algorithm = <algorithm>
       set barConfig(cryptAlgorithm) $s
       continue
     }
     if {[scanx $line "include = %S" s]} \
     {
-      set fileName $s
-      set itemPath [fileNameToItemPath $fileListWidget $fileName]
+      # include = <filename|pattern>
+      set pattern $s
 
-      # create directory
-      if {![$fileListWidget info exists $itemPath]} \
+      # add to include pattern list
+      lappend barConfig(included) $pattern; set barConfig(included) [lsort -uniq $barConfig(included)]
+
+      set fileName $pattern
+      set itemPath [fileNameToItemPath $fileName]
+
+      # add directory for entry
+      if {![$fileTreeWidget info exists $itemPath]} \
       {
         set directoryName [file dirname $fileName]
-        set directoryItemPath [fileNameToItemPath $fileListWidget $directoryName]
-        openCloseDirectory $fileListWidget $directoryItemPath
+        set directoryItemPath [fileNameToItemPath $directoryName]
+        openCloseDirectory $directoryItemPath
       }
 
       # set state of entry to "included"
-      if {[$fileListWidget info exists $itemPath]} \
+      if {[$fileTreeWidget info exists $itemPath]} \
       {
-        setEntryState $fileListWidget $itemPath "INCLUDED"
+        setEntryState $itemPath "INCLUDED"
       }
       continue
     }
     if {[scanx $line "exclude = %S" s]} \
     {
-      set fileName $s
-      set itemPath [fileNameToItemPath $fileListWidget $fileName]
+      # exclude = <filename|pattern>
+      set pattern $s
 
-      # create directory
-      if {![$fileListWidget info exists $itemPath]} \
-      {
-        set directoryName [file dirname $fileName]
-        set directoryItemPath [fileNameToItemPath $fileListWidget $directoryName]
-        openCloseDirectory $fileListWidget $directoryItemPath
-      }
+      # add to exclude pattern list
+      lappend barConfig(excluded) $pattern; set barConfig(excluded) [lsort -uniq $barConfig(excluded)]
 
-      # set state of entry to "included"
-      if {[$fileListWidget info exists $itemPath]} \
-      {
-        setEntryState $fileListWidget $itemPath "EXCLUDED"
-      }
       continue
     }
 puts "unknown $line"
@@ -1339,6 +1577,8 @@ puts "unknown $line"
   # close file
   close $handle
 
+  updateFileTreeStates
+
   set barConfigFileName $configFileName
   clearConfigModify
 }
@@ -1346,17 +1586,15 @@ puts "unknown $line"
 #***********************************************************************
 # Name   : saveConfig
 # Purpose: saveBAR config into file
-# Input  : configFileName    - config file name or ""
-#          fileListWidget    - file list widget
-#          patternListWidget - pattern list widget
+# Input  : configFileName - config file name or ""
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc saveConfig { configFileName fileListWidget patternListWidget } \
+proc saveConfig { configFileName } \
 {
-  global tk_strictMotif barConfigFileName barConfig errorInfo
+  global includedListWidget excludedListWidget tk_strictMotif barConfigFileName barConfig errorInfo
 
   # get file name
   if {$configFileName == ""} \
@@ -1398,13 +1636,13 @@ proc saveConfig { configFileName fileListWidget patternListWidget } \
   }
   puts $handle "compress-algorithm = [escapeString $barConfig(compressAlgorithm)]"
   puts $handle "crypt-algorithm = [escapeString $barConfig(cryptAlgorithm)]"
-  foreach fileName [getIncludedList $fileListWidget] \
+  foreach pattern [$includedListWidget get 0 end] \
   {
-    puts $handle "include = [escapeString $fileName]"
+    puts $handle "include = [escapeString $pattern]"
   }
-  foreach fileName [getExcludedList $fileListWidget] \
+  foreach pattern [$excludedListWidget get 0 end] \
   {
-    puts $handle "exclude = [escapeString $fileName]"
+    puts $handle "exclude = [escapeString $pattern]"
   }
 
   # close file
@@ -1425,9 +1663,17 @@ proc saveConfig { configFileName fileListWidget patternListWidget } \
 # Notes  : -
 #***********************************************************************
 
-proc quit {} \
+proc quit { } \
 {
-  global server
+  global server barConfigModifiedFlag barConfigFileName
+
+  if {$barConfigModifiedFlag} \
+  {
+    if {[Dialog:confirm "Configuration not saved. Save?" "Save" "Do not save"]} \
+    {
+      saveConfig $barConfigFileName
+    }
+  }
 
   Server:disconnect
 
@@ -1435,100 +1681,205 @@ proc quit {} \
 }
 
 #***********************************************************************
-# Name   : addExcludePattern
-# Purpose: add exclude pattern
-# Input  : patterListWidget - pattern list widget
+# Name   : addIncludedPattern
+# Purpose: add included pattern
+# Input  : pattern - pattern or "" for dialog
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc addExcludePattern { patterListWidget } \
+proc addIncludedPattern { pattern } \
 {
-  global addExcludeDialog
+  global barConfig
 
-  # dialog
-  set addExcludeDialog(handle) .dialog_addExclude
-  toplevel $addExcludeDialog(handle)
-  wm title $addExcludeDialog(handle) "Add exclude pattern"
-  wm geometry $addExcludeDialog(handle) +[winfo pointerx .]+[winfo pointery .]
-  set addExcludeDialog(result)  0
-  set addExcludeDialog(pattern) ""
+  if {$pattern == ""} \
+  {
+    # dialog
+    set handle [Dialog:new "Add included pattern"]
+    Dialog:addVariable $handle result  -1
+    Dialog:addVariable $handle pattern ""
 
-  frame $addExcludeDialog(handle).pattern
-    label $addExcludeDialog(handle).pattern.title -text "Pattern:"
-    grid $addExcludeDialog(handle).pattern.title -row 2 -column 0 -sticky "w"
-    entry $addExcludeDialog(handle).pattern.data -bg white -textvariable addExcludeDialog(pattern)
-    grid $addExcludeDialog(handle).pattern.data -row 2 -column 1 -sticky "we"
-    bind $addExcludeDialog(handle).pattern.data <Return> "focus $addExcludeDialog(handle).buttons.add"
+    frame $handle.pattern
+      label $handle.pattern.title -text "Pattern:"
+      grid $handle.pattern.title -row 2 -column 0 -sticky "w"
+      entry $handle.pattern.data -width 30 -bg white -textvariable [Dialog:variable $handle pattern]
+      grid $handle.pattern.data -row 2 -column 1 -sticky "we"
+      bind $handle.pattern.data <Return> "focus $handle.buttons.add"
 
-    grid rowconfigure    $addExcludeDialog(handle).pattern { 0 } -weight 1
-    grid columnconfigure $addExcludeDialog(handle).pattern { 1 } -weight 1
-  grid $addExcludeDialog(handle).pattern -row 0 -column 0 -sticky "nswe" -padx 3p -pady 3p
-  
-  frame $addExcludeDialog(handle).buttons
-    button $addExcludeDialog(handle).buttons.add -text "Add" -command "event generate $addExcludeDialog(handle) <<Event_add>>"
-    pack $addExcludeDialog(handle).buttons.add -side left -padx 2p -pady 2p
-    bind $addExcludeDialog(handle).buttons.add <Return> "$addExcludeDialog(handle).buttons.add invoke"
-    button $addExcludeDialog(handle).buttons.cancel -text "Cancel" -command "event generate $addExcludeDialog(handle) <<Event_cancel>>"
-    pack $addExcludeDialog(handle).buttons.cancel -side right -padx 2p -pady 2p
-    bind $addExcludeDialog(handle).buttons.cancel <Return> "$addExcludeDialog(handle).buttons.cancel invoke"
-  grid $addExcludeDialog(handle).buttons -row 1 -column 0 -sticky "we"
+      grid rowconfigure    $handle.pattern { 0 } -weight 1
+      grid columnconfigure $handle.pattern { 1 } -weight 1
+    grid $handle.pattern -row 0 -column 0 -sticky "nswe" -padx 3p -pady 3p
 
-  grid rowconfigure $addExcludeDialog(handle)    0 -weight 1
-  grid columnconfigure $addExcludeDialog(handle) 0 -weight 1
+    frame $handle.buttons
+      button $handle.buttons.add -text "Add" -command "event generate $handle <<Event_add>>"
+      pack $handle.buttons.add -side left -padx 2p -pady 2p
+      bind $handle.buttons.add <Return> "$handle.buttons.add invoke"
+      button $handle.buttons.cancel -text "Cancel" -command "event generate $handle <<Event_cancel>>"
+      pack $handle.buttons.cancel -side right -padx 2p -pady 2p
+      bind $handle.buttons.cancel <Return> "$handle.buttons.cancel invoke"
+    grid $handle.buttons -row 1 -column 0 -sticky "we"
 
-  # bindings
-  bind $addExcludeDialog(handle) <KeyPress-Escape> "$addExcludeDialog(handle).buttons.cancel invoke"
+    grid rowconfigure $handle    0 -weight 1
+    grid columnconfigure $handle 0 -weight 1
 
-  bind $addExcludeDialog(handle) <<Event_add>> \
-   "
-    set addExcludeDialog(result) 1;
-    destroy $addExcludeDialog(handle);
-   "
-  bind $addExcludeDialog(handle) <<Event_cancel>> \
-   "
-    set addExcludeDialog(result) 0;
-    destroy $addExcludeDialog(handle);
-   "
+    # bindings
+    bind $handle <KeyPress-Escape> "$handle.buttons.cancel invoke"
 
-  focus $addExcludeDialog(handle).pattern.data
-  catch {tkwait window $addExcludeDialog(handle)}
-  if {($addExcludeDialog(result) != 1) || ($addExcludeDialog(pattern) == "")} { return }
+    bind $handle <<Event_add>> \
+     "
+      Dialog:set $handle result 1
+      Dialog:close $handle
+     "
+    bind $handle <<Event_cancel>> \
+     "
+      Dialog:set $handle result 0
+      Dialog:close $handle
+     "
+
+    focus $handle.pattern.data
+
+    Dialog:show $handle
+    set result  [Dialog:get $handle result]
+    set pattern [Dialog:get $handle pattern]
+    Dialog:delete $handle
+    if {($result != 1) || ($pattern == "")} { return }
+  }
 
   # add
-  $patterListWidget insert end $addExcludeDialog(pattern)
+  lappend barConfig(included) $pattern; set barConfig(included) [lsort -uniq $barConfig(included)]
+  updateFileTreeStates
+  setConfigModify
 }
 
 #***********************************************************************
-# Name   : remExcludePattern
-# Purpose: remove exclude pattern from widget list
-# Input  : patterListWidget - pattern list widget
-#          index            - index
+# Name   : remIncludedPattern
+# Purpose: remove included pattern from widget list
+# Input  : pattern - pattern
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc remExcludePattern { patternListWidget index } \
+proc remIncludedPattern { pattern } \
 {
-  $patternListWidget delete $index
+  global barConfig
+
+  set index [lsearch -sorted -exact $barConfig(included) $pattern]
+  if {$index >= 0} \
+  {
+    set barConfig(included) [lreplace $barConfig(included) $index $index]
+    updateFileTreeStates
+    setConfigModify
+  }
+}
+
+#***********************************************************************
+# Name   : addExcludedPattern
+# Purpose: add excluded pattern
+# Input  : pattern - pattern or "" for dialog
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc addExcludedPattern { pattern } \
+{
+  global barConfig
+
+  if {$pattern == ""} \
+  {
+    # dialog
+    set handle [Dialog:new "Add excluded pattern"]
+    Dialog:addVariable $handle result  -1
+    Dialog:addVariable $handle pattern ""
+
+    frame $handle.pattern
+      label $handle.pattern.title -text "Pattern:"
+      grid $handle.pattern.title -row 2 -column 0 -sticky "w"
+      entry $handle.pattern.data -width 30 -bg white -textvariable [Dialog:variable $handle pattern]
+      grid $handle.pattern.data -row 2 -column 1 -sticky "we"
+      bind $handle.pattern.data <Return> "focus $handle.buttons.add"
+
+      grid rowconfigure    $handle.pattern { 0 } -weight 1
+      grid columnconfigure $handle.pattern { 1 } -weight 1
+    grid $handle.pattern -row 0 -column 0 -sticky "nswe" -padx 3p -pady 3p
+
+    frame $handle.buttons
+      button $handle.buttons.add -text "Add" -command "event generate $handle <<Event_add>>"
+      pack $handle.buttons.add -side left -padx 2p -pady 2p
+      bind $handle.buttons.add <Return> "$handle.buttons.add invoke"
+      button $handle.buttons.cancel -text "Cancel" -command "event generate $handle <<Event_cancel>>"
+      pack $handle.buttons.cancel -side right -padx 2p -pady 2p
+      bind $handle.buttons.cancel <Return> "$handle.buttons.cancel invoke"
+    grid $handle.buttons -row 1 -column 0 -sticky "we"
+
+    grid rowconfigure $handle    0 -weight 1
+    grid columnconfigure $handle 0 -weight 1
+
+    # bindings
+    bind $handle <KeyPress-Escape> "$handle.buttons.cancel invoke"
+
+    bind $handle <<Event_add>> \
+     "
+      Dialog:set $handle result 1
+      Dialog:close $handle
+     "
+    bind $handle <<Event_cancel>> \
+     "
+      Dialog:set $handle result 0
+      Dialog:close $handle
+     "
+
+    focus $handle.pattern.data
+
+    Dialog:show $handle
+    set result  [Dialog:get $handle result]
+    set pattern [Dialog:get $handle pattern]
+    Dialog:delete $handle
+    if {($result != 1) || ($pattern == "")} { return }
+  }
+
+  # add
+  lappend barConfig(excluded) $pattern; set barConfig(excluded) [lsort -uniq $barConfig(excluded)]
+  updateFileTreeStates
+  setConfigModify
+}
+
+#***********************************************************************
+# Name   : remExcludedPattern
+# Purpose: remove excluded pattern from widget list
+# Input  : pattern - pattern
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc remExcludedPattern { pattern } \
+{
+  global barConfig
+
+  set index [lsearch -sorted -exact $barConfig(excluded) $pattern]
+  if {$index >= 0} \
+  {
+    set barConfig(excluded) [lreplace $barConfig(excluded) $index $index]
+    updateFileTreeStates
+    setConfigModify
+  }
 }
 
 #***********************************************************************
 # Name   : addJob
 # Purpose: add new job
-# Input  : fileListWidget    - file list widget
-#          patternListWidget - pattern list widget
-#          jobListWidget     - job list widget
+# Input  : jobListWidget - job list widget
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc addJob { fileListWidget patternListWidget jobListWidget } \
+proc addJob { jobListWidget } \
 {
-  global barConfig currentJob
+  global includedListWidget excludedListWidget barConfig currentJob
 
   set errorCode 0
 
@@ -1551,24 +1902,13 @@ proc addJob { fileListWidget patternListWidget jobListWidget } \
   Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "archive-file" $archiveFileName
 
   # add included directories/files
-puts [getIncludedList $fileListWidget]
-  foreach fileName [getIncludedList $fileListWidget] \
+  foreach pattern [$includedListWidget get 0 end] \
   {
-    Server:executeCommand errorCode errorText "ADD_INCLUDE_PATTERN" [escapeString $fileName]
+    Server:executeCommand errorCode errorText "ADD_INCLUDE_PATTERN" [escapeString $pattern]
   }
 
   # add excluded directories/files
-puts [getExcludedList $fileListWidget]
-  foreach fileName [getExcludedList $fileListWidget] \
-  {
-    Server:executeCommand errorCode errorText "ADD_EXCLUDE_PATTERN" [escapeString $fileName]
-  }
-
-#  set commandId [Server:sendCommand "ADD_INCLUDE_PATTERN" "'t*'"]
-#  Server:readResult $commandId errorCode result
-
-  # add exclude patterns
-  foreach pattern [$patternListWidget get 0 end] \
+  foreach pattern [$excludedListWidget get 0 end] \
   {
     Server:executeCommand errorCode errorText "ADD_EXCLUDE_PATTERN" [escapeString $pattern]
   }
@@ -1643,7 +1983,7 @@ pack $mainWindow.menu -side top -fill x
 tixNoteBook $mainWindow.tabs
   $mainWindow.tabs add jobs          -label "Jobs"             -underline -1 -raisecmd { focus .jobs.list }
   $mainWindow.tabs add files         -label "Files"            -underline -1 -raisecmd { focus .files.list }
-  $mainWindow.tabs add excludes      -label "Excludes"         -underline -1 -raisecmd { focus .excludes.list }
+  $mainWindow.tabs add filters       -label "Filters"          -underline -1 -raisecmd { focus .filters.included }
   $mainWindow.tabs add storage       -label "Storage"          -underline -1
   $mainWindow.tabs add compressCrypt -label "Compress & crypt" -underline -1
   $mainWindow.tabs add misc          -label "Misc"             -underline -1
@@ -1807,7 +2147,6 @@ frame .files
   }
  # .files.list subwidget hlist configure -font $Config(Font,ListTitle)
   .files.list subwidget hlist configure -selectmode extended
-  .files.list subwidget hlist configure -command "openCloseDirectory [.files.list subwidget hlist]"
 
   .files.list subwidget hlist header create 0 -itemtype text -text "File"
   .files.list subwidget hlist header create 1 -itemtype text -text "Type"
@@ -1817,6 +2156,44 @@ frame .files
   .files.list subwidget hlist header create 3 -itemtype text -text "Modified"
   .files.list subwidget hlist column width 3 -char 15
   grid .files.list -row 0 -column 0 -sticky "nswe" -padx 2p -pady 2p
+  set fileTreeWidget [.files.list subwidget hlist]
+
+  tixPopupMenu .files.list.popup -title "Command"
+  .files.list.popup subwidget menu add command -label "Add include"                            -command ""
+  .files.list.popup subwidget menu add command -label "Add exclude"                            -command ""
+  .files.list.popup subwidget menu add command -label "Remove include"                         -command ""
+  .files.list.popup subwidget menu add command -label "Remove exclude"                         -command ""
+  .files.list.popup subwidget menu add command -label "Add include pattern"    -state disabled -command ""
+  .files.list.popup subwidget menu add command -label "Add exclude pattern"    -state disabled -command ""
+  .files.list.popup subwidget menu add command -label "Remove include pattern" -state disabled -command ""
+  .files.list.popup subwidget menu add command -label "Remove exclude pattern" -state disabled -command ""
+
+proc dop { widget x y } \
+{
+  set fileName [$widget nearest $y]
+  set extension ""
+  regexp {.*(\.[^\.]+)} $fileName * extension
+
+  .files.list.popup subwidget menu entryconfigure 0 -label "Add include '$fileName'"    -command "addIncludedPattern $fileName"
+  .files.list.popup subwidget menu entryconfigure 1 -label "Add exclude '$fileName'"    -command "addExcludedPattern $fileName"
+  .files.list.popup subwidget menu entryconfigure 2 -label "Remove include '$fileName'" -command "remIncludedPattern $fileName"
+  .files.list.popup subwidget menu entryconfigure 3 -label "Remove exclude '$fileName'" -command "remExcludedPattern $fileName"
+  if {$extension != ""} \
+  {
+    .files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern *$extension"    -state normal -command "addIncludedPattern *$extension"
+    .files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern *$extension"    -state normal -command "addExcludedPattern *$extension"
+    .files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern *$extension" -state normal -command "remIncludedPattern *$extension"
+    .files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern *$extension" -state normal -command "remExcludedPattern *$extension"
+  } \
+  else \
+  {
+    .files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern -"    -state disabled -command ""
+    .files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern -"    -state disabled -command ""
+    .files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern -" -state disabled -command ""
+    .files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern -" -state disabled -command ""
+  }
+  .files.list.popup post $widget $x $y
+}
 
   frame .files.buttons
     button .files.buttons.stateNone -text "*" -command "event generate . <<Event_stateNone>>"
@@ -1827,6 +2204,7 @@ frame .files
     pack .files.buttons.stateExcluded -side left -fill x -expand yes
   grid .files.buttons -row 1 -column 0 -sticky "we" -padx 2p -pady 2p
 
+  bind [.files.list subwidget hlist] <Button-3>             "dop %W %x %y"
   bind [.files.list subwidget hlist] <BackSpace>            "event generate . <<Event_stateNone>>"
   bind [.files.list subwidget hlist] <Delete>               "event generate . <<Event_stateNone>>"
   bind [.files.list subwidget hlist] <KeyPress-plus>        "event generate . <<Event_stateIncluded>>"
@@ -1842,6 +2220,8 @@ frame .files
      .files.list subwidget hlist anchor set \[lindex \[.files.list subwidget hlist info children /\] end\]
      break
     "
+
+  # mouse-wheel events
   bind [.files.list subwidget hlist] <Button-4> \
     "
      set n \[expr {\[string is integer \"%D\"\]?\"%D\":5}\]
@@ -1857,25 +2237,48 @@ frame .files
   grid columnconfigure .files { 0 } -weight 1
 pack .files -side top -fill both -expand yes -in [$mainWindow.tabs subwidget files]
 
-frame .excludes
-  tixScrolledListBox .excludes.list -scrollbar both -options { listbox.background white }
-  grid .excludes.list -row 0 -column 0 -sticky "nswe" -padx 2p -pady 2p
+frame .filters
+  label .filters.includedTitle -text "Included:"
+  grid .filters.includedTitle -row 0 -column 0 -sticky "nw"
+  tixScrolledListBox .filters.included -scrollbar both -options { listbox.background white  }
+  grid .filters.included -row 0 -column 1 -sticky "nswe" -padx 2p -pady 2p
+  .filters.included subwidget listbox configure -listvariable barConfig(included)
+  set includedListWidget [.filters.included subwidget listbox]
 
-  frame .excludes.buttons
-    button .excludes.buttons.add -text "Add (Ins)" -command "event generate . <<Event_addExcludePattern>>"
-    pack .excludes.buttons.add -side left
-    button .excludes.buttons.rem -text "Rem (Del)" -command "event generate . <<Event_remExcludePattern>>"
-    pack .excludes.buttons.rem -side left
-  grid .excludes.buttons -row 1 -column 0 -sticky "we" -padx 2p -pady 2p
+  frame .filters.includedButtons
+    button .filters.includedButtons.add -text "Add (Ins)" -command "event generate . <<Event_addIncludePattern>>"
+    pack .filters.includedButtons.add -side left
+    button .filters.includedButtons.rem -text "Rem (Del)" -command "event generate . <<Event_remIncludePattern>>"
+    pack .filters.includedButtons.rem -side left
+  grid .filters.includedButtons -row 1 -column 1 -sticky "we" -padx 2p -pady 2p
 
-  bind [.excludes.list subwidget listbox] <KeyPress-Insert>    "event generate . <<Event_addExcludePattern>>"
-  bind [.excludes.list subwidget listbox] <KeyPress-KP_Insert> "event generate . <<Event_addExcludePattern>>"
-  bind [.excludes.list subwidget listbox] <KeyPress-Delete>    "event generate . <<Event_remExcludePattern>>"
-  bind [.excludes.list subwidget listbox] <KeyPress-KP_Delete> "event generate . <<Event_remExcludePattern>>"
+  bind [.filters.included subwidget listbox] <KeyPress-Insert>    "event generate . <<Event_addIncludePattern>>"
+  bind [.filters.included subwidget listbox] <KeyPress-KP_Insert> "event generate . <<Event_addIncludePattern>>"
+  bind [.filters.included subwidget listbox] <KeyPress-Delete>    "event generate . <<Event_remIncludePattern>>"
+  bind [.filters.included subwidget listbox] <KeyPress-KP_Delete> "event generate . <<Event_remIncludePattern>>"
 
-  grid rowconfigure    .excludes { 0 } -weight 1
-  grid columnconfigure .excludes { 0 } -weight 1
-pack .excludes -side top -fill both -expand yes -in [$mainWindow.tabs subwidget excludes]
+  label .filters.excludedTitle -text "Excluded:"
+  grid .filters.excludedTitle -row 2 -column 0 -sticky "nw"
+  tixScrolledListBox .filters.excluded -scrollbar both -options { listbox.background white }
+  grid .filters.excluded -row 2 -column 1 -sticky "nswe" -padx 2p -pady 2p
+  .filters.excluded subwidget listbox configure -listvariable barConfig(excluded)
+  set excludedListWidget [.filters.excluded subwidget listbox]
+
+  frame .filters.excludedButtons
+    button .filters.excludedButtons.add -text "Add (Ins)" -command "event generate . <<Event_addExcludePattern>>"
+    pack .filters.excludedButtons.add -side left
+    button .filters.excludedButtons.rem -text "Rem (Del)" -command "event generate . <<Event_remExcludePattern>>"
+    pack .filters.excludedButtons.rem -side left
+  grid .filters.excludedButtons -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
+
+  bind [.filters.excluded subwidget listbox] <KeyPress-Insert>    "event generate . <<Event_addExcludePattern>>"
+  bind [.filters.excluded subwidget listbox] <KeyPress-KP_Insert> "event generate . <<Event_addExcludePattern>>"
+  bind [.filters.excluded subwidget listbox] <KeyPress-Delete>    "event generate . <<Event_remExcludePattern>>"
+  bind [.filters.excluded subwidget listbox] <KeyPress-KP_Delete> "event generate . <<Event_remExcludePattern>>"
+
+  grid rowconfigure    .filters { 0 2 } -weight 1
+  grid columnconfigure .filters { 1 } -weight 1
+pack .filters -side top -fill both -expand yes -in [$mainWindow.tabs subwidget filters]
 
 frame .storage
   label .storage.archivePartSizeTitle -text "Part size:"
@@ -2006,19 +2409,21 @@ frame $mainWindow.buttons
   pack $mainWindow.buttons.quit -side right
 pack $mainWindow.buttons -fill x -padx 2p -pady 2p
 
+.files.list subwidget hlist configure -command "openCloseDirectory"
+
 bind . <<Event_load>> \
 {
-  loadConfig "" [.files.list subwidget hlist] [.excludes.list subwidget listbox]
+  loadConfig ""
 }
 
 bind . <<Event_save>> \
 {
-  saveConfig $barConfigFileName [.files.list subwidget hlist] [.excludes.list subwidget listbox]
+  saveConfig $barConfigFileName
 }
 
 bind . <<Event_saveAs>> \
 {
-  saveConfig "" [.files.list subwidget hlist] [.excludes.list subwidget listbox]
+  saveConfig ""
 }
 
 bind . <<Event_quit>> \
@@ -2026,11 +2431,18 @@ bind . <<Event_quit>> \
   quit
 }
 
+bind . <<Event_stateMenu>> \
+{
+puts 222
+  .files.list.popup post %W %x %y
+
+}
+
 bind . <<Event_stateNone>> \
 {
   foreach itemPath [.files.list subwidget hlist info selection] \
   {
-    setEntryState [.files.list subwidget hlist] $itemPath "NONE"
+    setEntryState $itemPath "NONE"
   }
 }
 
@@ -2038,7 +2450,7 @@ bind . <<Event_stateIncluded>> \
 {
   foreach itemPath [.files.list subwidget hlist info selection] \
   {
-    setEntryState [.files.list subwidget hlist] $itemPath "INCLUDED"
+    setEntryState $itemPath "INCLUDED"
   }
 }
 
@@ -2046,7 +2458,7 @@ bind . <<Event_stateExcluded>> \
 {
   foreach itemPath [.files.list subwidget hlist info selection] \
   {
-    setEntryState [.files.list subwidget hlist] $itemPath "EXCLUDED"
+    setEntryState $itemPath "EXCLUDED"
   }
 }
 
@@ -2054,20 +2466,33 @@ bind . <<Event_toggleStateNoneIncludedExcluded>> \
 {
   foreach itemPath [.files.list subwidget hlist info selection] \
   {
-    toggleEntryIncludedExcluded [.files.list subwidget hlist] $itemPath
+    toggleEntryIncludedExcluded $itemPath
+  }
+}
+
+bind . <<Event_addIncludePattern>> \
+{
+  addIncludedPattern ""
+}
+
+bind . <<Event_remIncludePattern>> \
+{
+  foreach index [.filters.included subwidget listbox curselection] \
+  {
+    remIncludedPattern [.filters.included subwidget listbox get $index]
   }
 }
 
 bind . <<Event_addExcludePattern>> \
 {
-  addExcludePattern [.excludes.list subwidget listbox]
+  addExcludedPattern ""
 }
 
 bind . <<Event_remExcludePattern>> \
 {
-  foreach index [.excludes.list subwidget listbox curselection] \
+  foreach index [.filters.excluded subwidget listbox curselection] \
   {
-    remExcludePattern [.excludes.list subwidget listbox] $index
+    remExcludedPattern [.filters.excluded subwidget listbox get $index]
   }
 }
 
@@ -2082,7 +2507,7 @@ bind . <<Event_selectJob>> \
 
 bind . <<Event_addJob>> \
 {
-  addJob [.files.list subwidget hlist] [.excludes.list subwidget listbox] .jobs.list.data
+  addJob .jobs.list.data
 }
 
 bind . <<Event_remJob>> \
@@ -2094,6 +2519,7 @@ bind . <<Event_remJob>> \
     remJob .jobs.list.data $id
   }
 }
+update
 
 # config modify trace
 trace add variable barConfig write "setConfigModify"
@@ -2114,21 +2540,23 @@ updateCurrentJob
 #set commandId [Server:sendCommand "DEVICE_LIST"]
 #while {[Server:readResult $commandId errorCode result]} \
 #{
-#  addDevice [.files.list subwidget hlist] $result
+#  addDevice $result
 #}
-addDevice [.files.list subwidget hlist] "/"
+addDevice "/"
 
 #clearFileList [.files.list subwidget hlist]
-#openCloseDirectory [.files.list subwidget hlist] "/"
-#openCloseDirectory [.files.list subwidget hlist] "/home"
+#openCloseDirectory "/"
+#openCloseDirectory "/home"
 #setEntryState [.files.list subwidget hlist] "/" "INCLUDED"
 #setEntryState [.files.list subwidget hlist] "/boot" "EXCLUDED"
 #setEntryState [.files.list subwidget hlist] "/proc" "EXCLUDED"
 
-.excludes.list subwidget listbox insert end "abc"
+.filters.excluded subwidget listbox insert end "abc"
 
-puts "load config "
-loadConfig "test.cfg" [.files.list subwidget hlist] [.excludes.list subwidget listbox]
-#saveConfig "test.cfg" [.files.list subwidget hlist] [.excludes.list subwidget listbox]
+loadConfig "test.cfg"
+#saveConfig "test.cfg"
+
+#lappend barConfig(excluded) "*.avi"
+#updateFileTreeStates
 
 # end of file
