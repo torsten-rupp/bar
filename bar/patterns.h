@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems : all
@@ -48,9 +48,10 @@ typedef struct PatternNode
 {
   NODE_HEADER(struct PatternNode);
 
-  String pattern;      // file/path name pattern
-  String matchString;  // pattern match string
-  int    matchFlags;
+  String  pattern;      // file/path name pattern
+  regex_t regexBegin;   // regular expression for matching begin
+  regex_t regexEnd;     // regular expression for matching end
+  regex_t regexExact;   // regular expression for matching exact
 } PatternNode;
 
 typedef struct

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -22,6 +22,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+#define NETWORK_SOCKET_FLAG_NON_BLOCKING (1 << 0)
 
 /***************************** Datatypes *******************************/
 typedef int SocketHandle;
@@ -65,6 +67,7 @@ void Network_done(void);
 * Purpose: connect to host
 * Input  : hostName - host name
 *          hostPort - host port
+*          flags    - socket falgs
 * Output : socketHandle - socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -72,7 +75,8 @@ void Network_done(void);
 
 Errors Network_connect(SocketHandle *socketHandle,
                        String       hostName,
-                       uint         hostPort
+                       uint         hostPort,
+                       uint         flags
                       );
 
 /***********************************************************************\
@@ -158,13 +162,15 @@ void Network_doneServer(SocketHandle *socketHandle);
 * Name   : Network_accept
 * Purpose: accept client connection
 * Input  : serverSocketHandle - server socket handle
+*          flags              - socket falgs
 * Output : socketHandle - server socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Network_accept(SocketHandle *socketHandle,
-                      SocketHandle *serverSocketHandle
+                      SocketHandle *serverSocketHandle,
+                      uint         flags
                      );
 
 /***********************************************************************\

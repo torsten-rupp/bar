@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/errors.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver errors
 * Systems : all
@@ -28,6 +28,8 @@ typedef enum
   /* general errors */
   ERROR_INSUFFICIENT_MEMORY,
   ERROR_INIT,
+  ERROR_INVALID_ARGUMENT,
+  ERROR_CONFIG,
 
   /* pattern matching errors */
   ERROR_INVALID_PATTERN,
@@ -52,6 +54,8 @@ typedef enum
   ERROR_OPEN_FILE,
   ERROR_OPEN_DIRECTORY,
   ERROR_IO_ERROR,
+  ERROR_FILE_EXITS,
+  ERROR_FILE_NOT_FOUND,
 
   /* archive errors */
   ERROR_END_OF_ARCHIVE,
@@ -59,6 +63,9 @@ typedef enum
   ERROR_NO_FILE_DATA,
   ERROR_END_OF_DATA,
   ERROR_CRC_ERROR,
+  ERROR_FILE_INCOMPLETE,
+  ERROR_WRONG_FILE_TYPE,
+  ERROR_FILES_DIFFER,
 
   /* network errors */
   ERROR_HOST_NOT_FOUND,

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -77,6 +77,8 @@ LOCAL void insertString(StringList *stringList, String string, StringNode *nextS
 LOCAL void freeStringNode(StringNode *stringNode, void *userData)
 {
   assert(stringNode != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   String_delete(stringNode->string);
 }

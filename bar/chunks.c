@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -864,10 +864,13 @@ Errors Chunks_nextSub(ChunkInfo   *chunkInfo,
 }
 
 Errors Chunks_skipSub(ChunkInfo   *chunkInfo,
-                    ChunkHeader *chunkHeader
-                   )
+                      ChunkHeader *chunkHeader
+                     )
 {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+  UNUSED_VARIABLE(chunkInfo);
+  UNUSED_VARIABLE(chunkHeader);
+
+  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
   return ERROR_NONE; 
 }

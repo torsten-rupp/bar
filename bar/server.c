@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -35,6 +35,7 @@
 
 /****************** Conditional compilation switches *******************/
 
+#define _SERVER_DEBUG
 #define _SIMULATOR
 
 /***************************** Constants *******************************/
@@ -62,8 +63,15 @@ typedef struct JobNode
   PatternList        includePatternList;
   PatternList        excludePatternList;
   uint64             archivePartSize;
+  uint64             maxTmpSize;
+  uint               sshPort;
+  String             sshPublicKeyFileName;
+  String             sshPrivatKeyFileName;
   CompressAlgorithms compressAlgorithm;
   CryptAlgorithms    cryptAlgorithm;
+  bool               skipUnreadableFlag;
+  bool               overwriteArchiveFilesFlag;
+  bool               overwriteFilesFlag;
 
   /* running info */
   struct
@@ -72,18 +80,27 @@ typedef struct JobNode
     {
       JOB_STATE_WAITING,
       JOB_STATE_RUNNING,
-      JOB_STATE_COMPLETED
+      JOB_STATE_COMPLETED,
+      JOB_STATE_ERROR
     } state;
     bool   terminteFlag;                    // signal to terminate job
     time_t startTime;                       // start time [s]
     ulong  estimatedRestTime;               // estimated rest running time [s]
     ulong  doneFiles;                       // number of processed files
     uint64 doneBytes;                       // sum of processed bytes
-    double compressRatio;
     ulong  totalFiles;                      // number of total files
     uint64 totalBytes;                      // sum of total bytes
+    ulong  skippedFiles;                    // number of skipped files
+    uint64 skippedBytes;                    // sum of skippped bytes
+    ulong  errorFiles;                      // number of files with errors
+    uint64 errorBytes;                      // sum of bytes of files with errors
+    double compressionRatio;
     String fileName;                        // current file
+    uint64 fileDoneBytes;                   // current file bytes done
+    uint64 fileTotalBytes;                  // current file bytes total
     String storageName;                     // current storage file
+    uint64 storageDoneBytes;                // current storage file bytes done
+    uint64 storageTotalBytes;               // current storage file bytes total
     Errors error;
   } runningInfo;
 } JobNode;
@@ -157,7 +174,8 @@ LOCAL bool       quitFlag;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateCreateStatus(const CreateStatusInfo *createStatusInfo,
+LOCAL void updateCreateStatus(Errors                 error,
+                              const CreateStatusInfo *createStatusInfo,
                               JobNode                *jobNode
                              )
 {
@@ -194,13 +212,23 @@ jobNode->runningInfo.totalBytes,
 elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
 */
 
-  jobNode->runningInfo.doneFiles  = createStatusInfo->doneFiles;
-  jobNode->runningInfo.doneBytes  = createStatusInfo->doneBytes;
-  jobNode->runningInfo.totalFiles = createStatusInfo->totalFiles;
-  jobNode->runningInfo.totalBytes = createStatusInfo->totalBytes;
+  jobNode->runningInfo.error             = error;
+  jobNode->runningInfo.doneFiles         = createStatusInfo->doneFiles;
+  jobNode->runningInfo.doneBytes         = createStatusInfo->doneBytes;
+  jobNode->runningInfo.totalFiles        = createStatusInfo->totalFiles;
+  jobNode->runningInfo.totalBytes        = createStatusInfo->totalBytes;
+  jobNode->runningInfo.skippedFiles      = createStatusInfo->skippedFiles;
+  jobNode->runningInfo.skippedBytes      = createStatusInfo->skippedBytes;
+  jobNode->runningInfo.errorFiles        = createStatusInfo->errorFiles;
+  jobNode->runningInfo.errorBytes        = createStatusInfo->errorBytes;
+  jobNode->runningInfo.compressionRatio  = createStatusInfo->compressionRatio;
   jobNode->runningInfo.estimatedRestTime = estimtedRestTime;
-  String_set(jobNode->runningInfo.fileName,   createStatusInfo->fileName   );
+  String_set(jobNode->runningInfo.fileName,createStatusInfo->fileName);
+  jobNode->runningInfo.fileDoneBytes     = createStatusInfo->fileDoneBytes;
+  jobNode->runningInfo.fileTotalBytes    = createStatusInfo->fileTotalBytes;
   String_set(jobNode->runningInfo.storageName,createStatusInfo->storageName);
+  jobNode->runningInfo.storageDoneBytes  = createStatusInfo->storageDoneBytes;
+  jobNode->runningInfo.storageTotalBytes = createStatusInfo->storageTotalBytes;
 //fprintf(stderr,"%s,%d: createStatusInfo->fileName=%s\n",__FILE__,__LINE__,String_cString(jobNode->runningInfo.fileName));
 }
 
@@ -216,6 +244,7 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
 LOCAL void jobThread(JobList *jobList)
 {
   JobNode *jobNode;
+  Options options;
 
   while (!quitFlag)
   {
@@ -272,37 +301,32 @@ LOCAL void jobThread(JobList *jobList)
   }
 }
 #else
-/*
-bool Command_create(const char         *archiveFileName,
-                    PatternList        *includePatternList,
-                    PatternList        *excludePatternList,
-                    ulong              partSize,
-                    CompressAlgorithms compressAlgorithm,
-                    ulong              compressMinFileSize,
-                    CryptAlgorithms    cryptAlgorithm,
-                    const char         *password
-                   );    
-*/
-fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,
-String_cString(jobNode->archiveFileName)
+    /* set options */
+    options = defaultOptions;
+    options.archivePartSize           = jobNode->archivePartSize;
+    options.maxTmpSize                = jobNode->maxTmpSize;
+    if (jobNode->compressAlgorithm != COMPRESS_ALGORITHM_UNKNOWN) options.compressAlgorithm = jobNode->compressAlgorithm;
+    if (jobNode->cryptAlgorithm != CRYPT_ALGORITHM_UNKNOWN      ) options.cryptAlgorithm    = jobNode->cryptAlgorithm;
+    if (jobNode->sshPort != 0                                   ) options.sshPort           = jobNode->sshPort;
+    if (!String_empty(jobNode->sshPublicKeyFileName)) options.sshPublicKeyFileName = String_cString(jobNode->sshPublicKeyFileName);
+    if (!String_empty(jobNode->sshPrivatKeyFileName)) options.sshPrivatKeyFileName = String_cString(jobNode->sshPrivatKeyFileName);
+    options.skipUnreadableFlag        = jobNode->skipUnreadableFlag;
+    options.overwriteArchiveFilesFlag = jobNode->overwriteArchiveFilesFlag;
+    options.overwriteFilesFlag        = jobNode->overwriteFilesFlag;
 
-);
-    Command_create(String_cString(jobNode->archiveFileName),
-                   &jobNode->includePatternList,
-                   &jobNode->excludePatternList,
-                   jobNode->archivePartSize,
-                   jobNode->compressAlgorithm,
-                   0,
-                   jobNode->cryptAlgorithm,
-                   "xxxx",
-                   (CreateStatusInfoFunction)updateCreateStatus,
-                   jobNode
-                  );
+    /* create archive */
+    jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveFileName),
+                                                &jobNode->includePatternList,
+                                                &jobNode->excludePatternList,
+                                                &options,
+                                                (CreateStatusInfoFunction)updateCreateStatus,
+                                                jobNode
+                                               );
 
 #endif /* SIMULATOR */
 
     /* done job */
-    jobNode->runningInfo.state = JOB_STATE_COMPLETED;
+    jobNode->runningInfo.state = (jobNode->runningInfo.error == ERROR_NONE)?JOB_STATE_COMPLETED:JOB_STATE_ERROR;
   }
 }
 
@@ -338,6 +362,8 @@ LOCAL void freeJobNode(JobNode *jobNode)
 
   Pattern_doneList(&jobNode->excludePatternList);
   Pattern_doneList(&jobNode->includePatternList);
+  String_delete(jobNode->sshPrivatKeyFileName);
+  String_delete(jobNode->sshPublicKeyFileName);
   String_delete(jobNode->archiveFileName);
 
   String_delete(jobNode->runningInfo.fileName);
@@ -363,12 +389,19 @@ LOCAL JobNode *newJob(void)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  jobNode->archiveFileName   = String_new();
+  jobNode->archiveFileName               = String_new();
   Pattern_initList(&jobNode->includePatternList);
   Pattern_initList(&jobNode->excludePatternList);
-  jobNode->archivePartSize   = 0LL;
-  jobNode->compressAlgorithm = COMPRESS_ALGORITHM_NONE;
-  jobNode->cryptAlgorithm    = CRYPT_ALGORITHM_NONE;
+  jobNode->archivePartSize               = 0LL;
+  jobNode->maxTmpSize                    = 0LL;
+  jobNode->sshPort                       = 0;
+  jobNode->sshPublicKeyFileName          = String_new();
+  jobNode->sshPrivatKeyFileName          = String_new();
+  jobNode->compressAlgorithm             = COMPRESS_ALGORITHM_UNKNOWN;
+  jobNode->cryptAlgorithm                = CRYPT_ALGORITHM_UNKNOWN;
+  jobNode->skipUnreadableFlag            = TRUE;
+  jobNode->overwriteArchiveFilesFlag     = FALSE;
+  jobNode->overwriteFilesFlag            = FALSE;
 
   jobNode->runningInfo.state             = JOB_STATE_WAITING;
   jobNode->runningInfo.terminteFlag      = FALSE;
@@ -376,11 +409,19 @@ LOCAL JobNode *newJob(void)
   jobNode->runningInfo.estimatedRestTime = 0;
   jobNode->runningInfo.doneFiles         = 0L;
   jobNode->runningInfo.doneBytes         = 0LL;
-  jobNode->runningInfo.compressRatio     = 0.0;
   jobNode->runningInfo.totalFiles        = 0L;
   jobNode->runningInfo.totalBytes        = 0LL;
+  jobNode->runningInfo.skippedFiles      = 0L;
+  jobNode->runningInfo.skippedBytes      = 0LL;
+  jobNode->runningInfo.totalFiles        = 0L;
+  jobNode->runningInfo.totalBytes        = 0LL;
+  jobNode->runningInfo.compressionRatio  = 0.0;
   jobNode->runningInfo.fileName          = String_new();
+  jobNode->runningInfo.fileDoneBytes     = 0LL;
+  jobNode->runningInfo.fileTotalBytes    = 0LL;
   jobNode->runningInfo.storageName       = String_new();
+  jobNode->runningInfo.storageDoneBytes  = 0LL;
+  jobNode->runningInfo.storageTotalBytes = 0LL;
   jobNode->runningInfo.error             = ERROR_NONE;
 
   return jobNode;  
@@ -555,6 +596,9 @@ LOCAL void serverCommand_deviceList(ClientNode *clientNode, uint id, const Strin
   assert(clientNode != NULL);
   assert(arguments != NULL);
 
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
   error = File_openDevices(&deviceHandle);
   if (error != ERROR_NONE)
   {
@@ -687,6 +731,9 @@ LOCAL void serverCommand_jobList(ClientNode *clientNode, uint id, const String a
   assert(clientNode != NULL);
   assert(arguments != NULL);
 
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
   Semaphore_lock(&jobList.lock);
   jobNode = jobList.head;
   while (jobNode != NULL)
@@ -696,6 +743,7 @@ LOCAL void serverCommand_jobList(ClientNode *clientNode, uint id, const String a
       case JOB_STATE_WAITING:   stateText = "WAITING";   break;
       case JOB_STATE_RUNNING:   stateText = "RUNNING";   break;
       case JOB_STATE_COMPLETED: stateText = "COMPLETED"; break;
+      case JOB_STATE_ERROR:     stateText = "ERROR";     break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -756,6 +804,7 @@ LOCAL void serverCommand_jobInfo(ClientNode *clientNode, uint id, const String a
       case JOB_STATE_WAITING:   stateText = "WAITING";   break;
       case JOB_STATE_RUNNING:   stateText = "RUNNING";   break;
       case JOB_STATE_COMPLETED: stateText = "COMPLETED"; break;
+      case JOB_STATE_ERROR:     stateText = "ERROR";     break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -763,15 +812,23 @@ LOCAL void serverCommand_jobInfo(ClientNode *clientNode, uint id, const String a
       #endif /* NDEBUG */
     }
     sendResult(clientNode,id,TRUE,0,
-               "%s %lu %llu %f %lu %llu %'S %'S",
+               "%s %lu %llu %lu %llu %lu %llu %lu %llu %f %'S %llu %llu %'S %llu %llu",
                stateText,
                jobNode->runningInfo.doneFiles,
                jobNode->runningInfo.doneBytes,
-               jobNode->runningInfo.compressRatio,
                jobNode->runningInfo.totalFiles,
                jobNode->runningInfo.totalBytes,
+               jobNode->runningInfo.skippedFiles,
+               jobNode->runningInfo.skippedBytes,
+               jobNode->runningInfo.errorFiles,
+               jobNode->runningInfo.errorBytes,
+               jobNode->runningInfo.compressionRatio,
                jobNode->runningInfo.fileName,
-               jobNode->runningInfo.storageName
+               jobNode->runningInfo.fileDoneBytes,
+               jobNode->runningInfo.fileTotalBytes,
+               jobNode->runningInfo.storageName,
+               jobNode->runningInfo.storageDoneBytes,
+               jobNode->runningInfo.storageTotalBytes
               );
   }
   else
@@ -857,6 +914,10 @@ LOCAL void serverCommand_getConfigValue(ClientNode *clientNode, uint id, const S
     {
       sendResult(clientNode,id,TRUE,0,"%llu",clientNode->jobNode->archivePartSize);
     }
+    else if (String_equalsCString(arguments[0],"max-tmp-size"))
+    {
+      sendResult(clientNode,id,TRUE,0,"%llu",clientNode->jobNode->maxTmpSize);
+    }
     else if (String_equalsCString(arguments[0],"compress-algorithm"))
     {
       sendResult(clientNode,id,TRUE,0,"%'s",Compress_getAlgorithmName(clientNode->jobNode->compressAlgorithm));
@@ -864,6 +925,18 @@ LOCAL void serverCommand_getConfigValue(ClientNode *clientNode, uint id, const S
     else if (String_equalsCString(arguments[0],"crypt-algorithm"))
     {
       sendResult(clientNode,id,TRUE,0,"%'s",Crypt_getAlgorithmName(clientNode->jobNode->cryptAlgorithm));
+    }
+    else if (String_equalsCString(arguments[0],"skip-unreadable"))
+    {
+      sendResult(clientNode,id,TRUE,0,"%d",clientNode->jobNode->skipUnreadableFlag?1:0);
+    }
+    else if (String_equalsCString(arguments[0],"overwrite-archives"))
+    {
+      sendResult(clientNode,id,TRUE,0,"%d",clientNode->jobNode->overwriteArchiveFilesFlag?1:0);
+    }
+    else if (String_equalsCString(arguments[0],"overwrite-files"))
+    {
+      sendResult(clientNode,id,TRUE,0,"%d",clientNode->jobNode->overwriteFilesFlag?1:0);
     }
     else
     {
@@ -897,18 +970,47 @@ LOCAL void serverCommand_setConfigValue(ClientNode *clientNode, uint id, const S
   {
     if      (String_equalsCString(arguments[0],"archive-file"))
     {
+      // archive-file = <name>
       String_set(clientNode->jobNode->archiveFileName,arguments[1]);
       sendResult(clientNode,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"archive-part-size"))
     {
+      // archive-part-size = <n>
       const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
       clientNode->jobNode->archivePartSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
       sendResult(clientNode,id,TRUE,0,"");
     }
+    else if (String_equalsCString(arguments[0],"max-tmp-size"))
+    {
+      // max-tmp-part-size = <n>
+      const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
+
+      clientNode->jobNode->maxTmpSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+      sendResult(clientNode,id,TRUE,0,"");
+    }
+    else if (String_equalsCString(arguments[0],"ssh-port"))
+    {
+      // ssh-port = <n>
+      clientNode->jobNode->sshPort = String_toInteger(arguments[1],NULL,NULL,0);
+      sendResult(clientNode,id,TRUE,0,"");
+    }
+    else if (String_equalsCString(arguments[0],"ssh-public-key"))
+    {
+      // ssh-public-key = <file name>
+      String_set(clientNode->jobNode->sshPublicKeyFileName,arguments[1]);
+      sendResult(clientNode,id,TRUE,0,"");
+    }
+    else if (String_equalsCString(arguments[0],"ssh-prvat-key"))
+    {
+      // ssh-privat-key = <file name>
+      String_set(clientNode->jobNode->sshPrivatKeyFileName,arguments[1]);
+      sendResult(clientNode,id,TRUE,0,"");
+    }
     else if (String_equalsCString(arguments[0],"compress-algorithm"))
     {
+      // compress-algorithm = <name>
       CompressAlgorithms compressAlgorithm;
 
       compressAlgorithm = Compress_getAlgorithm(String_cString(arguments[1]));
@@ -922,6 +1024,7 @@ LOCAL void serverCommand_setConfigValue(ClientNode *clientNode, uint id, const S
     }
     else if (String_equalsCString(arguments[0],"crypt-algorithm"))
     {
+      // crypt-algorithm = <name>
       CryptAlgorithms cryptAlgorithm;
 
       cryptAlgorithm = Crypt_getAlgorithm(String_cString(arguments[1]));
@@ -933,9 +1036,24 @@ LOCAL void serverCommand_setConfigValue(ClientNode *clientNode, uint id, const S
       clientNode->jobNode->cryptAlgorithm = cryptAlgorithm;
       sendResult(clientNode,id,TRUE,0,"");
     }
+    else if (String_equalsCString(arguments[0],"skip-unreadable"))
+    {
+      clientNode->jobNode->skipUnreadableFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
+      sendResult(clientNode,id,TRUE,0,"");
+    }
+    else if (String_equalsCString(arguments[0],"overwrite-archive-files"))
+    {
+      clientNode->jobNode->overwriteArchiveFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
+      sendResult(clientNode,id,TRUE,0,"");
+    }
+    else if (String_equalsCString(arguments[0],"overwrite-files"))
+    {
+      clientNode->jobNode->overwriteFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
+      sendResult(clientNode,id,TRUE,0,"");
+    }
     else
     {
-      sendResult(clientNode,id,TRUE,1,"unknown config value");
+      sendResult(clientNode,id,TRUE,1,"unknown config value '%S'",arguments[0]);
     }
   }
   else
@@ -948,6 +1066,9 @@ LOCAL void serverCommand_newJob(ClientNode *clientNode, uint id, const String ar
 {
   assert(clientNode != NULL);
   assert(arguments != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
 
   if (clientNode->jobNode != NULL)
   {
@@ -966,6 +1087,9 @@ LOCAL void serverCommand_addJob(ClientNode *clientNode, uint id, const String ar
 
   assert(clientNode != NULL);
   assert(arguments != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
 
   if (clientNode->jobNode != NULL)
   {
@@ -1318,7 +1442,9 @@ LOCAL void processCommand(ClientNode *clientNode, const String command)
 
   assert(clientNode != NULL);
 
-fprintf(stderr,"%s,%d: command=%s\n",__FILE__,__LINE__,String_cString(command));
+  #ifdef SERVER_DEBUG
+    fprintf(stderr,"%s,%d: command=%s\n",__FILE__,__LINE__,String_cString(command));
+  #endif /* SERVER_DEBUG */
   if (String_equalsCString(command,"VERSION"))
   {
     /* version info */
@@ -1356,9 +1482,9 @@ void Server_done(void)
 {
 }
 
-bool Server_run(uint       serverPort,
-                const char *serverPassword
-               )
+Errors Server_run(uint       serverPort,
+                  const char *serverPassword
+                 )
 {
   Errors       error;
   SocketHandle serverSocketHandle;
@@ -1412,7 +1538,8 @@ bool Server_run(uint       serverPort,
     if (FD_ISSET(Network_getSocket(&serverSocketHandle),&selectSet))
     {
       error = Network_accept(&socketHandle,
-                             &serverSocketHandle
+                             &serverSocketHandle,
+                             NETWORK_SOCKET_FLAG_NON_BLOCKING
                             );
       if (error == ERROR_NONE)
       {
@@ -1496,7 +1623,7 @@ bool Server_run(uint       serverPort,
   List_done(&clientList,(ListNodeFreeFunction)freeClientNode,NULL);
   List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);
 
-  return TRUE;
+  return ERROR_NONE;
 }
 
 #ifdef __cplusplus

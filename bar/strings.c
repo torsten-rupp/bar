@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -17,6 +17,7 @@
 
 #include "global.h"
 #ifndef NDEBUG
+  #include <pthread.h>
   #include "lists.h"
 #endif /* not NDEBUG */
 
@@ -28,6 +29,21 @@
 /***************************** Constants *******************************/
 #define STRING_START_LENGTH 64   // string start length
 #define STRING_DELTA_LENGTH 32   // string delta increasing/decreasing
+
+LOCAL const char *DEFAULT_TRUE_STRINGS[] =
+{
+  "1",
+  "true",
+  "yes",
+  "on",
+};
+LOCAL const char *DEFAULT_FALSE_STRINGS[] =
+{
+  "0",
+  "false",
+  "no",
+  "off",
+};
 
 /***************************** Datatypes *******************************/
 typedef enum
@@ -84,7 +100,9 @@ struct __String
 
 /***************************** Variables *******************************/
 #ifndef NDEBUG
-  DebugStringList debugStringList = LIST_STATIC_INIT;
+  pthread_once_t  debugStringInitFlag = PTHREAD_ONCE_INIT;
+  pthread_mutex_t debugStringLock;
+  DebugStringList debugStringList;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -123,6 +141,14 @@ struct __String
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+#ifndef NDEBUG
+LOCAL void debugStringInit(void)
+{
+  pthread_mutex_init(&debugStringLock,NULL);
+  List_init(&debugStringList);
+}
+#endif /* not NDEBUG */
 
 /***********************************************************************\
 * Name   : ensureStringLength
@@ -1154,8 +1180,48 @@ JAMAICA_HALT_NOT_YET_IMPLEMENTED();
   return TRUE;
 }
 
-#ifndef NDEBUG
-#endif /* not NDEBUG */
+/***********************************************************************\
+* Name   : getUnitFactor
+* Purpose: get unit factor
+* Input  : stringUnits     - string units
+*          stringUnitCount - number of string units
+*          string          - string start
+*          unitString      - unit string start
+* Output : nextIndex - index of next character in string not parsed or
+*                      STRING_END if string completely parsed (can be
+*                      NULL)
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
+                          uint             stringUnitCount,
+                          const char       *string,
+                          const char       *unitString,
+                          long             *nextIndex
+                         )
+{
+  uint  z;
+  ulong factor;
+
+  z = 0;
+  while ((z < stringUnitCount) && (strcmp(unitString,stringUnits[z].name) != 0))
+  {
+    z++;
+  }
+  if (z < stringUnitCount)
+  {
+    factor = stringUnits[z].factor;
+    if (nextIndex != NULL) (*nextIndex) = STRING_END;
+  }
+  else
+  {
+    factor = 1L;
+    if (nextIndex != NULL) (*nextIndex) = (ulong)(unitString-string);
+  }
+
+  return factor;
+}
 
 /*---------------------------------------------------------------------*/
 
@@ -1195,6 +1261,8 @@ String __String_new(const char *fileName, ulong lineNb)
   string->data[0]   = '\0';
 
   #ifndef NDEBUG
+    pthread_once(&debugStringInitFlag,debugStringInit);
+
     debugStringNode = LIST_NEW_NODE(DebugStringNode);
     if (debugStringNode == NULL)
     {
@@ -1203,7 +1271,9 @@ String __String_new(const char *fileName, ulong lineNb)
     debugStringNode->fileName = fileName;
     debugStringNode->lineNb   = lineNb;
     debugStringNode->string   = string;
+    pthread_mutex_lock(&debugStringLock);
     List_append(&debugStringList,debugStringNode);
+    pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
 
   UPDATE_VALID(string);
@@ -1271,7 +1341,11 @@ String __String_newBuffer(const char *fileName, ulong lineNb, const char *buffer
   return string;
 }
 
+#ifdef NDEBUG
 void String_delete(String string)
+#else /* not NDEBUG */
+void __String_delete(const char *fileName, ulong lineNb, String string)
+#endif /* NDEBUG */
 {
   #ifndef NDEBUG
     DebugStringNode *debugStringNode;;
@@ -1284,6 +1358,9 @@ void String_delete(String string)
     assert(string->data != NULL);
 
     #ifndef NDEBUG
+      pthread_once(&debugStringInitFlag,debugStringInit);
+
+      pthread_mutex_lock(&debugStringLock);
       debugStringNode = debugStringList.head;
       while ((debugStringNode != NULL) && (debugStringNode->string != string))
       {
@@ -1295,10 +1372,14 @@ void String_delete(String string)
       }
       else
       {
-        fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list!\n",
-                string->data
+        fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list at %s, %ld!\n",
+                string->data,
+                fileName,
+                lineNb
                );
+HALT_INTERNAL_ERROR("");
       }
+      pthread_mutex_unlock(&debugStringLock);
     #endif /* not NDEBUG */
 
     free(string->data);
@@ -1775,6 +1856,13 @@ ulong String_length(const String string)
   CHECK_VALID(string);
 
   return (string != NULL)?string->length:0;
+}
+
+bool String_empty(const String string)
+{
+  CHECK_VALID(string);
+
+  return (string != NULL)?(string->length == 0):TRUE;
 }
 
 char String_index(const String string, ulong index)
@@ -2423,7 +2511,6 @@ int String_toInteger(const String string, long *nextIndex, const StringUnit stri
 {
   int  n;
   char *nextData;
-  int  z;
 
   assert(string != NULL);
 
@@ -2432,20 +2519,7 @@ int String_toInteger(const String string, long *nextIndex, const StringUnit stri
   n = strtol(string->data,&nextData,0);
   if ((ulong)(nextData-string->data) < string->length)
   {
-    z = 0;
-    while ((z < stringUnitCount) && (strcmp(nextData,stringUnits[z].name) != 0))
-    {
-      z++;
-    }
-    if (z < stringUnitCount)
-    {
-      n = n*stringUnits[z].factor;
-      if (nextIndex != NULL) (*nextIndex) = STRING_END;
-    }
-    else
-    {
-      (*nextIndex) = (ulong)(nextData-string->data);
-    }
+    n = n*getUnitFactor(stringUnits,stringUnitCount,string->data,nextData,nextIndex);
   }
   else
   {
@@ -2459,27 +2533,13 @@ int64 String_toInteger64(const String string, long *nextIndex, const StringUnit 
 {
   int64 n;
   char  *nextData;
-  int   z;
 
   assert(string != NULL);
 
   n = strtoll(string->data,&nextData,0);
   if ((ulong)(nextData-string->data) < string->length)
   {
-    z = 0;
-    while ((z < stringUnitCount) && (strcmp(nextData,stringUnits[z].name) != 0))
-    {
-      z++;
-    }
-    if (z < stringUnitCount)
-    {
-      n = n*stringUnits[z].factor;
-      if (nextIndex != NULL) (*nextIndex) = STRING_END;
-    }
-    else
-    {
-      (*nextIndex) = (ulong)(nextData-string->data);
-    }
+    n = n*(int64)getUnitFactor(stringUnits,stringUnitCount,string->data,nextData,nextIndex);
   }
   else
   {
@@ -2493,7 +2553,6 @@ double String_toDouble(const String string, long *nextIndex, const StringUnit st
 {
   double n;
   char   *nextData;
-  int    z;
 
   assert(string != NULL);
 
@@ -2502,26 +2561,81 @@ double String_toDouble(const String string, long *nextIndex, const StringUnit st
   n = strtod(string->data,&nextData);
   if ((ulong)(nextData-string->data) < string->length)
   {
-    z = 0;
-    while ((z < stringUnitCount) && (strcmp(nextData,stringUnits[z].name) != 0))
-    {
-      z++;
-    }
-    if (z < stringUnitCount)
-    {
-      n = n*(double)stringUnits[z].factor;
-      if (nextIndex != NULL) (*nextIndex) = STRING_END;
-    }
-    else
-    {
-      (*nextIndex) = (ulong)(nextData-string->data);
-    }
+    n = n*(double)getUnitFactor(stringUnits,stringUnitCount,string->data,nextData,nextIndex);
   }
   else
   {
     if (nextIndex != NULL) (*nextIndex) = STRING_END;
   }
 
+  return n;
+}
+
+double String_toBoolean(const String string, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount)
+{
+  bool       n;
+  bool       foundFlag;
+  const char **strings;
+  uint       stringCount;
+  uint       z;
+
+  assert(string != NULL);
+
+  CHECK_VALID(string);
+
+  n = FALSE;
+  foundFlag = FALSE;
+  if (!foundFlag)
+  {
+    if (trueStrings != NULL)
+    {
+      strings     = trueStrings;
+      stringCount = trueStringCount;
+    }
+    else
+    {
+      strings     = DEFAULT_TRUE_STRINGS;
+      stringCount = SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS);
+    }
+    z = 0;
+    while (!foundFlag && (z < stringCount))
+    {
+      if (strcmp(string->data,strings[z]) == 0)
+      {
+        n = TRUE;
+        foundFlag = TRUE;
+      }
+      z++;
+    }
+  }
+  if (!foundFlag)
+  {
+    if (falseStrings != NULL)
+    {
+      strings     = falseStrings;
+      stringCount = falseStringCount;
+    }
+    else
+    {
+      strings     = DEFAULT_FALSE_STRINGS;
+      stringCount = SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS);
+    }
+    z = 0;
+    while (!foundFlag && (z < stringCount))
+    {
+      if (strcmp(string->data,strings[z]) == 0)
+      {
+        n = FALSE;
+        foundFlag = TRUE;
+      }
+      z++;
+    }
+  }
+  if (!foundFlag)
+  {
+    if (nextIndex != NULL) (*nextIndex) = 0;
+  }
+  
   return n;
 }
 
@@ -2574,6 +2688,9 @@ void String_debug(void)
   #endif /* not NDEBUG */
 
   #ifndef NDEBUG
+    pthread_once(&debugStringInitFlag,debugStringInit);
+
+    pthread_mutex_lock(&debugStringLock);
     for (debugStringNode = debugStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
     {
       fprintf(stderr,"DEBUG WARNING: string '%s' allocated at %s, %ld!\n",
@@ -2582,6 +2699,7 @@ void String_debug(void)
               debugStringNode->lineNb
              );
     }
+    pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
 }
 #endif /* not NDEBUG */

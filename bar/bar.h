@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -21,6 +21,8 @@
 #include "strings.h"
 
 #include "patterns.h"
+#include "compress.h"
+#include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -44,27 +46,33 @@ typedef enum
 
 typedef struct
 {
-  uint64     maxTmpSize;
+  ulong              archivePartSize;
+  const char         *tmpDirectory;
+  uint64             maxTmpSize;
+  uint               directoryStripCount;
+  const char         *directory;
 
-  const char *tmpDirectory;
+  PatternTypes       patternType;
 
-  uint       sshPort;
-  const char *sshPublicKeyFile;
-  const char *sshPrivatKeyFile;
-  const char *sshPassword;
+  CompressAlgorithms compressAlgorithm;
+  CryptAlgorithms    cryptAlgorithm;
+  ulong              compressMinFileSize;
+  const char         *cryptPassword;
 
-  uint       serverPort;
-  const char *serverPassword;
+  uint               sshPort;
+  const char         *sshPublicKeyFileName;
+  const char         *sshPrivatKeyFileName;
+  const char         *sshPassword;
 
-  bool       overwriteFlag;
-  bool       skipUnreadableFlag;
-  bool       quietFlag;
-  long       verboseLevel;
-} GlobalOptions;
+  bool               skipUnreadableFlag;
+  bool               overwriteArchiveFilesFlag;
+  bool               overwriteFilesFlag;
+  bool               quietFlag;
+  long               verboseLevel;
+} Options;
 
 /***************************** Variables *******************************/
-
-extern GlobalOptions globalOptions;
+extern Options defaultOptions;
 
 /****************************** Macros *********************************/
 

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -54,7 +54,9 @@ LOCAL void freePatternNode(PatternNode *patternNode,
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(((PatternNode*)patternNode)->matchString);
+  regfree(&patternNode->regexExact);
+  regfree(&patternNode->regexEnd);
+  regfree(&patternNode->regexBegin);
   String_delete(((PatternNode*)patternNode)->pattern);
 }
 
@@ -105,10 +107,16 @@ Errors Pattern_appendList(PatternList  *patternList,
 {
   PatternNode *patternNode;
   long        z;
-  regex_t     regex;
+  String      matchString;
+  int         regexFlags;
+  String      regexString;
 
   assert(patternList != NULL);
   assert(pattern != NULL);
+
+  /* init variables */
+  matchString = String_new();
+  regexString = String_new();
 
   /* allocate pattern node */
   patternNode = LIST_NEW_NODE(PatternNode);
@@ -119,8 +127,7 @@ Errors Pattern_appendList(PatternList  *patternList,
   patternNode->pattern = String_newCString(pattern);
 
   /* compile pattern */
-  patternNode->matchString = String_new();
-  patternNode->matchFlags  = REG_ICASE|REG_NOSUB;
+  regexFlags = REG_ICASE|REG_NOSUB;
   switch (patternType)
   {
     case PATTERN_TYPE_GLOB:
@@ -130,32 +137,32 @@ Errors Pattern_appendList(PatternList  *patternList,
         switch (pattern[z])
         {
           case '*':
-            String_appendCString(patternNode->matchString,".*");
+            String_appendCString(matchString,".*");
             break;
           case '?':
-            String_appendChar(patternNode->matchString,'.');
+            String_appendChar(matchString,'.');
             break;
           case '.':
-            String_appendCString(patternNode->matchString,"\\.");
+            String_appendCString(matchString,"\\.");
             break;
           case '\\':
-            String_appendChar(patternNode->matchString,'\\');
+            String_appendChar(matchString,'\\');
             z++;
-            if (pattern[z] != '\0') String_appendChar(patternNode->matchString,pattern[z]);
+            if (pattern[z] != '\0') String_appendChar(matchString,pattern[z]);
             break;
           default:
-            String_appendChar(patternNode->matchString,pattern[z]);
+            String_appendChar(matchString,pattern[z]);
             break;
         }
         z++;
       }     
       break;
     case PATTERN_TYPE_BASIC:
-      String_setCString(patternNode->matchString,pattern);
+      String_setCString(matchString,pattern);
       break;
     case PATTERN_TYPE_EXTENDED:
-      patternNode->matchFlags |= REG_EXTENDED;
-      String_setCString(patternNode->matchString,pattern);
+      regexFlags |= REG_EXTENDED;
+      String_setCString(matchString,pattern);
       break;
     #ifndef NDEBUG
       default:
@@ -163,47 +170,78 @@ Errors Pattern_appendList(PatternList  *patternList,
         break; /* not reached */
     #endif /* NDEBUG */
   }
-  if (regcomp(&regex,String_cString(patternNode->matchString),patternNode->matchFlags) != 0)
+
+  String_set(regexString,matchString);
+  if (String_index(regexString,STRING_BEGIN) != '^') String_insertChar(regexString,STRING_BEGIN,'^');
+  if (regcomp(&patternNode->regexBegin,String_cString(regexString),regexFlags) != 0)
   {
+    String_delete(regexString);
+    String_delete(matchString);
+    LIST_DELETE_NODE(patternNode);
     return ERROR_INVALID_PATTERN;
   }
-  regfree(&regex);
+
+  String_set(regexString,matchString);
+  if (String_index(regexString,STRING_END) != '$') String_insertChar(regexString,STRING_BEGIN,'$');
+  if (regcomp(&patternNode->regexEnd,String_cString(regexString),regexFlags) != 0)
+  {
+    regfree(&patternNode->regexBegin);
+    String_delete(regexString);
+    String_delete(matchString);
+    LIST_DELETE_NODE(patternNode);
+    return ERROR_INVALID_PATTERN;
+  }
+
+  String_set(regexString,matchString);
+  if (String_index(regexString,STRING_BEGIN) != '^') String_insertChar(regexString,STRING_BEGIN,'^');
+  if (String_index(regexString,STRING_END) != '$') String_insertChar(regexString,STRING_END,'$');
+  if (regcomp(&patternNode->regexExact,String_cString(regexString),regexFlags) != 0)
+  {
+    regfree(&patternNode->regexEnd);
+    regfree(&patternNode->regexBegin);
+    String_delete(regexString);
+    String_delete(matchString);
+    LIST_DELETE_NODE(patternNode);
+    return ERROR_INVALID_PATTERN;
+  }
 
   /* add to list */
   List_append(patternList,patternNode);
 
+  /* free resources */
+  String_delete(regexString);
+  String_delete(matchString);
+
   return ERROR_NONE;
 }
 
+/*
 void Pattern_freeList(PatternList *patternList)
 {
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 }
+*/
 
 bool Pattern_match(PatternNode       *patternNode,
                    String            s,
                    PatternMatchModes patternMatchMode
                   )
 {
-  String  matchString;
-  regex_t regex;
-  bool    matchFlag;
+  bool matchFlag;
 
   assert(patternNode != NULL);
   assert(s != NULL);
 
-  /* get match string */
-  matchString = String_copy(patternNode->matchString);
   switch (patternMatchMode)
   {
     case PATTERN_MATCH_MODE_BEGIN:
-      if (String_index(matchString,STRING_BEGIN) != '^') String_insertChar(matchString,STRING_BEGIN,'^');
+      matchFlag = (regexec(&patternNode->regexBegin,String_cString(s),0,NULL,0) == 0);
       break;
     case PATTERN_MATCH_MODE_END:
-      if (String_index(matchString,STRING_END) != '$') String_insertChar(matchString,STRING_BEGIN,'$');
+      matchFlag = (regexec(&patternNode->regexEnd,String_cString(s),0,NULL,0) == 0);
       break;
     case PATTERN_MATCH_MODE_EXACT:
-      if (String_index(matchString,STRING_BEGIN) != '^') String_insertChar(matchString,STRING_BEGIN,'^');
-      if (String_index(matchString,STRING_END) != '$') String_insertChar(matchString,STRING_END,'$');
+      matchFlag = (regexec(&patternNode->regexExact,String_cString(s),0,NULL,0) == 0);
       break;
     #ifndef NDEBUG
       default:
@@ -211,17 +249,6 @@ bool Pattern_match(PatternNode       *patternNode,
         break; /* not reached */
     #endif /* NDEBUG */
   }
-
-  /* match */
-  if (regcomp(&regex,String_cString(matchString),patternNode->matchFlags) != 0)
-  {
-    HALT(EXITCODE_FATAL_ERROR,"cannot compile regular expression '%s'!",String_cString(patternNode->pattern));
-  }
-  matchFlag = (regexec(&regex,String_cString(s),0,NULL,0) == 0);
-  regfree(&regex);
-
-  /* free resources */
-  String_delete(matchString);
 
   return matchFlag;
 }

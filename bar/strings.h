@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -62,6 +62,7 @@ typedef struct
   #define String_newChar(ch)                    __String_newChar(__FILE__,__LINE__,ch)
   #define String_newBuffer(buffer,bufferLength) __String_newBuffer(__FILE__,__LINE__,buffer,bufferLength)
   #define String_copy(fromString)               __String_copy(__FILE__,__LINE__,fromString)
+  #define String_delete(string)                 __String_delete(__FILE__,__LINE__,string)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -106,7 +107,11 @@ String __String_newBuffer(const char *fileName, ulong lineNb, const char *buffer
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void String_delete(String string);
+#else /* not NDEBUG */
+void __String_delete(const char *fileName, ulong lineNb, String string);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : String_clear
@@ -245,7 +250,18 @@ String String_replaceChar(String string, ulong index, ulong length, char ch);
 * Notes  : -
 \***********************************************************************/
 
-ulong String_length(String string);
+ulong String_length(const String string);
+
+/***********************************************************************\
+* Name   : String_empty
+* Purpose: check if string is empty
+* Input  : string - string
+* Output : -
+* Return : TRUE iff string is empty, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool String_empty(const String string);
 
 /***********************************************************************\
 * Name   : String_index
@@ -446,12 +462,14 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 bool String_scan(const String string, const char *format, ...);
 
 /***********************************************************************\
-* Name   : String_toInteger, String_toInteger64, String_toDouble
-* Purpose: convert string into integer, integer64 or double
+* Name   : String_toInteger, String_toInteger64, String_toDouble,
+*          String_toBoolean
+* Purpose: convert string into integer, integer64, double or boolean
 * Input  : string - string to convert
 * Output : nextIndex - index of next character in string not parsed or
 *                      STRING_END if string completely parsed (can be
 *                      NULL)
+*
 * Return : integer/integer64/double value
 * Notes  : -
 \***********************************************************************/
@@ -459,6 +477,7 @@ bool String_scan(const String string, const char *format, ...);
 int String_toInteger(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
 int64 String_toInteger64(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
 double String_toDouble(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
+double String_toBoolean(const String string, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount);
 
 /***********************************************************************\
 * Name   : String_parse

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -1125,7 +1125,7 @@ bool Compress_checkEndOfBlock(CompressInfo *compressInfo)
 #endif /* 0 */
 
 void Compress_getBlock(CompressInfo *compressInfo,
-                       void         *buffer,
+                       byte         *buffer,
                        ulong        *bufferLength
                       )
 {

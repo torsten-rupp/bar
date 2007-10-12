@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -105,12 +105,15 @@ void Storage_done(void);
 * Input  : storageName - storage name:
 *                          <file name>
 *                          scp:<user name>@<host name>:<file name>
+*          options     - options
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_prepare(const String storageName);
+Errors Storage_prepare(const String  storageName,
+                       const Options *options
+                      );
 
 /***********************************************************************\
 * Name   : Storage_create
@@ -119,12 +122,17 @@ Errors Storage_prepare(const String storageName);
 *                          <file name>
 *                          scp:<user name>@<host name>:<file name>
 *          fileSize    - storage file size
+*          options     - options
 * Output : storageInfo - initialized storage info
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_create(StorageInfo *storageInfo, const String storageName, uint64 fileSize);
+Errors Storage_create(StorageInfo   *storageInfo,
+                      const String  storageName,
+                      uint64        fileSize,
+                      const Options *options
+                     );
 
 /***********************************************************************\
 * Name   : Storage_open

@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -84,30 +84,51 @@ set server(lastCommandId) 0
 set barConfigFileName     ""
 set barConfigModifiedFlag 0
 
-set barConfig(included)                {}
-set barConfig(excluded)                {}
-set barConfig(storageType)             ""
-set barConfig(storageLoginName)        ""
-set barConfig(storageHostName)         ""
-set barConfig(storageFileName)         ""
-set barConfig(archivePartSizeFlag)     0
-set barConfig(archivePartSize)         0
-set barConfig(maxTmpDirectorySizeFlag) 0
-set barConfig(maxTmpDirectorySize)     0
-set barConfig(sshPassword)             ""
-set barConfig(sshPort)                 0
-set barConfig(compressAlgorithm)       ""
-set barConfig(cryptAlgorithm)          ""
-set barConfig(cryptPassword)           ""
+set barConfig(included)               {}
+set barConfig(excluded)               {}
+set barConfig(storageType)            ""
+set barConfig(storageFileName)        ""
+set barConfig(storageLoginName)       ""
+set barConfig(storageHostName)        ""
+set barConfig(archivePartSizeFlag)    0
+set barConfig(archivePartSize)        0
+set barConfig(maxTmpSizeFlag)         0
+set barConfig(maxTmpSize)             0
+set barConfig(sshPort)                0
+set barConfig(sshPublicKeyFileName)   ""
+set barConfig(sshPrivatKeyFileName)   ""
+set barConfig(compressAlgorithm)      ""
+set barConfig(cryptAlgorithm)         ""
+set barConfig(cryptPassword)          ""
+set barConfig(skipUnreadable)         1
+set barConfig(overwriteArchiveFiles)  0
+set barConfig(overwriteFiles)         0
 
-set currentJob(id)                     0
-set currentJob(doneFiles)              0
-set currentJob(doneBytes)              0
-set currentJob(compressionRatio)       0
-set currentJob(totalFiles)             0
-set currentJob(totalBytes)             0
-set currentJob(fileName)               ""
-set currentJob(storageName)            ""
+set currentJob(id)                    0
+set currentJob(error)                 0
+set currentJob(doneFiles)             0
+set currentJob(doneBytes)             0
+set currentJob(doneBytesShort)        0
+set currentJob(doneBytesShortUnit)    "K"
+set currentJob(totalFiles)            0
+set currentJob(totalBytes)            0
+set currentJob(totalBytesShort)       0
+set currentJob(totalBytesShortUnit)   "K"
+set currentJob(skippedFiles)          0
+set currentJob(skippedBytes)          0
+set currentJob(skippedBytesShort)     0
+set currentJob(skippedBytesShortUnit) "K"
+set currentJob(errorFiles)            0
+set currentJob(errorBytes)            0
+set currentJob(errorBytesShort)       0
+set currentJob(errorBytesShortUnit)   "K"
+set currentJob(compressionRatio)      0
+set currentJob(fileName)              ""
+set currentJob(fileDoneBytes)         0
+set currentJob(fileTotalBytes)        0
+set currentJob(storageName)           ""
+set currentJob(storageDoneBytes)      0
+set currentJob(storageTotalBytes)     0
 
 set jobListTimerId    0
 set currentJobTimerId 0
@@ -404,8 +425,8 @@ proc progressbar { path args } \
     {
       set p [lindex $args 1]
       place configure $path.back.fill -relwidth $p
-      $path.back.text configure -text "[expr {int($p*100)}]%"
-      $path.back.fill.text configure -text "[expr {int($p*100)}]%"
+      $path.back.text configure -text [format "%.1f%%" [expr {$p*100}]]
+      $path.back.fill.text configure -text [format "%.1f%%" [expr {$p*100}]]
       update
     }
   } 
@@ -513,19 +534,19 @@ proc resetBarConfig {} \
 {
   global barConfig
 
-  set barConfig(storageType)             "FILESYSTEM"
-  set barConfig(storageHostName)         ""
-  set barConfig(storageLoginName)        ""
-  set barConfig(storageFileName)         ""
-  set barConfig(archivePartSizeFlag)     0
-  set barConfig(archivePartSize)         0
-  set barConfig(maxTmpDirectorySizeFlag) 0
-  set barConfig(maxTmpDirectorySize)     0
-  set barConfig(sshPassword)             ""
-  set barConfig(sshPort)                 22
-  set barConfig(compressAlgorithm)       "bzip9"
-  set barConfig(cryptAlgorithm)          "none"
-  set barConfig(cryptPassword)           ""
+  set barConfig(storageType)         "FILESYSTEM"
+  set barConfig(storageHostName)     ""
+  set barConfig(storageLoginName)    ""
+  set barConfig(storageFileName)     ""
+  set barConfig(archivePartSizeFlag) 0
+  set barConfig(archivePartSize)     0
+  set barConfig(maxTmpSizeFlag)      0
+  set barConfig(maxTmpSize)          0
+  set barConfig(sshPassword)         ""
+  set barConfig(sshPort)             22
+  set barConfig(compressAlgorithm)   "bzip9"
+  set barConfig(cryptAlgorithm)      "none"
+  set barConfig(cryptPassword)       ""
 }
 
 #***********************************************************************
@@ -540,6 +561,20 @@ proc resetBarConfig {} \
 proc escapeString { s } \
 {
   return "'[string map {"'" "\\'" "\\" "\\\\"} $s]'"
+}
+
+#***********************************************************************
+# Name   : stringToBoolean
+# Purpose: convert string to boolean value
+# Input  : s - string
+# Output : -
+# Return : 1 or 0 (default 0)
+# Notes  : -
+#***********************************************************************
+
+proc stringToBoolean { s } \
+{
+  return [string is true $s]
 }
 
 #***********************************************************************
@@ -641,12 +676,13 @@ proc Server:sendCommand { command args } \
 # Notes  : -
 #***********************************************************************
 
-proc Server:readResult { commandId _errorCode _result } \
+proc Server:readResult { commandId _completeFlag _errorCode _result } \
 {
   global server
 
-  upvar $_errorCode errorCode
-  upvar $_result    result
+  upvar $_completeFlag completeFlag
+  upvar $_errorCode    errorCode
+  upvar $_result       result
 
   set id -1
   while {($id != $commandId) && ($id != 0)} \
@@ -662,7 +698,7 @@ proc Server:readResult { commandId _errorCode _result } \
   }
 #puts "$completeFlag $errorCode $result"
 
-  return [expr {!$completeFlag}]
+  return 1
 }
 
 #***********************************************************************
@@ -684,9 +720,12 @@ proc Server:executeCommand { _errorCode _errorText command args } \
   set commandId [Server:sendCommand $command $args]
   if {$commandId == 0} \
   {
-    return 0;
+    return 0
   }
-  Server:readResult $commandId localErrorCode result
+  if {![Server:readResult $commandId completeFlag localErrorCode result]} \
+  {
+    return 0
+  }
 #puts "execute result: $localErrorCode '$result' [expr {$localErrorCode == 0}]"
 
   if {$localErrorCode == 0} \
@@ -717,22 +756,22 @@ proc Server:executeCommand { _errorCode _errorText command args } \
 
 proc updateJobList { jobListWidget } \
 {
-  global jobListTimerId config
+  global jobListTimerId config currentJob
 
   catch {after cancel $jobListTimerId}
 
   # get current selection
-  set currentId 0
+  set selectedId 0
   if {[$jobListWidget curselection] != {}} \
   {
     set n [lindex [$jobListWidget curselection] 0]
-    set currentId [lindex [lindex [$jobListWidget get $n $n] 0] 0]
+    set selectedId [lindex [lindex [$jobListWidget get $n $n] 0] 0]
   }
 
   # update list
   $jobListWidget delete 0 end
   set commandId [Server:sendCommand "JOB_LIST"]
-  while {[Server:readResult $commandId errorCode result]} \
+  while {[Server:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
   {
     scanx $result "%d %s %d %S %S %d %d" \
       id \
@@ -760,10 +799,10 @@ proc updateJobList { jobListWidget } \
   }
 
   # restore selection
-  if     {$currentId > 0} \
+  if     {$selectedId > 0} \
   {
     set n 0
-    while {($n < [$jobListWidget index end]) && ($currentId != [lindex [lindex [$jobListWidget get $n $n] 0] 0])} \
+    while {($n < [$jobListWidget index end]) && ($selectedId != [lindex [lindex [$jobListWidget get $n $n] 0] 0])} \
     {
       incr n
     }
@@ -771,7 +810,15 @@ proc updateJobList { jobListWidget } \
     {
       $jobListWidget selection set $n
     }
-    
+  } \
+  elseif {$currentJob(id) == 0} \
+  {
+    set id [lindex [lindex [$jobListWidget get 0 0] 0] 0]
+    if {$id != ""} \
+    {
+      set currentJob(id) $id
+      $jobListWidget selection set 0 0 
+    }
   }
 
   set jobListTimerId [after $config(JOB_LIST_UPDATE_TIME) "updateJobList $jobListWidget"]
@@ -795,26 +842,66 @@ proc updateCurrentJob { } \
     catch {after cancel $currentJobTimerId}
 
     set commandId [Server:sendCommand "JOB_INFO" $currentJob(id)]
-    Server:readResult $commandId errorCode result
-    scanx $result "%s %lu %lu %f %lu %lu %S %S" \
-      state \
-      currentJob(doneFiles) \
-      currentJob(doneBytes) \
-      currentJob(compressionRatio) \
-      currentJob(totalFiles) \
-      currentJob(totalBytes) \
-      currentJob(fileName) \
-      currentJob(storageName)
+    if {[Server:readResult $commandId completeFlag errorCode result]} \
+    {
+      scanx $result "%s %lu %lu %lu %lu %lu %lu %lu %lu %f %S %lu %lu %S %lu %lu" \
+        state \
+        currentJob(doneFiles) \
+        currentJob(doneBytes) \
+        currentJob(totalFiles) \
+        currentJob(totalBytes) \
+        currentJob(skippedFiles) \
+        currentJob(skippedBytes) \
+        currentJob(errorFiles) \
+        currentJob(errorBytes) \
+        currentJob(compressionRatio) \
+        currentJob(fileName) \
+        currentJob(fileDoneBytes) \
+        currentJob(fileTotalBytes) \
+        currentJob(storageName) \
+        currentJob(storageDoneBytes) \
+        currentJob(storageTotalBytes)
+
+      if     {$currentJob(doneBytes)    > 1024*1024*1024} { set currentJob(doneBytesShort)    [format "%.1f" [expr {double($currentJob(doneBytes))/(1024*1024*1024)   }]]; set currentJob(doneBytesShortUnit)    "G" } \
+      elseif {$currentJob(doneBytes)    >      1024*1024} { set currentJob(doneBytesShort)    [format "%.1f" [expr {double($currentJob(doneBytes))/(     1024*1024)   }]]; set currentJob(doneBytesShortUnit)    "M" } \
+      else                                                { set currentJob(doneBytesShort)    [format "%.1f" [expr {double($currentJob(doneBytes))/(          1024)   }]]; set currentJob(doneBytesShortUnit)    "K" }
+      if     {$currentJob(totalBytes)   > 1024*1024*1024} { set currentJob(totalBytesShort)   [format "%.1f" [expr {double($currentJob(totalBytes))/(1024*1024*1024)  }]]; set currentJob(totalBytesShortUnit)   "G" } \
+      elseif {$currentJob(totalBytes)   >      1024*1024} { set currentJob(totalBytesShort)   [format "%.1f" [expr {double($currentJob(totalBytes))/(     1024*1024)  }]]; set currentJob(totalBytesShortUnit)   "M" } \
+      else                                                { set currentJob(totalBytesShort)   [format "%.1f" [expr {double($currentJob(totalBytes))/(          1024)  }]]; set currentJob(totalBytesShortUnit)   "K" }
+      if     {$currentJob(skippedBytes) > 1024*1024*1024} { set currentJob(skippedBytesShort) [format "%.1f" [expr {double($currentJob(skippedBytes))/(1024*1024*1024)}]]; set currentJob(skippedBytesShortUnit) "G" } \
+      elseif {$currentJob(skippedBytes) >      1024*1024} { set currentJob(skippedBytesShort) [format "%.1f" [expr {double($currentJob(skippedBytes))/(     1024*1024)}]]; set currentJob(skippedBytesShortUnit) "M" } \
+      else                                                { set currentJob(skippedBytesShort) [format "%.1f" [expr {double($currentJob(skippedBytes))/(          1024)}]]; set currentJob(skippedBytesShortUnit) "K" }
+      if     {$currentJob(errorBytes)   > 1024*1024*1024} { set currentJob(errorBytesShort)   [format "%.1f" [expr {double($currentJob(errorBytes))/(1024*1024*1024)  }]]; set currentJob(errorBytesShortUnit)   "G" } \
+      elseif {$currentJob(errorBytes)   >      1024*1024} { set currentJob(errorBytesShort)   [format "%.1f" [expr {double($currentJob(errorBytes))/(     1024*1024)  }]]; set currentJob(errorBytesShortUnit)   "M" } \
+      else                                                { set currentJob(errorBytesShort)   [format "%.1f" [expr {double($currentJob(errorBytes))/(          1024)  }]]; set currentJob(errorBytesShortUnit)   "K" }
+    }
   } \
   else \
   {
-    set currentJob(doneFiles)        0
-    set currentJob(doneBytes)        0
-    set currentJob(compressionRatio) 0
-    set currentJob(totalFiles)       0
-    set currentJob(totalBytes)       0
-    set currentJob(fileName)         ""
-    set currentJob(storageName)      ""
+    set currentJob(doneFiles)             0
+    set currentJob(doneBytes)             0
+    set currentJob(doneBytesShort)        0
+    set currentJob(doneBytesShortUnit)    "K"
+    set currentJob(totalFiles)            0
+    set currentJob(totalBytes)            0
+    set currentJob(totalBytesShort)       0
+    set currentJob(totalBytesShortUnit)   "K"
+    set currentJob(skippedFiles)          0
+    set currentJob(skippedBytes)          0
+    set currentJob(skippedBytesShort)     0
+    set currentJob(skippedBytesShortUnit) "K"
+    set currentJob(errorFiles)            0
+    set currentJob(errorBytes)            0
+    set currentJob(errorBytesShort)       0
+    set currentJob(errorBytesShortUnit)   "K"
+    set currentJob(compressionRatio)      0
+    set currentJob(fileName)              ""
+    set currentJob(fileDoneBytes)         ""
+    set currentJob(fileTotalBytes)        ""
+    set currentJob(storageName)           ""
+    set currentJob(storageName)           ""
+    set currentJob(storageDoneBytes)      ""
+    set currentJob(storageTotalBytes)     ""
   }
 
   set currentJobTimerId [after $config(CURRENT_JOB_UPDATE_TIME) "updateCurrentJob"]
@@ -1107,18 +1194,18 @@ proc openCloseDirectory { itemPath } \
 
       set fileName [itemPathToFileName $itemPath]
       set commandId [Server:sendCommand "FILE_LIST" $fileName 0]
-      while {[Server:readResult $commandId errorCode result]} \
+      while {[Server:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
       {
 #puts "add file $result"
-        if     {[scanx $result "FILE %d %S" fileSize fileName]} \
+        if     {[scanx $result "FILE %d %S" fileSize fileName] == 2} \
         {
           addEntry $fileName "FILE" $fileSize
         } \
-        elseif {[scanx $result "DIRECTORY %ld %S" totalSize directoryName]} \
+        elseif {[scanx $result "DIRECTORY %ld %S" totalSize directoryName] == 2} \
         {
           addEntry $directoryName "DIRECTORY" $totalSize
         } \
-        elseif {[scanx $result "LINK %S" linkName]} \
+        elseif {[scanx $result "LINK %S" linkName] == 1} \
         {
           addEntry $linkName "LINK" 0
         } else {
@@ -1311,6 +1398,7 @@ proc setEntryState { itemPath state } \
     {
       set image $images(linkIncluded)
     }
+    set index [lsearch -sorted -exact $barConfig(excluded) $fileName]; if {$index >= 0} { set barConfig(excluded) [lreplace $barConfig(excluded) $index $index] }
     lappend barConfig(included) $fileName; set barConfig(included) [lsort -uniq $barConfig(included)]
   } \
   elseif {$state == "EXCLUDED"} \
@@ -1333,6 +1421,7 @@ proc setEntryState { itemPath state } \
       set image $images(linkExcluded)
     }
     set index [lsearch -sorted -exact $barConfig(included) $fileName]; if {$index >= 0} { set barConfig(included) [lreplace $barConfig(included) $index $index] }
+    lappend barConfig(excluded) $fileName; set barConfig(excluded) [lsort -uniq $barConfig(excluded)]
   } \
   else  \
   {
@@ -1484,10 +1573,10 @@ proc loadConfig { configFileName } \
 
 #puts "read $line"
     # parse
-    if {[scanx $line "archive-filename = %S" s]} \
+    if {[scanx $line "archive-filename = %S" s] == 1} \
     {
       # archive-filename = <file name>
-      if {[regexp {^scp:([^@])+@([^:]+):(.*)} $s * loginName hostName fileName]} \
+      if {[regexp {^scp:([^@]*)@([^:]*):(.*)} $s * loginName hostName fileName]} \
       {
         set barConfig(storageType)      "SCP"
         set barConfig(storageLoginName) $loginName
@@ -1500,42 +1589,54 @@ proc loadConfig { configFileName } \
         set barConfig(storageLoginName) ""
         set barConfig(storageHostName)  ""
         set barConfig(storageFileName)  $s
-      }     
+      }
       continue
     }
-    if {[scanx $line "archive-part-size = %s" s]} \
+    if {[scanx $line "archive-part-size = %s" s] == 1} \
     {
       # archive-part-size = <size>
       set barConfig(archivePartSizeFlag) 1
       set barConfig(archivePartSize)     $s
       continue
     }
-    if {[scanx $line "max-tmp-size = %d" s]} \
+    if {[scanx $line "max-tmp-size = %s" s] == 1} \
     {
       # max-tmp-size = <size>
-      set barConfig(maxTmpDirectorySizeFlag) 1
-      set barConfig(maxTmpDirectorySize)     $s
+      set barConfig(maxTmpSizeFlag) 1
+      set barConfig(maxTmpSize)     $s
       continue
     }
-    if {[scanx $line "ssh-port = %d" n]} \
+    if {[scanx $line "ssh-port = %d" n] == 1} \
     {
       # ssh-port = <port>
-      set barConfig(sshPort) $s
+      set barConfig(sshPort) $n
       continue
     }
-    if {[scanx $line "compress-algorithm = %S" s]} \
+    if {[scanx $line "ssh-public-key = %S" s] == 1} \
+    {
+      # ssh-public-key = <file name>
+      set barConfig(sshPublicKeyFileName) $s
+      continue
+    }
+    if {[scanx $line "ssh-privat-key = %S" s] == 1} \
+    {
+      # ssh-privat-key = <file name>
+      set barConfig(sshPrivatKeyFileName) $s
+      continue
+    }
+    if {[scanx $line "compress-algorithm = %S" s] == 1} \
     {
       # compress-algorithm = <algortihm>
       set barConfig(compressAlgorithm) $s
       continue
     }
-    if {[scanx $line "crypt-algorithm = %S" s]} \
+    if {[scanx $line "crypt-algorithm = %S" s] == 1} \
     {
       # crypt-algorithm = <algorithm>
       set barConfig(cryptAlgorithm) $s
       continue
     }
-    if {[scanx $line "include = %S" s]} \
+    if {[scanx $line "include = %S" s] == 1} \
     {
       # include = <filename|pattern>
       set pattern $s
@@ -1561,14 +1662,31 @@ proc loadConfig { configFileName } \
       }
       continue
     }
-    if {[scanx $line "exclude = %S" s]} \
+    if {[scanx $line "exclude = %S" s] == 1} \
     {
       # exclude = <filename|pattern>
       set pattern $s
 
       # add to exclude pattern list
       lappend barConfig(excluded) $pattern; set barConfig(excluded) [lsort -uniq $barConfig(excluded)]
-
+      continue
+    }
+    if {[scanx $line "skip-unreadable = %s" s] == 1} \
+    {
+      # skip-unreadable = [yes|no]
+      set barConfig(skipUnreadable) [stringToBoolean $s]
+      continue
+    }
+    if {[scanx $line "overwrite-archive-files = %s" s] == 1} \
+    {
+      # overwrite-archive-files = [yes|no]
+      set barConfig(overWriteArchiveFiles) [stringToBoolean $s]
+      continue
+    }
+    if {[scanx $line "overwrite-files = %s" s] == 1} \
+    {
+      # overwrite-archive-files = [yes|no]
+      set barConfig(overwriteFiles) [stringToBoolean $s]
       continue
     }
 puts "unknown $line"
@@ -1624,16 +1742,23 @@ proc saveConfig { configFileName } \
   } \
   elseif {$barConfig(storageType) == "SCP"} \
   {
-    puts $handle "archive-filename = scp:$barConfig(storageLoginName)@$barConfig(storageHostName):[escapeString $barConfig(storageFileName)]"
+    puts $handle "archive-filename = [escapeString scp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)]"
+  } \
+  else \
+  {
+    internalError "unknown storage type '$barConfig(storageType)'"
   }
   if {$barConfig(archivePartSizeFlag)} \
   {
     puts $handle "archive-part-size = $barConfig(archivePartSize)"
   }
-  if {$barConfig(maxTmpDirectorySizeFlag)} \
+  if {$barConfig(maxTmpSizeFlag)} \
   {
-    puts $handle "max-tmp-size = $barConfig(maxTmpDirectorySize)"
+    puts $handle "max-tmp-size = $barConfig(maxTmpSize)"
   }
+  puts $handle "ssh-port = $barConfig(sshPort)"
+  puts $handle "ssh-public-key = $barConfig(sshPublicKeyFileName)"
+  puts $handle "ssh-privat-key = $barConfig(sshPrivatKeyFileName)"
   puts $handle "compress-algorithm = [escapeString $barConfig(compressAlgorithm)]"
   puts $handle "crypt-algorithm = [escapeString $barConfig(cryptAlgorithm)]"
   foreach pattern [$includedListWidget get 0 end] \
@@ -1644,6 +1769,9 @@ proc saveConfig { configFileName } \
   {
     puts $handle "exclude = [escapeString $pattern]"
   }
+  puts $handle "skip-unreadable = $barConfig(skipUnreadable)"
+  puts $handle "overwrite-archive-files = $barConfig(overwriteArchiveFiles)"
+  puts $handle "overwrite-files = $barConfig(overwriteFiles)"
 
   # close file
   close $handle
@@ -1893,7 +2021,7 @@ proc addJob { jobListWidget } \
   } \
   elseif {$barConfig(storageType) == "SCP"} \
   {
-    set archiveFileName "$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
+    set archiveFileName "scp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
   } \
   else \
   {
@@ -1914,9 +2042,14 @@ proc addJob { jobListWidget } \
   }
 
   # set other parameters
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "archive-part-size"  $barConfig(archivePartSize)
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "compress-algorithm" $barConfig(compressAlgorithm)
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "crypt-algorithm"    $barConfig(cryptAlgorithm)
+  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "archive-part-size"       $barConfig(archivePartSize)
+  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "max-tmp-size"            $barConfig(maxTmpSize)
+  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "ssh-port"                $barConfig(sshPort)
+  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "compress-algorithm"      $barConfig(compressAlgorithm)
+  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "crypt-algorithm"         $barConfig(cryptAlgorithm)
+  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "skip-unreadable"         $barConfig(skipUnreadable)
+  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "overwrite-archive-files" $barConfig(overwriteArchiveFiles)
+  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "overwrite-files"         $barConfig(overwriteFiles)
 
   if {$errorCode == 0} \
   {
@@ -1931,13 +2064,6 @@ proc addJob { jobListWidget } \
   }
 
   updateJobList $jobListWidget
-
-  # select first entry if no other selected
-  if {$currentJob(id) == 0} \
-  {
-    set currentJob(id) [lindex [lindex [$jobListWidget get 0 0] 0] 0]
-    $jobListWidget selection set 0 0 
-  }
 }
 
 #***********************************************************************
@@ -1963,13 +2089,13 @@ proc remJob { jobListWidget id } \
 frame $mainWindow.menu -relief raised -bd 2
   menubutton $mainWindow.menu.file -text "Program" -menu $mainWindow.menu.file.items -underline 0
   menu $mainWindow.menu.file.items
-  $mainWindow.menu.file.items add command -label "Load..." -command "event generate . <<Event_load>>"
-  $mainWindow.menu.file.items add command -label "Save"    -command "event generate . <<Event_save>>"
-  $mainWindow.menu.file.items add command -label "Save as" -command "event generate . <<Event_saveAs>>"
+  $mainWindow.menu.file.items add command -label "Load..."    -accelerator "Ctrl-o" -command "event generate . <<Event_load>>"
+  $mainWindow.menu.file.items add command -label "Save"       -accelerator "Ctrl-s" -command "event generate . <<Event_save>>"
+  $mainWindow.menu.file.items add command -label "Save as..."                       -command "event generate . <<Event_saveAs>>"
   $mainWindow.menu.file.items add separator
-  $mainWindow.menu.file.items add command -label "Start"   -command "event generate . <<Event_start>>"
+  $mainWindow.menu.file.items add command -label "Start"                            -command "event generate . <<Event_start>>"
   $mainWindow.menu.file.items add separator
-  $mainWindow.menu.file.items add command -label "Quit"    -command "event generate . <<Event_quit>>"
+  $mainWindow.menu.file.items add command -label "Quit"       -accelerator "Ctrl-q" -command "event generate . <<Event_quit>>"
   pack $mainWindow.menu.file -side left
 
   menubutton $mainWindow.menu.edit -text "Edit" -menu $mainWindow.menu.edit.items -underline 0
@@ -1980,14 +2106,15 @@ frame $mainWindow.menu -relief raised -bd 2
   pack $mainWindow.menu.edit -side left
 pack $mainWindow.menu -side top -fill x
 
+# window
 tixNoteBook $mainWindow.tabs
   $mainWindow.tabs add jobs          -label "Jobs"             -underline -1 -raisecmd { focus .jobs.list }
   $mainWindow.tabs add files         -label "Files"            -underline -1 -raisecmd { focus .files.list }
   $mainWindow.tabs add filters       -label "Filters"          -underline -1 -raisecmd { focus .filters.included }
   $mainWindow.tabs add storage       -label "Storage"          -underline -1
   $mainWindow.tabs add compressCrypt -label "Compress & crypt" -underline -1
-  $mainWindow.tabs add misc          -label "Misc"             -underline -1
-pack $mainWindow.tabs -fill both -expand yes  -padx 3p -pady 3p
+#  $mainWindow.tabs add misc          -label "Misc"             -underline -1
+pack $mainWindow.tabs -fill both -expand yes -padx 2p -pady 2p
 
 frame .jobs
   labelframe .jobs.selected -text "Selected"
@@ -2009,15 +2136,23 @@ frame .jobs
       label .jobs.selected.done.bytesPostfix -text "bytes"
       grid .jobs.selected.done.bytesPostfix -row 0 -column 3 -sticky "w" 
 
+      label .jobs.selected.done.separator -text "/"
+      grid .jobs.selected.done.separator -row 0 -column 4 -sticky "w" 
+
+      entry .jobs.selected.done.bytesShort -width 6 -textvariable currentJob(doneBytesShort) -justify right -border 0 -state readonly
+      grid .jobs.selected.done.bytesShort -row 0 -column 5 -sticky "w" 
+      label .jobs.selected.done.bytesShortUnit -width 3 -textvariable currentJob(doneBytesShortUnit)
+      grid .jobs.selected.done.bytesShortUnit -row 0 -column 6 -sticky "w"
+
       label .jobs.selected.done.compressRatioTitle -text "Ratio"
-      grid .jobs.selected.done.compressRatioTitle -row 0 -column 4 -sticky "w" 
+      grid .jobs.selected.done.compressRatioTitle -row 0 -column 7 -sticky "w" 
       entry .jobs.selected.done.compressRatio -width 5 -textvariable currentJob(compressionRatio) -justify right -border 0 -state readonly
-      grid .jobs.selected.done.compressRatio -row 0 -column 5 -sticky "w" 
+      grid .jobs.selected.done.compressRatio -row 0 -column 8 -sticky "w" 
       label .jobs.selected.done.compressRatioPostfix -text "%"
-      grid .jobs.selected.done.compressRatioPostfix -row 0 -column 6 -sticky "w" 
+      grid .jobs.selected.done.compressRatioPostfix -row 0 -column 9 -sticky "w" 
 
       grid rowconfigure    .jobs.selected.done { 0 } -weight 1
-      grid columnconfigure .jobs.selected.done { 7 } -weight 1
+      grid columnconfigure .jobs.selected.done { 10 } -weight 1
     grid .jobs.selected.done -row 0 -column 3 -sticky "we" -padx 2p -pady 2p
 
     label .jobs.selected.totalTitle -text "Total:"
@@ -2033,8 +2168,16 @@ frame .jobs
       label .jobs.selected.total.bytesPostfix -text "bytes"
       grid .jobs.selected.total.bytesPostfix -row 0 -column 3 -sticky "w" 
 
+      label .jobs.selected.total.separator -text "/"
+      grid .jobs.selected.total.separator -row 0 -column 4 -sticky "w" 
+
+      entry .jobs.selected.total.bytesShort -width 6 -textvariable currentJob(totalBytesShort) -justify right -border 0 -state readonly
+      grid .jobs.selected.total.bytesShort -row 0 -column 5 -sticky "w" 
+      label .jobs.selected.total.bytesShortUnit -width 3 -textvariable currentJob(totalBytesShortUnit)
+      grid .jobs.selected.total.bytesShortUnit -row 0 -column 6 -sticky "w" 
+
       grid rowconfigure    .jobs.selected.total { 0 } -weight 1
-      grid columnconfigure .jobs.selected.total { 4 } -weight 1
+      grid columnconfigure .jobs.selected.total { 7 } -weight 1
     grid .jobs.selected.total -row 1 -column 3 -sticky "we" -padx 2p -pady 2p
 
     label .jobs.selected.currentFileNameTitle -text "File:"
@@ -2044,17 +2187,61 @@ frame .jobs
 #pack .jobs.selected.done.percentageContainer.x -fill x -expand yes
     grid .jobs.selected.currentFileName -row 2 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
 
-    label .jobs.selected.currentStorageTitle -text "Storage:"
-    grid .jobs.selected.currentStorageTitle -row 3 -column 0 -sticky "w"
-    entry .jobs.selected.currentStorage -textvariable currentJob(storageName) -border 0 -state readonly
-#entry .jobs.selected.done.percentageContainer.x
-#pack .jobs.selected.done.percentageContainer.x -fill x -expand yes
-    grid .jobs.selected.currentStorage -row 3 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    progressbar .jobs.selected.filePercentage
+    grid .jobs.selected.filePercentage -row 3 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    addModifyTrace ::currentJob(fileDoneBytes) \
+      "
+        global currentJob
 
-    label .jobs.selected.filesPercentageTitle -text "Files:"
-    grid .jobs.selected.filesPercentageTitle -row 4 -column 0 -sticky "w"
-    progressbar .jobs.selected.filesPercentage
-    grid .jobs.selected.filesPercentage -row 4 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+        if {\$currentJob(fileTotalBytes) > 0} \
+        {
+          set p \[expr {double(\$currentJob(fileDoneBytes))/\$currentJob(fileTotalBytes)}]
+          progressbar .jobs.selected.filePercentage update \$p
+        }
+      "
+    addModifyTrace ::currentJob(fileTotalBytes) \
+      "
+        global currentJob
+
+        if {\$currentJob(fileTotalBytes) > 0} \
+        {
+          set p \[expr {double(\$currentJob(fileDoneBytes))/\$currentJob(fileTotalBytes)}]
+          progressbar .jobs.selected.filePercentage update \$p
+        }
+      "
+
+    label .jobs.selected.storageNameTitle -text "Storage:"
+    grid .jobs.selected.storageNameTitle -row 4 -column 0 -sticky "w"
+    entry .jobs.selected.storageName -textvariable currentJob(storageName) -border 0 -state readonly
+    grid .jobs.selected.storageName -row 4 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+
+    progressbar .jobs.selected.storagePercentage
+    grid .jobs.selected.storagePercentage -row 5 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    addModifyTrace ::currentJob(storageDoneBytes) \
+      "
+        global currentJob
+
+        if {\$currentJob(storageTotalBytes) > 0} \
+        {
+          set p \[expr {double(\$currentJob(storageDoneBytes))/\$currentJob(storageTotalBytes)}]
+          progressbar .jobs.selected.storagePercentage update \$p
+        }
+      "
+    addModifyTrace ::currentJob(storageTotalBytes) \
+      "
+        global currentJob
+
+        if {\$currentJob(storageTotalBytes) > 0} \
+        {
+          set p \[expr {double(\$currentJob(storageDoneBytes))/\$currentJob(storageTotalBytes)}]
+          progressbar .jobs.selected.storagePercentage update \$p
+        }
+      "
+
+    label .jobs.selected.totalFilesPercentageTitle -text "Total files:"
+    grid .jobs.selected.totalFilesPercentageTitle -row 6 -column 0 -sticky "w"
+    progressbar .jobs.selected.totalFilesPercentage
+    grid .jobs.selected.totalFilesPercentage -row 6 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(doneFiles) \
       "
         global currentJob
@@ -2062,7 +2249,7 @@ frame .jobs
         if {\$currentJob(totalFiles) > 0} \
         {
           set p \[expr {double(\$currentJob(doneFiles))/\$currentJob(totalFiles)}]
-          progressbar .jobs.selected.filesPercentage update \$p
+          progressbar .jobs.selected.totalFilesPercentage update \$p
         }
       "
     addModifyTrace ::currentJob(totalFiles) \
@@ -2072,14 +2259,14 @@ frame .jobs
         if {\$currentJob(totalFiles) > 0} \
         {
           set p \[expr {double(\$currentJob(doneFiles))/\$currentJob(totalFiles)}]
-          progressbar .jobs.selected.filesPercentage update \$p
+          progressbar .jobs.selected.totalFilesPercentage update \$p
         }
       "
 
-    label .jobs.selected.bytesPercentageTitle -text "Bytes:"
-    grid .jobs.selected.bytesPercentageTitle -row 5 -column 0 -sticky "w"
-    progressbar .jobs.selected.bytesPercentage
-    grid .jobs.selected.bytesPercentage -row 5 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    label .jobs.selected.totalBytesPercentageTitle -text "Total bytes:"
+    grid .jobs.selected.totalBytesPercentageTitle -row 7 -column 0 -sticky "w"
+    progressbar .jobs.selected.totalBytesPercentage
+    grid .jobs.selected.totalBytesPercentage -row 7 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(doneBytes) \
       "
         global currentJob
@@ -2087,7 +2274,7 @@ frame .jobs
         if {\$currentJob(totalBytes) > 0} \
         {
           set p \[expr {double(\$currentJob(doneBytes))/\$currentJob(totalBytes)}]
-          progressbar .jobs.selected.bytesPercentage update \$p
+          progressbar .jobs.selected.totalBytesPercentage update \$p
         }
       "
     addModifyTrace ::currentJob(totalBytes) \
@@ -2097,7 +2284,7 @@ frame .jobs
         if {\$currentJob(totalBytes) > 0} \
         {
           set p \[expr {double(\$currentJob(doneBytes))/\$currentJob(totalBytes)}]
-          progressbar .jobs.selected.bytesPercentage update \$p
+          progressbar .jobs.selected.totalBytesPercentage update \$p
         }
       "
 
@@ -2106,7 +2293,7 @@ frame .jobs
   grid .jobs.selected -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
 
   frame .jobs.list
-    mclistbox::mclistbox .jobs.list.data -bg white -labelanchor w -selectmode single -xscrollcommand ".jobs.list.xscroll set" -yscrollcommand ".jobs.list.yscroll set"
+    mclistbox::mclistbox .jobs.list.data -height 1 -bg white -labelanchor w -selectmode single -xscrollcommand ".jobs.list.xscroll set" -yscrollcommand ".jobs.list.yscroll set"
     .jobs.list.data column add id                -label "Id"             -width 5
     .jobs.list.data column add state             -label "State"          -width 12
     .jobs.list.data column add archivePartSize   -label "Part size"      -width 8
@@ -2129,7 +2316,7 @@ frame .jobs
     pack .jobs.buttons.rem -side left
   grid .jobs.buttons -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
 
-  bind .jobs.list.data <ButtonRelease-1>           "event generate . <<Event_selectJob>>"
+  bind .jobs.list.data <ButtonRelease-1>    "event generate . <<Event_selectJob>>"
   bind .jobs.list.data <KeyPress-Delete>    "event generate . <<Event_remJob>>"
   bind .jobs.list.data <KeyPress-KP_Delete> "event generate . <<Event_remJob>>"
 
@@ -2168,32 +2355,32 @@ frame .files
   .files.list.popup subwidget menu add command -label "Remove include pattern" -state disabled -command ""
   .files.list.popup subwidget menu add command -label "Remove exclude pattern" -state disabled -command ""
 
-proc dop { widget x y } \
-{
-  set fileName [$widget nearest $y]
-  set extension ""
-  regexp {.*(\.[^\.]+)} $fileName * extension
+  proc filesPopupHandler { widget x y } \
+  {
+    set fileName [$widget nearest $y]
+    set extension ""
+    regexp {.*(\.[^\.]+)} $fileName * extension
 
-  .files.list.popup subwidget menu entryconfigure 0 -label "Add include '$fileName'"    -command "addIncludedPattern $fileName"
-  .files.list.popup subwidget menu entryconfigure 1 -label "Add exclude '$fileName'"    -command "addExcludedPattern $fileName"
-  .files.list.popup subwidget menu entryconfigure 2 -label "Remove include '$fileName'" -command "remIncludedPattern $fileName"
-  .files.list.popup subwidget menu entryconfigure 3 -label "Remove exclude '$fileName'" -command "remExcludedPattern $fileName"
-  if {$extension != ""} \
-  {
-    .files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern *$extension"    -state normal -command "addIncludedPattern *$extension"
-    .files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern *$extension"    -state normal -command "addExcludedPattern *$extension"
-    .files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern *$extension" -state normal -command "remIncludedPattern *$extension"
-    .files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern *$extension" -state normal -command "remExcludedPattern *$extension"
-  } \
-  else \
-  {
-    .files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern -"    -state disabled -command ""
-    .files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern -"    -state disabled -command ""
-    .files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern -" -state disabled -command ""
-    .files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern -" -state disabled -command ""
+    .files.list.popup subwidget menu entryconfigure 0 -label "Add include '$fileName'"    -command "addIncludedPattern $fileName"
+    .files.list.popup subwidget menu entryconfigure 1 -label "Add exclude '$fileName'"    -command "addExcludedPattern $fileName"
+    .files.list.popup subwidget menu entryconfigure 2 -label "Remove include '$fileName'" -command "remIncludedPattern $fileName"
+    .files.list.popup subwidget menu entryconfigure 3 -label "Remove exclude '$fileName'" -command "remExcludedPattern $fileName"
+    if {$extension != ""} \
+    {
+      .files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern *$extension"    -state normal -command "addIncludedPattern *$extension"
+      .files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern *$extension"    -state normal -command "addExcludedPattern *$extension"
+      .files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern *$extension" -state normal -command "remIncludedPattern *$extension"
+      .files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern *$extension" -state normal -command "remExcludedPattern *$extension"
+    } \
+    else \
+    {
+      .files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern -"    -state disabled -command ""
+      .files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern -"    -state disabled -command ""
+      .files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern -" -state disabled -command ""
+      .files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern -" -state disabled -command ""
+    }
+    .files.list.popup post $widget $x $y
   }
-  .files.list.popup post $widget $x $y
-}
 
   frame .files.buttons
     button .files.buttons.stateNone -text "*" -command "event generate . <<Event_stateNone>>"
@@ -2204,14 +2391,14 @@ proc dop { widget x y } \
     pack .files.buttons.stateExcluded -side left -fill x -expand yes
   grid .files.buttons -row 1 -column 0 -sticky "we" -padx 2p -pady 2p
 
-  bind [.files.list subwidget hlist] <Button-3>             "dop %W %x %y"
-  bind [.files.list subwidget hlist] <BackSpace>            "event generate . <<Event_stateNone>>"
-  bind [.files.list subwidget hlist] <Delete>               "event generate . <<Event_stateNone>>"
-  bind [.files.list subwidget hlist] <KeyPress-plus>        "event generate . <<Event_stateIncluded>>"
-  bind [.files.list subwidget hlist] <KeyPress-KP_Add>      "event generate . <<Event_stateIncluded>>"
-  bind [.files.list subwidget hlist] <KeyPress-minus>       "event generate . <<Event_stateExcluded>>"
-  bind [.files.list subwidget hlist] <KeyPress-KP_Subtract> "event generate . <<Event_stateExcluded>>"
-  bind [.files.list subwidget hlist] <KeyPress-space>       "event generate . <<Event_toggleStateNoneIncludedExcluded>>"
+  bind [.files.list subwidget hlist] <Button-3>    "filesPopupHandler %W %x %y"
+  bind [.files.list subwidget hlist] <BackSpace>   "event generate . <<Event_stateNone>>"
+  bind [.files.list subwidget hlist] <Delete>      "event generate . <<Event_stateNone>>"
+  bind [.files.list subwidget hlist] <plus>        "event generate . <<Event_stateIncluded>>"
+  bind [.files.list subwidget hlist] <KP_Add>      "event generate . <<Event_stateIncluded>>"
+  bind [.files.list subwidget hlist] <minus>       "event generate . <<Event_stateExcluded>>"
+  bind [.files.list subwidget hlist] <KP_Subtract> "event generate . <<Event_stateExcluded>>"
+  bind [.files.list subwidget hlist] <space>       "event generate . <<Event_toggleStateNoneIncludedExcluded>>"
 
   # fix a bug in tix: end does not use separator-char to detect last entry
   bind [.files.list subwidget hlist] <KeyPress-End> \
@@ -2240,41 +2427,46 @@ pack .files -side top -fill both -expand yes -in [$mainWindow.tabs subwidget fil
 frame .filters
   label .filters.includedTitle -text "Included:"
   grid .filters.includedTitle -row 0 -column 0 -sticky "nw"
-  tixScrolledListBox .filters.included -scrollbar both -options { listbox.background white  }
+  tixScrolledListBox .filters.included -height 1 -scrollbar both -options { listbox.background white  }
   grid .filters.included -row 0 -column 1 -sticky "nswe" -padx 2p -pady 2p
-  .filters.included subwidget listbox configure -listvariable barConfig(included)
+  .filters.included subwidget listbox configure -listvariable barConfig(included) -selectmode extended
   set includedListWidget [.filters.included subwidget listbox]
 
+  bind [.filters.included subwidget listbox] <Button-1> ".filters.includedButtons.rem configure -state normal"
+
   frame .filters.includedButtons
-    button .filters.includedButtons.add -text "Add (Ins)" -command "event generate . <<Event_addIncludePattern>>"
+    button .filters.includedButtons.add -text "Add (F5)" -command "event generate . <<Event_addIncludePattern>>"
     pack .filters.includedButtons.add -side left
-    button .filters.includedButtons.rem -text "Rem (Del)" -command "event generate . <<Event_remIncludePattern>>"
+    button .filters.includedButtons.rem -text "Rem (F6)" -state disabled -command "event generate . <<Event_remIncludePattern>>"
     pack .filters.includedButtons.rem -side left
   grid .filters.includedButtons -row 1 -column 1 -sticky "we" -padx 2p -pady 2p
 
-  bind [.filters.included subwidget listbox] <KeyPress-Insert>    "event generate . <<Event_addIncludePattern>>"
-  bind [.filters.included subwidget listbox] <KeyPress-KP_Insert> "event generate . <<Event_addIncludePattern>>"
-  bind [.filters.included subwidget listbox] <KeyPress-Delete>    "event generate . <<Event_remIncludePattern>>"
-  bind [.filters.included subwidget listbox] <KeyPress-KP_Delete> "event generate . <<Event_remIncludePattern>>"
+  bind [.filters.included subwidget listbox] <Insert> "event generate . <<Event_addIncludePattern>>"
+  bind [.filters.included subwidget listbox] <Delete> "event generate . <<Event_remIncludePattern>>"
 
   label .filters.excludedTitle -text "Excluded:"
   grid .filters.excludedTitle -row 2 -column 0 -sticky "nw"
-  tixScrolledListBox .filters.excluded -scrollbar both -options { listbox.background white }
+  tixScrolledListBox .filters.excluded -height 1 -scrollbar both -options { listbox.background white }
   grid .filters.excluded -row 2 -column 1 -sticky "nswe" -padx 2p -pady 2p
-  .filters.excluded subwidget listbox configure -listvariable barConfig(excluded)
+  .filters.excluded subwidget listbox configure -listvariable barConfig(excluded) -selectmode extended
   set excludedListWidget [.filters.excluded subwidget listbox]
 
+  bind [.filters.excluded subwidget listbox] <Button-1> ".filters.excludedButtons.rem configure -state normal"
+
   frame .filters.excludedButtons
-    button .filters.excludedButtons.add -text "Add (Ins)" -command "event generate . <<Event_addExcludePattern>>"
+    button .filters.excludedButtons.add -text "Add (F7)" -command "event generate . <<Event_addExcludePattern>>"
     pack .filters.excludedButtons.add -side left
-    button .filters.excludedButtons.rem -text "Rem (Del)" -command "event generate . <<Event_remExcludePattern>>"
+    button .filters.excludedButtons.rem -text "Rem (F8)" -state disabled -command "event generate . <<Event_remExcludePattern>>"
     pack .filters.excludedButtons.rem -side left
   grid .filters.excludedButtons -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
 
-  bind [.filters.excluded subwidget listbox] <KeyPress-Insert>    "event generate . <<Event_addExcludePattern>>"
-  bind [.filters.excluded subwidget listbox] <KeyPress-KP_Insert> "event generate . <<Event_addExcludePattern>>"
-  bind [.filters.excluded subwidget listbox] <KeyPress-Delete>    "event generate . <<Event_remExcludePattern>>"
-  bind [.filters.excluded subwidget listbox] <KeyPress-KP_Delete> "event generate . <<Event_remExcludePattern>>"
+  bind [.filters.excluded subwidget listbox] <Insert> "event generate . <<Event_addExcludePattern>>"
+  bind [.filters.excluded subwidget listbox] <Delete> "event generate . <<Event_remExcludePattern>>"
+
+  label .filters.optionsTitle -text "Options:"
+  grid .filters.optionsTitle -row 4 -column 0 -sticky "nw" 
+  checkbutton .filters.optionSkipUnreadable -text "skip unreable files" -variable barConfig(skipUnreadable)
+  grid .filters.optionSkipUnreadable -row 4 -column 1 -sticky "nw" 
 
   grid rowconfigure    .filters { 0 2 } -weight 1
   grid columnconfigure .filters { 1 } -weight 1
@@ -2284,13 +2476,15 @@ frame .storage
   label .storage.archivePartSizeTitle -text "Part size:"
   grid .storage.archivePartSizeTitle -row 0 -column 0 -sticky "w" 
   frame .storage.split
-    radiobutton .storage.split.unlimted -text "unlimted" -width 6 -anchor w -variable barConfig(archivePartSizeFlag) -value 0
-    grid .storage.split.unlimted -row 0 -column 1 -sticky "w" 
-    radiobutton .storage.split.size -text "split in" -width 6 -anchor w -variable barConfig(archivePartSizeFlag) -value 1
+    radiobutton .storage.split.unlimited -text "unlimited" -anchor w -variable barConfig(archivePartSizeFlag) -value 0
+    grid .storage.split.unlimited -row 0 -column 1 -sticky "w" 
+    radiobutton .storage.split.size -text "split in" -width 8 -anchor w -variable barConfig(archivePartSizeFlag) -value 1
     grid .storage.split.size -row 0 -column 2 -sticky "w" 
     tixComboBox .storage.split.archivePartSize -variable barConfig(archivePartSize) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
     grid .storage.split.archivePartSize -row 0 -column 3 -sticky "w" 
 
+   .storage.split.archivePartSize insert end 32M
+   .storage.split.archivePartSize insert end 64M
    .storage.split.archivePartSize insert end 128M
    .storage.split.archivePartSize insert end 256M
    .storage.split.archivePartSize insert end 512M
@@ -2301,77 +2495,112 @@ frame .storage
   grid .storage.split -row 0 -column 1 -sticky "w" -padx 2p -pady 2p
   addEnableTrace ::barConfig(archivePartSizeFlag) 1 .storage.split.archivePartSize
 
-  label .storage.maxTmpDirectorySizeTitle -text "Max. temp. size:"
-  grid .storage.maxTmpDirectorySizeTitle -row 1 -column 0 -sticky "w" 
-  frame .storage.maxTmpDirectorySize
-    radiobutton .storage.maxTmpDirectorySize.unlimted -text "unlimted" -width 6 -anchor w -variable barConfig(maxTmpDirectorySizeFlag) -value 0
-    grid .storage.maxTmpDirectorySize.unlimted -row 0 -column 1 -sticky "w" 
-    radiobutton .storage.maxTmpDirectorySize.limitto -text "limit to" -width 6 -anchor w -variable barConfig(maxTmpDirectorySizeFlag) -value 1
-    grid .storage.maxTmpDirectorySize.limitto -row 0 -column 2 -sticky "w" 
-    tixComboBox .storage.maxTmpDirectorySize.size -variable barConfig(maxTmpDirectorySize) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
-    grid .storage.maxTmpDirectorySize.size -row 0 -column 3 -sticky "w" 
+  label .storage.maxTmpSizeTitle -text "Max. temp. size:"
+  grid .storage.maxTmpSizeTitle -row 1 -column 0 -sticky "w" 
+  frame .storage.maxTmpSize
+    radiobutton .storage.maxTmpSize.unlimited -text "unlimited" -anchor w -variable barConfig(maxTmpSizeFlag) -value 0
+    grid .storage.maxTmpSize.unlimited -row 0 -column 1 -sticky "w" 
+    radiobutton .storage.maxTmpSize.limitto -text "limit to" -width 8 -anchor w -variable barConfig(maxTmpSizeFlag) -value 1
+    grid .storage.maxTmpSize.limitto -row 0 -column 2 -sticky "w" 
+    tixComboBox .storage.maxTmpSize.size -variable barConfig(maxTmpSize) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
+    grid .storage.maxTmpSize.size -row 0 -column 3 -sticky "w" 
 
-   .storage.maxTmpDirectorySize.size insert end 128M
-   .storage.maxTmpDirectorySize.size insert end 256M
-   .storage.maxTmpDirectorySize.size insert end 512M
-   .storage.maxTmpDirectorySize.size insert end 1G
-   .storage.maxTmpDirectorySize.size insert end 2G
-   .storage.maxTmpDirectorySize.size insert end 4G
-   .storage.maxTmpDirectorySize.size insert end 8G
+   .storage.maxTmpSize.size insert end 32M
+   .storage.maxTmpSize.size insert end 64M
+   .storage.maxTmpSize.size insert end 128M
+   .storage.maxTmpSize.size insert end 256M
+   .storage.maxTmpSize.size insert end 512M
+   .storage.maxTmpSize.size insert end 1G
+   .storage.maxTmpSize.size insert end 2G
+   .storage.maxTmpSize.size insert end 4G
+   .storage.maxTmpSize.size insert end 8G
 
-    grid rowconfigure    .storage.maxTmpDirectorySize { 0 } -weight 1
-    grid columnconfigure .storage.maxTmpDirectorySize { 1 } -weight 1
-  grid .storage.maxTmpDirectorySize -row 1 -column 1 -sticky "w" -padx 2p -pady 2p
-  addEnableTrace ::barConfig(maxTmpDirectorySizeFlag) 1 .storage.maxTmpDirectorySize.size
+    grid rowconfigure    .storage.maxTmpSize { 0 } -weight 1
+    grid columnconfigure .storage.maxTmpSize { 1 } -weight 1
+  grid .storage.maxTmpSize -row 1 -column 1 -sticky "w" -padx 2p -pady 2p
+  addEnableTrace ::barConfig(maxTmpSizeFlag) 1 .storage.maxTmpSize.size
 
-  radiobutton .storage.typeFileSystem -variable barConfig(storageType) -value "FILESYSTEM"
-  grid .storage.typeFileSystem -row 2 -column 0 -sticky "nw" 
-  labelframe .storage.fileSystem -text "File system"
-    label .storage.fileSystem.fileNameTitle -text "File name:"
-    grid .storage.fileSystem.fileNameTitle -row 0 -column 0 -sticky "w" 
-    entry .storage.fileSystem.fileName -textvariable barConfig(storageFileName) -bg white
-    grid .storage.fileSystem.fileName -row 0 -column 1 -sticky "we" 
+  label .storage.optionOverwriteArchiveFilesTitle -text "Options:"
+  grid .storage.optionOverwriteArchiveFilesTitle -row 2 -column 0 -sticky "w" 
+  checkbutton .storage.optionOverwriteArchiveFiles -text "overwrite archive files" -variable barConfig(overwriteArchiveFiles)
+  grid .storage.optionOverwriteArchiveFiles -row 2 -column 1 -sticky "w" 
 
-    grid rowconfigure    .storage.fileSystem { 0 } -weight 1
-    grid columnconfigure .storage.fileSystem { 1 } -weight 1
-  grid .storage.fileSystem -row 2 -column 1 -sticky "nswe" -padx 2p -pady 2p
-  addEnableTrace ::barConfig(storageType) "FILESYSTEM" .storage.fileSystem.fileNameTitle
-  addEnableTrace ::barConfig(storageType) "FILESYSTEM" .storage.fileSystem.fileName
+  label .storage.destintationTitle -text "Destination:"
+  grid .storage.destintationTitle -row 3 -column 0 -sticky "nw" 
+  frame .storage.destintation
+    radiobutton .storage.destintation.typeFileSystem -variable barConfig(storageType) -value "FILESYSTEM"
+    grid .storage.destintation.typeFileSystem -row 0 -column 0 -sticky "nw" 
+    labelframe .storage.destintation.fileSystem -text "File system"
+      label .storage.destintation.fileSystem.fileNameTitle -text "File name:"
+      grid .storage.destintation.fileSystem.fileNameTitle -row 0 -column 0 -sticky "w" 
+      entry .storage.destintation.fileSystem.fileName -textvariable barConfig(storageFileName) -bg white
+      grid .storage.destintation.fileSystem.fileName -row 0 -column 1 -sticky "we" 
 
-  radiobutton .storage.typeSCP -variable barConfig(storageType) -value "SCP"
-  grid .storage.typeSCP -row 3 -column 0 -sticky "nw" 
-  labelframe .storage.scp -text "scp"
-    label .storage.scp.loginNameTitle -text "Login:" -state disabled
-    grid .storage.scp.loginNameTitle -row 0 -column 0 -sticky "w" 
-    entry .storage.scp.loginName -textvariable barConfig(storageLoginName) -bg white -state disabled
-    grid .storage.scp.loginName -row 0 -column 1 -sticky "we" 
+      grid rowconfigure    .storage.destintation.fileSystem { 0 } -weight 1
+      grid columnconfigure .storage.destintation.fileSystem { 1 } -weight 1
+    grid .storage.destintation.fileSystem -row 0 -column 1 -sticky "nswe" -padx 2p -pady 2p
+    addEnableTrace ::barConfig(storageType) "FILESYSTEM" .storage.destintation.fileSystem.fileNameTitle
+    addEnableTrace ::barConfig(storageType) "FILESYSTEM" .storage.destintation.fileSystem.fileName
 
-    label .storage.scp.loginPasswordTitle -text "Password:" -state disabled
-    grid .storage.scp.loginPasswordTitle -row 0 -column 2 -sticky "w" 
-    entry .storage.scp.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
-    grid .storage.scp.loginPassword -row 0 -column 3 -sticky "we" 
+    radiobutton .storage.destintation.typeSCP -variable barConfig(storageType) -value "SCP"
+    grid .storage.destintation.typeSCP -row 1 -column 0 -sticky "nw" 
+    labelframe .storage.destintation.scp -text "scp"
+      label .storage.destintation.scp.fileNameTitle -text "File name:"
+      grid .storage.destintation.scp.fileNameTitle -row 0 -column 0 -sticky "w" 
+      entry .storage.destintation.scp.fileName -textvariable barConfig(storageFileName) -bg white
+      grid .storage.destintation.scp.fileName -row 0 -column 1 -columnspan 5 -sticky "we" 
 
-    label .storage.scp.hostNameTitle -text "Host:" -state disabled
-    grid .storage.scp.hostNameTitle -row 2 -column 0 -sticky "w" 
-    entry .storage.scp.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
-    grid .storage.scp.hostName -row 2 -column 1 -sticky "we" 
+      label .storage.destintation.scp.loginNameTitle -text "Login:" -state disabled
+      grid .storage.destintation.scp.loginNameTitle -row 1 -column 0 -sticky "w" 
+      entry .storage.destintation.scp.loginName -textvariable barConfig(storageLoginName) -bg white -state disabled
+      grid .storage.destintation.scp.loginName -row 1 -column 1 -sticky "we" 
 
-    label .storage.scp.sshPortTitle -text "SSH port:" -state disabled
-    grid .storage.scp.sshPortTitle -row 2 -column 2 -sticky "w" 
-    tixControl .storage.scp.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 1 -max 65535 -options { entry.background white } -state disabled
-    grid .storage.scp.sshPort -row 2 -column 3 -sticky "we" 
+  #    label .storage.destintation.scp.loginPasswordTitle -text "Password:" -state disabled
+  #    grid .storage.destintation.scp.loginPasswordTitle -row 0 -column 2 -sticky "w" 
+  #    entry .storage.destintation.scp.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
+  #    grid .storage.destintation.scp.loginPassword -row 0 -column 3 -sticky "we" 
 
-    grid rowconfigure    .storage.scp { 0 1 } -weight 1
-    grid columnconfigure .storage.scp { 1 3 } -weight 1
-  grid .storage.scp -row 3 -column 1 -sticky "nswe" -padx 2p -pady 2p
-  addEnableTrace ::barConfig(storageType) "SCP" .storage.scp.loginNameTitle
-  addEnableTrace ::barConfig(storageType) "SCP" .storage.scp.loginName
-  addEnableTrace ::barConfig(storageType) "SCP" .storage.scp.loginPasswordTitle
-  addEnableTrace ::barConfig(storageType) "SCP" .storage.scp.loginPassword
-  addEnableTrace ::barConfig(storageType) "SCP" .storage.scp.hostNameTitle
-  addEnableTrace ::barConfig(storageType) "SCP" .storage.scp.hostName
-  addEnableTrace ::barConfig(storageType) "SCP" .storage.scp.sshPortTitle
-  addEnableTrace ::barConfig(storageType) "SCP" .storage.scp.sshPort
+      label .storage.destintation.scp.hostNameTitle -text "Host:" -state disabled
+      grid .storage.destintation.scp.hostNameTitle -row 1 -column 2 -sticky "w" 
+      entry .storage.destintation.scp.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
+      grid .storage.destintation.scp.hostName -row 1 -column 3 -sticky "we" 
+
+      label .storage.destintation.scp.sshPortTitle -text "SSH port:" -state disabled
+      grid .storage.destintation.scp.sshPortTitle -row 1 -column 4 -sticky "w" 
+      tixControl .storage.destintation.scp.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 1 -max 65535 -options { entry.background white } -state disabled
+      grid .storage.destintation.scp.sshPort -row 1 -column 5 -sticky "we" 
+
+      label .storage.destintation.scp.sshPublicKeyFileNameTitle -text "SSH public key:" -state disabled
+      grid .storage.destintation.scp.sshPublicKeyFileNameTitle -row 2 -column 0 -sticky "w" 
+      entry .storage.destintation.scp.sshPublicKeyFileName -textvariable barConfig(sshPublicKeyFileName) -bg white -state disabled
+      grid .storage.destintation.scp.sshPublicKeyFileName -row 2 -column 1 -columnspan 5 -sticky "we" 
+
+      label .storage.destintation.scp.sshPrivatKeyFileNameTitle -text "SSH privat key:" -state disabled
+      grid .storage.destintation.scp.sshPrivatKeyFileNameTitle -row 3 -column 0 -sticky "w" 
+      entry .storage.destintation.scp.sshPrivatKeyFileName -textvariable barConfig(sshPrivatKeyFileName) -bg white -state disabled
+      grid .storage.destintation.scp.sshPrivatKeyFileName -row 3 -column 1 -columnspan 5 -sticky "we" 
+
+#      grid rowconfigure    .storage.destintation.scp { } -weight 1
+      grid columnconfigure .storage.destintation.scp { 1 3 5 } -weight 1
+    grid .storage.destintation.scp -row 1 -column 1 -sticky "nswe" -padx 2p -pady 2p
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.fileNameTitle
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.fileName
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.loginNameTitle
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.loginName
+  #  addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.loginPasswordTitle
+  #  addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.loginPassword
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.hostNameTitle
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.hostName
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.sshPortTitle
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.sshPort
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.sshPublicKeyFileNameTitle
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.sshPublicKeyFileName
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.sshPrivatKeyFileNameTitle
+    addEnableTrace ::barConfig(storageType) "SCP" .storage.destintation.scp.sshPrivatKeyFileName
+
+    grid rowconfigure    .storage.destintation { 0 } -weight 1
+    grid columnconfigure .storage.destintation { 1 } -weight 1
+  grid .storage.destintation -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
 
   grid rowconfigure    .storage { 4 } -weight 1
   grid columnconfigure .storage { 1 } -weight 1
@@ -2387,18 +2616,30 @@ frame .compressCrypt
   label .compressCrypt.cryptAlgorithmTitle -text "Crypt:"
   grid .compressCrypt.cryptAlgorithmTitle -row 1 -column 0 -sticky "w" 
   tk_optionMenu .compressCrypt.cryptAlgorithm barConfig(cryptAlgorithm) \
-    "none" "3des" "cast5" "blowfish" "aes128" "aes192" "aes256" "twofish128" "twofish256"
+    "none" "3DES" "CAST5" "BLOWFISH" "AES128" "AES192" "AES256" "TWOFISH128" "TWOFISH256"
   grid .compressCrypt.cryptAlgorithm -row 1 -column 1 -sticky "w" -padx 2p -pady 2p
 
-  label .compressCrypt.passwordTitle -text "Password:"
-  grid .compressCrypt.passwordTitle -row 2 -column 0 -sticky "w" 
-  entry .compressCrypt.password -textvariable barConfig(cryptPassword) -bg white -show "*" -state disabled
-  grid .compressCrypt.password -row 2 -column 1 -sticky "we" -padx 2p -pady 2p
-  addDisableTrace ::barConfig(cryptAlgorithm) "none" .compressCrypt.password
+#  label .compressCrypt.passwordTitle -text "Password:"
+#  grid .compressCrypt.passwordTitle -row 2 -column 0 -sticky "w" 
+#  entry .compressCrypt.password -textvariable barConfig(cryptPassword) -bg white -show "*" -state disabled
+#  grid .compressCrypt.password -row 2 -column 1 -sticky "we" -padx 2p -pady 2p
+#  addDisableTrace ::barConfig(cryptAlgorithm) "none" .compressCrypt.password
 
   grid rowconfigure    .compressCrypt { 3 } -weight 1
   grid columnconfigure .compressCrypt { 1 } -weight 1
 pack .compressCrypt -side top -fill both -expand yes -in [$mainWindow.tabs subwidget compressCrypt]
+
+#frame .misc
+#  label .misc.optionsTitle -text "Options:"
+#  grid .misc.optionsTitle -row 0 -column 0 -sticky "nw" 
+#  checkbutton .misc.optionSkipUnreadable -text "skip unreable files" -variable barConfig(skipUnreadable)
+#  grid .misc.optionSkipUnreadable -row 0 -column 1 -sticky "nw" 
+#  checkbutton .misc.optionOverwriteFiles -text "overwrite files" -variable barConfig(overwriteFiles)
+#  grid .misc.optionOverwriteFiles -row 2 -column 1 -sticky "nw" 
+
+#  grid rowconfigure    .misc { 1 } -weight 1
+#  grid columnconfigure .misc { 2 } -weight 1
+#pack .misc -side top -fill both -expand yes -in [$mainWindow.tabs subwidget misc]
 
 # buttons
 frame $mainWindow.buttons
@@ -2410,6 +2651,15 @@ frame $mainWindow.buttons
 pack $mainWindow.buttons -fill x -padx 2p -pady 2p
 
 .files.list subwidget hlist configure -command "openCloseDirectory"
+
+bind . <Control-o> "event generate . <<Event_load>>"
+bind . <Control-s> "event generate . <<Event_save>>"
+bind . <Control-q> "event generate . <<Event_quit>>"
+
+bind . <F5> "event generate . <<Event_addIncludePattern>>"
+bind . <F6> "event generate . <<Event_remIncludePattern>>"
+bind . <F7> "event generate . <<Event_addExcludePattern>>"
+bind . <F8> "event generate . <<Event_remExcludePattern>>"
 
 bind . <<Event_load>> \
 {
@@ -2477,10 +2727,17 @@ bind . <<Event_addIncludePattern>> \
 
 bind . <<Event_remIncludePattern>> \
 {
+  set patternList {}
   foreach index [.filters.included subwidget listbox curselection] \
   {
-    remIncludedPattern [.filters.included subwidget listbox get $index]
+    lappend patternList [.filters.included subwidget listbox get $index]
   }
+  foreach pattern $patternList \
+  {
+    remIncludedPattern $pattern
+  }
+  .filters.included subwidget listbox selection clear 0 end
+  .filters.includedButtons.rem configure -state disabled
 }
 
 bind . <<Event_addExcludePattern>> \
@@ -2490,10 +2747,17 @@ bind . <<Event_addExcludePattern>> \
 
 bind . <<Event_remExcludePattern>> \
 {
+  set patternList {}
   foreach index [.filters.excluded subwidget listbox curselection] \
   {
-    remExcludedPattern [.filters.excluded subwidget listbox get $index]
+    lappend patternList [.filters.excluded subwidget listbox get $index]
   }
+  foreach pattern $patternList \
+  {
+    remExcludedPattern $pattern
+  }
+  .filters.excluded subwidget listbox selection clear 0 end
+  .filters.excludedButtons.rem configure -state disabled
 }
 
 bind . <<Event_selectJob>> \
@@ -2538,7 +2802,7 @@ updateCurrentJob
 
 # read devices
 #set commandId [Server:sendCommand "DEVICE_LIST"]
-#while {[Server:readResult $commandId errorCode result]} \
+#while {[Server:readResult $commandId completeFlag errorCode result]} \
 #{
 #  addDevice $result
 #}

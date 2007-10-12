@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -56,7 +56,8 @@ void Network_done(void)
 
 Errors Network_connect(SocketHandle *socketHandle,
                        String       hostName,
-                       uint         hostPort
+                       uint         hostPort,
+                       uint         flags
                       )
 {
   struct hostent     *hostAddressEntry;
@@ -100,8 +101,11 @@ Errors Network_connect(SocketHandle *socketHandle,
     return ERROR_CONNECT_FAIL;
   }
 
-  /* enable non-blocking */
-  fcntl(*socketHandle,F_SETFL,O_NONBLOCK);
+  if ((flags & NETWORK_SOCKET_FLAG_NON_BLOCKING) != 0)
+  {
+    /* enable non-blocking */
+    fcntl(*socketHandle,F_SETFL,O_NONBLOCK);
+  }
 
   return ERROR_NONE;
 }
@@ -194,7 +198,8 @@ void Network_doneServer(SocketHandle *socketHandle)
 }
 
 Errors Network_accept(SocketHandle *socketHandle,
-                      SocketHandle *serverSocketHandle
+                      SocketHandle *serverSocketHandle,
+                      uint         flags
                      )
 {
   struct sockaddr_in socketAddress;
@@ -215,8 +220,11 @@ Errors Network_accept(SocketHandle *socketHandle,
     return ERROR_CONNECT_FAIL;
   }
 
-  /* enable non-blocking */
-  fcntl(*socketHandle,F_SETFL,O_NONBLOCK);
+  if ((flags & NETWORK_SOCKET_FLAG_NON_BLOCKING) != 0)
+  {
+    /* enable non-blocking */
+    fcntl(*socketHandle,F_SETFL,O_NONBLOCK);
+  }
 
   return ERROR_NONE;
 }

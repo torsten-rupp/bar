@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -26,18 +26,30 @@
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
+/* status info data */
 typedef struct
 {
   ulong  doneFiles;
   uint64 doneBytes;
   ulong  totalFiles;
   uint64 totalBytes;
+  ulong  skippedFiles;
+  uint64 skippedBytes;
+  ulong  errorFiles;
+  uint64 errorBytes;
   double compressionRatio;
   String fileName;
+  uint64 fileDoneBytes;
+  uint64 fileTotalBytes;
   String storageName;
+  uint64 storageDoneBytes;
+  uint64 storageTotalBytes;
 } CreateStatusInfo;
 
-typedef char(*CreateStatusInfoFunction)(const CreateStatusInfo *createStatusInfo, void *userData);
+typedef char(*CreateStatusInfoFunction)(Errors                 error,
+                                        const CreateStatusInfo *createStatusInfo,
+                                        void                   *userData
+                                       );
 
 /***************************** Variables *******************************/
 
@@ -54,30 +66,25 @@ typedef char(*CreateStatusInfoFunction)(const CreateStatusInfo *createStatusInfo
 /***********************************************************************\
 * Name   : Command_create
 * Purpose: create archive
-* Input  : archiveFileName     - archive file name
-*          includeList         - include list
-*          excludeList         - exclude list
-*          archivePartSize     - archive part size or 0
-*          compressAlgorithm   - compression algorithm to use
-*          compressMinFileSize - min. file size for compression
-*          cryptAlgorithm      - crypt algorithm to use
-*          password            - crypt password
+* Input  : archiveFileName          - archive file name
+*          includeList              - include list
+*          excludeList              - exclude list
+*          optiosn                  - options
+*          createStatusInfoFunction - status info call back function
+*                                     (can be NULL)
+*          createStatusInfoUserData - user data for status info function
 * Output : -
-* Return : TRUE if archive created, FALSE otherwise
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-bool Command_create(const char               *archiveFileName,
-                    PatternList              *includePatternList,
-                    PatternList              *excludePatternList,
-                    ulong                    archivePartSize,
-                    CompressAlgorithms       compressAlgorithm,
-                    ulong                    compressMinFileSize,
-                    CryptAlgorithms          cryptAlgorithm,
-                    const char               *password,
-                    CreateStatusInfoFunction createStatusInfoFunction,
-                    void                     *createStatusInfoUserData
-                   );
+Errors Command_create(const char               *archiveFileName,
+                      PatternList              *includePatternList,
+                      PatternList              *excludePatternList,
+                      const Options            *options,
+                      CreateStatusInfoFunction createStatusInfoFunction,
+                      void                     *createStatusInfoUserData
+                     );
 
 #ifdef __cplusplus
   }

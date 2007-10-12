@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems :
@@ -94,14 +94,14 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           }
           if (i >= commandLineOption->integerOption.unitCount)
           {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Invalid unit in integer value '%s'!\n",value);
+            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
             return FALSE;
           }
           factor = commandLineOption->integerOption.units[i].factor;
         }
         else
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Unexpected unit in value '%s'!\n",value);
+          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
           return FALSE;
         }
       }
@@ -116,7 +116,8 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
          )
       {
         if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                               "Value '%s' out range %d..%d for option '%s%s'!\n",
+                                               "%sValue '%s' out range %d..%d for option '%s%s'!\n",
+                                               (errorPrefix != NULL)?errorPrefix:"",
                                                value,
                                                commandLineOption->integerOption.min,
                                                commandLineOption->integerOption.max,
@@ -155,14 +156,14 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           }
           if (i >= commandLineOption->integer64Option.unitCount)
           {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Invalid unit in integer value '%s'!\n",value);
+            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
             return FALSE;
           }
           factor = commandLineOption->integer64Option.units[i].factor;
         }
         else
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Unexpected unit in value '%s'!\n",value);
+          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
           return FALSE;
         }
       }
@@ -177,7 +178,8 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
          )
       {
         if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                               "Value '%s' out range %lld..%lld for option '%s%s'!\n",
+                                               "%sValue '%s' out range %lld..%lld for option '%s%s'!\n",
+                                               (errorPrefix != NULL)?errorPrefix:"",
                                                value,
                                                commandLineOption->integer64Option.min,
                                                commandLineOption->integer64Option.max,
@@ -195,7 +197,8 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
          )
       {
         if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                               "Value '%s' out range %lf..%lf for float option '%s%s'!\n",
+                                               "%sValue '%s' out range %lf..%lf for float option '%s%s'!\n",
+                                               (errorPrefix != NULL)?errorPrefix:"",
                                                value,
                                                commandLineOption->doubleOption.min,
                                                commandLineOption->doubleOption.max,
@@ -224,7 +227,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
       else
       {
-        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Invalid value '%s' for boolean option '%s%s'!\n",value,prefix,name);
+        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid value '%s' for boolean option '%s%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value,prefix,name);
         return FALSE;
       }
       break;
@@ -241,7 +244,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
       if (i >= commandLineOption->selectOption.selectCount)
       {
-        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"Unknown value '%s' for option '%s%s'!\n",value,prefix,name);
+        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown value '%s' for option '%s%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value,prefix,name);
         return FALSE;
       }
       (*commandLineOption->variable.enumeration) = commandLineOption->selectOption.selects[i].value;

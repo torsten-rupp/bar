@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems : all
@@ -35,14 +35,14 @@ LOCAL const struct { const char *name; CryptAlgorithms cryptAlgorithm; } CRYPT_A
 {
   {"none",      CRYPT_ALGORITHM_NONE       },
 
-  {"3des",      CRYPT_ALGORITHM_3DES       },
-  {"cast5",     CRYPT_ALGORITHM_CAST5      },
-  {"blowfish",  CRYPT_ALGORITHM_BLOWFISH   },
-  {"aes128",    CRYPT_ALGORITHM_AES128     },
-  {"aes192",    CRYPT_ALGORITHM_AES192     },
-  {"aes256",    CRYPT_ALGORITHM_AES256     },
-  {"twofish128",CRYPT_ALGORITHM_TWOFISH128 },
-  {"twofish256",CRYPT_ALGORITHM_TWOFISH256 },
+  {"3DES",      CRYPT_ALGORITHM_3DES       },
+  {"CAST5",     CRYPT_ALGORITHM_CAST5      },
+  {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH   },
+  {"AES128",    CRYPT_ALGORITHM_AES128     },
+  {"AES192",    CRYPT_ALGORITHM_AES192     },
+  {"AES256",    CRYPT_ALGORITHM_AES256     },
+  {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128 },
+  {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256 },
 };
 
 /***************************** Datatypes *******************************/

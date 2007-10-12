@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.30 $
+# $Revision: 1.31 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -13,7 +13,8 @@
 #--------------------------------- tool chain --------------------------------
 
 CC                  = gcc
-CC_FLAGS            = -Wall -g -O0
+CC_FLAGS            = -g -O0
+CC_WARN_FLAGS       = -Wall -Wpointer-arith -Wunused-label -Wunused-parameter -Wunused-variable -Wmissing-prototypes -Wmissing-declarations
 CC_DEFINES          = -D_LARGEFILE64_SOURCE -D_GNU_SOURCE -D_LONG_LONG
 CC_INCLUDES         =
 
@@ -48,7 +49,7 @@ TEST_PASSWORD=franz_kafka
 #---------------------------------- rules ------------------------------------
 
 %.o:%.c
-	$(CC) $(CC_FLAGS) $(CC_DEFINES) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_WARN_FLAGS) $(CC_DEFINES) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 %:%.o
 	$(LD) \
@@ -62,41 +63,48 @@ TEST_PASSWORD=franz_kafka
 
 #--------------------------------- objects -----------------------------------
 
-SOURCES =       bar.c \
-                commands_create.c \
-                commands_list.c \
-                commands_restore.c \
-                commands_test.c \
-                files.c \
-                archive.c \
-                chunks.c \
-                patterns.c \
-                compress.c \
-                crypt.c \
-                storage.c \
-                network.c \
-                server.c \
-                \
-                global.c \
-                cmdoptions.c \
-                lists.c \
-                strings.c \
-                stringlists.c \
-                msgqueues.c \
-                semaphores.c \
-                filefragmentlists.c \
-                arrays.c \
+BAR_SOURCES        = bar.c \
+                     commands_create.c \
+                     commands_list.c \
+                     commands_restore.c \
+                     commands_test.c \
+                     files.c \
+                     archive.c \
+                     chunks.c \
+                     patterns.c \
+                     compress.c \
+                     crypt.c \
+                     storage.c \
+                     network.c \
+                     server.c \
+                     \
+                     global.c \
+                     cmdoptions.c \
+                     lists.c \
+                     strings.c \
+                     stringlists.c \
+                     msgqueues.c \
+                     semaphores.c \
+                     filefragmentlists.c \
+                     arrays.c \
 
-OBJECTS = 	$(foreach z,$(SOURCES),$(subst .c,.o,$z)) \
-                archive_format.o \
+BAR_OBJECTS        = $(foreach z,$(BAR_SOURCES),$(subst .c,.o,$z)) \
+                     archive_format.o \
 
-INTERMEDIATE =  archive_format.c \
-                archive_format.h \
-                server_parser.c \
-                server_parser.h \
+DESTROYER_SOURCES  = destroyer.c \
+                     global.c \
+                     cmdoptions.c \
+                     lists.c \
+                     strings.c \
 
-TARGETS = 	bar \
-                destroyer \
+DESTROYER_OBJECTS  = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z))
+
+
+INTERMEDIATE       = archive_format.c \
+                     archive_format.h \
+
+TARGETS            = bar \
+                     destroyer \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -104,30 +112,23 @@ TARGETS = 	bar \
 all:		$(TARGETS)
 
 clean:
-		$(RMF) $(OBJECTS) $(INTERMEDIATE) $(TARGETS)
+		$(RMF) $(BAR_OBJECTS) $(DESTROYER_OBJECTS) $(INTERMEDIATE) $(TARGETS)
 
 distclean: clean
 	$(RMF) Makefile.depend
 
 depend: archive_format.h
 	$(ECHO) > Makefile.depend
-	for z in $(SOURCES); do \
+	for z in $(BAR_SOURCES) $(DESTROYER_SOURCES); do \
           $(CC) -MM >> Makefile.depend $$z; \
         done;
 
 # create Backup Archiver
-bar: $(OBJECTS)
-
-server_parser.h server_parser.c: server_parser.y
-	$(YACC) $(YACCFLAGS) -d -o server_parser.c server_parser.y
-
-server_parser.o: server_parser.c server_parser.h server_scanner.h
-	$(CC) $(CC_FLAGS) $(CC_DEFINES) -Dyylex=ServerScanner_lex -Dyyparse=ServerParser_parse $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
-
+bar: $(BAR_OBJECTS)
 
 # create destroyer (for testing only!)
-destroyer: destroyer.o cmdoptions.o global.o lists.o strings.o
-	$(LD) $(LD_FLAGS) -o $@ $^
+destroyer: $(DESTROYER_OBJECTS) 
+	$(LD) $(LD_FLAGS) -o $@ $^ -lpthread
 
 archive_format.h: archive_format.def
 	$(PERL) archive_format.pl < $^ -h $@

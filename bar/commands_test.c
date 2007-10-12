@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -85,16 +85,16 @@ LOCAL ulong compare(const void *p0, const void *p1, ulong length)
 
 /*---------------------------------------------------------------------*/
 
-bool Command_test(StringList  *archiveFileNameList,
-                  PatternList *includePatternList,
-                  PatternList *excludePatternList,
-                  const char  *password
-                 )
+Errors Command_test(StringList    *archiveFileNameList,
+                    PatternList   *includePatternList,
+                    PatternList   *excludePatternList,
+                    const Options *options
+                   )
 {
   byte             *archiveBuffer,*fileBuffer;
   FileFragmentList fileFragmentList;
   String           archiveFileName;
-  bool             failFlag;
+  Errors           failError;
   Errors           error;
   ArchiveInfo      archiveInfo;
   ArchiveFileInfo  archiveFileInfo;
@@ -104,6 +104,7 @@ bool Command_test(StringList  *archiveFileNameList,
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
+  assert(options != NULL);
 
   /* allocate resources */
   archiveBuffer = (byte*)malloc(BUFFER_SIZE);
@@ -120,7 +121,7 @@ bool Command_test(StringList  *archiveFileNameList,
   FileFragmentList_init(&fileFragmentList);
   archiveFileName = String_new();
 
-  failFlag = FALSE;
+  failError = ERROR_NONE;
   while (!StringList_empty(archiveFileNameList))
   {
     StringList_getFirst(archiveFileNameList,archiveFileName);
@@ -128,7 +129,7 @@ bool Command_test(StringList  *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         password
+                         options->cryptPassword
                         );
     if (error != ERROR_NONE)
     {
@@ -136,12 +137,12 @@ bool Command_test(StringList  *archiveFileNameList,
                  String_cString(archiveFileName),
                  getErrorText(error)
                 );
-      failFlag = TRUE;
+      if (failError == ERROR_NONE) failError = error;
       continue;
     }
 
     /* read files */
-    while (!Archive_eof(&archiveInfo) && !failFlag)
+    while (!Archive_eof(&archiveInfo) && (failError == ERROR_NONE))
     {
       /* get next file type */
       error = Archive_getNextFileType(&archiveInfo,
@@ -154,7 +155,7 @@ bool Command_test(StringList  *archiveFileNameList,
                    String_cString(archiveFileName),
                    getErrorText(error)
                   );
-        failFlag = TRUE;
+        if (failError == ERROR_NONE) failError = error;
         break;
       }
 
@@ -192,7 +193,7 @@ bool Command_test(StringList  *archiveFileNameList,
                          getErrorText(error)
                         );
               String_delete(fileName);
-              failFlag = TRUE;
+              if (failError == ERROR_NONE) failError = error;
               break;
             }
 
@@ -210,7 +211,7 @@ bool Command_test(StringList  *archiveFileNameList,
                     );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
                 break;
               }
               if (File_getType(fileName) != FILETYPE_FILE)
@@ -218,10 +219,9 @@ bool Command_test(StringList  *archiveFileNameList,
                 info(0,"Not a file '%s'!\n",
                      String_cString(fileName)
                     );
-                failFlag = TRUE;
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = ERROR_WRONG_FILE_TYPE;
                 break;
               }
 
@@ -244,7 +244,7 @@ bool Command_test(StringList  *archiveFileNameList,
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 continue;
               }
 
@@ -258,7 +258,7 @@ bool Command_test(StringList  *archiveFileNameList,
                 File_close(&fileHandle);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = ERROR_FILES_DIFFER;
                 continue;
               }
 
@@ -274,7 +274,7 @@ bool Command_test(StringList  *archiveFileNameList,
                 File_close(&fileHandle);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 continue;
               }
               length    = 0;
@@ -292,7 +292,7 @@ bool Command_test(StringList  *archiveFileNameList,
                              String_cString(archiveFileName),
                              getErrorText(error)
                             );
-                  failFlag = TRUE;
+                  if (failError == ERROR_NONE) failError = error;
                   break;
                 }
                 error = File_read(&fileHandle,fileBuffer,n,&readBytes);
@@ -303,7 +303,7 @@ bool Command_test(StringList  *archiveFileNameList,
                              String_cString(fileName),
                              getErrorText(error)
                             );
-                  failFlag = TRUE;
+                  if (failError == ERROR_NONE) failError = error;
                   break;
                 }
                 if (n != readBytes)
@@ -323,7 +323,7 @@ bool Command_test(StringList  *archiveFileNameList,
                 length += n;
               }
               File_close(&fileHandle);
-              if (failFlag)
+              if (failError != ERROR_NONE)
               {
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
@@ -347,7 +347,7 @@ bool Command_test(StringList  *archiveFileNameList,
                     );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = ERROR_FILES_DIFFER;
                 continue;
               }
 
@@ -395,7 +395,7 @@ bool Command_test(StringList  *archiveFileNameList,
                          getErrorText(error)
                         );
               String_delete(directoryName);
-              failFlag = TRUE;
+              if (failError == ERROR_NONE) failError = error;
               break;
             }
 
@@ -413,7 +413,7 @@ bool Command_test(StringList  *archiveFileNameList,
                     );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
                 break;
               }
               if (File_getType(directoryName) != FILETYPE_DIRECTORY)
@@ -421,10 +421,9 @@ bool Command_test(StringList  *archiveFileNameList,
                 info(0,"Not a directory '%s'!\n",
                      String_cString(directoryName)
                     );
-                failFlag = TRUE;
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = ERROR_WRONG_FILE_TYPE;
                 break;
               }
 
@@ -439,7 +438,7 @@ bool Command_test(StringList  *archiveFileNameList,
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 break;
               }
 
@@ -488,7 +487,7 @@ bool Command_test(StringList  *archiveFileNameList,
                         );
               String_delete(fileName);
               String_delete(linkName);
-              failFlag = TRUE;
+              if (failError == ERROR_NONE) failError = error;
               break;
             }
 
@@ -507,7 +506,7 @@ bool Command_test(StringList  *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
                 break;
               }
               if (File_getType(linkName) != FILETYPE_LINK)
@@ -515,11 +514,10 @@ bool Command_test(StringList  *archiveFileNameList,
                 info(0,"Not a link '%s'!\n",
                      String_cString(linkName)
                     );
-                failFlag = TRUE;
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = ERROR_WRONG_FILE_TYPE;
                 break;
               }
 
@@ -536,7 +534,7 @@ bool Command_test(StringList  *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 break;
               }
               if (!String_equals(fileName,localFileName))
@@ -549,7 +547,7 @@ bool Command_test(StringList  *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = ERROR_FILES_DIFFER;
                 break;
               }
               String_delete(localFileName);
@@ -566,7 +564,7 @@ bool Command_test(StringList  *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 break;
               }
 
@@ -608,7 +606,7 @@ bool Command_test(StringList  *archiveFileNameList,
     if (!FileFragmentList_checkComplete(fileFragmentNode))
     {
       info(0,"Warning: incomplete file '%s'\n",String_cString(fileFragmentNode->fileName));
-      failFlag = TRUE;
+      if (failError == ERROR_NONE) failError = ERROR_FILE_INCOMPLETE;
     }
   }
 
@@ -618,7 +616,7 @@ bool Command_test(StringList  *archiveFileNameList,
   free(fileBuffer);
   free(archiveBuffer);
 
-  return !failFlag;
+  return failError;
 }
 
 #ifdef __cplusplus

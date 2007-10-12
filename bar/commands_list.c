@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -148,14 +148,14 @@ LOCAL void printLinkInfo(const String    linkName,
 
 /*---------------------------------------------------------------------*/
 
-bool Command_list(StringList  *archiveFileNameList,
-                  PatternList *includePatternList,
-                  PatternList *excludePatternList,
-                  const char  *password
-                 )
+Errors Command_list(StringList    *archiveFileNameList,
+                    PatternList   *includePatternList,
+                    PatternList   *excludePatternList,
+                    const Options *options
+                   )
 {
   String             archiveFileName;
-  bool               failFlag;
+  Errors             failError;
   ulong              fileCount;
   Errors             error;
   ArchiveInfo        archiveInfo;
@@ -166,10 +166,11 @@ bool Command_list(StringList  *archiveFileNameList,
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
+  assert(options != NULL);
 
   archiveFileName = String_new();
 
-  failFlag  = FALSE;
+  failError = ERROR_NONE;
   fileCount = 0;
   info(0,
        "%4s %-10s %-22s %-10s %-7s %-10s %s\n",
@@ -189,7 +190,7 @@ bool Command_list(StringList  *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         password
+                         options->cryptPassword
                         );
     if (error != ERROR_NONE)
     {
@@ -197,7 +198,7 @@ bool Command_list(StringList  *archiveFileNameList,
                  String_cString(archiveFileName),
                  getErrorText(error)
                 );
-      failFlag = TRUE;
+      if (failError == ERROR_NONE) failError = error;
       continue;
     }
 
@@ -215,7 +216,7 @@ bool Command_list(StringList  *archiveFileNameList,
                    String_cString(archiveFileName),
                    getErrorText(error)
                   );
-        failFlag = TRUE;
+        if (failError == ERROR_NONE) failError = error;
         break;
       }
 
@@ -247,7 +248,7 @@ bool Command_list(StringList  *archiveFileNameList,
                          getErrorText(error)
                         );
               String_delete(fileName);
-              failFlag = TRUE;
+              if (failError == ERROR_NONE) failError = error;
               break;
             }
 
@@ -292,7 +293,7 @@ bool Command_list(StringList  *archiveFileNameList,
                          getErrorText(error)
                         );
               String_delete(directoryName);
-              failFlag = TRUE;
+              if (failError == ERROR_NONE) failError = error;
               break;
             }
 
@@ -337,7 +338,7 @@ bool Command_list(StringList  *archiveFileNameList,
                         );
               String_delete(fileName);
               String_delete(linkName);
-              failFlag = TRUE;
+              if (failError == ERROR_NONE) failError = error;
               break;
             }
 
@@ -377,7 +378,7 @@ bool Command_list(StringList  *archiveFileNameList,
   /* free resources */
   String_delete(archiveFileName);
 
-  return !failFlag;
+  return failError;
 }
 
 #ifdef __cplusplus

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -93,18 +93,16 @@ LOCAL String getDestinationFileName(String     destinationFileName,
 
 /*---------------------------------------------------------------------*/
 
-bool Command_restore(StringList  *archiveFileNameList,
-                     PatternList *includePatternList,
-                     PatternList *excludePatternList,
-                     uint        directoryStripCount,
-                     const char  *directory,
-                     const char  *password
-                    )
+Errors Command_restore(StringList    *archiveFileNameList,
+                       PatternList   *includePatternList,
+                       PatternList   *excludePatternList,
+                       const Options *options
+                      )
 {
   byte             *buffer;
   FileFragmentList fileFragmentList;
   String           archiveFileName;
-  bool             failFlag;
+  Errors           failError;
   Errors           error;
   ArchiveInfo      archiveInfo;
   ArchiveFileInfo  archiveFileInfo;
@@ -114,6 +112,7 @@ bool Command_restore(StringList  *archiveFileNameList,
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
+  assert(options != NULL);
 
   /* allocate resources */
   buffer = malloc(BUFFER_SIZE);
@@ -124,7 +123,7 @@ bool Command_restore(StringList  *archiveFileNameList,
   FileFragmentList_init(&fileFragmentList);
   archiveFileName = String_new();
 
-  failFlag = FALSE;
+  failError = ERROR_NONE;
   while (!StringList_empty(archiveFileNameList))
   {
     StringList_getFirst(archiveFileNameList,archiveFileName);
@@ -132,7 +131,7 @@ bool Command_restore(StringList  *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         password
+                         options->cryptPassword
                         );
     if (error != ERROR_NONE)
     {
@@ -140,7 +139,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                  String_cString(archiveFileName),
                  getErrorText(error)
                 );
-      failFlag = TRUE;
+      if (failError == ERROR_NONE) failError = error;
       continue;
     }
 
@@ -158,7 +157,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                    String_cString(archiveFileName),
                    getErrorText(error)
                   );
-        failFlag = TRUE;
+        if (failError == ERROR_NONE) failError = error;
         break;
       }
 
@@ -194,7 +193,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                          getErrorText(error)
                         );
               String_delete(fileName);
-              failFlag = TRUE;
+              if (failError == ERROR_NONE) failError = error;
               break;
             }
 
@@ -205,8 +204,8 @@ bool Command_restore(StringList  *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            fileName,
-                                                           directory,
-                                                           directoryStripCount
+                                                           options->directory,
+                                                           options->directoryStripCount
                                                           );
 
               info(0,"Restore file '%s'...",String_cString(destinationFileName));
@@ -215,7 +214,7 @@ bool Command_restore(StringList  *archiveFileNameList,
               fileFragmentNode = FileFragmentList_findFile(&fileFragmentList,fileName);
               if (fileFragmentNode != NULL)
               {
-                if (!globalOptions.overwriteFlag && FileFragmentList_checkExists(fileFragmentNode,fragmentOffset,fragmentSize))
+                if (!options->overwriteFilesFlag && FileFragmentList_checkExists(fileFragmentNode,fragmentOffset,fragmentSize))
                 {
                   info(0,"skipped (file part %ll..%ll exists)\n",
                        fragmentOffset,
@@ -223,19 +222,19 @@ bool Command_restore(StringList  *archiveFileNameList,
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveFileInfo);
                   String_delete(fileName);
-                  failFlag = TRUE;
+                  if (failError == ERROR_NONE) failError = ERROR_FILE_EXITS;
                   continue;
                 }
               }
               else
               {
-                if (!globalOptions.overwriteFlag && File_exists(destinationFileName))
+                if (!options->overwriteFilesFlag && File_exists(destinationFileName))
                 {
                   info(0,"skipped (file exists)\n");
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveFileInfo);
                   String_delete(fileName);
-                  failFlag = TRUE;
+                  if (failError == ERROR_NONE) failError = ERROR_FILE_EXITS;
                   continue;
                 }
                 fileFragmentNode = FileFragmentList_addFile(&fileFragmentList,fileName,fileInfo.size);
@@ -253,7 +252,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 continue;
               }
               error = File_seek(&fileHandle,fragmentOffset);
@@ -268,7 +267,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 continue;
               }
               length = 0;
@@ -284,7 +283,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                              String_cString(archiveFileName),
                              getErrorText(error)
                             );
-                  failFlag = TRUE;
+                  if (failError == ERROR_NONE) failError = error;
                   break;
                 }
                 error = File_write(&fileHandle,buffer,n);
@@ -295,14 +294,14 @@ bool Command_restore(StringList  *archiveFileNameList,
                              String_cString(destinationFileName),
                              getErrorText(error)
                             );
-                  failFlag = TRUE;
+                  if (failError == ERROR_NONE) failError = error;
                   break;
                 }
 
                 length += n;
               }
               File_close(&fileHandle);
-              if (failFlag)
+              if (failError != ERROR_NONE)
               {
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -326,7 +325,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 continue;
               }
 
@@ -374,7 +373,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                          getErrorText(error)
                         );
               String_delete(directoryName);
-              failFlag = TRUE;
+              if (failError == ERROR_NONE) failError = error;
               break;
             }
 
@@ -385,8 +384,8 @@ bool Command_restore(StringList  *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            directoryName,
-                                                           directory,
-                                                           directoryStripCount
+                                                           options->directory,
+                                                           options->directoryStripCount
                                                           );
 
               info(0,"Restore directory '%s'...",String_cString(destinationFileName));
@@ -403,7 +402,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 continue;
               }
 
@@ -419,7 +418,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 continue;
               }
 
@@ -465,7 +464,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                         );
               String_delete(fileName);
               String_delete(linkName);
-              failFlag = TRUE;
+              if (failError == ERROR_NONE) failError = error;
               break;
             }
 
@@ -476,8 +475,8 @@ bool Command_restore(StringList  *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            linkName,
-                                                           directory,
-                                                           directoryStripCount
+                                                           options->directory,
+                                                           options->directoryStripCount
                                                           );
 
               info(0,"Restore link '%s'...",String_cString(destinationFileName));
@@ -496,7 +495,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 continue;
               }
 
@@ -513,7 +512,7 @@ bool Command_restore(StringList  *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                failFlag = TRUE;
+                if (failError == ERROR_NONE) failError = error;
                 continue;
               }
 
@@ -552,7 +551,7 @@ bool Command_restore(StringList  *archiveFileNameList,
     if (!FileFragmentList_checkComplete(fileFragmentNode))
     {
       info(0,"Warning: incomplete file '%s'\n",String_cString(fileFragmentNode->fileName));
-      failFlag = TRUE;
+      if (failError == ERROR_NONE) failError = ERROR_FILE_INCOMPLETE;
     }
   }
 
@@ -561,7 +560,7 @@ bool Command_restore(StringList  *archiveFileNameList,
   FileFragmentList_done(&fileFragmentList);
   free(buffer);
 
-  return !failFlag;
+  return failError;
 }
 
 #ifdef __cplusplus
