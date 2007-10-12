@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -29,21 +29,21 @@
 /* status info data */
 typedef struct
 {
-  ulong  doneFiles;
-  uint64 doneBytes;
-  ulong  totalFiles;
-  uint64 totalBytes;
-  ulong  skippedFiles;
-  uint64 skippedBytes;
-  ulong  errorFiles;
-  uint64 errorBytes;
-  double compressionRatio;
-  String fileName;
-  uint64 fileDoneBytes;
-  uint64 fileTotalBytes;
-  String storageName;
-  uint64 storageDoneBytes;
-  uint64 storageTotalBytes;
+  ulong  doneFiles;                        // number of files processed
+  uint64 doneBytes;                        // number of bytes processed
+  ulong  totalFiles;                       // total number of files
+  uint64 totalBytes;                       // total bytes
+  ulong  skippedFiles;                     // number of skipped files
+  uint64 skippedBytes;                     // sum of skipped bytes
+  ulong  errorFiles;                       // number of files with errors
+  uint64 errorBytes;                       // sum of byste in files with errors
+  double compressionRatio;                 // compression ratio
+  String fileName;                         // current file name
+  uint64 fileDoneBytes;                    // number of bytes processed of current file
+  uint64 fileTotalBytes;                   // total number of bytes of current file
+  String storageName;                      // current storage name
+  uint64 storageDoneBytes;                 // number of bytes processed of current storage
+  uint64 storageTotalBytes;                // total bytes of current storage
 } CreateStatusInfo;
 
 typedef char(*CreateStatusInfoFunction)(Errors                 error,

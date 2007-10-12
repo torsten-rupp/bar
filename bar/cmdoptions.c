@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems :
@@ -414,35 +414,46 @@ bool CmdOption_parse(const char              *argv[],
                      int                     *argc,
                      const CommandLineOption commandLineOptions[],
                      uint                    commandLineOptionCount,
+                     int                     commandPriority,
                      FILE                    *errorOutputHandle,
                      const char              *errorPrefix
                     )
 {
-  uint         i;
-  unsigned int priority,maxPriority;
-  bool         endOfOptionsFlag;
-  uint         z;
-  const char   *s;
-  char         name[128];
-  const char   *optionChars;
-  const char   *value;
-  int          argumentsCount;
+  uint       z;
+  uint       minPriority,maxPriority;
+  uint       priority;
+  bool       endOfOptionsFlag;
+  const char *s;
+  char       name[128];
+  uint       i;
+  const char *optionChars;
+  const char *value;
+  int        argumentsCount;
 
   assert(argv != NULL);
   assert(argc != NULL);
   assert((*argc) >= 1);
   assert(commandLineOptions != NULL);
 
-  /* get max. option priority */
-  maxPriority = 0;
-  for (i = 0; i < commandLineOptionCount; i++)
+  /* get min./max. option priority */
+  if (commandPriority != CMD_PRIORITY_ANY)
   {
-    maxPriority = MAX(maxPriority,commandLineOptions[i].priority);
+    minPriority = commandPriority;
+    maxPriority = commandPriority;
+  }
+  else
+  {
+    minPriority = 0;
+    maxPriority = 0;
+    for (z = 0; z < commandLineOptionCount; z++)
+    {
+      maxPriority = MAX(maxPriority,commandLineOptions[z].priority);
+    }
   }
 
   /* parse options */
   argumentsCount = 1;
-  for (priority = 0; priority <= maxPriority; priority++)
+  for (priority = minPriority; priority <= maxPriority; priority++)
   {
     endOfOptionsFlag = FALSE;
     z = 1;
@@ -601,7 +612,7 @@ bool CmdOption_parse(const char              *argv[],
       }
       else
       {
-        if (priority >= maxPriority)
+        if ((commandPriority == CMD_PRIORITY_ANY) && (priority >= maxPriority))
         {
           /* add argument */
           argv[argumentsCount] = argv[z];
@@ -612,7 +623,10 @@ bool CmdOption_parse(const char              *argv[],
       z++;
     }
   }
-  (*argc) = argumentsCount;
+  if (commandPriority == CMD_PRIORITY_ANY)
+  {
+    (*argc) = argumentsCount;
+  }
 
   return TRUE;
 }

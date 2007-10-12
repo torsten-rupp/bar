@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -67,6 +67,7 @@ typedef struct
   bool               skipUnreadableFlag;
   bool               overwriteArchiveFilesFlag;
   bool               overwriteFilesFlag;
+  bool               noDefaultConfigFlag;
   bool               quietFlag;
   long               verboseLevel;
 } Options;

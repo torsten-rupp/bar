@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -2295,6 +2295,13 @@ Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulon
   }
 
   return ERROR_NONE;
+}
+
+uint64 Archive_getSize(ArchiveFileInfo *archiveFileInfo)
+{
+  assert(archiveFileInfo != NULL);
+
+  return File_getSize(&archiveFileInfo->archiveInfo->fileHandle);
 }
 
 #ifdef __cplusplus

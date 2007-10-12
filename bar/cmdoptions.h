@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems :
@@ -23,6 +23,8 @@
 /********************** Conditional compilation ***********************/
 
 /**************************** Constants *******************************/
+
+#define CMD_PRIORITY_ANY -1
 
 /***************************** Datatypes ******************************/
 typedef enum
@@ -275,6 +277,7 @@ bool CmdOption_parse(const char              *argv[],
                      int                     *argc,
                      const CommandLineOption commandLineOptions[],
                      uint                    commandLineOptionCount,
+                     int                     commandPriority,
                      FILE                    *errorOutputHandle,
                      const char              *errorPrefix
                     );

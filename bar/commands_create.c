@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -76,8 +76,9 @@ typedef struct
 
   MsgQueue                 storageMsgQueue;                    // queue with storage files
   Semaphore                storageSemaphore;
-  uint                     storageCount;
-  uint64                   storageSize;
+  uint                     storageCount;                       // number of current storage files
+  uint64                   storageBytes;                       // number of bytes in current storage files
+  uint64                   storageTotalBytes;                  // number of total storage bytes
   pthread_t                storageThreadId;                    // storage thread id
   bool                     storageThreadExitFlag;
 
@@ -743,8 +744,9 @@ LOCAL Errors storeArchiveFile(String fileName,
     /* send to storage controller */
     Semaphore_lock(&createInfo->storageSemaphore);
 fprintf(stderr,"%s,%d: Semaphore locked by main\n",__FILE__,__LINE__);
-    createInfo->storageCount += 1;
-    createInfo->storageSize  += fileSize;
+    createInfo->storageCount      += 1;
+    createInfo->storageBytes      += fileSize;
+    createInfo->storageTotalBytes += fileSize;
     appendToStorageList(&createInfo->storageMsgQueue,
                         fileName,
                         fileSize,
@@ -757,7 +759,7 @@ fprintf(stderr,"%s,%d: Semaphore locked by main\n",__FILE__,__LINE__);
     {
       Semaphore_lock(&createInfo->storageSemaphore);
 fprintf(stderr,"%s,%d: Semaphore locked by main2\n",__FILE__,__LINE__);
-      while ((createInfo->storageCount > 2) && (createInfo->storageSize > createInfo->options->maxTmpSize))
+      while ((createInfo->storageCount > 2) && (createInfo->storageBytes > createInfo->options->maxTmpSize))
       {
         Semaphore_wait(&createInfo->storageSemaphore);
       }
@@ -896,9 +898,9 @@ fprintf(stderr,"%s,%d: FAIL - only delete files \n",__FILE__,__LINE__);
     Semaphore_lock(&createInfo->storageSemaphore);
 fprintf(stderr,"%s,%d: Semaphore locked by storage\n",__FILE__,__LINE__);
     assert(createInfo->storageCount > 0);
-    assert(createInfo->storageSize >= storageMsg.fileSize);
+    assert(createInfo->storageBytes>= storageMsg.fileSize);
     createInfo->storageCount -= 1;
-    createInfo->storageSize  -= storageMsg.fileSize;
+    createInfo->storageBytes -= storageMsg.fileSize;
     Semaphore_unlock(&createInfo->storageSemaphore);
 
     /* free resources */
@@ -942,7 +944,8 @@ Errors Command_create(const char               *archiveFileName,
   createInfo.options                      = options;
   createInfo.collectorThreadExitFlag      = FALSE;
   createInfo.storageCount                 = 0;
-  createInfo.storageSize                  = 0;
+  createInfo.storageBytes                 = 0LL;
+  createInfo.storageTotalBytes            = 0LL;
   createInfo.storageThreadExitFlag        = FALSE;
   createInfo.error                        = ERROR_NONE;
   createInfo.statusInfoFunction           = createStatusInfoFunction;
@@ -1127,6 +1130,8 @@ Errors Command_create(const char               *archiveFileName,
                 error = Archive_writeFileData(&archiveFileInfo,buffer,n);
                 createInfo.statusInfo.doneBytes += n;
                 createInfo.statusInfo.fileDoneBytes += n;
+                createInfo.statusInfo.compressionRatio = 100.0-(createInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
+fprintf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
                 updateStatusInfo(&createInfo);
               }
             }

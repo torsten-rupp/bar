@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -418,6 +418,17 @@ Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo,
                             void            *buffer,
                             ulong           bufferLength
                            );
+
+/***********************************************************************\
+* Name   : Archive_getSize
+* Purpose: get size of archive file
+* Input  : archiveFileInfo - archive file info block
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+uint64 Archive_getSize(ArchiveFileInfo *archiveFileInfo);
 
 #ifdef __cplusplus
   }

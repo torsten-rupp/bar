@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -77,6 +77,8 @@ wm geometry . "800x600"
 
 set config(JOB_LIST_UPDATE_TIME)    5000
 set config(CURRENT_JOB_UPDATE_TIME) 1000
+
+set interactiveMode 0
 
 set server(socketHandle)  -1
 set server(lastCommandId) 0
@@ -432,6 +434,16 @@ proc progressbar { path args } \
   } 
 }
 
+#***********************************************************************
+# Name   : popupMenu
+# Purpose: display popup menu
+# Input  : widget - widget
+#          menuItemList - list of menu items {{<lable> <event>}..}
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
 proc popupMenu { widget menuItemList } \
 {
   tixPopupMenu $widget.popup -title "Command"
@@ -520,6 +532,26 @@ proc addModifyTrace { name action } \
 }
 
 # ----------------------------------------------------------------------
+
+#***********************************************************************
+# Name   : printUsage
+# Purpose: print program usage
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc printUsage { } \
+{
+  global argv0
+
+  puts "Usage: $argv0 \[<options>\] <config name>"
+  puts ""
+  puts "Options: --start    - add new job and quit"
+  puts "         -h|--help  - print this help"
+}
+
 
 #***********************************************************************
 # Name   : resetBarConfig
@@ -854,7 +886,7 @@ proc updateCurrentJob { } \
         currentJob(skippedBytes) \
         currentJob(errorFiles) \
         currentJob(errorBytes) \
-        currentJob(compressionRatio) \
+        ratio \
         currentJob(fileName) \
         currentJob(fileDoneBytes) \
         currentJob(fileTotalBytes) \
@@ -874,6 +906,8 @@ proc updateCurrentJob { } \
       if     {$currentJob(errorBytes)   > 1024*1024*1024} { set currentJob(errorBytesShort)   [format "%.1f" [expr {double($currentJob(errorBytes))/(1024*1024*1024)  }]]; set currentJob(errorBytesShortUnit)   "G" } \
       elseif {$currentJob(errorBytes)   >      1024*1024} { set currentJob(errorBytesShort)   [format "%.1f" [expr {double($currentJob(errorBytes))/(     1024*1024)  }]]; set currentJob(errorBytesShortUnit)   "M" } \
       else                                                { set currentJob(errorBytesShort)   [format "%.1f" [expr {double($currentJob(errorBytes))/(          1024)  }]]; set currentJob(errorBytesShortUnit)   "K" }
+
+      set currentJob(compressionRatio) [format "%.1f" $ratio]
     }
   } \
   else \
@@ -958,6 +992,15 @@ proc fileNameToItemPath { fileName } \
 
 # ----------------------------------------------------------------------
 
+#***********************************************************************
+# Name   : checkIncluded
+# Purpose: check if file is in included-pattern-list
+# Input  : fileName - file name
+# Output : -
+# Return : 1 if file is in included-pattern-list, 0 otherwise
+# Notes  : -
+#***********************************************************************
+
 proc checkIncluded { fileName } \
 {
   global barConfig
@@ -974,6 +1017,15 @@ proc checkIncluded { fileName } \
 
   return $includedFlag
 }
+
+#***********************************************************************
+# Name   : checkExcluded
+# Purpose: check if file is in excluded-pattern-list
+# Input  : fileName - file name
+# Output : -
+# Return : 1 if file is in excluded-pattern-list, 0 otherwise
+# Notes  : -
+#***********************************************************************
 
 proc checkExcluded { fileName } \
 {
@@ -1181,6 +1233,7 @@ proc openCloseDirectory { itemPath } \
   # get data
   set data [$fileTreeWidget info data $itemPath]
   set type              [lindex $data 0]
+  set state             [lindex $data 1]
   set directoryOpenFlag [lindex $data 2]
 
   if {$type == "DIRECTORY"} \
@@ -1190,7 +1243,11 @@ proc openCloseDirectory { itemPath } \
     $fileTreeWidget delete offsprings $itemPath
     if {!$directoryOpenFlag} \
     {
-      $fileTreeWidget item configure $itemPath 0 -image $images(folderOpen)
+      if     {$state == "INCLUDED"} { set image $images(folderIncludedOpen) } \
+      elseif {$state == "EXCLUDED"} { set image $images(folderExcludedOpen) } \
+      else                          { set image $images(folderOpen)         }
+      $fileTreeWidget item configure $itemPath 0 -image $image
+      update
 
       set fileName [itemPathToFileName $itemPath]
       set commandId [Server:sendCommand "FILE_LIST" $fileName 0]
@@ -1217,7 +1274,10 @@ proc openCloseDirectory { itemPath } \
     } \
     else \
     {
-      $fileTreeWidget item configure $itemPath 0 -image $images(folder)
+      if     {$state == "INCLUDED"} { set image $images(folderIncluded) } \
+      elseif {$state == "EXCLUDED"} { set image $images(folderExcluded) } \
+      else                          { set image $images(folder)         }
+      $fileTreeWidget item configure $itemPath 0 -image $image
 
       set directoryOpenFlag 0
     }
@@ -1241,7 +1301,6 @@ proc updateFileTreeStates { } \
 {
   global fileTreeWidget barConfig images
 
-  set excludedList {}
   set itemPathList [$fileTreeWidget info children ""]
   while {[llength $itemPathList] > 0} \
   {
@@ -1270,6 +1329,17 @@ proc updateFileTreeStates { } \
     if     {$excludedFlag} \
     {
       set state "EXCLUDED"
+    } \
+    elseif {($state == "INCLUDED") && !$includedFlag} \
+    {
+      if {$excludedFlag} \
+      {
+        set state "EXCLUDED"
+      } \
+      else \
+      {
+        set state "NONE"
+      }
     } \
     elseif {($state == "EXCLUDED") && !$excludedFlag} \
     {
@@ -1348,8 +1418,6 @@ proc updateFileTreeStates { } \
     lset data 1 $state
     $fileTreeWidget entryconfigure $itemPath -data $data
   }
-
-  return $excludedList
 }
 
 #***********************************************************************
@@ -1533,7 +1601,7 @@ proc setConfigModify { args } \
 
 proc loadConfig { configFileName } \
 {
-  global fileTreeWidget includedListWidget excludedListWidget tk_strictMotif barConfigFileName barConfigModifiedFlag barConfig errorCode
+  global fileTreeWidget includedListWidget excludedListWidget tk_strictMotif barConfigFileName barConfigModifiedFlag barConfig interactiveMode errorCode
 
   # get file name
   if {$configFileName == ""} \
@@ -1554,9 +1622,12 @@ proc loadConfig { configFileName } \
 
   # reset variables
   resetBarConfig
-  clearFileList
-  $includedListWidget delete 0 end
-  $excludedListWidget delete 0 end
+  if {$interactiveMode} \
+  {
+    clearFileList
+    $includedListWidget delete 0 end
+    $excludedListWidget delete 0 end
+  }
 
   # read file
   set lineNb 0
@@ -1644,21 +1715,24 @@ proc loadConfig { configFileName } \
       # add to include pattern list
       lappend barConfig(included) $pattern; set barConfig(included) [lsort -uniq $barConfig(included)]
 
-      set fileName $pattern
-      set itemPath [fileNameToItemPath $fileName]
-
-      # add directory for entry
-      if {![$fileTreeWidget info exists $itemPath]} \
+      if {$interactiveMode} \
       {
-        set directoryName [file dirname $fileName]
-        set directoryItemPath [fileNameToItemPath $directoryName]
-        openCloseDirectory $directoryItemPath
-      }
+        set fileName $pattern
+        set itemPath [fileNameToItemPath $fileName]
 
-      # set state of entry to "included"
-      if {[$fileTreeWidget info exists $itemPath]} \
-      {
-        setEntryState $itemPath "INCLUDED"
+        # add directory for entry
+        if {![$fileTreeWidget info exists $itemPath]} \
+        {
+          set directoryName [file dirname $fileName]
+          set directoryItemPath [fileNameToItemPath $directoryName]
+          openCloseDirectory $directoryItemPath
+        }
+
+        # set state of entry to "included"
+        if {[$fileTreeWidget info exists $itemPath]} \
+        {
+          setEntryState $itemPath "INCLUDED"
+        }
       }
       continue
     }
@@ -1695,7 +1769,10 @@ puts "unknown $line"
   # close file
   close $handle
 
-  updateFileTreeStates
+  if {$interactiveMode} \
+  {
+    updateFileTreeStates
+  }
 
   set barConfigFileName $configFileName
   clearConfigModify
@@ -1723,7 +1800,7 @@ proc saveConfig { configFileName } \
   {
     set old_tk_strictMotif $tk_strictMotif
     set tk_strictMotif 0
-    set configFileName [tk_getOpenFile -title "Load configuration" -initialdir "" -filetypes {{"BAR config" "*.cfg"} {"all" "*"}} -parent . -defaultextension ".cfg"]
+    set configFileName [tk_getSaveFile -title "Save configuration" -initialfile "" -filetypes {{"BAR config" "*.cfg"} {"all" "*"}} -parent . -defaultextension ".cfg"]
     set tk_strictMotif $old_tk_strictMotif
     if {$configFileName == ""} { return }
   }
@@ -2007,7 +2084,7 @@ proc remExcludedPattern { pattern } \
 
 proc addJob { jobListWidget } \
 {
-  global includedListWidget excludedListWidget barConfig currentJob
+  global includedListWidget excludedListWidget barConfig currentJob interactiveMode
 
   set errorCode 0
 
@@ -2030,13 +2107,13 @@ proc addJob { jobListWidget } \
   Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "archive-file" $archiveFileName
 
   # add included directories/files
-  foreach pattern [$includedListWidget get 0 end] \
+  foreach pattern $barConfig(included) \
   {
     Server:executeCommand errorCode errorText "ADD_INCLUDE_PATTERN" [escapeString $pattern]
   }
 
   # add excluded directories/files
-  foreach pattern [$excludedListWidget get 0 end] \
+  foreach pattern $barConfig(excluded) \
   {
     Server:executeCommand errorCode errorText "ADD_EXCLUDE_PATTERN" [escapeString $pattern]
   }
@@ -2063,7 +2140,10 @@ proc addJob { jobListWidget } \
     Dialog:error "Error adding new job: $errorText"
   }
 
-  updateJobList $jobListWidget
+  if {$interactiveMode} \
+  {
+    updateJobList $jobListWidget
+  }
 }
 
 #***********************************************************************
@@ -2085,6 +2165,71 @@ proc remJob { jobListWidget id } \
 
 # ----------------------------- main program  -------------------------------
 
+# parse command line arguments
+set configName ""
+set startFlag  0
+set z 0
+while {$z<[llength $argv]} \
+{
+  set arg [lindex $argv $z]
+  switch -glob -- $arg \
+  {
+    "-help" -
+    "--help" \
+    {
+      printUsage
+      exit 1
+    }
+    "--start" \
+    {
+      set startFlag 1
+    }
+    "--" \
+    {
+      break
+    }
+    "-*" \
+    {
+      puts stderr "ERROR: Unknown option '[lindex $argv $z]'!"
+      exit 1
+    }
+    default
+    {
+      set configName $arg
+    }
+  }
+  incr z
+}
+while {$z<[llength $argv]} \
+{
+  set arg [lindex $argv $z]
+  set configName $arg
+  incr z
+}
+
+set hostname "localhost"
+set port 38523
+if {![Server:connect $hostname $port]} \
+{
+  puts stderr "ERROR: Cannot connect to server '$hostname:$port'!"
+  exit 1
+}
+
+# non-GUI commands
+set interactiveMode 0
+if {$startFlag} \
+{
+  if {$configName != ""} \
+  {
+    loadConfig $configName
+    addJob ""
+  }
+  exit 0
+}
+
+# GUI commands
+set interactiveMode 1
+
 # menu
 frame $mainWindow.menu -relief raised -bd 2
   menubutton $mainWindow.menu.file -text "Program" -menu $mainWindow.menu.file.items -underline 0
@@ -2093,17 +2238,17 @@ frame $mainWindow.menu -relief raised -bd 2
   $mainWindow.menu.file.items add command -label "Save"       -accelerator "Ctrl-s" -command "event generate . <<Event_save>>"
   $mainWindow.menu.file.items add command -label "Save as..."                       -command "event generate . <<Event_saveAs>>"
   $mainWindow.menu.file.items add separator
-  $mainWindow.menu.file.items add command -label "Start"                            -command "event generate . <<Event_start>>"
-  $mainWindow.menu.file.items add separator
+#  $mainWindow.menu.file.items add command -label "Start"                            -command "event generate . <<Event_start>>"
+#  $mainWindow.menu.file.items add separator
   $mainWindow.menu.file.items add command -label "Quit"       -accelerator "Ctrl-q" -command "event generate . <<Event_quit>>"
   pack $mainWindow.menu.file -side left
 
-  menubutton $mainWindow.menu.edit -text "Edit" -menu $mainWindow.menu.edit.items -underline 0
-  menu $mainWindow.menu.edit.items
-  $mainWindow.menu.edit.items add command -label "None"    -accelerator "*" -command "event generate . <<Event_stateNone>>"
-  $mainWindow.menu.edit.items add command -label "Include" -accelerator "+" -command "event generate . <<Event_stateIncluded>>"
-  $mainWindow.menu.edit.items add command -label "Exclude" -accelerator "-" -command "event generate . <<Event_stateExcluded>>"
-  pack $mainWindow.menu.edit -side left
+#  menubutton $mainWindow.menu.edit -text "Edit" -menu $mainWindow.menu.edit.items -underline 0
+#  menu $mainWindow.menu.edit.items
+#  $mainWindow.menu.edit.items add command -label "None"    -accelerator "*" -command "event generate . <<Event_stateNone>>"
+#  $mainWindow.menu.edit.items add command -label "Include" -accelerator "+" -command "event generate . <<Event_stateIncluded>>"
+#  $mainWindow.menu.edit.items add command -label "Exclude" -accelerator "-" -command "event generate . <<Event_stateExcluded>>"
+#  pack $mainWindow.menu.edit -side left
 pack $mainWindow.menu -side top -fill x
 
 # window
@@ -2673,6 +2818,7 @@ bind . <<Event_save>> \
 
 bind . <<Event_saveAs>> \
 {
+puts 111
   saveConfig ""
 }
 
@@ -2788,15 +2934,6 @@ update
 # config modify trace
 trace add variable barConfig write "setConfigModify"
 
-set hostname "localhost"
-set port 38523
-if {![Server:connect $hostname $port]} \
-{
-  Dialog:error "Cannot connect to server '$hostname:$port'!"
-  exit 1
-}
-
-resetBarConfig
 updateJobList .jobs.list.data
 updateCurrentJob
 
@@ -2808,19 +2945,7 @@ updateCurrentJob
 #}
 addDevice "/"
 
-#clearFileList [.files.list subwidget hlist]
-#openCloseDirectory "/"
-#openCloseDirectory "/home"
-#setEntryState [.files.list subwidget hlist] "/" "INCLUDED"
-#setEntryState [.files.list subwidget hlist] "/boot" "EXCLUDED"
-#setEntryState [.files.list subwidget hlist] "/proc" "EXCLUDED"
-
-.filters.excluded subwidget listbox insert end "abc"
-
-loadConfig "test.cfg"
-#saveConfig "test.cfg"
-
-#lappend barConfig(excluded) "*.avi"
-#updateFileTreeStates
+# load config if given
+if {$configName != ""} { loadConfig $configName }
 
 # end of file

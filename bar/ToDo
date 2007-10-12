@@ -8,7 +8,6 @@ ToDo
 - support storage controller for reading archives
 - support sftp
 - support ssh-agent (extend libssh2?)
-- reading configuration from file
 - configure
 - network bandwidth limitation
 - ssl-network command interface
