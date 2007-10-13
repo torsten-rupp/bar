@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/semaphores.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -114,7 +114,7 @@ void Semaphore_lock(Semaphore *semaphore);
 void Semaphore_unlock(Semaphore *semaphore);
 
 /***********************************************************************\
-* Name   : Semaphore_wait
+* Name   : Semaphore_waitModified
 * Purpose: wait until semaphore modified
 * Input  : semaphore - semaphore
 * Output : -
@@ -122,7 +122,7 @@ void Semaphore_unlock(Semaphore *semaphore);
 * Notes  : -
 \***********************************************************************/
 
-void Semaphore_wait(Semaphore *semaphore);
+void Semaphore_waitModified(Semaphore *semaphore);
 
 /***********************************************************************\
 * Name   : Semaphore_setEndOfMail

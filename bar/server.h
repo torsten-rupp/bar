@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -63,13 +63,15 @@ void Server_done(void);
 * Purpose: run server
 * Input  : serverPort     - server port
 *          serverPassword - server authenfication password
+*          serverType     - server type; see SERVER_TYPE_*
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Server_run(uint       serverPport,
-                  const char *serverPassword
+Errors Server_run(uint        serverPport,
+                  const char  *serverPassword,
+                  ServerTypes serverType
                  );
 
 #ifdef __cplusplus

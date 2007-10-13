@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -14,6 +14,9 @@
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef HAVE_GNU_TLS
+  #include <gnutls/gnutls.h>
+#endif /* HAVE_GNU_TLS */
 #include <assert.h>
 
 #include "global.h"
@@ -23,10 +26,33 @@
 
 /***************************** Constants *******************************/
 
-#define NETWORK_SOCKET_FLAG_NON_BLOCKING (1 << 0)
+#define SOCKET_FLAG_NON_BLOCKING (1 << 0)
 
 /***************************** Datatypes *******************************/
-typedef int SocketHandle;
+typedef enum
+{
+  SOCKET_TYPE_PLAIN,
+  SOCKET_TYPE_SSL,
+} SocketTypes;
+
+typedef struct
+{
+  SocketTypes      type;
+  int              handle; 
+  gnutls_session_t gnuTLSSession;
+} SocketHandle;
+
+typedef enum
+{
+  SERVER_TYPE_PLAIN,
+  SERVER_TYPE_SSL,
+} ServerTypes;
+
+typedef struct
+{
+  ServerTypes type;
+  int         handle; 
+} ServerSocketHandle;
 
 /***************************** Variables *******************************/
 
@@ -49,7 +75,10 @@ typedef int SocketHandle;
 * Notes  : -
 \***********************************************************************/
 
-Errors Network_init(void);
+Errors Network_init(const char *caFileName,
+                    const char *certFileName,
+                    const char *keyFileName
+                   );
 
 /***********************************************************************\
 * Name   : Network_done
@@ -137,26 +166,39 @@ Errors Network_receive(SocketHandle *socketHandle,
 /***********************************************************************\
 * Name   : Network_initServer
 * Purpose: initialize a server socket
-* Input  : serverPort - server port
-* Output : socketHandle - server socket handle
+* Input  : serverPort  - server port
+*          ServerTypes - server type; see SERVER_TYPE_*
+* Output : serverSocketHandle - server socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Network_initServer(SocketHandle *socketHandle,
-                          uint         serverPort
+Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
+                          uint               serverPort,
+                          ServerTypes        serverType
                          );
 
 /***********************************************************************\
 * Name   : Network_doneServer
 * Purpose: deinitialize server
-* Input  : socketHandle - socket handle
+* Input  : serverSocketHandle - socket handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Network_doneServer(SocketHandle *socketHandle);
+void Network_doneServer(ServerSocketHandle *serverSocketHandle);
+
+/***********************************************************************\
+* Name   : Network_getServerSocket
+* Purpose: get socket from socket handle
+* Input  : serverSocketHandle - server socket handle
+* Output : -
+* Return : socket
+* Notes  : -
+\***********************************************************************/
+
+int Network_getServerSocket(ServerSocketHandle *serverSocketHandle);
 
 /***********************************************************************\
 * Name   : Network_accept
@@ -168,9 +210,9 @@ void Network_doneServer(SocketHandle *socketHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Network_accept(SocketHandle *socketHandle,
-                      SocketHandle *serverSocketHandle,
-                      uint         flags
+Errors Network_accept(SocketHandle             *socketHandle,
+                      const ServerSocketHandle *serverSocketHandle,
+                      uint                     flags
                      );
 
 /***********************************************************************\

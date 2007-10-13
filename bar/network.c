@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -17,6 +19,9 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <unistd.h>
+#ifdef HAVE_GNU_TLS
+  #include <gnutls/gnutls.h>
+#endif /* HAVE_GNU_TLS */
 #include <assert.h>
 
 #include <linux/tcp.h>
@@ -24,16 +29,21 @@
 #include "global.h"
 #include "strings.h"
 #include "errors.h"
+#include "bar.h"
 
 #include "network.h"
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define DH_BITS 1024
 
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+LOCAL bool                             initTLSFlag;
+LOCAL gnutls_certificate_credentials_t gnuTLSCredentials;
+LOCAL gnutls_dh_params_t               gnuTLSDHParams;
 
 /****************************** Macros *********************************/
 
@@ -45,13 +55,76 @@
   extern "C" {
 #endif
 
-Errors Network_init(void)
+Errors Network_init(const char *caFileName,
+                    const char *certFileName,
+                    const char *keyFileName
+                   )
 {
+  int result;
+
+  if (   (caFileName != NULL)
+      || (certFileName != NULL)
+      || (keyFileName != NULL)
+     )
+  {
+    gnutls_global_init();
+    gnutls_global_set_log_level(10);
+
+    if (gnutls_certificate_allocate_credentials(&gnuTLSCredentials) != 0)
+    {
+      printError("Initialize TLS fail!\n");
+      return ERROR_INIT_TLS;
+    }
+    result = gnutls_certificate_set_x509_trust_file(gnuTLSCredentials,
+                                                    caFileName,
+                                                    GNUTLS_X509_FMT_PEM
+                                                   );
+    if (result < 0)
+    {
+      printError("Cannot load CA file: %s\n",gnutls_strerror(result));
+      gnutls_certificate_free_credentials (gnuTLSCredentials);
+      return ERROR_INIT_TLS;
+    }
+    result = gnutls_certificate_set_x509_key_file(gnuTLSCredentials,
+                                                  certFileName,
+                                                  keyFileName,
+                                                  GNUTLS_X509_FMT_PEM
+                                                 );
+    if (result < 0)
+    {
+      printError("Cannot load certificate/key file: %s\n",gnutls_strerror(result));
+      gnutls_certificate_free_credentials (gnuTLSCredentials);
+      return ERROR_INIT_TLS;
+    }
+
+    gnutls_dh_params_init(&gnuTLSDHParams);
+    result = gnutls_dh_params_generate2(gnuTLSDHParams,DH_BITS);
+    if (result < 0)
+    {
+      printError("Generate DH parameter fail: %s\n",gnutls_strerror(result));
+      gnutls_dh_params_deinit(gnuTLSDHParams);
+      gnutls_certificate_free_credentials (gnuTLSCredentials);
+      return ERROR_INIT_TLS;
+    }
+    gnutls_certificate_set_dh_params(gnuTLSCredentials,gnuTLSDHParams);
+
+    initTLSFlag = TRUE;
+  }
+  else
+  {
+    initTLSFlag = FALSE;
+  }
+
   return ERROR_NONE;
 }
 
 void Network_done(void)
 {
+  if (initTLSFlag)
+  {
+    gnutls_dh_params_deinit(gnuTLSDHParams);
+    gnutls_certificate_free_credentials(gnuTLSCredentials);
+  }
 }
 
 Errors Network_connect(SocketHandle *socketHandle,
@@ -83,28 +156,28 @@ Errors Network_connect(SocketHandle *socketHandle,
   }
 
   /* connect */
-  (*socketHandle) = socket(AF_INET,SOCK_STREAM,0);
-  if ((*socketHandle) == -1)
+  socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
+  if (socketHandle->handle == -1)
   {
     return ERROR_CONNECT_FAIL;
   }
   socketAddress.sin_family      = AF_INET;
   socketAddress.sin_addr.s_addr = ipAddress;
   socketAddress.sin_port        = htons(hostPort);
-  if (connect((*socketHandle),
+  if (connect(socketHandle->handle,
               (struct sockaddr*)&socketAddress,
               sizeof(socketAddress)
              ) != 0
      )
   {
-    close(*socketHandle);
+    close(socketHandle->handle);
     return ERROR_CONNECT_FAIL;
   }
 
-  if ((flags & NETWORK_SOCKET_FLAG_NON_BLOCKING) != 0)
+  if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {
     /* enable non-blocking */
-    fcntl(*socketHandle,F_SETFL,O_NONBLOCK);
+    fcntl(socketHandle->handle,F_SETFL,O_NONBLOCK);
   }
 
   return ERROR_NONE;
@@ -113,15 +186,29 @@ Errors Network_connect(SocketHandle *socketHandle,
 void Network_disconnect(SocketHandle *socketHandle)
 {
   assert(socketHandle != NULL);
+  assert(socketHandle->handle >= 0);
 
-  close(*socketHandle);
+  switch (socketHandle->type)
+  {
+    case SOCKET_TYPE_PLAIN:
+      break;
+    case SOCKET_TYPE_SSL:
+      gnutls_deinit(socketHandle->gnuTLSSession);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+  close(socketHandle->handle);
 }
 
 int Network_getSocket(SocketHandle *socketHandle)
 {
   assert(socketHandle != NULL);
 
-  return (int)(*socketHandle);
+  return socketHandle->handle;
 }
 
 Errors Network_send(SocketHandle *socketHandle,
@@ -129,9 +216,26 @@ Errors Network_send(SocketHandle *socketHandle,
                     ulong        length
                    )
 {
+  long sentBytes;
+
   assert(socketHandle != NULL);
 
-  return (send((*socketHandle),buffer,length,0) == length)?ERROR_NONE:ERROR_NETWORK_SEND;
+  switch (socketHandle->type)
+  {
+    case SOCKET_TYPE_PLAIN:
+      sentBytes = send(socketHandle->handle,buffer,length,0);
+      break;
+    case SOCKET_TYPE_SSL:
+      sentBytes = gnutls_record_send(socketHandle->gnuTLSSession,buffer,length);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return (sentBytes == length)?ERROR_NONE:ERROR_NETWORK_SEND;
 }
 
 Errors Network_receive(SocketHandle *socketHandle,
@@ -145,85 +249,161 @@ Errors Network_receive(SocketHandle *socketHandle,
   assert(socketHandle != NULL);
   assert(receivedBytes != NULL);
 
-  n = recv((*socketHandle),buffer,maxLength,0);
+  switch (socketHandle->type)
+  {
+    case SOCKET_TYPE_PLAIN:
+      n = recv(socketHandle->handle,buffer,maxLength,0);
+      break;
+    case SOCKET_TYPE_SSL:
+      n = gnutls_record_recv(socketHandle->gnuTLSSession,buffer,maxLength);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
   (*receivedBytes) = (n >= 0)?n:0;
 
   return ((*receivedBytes) >= 0)?ERROR_NONE:ERROR_NETWORK_RECEIVE;
 }
 
-Errors Network_initServer(SocketHandle *socketHandle,
-                          uint         port
+Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
+                          uint               serverPort,
+                          ServerTypes        serverType
                          )
 {
   struct sockaddr_in socketAddress;
   int                n;
 
-  assert(socketHandle != NULL);
+  assert(serverSocketHandle != NULL);
 
-  (*socketHandle) = socket(AF_INET,SOCK_STREAM,0);
-  if ((*socketHandle) == -1)
+  serverSocketHandle->type = serverType;
+
+  serverSocketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
+  if (serverSocketHandle->handle == -1)
   {
     return ERROR_CONNECT_FAIL;
   }
 
   n = 1;
-  if (setsockopt((*socketHandle),SOL_SOCKET,SO_REUSEADDR,&n,sizeof(int)) != 0)
+  if (setsockopt(serverSocketHandle->handle,SOL_SOCKET,SO_REUSEADDR,&n,sizeof(int)) != 0)
   {
-    close(*socketHandle);
+    close(serverSocketHandle->handle);
     return ERROR_CONNECT_FAIL;
   }
 
   socketAddress.sin_family      = AF_INET;
   socketAddress.sin_addr.s_addr = INADDR_ANY;
-  socketAddress.sin_port        = htons(port);
-  if (bind((*socketHandle),
+  socketAddress.sin_port        = htons(serverPort);
+  if (bind(serverSocketHandle->handle,
            (struct sockaddr*)&socketAddress,
            sizeof(socketAddress)
           ) != 0
      )
   {
-    close(*socketHandle);
+    close(serverSocketHandle->handle);
     return ERROR_CONNECT_FAIL;
   }
-  listen((int)(*socketHandle),5);
+  listen(serverSocketHandle->handle,5);
 
   return ERROR_NONE;
 }
 
-void Network_doneServer(SocketHandle *socketHandle)
+void Network_doneServer(ServerSocketHandle *serverSocketHandle)
 {
-  assert(socketHandle != NULL);
+  assert(serverSocketHandle != NULL);
 
-  close((*socketHandle));
+  close(serverSocketHandle->handle);
 }
 
-Errors Network_accept(SocketHandle *socketHandle,
-                      SocketHandle *serverSocketHandle,
-                      uint         flags
+int Network_getServerSocket(ServerSocketHandle *serverSocketHandle)
+{
+  assert(serverSocketHandle != NULL);
+
+  return serverSocketHandle->handle;
+}
+
+Errors Network_accept(SocketHandle             *socketHandle,
+                      const ServerSocketHandle *serverSocketHandle,
+                      uint                     flags
                      )
 {
   struct sockaddr_in socketAddress;
   socklen_t          socketAddressLength;
+  int                result;
 
   assert(socketHandle != NULL);
   assert(serverSocketHandle != NULL);
 
   /* accept */
   socketAddressLength = sizeof(socketAddress);
-  (*socketHandle) = accept((*serverSocketHandle),
-                           (struct sockaddr*)&socketAddress,
-                           &socketAddressLength
-                          );
-  if ((*socketHandle) == -1)
+  socketHandle->handle = accept(serverSocketHandle->handle,
+                                (struct sockaddr*)&socketAddress,
+                                &socketAddressLength
+                               );
+  if (socketHandle->handle == -1)
   {
-    close(*socketHandle);
+    close(socketHandle->handle);
     return ERROR_CONNECT_FAIL;
   }
 
-  if ((flags & NETWORK_SOCKET_FLAG_NON_BLOCKING) != 0)
+  /* initialise SSL session */
+  switch (serverSocketHandle->type)
+  {
+    case SERVER_TYPE_PLAIN:
+      socketHandle->type = SOCKET_TYPE_PLAIN;
+      break;
+    case SERVER_TYPE_SSL:
+      socketHandle->type = SOCKET_TYPE_SSL;
+
+      /* initialise session */
+      if (gnutls_init(&socketHandle->gnuTLSSession,GNUTLS_SERVER) != 0)
+      {
+        close(socketHandle->handle);
+        return ERROR_INIT_TLS;
+      }
+
+      if (gnutls_set_default_priority(socketHandle->gnuTLSSession) != 0)
+      {
+        gnutls_deinit(socketHandle->gnuTLSSession);
+        close(socketHandle->handle);
+        return ERROR_INIT_TLS;
+      }
+
+      if (gnutls_credentials_set(socketHandle->gnuTLSSession,GNUTLS_CRD_CERTIFICATE,gnuTLSCredentials) != 0)
+      {
+        gnutls_deinit(socketHandle->gnuTLSSession);
+        close(socketHandle->handle);
+        return ERROR_INIT_TLS;
+      }
+
+      gnutls_certificate_server_set_request(socketHandle->gnuTLSSession,GNUTLS_CERT_REQUEST);
+    //  gnutls_certificate_server_set_request(socketHandle->gnuTLSSession,GNUTLS_CERT_REQUIRE);
+
+      gnutls_dh_set_prime_bits(socketHandle->gnuTLSSession,DH_BITS);
+      gnutls_transport_set_ptr(socketHandle->gnuTLSSession,(gnutls_transport_ptr_t)socketHandle->handle);
+
+      /* do handshake */
+      result = gnutls_handshake(socketHandle->gnuTLSSession);
+      if (result < 0)
+      {
+        gnutls_deinit(socketHandle->gnuTLSSession);
+        close(socketHandle->handle);
+        return ERROR_TLS_HANDSHAKE;
+      }
+      break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+  }
+
+  if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {
     /* enable non-blocking */
-    fcntl(*socketHandle,F_SETFL,O_NONBLOCK);
+    fcntl(socketHandle->handle,F_SETFL,O_NONBLOCK);
   }
 
   return ERROR_NONE;
@@ -242,7 +422,7 @@ void Network_getLocalInfo(SocketHandle *socketHandle,
   assert(port != NULL);
 
   socketAddressLength = sizeof(socketAddress);
-  if (getsockname((*socketHandle),
+  if (getsockname(socketHandle->handle,
                   (struct sockaddr*)&socketAddress,
                   &socketAddressLength
                  ) == 0
@@ -271,7 +451,7 @@ void Network_getRemoteInfo(SocketHandle *socketHandle,
   assert(port != NULL);
 
   socketAddressLength = sizeof(socketAddress);
-  if (getpeername((*socketHandle),
+  if (getpeername(socketHandle->handle,
                   (struct sockaddr*)&socketAddress,
                   &socketAddressLength
                  ) == 0

@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.31 $
+# $Revision: 1.32 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -21,7 +21,7 @@ CC_INCLUDES         =
 LD                  = gcc
 LD_FLAGS            =
 LD_LIBRARY_PATHS    = /usr/local/lib
-LD_LIBRARIES        = m pthread z bz2 gcrypt gpg-error ssh2
+LD_LIBRARIES        = m pthread z bz2 gcrypt gpg-error ssh2 gnutls
 LD_STATIC_LIBRARIES = 
 
 YACC                = bison
@@ -134,6 +134,67 @@ archive_format.h: archive_format.def
 	$(PERL) archive_format.pl < $^ -h $@
 archive_format.c: archive_format.def
 	$(PERL) archive_format.pl < $^ -c $@
+
+# create SSL certificates
+.PHONY: cert clean_cert
+cert: bar-ca.pem bar-key.pem bar-server-cert.pem bar-server-key.pem
+
+clean_cert:
+	$(RMF) bar-ca.pem bar-key.pem bar-server-cert.pem bar-server-key.pem
+
+bar-key.pem:
+	certtool \
+          --generate-privkey \
+          --outfile $@ \
+          1>/dev/null 2>/dev/null
+
+bar-ca.pem: bar-key.pem
+	certtool \
+          --generate-self-signed \
+          --template ssl/ca.tmpl \
+          --load-privkey bar-key.pem \
+          --outfile $@ \
+          1>/dev/null 2>/dev/null
+
+bar-server-key.pem:
+	certtool \
+          --generate-privkey \
+          --outfile $@ \
+          1>/dev/null 2>/dev/null
+
+bar-server-cert.pem: bar-server-key.pem
+	certtool \
+          --generate-certificate \
+          --template ssl/server.tmpl \
+          --load-privkey bar-server-key.pem \
+          --load-ca-certificate bar-ca.pem \
+          --load-ca-privkey bar-key.pem \
+          --outfile $@ \
+          1>/dev/null 2>/dev/null
+
+#	certtool \
+#          --generate-crl \
+#          --template ssl/server.tmpl \
+#          --load-privkey key-server.pem \
+#          --load-ca-certificate ca.pem \
+#          --load-ca-privkey key-ca.pem \
+#          --outfile server-crl.pem
+#	certtool --generate-privkey --outfile client-key.pem
+#	certtool --generate-certificate --template doc/credentials/client.tmpl --load-privkey client-key.pem --load-ca-certificate ca.pem --load-ca-privkey ca-key.pem --outfile client-cert.pem
+
+# run server
+.PHONY: barserver barserver_ssl
+barserver: bar
+	./bar \
+          --daemon
+
+barserver_ssl: bar
+	./bar \
+          --daemon \
+          --ssl \
+          --server-ca-file=bar-ca.pem \
+          --server-cert-file=bar-server-cert.pem \
+          --server-key-file=bar-server-key.pem
 
 # do test
 .PHONY: test test1 test2 test3 test4 test_all

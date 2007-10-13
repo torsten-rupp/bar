@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -265,7 +265,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
   String          fileName;
   FileInfo        fileInfo;
   DirectoryHandle directoryHandle;
-ulong xx;
+//ulong xx;
 
   assert(createInfo != NULL);
   assert(createInfo->includePatternList != NULL);
@@ -340,13 +340,14 @@ fprintf(stderr,"%s,%d: bnase basePath=%s\n",__FILE__,__LINE__,String_cString(bas
                      && !File_endOfDirectory(&directoryHandle)
                     )
               {
+/*
 xx++;
 if ((xx%1000)==0)
 {
 // String_debug();
 fprintf(stderr,"%s,%d: %lu xx=%lu\n",__FILE__,__LINE__,StringList_count(&nameList),xx);
-
 }
+*/
                 /* read next directory entry */
                 error = File_readDirectory(&directoryHandle,fileName);
                 if (error != ERROR_NONE)
@@ -761,7 +762,7 @@ fprintf(stderr,"%s,%d: Semaphore locked by main\n",__FILE__,__LINE__);
 fprintf(stderr,"%s,%d: Semaphore locked by main2\n",__FILE__,__LINE__);
       while ((createInfo->storageCount > 2) && (createInfo->storageBytes > createInfo->options->maxTmpSize))
       {
-        Semaphore_wait(&createInfo->storageSemaphore);
+        Semaphore_waitModified(&createInfo->storageSemaphore);
       }
       Semaphore_unlock(&createInfo->storageSemaphore);
     }
@@ -799,7 +800,9 @@ LOCAL void storageThread(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  while (!createInfo->storageThreadExitFlag && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg)))
+  while (   !createInfo->storageThreadExitFlag
+         && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg))
+        )
   {
     if (createInfo->error == ERROR_NONE)
     {
@@ -922,7 +925,8 @@ Errors Command_create(const char               *archiveFileName,
                       PatternList              *excludePatternList,
                       const Options            *options,
                       CreateStatusInfoFunction createStatusInfoFunction,
-                      void                     *createStatusInfoUserData
+                      void                     *createStatusInfoUserData,
+                      bool                     *abortRequestFlag
                      )
 {
   CreateInfo      createInfo;
@@ -956,6 +960,8 @@ Errors Command_create(const char               *archiveFileName,
   createInfo.statusInfo.totalBytes        = 0LL;
   createInfo.statusInfo.skippedFiles      = 0L;
   createInfo.statusInfo.skippedBytes      = 0LL;
+  createInfo.statusInfo.errorFiles        = 0L;
+  createInfo.statusInfo.errorBytes        = 0LL;
   createInfo.statusInfo.compressionRatio  = 0.0;
   createInfo.statusInfo.fileName          = String_new();
   createInfo.statusInfo.fileDoneBytes     = 0LL;
@@ -1048,7 +1054,9 @@ Errors Command_create(const char               *archiveFileName,
   }
 
   /* store files */
-  while (getNextFile(&createInfo.fileMsgQueue,fileName,&fileType))
+  while (   ((abortRequestFlag == NULL) || !(*abortRequestFlag))
+         && getNextFile(&createInfo.fileMsgQueue,fileName,&fileType)
+        )
   {
     if (createInfo.error == ERROR_NONE)
     {
@@ -1131,14 +1139,22 @@ Errors Command_create(const char               *archiveFileName,
                 createInfo.statusInfo.doneBytes += n;
                 createInfo.statusInfo.fileDoneBytes += n;
                 createInfo.statusInfo.compressionRatio = 100.0-(createInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
-fprintf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
+//printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
                 updateStatusInfo(&createInfo);
               }
             }
-            while (   (n > 0)
+            while (   ((abortRequestFlag == NULL) || !(*abortRequestFlag))
+                   && (n > 0)
                    && (createInfo.error == ERROR_NONE)
                    && (error == ERROR_NONE)
                   );
+            if ((abortRequestFlag != NULL) && (*abortRequestFlag))
+            {
+              info(1,"ABORTED\n");
+              File_close(&fileHandle);
+              Archive_closeEntry(&archiveFileInfo);
+              break;
+            }
             if (error != ERROR_NONE)
             {
               info(1,"FAIL\n");
@@ -1295,9 +1311,16 @@ fprintf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.st
 #endif /* 0 */
     }
   }
+  if ((abortRequestFlag != NULL) && (*abortRequestFlag))
+  {
+    createInfo.collectorThreadExitFlag = TRUE;
+    createInfo.storageThreadExitFlag   = TRUE;
+    createInfo.error = ERROR_ABORTED;
+  }
 
   /* close archive */
   Archive_close(&archiveInfo);
+  MsgQueue_setEndOfMsg(&createInfo.fileMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
   updateStatusInfo(&createInfo);
 

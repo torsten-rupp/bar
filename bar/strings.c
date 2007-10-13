@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -126,7 +126,7 @@ struct __String
         } \
     } while (0)
 #else /* NDEBUG */
-  #define VALIDATE_STRING(string) \
+  #define CHECK_VALID(string) \
     do { \
     } while (0)
   #define UPDATE_VALID(string) \

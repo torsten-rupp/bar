@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -22,6 +22,7 @@ if {[catch {set basePath [file dirname [file readlink $argv0]]}]} \
 if {$basePath==""} { set BasePath "." }
 
 # extend package library path
+lappend auto_path /usr/local/lib
 lappend auto_path $basePath
 lappend auto_path tcltk-lib
 lappend auto_path $env(HOME)/sources/tcl-lib
@@ -59,33 +60,35 @@ if {[catch {package require Tix}]} \
 }
 package require tools
 package require mclistbox
+package require tls
+
 load "[pwd]/tcl/scanx.so"
 
 # ---------------------------- constants/variables ---------------------------
 
+set DEFAULT_PORT     38523
+set DEFAULT_SSL_PORT 38524
+
 # --------------------------------- includes ---------------------------------
-
-# -------------------------------- main window -------------------------------
-
-# init main window
-set mainWindow ""
-wm title . "BAR control"
-wm iconname . "BAR"
-wm geometry . "800x600"
 
 # ------------------------ internal constants/variables ----------------------
 
+# configuration
 set config(JOB_LIST_UPDATE_TIME)    5000
 set config(CURRENT_JOB_UPDATE_TIME) 1000
 
 set interactiveMode 0
 
-set server(socketHandle)  -1
-set server(lastCommandId) 0
+# server variables
+set server(tlsAvailableFlag) 0
+set server(socketHandle)     -1
+set server(lastCommandId)    0
 
+# BAR configuration
 set barConfigFileName     ""
 set barConfigModifiedFlag 0
 
+set barConfig(name)                   ""
 set barConfig(included)               {}
 set barConfig(excluded)               {}
 set barConfig(storageType)            ""
@@ -132,6 +135,7 @@ set currentJob(storageName)           ""
 set currentJob(storageDoneBytes)      0
 set currentJob(storageTotalBytes)     0
 
+# misc.
 set jobListTimerId    0
 set currentJobTimerId 0
 
@@ -242,11 +246,16 @@ proc Dialog:delete { handle } \
 
 proc Dialog:show { handle } \
 {
+  set xBorderDistance  0
+  set yBorderDistance 80
+
   tkwait visibility $handle
   set w [winfo width  $handle]
   set h [winfo height $handle]
-  set x [expr {[winfo pointerx $handle]-$w/2}]; if {$x < 0} { set x 0 }
-  set y [expr {[winfo pointery $handle]-$h/2}]; if {$y < 0} { set y 0 }
+  set screenWidth  [winfo screenwidth  .]
+  set screenHeight [winfo screenheight .]
+  set x [expr {[winfo pointerx $handle]-$w/2}]; if {$x < $xBorderDistance} { set x $xBorderDistance }; if {[expr {$x+$w}] > [expr {$screenWidth -$xBorderDistance}]} { set x [expr {$screenWidth -$w-$xBorderDistance}] }
+  set y [expr {[winfo pointery $handle]-$h/2}]; if {$y < $yBorderDistance} { set y $yBorderDistance }; if {[expr {$y+$h}] > [expr {$screenHeight-$yBorderDistance}]} { set y [expr {$screenHeight-$h-$yBorderDistance}] }
   wm geometry $handle +$x+$y
   raise $handle
   tkwait window $handle
@@ -548,38 +557,14 @@ proc printUsage { } \
 
   puts "Usage: $argv0 \[<options>\] <config name>"
   puts ""
-  puts "Options: --start    - add new job and quit"
-  puts "         -h|--help  - print this help"
+  puts "Options: -h|--host=<server name>  - server host name"
+  puts "         -p|--port=<server port>  - server port number"
+  puts "         --list                   - list jobs and quit"
+  puts "         --start                  - add new job and quit"
+  puts "         --abort=<id>             - abort running job and quit"
+  puts "         --help                   - print this help"
 }
 
-
-#***********************************************************************
-# Name   : resetBarConfig
-# Purpose: reset bar config to default values
-# Input  : -
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-proc resetBarConfig {} \
-{
-  global barConfig
-
-  set barConfig(storageType)         "FILESYSTEM"
-  set barConfig(storageHostName)     ""
-  set barConfig(storageLoginName)    ""
-  set barConfig(storageFileName)     ""
-  set barConfig(archivePartSizeFlag) 0
-  set barConfig(archivePartSize)     0
-  set barConfig(maxTmpSizeFlag)      0
-  set barConfig(maxTmpSize)          0
-  set barConfig(sshPassword)         ""
-  set barConfig(sshPort)             22
-  set barConfig(compressAlgorithm)   "bzip9"
-  set barConfig(cryptAlgorithm)      "none"
-  set barConfig(cryptPassword)       ""
-}
 
 #***********************************************************************
 # Name   : escapeString
@@ -642,10 +627,12 @@ proc Server:connect { hostname port } \
 {
   global server
 
-  if {[catch {set server(socketHandle) [socket $hostname $port]}]} \
-  {
-    return 0
-  }
+#  if {[catch {set server(socketHandle) [socket $hostname $port]}]} \
+#  {
+#    return 0
+#  }
+  set server(socketHandle) [tls::socket $hostname $port]
+tls::handshake $server(socketHandle)
   fconfigure $server(socketHandle) -buffering line -blocking 1 -translation lf
 
   return 1
@@ -719,7 +706,7 @@ proc Server:readResult { commandId _completeFlag _errorCode _result } \
   set id -1
   while {($id != $commandId) && ($id != 0)} \
   {
-     if {[eof $server(socketHandle)]} { return 0 }
+     if {[eof $server(socketHandle)]} { puts "obs?"; return 0 }
     gets $server(socketHandle) line
 #puts "received [clock clicks] [eof $server(socketHandle)]: $line"
 
@@ -805,8 +792,9 @@ proc updateJobList { jobListWidget } \
   set commandId [Server:sendCommand "JOB_LIST"]
   while {[Server:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
   {
-    scanx $result "%d %s %d %S %S %d %d" \
+    scanx $result "%d %S %s %d %S %S %d %d" \
       id \
+      name \
       state \
       archivePartSize \
       compressAlgorithm \
@@ -821,6 +809,7 @@ proc updateJobList { jobListWidget } \
 
     $jobListWidget insert end [list \
       $id \
+      $name \
       $state \
       [formatByteSize $archivePartSize] \
       $compressAlgorithm \
@@ -874,7 +863,7 @@ proc updateCurrentJob { } \
     catch {after cancel $currentJobTimerId}
 
     set commandId [Server:sendCommand "JOB_INFO" $currentJob(id)]
-    if {[Server:readResult $commandId completeFlag errorCode result]} \
+    if {[Server:readResult $commandId completeFlag errorCode result] && ($errorCode == 0)} \
     {
       scanx $result "%s %lu %lu %lu %lu %lu %lu %lu %lu %f %S %lu %lu %S %lu %lu" \
         state \
@@ -1591,6 +1580,35 @@ proc setConfigModify { args } \
 }
 
 #***********************************************************************
+# Name   : resetBarConfig
+# Purpose: reset bar config to default values
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc resetBarConfig {} \
+{
+  global barConfig
+
+  set barConfig(storageType)         "FILESYSTEM"
+  set barConfig(storageHostName)     ""
+  set barConfig(storageLoginName)    ""
+  set barConfig(storageFileName)     ""
+  set barConfig(archivePartSizeFlag) 0
+  set barConfig(archivePartSize)     0
+  set barConfig(maxTmpSizeFlag)      0
+  set barConfig(maxTmpSize)          0
+  set barConfig(sshPassword)         ""
+  set barConfig(sshPort)             22
+  set barConfig(compressAlgorithm)   "bzip9"
+  set barConfig(cryptAlgorithm)      "none"
+  set barConfig(cryptPassword)       ""
+  clearConfigModify
+}
+
+#***********************************************************************
 # Name   : loadConfig
 # Purpose: load BAR config from file
 # Input  : configFileName - config file name or ""
@@ -1644,6 +1662,12 @@ proc loadConfig { configFileName } \
 
 #puts "read $line"
     # parse
+    if {[scanx $line "name = %S" s] == 1} \
+    {
+      # name = <name>
+      set barConfig(name) $s
+      continue
+    }
     if {[scanx $line "archive-filename = %S" s] == 1} \
     {
       # archive-filename = <file name>
@@ -1813,6 +1837,7 @@ proc saveConfig { configFileName } \
   }
 
   # write file
+  puts $handle "name = [escapeString $barConfig(name)]"
   if     {$barConfig(storageType) == "FILESYSTEM"} \
   {
     puts $handle "archive-filename = [escapeString $barConfig(storageFileName)]"
@@ -2074,22 +2099,22 @@ proc remExcludedPattern { pattern } \
 }
 
 #***********************************************************************
-# Name   : addJob
-# Purpose: add new job
+# Name   : addBackupJob
+# Purpose: add new backup job
 # Input  : jobListWidget - job list widget
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc addJob { jobListWidget } \
+proc addBackupJob { jobListWidget } \
 {
   global includedListWidget excludedListWidget barConfig currentJob interactiveMode
 
   set errorCode 0
 
   # new job
-  Server:executeCommand errorCode errorText "NEW_JOB"
+  Server:executeCommand errorCode errorText "NEW_JOB" $barConfig(name)
 
   # set archive file name
   if     {$barConfig(storageType) == "FILESYSTEM"} \
@@ -2158,16 +2183,46 @@ proc addJob { jobListWidget } \
 
 proc remJob { jobListWidget id } \
 {
+  set errorCode 0
   Server:executeCommand errorCode errorText "REM_JOB" $id
 
   updateJobList $jobListWidget
+}
+
+#***********************************************************************
+# Name   : abortJob
+# Purpose: abort running job
+# Input  : jobListWidget - job list widget
+#          id            - job id
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc abortJob { jobListWidget id } \
+{
+  global interactiveMode
+
+  set errorCode 0
+  Server:executeCommand errorCode errorText "ABORT_JOB" $id
+
+  if {$interactiveMode} \
+  {
+    updateJobList $jobListWidget
+  }
 }
 
 # ----------------------------- main program  -------------------------------
 
 # parse command line arguments
 set configName ""
+set hostName   "localhost"
+set port       0
+set sslPort    0
+set caFileName "bar-ca.pem"
+set listFlag   0
 set startFlag  0
+set abortId    0
 set z 0
 while {$z<[llength $argv]} \
 {
@@ -2180,9 +2235,55 @@ while {$z<[llength $argv]} \
       printUsage
       exit 1
     }
+    "-h" - \
+    "--host" \
+    {
+      incr z
+      if {$z >= [llength $argv]} \
+      {
+        puts stderr "ERROR: no argument given for '$arg'. Expected host name."
+        exit 1
+      }
+      set hostName [lindex $argv $z]
+    }
+    "-p" - \
+    "--port" \
+    {
+      incr z
+      if {$z >= [llength $argv]} \
+      {
+        puts stderr "ERROR: no argument given for '$arg'. Expected port number."
+        exit 1
+      }
+      set port [lindex $argv $z]
+    }
+    "--ssl-port" \
+    {
+      incr z
+      if {$z >= [llength $argv]} \
+      {
+        puts stderr "ERROR: no argument given for '$arg'. Expected port number."
+        exit 1
+      }
+      set sslPort [lindex $argv $z]
+    }
+    "--list" \
+    {
+      set listFlag 1
+    }
     "--start" \
     {
       set startFlag 1
+    }
+    "--abort" \
+    {
+      incr z
+      if {$z >= [llength $argv]} \
+      {
+        puts stderr "ERROR: no argument given for '$arg'. Expected id."
+        exit 1
+      }
+      set abortId [lindex $argv $z]
     }
     "--" \
     {
@@ -2207,28 +2308,102 @@ while {$z<[llength $argv]} \
   incr z
 }
 
-set hostname "localhost"
-set port 38523
-if {![Server:connect $hostname $port]} \
+# init TSL/SSL (if possible)
+if {![catch {tls::init -version}]} \
 {
-  puts stderr "ERROR: Cannot connect to server '$hostname:$port'!"
-  exit 1
+  set server(tlsAvailableFlag) 1
+}
+
+# connect to server
+if {$server(tlsAvailableFlag)} \
+{
+  if {[catch {tls::init -cafile $caFileName}]} \
+  {
+    puts stderr "ERROR: Cannot initialise SSL system"
+    exti 1
+  }
+  if {$sslPort == 0} { set sslPort $DEFAULT_SSL_PORT }
+  if {![Server:connect $hostName $sslPort]} \
+  {
+    puts stderr "ERROR: Cannot connect to server '$hostName:$port'!"
+    exit 1
+  }
+} \
+else \
+{
+  if {$port == 0} { set port $DEFAULT_PORT }
+  if {![Server:connect $hostName $port]} \
+  {
+    puts stderr "ERROR: Cannot connect to server '$hostName:$port'!"
+    exit 1
+  }
 }
 
 # non-GUI commands
 set interactiveMode 0
+if {$listFlag} \
+{
+  set formatString "%3s %-20s %-20s %10s %-10s %-10s %-20s %-20s"
+
+  set s [format $formatString "Id" "Name" "State" "Part size" "Compress" "Crypt" "Started" "Estimate time"]
+  puts $s
+  puts [string repeat "-" [string length $s]]
+  set commandId [Server:sendCommand "JOB_LIST"]
+  while {[Server:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
+  {
+    scanx $result "%d %S %s %d %S %S %d %d" \
+      id \
+      name \
+      state \
+      archivePartSize \
+      compressAlgorithm \
+      cryptAlgorithm \
+      startTime \
+      estimatedRestTime
+
+    set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
+    set estimatedRestHours   [expr {int($estimatedRestTime%(24*60*60)/(60*60))}]
+    set estimatedRestMinutes [expr {int($estimatedRestTime%(60*60   )/60     )}]
+    set estimatedRestSeconds [expr {int($estimatedRestTime%(60)              )}]
+
+    puts [format $formatString \
+      $id \
+      $name \
+      $state \
+      [formatByteSize $archivePartSize] \
+      $compressAlgorithm \
+      $cryptAlgorithm \
+      [expr {($startTime > 0)?[clock format $startTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
+      [format "%d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds] \
+    ]
+  }
+  puts [string repeat "-" [string length $s]]
+  exit 0
+}
 if {$startFlag} \
 {
   if {$configName != ""} \
   {
     loadConfig $configName
-    addJob ""
+    addBackupJob ""
   }
+  exit 0
+}
+if {$abortId != 0} \
+{
+  abortJob "" $abortId
   exit 0
 }
 
 # GUI commands
 set interactiveMode 1
+
+# init main window
+set mainWindow ""
+wm title . "BAR control"
+wm iconname . "BAR"
+wm geometry . "800x600"
+wm protocol . WM_DELETE_WINDOW quit
 
 # menu
 frame $mainWindow.menu -relief raised -bd 2
@@ -2253,23 +2428,16 @@ pack $mainWindow.menu -side top -fill x
 
 # window
 tixNoteBook $mainWindow.tabs
-  $mainWindow.tabs add jobs          -label "Jobs"             -underline -1 -raisecmd { focus .jobs.list }
-  $mainWindow.tabs add files         -label "Files"            -underline -1 -raisecmd { focus .files.list }
-  $mainWindow.tabs add filters       -label "Filters"          -underline -1 -raisecmd { focus .filters.included }
-  $mainWindow.tabs add storage       -label "Storage"          -underline -1
+  $mainWindow.tabs add jobs          -label "Jobs"    -underline -1 -raisecmd { focus .jobs.list }
+  $mainWindow.tabs add backup        -label "Backup"  -underline -1
+  $mainWindow.tabs add restore       -label "Restore" -underline -1
   $mainWindow.tabs add compressCrypt -label "Compress & crypt" -underline -1
-#  $mainWindow.tabs add misc          -label "Misc"             -underline -1
 pack $mainWindow.tabs -fill both -expand yes -padx 2p -pady 2p
 
 frame .jobs
   labelframe .jobs.selected -text "Selected"
-    label .jobs.selected.idTitle -text "Id:"
-    grid .jobs.selected.idTitle -row 0 -column 0 -sticky "w"
-    entry .jobs.selected.id -width 5 -textvariable currentJob(id) -justify right -border 0 -state readonly
-    grid .jobs.selected.id -row 0 -column 1 -sticky "w" -padx 2p -pady 2p
-
     label .jobs.selected.doneTitle -text "Done:"
-    grid .jobs.selected.doneTitle -row 0 -column 2 -sticky "w" 
+    grid .jobs.selected.doneTitle -row 0 -column 0 -sticky "w" 
     frame .jobs.selected.done
       entry .jobs.selected.done.files -width 10 -textvariable currentJob(doneFiles) -justify right -border 0 -state readonly
       grid .jobs.selected.done.files -row 0 -column 0 -sticky "w" 
@@ -2297,11 +2465,61 @@ frame .jobs
       grid .jobs.selected.done.compressRatioPostfix -row 0 -column 9 -sticky "w" 
 
       grid rowconfigure    .jobs.selected.done { 0 } -weight 1
-      grid columnconfigure .jobs.selected.done { 10 } -weight 1
-    grid .jobs.selected.done -row 0 -column 3 -sticky "we" -padx 2p -pady 2p
+      grid columnconfigure .jobs.selected.done { 13 } -weight 1
+    grid .jobs.selected.done -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
+
+    label .jobs.selected.skippedTitle -text "Skipped:"
+    grid .jobs.selected.skippedTitle -row 1 -column 0 -sticky "w" 
+    frame .jobs.selected.skipped
+      entry .jobs.selected.skipped.files -width 10 -textvariable currentJob(skippedFiles) -justify right -border 0 -state readonly
+      grid .jobs.selected.skipped.files -row 0 -column 0 -sticky "w" 
+      label .jobs.selected.skipped.filesPostfix -text "files"
+      grid .jobs.selected.skipped.filesPostfix -row 0 -column 1 -sticky "w" 
+
+      entry .jobs.selected.skipped.bytes -width 20 -textvariable currentJob(skippedBytes) -justify right -border 0 -state readonly
+      grid .jobs.selected.skipped.bytes -row 0 -column 2 -sticky "w" 
+      label .jobs.selected.skipped.bytesPostfix -text "bytes"
+      grid .jobs.selected.skipped.bytesPostfix -row 0 -column 3 -sticky "w" 
+
+      label .jobs.selected.skipped.separator -text "/"
+      grid .jobs.selected.skipped.separator -row 0 -column 4 -sticky "w" 
+
+      entry .jobs.selected.skipped.bytesShort -width 6 -textvariable currentJob(skippedBytesShort) -justify right -border 0 -state readonly
+      grid .jobs.selected.skipped.bytesShort -row 0 -column 5 -sticky "w" 
+      label .jobs.selected.skipped.bytesShortUnit -width 3 -textvariable currentJob(skippedBytesShortUnit)
+      grid .jobs.selected.skipped.bytesShortUnit -row 0 -column 6 -sticky "w"
+
+      grid rowconfigure    .jobs.selected.skipped { 0 } -weight 1
+      grid columnconfigure .jobs.selected.skipped { 7 } -weight 1
+    grid .jobs.selected.skipped -row 1 -column 1 -sticky "we" -padx 2p -pady 2p
+
+    label .jobs.selected.errorTitle -text "Errors:"
+    grid .jobs.selected.errorTitle -row 2 -column 0 -sticky "w" 
+    frame .jobs.selected.error
+      entry .jobs.selected.error.files -width 10 -textvariable currentJob(errorFiles) -justify right -border 0 -state readonly
+      grid .jobs.selected.error.files -row 0 -column 0 -sticky "w" 
+      label .jobs.selected.error.filesPostfix -text "files"
+      grid .jobs.selected.error.filesPostfix -row 0 -column 1 -sticky "w" 
+
+      entry .jobs.selected.error.bytes -width 20 -textvariable currentJob(errorBytes) -justify right -border 0 -state readonly
+      grid .jobs.selected.error.bytes -row 0 -column 2 -sticky "w" 
+      label .jobs.selected.error.bytesPostfix -text "bytes"
+      grid .jobs.selected.error.bytesPostfix -row 0 -column 3 -sticky "w" 
+
+      label .jobs.selected.error.separator -text "/"
+      grid .jobs.selected.error.separator -row 0 -column 4 -sticky "w" 
+
+      entry .jobs.selected.error.bytesShort -width 6 -textvariable currentJob(errorBytesShort) -justify right -border 0 -state readonly
+      grid .jobs.selected.error.bytesShort -row 0 -column 5 -sticky "w" 
+      label .jobs.selected.error.bytesShortUnit -width 3 -textvariable currentJob(errorBytesShortUnit)
+      grid .jobs.selected.error.bytesShortUnit -row 0 -column 6 -sticky "w"
+
+      grid rowconfigure    .jobs.selected.error { 0 } -weight 1
+      grid columnconfigure .jobs.selected.error { 7 } -weight 1
+    grid .jobs.selected.error -row 2 -column 1 -sticky "we" -padx 2p -pady 2p
 
     label .jobs.selected.totalTitle -text "Total:"
-    grid .jobs.selected.totalTitle -row 1 -column 2 -sticky "w" 
+    grid .jobs.selected.totalTitle -row 3 -column 0 -sticky "w" 
     frame .jobs.selected.total
       entry .jobs.selected.total.files -width 10 -textvariable currentJob(totalFiles) -justify right -border 0 -state readonly
       grid .jobs.selected.total.files -row 0 -column 0 -sticky "w" 
@@ -2323,17 +2541,17 @@ frame .jobs
 
       grid rowconfigure    .jobs.selected.total { 0 } -weight 1
       grid columnconfigure .jobs.selected.total { 7 } -weight 1
-    grid .jobs.selected.total -row 1 -column 3 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.total -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
 
     label .jobs.selected.currentFileNameTitle -text "File:"
-    grid .jobs.selected.currentFileNameTitle -row 2 -column 0 -sticky "w"
+    grid .jobs.selected.currentFileNameTitle -row 4 -column 0 -sticky "w"
     entry .jobs.selected.currentFileName -textvariable currentJob(fileName) -border 0 -state readonly
 #entry .jobs.selected.done.percentageContainer.x
 #pack .jobs.selected.done.percentageContainer.x -fill x -expand yes
-    grid .jobs.selected.currentFileName -row 2 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.currentFileName -row 4 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
 
     progressbar .jobs.selected.filePercentage
-    grid .jobs.selected.filePercentage -row 3 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.filePercentage -row 5 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(fileDoneBytes) \
       "
         global currentJob
@@ -2356,12 +2574,12 @@ frame .jobs
       "
 
     label .jobs.selected.storageNameTitle -text "Storage:"
-    grid .jobs.selected.storageNameTitle -row 4 -column 0 -sticky "w"
+    grid .jobs.selected.storageNameTitle -row 5 -column 0 -sticky "w"
     entry .jobs.selected.storageName -textvariable currentJob(storageName) -border 0 -state readonly
-    grid .jobs.selected.storageName -row 4 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.storageName -row 5 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
 
     progressbar .jobs.selected.storagePercentage
-    grid .jobs.selected.storagePercentage -row 5 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.storagePercentage -row 6 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(storageDoneBytes) \
       "
         global currentJob
@@ -2384,9 +2602,9 @@ frame .jobs
       "
 
     label .jobs.selected.totalFilesPercentageTitle -text "Total files:"
-    grid .jobs.selected.totalFilesPercentageTitle -row 6 -column 0 -sticky "w"
+    grid .jobs.selected.totalFilesPercentageTitle -row 7 -column 0 -sticky "w"
     progressbar .jobs.selected.totalFilesPercentage
-    grid .jobs.selected.totalFilesPercentage -row 6 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.totalFilesPercentage -row 7 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(doneFiles) \
       "
         global currentJob
@@ -2409,9 +2627,9 @@ frame .jobs
       "
 
     label .jobs.selected.totalBytesPercentageTitle -text "Total bytes:"
-    grid .jobs.selected.totalBytesPercentageTitle -row 7 -column 0 -sticky "w"
+    grid .jobs.selected.totalBytesPercentageTitle -row 8 -column 0 -sticky "w"
     progressbar .jobs.selected.totalBytesPercentage
-    grid .jobs.selected.totalBytesPercentage -row 7 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.totalBytesPercentage -row 8 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(doneBytes) \
       "
         global currentJob
@@ -2436,10 +2654,22 @@ frame .jobs
 #    grid rowconfigure    .jobs.selected { 0 } -weight 1
     grid columnconfigure .jobs.selected { 4 } -weight 1
   grid .jobs.selected -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+  addModifyTrace ::currentJob(id) \
+    "
+      if {\$::currentJob(id) != \"\"} \
+      {
+         .jobs.selected configure -text \"Selected #\$::currentJob(id)\"
+      } \
+      else \
+      {
+         .jobs.selected configure -text \"Selected\"
+      }
+    "
 
   frame .jobs.list
     mclistbox::mclistbox .jobs.list.data -height 1 -bg white -labelanchor w -selectmode single -xscrollcommand ".jobs.list.xscroll set" -yscrollcommand ".jobs.list.yscroll set"
     .jobs.list.data column add id                -label "Id"             -width 5
+    .jobs.list.data column add name              -label "name"           -width 12
     .jobs.list.data column add state             -label "State"          -width 12
     .jobs.list.data column add archivePartSize   -label "Part size"      -width 8
     .jobs.list.data column add compressAlgortihm -label "Compress"       -width 10
@@ -2457,6 +2687,8 @@ frame .jobs
   grid .jobs.list -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
 
   frame .jobs.buttons
+    button .jobs.buttons.abort -text "Abort" -command "event generate . <<Event_abortJob>>"
+    pack .jobs.buttons.abort -side left
     button .jobs.buttons.rem -text "Rem (Del)" -command "event generate . <<Event_remJob>>"
     pack .jobs.buttons.rem -side left
   grid .jobs.buttons -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
@@ -2468,6 +2700,24 @@ frame .jobs
   grid rowconfigure    .jobs { 1 } -weight 1
   grid columnconfigure .jobs { 0 } -weight 1
 pack .jobs -side top -fill both -expand yes -in [$mainWindow.tabs subwidget jobs]
+
+frame .backup
+  tixNoteBook .backup.tabs
+    .backup.tabs add files         -label "Files"            -underline -1 -raisecmd { focus .files.list }
+    .backup.tabs add filters       -label "Filters"          -underline -1 -raisecmd { focus .filters.included }
+    .backup.tabs add storage       -label "Storage"          -underline -1
+  #  $mainWindow.tabs add misc          -label "Misc"             -underline -1
+  pack .backup.tabs -side top -fill both -expand yes
+
+  frame .backup.control
+    label .backup.control.nameTitle -text "Name:"
+    pack .backup.control.nameTitle -side left
+    entry .backup.control.name -textvariable barConfig(name) -bg white
+    pack .backup.control.name -side left -fill x -expand yes -padx 2p
+    button .backup.control.addBackupJob -text "Start backup" -command "event generate . <<Event_addBackupJob>>"
+    pack .backup.control.addBackupJob -side left -padx 2p
+  pack .backup.control -side bottom -fill x
+pack .backup -side top -fill both -expand yes -in [$mainWindow.tabs subwidget backup]
 
 frame .files
   tixTree .files.list -scrollbar both -options \
@@ -2567,7 +2817,7 @@ frame .files
 
   grid rowconfigure    .files { 0 } -weight 1
   grid columnconfigure .files { 0 } -weight 1
-pack .files -side top -fill both -expand yes -in [$mainWindow.tabs subwidget files]
+pack .files -side top -fill both -expand yes -in [.backup.tabs subwidget files]
 
 frame .filters
   label .filters.includedTitle -text "Included:"
@@ -2615,7 +2865,7 @@ frame .filters
 
   grid rowconfigure    .filters { 0 2 } -weight 1
   grid columnconfigure .filters { 1 } -weight 1
-pack .filters -side top -fill both -expand yes -in [$mainWindow.tabs subwidget filters]
+pack .filters -side top -fill both -expand yes -in [.backup.tabs subwidget filters]
 
 frame .storage
   label .storage.archivePartSizeTitle -text "Part size:"
@@ -2749,7 +2999,31 @@ frame .storage
 
   grid rowconfigure    .storage { 4 } -weight 1
   grid columnconfigure .storage { 1 } -weight 1
-pack .storage -side top -fill both -expand yes -in [$mainWindow.tabs subwidget storage]
+pack .storage -side top -fill both -expand yes -in [.backup.tabs subwidget storage]
+
+#frame .misc
+#  label .misc.optionsTitle -text "Options:"
+#  grid .misc.optionsTitle -row 0 -column 0 -sticky "nw" 
+#  checkbutton .misc.optionSkipUnreadable -text "skip unreable files" -variable barConfig(skipUnreadable)
+#  grid .misc.optionSkipUnreadable -row 0 -column 1 -sticky "nw" 
+#  checkbutton .misc.optionOverwriteFiles -text "overwrite files" -variable barConfig(overwriteFiles)
+#  grid .misc.optionOverwriteFiles -row 2 -column 1 -sticky "nw" 
+
+#  grid rowconfigure    .misc { 1 } -weight 1
+#  grid columnconfigure .misc { 2 } -weight 1
+#pack .misc -side top -fill both -expand yes -in [$mainWindow.tabs subwidget misc]
+
+frame .restore
+  tixNoteBook .restore.tabs
+    .restore.tabs add archives -label "Archives" -underline -1
+    .restore.tabs add files    -label "Files"    -underline -1
+  pack .restore.tabs -side top -fill both -expand yes
+
+  frame .restore.buttons
+    button .restore.buttons.addRestore -text "Start restore" -command "event generate . <<Event_addRestore>>"
+    pack .restore.buttons.addRestore -side left -padx 2p
+  pack .restore.buttons -side bottom -fill x
+pack .restore -side top -fill both -expand yes -in [$mainWindow.tabs subwidget restore]
 
 frame .compressCrypt
   label .compressCrypt.compressAlgorithmTitle -text "Compress:"
@@ -2774,27 +3048,6 @@ frame .compressCrypt
   grid columnconfigure .compressCrypt { 1 } -weight 1
 pack .compressCrypt -side top -fill both -expand yes -in [$mainWindow.tabs subwidget compressCrypt]
 
-#frame .misc
-#  label .misc.optionsTitle -text "Options:"
-#  grid .misc.optionsTitle -row 0 -column 0 -sticky "nw" 
-#  checkbutton .misc.optionSkipUnreadable -text "skip unreable files" -variable barConfig(skipUnreadable)
-#  grid .misc.optionSkipUnreadable -row 0 -column 1 -sticky "nw" 
-#  checkbutton .misc.optionOverwriteFiles -text "overwrite files" -variable barConfig(overwriteFiles)
-#  grid .misc.optionOverwriteFiles -row 2 -column 1 -sticky "nw" 
-
-#  grid rowconfigure    .misc { 1 } -weight 1
-#  grid columnconfigure .misc { 2 } -weight 1
-#pack .misc -side top -fill both -expand yes -in [$mainWindow.tabs subwidget misc]
-
-# buttons
-frame $mainWindow.buttons
-  button $mainWindow.buttons.startJob -text "Start job" -command "event generate . <<Event_addJob>>"
-  pack $mainWindow.buttons.startJob -side left -padx 2p
-
-  button $mainWindow.buttons.quit -text "Quit" -command "event generate . <<Event_quit>>"
-  pack $mainWindow.buttons.quit -side right
-pack $mainWindow.buttons -fill x -padx 2p -pady 2p
-
 .files.list subwidget hlist configure -command "openCloseDirectory"
 
 bind . <Control-o> "event generate . <<Event_load>>"
@@ -2818,20 +3071,12 @@ bind . <<Event_save>> \
 
 bind . <<Event_saveAs>> \
 {
-puts 111
   saveConfig ""
 }
 
 bind . <<Event_quit>> \
 {
   quit
-}
-
-bind . <<Event_stateMenu>> \
-{
-puts 222
-  .files.list.popup post %W %x %y
-
 }
 
 bind . <<Event_stateNone>> \
@@ -2915,9 +3160,20 @@ bind . <<Event_selectJob>> \
   }
 }
 
-bind . <<Event_addJob>> \
+bind . <<Event_addBackupJob>> \
 {
-  addJob .jobs.list.data
+  if {[Dialog:confirm "Start this backup?" "Start backup" "Cancel"]} \
+  {
+    addBackupJob .jobs.list.data
+  }
+}
+
+bind . <<Event_addRestoreJob>> \
+{
+  if {[Dialog:confirm "Start this restore?" "Start restore" "Cancel"]} \
+  {
+    addRestoreJob .jobs.list.data
+  }
 }
 
 bind . <<Event_remJob>> \
@@ -2929,6 +3185,20 @@ bind . <<Event_remJob>> \
     remJob .jobs.list.data $id
   }
 }
+
+bind . <<Event_abortJob>> \
+{
+  set n [.jobs.list.data curselection]
+  if {$n != {}} \
+  {
+    if {[Dialog:confirm "Really abort job?" "Abort job" "Cancel"]} \
+    {
+      set id [lindex [lindex [.jobs.list.data get $n $n] 0] 0]
+      abortJob .jobs.list.data $id
+    }
+  }
+}
+
 update
 
 # config modify trace
@@ -2946,6 +3216,7 @@ updateCurrentJob
 addDevice "/"
 
 # load config if given
+resetBarConfig
 if {$configName != ""} { loadConfig $configName }
 
 # end of file

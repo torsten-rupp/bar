@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/errors.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver errors
 * Systems : all
@@ -30,9 +30,15 @@ typedef enum
   ERROR_INIT,
   ERROR_INVALID_ARGUMENT,
   ERROR_CONFIG,
+  ERROR_ABORTED,
 
   /* pattern matching errors */
   ERROR_INVALID_PATTERN,
+
+  /* SSL errors */
+  ERROR_INIT_TLS,
+  ERROR_INIT_INVALID_CERTIFICATE,
+  ERROR_TLS_HANDSHAKE,
 
   /* compress errors */
   ERROR_INIT_COMPRESS,

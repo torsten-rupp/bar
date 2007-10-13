@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -52,8 +52,8 @@ typedef struct JobNode
 {
   NODE_HEADER(struct JobNode);
 
-  uint id;
-
+  uint               id;
+  String             name;
   enum
   {
     MODE_BACKUP,
@@ -83,7 +83,6 @@ typedef struct JobNode
       JOB_STATE_COMPLETED,
       JOB_STATE_ERROR
     } state;
-    bool   terminteFlag;                    // signal to terminate job
     time_t startTime;                       // start time [s]
     ulong  estimatedRestTime;               // estimated rest running time [s]
     ulong  doneFiles;                       // number of processed files
@@ -101,6 +100,8 @@ typedef struct JobNode
     String storageName;                     // current storage file
     uint64 storageDoneBytes;                // current storage file bytes done
     uint64 storageTotalBytes;               // current storage file bytes total
+
+    bool   abortRequestFlag;                // TRUE for abort operation
     Errors error;
   } runningInfo;
 } JobNode;
@@ -257,14 +258,14 @@ LOCAL void jobThread(JobList *jobList)
       {
         jobNode = jobNode->next;
       }
-      if (jobNode == NULL) Semaphore_wait(&jobList->lock);
+      if (jobNode == NULL) Semaphore_waitModified(&jobList->lock);
     }
     while (!quitFlag && (jobNode == NULL));
     if (jobNode != NULL)
     {
       jobNode->runningInfo.state = JOB_STATE_RUNNING;
     }
-    Semaphore_unlock(&jobList->lock);
+    Semaphore_unlock(&jobList->lock);    /* unlock is ok; job is protected by running state */
     if (quitFlag) break;
 
     /* run job */
@@ -281,7 +282,7 @@ LOCAL void jobThread(JobList *jobList)
   for (z=0;z<120;z++)
   {
     extern void sleep(int);
-    if (jobNode->runningInfo.terminteFlag) break;
+    if (jobNode->runningInfo.abortRequestFlag) break;
 
     fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
     sleep(1);
@@ -320,13 +321,16 @@ LOCAL void jobThread(JobList *jobList)
                                                 &jobNode->excludePatternList,
                                                 &options,
                                                 (CreateStatusInfoFunction)updateCreateStatus,
-                                                jobNode
+                                                jobNode,
+                                                &jobNode->runningInfo.abortRequestFlag
                                                );
 
 #endif /* SIMULATOR */
 
-    /* done job */
+    /* done job (lock list to signal modifcation to waiting threads) */
+    Semaphore_lock(&jobList->lock);
     jobNode->runningInfo.state = (jobNode->runningInfo.error == ERROR_NONE)?JOB_STATE_COMPLETED:JOB_STATE_ERROR;
+    Semaphore_unlock(&jobList->lock);
   }
 }
 
@@ -365,6 +369,7 @@ LOCAL void freeJobNode(JobNode *jobNode)
   String_delete(jobNode->sshPrivatKeyFileName);
   String_delete(jobNode->sshPublicKeyFileName);
   String_delete(jobNode->archiveFileName);
+  String_delete(jobNode->name);
 
   String_delete(jobNode->runningInfo.fileName);
   String_delete(jobNode->runningInfo.storageName);
@@ -389,6 +394,7 @@ LOCAL JobNode *newJob(void)
     HALT_INSUFFICIENT_MEMORY();
   }
 
+  jobNode->name                          = String_new();
   jobNode->archiveFileName               = String_new();
   Pattern_initList(&jobNode->includePatternList);
   Pattern_initList(&jobNode->excludePatternList);
@@ -404,7 +410,6 @@ LOCAL JobNode *newJob(void)
   jobNode->overwriteFilesFlag            = FALSE;
 
   jobNode->runningInfo.state             = JOB_STATE_WAITING;
-  jobNode->runningInfo.terminteFlag      = FALSE;
   jobNode->runningInfo.startTime         = 0;
   jobNode->runningInfo.estimatedRestTime = 0;
   jobNode->runningInfo.doneFiles         = 0L;
@@ -422,6 +427,8 @@ LOCAL JobNode *newJob(void)
   jobNode->runningInfo.storageName       = String_new();
   jobNode->runningInfo.storageDoneBytes  = 0LL;
   jobNode->runningInfo.storageTotalBytes = 0LL;
+
+  jobNode->runningInfo.abortRequestFlag  = FALSE;
   jobNode->runningInfo.error             = ERROR_NONE;
 
   return jobNode;  
@@ -751,8 +758,9 @@ LOCAL void serverCommand_jobList(ClientNode *clientNode, uint id, const String a
       #endif /* NDEBUG */
     }
     sendResult(clientNode,id,FALSE,0,
-               "%u %s %llu %'s %'s %lu %lu",
+               "%u %'S %s %llu %'s %'s %lu %lu",
                jobNode->id,
+               jobNode->name,
                stateText,
                jobNode->archivePartSize,
                Compress_getAlgorithmName(jobNode->compressAlgorithm),
@@ -1067,8 +1075,12 @@ LOCAL void serverCommand_newJob(ClientNode *clientNode, uint id, const String ar
   assert(clientNode != NULL);
   assert(arguments != NULL);
 
-  UNUSED_VARIABLE(arguments);
-  UNUSED_VARIABLE(argumentCount);
+  /* get config value name */
+  if (argumentCount < 1)
+  {
+    sendResult(clientNode,id,TRUE,1,"expected name");
+    return;
+  }
 
   if (clientNode->jobNode != NULL)
   {
@@ -1076,6 +1088,12 @@ LOCAL void serverCommand_newJob(ClientNode *clientNode, uint id, const String ar
   }
 
   clientNode->jobNode = newJob();
+  if (clientNode->jobNode == NULL)
+  {
+    sendResult(clientNode,id,TRUE,1,"insufficient memory");
+    return;
+  }
+  String_set(clientNode->jobNode->name,arguments[0]);
 
   sendResult(clientNode,id,TRUE,0,"");
 }
@@ -1127,7 +1145,7 @@ LOCAL void serverCommand_addJob(ClientNode *clientNode, uint id, const String ar
   }
 }
 
-LOCAL void serverCommand_remJob(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_abortJob(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
 {
   JobNode *jobNode;
   uint    jobId;
@@ -1153,13 +1171,64 @@ LOCAL void serverCommand_remJob(ClientNode *clientNode, uint id, const String ar
     jobNode = jobNode->next;
   }
 
-  /* check if job running, remove job to list */
-  jobNode->runningInfo.terminteFlag = TRUE;
-  while (jobNode->runningInfo.state == JOB_STATE_RUNNING)
+  if (jobNode != NULL)
   {
-    Semaphore_wait(&jobList.lock);
+    /* check if job running, remove job in list */
+    jobNode->runningInfo.abortRequestFlag = TRUE;
+    while (jobNode->runningInfo.state == JOB_STATE_RUNNING)
+    {
+      Semaphore_waitModified(&jobList.lock);
+    }
+    List_remove(&jobList,jobNode);
   }
-  List_remove(&jobList,jobNode);
+  else
+  {
+    sendResult(clientNode,id,TRUE,1,"job %d not found",jobId);
+  }
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientNode,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_remJob(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+{
+  JobNode *jobNode;
+  uint    jobId;
+
+  assert(clientNode != NULL);
+  assert(arguments != NULL);
+
+  /* get id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientNode,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = jobList.head;
+  while ((jobNode != NULL) && (jobNode->id != jobId))
+  {
+    jobNode = jobNode->next;
+  }
+  if (jobNode != NULL)
+  {
+    /* remove job in list if not running */
+    if (jobNode->runningInfo.state != JOB_STATE_RUNNING)
+    {
+      List_remove(&jobList,jobNode);
+    }
+  }
+  else
+  {
+    sendResult(clientNode,id,TRUE,1,"job %d not found",jobId);
+  }
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
@@ -1181,6 +1250,7 @@ const struct { const char *name; ServerCommandFunction serverCommandFunction; } 
   { "NEW_JOB",             serverCommand_newJob            },
   { "ADD_JOB",             serverCommand_addJob            },
   { "REM_JOB",             serverCommand_remJob            },
+  { "ABORT_JOB",           serverCommand_abortJob          },
 };
 
 /***********************************************************************\
@@ -1257,6 +1327,7 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
   }
   if (z >= SIZE_OF_ARRAY(SERVER_COMMANDS))
   {
+fprintf(stderr,"%s,%d: unknown %s\n",__FILE__,__LINE__,String_cString(string));
     String_doneTokenizer(&stringTokenizer);
     return FALSE;
   }
@@ -1482,21 +1553,22 @@ void Server_done(void)
 {
 }
 
-Errors Server_run(uint       serverPort,
-                  const char *serverPassword
+Errors Server_run(uint        serverPort,
+                  const char  *serverPassword,
+                  ServerTypes serverType
                  )
 {
-  Errors       error;
-  SocketHandle serverSocketHandle;
-  fd_set       selectSet;
-  ClientNode   *clientNode;
-  SocketHandle socketHandle;
-  String       name;
-  uint         port;
-  char         buffer[256];
-  ulong        receivedBytes;
-  ulong        z;
-  ClientNode   *deleteClientNode;
+  Errors             error;
+  ServerSocketHandle serverSocketHandle;
+  fd_set             selectSet;
+  ClientNode         *clientNode;
+  SocketHandle       socketHandle;
+  String             name;
+  uint               port;
+  char               buffer[256];
+  ulong              receivedBytes;
+  ulong              z;
+  ClientNode         *deleteClientNode;
 
   /* initialise variables */
   List_init(&jobList);
@@ -1504,7 +1576,7 @@ Errors Server_run(uint       serverPort,
   quitFlag = FALSE;
 
   /* start server */
-  error = Network_initServer(&serverSocketHandle,serverPort);
+  error = Network_initServer(&serverSocketHandle,serverPort,serverType);
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize server (error: %s)!\n",
@@ -1525,7 +1597,7 @@ Errors Server_run(uint       serverPort,
   {
     /* wait for command */
     FD_ZERO(&selectSet);
-    FD_SET(Network_getSocket(&serverSocketHandle),&selectSet);
+    FD_SET(Network_getServerSocket(&serverSocketHandle),&selectSet);
     clientNode = clientList.head;
     while (clientNode != NULL)
     {
@@ -1535,11 +1607,11 @@ Errors Server_run(uint       serverPort,
     select(FD_SETSIZE,&selectSet,NULL,NULL,NULL);
 
     /* connect new clients */
-    if (FD_ISSET(Network_getSocket(&serverSocketHandle),&selectSet))
+    if (FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
     {
       error = Network_accept(&socketHandle,
                              &serverSocketHandle,
-                             NETWORK_SOCKET_FLAG_NON_BLOCKING
+                             SOCKET_FLAG_NON_BLOCKING
                             );
       if (error == ERROR_NONE)
       {
@@ -1551,7 +1623,7 @@ Errors Server_run(uint       serverPort,
       }
       else
       {
-        printError("Cannot estable client connection (error: %s)!\n",
+        printError("Cannot establish client connection (error: %s)!\n",
                    getErrorText(error)
                   );
       }

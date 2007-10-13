@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/semaphores.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -156,7 +156,7 @@ void Semaphore_unlock(Semaphore *semaphore)
   unlock(semaphore);
 }
 
-void Semaphore_wait(Semaphore *semaphore)
+void Semaphore_waitModified(Semaphore *semaphore)
 {
   assert(semaphore != NULL);
 

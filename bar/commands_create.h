@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -73,6 +73,8 @@ typedef char(*CreateStatusInfoFunction)(Errors                 error,
 *          createStatusInfoFunction - status info call back function
 *                                     (can be NULL)
 *          createStatusInfoUserData - user data for status info function
+*          abortRequestFlag         - flag to request abort (can be
+*                                     NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -83,7 +85,8 @@ Errors Command_create(const char               *archiveFileName,
                       PatternList              *excludePatternList,
                       const Options            *options,
                       CreateStatusInfoFunction createStatusInfoFunction,
-                      void                     *createStatusInfoUserData
+                      void                     *createStatusInfoUserData,
+                      bool                     *abortRequestFlag
                      );
 
 #ifdef __cplusplus

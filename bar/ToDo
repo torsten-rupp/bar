@@ -1,7 +1,6 @@
 ToDo
 
-- network command interface
-- graphical frontend
+- restore files with graphical frontend
 - check if file date/permission/owner/group is correct
 - internal pipeling of commands for e. g. repacking, remove/add encryption
 - passwort input for crypt password
@@ -11,3 +10,4 @@ ToDo
 - configure
 - network bandwidth limitation
 - ssl-network command interface
+- server password
