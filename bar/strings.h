@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -162,16 +162,19 @@ String __String_copy(const char *fileName, ulong lineNb, String fromString);
 /***********************************************************************\
 * Name   : String_sub
 * Purpose: get sub-string from string
-* Input  : string     - string to set
-*          fromString - string to get sub-string from
-*          index      - start index (0..n-1)
-*          length     - length of sub-string (0..n)
+* Input  : string/buffer - string/buffer to set
+*          fromString    - string to get sub-string from
+*          index         - start index (0..n-1)
+*          length        - length of sub-string (0..n) or STRING_END
+*                          (String_sub only!)
 * Output : -
-* Return : new sub-string
+* Return : new sub-string/buffer
 * Notes  : -
 \***********************************************************************/
 
 String String_sub(String string, const String fromString, ulong index, long length);
+char *String_subCString(char *s, const String fromString, ulong index, long length);
+char *String_subBuffer(char *buffer, const String fromString, ulong index, long length);
 
 /***********************************************************************\
 * Name   : String_append, String_appendCString, String_appendChar

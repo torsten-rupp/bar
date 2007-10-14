@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -42,6 +42,8 @@
 
 #define PROTOCOL_VERSION_MAJOR 1
 #define PROTOCOL_VERSION_MINOR 0
+
+#define SESSION_ID_LENGTH 64
 
 #define MAX_JOBS_IN_LIST 32
 
@@ -114,6 +116,17 @@ typedef struct
   uint      lastJobId;
 } JobList;
 
+/* session id */
+typedef byte SessionId[SESSION_ID_LENGTH];
+
+/* authorization states */
+typedef enum
+{
+  AUTHORIZATION_STATE_WAITING,
+  AUTHORIZATION_STATE_OK,
+  AUTHORIZATION_STATE_FAIL,
+} AuthorizationStates;
+
 /* client info */
 typedef struct ClientNode
 {
@@ -125,11 +138,12 @@ typedef struct ClientNode
   bool         exitFlag;
 
   /* connection */
-  String       name;
-  uint         port;
-  SocketHandle socketHandle;
-  bool         authentificationFlag;
-  String       commandString;
+  String              name;
+  uint                port;
+  SocketHandle        socketHandle;
+  SessionId           sessionId;
+  AuthorizationStates authorizationState;
+  String              commandString;
 
   /* new job */
   JobNode      *jobNode;
@@ -145,11 +159,13 @@ typedef void(*ServerCommandFunction)(ClientNode *clientNode, uint id, const Stri
 typedef struct
 {
   ServerCommandFunction serverCommandFunction;
+  AuthorizationStates   authorizationState;
   uint                  id;
   Array                 arguments;
 } CommandMsg;
 
 /***************************** Variables *******************************/
+LOCAL const char *password;
 LOCAL JobList    jobList;
 LOCAL pthread_t  jobThreadId;
 LOCAL ClientList clientList;
@@ -454,22 +470,6 @@ LOCAL void deleteJob(JobNode *jobNode)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : getBooleanValue
-* Purpose: get boolean value from string
-* Input  : string - string
-* Output : -
-* Return : TRUE if string is either ", yes or true, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool getBooleanValue(const String s)
-{
-  return    String_equalsCString(s,"1")
-         || String_equalsCString(s,"yes")
-         || String_equalsCString(s,"true");
-}
-
-/***********************************************************************\
 * Name   : sendResult
 * Purpose: send result to client
 * Input  : clientNode   - client node
@@ -580,15 +580,45 @@ LOCAL uint64 getTotalSubDirectorySize(const String subDirectory)
 
 /*---------------------------------------------------------------------*/
 
-LOCAL void serverCommand_auth(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_authorize(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
 {
+  bool okFlag;
+
+  uint z;
+  char s[3];
+  char n0,n1;
+
   assert(clientNode != NULL);
   assert(arguments != NULL);
 
+  /* get encoded password (to avoid plain text passwords in memory) */
   if (argumentCount < 1)
   {
     sendResult(clientNode,id,TRUE,1,"expected password");
     return;
+  }
+
+  /* check password */
+  okFlag = TRUE;
+  if (password != NULL)
+  {
+    z = 0;
+    while ((z < strlen(password)) && okFlag)
+    {
+      n0 = (char)(strtoul(String_subCString(s,arguments[0],z*2,sizeof(s)),NULL,16) & 0xFF);
+      n1 = clientNode->sessionId[z];
+      okFlag = (password[z] == (n0^n1));
+      z++;
+    } 
+  }
+
+  if (okFlag)
+  {
+    clientNode->authorizationState = AUTHORIZATION_STATE_OK;
+  }
+  else
+  {
+    clientNode->authorizationState = AUTHORIZATION_STATE_FAIL;
   }
 
   sendResult(clientNode,id,TRUE,0,"");
@@ -651,7 +681,7 @@ LOCAL void serverCommand_fileList(ClientNode *clientNode, uint id, const String 
     sendResult(clientNode,id,TRUE,1,"expected path name");
     return;
   }
-  totalSizeFlag = ((argumentCount >= 2) && getBooleanValue(arguments[1]));
+  totalSizeFlag = ((argumentCount >= 2) && String_toBoolean(arguments[1],NULL,NULL,0,NULL,0));
 
   error = File_openDirectory(&directoryHandle,arguments[0]);
   if (error != ERROR_NONE)
@@ -1179,7 +1209,7 @@ LOCAL void serverCommand_abortJob(ClientNode *clientNode, uint id, const String 
     {
       Semaphore_waitModified(&jobList.lock);
     }
-    List_remove(&jobList,jobNode);
+    sendResult(clientNode,id,TRUE,0,"");
   }
   else
   {
@@ -1188,8 +1218,6 @@ LOCAL void serverCommand_abortJob(ClientNode *clientNode, uint id, const String 
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientNode,id,TRUE,0,"");
 }
 
 LOCAL void serverCommand_remJob(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
@@ -1224,6 +1252,7 @@ LOCAL void serverCommand_remJob(ClientNode *clientNode, uint id, const String ar
     {
       List_remove(&jobList,jobNode);
     }
+    sendResult(clientNode,id,TRUE,0,"");
   }
   else
   {
@@ -1232,25 +1261,23 @@ LOCAL void serverCommand_remJob(ClientNode *clientNode, uint id, const String ar
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientNode,id,TRUE,0,"");
 }
 
-const struct { const char *name; ServerCommandFunction serverCommandFunction; } SERVER_COMMANDS[] =
+const struct { const char *name; ServerCommandFunction serverCommandFunction; bool authorizationState; } SERVER_COMMANDS[] =
 {
-  { "AUTH",                serverCommand_auth              }, 
-  { "DEVICE_LIST",         serverCommand_deviceList        }, 
-  { "FILE_LIST",           serverCommand_fileList          }, 
-  { "JOB_LIST",            serverCommand_jobList           }, 
-  { "JOB_INFO",            serverCommand_jobInfo           }, 
-  { "ADD_INCLUDE_PATTERN", serverCommand_addIncludePattern },
-  { "ADD_EXCLUDE_PATTERN", serverCommand_addExcludePattern },
-  { "GET_CONFIG_VALUE",    serverCommand_getConfigValue    },
-  { "SET_CONFIG_VALUE",    serverCommand_setConfigValue    },
-  { "NEW_JOB",             serverCommand_newJob            },
-  { "ADD_JOB",             serverCommand_addJob            },
-  { "REM_JOB",             serverCommand_remJob            },
-  { "ABORT_JOB",           serverCommand_abortJob          },
+  { "AUTHORIZE",           serverCommand_authorize,         AUTHORIZATION_STATE_WAITING }, 
+  { "DEVICE_LIST",         serverCommand_deviceList,        AUTHORIZATION_STATE_OK      }, 
+  { "FILE_LIST",           serverCommand_fileList,          AUTHORIZATION_STATE_OK      },
+  { "JOB_LIST",            serverCommand_jobList,           AUTHORIZATION_STATE_OK      },
+  { "JOB_INFO",            serverCommand_jobInfo,           AUTHORIZATION_STATE_OK      },
+  { "ADD_INCLUDE_PATTERN", serverCommand_addIncludePattern, AUTHORIZATION_STATE_OK      },
+  { "ADD_EXCLUDE_PATTERN", serverCommand_addExcludePattern, AUTHORIZATION_STATE_OK      },
+  { "GET_CONFIG_VALUE",    serverCommand_getConfigValue,    AUTHORIZATION_STATE_OK      },
+  { "SET_CONFIG_VALUE",    serverCommand_setConfigValue,    AUTHORIZATION_STATE_OK      },
+  { "NEW_JOB",             serverCommand_newJob,            AUTHORIZATION_STATE_OK      },
+  { "ADD_JOB",             serverCommand_addJob,            AUTHORIZATION_STATE_OK      },
+  { "REM_JOB",             serverCommand_remJob,            AUTHORIZATION_STATE_OK      },
+  { "ABORT_JOB",           serverCommand_abortJob,          AUTHORIZATION_STATE_OK      },
 };
 
 /***********************************************************************\
@@ -1332,6 +1359,7 @@ fprintf(stderr,"%s,%d: unknown %s\n",__FILE__,__LINE__,String_cString(string));
     return FALSE;
   }
   commandMsg->serverCommandFunction = SERVER_COMMANDS[z].serverCommandFunction;
+  commandMsg->authorizationState    = SERVER_COMMANDS[z].authorizationState;
 
   /* get id */
   if (!String_getNextToken(&stringTokenizer,&token,NULL))
@@ -1381,12 +1409,22 @@ LOCAL void clientThread(ClientNode *clientNode)
          && MsgQueue_get(&clientNode->commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg))
         )
   {
-    /* execute command */
-    commandMsg.serverCommandFunction(clientNode,
-                                     commandMsg.id,
-                                     Array_cArray(commandMsg.arguments),
-                                     Array_length(commandMsg.arguments)
-                                    );
+    /* check authorization */
+    if (clientNode->authorizationState == commandMsg.authorizationState)
+    {
+      /* execute command */
+      commandMsg.serverCommandFunction(clientNode,
+                                       commandMsg.id,
+                                       Array_cArray(commandMsg.arguments),
+                                       Array_length(commandMsg.arguments)
+                                      );
+    }
+    else
+    {
+      /* authorization failure -> mark for disconnect */
+      sendResult(clientNode,commandMsg.id,TRUE,1,"authorization failure");
+      clientNode->authorizationState = AUTHORIZATION_STATE_FAIL;
+    }
 
     /* free resources */
     freeCommand(&commandMsg);
@@ -1441,6 +1479,21 @@ LOCAL void freeClientNode(ClientNode *clientNode)
 }
 
 /***********************************************************************\
+* Name   : getNewSessionId
+* Purpose: get new session id
+* Input  : -
+* Output : sessionId - new session id
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getNewSessionId(SessionId sessionId)
+{
+  Crypt_randomize(sessionId,sizeof(SessionId));
+//  memset(sessionId,0,sizeof(SessionId));
+}
+
+/***********************************************************************\
 * Name   : newClient
 * Purpose: create new client
 * Input  : name         - client name
@@ -1454,21 +1507,25 @@ LOCAL void freeClientNode(ClientNode *clientNode)
 LOCAL ClientNode *newClient(const String name, uint port, SocketHandle socketHandle)
 {
   ClientNode *clientNode;
+  String     s;
+  uint       z;
 
+  /* create new client node */
   clientNode = LIST_NEW_NODE(ClientNode);
   if (clientNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
+  /* initialize node */
   clientNode->exitFlag = FALSE;
 
-  clientNode->name                 = String_copy(name);
-  clientNode->port                 = port;
-  clientNode->socketHandle         = socketHandle;
-  clientNode->authentificationFlag = FALSE;
-  clientNode->commandString        = String_new();
-  clientNode->jobNode              = NULL;
+  clientNode->name               = String_copy(name);
+  clientNode->port               = port;
+  clientNode->socketHandle       = socketHandle;
+  clientNode->authorizationState = AUTHORIZATION_STATE_WAITING;
+  clientNode->commandString      = String_new();
+  clientNode->jobNode            = NULL;
 
   if (!MsgQueue_init(&clientNode->commandMsgQueue,0))
   {
@@ -1478,6 +1535,18 @@ LOCAL ClientNode *newClient(const String name, uint port, SocketHandle socketHan
   {
     HALT_FATAL_ERROR("Cannot initialise client thread!");
   }
+
+  /* create and send session id */
+  getNewSessionId(clientNode->sessionId);
+  s = String_new();
+  String_appendCString(s,"SESSION ");
+  for (z = 0; z < sizeof(SessionId); z++)
+  {
+    String_format(s,"%02x",clientNode->sessionId[z]);
+  }
+  String_appendChar(s,'\n');
+  Network_send(&clientNode->socketHandle,String_cString(s),String_length(s));
+  String_delete(s);
 
   return clientNode;
 }
@@ -1493,6 +1562,8 @@ LOCAL ClientNode *newClient(const String name, uint port, SocketHandle socketHan
 
 LOCAL void deleteClient(ClientNode *clientNode)
 {
+  assert(clientNode != NULL);
+
   freeClientNode(clientNode);
 
   LIST_DELETE_NODE(clientNode);
@@ -1553,13 +1624,13 @@ void Server_done(void)
 {
 }
 
-Errors Server_run(uint        serverPort,
-                  const char  *serverPassword,
-                  ServerTypes serverType
+Errors Server_run(uint       serverPort,
+                  uint       serverTLSPort,
+                  const char *serverPassword
                  )
 {
   Errors             error;
-  ServerSocketHandle serverSocketHandle;
+  ServerSocketHandle serverSocketHandle,serverTLSSocketHandle;
   fd_set             selectSet;
   ClientNode         *clientNode;
   SocketHandle       socketHandle;
@@ -1570,19 +1641,36 @@ Errors Server_run(uint        serverPort,
   ulong              z;
   ClientNode         *deleteClientNode;
 
+  assert((serverPort != 0) || (serverTLSPort != 0));
+
   /* initialise variables */
+  password = serverPassword;
   List_init(&jobList);
   List_init(&clientList);
   quitFlag = FALSE;
 
-  /* start server */
-  error = Network_initServer(&serverSocketHandle,serverPort,serverType);
-  if (error != ERROR_NONE)
+  /* init server sockets */
+  if (serverPort != 0)
   {
-    printError("Cannot initialize server (error: %s)!\n",
-               getErrorText(error)
-              );
-    return FALSE;
+    error = Network_initServer(&serverSocketHandle,serverPort,SERVER_TYPE_PLAIN);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot initialize server (error: %s)!\n",
+                 getErrorText(error)
+                );
+      return FALSE;
+    }
+  }
+  if (serverTLSPort != 0)
+  {
+    error = Network_initServer(&serverTLSSocketHandle,serverTLSPort,SERVER_TYPE_TLS);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot initialize SSL/TLS server (error: %s)!\n",
+                 getErrorText(error)
+                );
+      return FALSE;
+    }
   }
 
   /* start job-thread */
@@ -1597,7 +1685,8 @@ Errors Server_run(uint        serverPort,
   {
     /* wait for command */
     FD_ZERO(&selectSet);
-    FD_SET(Network_getServerSocket(&serverSocketHandle),&selectSet);
+    if (serverPort    != 0) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
+    if (serverTLSPort != 0) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
     clientNode = clientList.head;
     while (clientNode != NULL)
     {
@@ -1607,7 +1696,7 @@ Errors Server_run(uint        serverPort,
     select(FD_SETSIZE,&selectSet,NULL,NULL,NULL);
 
     /* connect new clients */
-    if (FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
+    if ((serverPort != 0) && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
     {
       error = Network_accept(&socketHandle,
                              &serverSocketHandle,
@@ -1624,6 +1713,27 @@ Errors Server_run(uint        serverPort,
       else
       {
         printError("Cannot establish client connection (error: %s)!\n",
+                   getErrorText(error)
+                  );
+      }
+    }
+    if ((serverTLSPort != 0) && FD_ISSET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet))
+    {
+      error = Network_accept(&socketHandle,
+                             &serverTLSSocketHandle,
+                             SOCKET_FLAG_NON_BLOCKING
+                            );
+      if (error == ERROR_NONE)
+      {
+        Network_getRemoteInfo(&socketHandle,name,&port);
+        clientNode = newClient(name,port,socketHandle);
+        List_append(&clientList,clientNode);
+
+        info(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->name),clientNode->port);
+      }
+      else
+      {
+        printError("Cannot establish client TLS connection (error: %s)!\n",
                    getErrorText(error)
                   );
       }
@@ -1666,12 +1776,9 @@ Errors Server_run(uint        serverPort,
             /* disconnect */
             info(1,"Disconnected client '%s:%u'\n",String_cString(clientNode->name),clientNode->port);
 
-            /* remove from list */
             deleteClientNode = clientNode;
             clientNode = clientNode->next;
             List_remove(&clientList,deleteClientNode);
-
-            /* delete */
             deleteClient(deleteClientNode);
           }
         }
@@ -1685,11 +1792,35 @@ Errors Server_run(uint        serverPort,
         clientNode = clientNode->next;
       }
     }
+
+    /* removed disconnect clients because of authorization failure */
+    clientNode = clientList.head;
+    while (clientNode != NULL)
+    {
+      if (clientNode->authorizationState == AUTHORIZATION_STATE_FAIL)
+      {
+        /* authorizaton error -> disconnect  client */
+        info(1,"Disconnected client '%s:%u': authorization failure\n",String_cString(clientNode->name),clientNode->port);
+
+        Network_disconnect(&clientNode->socketHandle);
+
+        deleteClientNode = clientNode;
+        clientNode = clientNode->next;
+        List_remove(&clientList,deleteClientNode);
+        deleteClient(deleteClientNode);
+      }
+      else
+      {
+        /* next client */
+        clientNode = clientNode->next;
+      }
+    }
   }
   String_delete(name);
 
   /* done server */
-  Network_doneServer(&serverSocketHandle);
+  if (serverPort    != 0) Network_doneServer(&serverSocketHandle);
+  if (serverTLSPort != 0) Network_doneServer(&serverTLSSocketHandle);
 
   /* free resources */
   List_done(&clientList,(ListNodeFreeFunction)freeClientNode,NULL);

@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -149,6 +149,18 @@ const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm);
 \***********************************************************************/
 
 CryptAlgorithms Crypt_getAlgorithm(const char *name);
+
+/***********************************************************************\
+* Name   : Crypt_randomize
+* Purpose: fill buffer with randomized data
+* Input  : buffer - buffer to fill with randomized data
+*          length - length of buffer
+* Output : buffer - buffer with randomized data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_randomize(byte *buffer, uint length);
 
 /***********************************************************************\
 * Name   : Crypt_getBlockLength

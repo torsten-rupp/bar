@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -32,7 +32,7 @@
 typedef enum
 {
   SOCKET_TYPE_PLAIN,
-  SOCKET_TYPE_SSL,
+  SOCKET_TYPE_TLS,
 } SocketTypes;
 
 typedef struct
@@ -45,7 +45,7 @@ typedef struct
 typedef enum
 {
   SERVER_TYPE_PLAIN,
-  SERVER_TYPE_SSL,
+  SERVER_TYPE_TLS,
 } ServerTypes;
 
 typedef struct

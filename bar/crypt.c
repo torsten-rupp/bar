@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -12,6 +12,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
+#include <gcrypt.h>
+#include <errno.h>
 #include <assert.h>
 
 #include "global.h"
@@ -59,16 +62,20 @@ LOCAL const struct { const char *name; CryptAlgorithms cryptAlgorithm; } CRYPT_A
   extern "C" {
 #endif
 
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
+
 Errors Crypt_init(void)
 {
+  /* enable pthread-support before any other function is called */
+  gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
+
+  /* check version and do internal library init */
   if (!gcry_check_version(GCRYPT_VERSION))
   {
     printError("Wrong gcrypt version (needed: %d)\n",GCRYPT_VERSION);
     return ERROR_INIT_CRYPT;
   }
 
-//  gcry_set_progress_handler (progress_handler, NULL);
-  
   gcry_control(GCRYCTL_DISABLE_SECMEM,         0);
   gcry_control(GCRYCTL_INITIALIZATION_FINISHED,0);
   gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM,    0);
@@ -131,6 +138,13 @@ CryptAlgorithms Crypt_getAlgorithm(const char *name)
   }
 
   return cryptAlgorithm;
+}
+
+void Crypt_randomize(byte *buffer, uint length)
+{
+  assert(buffer != NULL);
+
+  gcry_randomize((unsigned char*)buffer,length,GCRY_STRONG_RANDOM);
 }
 
 Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,

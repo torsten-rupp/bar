@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.32 $
+# $Revision: 1.33 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems : all
@@ -191,7 +191,6 @@ barserver: bar
 barserver_ssl: bar
 	./bar \
           --daemon \
-          --ssl \
           --server-ca-file=bar-ca.pem \
           --server-cert-file=bar-server-cert.pem \
           --server-key-file=bar-server-key.pem

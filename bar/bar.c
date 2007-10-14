@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -50,7 +50,7 @@
 #define DEFAULT_TMP_DIRECTORY          "/tmp"
 #define DEFAULT_COMPRESS_MIN_FILE_SIZE 32
 #define DEFAULT_SERVER_PORT            38523
-#define DEFAULT_SERVER_SSL_PORT        38524
+#define DEFAULT_SERVER_TLS_PORT        38524
 
 /***************************** Datatypes *******************************/
 
@@ -75,7 +75,7 @@ LOCAL PatternList includePatternList;
 LOCAL PatternList excludePatternList;
 LOCAL bool        daemonFlag;
 LOCAL uint        serverPort;
-LOCAL bool        serverSSLFlag;
+LOCAL bool        serverTLSPort;
 LOCAL const char  *serverCAFileName;
 LOCAL const char  *serverCertFileName;
 LOCAL const char  *serverKeyFileName;
@@ -172,11 +172,11 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING ("ssh-password",             0,  0,defaultOptions.sshPassword,              NULL,                                                           "ssh password (use with care!)",NULL            ),
 
   CMD_OPTION_BOOLEAN("daemon",                   0,  0,daemonFlag,                              FALSE,                                                          "run in daemon mode"                            ),
-  CMD_OPTION_INTEGER("port",                     0,  0,serverPort,                              0,0,65535,NULL,                                                 "server port"                                   ),
-  CMD_OPTION_BOOLEAN("ssl",                      0,  0,serverSSLFlag,                           FALSE,                                                          "enable SSL server"                             ),
-  CMD_OPTION_STRING ("server-ca-file",           0,  0,serverCAFileName,                        NULL,                                                           "server SSL CA file","file name"                ),
-  CMD_OPTION_STRING ("server-cert-file",         0,  0,serverCertFileName,                      NULL,                                                           "server SSL certificate file","file name"       ),
-  CMD_OPTION_STRING ("server-key-file",          0,  0,serverKeyFileName,                       NULL,                                                           "server SSL key file","file name"               ),
+  CMD_OPTION_INTEGER("port",                     0,  0,serverPort,                              DEFAULT_SERVER_PORT,0,65535,NULL,                               "server port"                                   ),
+  CMD_OPTION_INTEGER("tls-port",                 0,  0,serverTLSPort,                           DEFAULT_SERVER_TLS_PORT,0,65535,NULL,                           "server TLS (SSL) port"                         ),
+  CMD_OPTION_STRING ("server-ca-file",           0,  0,serverCAFileName,                        NULL,                                                           "server TLS CA file","file name"                ),
+  CMD_OPTION_STRING ("server-cert-file",         0,  0,serverCertFileName,                      NULL,                                                           "server TLS certificate file","file name"       ),
+  CMD_OPTION_STRING ("server-key-file",          0,  0,serverKeyFileName,                       NULL,                                                           "server TLS key file","file name"               ),
   CMD_OPTION_STRING ("server-password",          0,  0,serverPassword,                          NULL,                                                           "server password (use with care!)",NULL         ),
 
 //  CMD_OPTION_BOOLEAN("incremental",              0,  0,defaultOptions.incrementalFlag,        FALSE,                                                          "overwrite existing files"                      ),
@@ -488,29 +488,29 @@ const char *getErrorText(Errors error)
 
   switch (error)
   {
-    CASE(ERROR_NONE,                   "none"                        );
+    CASE(ERROR_NONE,                   "none"                          );
 
-    CASE(ERROR_INSUFFICIENT_MEMORY,    "insufficient memory"         );
-    CASE(ERROR_INIT,                   "init"                        );
+    CASE(ERROR_INSUFFICIENT_MEMORY,    "insufficient memory"           );
+    CASE(ERROR_INIT,                   "init"                          );
 
-    CASE(ERROR_INVALID_PATTERN,        "init pattern matching"       );
+    CASE(ERROR_INVALID_PATTERN,        "init pattern matching"         );
 
-    CASE(ERROR_INIT_TLS,        "init pattern matching"       );
-    CASE(ERROR_INIT_INVALID_CERTIFICATE,        "init pattern matching"       );
-    CASE(ERROR_TLS_HANDSHAKE,        "init pattern matching"       );
+    CASE(ERROR_INIT_TLS,                "init TLS (SSL)"               );
+    CASE(ERROR_INIT_INVALID_CERTIFICATE,"invalid TLS (SSL) certificate");
+    CASE(ERROR_TLS_HANDSHAKE,           "TLS (SSL) handshake failure"  );
 
-    CASE(ERROR_INIT_COMPRESS,          "init compress"               );
-    CASE(ERROR_COMPRESS_ERROR,         "compress"                    );
-    CASE(ERROR_DEFLATE_ERROR,          "deflate"                     );
-    CASE(ERROR_INFLATE_ERROR,          "inflate"                     );
+    CASE(ERROR_INIT_COMPRESS,          "init compress"                 );
+    CASE(ERROR_COMPRESS_ERROR,         "compress"                      );
+    CASE(ERROR_DEFLATE_ERROR,          "deflate"                       );
+    CASE(ERROR_INFLATE_ERROR,          "inflate"                       );
 
-    CASE(ERROR_UNSUPPORTED_BLOCK_SIZE, "unsupported block size"      );
-    CASE(ERROR_INIT_CRYPT,             "init crypt"                  );
-    CASE(ERROR_NO_PASSWORD,            "no password given for cipher");
-    CASE(ERROR_INVALID_PASSWORD,       "invalid password"            );
-    CASE(ERROR_INIT_CIPHER,            "init cipher"                 );
-    CASE(ERROR_ENCRYPT_FAIL,           "encrypt"                     );
-    CASE(ERROR_DECRYPT_FAIL,           "decrypt"                     );
+    CASE(ERROR_UNSUPPORTED_BLOCK_SIZE, "unsupported block size"        );
+    CASE(ERROR_INIT_CRYPT,             "init crypt"                    );
+    CASE(ERROR_NO_PASSWORD,            "no password given for cipher"  );
+    CASE(ERROR_INVALID_PASSWORD,       "invalid password"              );
+    CASE(ERROR_INIT_CIPHER,            "init cipher"                   );
+    CASE(ERROR_ENCRYPT_FAIL,           "encrypt"                       );
+    CASE(ERROR_DECRYPT_FAIL,           "decrypt"                       );
 
     case ERROR_CREATE_FILE:
     case ERROR_OPEN_FILE:
@@ -519,30 +519,30 @@ const char *getErrorText(Errors error)
       strncpy(errorText,strerror(errno),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
       return errorText;
       break;
-    CASE(ERROR_FILE_EXITS,             "file already exists"         );
-    CASE(ERROR_FILE_NOT_FOUND,         "file not found"              );
+    CASE(ERROR_FILE_EXITS,             "file already exists"           );
+    CASE(ERROR_FILE_NOT_FOUND,         "file not found"                );
 
-    CASE(ERROR_END_OF_ARCHIVE,         "end of archive"              );
-    CASE(ERROR_NO_FILE_ENTRY,          "no file entry"               );
-    CASE(ERROR_NO_FILE_DATA,           "no data entry"               );
-    CASE(ERROR_END_OF_DATA,            "end of data"                 );
-    CASE(ERROR_CRC_ERROR,              "CRC error"                   );
-    CASE(ERROR_FILE_INCOMPLETE,        "file is incomplete"          );
-    CASE(ERROR_WRONG_FILE_TYPE,        "wrong file type"             );
-    CASE(ERROR_FILES_DIFFER,           "files differ"                );
+    CASE(ERROR_END_OF_ARCHIVE,         "end of archive"                );
+    CASE(ERROR_NO_FILE_ENTRY,          "no file entry"                 );
+    CASE(ERROR_NO_FILE_DATA,           "no data entry"                 );
+    CASE(ERROR_END_OF_DATA,            "end of data"                   );
+    CASE(ERROR_CRC_ERROR,              "CRC error"                     );
+    CASE(ERROR_FILE_INCOMPLETE,        "file is incomplete"            );
+    CASE(ERROR_WRONG_FILE_TYPE,        "wrong file type"               );
+    CASE(ERROR_FILES_DIFFER,           "files differ"                  );
 
-    CASE(ERROR_HOST_NOT_FOUND,         "host not found"              );
+    CASE(ERROR_HOST_NOT_FOUND,         "host not found"                );
     case ERROR_CONNECT_FAIL:
       strncpy(errorText,strerror(errno),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
       return errorText;
       break;
-    CASE(ERROR_NO_SSH_PASSWORD,        "no ssh password given"       );
-    CASE(ERROR_SSH_SESSION_FAIL,       "initialize ssh session fail" );
-    CASE(ERROR_SSH_AUTHENTIFICATION,   "invalid ssh password"        );
-    CASE(ERROR_NETWORK_SEND,           "sending data fail"           );
-    CASE(ERROR_NETWORK_RECEIVE,        "receiving data fail"         );
+    CASE(ERROR_NO_SSH_PASSWORD,        "no ssh password given"         );
+    CASE(ERROR_SSH_SESSION_FAIL,       "initialize ssh session fail"   );
+    CASE(ERROR_SSH_AUTHENTIFICATION,   "invalid ssh password"          );
+    CASE(ERROR_NETWORK_SEND,           "sending data fail"             );
+    CASE(ERROR_NETWORK_RECEIVE,        "receiving data fail"           );
 
-    DEFAULT(                           "unknown"                     );
+    DEFAULT(                           "unknown"                       );
   }
 
   #undef DEFAULT
@@ -673,8 +673,9 @@ int main(int argc, const char *argv[])
           /* get archive filename */
           if (argc < 1)
           {
-            printError("no archive filename given!\n");
-            return EXITCODE_INVALID_ARGUMENT;
+            printError("No archive filename given!\n");
+            error = ERROR_INVALID_ARGUMENT;
+            break;
           }
           archiveFileName = argv[1];
 
@@ -749,8 +750,18 @@ int main(int argc, const char *argv[])
   else
   {
     /* daemon mode -> run server */
-    if (serverPort == 0) serverPort = serverSSLFlag?DEFAULT_SERVER_SSL_PORT:DEFAULT_SERVER_PORT;
-    error = Server_run(serverPort,serverPassword,serverSSLFlag?SERVER_TYPE_SSL:SERVER_TYPE_PLAIN);
+    if ((serverPort != 0) || (serverTLSPort != 0))
+    {
+      error = Server_run(serverPort,
+                         serverTLSPort,
+                         serverPassword
+                        );
+    }
+    else
+    {
+      printError("No port number specified!\n");
+      error = ERROR_INVALID_ARGUMENT;
+    }
   }
 
   /* free resources */

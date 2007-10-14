@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1552,7 +1552,14 @@ String String_sub(String string, const String fromString, ulong index, long leng
 
       if (index < fromString->length)
       {
-        n = MIN(length,fromString->length-index);
+        if (index == STRING_END)
+        {
+          n = MIN(fromString->length,fromString->length-index);
+        }
+        else
+        {
+          n = MIN(length,fromString->length-index);
+        }
         ensureStringLength(string,n);
         memcpy(&string->data[0],&fromString->data[index],n);
         string->data[n] ='\0';
@@ -1569,6 +1576,74 @@ String String_sub(String string, const String fromString, ulong index, long leng
   UPDATE_VALID(string);
 
   return string;
+}
+
+char *String_subCString(char *s, const String fromString, ulong index, long length)
+{
+  ulong n;
+
+  assert(s != NULL);
+
+  CHECK_VALID(fromString);
+
+  if (length > 0)
+  {
+    if (fromString != NULL)
+    {
+      assert(fromString->data != NULL);
+
+      if (index < fromString->length)
+      {
+        n = MIN(length-1,fromString->length-index);
+        memcpy(s,&fromString->data[index],n);
+        s[n] = '\0';
+      }
+      else
+      {
+        s[0] = '\0';
+      }
+    }
+    else
+    {
+      s[0] = '\0';
+    }
+  }
+
+  return s;
+}
+
+char *String_subBuffer(char *buffer, const String fromString, ulong index, long length)
+{
+  ulong n;
+
+  assert(buffer != NULL);
+
+  CHECK_VALID(fromString);
+
+  if (length > 0)
+  {
+    if (fromString != NULL)
+    {
+      assert(fromString->data != NULL);
+
+      if (index < fromString->length)
+      {
+        n = MIN(length,fromString->length-index);
+        memcpy(&buffer[0],&fromString->data[index],n);
+        memset(&buffer[n],0,length-n);
+      }
+      else
+      {
+        memset(buffer,0,length);
+      }
+    }
+    else
+    {
+      memset(buffer,0,length);
+    }
+  }
+
+  return buffer;
 }
 
 String String_append(String string, const String appendString)

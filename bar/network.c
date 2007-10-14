@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
-* Contents: 
-* Systems :
+* Contents: Network functions
+* Systems: all
 *
 \***********************************************************************/
 
@@ -192,7 +192,7 @@ void Network_disconnect(SocketHandle *socketHandle)
   {
     case SOCKET_TYPE_PLAIN:
       break;
-    case SOCKET_TYPE_SSL:
+    case SOCKET_TYPE_TLS:
       gnutls_deinit(socketHandle->gnuTLSSession);
       break;
     #ifndef NDEBUG
@@ -225,7 +225,7 @@ Errors Network_send(SocketHandle *socketHandle,
     case SOCKET_TYPE_PLAIN:
       sentBytes = send(socketHandle->handle,buffer,length,0);
       break;
-    case SOCKET_TYPE_SSL:
+    case SOCKET_TYPE_TLS:
       sentBytes = gnutls_record_send(socketHandle->gnuTLSSession,buffer,length);
       break;
     #ifndef NDEBUG
@@ -254,7 +254,7 @@ Errors Network_receive(SocketHandle *socketHandle,
     case SOCKET_TYPE_PLAIN:
       n = recv(socketHandle->handle,buffer,maxLength,0);
       break;
-    case SOCKET_TYPE_SSL:
+    case SOCKET_TYPE_TLS:
       n = gnutls_record_recv(socketHandle->gnuTLSSession,buffer,maxLength);
       break;
     #ifndef NDEBUG
@@ -348,14 +348,14 @@ Errors Network_accept(SocketHandle             *socketHandle,
     return ERROR_CONNECT_FAIL;
   }
 
-  /* initialise SSL session */
+  /* initialise TLS session */
   switch (serverSocketHandle->type)
   {
     case SERVER_TYPE_PLAIN:
       socketHandle->type = SOCKET_TYPE_PLAIN;
       break;
-    case SERVER_TYPE_SSL:
-      socketHandle->type = SOCKET_TYPE_SSL;
+    case SERVER_TYPE_TLS:
+      socketHandle->type = SOCKET_TYPE_TLS;
 
       /* initialise session */
       if (gnutls_init(&socketHandle->gnuTLSSession,GNUTLS_SERVER) != 0)
