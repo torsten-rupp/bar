@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/errors.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver errors
 * Systems : all
@@ -31,6 +31,7 @@ typedef enum
   ERROR_INVALID_ARGUMENT,
   ERROR_CONFIG,
   ERROR_ABORTED,
+  ERROR_FUNCTION_NOT_SUPPORTED,
 
   /* pattern matching errors */
   ERROR_INVALID_PATTERN,

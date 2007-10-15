@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -11,6 +11,7 @@
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
+#include <libssh2.h>
 #include <assert.h>
 
 #include "global.h"
@@ -521,6 +522,11 @@ Errors Storage_open(StorageInfo *storageInfo, String storageName)
 {
   assert(storageInfo != NULL);
   assert(storageName != NULL);
+
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(storageName);
+
+  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
   return ERROR_NONE;
 }

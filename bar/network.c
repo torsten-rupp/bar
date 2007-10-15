@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -36,14 +36,19 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define DH_BITS 1024
+#ifdef HAVE_GNU_TLS
+  #define DH_BITS 1024
+#else /* not HAVE_GNU_TLS */
+#endif /* HAVE_GNU_TLS */
 
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL bool                             initTLSFlag;
-LOCAL gnutls_certificate_credentials_t gnuTLSCredentials;
-LOCAL gnutls_dh_params_t               gnuTLSDHParams;
+#ifdef HAVE_GNU_TLS
+  LOCAL bool                             initTLSFlag;
+  LOCAL gnutls_certificate_credentials_t gnuTLSCredentials;
+  LOCAL gnutls_dh_params_t               gnuTLSDHParams;
+#endif /* HAVE_GNU_TLS */
 
 /****************************** Macros *********************************/
 
@@ -60,71 +65,81 @@ Errors Network_init(const char *caFileName,
                     const char *keyFileName
                    )
 {
-  int result;
+  #ifdef HAVE_GNU_TLS
+    int result;
+  #endif /* HAVE_GNU_TLS */
 
-  if (   (caFileName != NULL)
-      || (certFileName != NULL)
-      || (keyFileName != NULL)
-     )
-  {
-    gnutls_global_init();
-    gnutls_global_set_log_level(10);
-
-    if (gnutls_certificate_allocate_credentials(&gnuTLSCredentials) != 0)
+  #ifdef HAVE_GNU_TLS
+    if (   (caFileName != NULL)
+        || (certFileName != NULL)
+        || (keyFileName != NULL)
+       )
     {
-      printError("Initialize TLS fail!\n");
-      return ERROR_INIT_TLS;
-    }
-    result = gnutls_certificate_set_x509_trust_file(gnuTLSCredentials,
-                                                    caFileName,
+      gnutls_global_init();
+      gnutls_global_set_log_level(10);
+
+      if (gnutls_certificate_allocate_credentials(&gnuTLSCredentials) != 0)
+      {
+        printError("Initialize TLS fail!\n");
+        return ERROR_INIT_TLS;
+      }
+      result = gnutls_certificate_set_x509_trust_file(gnuTLSCredentials,
+                                                      caFileName,
+                                                      GNUTLS_X509_FMT_PEM
+                                                     );
+      if (result < 0)
+      {
+        printError("Cannot load CA file: %s\n",gnutls_strerror(result));
+        gnutls_certificate_free_credentials (gnuTLSCredentials);
+        return ERROR_INIT_TLS;
+      }
+      result = gnutls_certificate_set_x509_key_file(gnuTLSCredentials,
+                                                    certFileName,
+                                                    keyFileName,
                                                     GNUTLS_X509_FMT_PEM
                                                    );
-    if (result < 0)
-    {
-      printError("Cannot load CA file: %s\n",gnutls_strerror(result));
-      gnutls_certificate_free_credentials (gnuTLSCredentials);
-      return ERROR_INIT_TLS;
-    }
-    result = gnutls_certificate_set_x509_key_file(gnuTLSCredentials,
-                                                  certFileName,
-                                                  keyFileName,
-                                                  GNUTLS_X509_FMT_PEM
-                                                 );
-    if (result < 0)
-    {
-      printError("Cannot load certificate/key file: %s\n",gnutls_strerror(result));
-      gnutls_certificate_free_credentials (gnuTLSCredentials);
-      return ERROR_INIT_TLS;
-    }
+      if (result < 0)
+      {
+        printError("Cannot load certificate/key file: %s\n",gnutls_strerror(result));
+        gnutls_certificate_free_credentials (gnuTLSCredentials);
+        return ERROR_INIT_TLS;
+      }
 
-    gnutls_dh_params_init(&gnuTLSDHParams);
-    result = gnutls_dh_params_generate2(gnuTLSDHParams,DH_BITS);
-    if (result < 0)
-    {
-      printError("Generate DH parameter fail: %s\n",gnutls_strerror(result));
-      gnutls_dh_params_deinit(gnuTLSDHParams);
-      gnutls_certificate_free_credentials (gnuTLSCredentials);
-      return ERROR_INIT_TLS;
-    }
-    gnutls_certificate_set_dh_params(gnuTLSCredentials,gnuTLSDHParams);
+      gnutls_dh_params_init(&gnuTLSDHParams);
+      result = gnutls_dh_params_generate2(gnuTLSDHParams,DH_BITS);
+      if (result < 0)
+      {
+        printError("Generate DH parameter fail: %s\n",gnutls_strerror(result));
+        gnutls_dh_params_deinit(gnuTLSDHParams);
+        gnutls_certificate_free_credentials (gnuTLSCredentials);
+        return ERROR_INIT_TLS;
+      }
+      gnutls_certificate_set_dh_params(gnuTLSCredentials,gnuTLSDHParams);
 
-    initTLSFlag = TRUE;
-  }
-  else
-  {
-    initTLSFlag = FALSE;
-  }
+      initTLSFlag = TRUE;
+    }
+    else
+    {
+      initTLSFlag = FALSE;
+    }
+  #else /* not HAVE_GNU_TLS */
+    UNUSED_VARIABLE(caFileName);
+    UNUSED_VARIABLE(certFileName);
+    UNUSED_VARIABLE(keyFileName);
+  #endif /* HAVE_GNU_TLS */
 
   return ERROR_NONE;
 }
 
 void Network_done(void)
 {
-  if (initTLSFlag)
-  {
-    gnutls_dh_params_deinit(gnuTLSDHParams);
-    gnutls_certificate_free_credentials(gnuTLSCredentials);
-  }
+  #ifdef HAVE_GNU_TLS
+    if (initTLSFlag)
+    {
+      gnutls_dh_params_deinit(gnuTLSDHParams);
+      gnutls_certificate_free_credentials(gnuTLSCredentials);
+    }
+  #endif /* HAVE_GNU_TLS */
 }
 
 Errors Network_connect(SocketHandle *socketHandle,
@@ -193,7 +208,10 @@ void Network_disconnect(SocketHandle *socketHandle)
     case SOCKET_TYPE_PLAIN:
       break;
     case SOCKET_TYPE_TLS:
-      gnutls_deinit(socketHandle->gnuTLSSession);
+      #ifdef HAVE_GNU_TLS
+        gnutls_deinit(socketHandle->gnuTLSSession);
+      #else /* not HAVE_GNU_TLS */
+      #endif /* HAVE_GNU_TLS */
       break;
     #ifndef NDEBUG
       default:
@@ -226,7 +244,11 @@ Errors Network_send(SocketHandle *socketHandle,
       sentBytes = send(socketHandle->handle,buffer,length,0);
       break;
     case SOCKET_TYPE_TLS:
-      sentBytes = gnutls_record_send(socketHandle->gnuTLSSession,buffer,length);
+      #ifdef HAVE_GNU_TLS
+        sentBytes = gnutls_record_send(socketHandle->gnuTLSSession,buffer,length);
+      #else /* not HAVE_GNU_TLS */
+        sentBytes = 0L;
+      #endif /* HAVE_GNU_TLS */
       break;
     #ifndef NDEBUG
       default:
@@ -255,7 +277,11 @@ Errors Network_receive(SocketHandle *socketHandle,
       n = recv(socketHandle->handle,buffer,maxLength,0);
       break;
     case SOCKET_TYPE_TLS:
-      n = gnutls_record_recv(socketHandle->gnuTLSSession,buffer,maxLength);
+      #ifdef HAVE_GNU_TLS
+        n = gnutls_record_recv(socketHandle->gnuTLSSession,buffer,maxLength);
+      #else /* not HAVE_GNU_TLS */
+        n = 0L;
+      #endif /* HAVE_GNU_TLS */
       break;
     #ifndef NDEBUG
       default:
@@ -355,43 +381,47 @@ Errors Network_accept(SocketHandle             *socketHandle,
       socketHandle->type = SOCKET_TYPE_PLAIN;
       break;
     case SERVER_TYPE_TLS:
-      socketHandle->type = SOCKET_TYPE_TLS;
+      #ifdef HAVE_GNU_TLS
+        socketHandle->type = SOCKET_TYPE_TLS;
 
-      /* initialise session */
-      if (gnutls_init(&socketHandle->gnuTLSSession,GNUTLS_SERVER) != 0)
-      {
-        close(socketHandle->handle);
-        return ERROR_INIT_TLS;
-      }
+        /* initialise session */
+        if (gnutls_init(&socketHandle->gnuTLSSession,GNUTLS_SERVER) != 0)
+        {
+          close(socketHandle->handle);
+          return ERROR_INIT_TLS;
+        }
 
-      if (gnutls_set_default_priority(socketHandle->gnuTLSSession) != 0)
-      {
-        gnutls_deinit(socketHandle->gnuTLSSession);
-        close(socketHandle->handle);
-        return ERROR_INIT_TLS;
-      }
+        if (gnutls_set_default_priority(socketHandle->gnuTLSSession) != 0)
+        {
+          gnutls_deinit(socketHandle->gnuTLSSession);
+          close(socketHandle->handle);
+          return ERROR_INIT_TLS;
+        }
 
-      if (gnutls_credentials_set(socketHandle->gnuTLSSession,GNUTLS_CRD_CERTIFICATE,gnuTLSCredentials) != 0)
-      {
-        gnutls_deinit(socketHandle->gnuTLSSession);
-        close(socketHandle->handle);
-        return ERROR_INIT_TLS;
-      }
+        if (gnutls_credentials_set(socketHandle->gnuTLSSession,GNUTLS_CRD_CERTIFICATE,gnuTLSCredentials) != 0)
+        {
+          gnutls_deinit(socketHandle->gnuTLSSession);
+          close(socketHandle->handle);
+          return ERROR_INIT_TLS;
+        }
 
-      gnutls_certificate_server_set_request(socketHandle->gnuTLSSession,GNUTLS_CERT_REQUEST);
-    //  gnutls_certificate_server_set_request(socketHandle->gnuTLSSession,GNUTLS_CERT_REQUIRE);
+        gnutls_certificate_server_set_request(socketHandle->gnuTLSSession,GNUTLS_CERT_REQUEST);
+      //  gnutls_certificate_server_set_request(socketHandle->gnuTLSSession,GNUTLS_CERT_REQUIRE);
 
-      gnutls_dh_set_prime_bits(socketHandle->gnuTLSSession,DH_BITS);
-      gnutls_transport_set_ptr(socketHandle->gnuTLSSession,(gnutls_transport_ptr_t)socketHandle->handle);
+        gnutls_dh_set_prime_bits(socketHandle->gnuTLSSession,DH_BITS);
+        gnutls_transport_set_ptr(socketHandle->gnuTLSSession,(gnutls_transport_ptr_t)socketHandle->handle);
 
-      /* do handshake */
-      result = gnutls_handshake(socketHandle->gnuTLSSession);
-      if (result < 0)
-      {
-        gnutls_deinit(socketHandle->gnuTLSSession);
-        close(socketHandle->handle);
-        return ERROR_TLS_HANDSHAKE;
-      }
+        /* do handshake */
+        result = gnutls_handshake(socketHandle->gnuTLSSession);
+        if (result < 0)
+        {
+          gnutls_deinit(socketHandle->gnuTLSSession);
+          close(socketHandle->handle);
+          return ERROR_TLS_HANDSHAKE;
+        }
+      #else /* not HAVE_GNU_TLS */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_GNU_TLS */
       break;
       #ifndef NDEBUG
         default:

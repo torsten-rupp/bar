@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -464,11 +464,11 @@ LOCAL void formatString(struct __String *string,
                 #endif /* _LONG_LONG || HAVE_LONG_LONG */
               }
               break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break; /* not reached */
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break; /* not reached */
           }
           break;
         case 'o':
@@ -526,11 +526,11 @@ LOCAL void formatString(struct __String *string,
                 #endif /* _LONG_LONG || HAVE_LONG_LONG */
               }
               break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break; /* not reached */
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break; /* not reached */
           }
           break;
         case 'e':

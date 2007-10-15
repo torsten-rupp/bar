@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -564,6 +564,8 @@ Errors Chunks_new(ChunkInfo *chunkInfo,
 void Chunks_delete(ChunkInfo *chunkInfo)
 {
   assert(chunkInfo != NULL);
+
+  UNUSED_VARIABLE(chunkInfo);
 }
 
 Errors Chunks_next(void        *userData,

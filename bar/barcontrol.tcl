@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -83,8 +83,7 @@ set barControlConfig(jobListUpdateTime)    5000
 set barControlConfig(currentJobUpdateTime) 1000
 
 set guiMode 0
-#set passwordObfuscateValue [expr {[clock clicks]%256}]
-set passwordObfuscator "\0\0\0\0\0\0\0\0"
+set passwordObfuscator [format "%c%c%c%c%c%c%c%c" [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}]]
 
 # server variables
 set server(socketHandle)     -1
@@ -227,6 +226,15 @@ proc internalError { args } \
 {
   error "INTERNAL ERROR: [join $args]"
 }
+
+#***********************************************************************
+# Name   : Dialog:...
+# Purpose: basic dialog functions
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
 
 proc Dialog:new { title } \
 {
@@ -2658,7 +2666,7 @@ while {$z<[llength $argv]} \
     }
     default
     {
-      set configName [llength $argv]
+      set configName [lindex $argv $z]
     }
   }
   incr z

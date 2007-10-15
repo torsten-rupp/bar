@@ -3,38 +3,37 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile,v $
-# $Revision: 1.33 $
+# $Revision: 1.34 $
 # $Author: torsten $
 # Contents: Makefile for bar
-# Systems : all
+# Systems: all
 #			   
 # ----------------------------------------------------------------------------
 
 #--------------------------------- tool chain --------------------------------
 
-CC                  = gcc
-CC_FLAGS            = -g -O0
+CC                  = /usr/bin/gcc
+CC_FLAGS            =  -g
 CC_WARN_FLAGS       = -Wall -Wpointer-arith -Wunused-label -Wunused-parameter -Wunused-variable -Wmissing-prototypes -Wmissing-declarations
-CC_DEFINES          = -D_LARGEFILE64_SOURCE -D_GNU_SOURCE -D_LONG_LONG
-CC_INCLUDES         =
+CC_OPTIMIZE         =  -O0
+CC_DEFINES          =  _LARGEFILE64_SOURCE _GNU_SOURCE
+# -D_LONG_LONG
+CC_INCLUDES         = 
 
-LD                  = gcc
-LD_FLAGS            =
-LD_LIBRARY_PATHS    = /usr/local/lib
-LD_LIBRARIES        = m pthread z bz2 gcrypt gpg-error ssh2 gnutls
+LD                  = /usr/bin/gcc
+LD_FLAGS            = 
+LD_LIBRARY_PATHS    =  /usr/local/lib
+LD_LIBRARIES        = c m pthread  z bz2 gcrypt gpg-error ssh2 gnutls
 LD_STATIC_LIBRARIES = 
-
-YACC                = bison
-YACC_FLAGS          =
 
 #---------------------------------- commands----------------------------------
 
-ECHO = echo
+ECHO       = echo
 ECHO_NO_LF = echo -n
-RMF  = rm -f
-RMRF = rm -rf
-PERL = perl
-DIFF = diff
+RMF        = rm -f
+RMRF       = rm -rf
+PERL       = /usr/bin/perl
+DIFF       = diff
 
 #------------------------ specific variables/settings ------------------------
 
@@ -49,7 +48,7 @@ TEST_PASSWORD=franz_kafka
 #---------------------------------- rules ------------------------------------
 
 %.o:%.c
-	$(CC) $(CC_FLAGS) $(CC_WARN_FLAGS) $(CC_DEFINES) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_WARN_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 %:%.o
 	$(LD) \
@@ -97,8 +96,7 @@ DESTROYER_SOURCES  = destroyer.c \
                      lists.c \
                      strings.c \
 
-DESTROYER_OBJECTS  = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z))
-
+DESTROYER_OBJECTS  = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
 
 INTERMEDIATE       = archive_format.c \
                      archive_format.h \
@@ -115,7 +113,11 @@ clean:
 		$(RMF) $(BAR_OBJECTS) $(DESTROYER_OBJECTS) $(INTERMEDIATE) $(TARGETS)
 
 distclean: clean
+	$(RMF) Makefile
+	$(RMF) config.h
 	$(RMF) Makefile.depend
+	$(RMF) config.status
+	$(RMF) config.log
 
 depend: archive_format.h
 	$(ECHO) > Makefile.depend
@@ -128,7 +130,7 @@ bar: $(BAR_OBJECTS)
 
 # create destroyer (for testing only!)
 destroyer: $(DESTROYER_OBJECTS) 
-	$(LD) $(LD_FLAGS) -o $@ $^ -lpthread
+	$(LD) $(LD_FLAGS) -o $@ $^ -lc -lpthread
 
 archive_format.h: archive_format.def
 	$(PERL) archive_format.pl < $^ -h $@
@@ -172,19 +174,9 @@ bar-server-cert.pem: bar-server-key.pem
           --outfile $@ \
           1>/dev/null 2>/dev/null
 
-#	certtool \
-#          --generate-crl \
-#          --template ssl/server.tmpl \
-#          --load-privkey key-server.pem \
-#          --load-ca-certificate ca.pem \
-#          --load-ca-privkey key-ca.pem \
-#          --outfile server-crl.pem
-#	certtool --generate-privkey --outfile client-key.pem
-#	certtool --generate-certificate --template doc/credentials/client.tmpl --load-privkey client-key.pem --load-ca-certificate ca.pem --load-ca-privkey ca-key.pem --outfile client-cert.pem
-
 # run server
 .PHONY: barserver barserver_ssl
-barserver: bar
+barserver: bar bar-ca.pem bar-key.pem bar-server-cert.pem bar-server-key.pem
 	./bar \
           --daemon
 

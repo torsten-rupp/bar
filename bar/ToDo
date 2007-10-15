@@ -9,5 +9,5 @@ ToDo
 - support ssh-agent (extend libssh2?)
 - configure
 - network bandwidth limitation
-- ssl-network command interface
-- server password
+- logfile
+- secure password memory

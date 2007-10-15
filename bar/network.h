@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -39,7 +39,9 @@ typedef struct
 {
   SocketTypes      type;
   int              handle; 
-  gnutls_session_t gnuTLSSession;
+  #ifdef HAVE_GNU_TLS
+    gnutls_session_t gnuTLSSession;
+  #endif /* HAVE_GNU_TLS */
 } SocketHandle;
 
 typedef enum

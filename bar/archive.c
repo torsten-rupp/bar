@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -1332,6 +1332,8 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
   assert(archiveFileInfo != NULL);
   assert(fileType != NULL);
 
+  UNUSED_VARIABLE(archiveFileInfo);
+
   /* find next file, directory, link chunk */
   do
   {
@@ -2133,11 +2135,11 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           String_delete(archiveFileInfo->link.chunkLinkEntry.name);
           String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
           break;
-        #ifndef NDEBUG
-          default:
+        default:
+          #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
+          #endif /* NDEBUG */
+          break; /* not reached */
       }
       break;
     case FILE_MODE_READ:
@@ -2195,11 +2197,11 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           String_delete(archiveFileInfo->link.chunkLinkEntry.name);
           String_delete(archiveFileInfo->link.chunkLinkEntry.fileName);
           break;
-        #ifndef NDEBUG
-          default:
+        default:
+          #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
+          #endif /* NDEBUG */
+          break; /* not reached */
       }
       break;
   }

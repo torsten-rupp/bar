@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -50,7 +50,11 @@
 #define DEFAULT_TMP_DIRECTORY          "/tmp"
 #define DEFAULT_COMPRESS_MIN_FILE_SIZE 32
 #define DEFAULT_SERVER_PORT            38523
-#define DEFAULT_SERVER_TLS_PORT        38524
+#ifdef HAVE_GNU_TLS
+  #define DEFAULT_SERVER_TLS_PORT        38524
+#else /* not HAVE_GNU_TLS */
+  #define DEFAULT_SERVER_TLS_PORT        0
+#endif /* HAVE_GNU_TLS */
 
 /***************************** Datatypes *******************************/
 
@@ -787,6 +791,8 @@ int main(int argc, const char *argv[])
       break;
     case ERROR_CONFIG:
       return EXITCODE_CONFIG_ERROR;
+    case ERROR_FUNCTION_NOT_SUPPORTED:
+      return EXITCODE_FUNCTION_NOT_SUPPORTED;
       break;
     default:
       return EXITCODE_FAIL;

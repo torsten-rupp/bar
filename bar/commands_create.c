@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -1060,7 +1060,6 @@ Errors Command_create(const char               *archiveFileName,
   {
     if (createInfo.error == ERROR_NONE)
     {
-#if 1
       info(1,"Add '%s'...",String_cString(fileName));
 
       switch (fileType)
@@ -1302,13 +1301,12 @@ Errors Command_create(const char               *archiveFileName,
             info(1,"ok\n");
           }
           break;
-        #ifndef NDEBUG
-          default:
+        default:
+          #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
+          #endif /* NDEBUG */
+          break; /* not reached */
       }
-#endif /* 0 */
     }
   }
   if ((abortRequestFlag != NULL) && (*abortRequestFlag))

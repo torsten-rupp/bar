@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -1663,14 +1663,21 @@ Errors Server_run(uint       serverPort,
   }
   if (serverTLSPort != 0)
   {
-    error = Network_initServer(&serverTLSSocketHandle,serverTLSPort,SERVER_TYPE_TLS);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot initialize SSL/TLS server (error: %s)!\n",
-                 getErrorText(error)
-                );
-      return FALSE;
-    }
+    #ifdef HAVE_GNU_TLS
+      error = Network_initServer(&serverTLSSocketHandle,serverTLSPort,SERVER_TYPE_TLS);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot initialize SSL/TLS server (error: %s)!\n",
+                   getErrorText(error)
+                  );
+        Network_doneServer(&serverSocketHandle);
+        return FALSE;
+      }
+  #else /* not HAVE_GNU_TLS */
+    printError("SSL/TLS server is not supported!\n");
+    Network_doneServer(&serverSocketHandle);
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_GNU_TLS */
   }
 
   /* start job-thread */

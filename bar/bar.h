@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -40,6 +40,7 @@ typedef enum
 
   EXITCODE_INIT_FAIL=125,
   EXITCODE_FATAL_ERROR=126,
+  EXITCODE_FUNCTION_NOT_SUPPORTED=127,
 
   EXITCODE_UNKNOWN=128
 } ExitCodes;

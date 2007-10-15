@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+
+#include "global.h"
 
 #include "lists.h"
 
@@ -259,6 +261,8 @@ Node *List_findNext(void *list, void *node, ListNodeCompareFunction listNodeComp
 {
   assert(list != NULL);
   assert(listNodeCompareFunction != NULL);
+
+  UNUSED_VARIABLE(list);
 
   if (node != NULL)
   {

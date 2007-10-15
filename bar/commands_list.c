@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -114,6 +114,8 @@ LOCAL void printDirectoryInfo(const String    directoryName,
   assert(directoryName != NULL);
   assert(fileInfo != NULL);
 
+  UNUSED_VARIABLE(fileInfo);
+
   printf("DIR                                                       %-10s %s\n",
          Crypt_getAlgorithmName(cryptAlgorithm),
          String_cString(directoryName)
@@ -138,6 +140,8 @@ LOCAL void printLinkInfo(const String    linkName,
   assert(linkName != NULL);
   assert(fileName != NULL);
   assert(fileInfo != NULL);
+
+  UNUSED_VARIABLE(fileInfo);
 
   printf("LINK                                                      %-10s %s -> %s\n",
          Crypt_getAlgorithmName(cryptAlgorithm),
@@ -361,11 +365,11 @@ Errors Command_list(StringList    *archiveFileNameList,
             String_delete(linkName);
           }
           break;
-        #ifndef NDEBUG
-          default:
+        default:
+          #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
+          #endif /* NDEBUG */
+          break; /* not reached */
       }
     }
 

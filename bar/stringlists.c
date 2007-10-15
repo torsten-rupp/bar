@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -184,6 +184,8 @@ void StringList_remove(StringList *stringList, StringNode *stringNode)
 {
   assert(stringList != NULL);
   assert(stringNode != NULL);
+
+  List_remove(stringList,stringNode);
 }
 
 String StringList_getFirst(StringList *stringList, String string)
