@@ -1,0 +1,246 @@
+dnl --------------------------------------------------------------------
+dnl
+dnl $Source: /home/torsten/cvs/bar/configure.in,v $
+dnl $Revision: 1.1 $
+dnl $Author: torsten $
+dnl Contents: BAR auto-configure script (autoconf)
+dnl
+dnl --------------------------------------------------------------------
+
+dnl ----------------------- additional macros --------------------------
+
+AC_DEFUN([AC_CHECK_LARGEFILE_DEFINES],
+[
+  AC_CACHE_CHECK(
+    [for needed large files defines],
+    ac_largefile_defines,
+    [
+      cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+int main(void) { printf("%p",lseek64); return 0; }
+EOF
+      ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+      if test $rc -eq 0; then
+        ac_largefile_defines=""
+      else
+        ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_largefile_defines="_LARGEFILE64_SOURCE"
+        else
+          ac_largefile_defines=""
+        fi
+      fi
+      rm -f conftest.c conftest.o
+      CC_DEFINES="$CC_DEFINES $ac_largefile_defines"
+    ]
+  )dnl
+  AC_PROVIDE([$0])dnl
+])
+
+AC_DEFUN([AC_CHECK_PTHREAD_DEFINES],
+[
+  AC_CACHE_CHECK(
+    [for needed pthread defines],
+    ac_extended_pthread_defines,
+    [
+      cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <stdio.h>
+#include <pthread.h>
+int main(void) { printf("%p",pthread_mutexattr_settype); return 0; }
+EOF
+      ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+      if test $rc -eq 0; then
+        ac_extended_pthread_defines=""
+      else
+        ${CC} ${CFLAGS} -Wall -Werror -D_GNU_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_extended_pthread_defines="_GNU_SOURCE"
+        else
+          ac_extended_pthread_defines=""
+        fi
+      fi
+      rm -f conftest.c conftest.o
+      CC_DEFINES="$CC_DEFINES $ac_extended_pthread_defines"
+    ]
+  )dnl
+  AC_PROVIDE([$0])dnl
+])
+
+dnl ------------------------- basic settings ---------------------------
+
+dnl --- initialize autoconf
+AC_INIT(.)
+AC_PREREQ(2.53)
+
+dnl --- set source-directory (specify existing source file)
+AC_CONFIG_SRCDIR(bar.c)
+
+dnl --- install-sh, config.sub and config.guess are in this directory.
+AC_CONFIG_AUX_DIR(bin)
+
+dnl --- check bost system
+AC_CANONICAL_HOST
+
+dnl ----------------------- substitute settings ------------------------
+
+AC_SUBST(CC)
+AC_SUBST(LD)
+AC_SUBST(STRIP)
+
+AC_SUBST(CC_FLAGS)
+AC_SUBST(CC_WARN_FLAGS)
+AC_SUBST(CC_OPTIMIZE)
+AC_SUBST(CC_DEFINES)
+AC_SUBST(CC_INCLUDES)
+
+AC_SUBST(LD_FLAGS)
+
+AC_SUBST(LIBRARY_PATHS)
+AC_SUBST(LIBRARIES)
+AC_SUBST(STATIC_LIBRARIES)
+
+AC_SUBST(INSTALL_DIR)                             dnl installation directory
+
+dnl ----------------------- initialize variables -----------------------
+
+CC_FLAGS=""
+CC_DEFINES=""
+CC_OPTIMIZE=""
+CC_INCLUDES=""
+
+LD_FLAGS=""
+LIBRARY_PATHS=""
+LIBRARIES=""
+STATIC_LIBRARIES=""
+
+DEBUG="no"
+
+dnl ------------------------- basic tools/commands ---------------------
+
+dnl --- determine install programs
+dnl AC_PROG_INSTALL
+dnl if test -z "$INSTALL"; then
+dnl  AC_MSG_ERROR([Cannot find a usable 'install' in PATH. Please check your PATH environment variable.])
+dnl fi
+INSTALL="$INSTALL -c"
+
+dnl ---------------------------- check system --------------------------
+
+dnl ---------------------------- directories ---------------------------
+
+dnl --------------------- --with/--without options ---------------------
+
+dnl ------------------- --enable/--disable options ---------------------
+
+AC_ARG_ENABLE(
+  debug,
+  AC_HELP_STRING([--enable-debug],[enable debug version]),
+  [DEBUG=$enableval]
+)
+dnl ------------------------------ programs ----------------------------
+
+AC_PATH_PROGS(CC,gcc cc)
+AC_PATH_PROGS(LD,ld gcc)
+AC_PATH_PROGS(STRIP,strip)
+
+AC_PATH_PROGS(PERL,perl)
+
+if test "$DEBUG" = "yes"; then
+  CC_OPTIMIZE="$CC_OPTIMIZE -O0"
+else
+  CC_OPTIMIZE="$CC_OPTIMIZE -O2"
+  CC_DEFINES="$CC_DEFINES NDEBUG"
+fi
+CC_INCLUDES=""
+
+LD_FLAGS=""
+LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
+
+dnl ------------------ functions/definitions/libraries -----------------
+
+# set variables for tests
+CFLAGS="$CC_FLAGS"
+for z in $CC_DEFINES ""; do
+  if test -n "$z"; then
+    CFLAGS="$CFLAGS -D$z"
+  fi
+done
+for z in $CC_INCLUDES ""; do
+  if test -n "$z"; then
+    CFLAGS="$CFLAGS -I$z"
+  fi
+done
+LDFLAGS="$LD_FLAGS"
+for z in $LIBRARY_PATHS ""; do
+  if test -n "$z"; then
+    LDFLAGS="$LDFLAGS -L$z"
+  fi
+done
+
+dnl AC_SYS_LARGEFILE
+AC_CHECK_LARGEFILE_DEFINES
+AC_CHECK_PTHREAD_DEFINES
+
+#pthread_mutexattr_settype
+
+AC_SEARCH_LIBS(round,                  m,        ,AC_ERROR([n library not found]))
+AC_SEARCH_LIBS(pthread_create,         pthread,  ,AC_ERROR([pthread library not found]))
+AC_SEARCH_LIBS(zlibVersion,            z,        [HAVE_Z=1;        LIBRARIES="$LIBRARIES z";        AC_DEFINE(HAVE_Z,        1,[z installed]        )])
+AC_SEARCH_LIBS(BZ2_bzCompressInit,     bz2,      [HAVE_BZ2=1;      LIBRARIES="$LIBRARIES bz2";      AC_DEFINE(HAVE_BZ2,      1,[bzip2 installed]    )])
+AC_SEARCH_LIBS(gcry_check_version,     gcrypt,   [HAVE_GRYPT=1;    LIBRARIES="$LIBRARIES gcrypt";   AC_DEFINE(HAVE_GRYPT,    1,[gcrypt installed]   )])
+AC_SEARCH_LIBS(gpg_strerror,           gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
+AC_SEARCH_LIBS(libssh2_session_init_ex,ssh2,     [HAVE_SSH2=1;     LIBRARIES="$LIBRARIES ssh2";     AC_DEFINE(HAVE_SSH2,     1,[SSH2 installed]     )])
+AC_SEARCH_LIBS(gnutls_global_init,     gnutls,   [HAVE_GNU_TLS=1;  LIBRARIES="$LIBRARIES gnutls";   AC_DEFINE(HAVE_GNU_TLS,  1,[GNU TLS installed]  )])
+
+#pthread z bz2 gcrypt gpg-error ssh2 gnutls
+
+dnl -------------------------------- misc ------------------------------
+
+dnl ------------ autoheader: top/bottom include for config.h -----------
+
+AC_CONFIG_HEADERS(config.h)
+
+dnl no AC_DEFINE should occur after this line!
+
+AH_TOP([
+#ifndef __CONFIG__
+#define __CONFIG__
+])
+
+AH_TOP([
+])
+
+AH_BOTTOM([#endif /* __CONFIG__ */])
+
+dnl --------------------------------------------------------------------
+
+AC_CONFIG_FILES(Makefile)
+
+AC_CONFIG_COMMANDS(BUILD_NOTE,
+        [echo "";
+         echo "Configuration:";
+         echo "  debug version    : `if test $DEBUG = "yes"; then echo yes; else echo no; fi`";
+         echo "  zip compression  : `if test $HAVE_Z; then echo yes; else echo no; fi`";
+         echo "  bzip2 compression: `if test $HAVE_BZ2; then echo yes; else echo no; fi`";
+         echo "  crypto support   : `if test $HAVE_GRYPT; then echo yes; else echo no; fi`";
+         echo "  SCP/SFTP support : `if test $HAVE_SSH2; then echo yes; else echo no; fi`";
+         echo "  TLS/SSL server   : `if test $HAVE_GNU_TLS; then echo yes; else echo no; fi`";
+        ],
+        DEBUG=$DEBUG
+        HAVE_Z=$HAVE_Z
+        HAVE_BZ2=$HAVE_BZ2
+        HAVE_GRYPT=$HAVE_GRYPT
+        HAVE_SSH2=$HAVE_SSH2
+        HAVE_GNU_TLS=$HAVE_GNU_TLS
+       )
+
+AC_OUTPUT
+
+dnl --- end of file ---
+
+
+
