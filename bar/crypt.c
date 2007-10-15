@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -184,11 +184,11 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
           case CRYPT_ALGORITHM_AES256:     gcryptAlgorithm = GCRY_CIPHER_AES256;     break;
           case CRYPT_ALGORITHM_TWOFISH128: gcryptAlgorithm = GCRY_CIPHER_TWOFISH128; break;
           case CRYPT_ALGORITHM_TWOFISH256: gcryptAlgorithm = GCRY_CIPHER_TWOFISH;    break;
-          #ifndef NDEBUG
-            default:
+          default:
+            #ifndef NDEBUG
               HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; /* not reached */
-          #endif /* NDEBUG */
+            #endif /* NDEBUG */
+            break; /* not reached */
         }
         gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
                                             GCRYCTL_GET_BLKLEN,
@@ -206,11 +206,11 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
         (*blockLength) = n;
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; /* not reached */
   }
 
   return ERROR_NONE;
@@ -269,11 +269,11 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
           case CRYPT_ALGORITHM_AES256:     gcryptAlgorithm = GCRY_CIPHER_AES256;     break;
           case CRYPT_ALGORITHM_TWOFISH128: gcryptAlgorithm = GCRY_CIPHER_TWOFISH128; break;
           case CRYPT_ALGORITHM_TWOFISH256: gcryptAlgorithm = GCRY_CIPHER_TWOFISH;    break;
-          #ifndef NDEBUG
-            default:
+          default:
+            #ifndef NDEBUG
               HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; /* not reached */
-          #endif /* NDEBUG */
+            #endif /* NDEBUG */
+            break; /* not reached */
         }
 
         /* get key length, block length */
@@ -317,11 +317,11 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
           case CRYPT_ALGORITHM_AES256:     keyLength = 256; break;
           case CRYPT_ALGORITHM_TWOFISH128: keyLength = 128; break;
           case CRYPT_ALGORITHM_TWOFISH256: keyLength = 256; break;
-          #ifndef NDEBUG
-            default:
+          default:
+            #ifndef NDEBUG
               HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; /* not reached */
-          #endif /* NDEBUG */
+            #endif /* NDEBUG */
+            break; /* not reached */
         }
         if (keyLength > maxKeyLength)
         {
@@ -385,11 +385,11 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
   #endif /* 0 */
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; /* not reached */
   }
 
   return ERROR_NONE;
@@ -413,11 +413,11 @@ void Crypt_delete(CryptInfo *cryptInfo)
     case CRYPT_ALGORITHM_TWOFISH256:
       gcry_cipher_close(cryptInfo->gcry_cipher_hd);
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; /* not reached */
   }
 }
 
@@ -459,11 +459,11 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
             case CRYPT_ALGORITHM_AES256:     ivLength = 256; break;
             case CRYPT_ALGORITHM_TWOFISH128: ivLength = 128; break;
             case CRYPT_ALGORITHM_TWOFISH256: ivLength = 256; break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break; /* not reached */
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break; /* not reached */
           }
 
           /* set IV */
@@ -486,11 +486,11 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
         }
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; /* not reached */
   }
 
   return ERROR_NONE;
@@ -531,11 +531,11 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
         return ERROR_ENCRYPT_FAIL;
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; /* not reached */
   }
 
   return ERROR_NONE;
@@ -576,11 +576,11 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
         return ERROR_ENCRYPT_FAIL;
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; /* not reached */
   }
 
   return ERROR_NONE;

@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -100,6 +100,10 @@ DESTROYER_OBJECTS  = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
 
 INTERMEDIATE       = archive_format.c \
                      archive_format.h \
+                     bar-key-ca.pem \
+                     bar-ca.pem \
+                     bar-server-key.pem \
+                     bar-server-cert.pem \
 
 TARGETS            = bar \
                      destroyer \
