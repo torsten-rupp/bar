@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.30 $
+* $Revision: 1.31 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -45,7 +45,9 @@
 
 /***************************** Constants *******************************/
 
-#define VERSION "0.01"
+#define __VERSION_TO_STRING(z) __VERSION_TO_STRING_TMP(z)
+#define __VERSION_TO_STRING_TMP(z) #z
+#define VERSION __VERSION_TO_STRING(VERSION_MAJOR) "." __VERSION_TO_STRING(VERSION_MINOR)
 
 #define DEFAULT_CONFIG_FILE_NAME       "bar.cfg"
 #define DEFAULT_TMP_DIRECTORY          "/tmp"

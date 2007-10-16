@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -301,7 +301,6 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
     File_doneSplitFileName(&fileNameTokenizer);
 
     /* find files */
-fprintf(stderr,"%s,%d: bnase basePath=%s\n",__FILE__,__LINE__,String_cString(basePath));
     StringList_append(&nameList,basePath);
     while (   !createInfo->collectorThreadExitFlag
            && (createInfo->error == ERROR_NONE)
@@ -744,7 +743,6 @@ LOCAL Errors storeArchiveFile(String fileName,
 
     /* send to storage controller */
     Semaphore_lock(&createInfo->storageSemaphore);
-fprintf(stderr,"%s,%d: Semaphore locked by main\n",__FILE__,__LINE__);
     createInfo->storageCount      += 1;
     createInfo->storageBytes      += fileSize;
     createInfo->storageTotalBytes += fileSize;
@@ -759,7 +757,6 @@ fprintf(stderr,"%s,%d: Semaphore locked by main\n",__FILE__,__LINE__);
     if (createInfo->options->maxTmpSize > 0)
     {
       Semaphore_lock(&createInfo->storageSemaphore);
-fprintf(stderr,"%s,%d: Semaphore locked by main2\n",__FILE__,__LINE__);
       while ((createInfo->storageCount > 2) && (createInfo->storageBytes > createInfo->options->maxTmpSize))
       {
         Semaphore_waitModified(&createInfo->storageSemaphore);
@@ -899,7 +896,6 @@ fprintf(stderr,"%s,%d: FAIL - only delete files \n",__FILE__,__LINE__);
 
     /* update storage info */
     Semaphore_lock(&createInfo->storageSemaphore);
-fprintf(stderr,"%s,%d: Semaphore locked by storage\n",__FILE__,__LINE__);
     assert(createInfo->storageCount > 0);
     assert(createInfo->storageBytes>= storageMsg.fileSize);
     createInfo->storageCount -= 1;
@@ -910,7 +906,6 @@ fprintf(stderr,"%s,%d: Semaphore locked by storage\n",__FILE__,__LINE__);
     String_delete(storageMsg.fileName);
     String_delete(storageMsg.destinationFileName);
   }
-fprintf(stderr,"%s,%d: storage end\n",__FILE__,__LINE__);
 
   /* free resoures */
   free(buffer);

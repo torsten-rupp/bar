@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -38,9 +38,9 @@ DIFF       = diff
 #------------------------ specific variables/settings ------------------------
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 1
+VERSION_MINOR = 01
 
-CRYPT_NAMES    = none 3des cast5 blowfish aes128 aes192 aes256 twofish128 twofish256
+CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
 
 CRYPT=none
@@ -251,7 +251,7 @@ standard_test: bar
 	./bar -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -x test/test*.bar $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r test/data test/restore/test/data
+	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
 
 .PHONY: standard_test_destroy
 standard_test_destroy: bar destroyer
@@ -261,7 +261,7 @@ standard_test_destroy: bar destroyer
 	./bar -l test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -t test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -x test/test.bar_destroyed $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r test/data test/restore/test/data
+	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
 
 .PHONY: dist
 dist: $(DISTRIBUTION_NAME).tgz

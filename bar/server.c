@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -36,7 +36,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define _SERVER_DEBUG
+#define SERVER_DEBUG
 #define _SIMULATOR
 
 /***************************** Constants *******************************/

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <libssh2.h>
+#include <libssh2_sftp.h>
 #include <assert.h>
 
 #include "global.h"
@@ -61,6 +62,11 @@ typedef struct
     } scp;
     struct
     {
+      SocketHandle        socketHandle;
+      LIBSSH2_SESSION     *session;
+      LIBSSH2_CHANNEL     *channel;
+      LIBSSH2_SFTP        *sftp;
+      LIBSSH2_SFTP_HANDLE *sftpHandle;
     } sftp;
   };
 } StorageInfo;
@@ -118,9 +124,11 @@ Errors Storage_prepare(const String  storageName,
 /***********************************************************************\
 * Name   : Storage_create
 * Purpose: create new storage
-* Input  : storageName - storage name:
+* Input  : storageInfo - storage info variable
+*          storageName - storage name:
 *                          <file name>
 *                          scp:<user name>@<host name>:<file name>
+*                          sftp:<user name>@<host name>:<file name>
 *          fileSize    - storage file size
 *          options     - options
 * Output : storageInfo - initialized storage info
@@ -137,13 +145,20 @@ Errors Storage_create(StorageInfo   *storageInfo,
 /***********************************************************************\
 * Name   : Storage_open
 * Purpose: open storage
-* Input  : storageName - storage name
+* Input  : storageInfo - storage info variable
+*          storageName - storage name:
+*                          <file name>
+*                          sftp:<user name>@<host name>:<file name>
+*          options     - options
 * Output : storageInfo - initialized storage info
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_open(StorageInfo *storageInfo, const String storageName);
+Errors Storage_open(StorageInfo   *storageInfo,
+                    const String  storageName,
+                    const Options *options
+                   );
 
 /***********************************************************************\
 * Name   : Storage_close
@@ -192,6 +207,49 @@ Errors Storage_read(StorageInfo *storageInfo, void *buffer, ulong size, ulong *r
 \***********************************************************************/
 
 Errors Storage_write(StorageInfo *storageInfo, const void *buffer, ulong size);
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Storage_openDirectory
+* Purpose: open storage
+* Input  : storageInfo - storage info variable
+*          storageName - storage name
+*          options     - options
+* Output : storageInfo - initialized storage info
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_openDirectory(StorageInfo   *storageInfo,
+                             const String  storageName,
+                             const Options *options
+                            );
+
+/***********************************************************************\
+* Name   : Storage_close
+* Purpose: close storage
+* Input  : storageInfo - storage info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Storage_closeDirectory(StorageInfo *storageInfo);
+
+/***********************************************************************\
+* Name   : Storage_readDirectory
+* Purpose: read next directory entry in storage
+* Input  : storageInfo - storage info
+*          fileName    - file name variable
+* Output : fileName - next file name
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_readDirectory(StorageInfo *storageInfo,
+                             String      fileName
+                            );
 
 #ifdef __cplusplus
   }

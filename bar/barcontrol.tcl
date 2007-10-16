@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -517,11 +517,10 @@ proc Dialog:progressbar { path args } \
 # Notes  : -
 #***********************************************************************
 
-proc addEnableDisableTrace { name conditionValue action1 action2 } \
+proc addEnableDisableTrace { name conditionValueList action1 action2 } \
 {
-  proc enableDisableTraceHandler { conditionValue action1 action2 name1 name2 op } \
+  proc enableDisableTraceHandler { conditionValueList action1 action2 name1 name2 op } \
   {
-#puts "$conditionValue: $name1 $name2"
     # get value
     if {$name2!=""} \
     {
@@ -531,34 +530,43 @@ proc addEnableDisableTrace { name conditionValue action1 action2 } \
     {
       eval "set value \$::$name1"
     }
+#puts "$conditionValueList: $name1 $name2: $value"
 
-    if {[eval {expr {$value==$conditionValue}}]} { eval $action1 } else { eval $action2 }
+    set flag 0
+    foreach conditionValue $conditionValueList \
+    {
+      if {[eval {expr {$value==$conditionValue}}]} { set flag 1 }
+    }
+    if {$flag} { eval $action1 } else { eval $action2 }
   }
 
   eval "set value \$$name"
-  if {$value==$conditionValue} { eval $action1 } else { eval $action2 }
+  foreach conditionValue $conditionValueList \
+  {
+    if {$value==$conditionValue} { eval $action1 } else { eval $action2 }
+  }
 
-  trace variable $name w "enableDisableTraceHandler $conditionValue {$action1} {$action2}"
+  trace variable $name w "enableDisableTraceHandler {$conditionValueList} {$action1} {$action2}"
 }
 
 #***********************************************************************
 # Name   : addEnableTrace/addDisableTrace
 # Purpose: add enable trace
-# Input  : name           - variable name
-#          conditionValue - condition value
-#          widget         - widget to enable/disable
+# Input  : name               - variable name
+#          conditionValueList - condition value
+#          widget             - widget to enable/disable
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc addEnableTrace { name conditionValue widget } \
+proc addEnableTrace { name conditionValueList widget } \
 {
-  addEnableDisableTrace $name $conditionValue "$widget configure -state normal" "$widget configure -state disabled"
+  addEnableDisableTrace $name $conditionValueList "$widget configure -state normal" "$widget configure -state disabled"
 }
 proc addDisableTrace { name conditionValue widget } \
 {
-  addEnableDisableTrace $name $conditionValue "$widget configure -state disabled" "$widget configure -state normal"
+  addEnableDisableTrace $name $conditionValueList "$widget configure -state disabled" "$widget configure -state normal"
 }
 
 #***********************************************************************
@@ -1985,9 +1993,16 @@ proc loadBARConfig { configFileName } \
     if {[scanx $line "archive-filename = %S" s] == 1} \
     {
       # archive-filename = <file name>
-      if {[regexp {^scp:([^@]*)@([^:]*):(.*)} $s * loginName hostName fileName]} \
+      if     {[regexp {^scp:([^@]*)@([^:]*):(.*)} $s * loginName hostName fileName]} \
       {
         set barConfig(storageType)      "SCP"
+        set barConfig(storageLoginName) $loginName
+        set barConfig(storageHostName)  $hostName
+        set barConfig(storageFileName)  $fileName
+      } \
+      elseif {[regexp {^sft@:([^@]*)@([^:]*):(.*)} $s * loginName hostName fileName]} \
+      {
+        set barConfig(storageType)      "SFTP"
         set barConfig(storageLoginName) $loginName
         set barConfig(storageHostName)  $hostName
         set barConfig(storageFileName)  $fileName
@@ -2159,6 +2174,10 @@ proc saveBARConfig { configFileName } \
   elseif {$barConfig(storageType) == "SCP"} \
   {
     puts $handle "archive-filename = [escapeString scp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)]"
+  } \
+  elseif {$barConfig(storageType) == "SFTP"} \
+  {
+    puts $handle "archive-filename = [escapeString sftp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)]"
   } \
   else \
   {
@@ -2438,6 +2457,10 @@ proc addBackupJob { jobListWidget } \
   elseif {$barConfig(storageType) == "SCP"} \
   {
     set archiveFileName "scp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
+  } \
+  elseif {$barConfig(storageType) == "SFTP"} \
+  {
+    set archiveFileName "sftp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
   } \
   else \
   {
@@ -3290,9 +3313,14 @@ frame .backup
     label .backup.storage.destintationTitle -text "Destination:"
     grid .backup.storage.destintationTitle -row 3 -column 0 -sticky "nw" 
     frame .backup.storage.destintation
-      radiobutton .backup.storage.destintation.typeFileSystem -variable barConfig(storageType) -value "FILESYSTEM"
-      grid .backup.storage.destintation.typeFileSystem -row 0 -column 0 -sticky "nw" 
-      labelframe .backup.storage.destintation.fileSystem -text "File system"
+      frame .backup.storage.destintation.type0
+        radiobutton .backup.storage.destintation.type0.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
+        grid .backup.storage.destintation.type0.fileSystem -row 0 -column 0 -sticky "nw" 
+
+        grid rowconfigure    .backup.storage.destintation.type0 { 0 } -weight 1
+        grid columnconfigure .backup.storage.destintation.type0 { 1 } -weight 1
+      grid .backup.storage.destintation.type0 -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+      labelframe .backup.storage.destintation.fileSystem
         label .backup.storage.destintation.fileSystem.fileNameTitle -text "File name:"
         grid .backup.storage.destintation.fileSystem.fileNameTitle -row 0 -column 0 -sticky "w" 
         entry .backup.storage.destintation.fileSystem.fileName -textvariable barConfig(storageFileName) -bg white
@@ -3300,13 +3328,20 @@ frame .backup
 
         grid rowconfigure    .backup.storage.destintation.fileSystem { 0 } -weight 1
         grid columnconfigure .backup.storage.destintation.fileSystem { 1 } -weight 1
-      grid .backup.storage.destintation.fileSystem -row 0 -column 1 -sticky "nswe" -padx 2p -pady 2p
+      grid .backup.storage.destintation.fileSystem -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
       addEnableTrace ::barConfig(storageType) "FILESYSTEM" .backup.storage.destintation.fileSystem.fileNameTitle
       addEnableTrace ::barConfig(storageType) "FILESYSTEM" .backup.storage.destintation.fileSystem.fileName
 
-      radiobutton .backup.storage.destintation.typeSCP -variable barConfig(storageType) -value "SCP"
-      grid .backup.storage.destintation.typeSCP -row 1 -column 0 -sticky "nw" 
-      labelframe .backup.storage.destintation.scp -text "scp"
+      frame .backup.storage.destintation.type1
+        radiobutton .backup.storage.destintation.type1.scp -text "scp" -variable barConfig(storageType) -value "SCP"
+        grid .backup.storage.destintation.type1.scp -row 0 -column 0 -sticky "w" 
+        radiobutton .backup.storage.destintation.type1.sftp -text "sftp" -variable barConfig(storageType) -value "SFTP"
+        grid .backup.storage.destintation.type1.sftp -row 0 -column 1 -sticky "w" 
+
+        grid rowconfigure    .backup.storage.destintation.type1 { 0 } -weight 1
+        grid columnconfigure .backup.storage.destintation.type1 { 2 } -weight 1
+      grid .backup.storage.destintation.type1 -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
+      labelframe .backup.storage.destintation.scp
         label .backup.storage.destintation.scp.fileNameTitle -text "File name:"
         grid .backup.storage.destintation.scp.fileNameTitle -row 0 -column 0 -sticky "w" 
         entry .backup.storage.destintation.scp.fileName -textvariable barConfig(storageFileName) -bg white
@@ -3344,24 +3379,43 @@ frame .backup
 
   #      grid rowconfigure    .backup.storage.destintation.scp { } -weight 1
         grid columnconfigure .backup.storage.destintation.scp { 1 3 5 } -weight 1
-      grid .backup.storage.destintation.scp -row 1 -column 1 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.fileNameTitle
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.fileName
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.loginNameTitle
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.loginName
-    #  addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.loginPasswordTitle
-    #  addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.loginPassword
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.hostNameTitle
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.hostName
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.sshPortTitle
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.sshPort
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.sshPublicKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.sshPublicKeyFileName
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.sshPrivatKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) "SCP" .backup.storage.destintation.scp.sshPrivatKeyFileName
+      grid .backup.storage.destintation.scp -row 3 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.fileNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.fileName
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.loginNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.loginName
+    #  addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.loginPasswordTitle
+    #  addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.loginPassword
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.hostNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.hostName
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPortTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPort
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPublicKeyFileNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPublicKeyFileName
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPrivatKeyFileNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPrivatKeyFileName
+
+      frame .backup.storage.destintation.type2
+        radiobutton .backup.storage.destintation.type2.fileSystem -text "DVD" -variable barConfig(storageType) -value "DVD"
+        grid .backup.storage.destintation.type2.fileSystem -row 0 -column 0 -sticky "nw" 
+
+        grid rowconfigure    .backup.storage.destintation.type2 { 0 } -weight 1
+        grid columnconfigure .backup.storage.destintation.type2 { 1 } -weight 1
+      grid .backup.storage.destintation.type2 -row 4 -column 0 -sticky "we" -padx 2p -pady 2p
+      labelframe .backup.storage.destintation.dvd
+        label .backup.storage.destintation.dvd.deviceNameTitle -text "Device name:"
+        grid .backup.storage.destintation.dvd.deviceNameTitle -row 0 -column 0 -sticky "w" 
+        entry .backup.storage.destintation.dvd.deviceName -textvariable barConfig(storageFileName) -bg white
+        grid .backup.storage.destintation.dvd.deviceName -row 0 -column 1 -sticky "we" 
+
+        grid rowconfigure    .backup.storage.destintation.dvd { 0 } -weight 1
+        grid columnconfigure .backup.storage.destintation.dvd { 1 } -weight 1
+      grid .backup.storage.destintation.dvd -row 5 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destintation.dvd.deviceNameTitle
+      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destintation.dvd.deviceName
 
       grid rowconfigure    .backup.storage.destintation { 0 } -weight 1
-      grid columnconfigure .backup.storage.destintation { 1 } -weight 1
+      grid columnconfigure .backup.storage.destintation { 0 } -weight 1
     grid .backup.storage.destintation -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
 
     grid rowconfigure    .backup.storage { 4 } -weight 1
