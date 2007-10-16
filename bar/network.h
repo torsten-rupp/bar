@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -12,6 +12,8 @@
 #define __NETWORK__
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #ifdef HAVE_GNU_TLS
@@ -54,6 +56,11 @@ typedef struct
 {
   ServerTypes type;
   int         handle; 
+  #ifdef HAVE_GNU_TLS
+    bool                             initTLSFlag;
+    gnutls_certificate_credentials_t gnuTLSCredentials;
+    gnutls_dh_params_t               gnuTLSDHParams;
+  #endif /* HAVE_GNU_TLS */
 } ServerSocketHandle;
 
 /***************************** Variables *******************************/
@@ -77,10 +84,7 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Network_init(const char *caFileName,
-                    const char *certFileName,
-                    const char *keyFileName
-                   );
+Errors Network_init(void);
 
 /***********************************************************************\
 * Name   : Network_done
@@ -170,6 +174,9 @@ Errors Network_receive(SocketHandle *socketHandle,
 * Purpose: initialize a server socket
 * Input  : serverPort  - server port
 *          ServerTypes - server type; see SERVER_TYPE_*
+*          caFileName   - file with TLS CA or NULL
+*          certFileName - file with TLS cerificate or NULL
+*          keyFileName  - file with TLS key or NULL
 * Output : serverSocketHandle - server socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -177,7 +184,10 @@ Errors Network_receive(SocketHandle *socketHandle,
 
 Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
                           uint               serverPort,
-                          ServerTypes        serverType
+                          ServerTypes        serverType,
+                          const char         *caFileName,
+                          const char         *certFileName,
+                          const char         *keyFileName
                          );
 
 /***********************************************************************\

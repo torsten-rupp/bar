@@ -11,14 +11,17 @@
 /* bzip2 installed */
 #undef HAVE_BZ2
 
+/* gcrypt installed */
+#undef HAVE_GCRYPT
+
 /* GNU TLS installed */
 #undef HAVE_GNU_TLS
 
 /* GPG error installed */
 #undef HAVE_GPG_ERROR
 
-/* gcrypt installed */
-#undef HAVE_GRYPT
+/* defined if long long data type available */
+#undef HAVE_LONG_LONG
 
 /* SSH2 installed */
 #undef HAVE_SSH2

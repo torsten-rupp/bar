@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -24,6 +24,7 @@
 #include "chunks.h"
 #include "files.h"
 #include "compress.h"
+#include "passwords.h"
 #include "crypt.h"
 
 #include "archive.h"
@@ -737,7 +738,7 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
                       CompressAlgorithms     compressAlgorithm,
                       ulong                  compressMinFileSize,
                       CryptAlgorithms        cryptAlgorithm,
-                      const char             *password
+                      Password               *password
                      )
 {
   Errors error;
@@ -777,7 +778,7 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
 
 Errors Archive_open(ArchiveInfo  *archiveInfo,
                     const String archiveFileName,
-                    const char   *password
+                    Password     *password
                    )
 {
   Errors error;

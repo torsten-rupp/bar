@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -22,6 +22,7 @@
 #include "errors.h"
 #include "chunks.h"
 #include "compress.h"
+#include "passwords.h"
 #include "crypt.h"
 #include "archive_format.h"
 #include "files.h"
@@ -59,7 +60,7 @@ typedef struct
   CompressAlgorithms     compressAlgorithm;          // default compression algorithm
   ulong                  compressMinFileSize;        // min. file size to use compression
   CryptAlgorithms        cryptAlgorithm;             // default crypt algorithm
-  const char             *password;                  // password
+  Password               *password;                  // password
 
   uint                   blockLength;                /* block length for file entry/file
                                                         data (depend on used crypt
@@ -199,7 +200,7 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
                       CompressAlgorithms     compressAlgorithm,
                       ulong                  compressMinFileSize,
                       CryptAlgorithms        cryptAlgorithm,
-                      const char             *password
+                      Password               *password
                      );
 
 /***********************************************************************\
@@ -215,7 +216,7 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
 
 Errors Archive_open(ArchiveInfo  *archiveInfo,
                     const String archiveFileName,
-                    const char   *password
+                    Password     *password
                    );
 
 /***********************************************************************\

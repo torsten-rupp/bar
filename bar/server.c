@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -25,6 +25,7 @@
 #include "stringlists.h"
 
 #include "bar.h"
+#include "passwords.h"
 #include "network.h"
 #include "files.h"
 #include "patterns.h"
@@ -165,7 +166,7 @@ typedef struct
 } CommandMsg;
 
 /***************************** Variables *******************************/
-LOCAL const char *password;
+LOCAL Password   *password;
 LOCAL JobList    jobList;
 LOCAL pthread_t  jobThreadId;
 LOCAL ClientList clientList;
@@ -603,11 +604,11 @@ LOCAL void serverCommand_authorize(ClientNode *clientNode, uint id, const String
   if (password != NULL)
   {
     z = 0;
-    while ((z < strlen(password)) && okFlag)
+    while ((z < Password_length(password)) && okFlag)
     {
       n0 = (char)(strtoul(String_subCString(s,arguments[0],z*2,sizeof(s)),NULL,16) & 0xFF);
       n1 = clientNode->sessionId[z];
-      okFlag = (password[z] == (n0^n1));
+      okFlag = (Password_get(password,z) == (n0^n1));
       z++;
     } 
   }
@@ -1626,7 +1627,10 @@ void Server_done(void)
 
 Errors Server_run(uint       serverPort,
                   uint       serverTLSPort,
-                  const char *serverPassword
+                  const char *caFileName,
+                  const char *certFileName,
+                  const char *keyFileName,
+                  Password   *serverPassword
                  )
 {
   Errors             error;
@@ -1652,7 +1656,13 @@ Errors Server_run(uint       serverPort,
   /* init server sockets */
   if (serverPort != 0)
   {
-    error = Network_initServer(&serverSocketHandle,serverPort,SERVER_TYPE_PLAIN);
+    error = Network_initServer(&serverSocketHandle,
+                               serverPort,
+                               SERVER_TYPE_PLAIN,
+                               NULL,
+                               NULL,
+                               NULL
+                              );
     if (error != ERROR_NONE)
     {
       printError("Cannot initialize server (error: %s)!\n",
@@ -1664,7 +1674,13 @@ Errors Server_run(uint       serverPort,
   if (serverTLSPort != 0)
   {
     #ifdef HAVE_GNU_TLS
-      error = Network_initServer(&serverTLSSocketHandle,serverTLSPort,SERVER_TYPE_TLS);
+      error = Network_initServer(&serverTLSSocketHandle,
+                                 serverTLSPort,
+                                 SERVER_TYPE_TLS,
+                                 caFileName,
+                                 certFileName,
+                                 keyFileName
+                                );
       if (error != ERROR_NONE)
       {
         printError("Cannot initialize SSL/TLS server (error: %s)!\n",

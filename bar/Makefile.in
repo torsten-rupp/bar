@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -16,7 +16,7 @@ CC                  = @CC@
 CC_FLAGS            = @CC_FLAGS@ -g
 CC_WARN_FLAGS       = -Wall -Wpointer-arith -Wunused-label -Wunused-parameter -Wunused-variable -Wmissing-prototypes -Wmissing-declarations
 CC_OPTIMIZE         = @CC_OPTIMIZE@
-CC_DEFINES          = @CC_DEFINES@
+CC_DEFINES          = @CC_DEFINES@ _LONG_LONG
 # -D_LONG_LONG
 CC_INCLUDES         = @CC_INCLUDES@
 
@@ -37,6 +37,9 @@ DIFF       = diff
 
 #------------------------ specific variables/settings ------------------------
 
+VERSION_MAJOR = 0
+VERSION_MINOR = 1
+
 CRYPT_NAMES    = none 3des cast5 blowfish aes128 aes192 aes256 twofish128 twofish256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
 
@@ -45,18 +48,15 @@ COMPRESS=none
 
 TEST_PASSWORD=franz_kafka
 
+DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
+
 #---------------------------------- rules ------------------------------------
 
 %.o:%.c
-	$(CC) $(CC_FLAGS) $(CC_WARN_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+	$(CC) $(CC_FLAGS) -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 %:%.o
-	$(LD) \
-          $(LD_FLAGS) \
-          -o $@ \
-          $^ \
-          $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
-          $(foreach z,$(LD_LIBRARIES),-l$z) \
+	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) $(foreach z,$(LD_LIBRARIES),-l$z)
 
 #          -Wl,-static $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) -Wl,-dynamic
 
@@ -73,6 +73,7 @@ BAR_SOURCES        = bar.c \
                      patterns.c \
                      compress.c \
                      crypt.c \
+                     passwords.c \
                      storage.c \
                      network.c \
                      server.c \
@@ -88,7 +89,7 @@ BAR_SOURCES        = bar.c \
                      arrays.c \
 
 BAR_OBJECTS        = $(foreach z,$(BAR_SOURCES),$(subst .c,.o,$z)) \
-                     archive_format.o \
+                     archive_format.o
 
 DESTROYER_SOURCES  = destroyer.c \
                      global.c \
@@ -98,9 +99,13 @@ DESTROYER_SOURCES  = destroyer.c \
 
 DESTROYER_OBJECTS  = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
 
+OTHER_SOURCES      = archive_format.def \
+                     barcontrol.tcl \
+
 INTERMEDIATE       = archive_format.c \
                      archive_format.h \
-                     bar-key-ca.pem \
+
+TLS_FILES          = bar-key.pem \
                      bar-ca.pem \
                      bar-server-key.pem \
                      bar-server-cert.pem \
@@ -114,18 +119,24 @@ TARGETS            = bar \
 all:		$(TARGETS)
 
 clean:
-		$(RMF) $(BAR_OBJECTS) $(DESTROYER_OBJECTS) $(INTERMEDIATE) $(TARGETS)
+		$(RMF) $(BAR_OBJECTS)
+		$(RMF) $(DESTROYER_OBJECTS)
+		$(RMF) $(INTERMEDIATE)
+		$(RMF) $(TLS_FILES)
+		$(RMF) $(TARGETS)
 
 distclean: clean
-	$(RMF) Makefile
+	$(RMF) Makefile Makefile.depend
 	$(RMF) config.h
-	$(RMF) Makefile.depend
 	$(RMF) config.status
 	$(RMF) config.log
 
-depend: archive_format.h
+depend: Makefile.depend
+
+# create dependencies
+Makefile.depend: $(BAR_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
 	$(ECHO) > Makefile.depend
-	for z in $(BAR_SOURCES) $(DESTROYER_SOURCES); do \
+	for z in $(BAR_SOURCES) $(DESTROYER_SOURCES) archive_format.c; do \
           $(CC) -MM >> Makefile.depend $$z; \
         done;
 
@@ -146,7 +157,7 @@ archive_format.c: archive_format.def
 cert: bar-ca.pem bar-key.pem bar-server-cert.pem bar-server-key.pem
 
 clean_cert:
-	$(RMF) bar-ca.pem bar-key.pem bar-server-cert.pem bar-server-key.pem
+	$(RMF) $(TLS_FILES)
 
 bar-key.pem:
 	certtool \
@@ -180,11 +191,11 @@ bar-server-cert.pem: bar-server-key.pem
 
 # run server
 .PHONY: barserver barserver_ssl
-barserver: bar bar-ca.pem bar-key.pem bar-server-cert.pem bar-server-key.pem
+barserver: bar
 	./bar \
           --daemon
 
-barserver_ssl: bar
+barserver_ssl: bar $(TLS_FILES)
 	./bar \
           --daemon \
           --server-ca-file=bar-ca.pem \
@@ -252,7 +263,27 @@ standard_test_destroy: bar destroyer
 	./bar -x test/test.bar_destroyed $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r test/data test/restore/test/data
 
+.PHONY: dist
+dist: $(DISTRIBUTION_NAME).tgz
+
+$(DISTRIBUTION_NAME).tgz:
+	$(TAR) cjf $@ \
+          $(BAR_SOURCES) \
+          $(DESTROYER_SOURCES) \
+          $(OTHER_SOURCES) \
+          configure \
+          configure.in \
+          Makefile.in \
+          config.h.in \
+          bitmaps \
+          ssl \
+          tcl \
+          ToDo \
+          README \
+
 -include Makefile.depend
+
+# --------------------------------------------------
 
 .PHONY: p0 pack0 l0 list0 r0 restore0 t0 c0 compare0
 p0 pack0: bar

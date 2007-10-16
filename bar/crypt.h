@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems: all
@@ -21,6 +21,7 @@
 #include "strings.h"
 
 #include "errors.h"
+#include "passwords.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -44,12 +45,6 @@ typedef enum
 } CryptAlgorithms;
 
 /***************************** Datatypes *******************************/
-
-/* password */
-typedef struct
-{
-  char data[256];
-} Password;
 
 /* crypt info block */
 typedef struct
@@ -92,41 +87,6 @@ Errors Crypt_init(void);
 \***********************************************************************/
 
 void Crypt_done(void);
-
-#if 0
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-const char *Crypt_setPassword(PasswordInfo *passwordInfo);
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-const char *Crypt_Password(PasswordInfo *passwordInfo, char *buffer, uint bufferSize);
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-const char *Crypt_Password(PasswordInfo *passwordInfo, char *buffer, uint bufferSize);
-#endif /* 0 */
 
 /***********************************************************************\
 * Name   : Crypt_getAlgorithmName
@@ -188,7 +148,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 
 Errors Crypt_new(CryptInfo       *cryptInfo,
                  CryptAlgorithms cryptAlgorithm,
-                 const char      *password
+                 Password        *password
                 );
 
 /***********************************************************************\

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -22,6 +22,7 @@
 
 #include "patterns.h"
 #include "compress.h"
+#include "passwords.h"
 #include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
@@ -58,12 +59,12 @@ typedef struct
   CompressAlgorithms compressAlgorithm;
   CryptAlgorithms    cryptAlgorithm;
   ulong              compressMinFileSize;
-  const char         *cryptPassword;
+  Password           *cryptPassword;
 
   uint               sshPort;
   const char         *sshPublicKeyFileName;
   const char         *sshPrivatKeyFileName;
-  const char         *sshPassword;
+  Password           *sshPassword;
 
   bool               skipUnreadableFlag;
   bool               overwriteArchiveFilesFlag;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -17,6 +17,8 @@
 #include <assert.h>
 
 #include "global.h"
+
+#include "passwords.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -63,6 +65,9 @@ void Server_done(void);
 * Purpose: run server
 * Input  : serverPort     - server port (or 0 to disable)
 *          serverSSLPort  - server SSL port (or 0 to disable)
+*          caFileName   - file with TLS CA or NULL
+*          certFileName - file with TLS cerificate or NULL
+*          keyFileName  - file with TLS key or NULL
 *          serverPassword - server authenfication password
 * Output : -
 * Return : ERROR_NONE or error code
@@ -71,7 +76,10 @@ void Server_done(void);
 
 Errors Server_run(uint       serverPort,
                   uint       serverSSLPort,
-                  const char *serverPassword
+                  const char *caFileName,
+                  const char *certFileName,
+                  const char *keyFileName,
+                  Password   *serverPassword
                  );
 
 #ifdef __cplusplus

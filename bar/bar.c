@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -27,6 +27,7 @@
 #include "files.h"
 #include "patterns.h"
 #include "compress.h"
+#include "passwords.h"
 #include "crypt.h"
 #include "archive.h"
 #include "network.h"
@@ -83,7 +84,7 @@ LOCAL bool        serverTLSPort;
 LOCAL const char  *serverCAFileName;
 LOCAL const char  *serverCertFileName;
 LOCAL const char  *serverKeyFileName;
-LOCAL const char  *serverPassword;
+LOCAL Password    *serverPassword;
 LOCAL bool        versionFlag;
 LOCAL bool        helpFlag;
 
@@ -143,6 +144,7 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM[] =
 
 LOCAL bool cmdParseConfigFile(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
 LOCAL bool cmdParseIncludeExclude(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
+LOCAL bool cmdParsePassword(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
@@ -168,12 +170,12 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER("compress-min-size",        0,  0,defaultOptions.compressMinFileSize,      DEFAULT_COMPRESS_MIN_FILE_SIZE,0,LONG_MAX,COMMAND_LINE_UNITS,   "minimal size of file for compression"          ),
 
   CMD_OPTION_SELECT ("crypt-algorithm",          'y',0,defaultOptions.cryptAlgorithm,           CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,      "select crypt algorithm to use"                 ),
-  CMD_OPTION_STRING ("crypt-password",           0,  0,defaultOptions.cryptPassword,            NULL,                                                           "crypt password (use with care!)",NULL          ),
+  CMD_OPTION_SPECIAL("crypt-password",           0,  0,&defaultOptions.cryptPassword,           NULL,cmdParsePassword,NULL,                                     "crypt password (use with care!)","password"    ),
 
   CMD_OPTION_INTEGER("ssh-port",                 0,  0,defaultOptions.sshPort,                  0,0,65535,NULL,                                                 "ssh port"                                      ),
   CMD_OPTION_STRING ("ssh-public-key",           0,  0,defaultOptions.sshPublicKeyFileName,     NULL,                                                           "ssh public key file name","file name"          ),
   CMD_OPTION_STRING ("ssh-privat-key",           0,  0,defaultOptions.sshPrivatKeyFileName,     NULL,                                                           "ssh privat key file name","file name"          ),
-  CMD_OPTION_STRING ("ssh-password",             0,  0,defaultOptions.sshPassword,              NULL,                                                           "ssh password (use with care!)",NULL            ),
+  CMD_OPTION_SPECIAL("ssh-password",             0,  0,&defaultOptions.sshPassword,             NULL,cmdParsePassword,NULL,                                     "ssh password (use with care!)","password"      ),
 
   CMD_OPTION_BOOLEAN("daemon",                   0,  0,daemonFlag,                              FALSE,                                                          "run in daemon mode"                            ),
   CMD_OPTION_INTEGER("port",                     0,  0,serverPort,                              DEFAULT_SERVER_PORT,0,65535,NULL,                               "server port"                                   ),
@@ -181,7 +183,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING ("server-ca-file",           0,  0,serverCAFileName,                        NULL,                                                           "server TLS CA file","file name"                ),
   CMD_OPTION_STRING ("server-cert-file",         0,  0,serverCertFileName,                      NULL,                                                           "server TLS certificate file","file name"       ),
   CMD_OPTION_STRING ("server-key-file",          0,  0,serverKeyFileName,                       NULL,                                                           "server TLS key file","file name"               ),
-  CMD_OPTION_STRING ("server-password",          0,  0,serverPassword,                          NULL,                                                           "server password (use with care!)",NULL         ),
+  CMD_OPTION_SPECIAL("server-password",          0,  0,&serverPassword,                         NULL,cmdParsePassword,NULL,                                     "server password (use with care!)","password"   ),
 
 //  CMD_OPTION_BOOLEAN("incremental",              0,  0,defaultOptions.incrementalFlag,        FALSE,                                                          "overwrite existing files"                      ),
   CMD_OPTION_BOOLEAN("skip-unreadable",          0,  0,defaultOptions.skipUnreadableFlag,       TRUE,                                                           "skip unreadable files"                         ),
@@ -377,6 +379,29 @@ LOCAL bool cmdParseIncludeExclude(void *variable, const char *name, const char *
 }
 
 /***********************************************************************\
+* Name   : cmdParsePassword
+* Purpose: command line option call back for parsing password
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdParsePassword(void *variable, const char *name, const char *value, const void *defaultValue, void *userData)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
+
+  Password_setCString((*(Password**)variable),value);
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name       : printUsage
 * Purpose    : print "usage" help
 * Input      : -
@@ -410,15 +435,22 @@ LOCAL bool init(void)
 {
   Errors error;
 
+  error = Password_init();
+  if (error != ERROR_NONE)
+  {
+    return FALSE;
+  }
   error = Crypt_init();
   if (error != ERROR_NONE)
   {
+    Password_done();
     return FALSE;
   }
   error = Pattern_init();
   if (error != ERROR_NONE)
   {
     Crypt_done();
+    Password_done();
     return FALSE;
   }
   error = Archive_init();
@@ -426,6 +458,7 @@ LOCAL bool init(void)
   {
     Pattern_done();
     Crypt_done();
+    Password_done();
     return FALSE;
   }
   error = Storage_init();
@@ -434,18 +467,17 @@ LOCAL bool init(void)
     Archive_done();
     Pattern_done();
     Crypt_done();
+    Password_done();
     return FALSE;
   }
-  error = Network_init(serverCAFileName,
-                       serverCertFileName,
-                       serverKeyFileName
-                      );
+  error = Network_init();
   if (error != ERROR_NONE)
   {
     Storage_done();
     Archive_done();
     Pattern_done();
     Crypt_done();
+    Password_done();
     return FALSE;
   }
   error = Server_init();
@@ -456,6 +488,7 @@ LOCAL bool init(void)
     Archive_done();
     Pattern_done();
     Crypt_done();
+    Password_done();
     return FALSE;
   }
 
@@ -479,6 +512,7 @@ LOCAL void done(void)
   Archive_done();
   Pattern_done();
   Crypt_done();
+  Password_done();
 }
 
 /*---------------------------------------------------------------------*/
@@ -600,7 +634,16 @@ int main(int argc, const char *argv[])
   String fileName;
   Errors error;
 
+  /* init */
+  if (!init())
+  {
+    return EXITCODE_INIT_FAIL;
+  }
+
   /* initialise variables */
+  defaultOptions.cryptPassword = Password_new();
+  defaultOptions.sshPassword = Password_new();
+  serverPassword = Password_new();
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   Pattern_initList(&includePatternList);
   Pattern_initList(&excludePatternList);
@@ -613,6 +656,12 @@ int main(int argc, const char *argv[])
                       )
      )
   {
+    Pattern_doneList(&excludePatternList);
+    Pattern_doneList(&includePatternList);
+    Password_delete(serverPassword);
+    Password_delete(defaultOptions.sshPassword);
+    Password_delete(defaultOptions.cryptPassword);
+    done();
     return EXITCODE_INVALID_ARGUMENT;
   }
 
@@ -631,6 +680,12 @@ int main(int argc, const char *argv[])
         #ifndef NDEBUG
           String_debug();
         #endif /* not NDEBUG */
+        Pattern_doneList(&excludePatternList);
+        Pattern_doneList(&includePatternList);
+        Password_delete(serverPassword);
+        Password_delete(defaultOptions.sshPassword);
+        Password_delete(defaultOptions.cryptPassword);
+        done();
         return EXITCODE_CONFIG_ERROR;
       }
     }
@@ -645,23 +700,36 @@ int main(int argc, const char *argv[])
                       )
      )
   {
+    Pattern_doneList(&excludePatternList);
+    Pattern_doneList(&includePatternList);
+    Password_delete(serverPassword);
+    Password_delete(defaultOptions.sshPassword);
+    Password_delete(defaultOptions.cryptPassword);
+    done();
     return EXITCODE_INVALID_ARGUMENT;
   }
   if (versionFlag)
   {
     printf("BAR version %s\n",VERSION);
+    Pattern_doneList(&excludePatternList);
+    Pattern_doneList(&includePatternList);
+    Password_delete(serverPassword);
+    Password_delete(defaultOptions.sshPassword);
+    Password_delete(defaultOptions.cryptPassword);
+    done();
     return EXITCODE_OK;
   }
   if (helpFlag)
   {
     printUsage(argv[0]);
-    return EXITCODE_OK;
-  }
 
-  /* init */
-  if (!init())
-  {
-    exit(EXITCODE_INIT_FAIL);
+    Pattern_doneList(&excludePatternList);
+    Pattern_doneList(&includePatternList);
+    Password_delete(serverPassword);
+    Password_delete(defaultOptions.sshPassword);
+    Password_delete(defaultOptions.cryptPassword);
+    done();
+    return EXITCODE_OK;
   }
 
   error = ERROR_NONE;
@@ -758,6 +826,9 @@ int main(int argc, const char *argv[])
     {
       error = Server_run(serverPort,
                          serverTLSPort,
+                         serverCAFileName,
+                         serverCertFileName,
+                         serverKeyFileName,
                          serverPassword
                         );
     }
@@ -769,12 +840,13 @@ int main(int argc, const char *argv[])
   }
 
   /* free resources */
+  CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   Pattern_doneList(&excludePatternList);
   Pattern_doneList(&includePatternList);
-
-  /* done */
+  Password_delete(serverPassword);
+  Password_delete(defaultOptions.sshPassword);
+  Password_delete(defaultOptions.cryptPassword);
   done();
-  CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
   #ifndef NDEBUG
     Array_debug();

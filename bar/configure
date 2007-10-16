@@ -805,6 +805,10 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          enable debug version
+  --disable-zip           disable zip support
+  --disable-bzip2         disable bzip2 support
+  --disable-gcrypt        disable gcrypt support
+  --disable-tls           disable TLS support
 
 Some influential environment variables:
   CC          C compiler command
@@ -1366,7 +1370,11 @@ LIBRARY_PATHS=""
 LIBRARIES=""
 STATIC_LIBRARIES=""
 
-DEBUG="no"
+ENABLE_DEBUG="no"
+ENABLE_ZIP="yes"
+ENABLE_BZIP2="yes"
+ENABLE_GCRYPT="yes"
+ENABLE_TLS="yes"
 
 
 INSTALL="$INSTALL -c"
@@ -1378,9 +1386,34 @@ INSTALL="$INSTALL -c"
 # Check whether --enable-debug or --disable-debug was given.
 if test "${enable_debug+set}" = set; then
   enableval="$enable_debug"
-  DEBUG=$enableval
+  ENABLE_DEBUG=$enableval
 
 fi;
+# Check whether --enable-zip or --disable-zip was given.
+if test "${enable_zip+set}" = set; then
+  enableval="$enable_zip"
+  ENABLE_ZIP=$enableval
+
+fi;
+# Check whether --enable-bzip2 or --disable-bzip2 was given.
+if test "${enable_bzip2+set}" = set; then
+  enableval="$enable_bzip2"
+  ENABLE_BZIP2=$enableval
+
+fi;
+# Check whether --enable-gcrypt or --disable-gcrypt was given.
+if test "${enable_gcrypt+set}" = set; then
+  enableval="$enable_gcrypt"
+  ENABLE_GCRYPT=$enableval
+
+fi;
+# Check whether --enable-tls or --disable-tls was given.
+if test "${enable_tls+set}" = set; then
+  enableval="$enable_tls"
+  ENABLE_TLS=$enableval
+
+fi;
+
 
 for ac_prog in gcc cc
 do
@@ -1560,13 +1593,14 @@ fi
 done
 
 
-if test "$DEBUG" = "yes"; then
+CC_DEFINES="$CC_DEFINES"
+if test "$ENABLE_DEBUG" = "yes"; then
   CC_OPTIMIZE="$CC_OPTIMIZE -O0"
 else
   CC_OPTIMIZE="$CC_OPTIMIZE -O2"
   CC_DEFINES="$CC_DEFINES NDEBUG"
 fi
-CC_INCLUDES=""
+CC_INCLUDES="$CC_INCLUDES"
 
 LD_FLAGS=""
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
@@ -1590,72 +1624,6 @@ for z in $LIBRARY_PATHS ""; do
     LDFLAGS="$LDFLAGS -L$z"
   fi
 done
-
-
-  echo "$as_me:$LINENO: checking for needed large files defines" >&5
-echo $ECHO_N "checking for needed large files defines... $ECHO_C" >&6
-if test "${ac_largefile_defines+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-
-      cat << \EOF > conftest.c
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
-int main(void) { printf("%p",lseek64); return 0; }
-EOF
-      ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-      if test $rc -eq 0; then
-        ac_largefile_defines=""
-      else
-        ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_largefile_defines="_LARGEFILE64_SOURCE"
-        else
-          ac_largefile_defines=""
-        fi
-      fi
-      rm -f conftest.c conftest.o
-      CC_DEFINES="$CC_DEFINES $ac_largefile_defines"
-
-
-fi
-echo "$as_me:$LINENO: result: $ac_largefile_defines" >&5
-echo "${ECHO_T}$ac_largefile_defines" >&6
-
-  echo "$as_me:$LINENO: checking for needed pthread defines" >&5
-echo $ECHO_N "checking for needed pthread defines... $ECHO_C" >&6
-if test "${ac_extended_pthread_defines+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-
-      cat << \EOF > conftest.c
-#include <stdlib.h>
-#include <stdio.h>
-#include <pthread.h>
-int main(void) { printf("%p",pthread_mutexattr_settype); return 0; }
-EOF
-      ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-      if test $rc -eq 0; then
-        ac_extended_pthread_defines=""
-      else
-        ${CC} ${CFLAGS} -Wall -Werror -D_GNU_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_extended_pthread_defines="_GNU_SOURCE"
-        else
-          ac_extended_pthread_defines=""
-        fi
-      fi
-      rm -f conftest.c conftest.o
-      CC_DEFINES="$CC_DEFINES $ac_extended_pthread_defines"
-
-
-fi
-echo "$as_me:$LINENO: result: $ac_extended_pthread_defines" >&5
-echo "${ECHO_T}$ac_extended_pthread_defines" >&6
-
-#pthread_mutexattr_settype
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -2588,6 +2556,145 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
+
+  echo "$as_me:$LINENO: checking for long long int" >&5
+echo $ECHO_N "checking for long long int... $ECHO_C" >&6
+if test "${ac_cv_c_long_long+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+      if test "$GCC" = yes; then
+        ac_cv_c_long_long=yes
+      else
+        cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+int
+main ()
+{
+long long int i;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_c_long_long=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_c_long_long=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+      fi
+
+
+fi
+echo "$as_me:$LINENO: result: $ac_cv_c_long_long" >&5
+echo "${ECHO_T}$ac_cv_c_long_long" >&6
+  if test $ac_cv_c_long_long = yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_LONG_LONG 1
+_ACEOF
+
+else
+  { { echo "$as_me:$LINENO: error: long long data type not available" >&5
+echo "$as_me: error: long long data type not available" >&2;}
+   { (exit 1); exit 1; }; }
+fi
+
+
+  echo "$as_me:$LINENO: checking for needed large files defines" >&5
+echo $ECHO_N "checking for needed large files defines... $ECHO_C" >&6
+if test "${ac_largefile_defines+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+      cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+int main(void) { printf("%p",lseek64); return 0; }
+EOF
+      ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+      if test $rc -eq 0; then
+        ac_largefile_defines=""
+      else
+        ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_largefile_defines="_LARGEFILE64_SOURCE"
+        else
+          ac_largefile_defines=""
+        fi
+      fi
+      rm -f conftest.c conftest.o
+      CC_DEFINES="$CC_DEFINES $ac_largefile_defines"
+
+
+fi
+echo "$as_me:$LINENO: result: $ac_largefile_defines" >&5
+echo "${ECHO_T}$ac_largefile_defines" >&6
+
+  echo "$as_me:$LINENO: checking for needed pthread defines" >&5
+echo $ECHO_N "checking for needed pthread defines... $ECHO_C" >&6
+if test "${ac_extended_pthread_defines+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+      cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <stdio.h>
+#include <pthread.h>
+int main(void) { printf("%p",pthread_mutexattr_settype); return 0; }
+EOF
+      ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+      if test $rc -eq 0; then
+        ac_extended_pthread_defines=""
+      else
+        ${CC} ${CFLAGS} -Wall -Werror -D_GNU_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_extended_pthread_defines="_GNU_SOURCE"
+        else
+          ac_extended_pthread_defines=""
+        fi
+      fi
+      rm -f conftest.c conftest.o
+      CC_DEFINES="$CC_DEFINES $ac_extended_pthread_defines"
+
+
+fi
+echo "$as_me:$LINENO: result: $ac_extended_pthread_defines" >&5
+echo "${ECHO_T}$ac_extended_pthread_defines" >&6
+
+#pthread_mutexattr_settype
+
 echo "$as_me:$LINENO: checking for library containing round" >&5
 echo $ECHO_N "checking for library containing round... $ECHO_C" >&6
 if test "${ac_cv_search_round+set}" = set; then
@@ -2848,7 +2955,8 @@ echo "$as_me: error: pthread library not found" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
-echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
+if test $ENABLE_ZIP = "yes"; then
+  echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
 echo $ECHO_N "checking for library containing zlibVersion... $ECHO_C" >&6
 if test "${ac_cv_search_zlibVersion+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -2978,7 +3086,9 @@ _ACEOF
 
 fi
 
-echo "$as_me:$LINENO: checking for library containing BZ2_bzCompressInit" >&5
+fi
+if test $ENABLE_BZIP2 = "yes"; then
+  echo "$as_me:$LINENO: checking for library containing BZ2_bzCompressInit" >&5
 echo $ECHO_N "checking for library containing BZ2_bzCompressInit... $ECHO_C" >&6
 if test "${ac_cv_search_BZ2_bzCompressInit+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -3108,7 +3218,9 @@ _ACEOF
 
 fi
 
-echo "$as_me:$LINENO: checking for library containing gcry_check_version" >&5
+fi
+if test $ENABLE_GCRYPT = "yes"; then
+  echo "$as_me:$LINENO: checking for library containing gcry_check_version" >&5
 echo $ECHO_N "checking for library containing gcry_check_version... $ECHO_C" >&6
 if test "${ac_cv_search_gcry_check_version+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -3231,13 +3343,14 @@ echo "$as_me:$LINENO: result: $ac_cv_search_gcry_check_version" >&5
 echo "${ECHO_T}$ac_cv_search_gcry_check_version" >&6
 if test "$ac_cv_search_gcry_check_version" != no; then
   test "$ac_cv_search_gcry_check_version" = "none required" || LIBS="$ac_cv_search_gcry_check_version $LIBS"
-  HAVE_GRYPT=1;    LIBRARIES="$LIBRARIES gcrypt";
+  HAVE_GCRYPT=1;   LIBRARIES="$LIBRARIES gcrypt";
 cat >>confdefs.h <<\_ACEOF
-#define HAVE_GRYPT 1
+#define HAVE_GCRYPT 1
 _ACEOF
 
 fi
 
+fi
 echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
 echo $ECHO_N "checking for library containing gpg_strerror... $ECHO_C" >&6
 if test "${ac_cv_search_gpg_strerror+set}" = set; then
@@ -3498,7 +3611,8 @@ _ACEOF
 
 fi
 
-echo "$as_me:$LINENO: checking for library containing gnutls_global_init" >&5
+if test $ENABLE_TLS = "yes"; then
+  echo "$as_me:$LINENO: checking for library containing gnutls_global_init" >&5
 echo $ECHO_N "checking for library containing gnutls_global_init... $ECHO_C" >&6
 if test "${ac_cv_search_gnutls_global_init+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -3628,6 +3742,7 @@ _ACEOF
 
 fi
 
+fi
 
 #pthread z bz2 gcrypt gpg-error ssh2 gnutls
 
@@ -4176,10 +4291,10 @@ cat >>$CONFIG_STATUS <<_ACEOF
 # INIT-COMMANDS section.
 #
 
-DEBUG=$DEBUG
+ENABLE_DEBUG=$ENABLE_DEBUG
         HAVE_Z=$HAVE_Z
         HAVE_BZ2=$HAVE_BZ2
-        HAVE_GRYPT=$HAVE_GRYPT
+        HAVE_GCRYPT=$HAVE_GCRYPT
         HAVE_SSH2=$HAVE_SSH2
         HAVE_GNU_TLS=$HAVE_GNU_TLS
 
@@ -4883,10 +4998,10 @@ echo "$as_me: executing $ac_dest commands" >&6;}
   case $ac_dest in
     BUILD_NOTE ) echo "";
          echo "Configuration:";
-         echo "  debug version    : `if test $DEBUG = "yes"; then echo yes; else echo no; fi`";
+         echo "  debug version    : `if test $ENABLE_DEBUG = "yes"; then echo yes; else echo no; fi`";
          echo "  zip compression  : `if test $HAVE_Z; then echo yes; else echo no; fi`";
          echo "  bzip2 compression: `if test $HAVE_BZ2; then echo yes; else echo no; fi`";
-         echo "  crypto support   : `if test $HAVE_GRYPT; then echo yes; else echo no; fi`";
+         echo "  crypto support   : `if test $HAVE_GCRYPT; then echo yes; else echo no; fi`";
          echo "  SCP/SFTP support : `if test $HAVE_SSH2; then echo yes; else echo no; fi`";
          echo "  TLS/SSL server   : `if test $HAVE_GNU_TLS; then echo yes; else echo no; fi`";
          ;;

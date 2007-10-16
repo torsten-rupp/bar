@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -218,7 +218,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 
 Errors Crypt_new(CryptInfo       *cryptInfo,
                  CryptAlgorithms cryptAlgorithm,
-                 const char      *password
+                 Password        *password
                 )
 {
   assert(cryptInfo != NULL);
@@ -253,7 +253,7 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
         {
           return ERROR_NO_PASSWORD;
         }
-        passwordLength = strlen(password);
+        passwordLength = Password_length(password);
         if (passwordLength <= 0)
         {
           return ERROR_NO_PASSWORD;
@@ -351,7 +351,7 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
         assert(sizeof(key) >= (keyLength+7)/8);
         for (z = 0; z < (keyLength+7)/8; z++)
         {
-          key[z] = password[z%passwordLength];
+          key[z] = Password_get(password,z%passwordLength);
         }
         gcryptError = gcry_cipher_setkey(cryptInfo->gcry_cipher_hd,
                                          key,

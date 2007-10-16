@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -44,11 +44,6 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-#ifdef HAVE_GNU_TLS
-  LOCAL bool                             initTLSFlag;
-  LOCAL gnutls_certificate_credentials_t gnuTLSCredentials;
-  LOCAL gnutls_dh_params_t               gnuTLSDHParams;
-#endif /* HAVE_GNU_TLS */
 
 /****************************** Macros *********************************/
 
@@ -60,72 +55,11 @@
   extern "C" {
 #endif
 
-Errors Network_init(const char *caFileName,
-                    const char *certFileName,
-                    const char *keyFileName
-                   )
+Errors Network_init(void)
 {
   #ifdef HAVE_GNU_TLS
-    int result;
-  #endif /* HAVE_GNU_TLS */
-
-  #ifdef HAVE_GNU_TLS
-    if (   (caFileName != NULL)
-        || (certFileName != NULL)
-        || (keyFileName != NULL)
-       )
-    {
-      gnutls_global_init();
-      gnutls_global_set_log_level(10);
-
-      if (gnutls_certificate_allocate_credentials(&gnuTLSCredentials) != 0)
-      {
-        printError("Initialize TLS fail!\n");
-        return ERROR_INIT_TLS;
-      }
-      result = gnutls_certificate_set_x509_trust_file(gnuTLSCredentials,
-                                                      caFileName,
-                                                      GNUTLS_X509_FMT_PEM
-                                                     );
-      if (result < 0)
-      {
-        printError("Cannot load CA file: %s\n",gnutls_strerror(result));
-        gnutls_certificate_free_credentials (gnuTLSCredentials);
-        return ERROR_INIT_TLS;
-      }
-      result = gnutls_certificate_set_x509_key_file(gnuTLSCredentials,
-                                                    certFileName,
-                                                    keyFileName,
-                                                    GNUTLS_X509_FMT_PEM
-                                                   );
-      if (result < 0)
-      {
-        printError("Cannot load certificate/key file: %s\n",gnutls_strerror(result));
-        gnutls_certificate_free_credentials (gnuTLSCredentials);
-        return ERROR_INIT_TLS;
-      }
-
-      gnutls_dh_params_init(&gnuTLSDHParams);
-      result = gnutls_dh_params_generate2(gnuTLSDHParams,DH_BITS);
-      if (result < 0)
-      {
-        printError("Generate DH parameter fail: %s\n",gnutls_strerror(result));
-        gnutls_dh_params_deinit(gnuTLSDHParams);
-        gnutls_certificate_free_credentials (gnuTLSCredentials);
-        return ERROR_INIT_TLS;
-      }
-      gnutls_certificate_set_dh_params(gnuTLSCredentials,gnuTLSDHParams);
-
-      initTLSFlag = TRUE;
-    }
-    else
-    {
-      initTLSFlag = FALSE;
-    }
-  #else /* not HAVE_GNU_TLS */
-    UNUSED_VARIABLE(caFileName);
-    UNUSED_VARIABLE(certFileName);
-    UNUSED_VARIABLE(keyFileName);
+    gnutls_global_init();
+    gnutls_global_set_log_level(10);
   #endif /* HAVE_GNU_TLS */
 
   return ERROR_NONE;
@@ -134,11 +68,6 @@ Errors Network_init(const char *caFileName,
 void Network_done(void)
 {
   #ifdef HAVE_GNU_TLS
-    if (initTLSFlag)
-    {
-      gnutls_dh_params_deinit(gnuTLSDHParams);
-      gnutls_certificate_free_credentials(gnuTLSCredentials);
-    }
   #endif /* HAVE_GNU_TLS */
 }
 
@@ -296,9 +225,15 @@ Errors Network_receive(SocketHandle *socketHandle,
 
 Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
                           uint               serverPort,
-                          ServerTypes        serverType
+                          ServerTypes        serverType,
+                          const char         *caFileName,
+                          const char         *certFileName,
+                          const char         *keyFileName
                          )
 {
+  #ifdef HAVE_GNU_TLS
+    int result;
+  #endif /* HAVE_GNU_TLS */
   struct sockaddr_in socketAddress;
   int                n;
 
@@ -333,6 +268,71 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   }
   listen(serverSocketHandle->handle,5);
 
+  switch (serverType)
+  {
+    case SERVER_TYPE_PLAIN:
+      break;
+    case SERVER_TYPE_TLS:
+      #ifdef HAVE_GNU_TLS
+        if (   (caFileName == NULL)
+            || (certFileName == NULL)
+            || (keyFileName == NULL)
+           )
+        {
+          close(serverSocketHandle->handle);
+          return ERROR_INIT_TLS;
+        }
+
+        if (gnutls_certificate_allocate_credentials(&serverSocketHandle->gnuTLSCredentials) != 0)
+        {
+          close(serverSocketHandle->handle);
+          return ERROR_INIT_TLS;
+        }
+        result = gnutls_certificate_set_x509_trust_file(serverSocketHandle->gnuTLSCredentials,
+                                                        caFileName,
+                                                        GNUTLS_X509_FMT_PEM
+                                                       );
+        if (result < 0)
+        {
+          gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
+          close(serverSocketHandle->handle);
+          return ERROR_INIT_TLS;
+        }
+        result = gnutls_certificate_set_x509_key_file(serverSocketHandle->gnuTLSCredentials,
+                                                      certFileName,
+                                                      keyFileName,
+                                                      GNUTLS_X509_FMT_PEM
+                                                     );
+        if (result < 0)
+        {
+          gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
+          close(serverSocketHandle->handle);
+          return ERROR_INIT_TLS;
+        }
+
+        gnutls_dh_params_init(&serverSocketHandle->gnuTLSDHParams);
+        result = gnutls_dh_params_generate2(serverSocketHandle->gnuTLSDHParams,DH_BITS);
+        if (result < 0)
+        {
+          gnutls_dh_params_deinit(serverSocketHandle->gnuTLSDHParams);
+          gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
+          close(serverSocketHandle->handle);
+          return ERROR_INIT_TLS;
+        }
+        gnutls_certificate_set_dh_params(serverSocketHandle->gnuTLSCredentials,serverSocketHandle->gnuTLSDHParams);
+      #else /* not HAVE_GNU_TLS */
+        UNUSED_VARIABLE(caFileName);
+        UNUSED_VARIABLE(certFileName);
+        UNUSED_VARIABLE(keyFileName);
+      #endif /* HAVE_GNU_TLS */
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
   return ERROR_NONE;
 }
 
@@ -340,6 +340,23 @@ void Network_doneServer(ServerSocketHandle *serverSocketHandle)
 {
   assert(serverSocketHandle != NULL);
 
+  switch (serverSocketHandle->type)
+  {
+    case SERVER_TYPE_PLAIN:
+      break;
+    case SERVER_TYPE_TLS:
+      #ifdef HAVE_GNU_TLS
+        gnutls_dh_params_deinit(serverSocketHandle->gnuTLSDHParams);
+        gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
+      #else /* not HAVE_GNU_TLS */
+      #endif /* HAVE_GNU_TLS */
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
   close(serverSocketHandle->handle);
 }
 
@@ -398,7 +415,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
           return ERROR_INIT_TLS;
         }
 
-        if (gnutls_credentials_set(socketHandle->gnuTLSSession,GNUTLS_CRD_CERTIFICATE,gnuTLSCredentials) != 0)
+        if (gnutls_credentials_set(socketHandle->gnuTLSSession,GNUTLS_CRD_CERTIFICATE,serverSocketHandle->gnuTLSCredentials) != 0)
         {
           gnutls_deinit(socketHandle->gnuTLSSession);
           close(socketHandle->handle);

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -17,8 +17,10 @@
 #include "global.h"
 #include "errors.h"
 #include "strings.h"
+
 #include "files.h"
 #include "network.h"
+#include "passwords.h"
 
 #include "storage.h"
 
@@ -29,9 +31,9 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL String defaultSSHPassword;
-LOCAL String defaultSSHPublicKeyFileName;
-LOCAL String defaultSSHPrivatKeyFileName;
+LOCAL Password *defaultSSHPassword;
+LOCAL String   defaultSSHPublicKeyFileName;
+LOCAL String   defaultSSHPrivatKeyFileName;
 
 /****************************** Macros *********************************/
 
@@ -102,16 +104,15 @@ LOCAL bool initSSHPassword(const Options *options)
       }
 
       /* read password, discard last LF */
-      while ((ch = getc(inputHandle)) != EOF)
+      while ((ch = getc(inputHandle) != EOF) && ((char)ch != '\n'))
       {
-        String_appendChar(defaultSSHPassword,(char)ch);
+        Password_appendChar(defaultSSHPassword,(char)ch);
       }
-      if (String_index(defaultSSHPassword,STRING_END) == '\n') String_remove(defaultSSHPassword,STRING_END,1);
 
       /* close pipe */
       pclose(inputHandle);
 
-      return (String_length(defaultSSHPassword) > 0);
+      return (Password_length(defaultSSHPassword) > 0);
     }
     else 
     {
@@ -172,7 +173,7 @@ LOCAL bool parseSSHSpecifier(const String sshSpecifier,
 
 Errors Storage_init(void)
 {
-  defaultSSHPassword          = String_new();
+  defaultSSHPassword          = Password_new();
   defaultSSHPublicKeyFileName = String_new();
   defaultSSHPrivatKeyFileName = String_new();
   File_setFileNameCString(defaultSSHPublicKeyFileName,getenv("HOME"));
@@ -189,7 +190,7 @@ void Storage_done(void)
 {
   String_delete(defaultSSHPrivatKeyFileName);
   String_delete(defaultSSHPublicKeyFileName);
-  String_delete(defaultSSHPassword);
+  Password_delete(defaultSSHPassword);
 }
 
 Errors Storage_prepare(const String  storageName,
@@ -228,6 +229,7 @@ Errors Storage_prepare(const String  storageName,
         Errors          error;
         SocketHandle    socketHandle;
         LIBSSH2_SESSION *session;
+        const char      *password;
 
         /* parse ssh login specification */
         userName     = String_new();
@@ -288,15 +290,17 @@ Errors Storage_prepare(const String  storageName,
         }
 
     #if 1
+        password = Password_deploy((options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword);
         if (libssh2_userauth_publickey_fromfile(session,
     // NYI
                                                 String_cString(userName),
                                                 (options->sshPublicKeyFileName != NULL)?options->sshPublicKeyFileName:String_cString(defaultSSHPublicKeyFileName),
                                                 (options->sshPrivatKeyFileName != NULL)?options->sshPrivatKeyFileName:String_cString(defaultSSHPrivatKeyFileName),
-                                                (options->sshPassword != NULL)?options->sshPassword:String_cString(defaultSSHPassword)
+                                                password
                                                ) != 0
            )
         {
+          Password_undeploy((options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword);
           libssh2_session_disconnect(session,"");
           libssh2_session_free(session);
           Network_disconnect(&socketHandle);
@@ -306,6 +310,7 @@ Errors Storage_prepare(const String  storageName,
           String_delete(storageSpecifier);
           return ERROR_SSH_AUTHENTIFICATION;
         }
+        Password_undeploy((options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword);
     #else
         if (libssh2_userauth_keyboard_interactive(session,
                                                   String_cString(userName),
@@ -377,9 +382,10 @@ Errors Storage_create(StorageInfo   *storageInfo,
       break;
     case STORAGE_TYPE_SCP:
       {
-        String userName;
-        String hostName;
-        String hostFileName;
+        String     userName;
+        String     hostName;
+        String     hostFileName;
+        const char *password;
 
         /* init variables */
         storageInfo->mode = STORAGE_MODE_WRITE;
@@ -438,16 +444,18 @@ Errors Storage_create(StorageInfo   *storageInfo,
         }
 
     #if 1
+        password = Password_deploy((options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword);
         if (libssh2_userauth_publickey_fromfile(storageInfo->scp.session,
     // NYI
                                                 String_cString(userName),
                                                 (options->sshPublicKeyFileName != NULL)?options->sshPublicKeyFileName:String_cString(defaultSSHPublicKeyFileName),
                                                 (options->sshPrivatKeyFileName != NULL)?options->sshPrivatKeyFileName:String_cString(defaultSSHPrivatKeyFileName),
-                                                (options->sshPassword != NULL)?options->sshPassword:String_cString(defaultSSHPassword)
+                                                password
                                                ) != 0
            )
         {
           printError("ssh authentification fail!\n");
+          Password_undeploy((options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword);
           libssh2_session_disconnect(storageInfo->scp.session,"");
           libssh2_session_free(storageInfo->scp.session);
           Network_disconnect(&storageInfo->scp.socketHandle);
@@ -457,6 +465,7 @@ Errors Storage_create(StorageInfo   *storageInfo,
           String_delete(storageSpecifier);
           return ERROR_SSH_AUTHENTIFICATION;
         }
+        Password_undeploy((options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword);
     #else
         if (libssh2_userauth_keyboard_interactive(storageInfo->scp.session,
                                                   String_cString(userName),
