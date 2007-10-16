@@ -1,0 +1,49 @@
+BAR - BAckup Archiver
+
+Features
+
+* can split archive files into pieces
+* compress of data with zlib or bzip2 algorithms
+* encryption with gcrypt algrithms (AES,TWOFISH etc.)
+* fast file format: can find and extract single files
+  without decompressing/decryption of the whole archive
+* direct copy of archives to remote computer via SSH
+  (SCP or SFTP)
+* daemon-mode with control over plain and TSL network
+  connection
+* nice graphical frontend (written in TclTk)
+
+Requirements
+
+* Unix system
+* PTHREADs library
+* zlib library
+* bzib2 library
+* gcrypt library
+* ssh2 library
+* long long datatype (because of large files)
+
+Installation
+
+./configure
+make
+make install
+
+Archive files and encryption
+
+For encryption the algorithms of the gcrypt library are
+used. The BAR archive files are not encrypted in a single
+block, instead each file is encrypted. The archive file
+structure is readable (an BAR archive is organized in
+"chunks"), thus everybody can detect e. g. how many files
+are stored in the archive, but nobody except the owner of
+the passphrase used for encryption can read the contents
+of the files nor the file meta data, e. g. file names (as
+long as the used encryption algorithm is not broken by
+someone).
+
+Contact
+
+Send an email to
+
+torsten.rupp@gmx.net
