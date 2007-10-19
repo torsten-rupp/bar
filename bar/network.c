@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -82,6 +82,9 @@ Errors Network_connect(SocketHandle *socketHandle,
   struct sockaddr_in socketAddress;
 
   assert(socketHandle != NULL);
+
+  /* initialize variables */
+  socketHandle->type = SOCKET_TYPE_PLAIN;
 
   /* get host IP address */
   hostAddressEntry = gethostbyname(String_cString(hostName));

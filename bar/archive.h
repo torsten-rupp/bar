@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -26,6 +26,7 @@
 #include "crypt.h"
 #include "archive_format.h"
 #include "files.h"
+#include "storage.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -55,6 +56,8 @@ typedef struct
 {
   ArchiveNewFileFunction archiveNewFileFunction;     // new archive file call back function
   void                   *archiveNewFileUserData;    // user data for new archive file call back function
+  const Options          *options;
+
   const char             *tmpDirectory;              // temporary directory
   uint64                 partSize;                   // approximated size of file part
   CompressAlgorithms     compressAlgorithm;          // default compression algorithm
@@ -69,8 +72,9 @@ typedef struct
 
   uint                   partNumber;                 // file part number
   bool                   fileOpenFlag;               // TRUE iff file is open
-  String                 fileName;                   // file anme
-  FileHandle             fileHandle;                 // file handle
+  String                 fileName;                   // file name
+//  FileHandle             fileHandle;                 // file handle
+StorageFileHandle storageFileHandle;
 
   bool                   nextChunkHeaderReadFlag;    // TRUE iff next chunk header read
   ChunkHeader            nextChunkHeader;            // next file, directory, link chunk header
@@ -195,6 +199,7 @@ void Archive_done(void);
 Errors Archive_create(ArchiveInfo            *archiveInfo,
                       ArchiveNewFileFunction archiveNewFileFunction,
                       void                   *archiveNewFileUserData,
+const Options *options,
                       const char             *tmpDirectory,
                       uint64                 partSize,
                       CompressAlgorithms     compressAlgorithm,
@@ -208,15 +213,17 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
 * Purpose: open archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileName - archive file name
+*          options         - option settings
 *          password        - crypt password
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_open(ArchiveInfo  *archiveInfo,
-                    const String archiveFileName,
-                    Password     *password
+Errors Archive_open(ArchiveInfo   *archiveInfo,
+                    const String  archiveFileName,
+                    const Options *options,
+                    Password      *password
                    );
 
 /***********************************************************************\

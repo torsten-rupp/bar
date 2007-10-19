@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -127,6 +127,7 @@ String File_setFileNameChar(String fileName, char ch);
 String File_appendFileName(String fileName, const String name);
 String File_appendFileNameCString(String fileName, const char *name);
 String File_appendFileNameChar(String fileName, char ch);
+String File_appendFileNameBuffer(String fileName, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : File_getFilePathName
@@ -259,7 +260,7 @@ bool File_eof(FileHandle *fileHandle);
 * Input  : fileHandle   - file handle
 *          buffer       - buffer for data to read
 *          bufferLength - length of data to read
-* Output : -
+* Output : bytesRead - bytes read
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -267,7 +268,7 @@ bool File_eof(FileHandle *fileHandle);
 Errors File_read(FileHandle *fileHandle,
                  void       *buffer,
                  ulong      bufferLength,
-                 ulong      *readBytes
+                 ulong      *bytesRead
                 );
 
 /***********************************************************************\
@@ -348,7 +349,9 @@ Errors File_tell(FileHandle *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_seek(FileHandle *fileHandle, uint64 offset);
+Errors File_seek(FileHandle *fileHandle,
+                 uint64     offset
+                );
 
 /*---------------------------------------------------------------------*/
 

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems : all
@@ -91,23 +91,27 @@ typedef struct ChunkInfo
 #endif
 
 /***********************************************************************\
-* Name   : Chunks_init
+* Name   : Chunk_init
 * Purpose: init chunks functions
-* Input  : -
+* Input  : eof   - call back check end of data
+*          read  - call back read data
+*          write - call back write data
+*          tell  - call back tell position
+*          seek  - call back seek to position
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_init(bool(*endOfFile)(void *userData),
-                   bool(*readFile)(void *userData, void *buffer, ulong length),
-                   bool(*writeFile)(void *userData, const void *buffer, ulong length),
-                   bool(*tellFile)(void *userData, uint64 *offset),
-                   bool(*seekFile)(void *userData, uint64 offset)
-                  );
+Errors Chunk_init(bool(*eof)(void *userData),
+                  Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
+                  Errors(*write)(void *userData, const void *buffer, ulong length),
+                  Errors(*tell)(void *userData, uint64 *offset),
+                  Errors(*seek)(void *userData, uint64 offset)
+                 );
 
 /***********************************************************************\
-* Name   : Chunks_done
+* Name   : Chunk_done
 * Purpose: done chunks functions
 * Input  : -
 * Output : -
@@ -115,10 +119,10 @@ Errors Chunks_init(bool(*endOfFile)(void *userData),
 * Notes  : -
 \***********************************************************************/
 
-void Chunks_done(void);
+void Chunk_done(void);
 
 /***********************************************************************\
-* Name   : Chunks_idToString
+* Name   : Chunk_idToString
 * Purpose: convert chunk id to string
 * Input  : chunkId - chunk id
 * Output : -
@@ -126,10 +130,10 @@ void Chunks_done(void);
 * Notes  : non-reentrant function!
 \***********************************************************************/
 
-const char *Chunks_idToString(ChunkId chunkId);
+const char *Chunk_idToString(ChunkId chunkId);
 
 /***********************************************************************\
-* Name   : Chunks_getSize
+* Name   : Chunk_getSize
 * Purpose: get size of chunk in bytes (without header and data elements)
 * Input  : definition - chunk definition
 *          alignment  - alignment to use
@@ -139,13 +143,13 @@ const char *Chunks_idToString(ChunkId chunkId);
 * Notes  : -
 \***********************************************************************/
 
-ulong Chunks_getSize(const int  *definition,
-                     ulong      alignment,
-                     const void *data
-                    );
+ulong Chunk_getSize(const int  *definition,
+                    ulong      alignment,
+                    const void *data
+                   );
 
 /***********************************************************************\
-* Name   : Chunks_new
+* Name   : Chunk_new
 * Purpose: create new chunk handle
 * Input  : chunkInfo       - chunk info block
 *          parentChunkInfo - parent chunk info block
@@ -158,15 +162,15 @@ ulong Chunks_getSize(const int  *definition,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_new(ChunkInfo *chunkInfo,
-                  ChunkInfo *parentChunkInfo,
-                  void      *userData,
-                  uint      alignment,
-                  CryptInfo *cryptInfo
-                 );
+Errors Chunk_new(ChunkInfo *chunkInfo,
+                 ChunkInfo *parentChunkInfo,
+                 void      *userData,
+                 uint      alignment,
+                 CryptInfo *cryptInfo
+                );
 
 /***********************************************************************\
-* Name   : Chunks_delete
+* Name   : Chunk_delete
 * Purpose: delete chunk handle
 * Input  : chunkInfo - chunk info block
 * Output : -
@@ -174,10 +178,10 @@ Errors Chunks_new(ChunkInfo *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-void Chunks_delete(ChunkInfo *chunkInfo);
+void Chunk_delete(ChunkInfo *chunkInfo);
 
 /***********************************************************************\
-* Name   : Chunks_next
+* Name   : Chunk_next
 * Purpose: get next chunk
 * Input  : userData - user data for file i/o
 * Output : chunkHeader - chunk header
@@ -185,12 +189,12 @@ void Chunks_delete(ChunkInfo *chunkInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_next(void        *userData,
-                   ChunkHeader *chunkHeader
-                  );
+Errors Chunk_next(void        *userData,
+                  ChunkHeader *chunkHeader
+                 );
 
 /***********************************************************************\
-* Name   : Chunks_skip
+* Name   : Chunk_skip
 * Purpose: skip chink
 * Input  : userData    - user data for file i/o
 *          chunkHeader - chunk header
@@ -199,12 +203,12 @@ Errors Chunks_next(void        *userData,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_skip(void        *userData,
-                   ChunkHeader *chunkHeader
-                  );
+Errors Chunk_skip(void        *userData,
+                  ChunkHeader *chunkHeader
+                 );
 
 /***********************************************************************\
-* Name   : Chunks_eof
+* Name   : Chunk_eof
 * Purpose: check of end of chunks (file)
 * Input  : userData - user data for file i/o
 * Output : -
@@ -212,10 +216,10 @@ Errors Chunks_skip(void        *userData,
 * Notes  : -
 \***********************************************************************/
 
-bool Chunks_eof(void *userData);
+bool Chunk_eof(void *userData);
 
 /***********************************************************************\
-* Name   : Chunks_open
+* Name   : Chunk_open
 * Purpose: open chunk
 * Input  : chunkInfo      - chunk info block
 *          chunkHeader    - chunk header
@@ -227,16 +231,16 @@ bool Chunks_eof(void *userData);
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_open(ChunkInfo   *chunkInfo,
-                   ChunkHeader *chunkHeader,
-                   ChunkId     chunkId,
-                   const int   *definition,
-                   ulong       definitionSize,
-                   void        *data
-                  );
+Errors Chunk_open(ChunkInfo   *chunkInfo,
+                  ChunkHeader *chunkHeader,
+                  ChunkId     chunkId,
+                  const int   *definition,
+                  ulong       definitionSize,
+                  void        *data
+                 );
 
 /***********************************************************************\
-* Name   : Chunks_create
+* Name   : Chunk_create
 * Purpose: create new chunk
 * Input  : chunkInfo      - chunk info block
 *          chunkId        - chunk id
@@ -248,15 +252,15 @@ Errors Chunks_open(ChunkInfo   *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_create(ChunkInfo  *chunkInfo,
-                     ChunkId    chunkId,
-                     const int  *definition,
-                     ulong      definitionSize,
-                     const void *data
-                    );
+Errors Chunk_create(ChunkInfo  *chunkInfo,
+                    ChunkId    chunkId,
+                    const int  *definition,
+                    ulong      definitionSize,
+                    const void *data
+                   );
 
 /***********************************************************************\
-* Name   : Chunks_close
+* Name   : Chunk_close
 * Purpose: update chunk header and close chunk
 * Input  : chunkInfo - chunk info block
 * Output : -
@@ -264,10 +268,10 @@ Errors Chunks_create(ChunkInfo  *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_close(ChunkInfo *chunkInfo);
+Errors Chunk_close(ChunkInfo *chunkInfo);
 
 /***********************************************************************\
-* Name   : Chunks_nextSub
+* Name   : Chunk_nextSub
 * Purpose: get next sub-chunk
 * Input  : chunkInfo   - chunk info block
 *          chunkHeader - chunk header
@@ -276,12 +280,12 @@ Errors Chunks_close(ChunkInfo *chunkInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_nextSub(ChunkInfo   *chunkInfo,
-                      ChunkHeader *chunkHeader
-                     );
+Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
+                     ChunkHeader *chunkHeader
+                    );
 
 /***********************************************************************\
-* Name   : Chunks_skipSub
+* Name   : Chunk_skipSub
 * Purpose: skip sub-chunk
 * Input  : chunkInfo   - chunk info block
 *          chunkHeader - chunk header
@@ -290,12 +294,12 @@ Errors Chunks_nextSub(ChunkInfo   *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_skipSub(ChunkInfo   *chunkInfo,
-                      ChunkHeader *chunkHeader
-                     );
+Errors Chunk_skipSub(ChunkInfo   *chunkInfo,
+                     ChunkHeader *chunkHeader
+                    );
 
 /***********************************************************************\
-* Name   : Chunks_eofSub
+* Name   : Chunk_eofSub
 * Purpose: check if end of sub-chunks
 * Input  : chunkInfo - chunk info block
 * Output : -
@@ -303,10 +307,10 @@ Errors Chunks_skipSub(ChunkInfo   *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-bool Chunks_eofSub(ChunkInfo *chunkInfo);
+bool Chunk_eofSub(ChunkInfo *chunkInfo);
 
 /***********************************************************************\
-* Name   : Chunks_update
+* Name   : Chunk_update
 * Purpose: update chunk data
 * Input  : chunkInfo - chunk info block
 *          data      - chunk data
@@ -315,12 +319,12 @@ bool Chunks_eofSub(ChunkInfo *chunkInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_update(ChunkInfo  *chunkInfo,
-                     const void *data
-                    );
+Errors Chunk_update(ChunkInfo  *chunkInfo,
+                    const void *data
+                   );
 
 /***********************************************************************\
-* Name   : Chunks_readData
+* Name   : Chunk_readData
 * Purpose: read data from chunk
 * Input  : chunkInfo   - chunk info block
 *          data        - buffer for data
@@ -330,13 +334,13 @@ Errors Chunks_update(ChunkInfo  *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_readData(ChunkInfo *chunkInfo,
-                       void      *data,
-                       ulong     size
-                      );
+Errors Chunk_readData(ChunkInfo *chunkInfo,
+                      void      *data,
+                      ulong     size
+                     );
 
 /***********************************************************************\
-* Name   : Chunks_writeData
+* Name   : Chunk_writeData
 * Purpose: write data into chunk
 * Input  : chunkInfo   - chunk info block
 *          data        - buffer with data
@@ -346,13 +350,13 @@ Errors Chunks_readData(ChunkInfo *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_writeData(ChunkInfo  *chunkInfo,
-                        const void *data,
-                        ulong      size
-                       );
+Errors Chunk_writeData(ChunkInfo  *chunkInfo,
+                       const void *data,
+                       ulong      size
+                      );
 
 /***********************************************************************\
-* Name   : Chunks_skipData
+* Name   : Chunk_skipData
 * Purpose: skip chunk data
 * Input  : chunkInfo - chunk info block
 *          size      - number of bytes to skip
@@ -361,9 +365,9 @@ Errors Chunks_writeData(ChunkInfo  *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunks_skipData(ChunkInfo *chunkInfo,
-                       ulong     size
-                      );
+Errors Chunk_skipData(ChunkInfo *chunkInfo,
+                      ulong     size
+                     );
 
 #ifdef __cplusplus
   }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -36,7 +36,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define SERVER_DEBUG
+#define _SERVER_DEBUG
 #define _SIMULATOR
 
 /***************************** Constants *******************************/
@@ -67,6 +67,7 @@ typedef struct JobNode
   PatternList        excludePatternList;
   uint64             archivePartSize;
   uint64             maxTmpSize;
+  ulong              maxBandWidth;
   uint               sshPort;
   String             sshPublicKeyFileName;
   String             sshPrivatKeyFileName;
@@ -323,6 +324,7 @@ LOCAL void jobThread(JobList *jobList)
     options = defaultOptions;
     options.archivePartSize           = jobNode->archivePartSize;
     options.maxTmpSize                = jobNode->maxTmpSize;
+    options.maxBandWidth              = jobNode->maxBandWidth;
     if (jobNode->compressAlgorithm != COMPRESS_ALGORITHM_UNKNOWN) options.compressAlgorithm = jobNode->compressAlgorithm;
     if (jobNode->cryptAlgorithm != CRYPT_ALGORITHM_UNKNOWN      ) options.cryptAlgorithm    = jobNode->cryptAlgorithm;
     if (jobNode->sshPort != 0                                   ) options.sshPort           = jobNode->sshPort;
@@ -957,6 +959,10 @@ LOCAL void serverCommand_getConfigValue(ClientNode *clientNode, uint id, const S
     {
       sendResult(clientNode,id,TRUE,0,"%llu",clientNode->jobNode->maxTmpSize);
     }
+    else if (String_equalsCString(arguments[0],"max-band-width"))
+    {
+      sendResult(clientNode,id,TRUE,0,"%'S",clientNode->jobNode->maxBandWidth);
+    }
     else if (String_equalsCString(arguments[0],"compress-algorithm"))
     {
       sendResult(clientNode,id,TRUE,0,"%'s",Compress_getAlgorithmName(clientNode->jobNode->compressAlgorithm));
@@ -1027,6 +1033,14 @@ LOCAL void serverCommand_setConfigValue(ClientNode *clientNode, uint id, const S
       const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
       clientNode->jobNode->maxTmpSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+      sendResult(clientNode,id,TRUE,0,"");
+    }
+    else if (String_equalsCString(arguments[0],"max-band-width"))
+    {
+      // max-tmp-part-size = <n>
+      const StringUnit UNITS[] = {{"K",1024}};
+
+      clientNode->jobNode->maxBandWidth = String_toInteger(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
       sendResult(clientNode,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"ssh-port"))

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -175,18 +175,6 @@ Errors Command_list(StringList    *archiveFileNameList,
   archiveFileName = String_new();
 
   failError = ERROR_NONE;
-  fileCount = 0;
-  info(0,
-       "%4s %-10s %-22s %-10s %-7s %-10s %s\n",
-       "Type",
-       "Size",
-       "Part",
-       "Compress",
-       "Ratio %",
-       "Crypt",
-       "Name"
-      );
-  info(0,"--------------------------------------------------------------------------------------------------------------\n");
   while (!StringList_empty(archiveFileNameList))
   {
     StringList_getFirst(archiveFileNameList,archiveFileName);
@@ -194,6 +182,7 @@ Errors Command_list(StringList    *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
+                         options,
                          options->cryptPassword
                         );
     if (error != ERROR_NONE)
@@ -207,6 +196,18 @@ Errors Command_list(StringList    *archiveFileNameList,
     }
 
     /* list contents */
+    fileCount = 0;
+    info(0,
+         "%4s %-10s %-22s %-10s %-7s %-10s %s\n",
+         "Type",
+         "Size",
+         "Part",
+         "Compress",
+         "Ratio %",
+         "Crypt",
+         "Name"
+        );
+    info(0,"--------------------------------------------------------------------------------------------------------------\n");
     while (!Archive_eof(&archiveInfo))
     {
       /* get next file type */
@@ -372,12 +373,12 @@ Errors Command_list(StringList    *archiveFileNameList,
           break; /* not reached */
       }
     }
+    info(0,"--------------------------------------------------------------------------------------------------------------\n");
+    info(0,"%lu file(s)\n",fileCount);
 
     /* close archive */
     Archive_close(&archiveInfo);
   }
-  info(0,"--------------------------------------------------------------------------------------------------------------\n");
-  info(0,"%lu file(s)\n",fileCount);
 
   /* free resources */
   String_delete(archiveFileName);

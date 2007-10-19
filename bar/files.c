@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -110,6 +110,22 @@ String File_appendFileNameChar(String fileName, char ch)
     }
   }
   String_appendChar(fileName,ch);
+
+  return fileName;
+}
+
+String File_appendFileNameBuffer(String fileName, const char *buffer, ulong bufferLength)
+{
+  assert(fileName != NULL);
+
+  if (String_length(fileName) > 0)
+  {
+    if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
+    {
+      String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+    }
+  }
+  String_appendBuffer(fileName,buffer,bufferLength);
 
   return fileName;
 }
@@ -382,13 +398,13 @@ bool File_eof(FileHandle *fileHandle)
 Errors File_read(FileHandle *fileHandle,
                  void       *buffer,
                  ulong      bufferLength,
-                 ulong      *readBytes
+                 ulong      *bytesRead
                 )
 {
   ssize_t n;
 
   assert(fileHandle != NULL);
-  assert(readBytes != NULL);
+  assert(bytesRead != NULL);
 
   n = read(fileHandle->handle,buffer,bufferLength);
   if (n > 0) fileHandle->index += n;
@@ -397,7 +413,7 @@ Errors File_read(FileHandle *fileHandle,
     return ERROR_IO_ERROR;
   }
 
-  (*readBytes) = n;
+  (*bytesRead) = n;
 
   return ERROR_NONE;
 }
@@ -488,7 +504,9 @@ assert(n == (off64_t)fileHandle->index);
   return ERROR_NONE;
 }
 
-Errors File_seek(FileHandle *fileHandle, uint64 offset)
+Errors File_seek(FileHandle *fileHandle,
+                 uint64     offset
+                )
 {
   assert(fileHandle != NULL);
 

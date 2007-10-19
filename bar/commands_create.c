@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.30 $
+* $Revision: 1.31 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -782,12 +782,12 @@ LOCAL Errors storeArchiveFile(String fileName,
 
 LOCAL void storageThread(CreateInfo *createInfo)
 {
-  byte        *buffer;
-  StorageMsg  storageMsg;
-  StorageInfo storageInfo;
-  Errors      error;
-  FileHandle  fileHandle;
-  ulong       n;
+  byte              *buffer;
+  StorageMsg        storageMsg;
+  StorageFileHandle storageFileHandle;
+  Errors            error;
+  FileHandle        fileHandle;
+  ulong             n;
 
   assert(createInfo != NULL);
 
@@ -806,7 +806,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
       info(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageMsg.destinationFileName));
 
       /* open storage */
-      error = Storage_create(&storageInfo,
+      error = Storage_create(&storageFileHandle,
                              storageMsg.destinationFileName,
                              storageMsg.fileSize,
                              createInfo->options
@@ -857,7 +857,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
           createInfo->error = error;
           break;
         }
-        error = Storage_write(&storageInfo,buffer,n);
+        error = Storage_write(&storageFileHandle,buffer,n);
         if (error != ERROR_NONE)
         {
           info(0,"FAIL!\n");
@@ -875,7 +875,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
       File_close(&fileHandle);
 
       /* close storage */
-      Storage_close(&storageInfo);
+      Storage_close(&storageFileHandle);
 
       if (createInfo->error == ERROR_NONE)
       {
@@ -1010,6 +1010,7 @@ Errors Command_create(const char               *archiveFileName,
   error = Archive_create(&archiveInfo,
                          storeArchiveFile,
                          &createInfo,
+                         options,
                          options->tmpDirectory,
                          options->archivePartSize,
                          options->compressAlgorithm,

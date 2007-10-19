@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -53,6 +53,8 @@ typedef struct
   uint64             maxTmpSize;
   uint               directoryStripCount;
   const char         *directory;
+
+  ulong              maxBandWidth;
 
   PatternTypes       patternType;
 

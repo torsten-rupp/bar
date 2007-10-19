@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -59,11 +59,11 @@ typedef struct
 /***************************** Variables *******************************/
 LOCAL struct
 {
-  bool(*endOfFile)(void *userData);
-  bool(*readFile)(void *userData, void *buffer, ulong length);
-  bool(*writeFile)(void *userData, const void *buffer, ulong length);
-  bool(*tellFile)(void *userData, uint64 *offset);
-  bool(*seekFile)(void *userData, uint64 offset);
+  bool(*eof)(void *userData);
+  Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead);
+  Errors(*write)(void *userData, const void *buffer, ulong length);
+  Errors(*tell)(void *userData, uint64 *offset);
+  Errors(*seek)(void *userData, uint64 offset);
 } IO;
 
 /****************************** Macros *********************************/
@@ -99,6 +99,7 @@ LOCAL Errors readDefinition(void      *userData,
                             ulong     *bytesRead
                            )
 {
+  Errors error;
   ulong  bufferLength;
   byte   *buffer;
   byte   *p;
@@ -116,12 +117,12 @@ LOCAL Errors readDefinition(void      *userData,
   }
 
   /* read data */
-  if (!IO.readFile(userData,buffer,bufferLength))
+  error = IO.read(userData,buffer,bufferLength,bytesRead);
+  if (error != ERROR_NONE)
   {
     free(buffer);
-    return ERROR_IO_ERROR;
+    return error;
   }
-  (*bytesRead) = bufferLength;
 
   /* decrypt */
 //cryptInfo=NULL;
@@ -283,6 +284,7 @@ LOCAL Errors writeDefinition(void       *userData,
   byte   *p;
   uint32 crc;
   int    z;
+  Errors error;
 
   assert(bytesWritten != NULL);
 
@@ -416,10 +418,11 @@ LOCAL Errors writeDefinition(void       *userData,
   }
 
   /* write data */
-  if (!IO.writeFile(userData,buffer,bufferLength))
+  error = IO.write(userData,buffer,bufferLength);
+  if (error != ERROR_NONE)
   {
     free(buffer);
-    return ERROR_IO_ERROR;
+    return error;
   }
   (*bytesWritten) = bufferLength;
 
@@ -428,33 +431,33 @@ LOCAL Errors writeDefinition(void       *userData,
 
 /*---------------------------------------------------------------------*/
 
-Errors Chunks_init(bool(*endOfFile)(void *userData),
-                   bool(*readFile)(void *userData, void *buffer, ulong length),
-                   bool(*writeFile)(void *userData, const void *buffer, ulong length),
-                   bool(*tellFile)(void *userData, uint64 *offset),
-                   bool(*seekFile)(void *userData, uint64 offset)
+Errors Chunk_init(bool(*eof)(void *userData),
+                  Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
+                  Errors(*write)(void *userData, const void *buffer, ulong length),
+                  Errors(*tell)(void *userData, uint64 *offset),
+                  Errors(*seek)(void *userData, uint64 offset)
                  )
 {
-  assert(endOfFile != NULL);
-  assert(readFile != NULL);
-  assert(writeFile != NULL);
-  assert(tellFile != NULL);
-  assert(seekFile != NULL);
+  assert(eof != NULL);
+  assert(read != NULL);
+  assert(write != NULL);
+  assert(tell != NULL);
+  assert(seek != NULL);
 
-  IO.endOfFile = endOfFile;
-  IO.readFile  = readFile;
-  IO.writeFile = writeFile;
-  IO.tellFile  = tellFile;
-  IO.seekFile  = seekFile;
+  IO.eof   = eof;
+  IO.read  = read;
+  IO.write = write;
+  IO.tell  = tell;
+  IO.seek  = seek;
 
   return ERROR_NONE;
 }
 
-void Chunks_done(void)
+void Chunk_done(void)
 {
 }
 
-const char *Chunks_idToString(ChunkId chunkId)
+const char *Chunk_idToString(ChunkId chunkId)
 {
   static char s[5];
   char   ch;
@@ -468,7 +471,7 @@ const char *Chunks_idToString(ChunkId chunkId)
   return s;
 }
 
-ulong Chunks_getSize(const int  *definition,
+ulong Chunk_getSize(const int  *definition,
                      ulong      alignment,
                      const void *data
                     )
@@ -535,12 +538,12 @@ ulong Chunks_getSize(const int  *definition,
   return definitionSize;
 }
 
-Errors Chunks_new(ChunkInfo *chunkInfo,
-                  ChunkInfo *parentChunkInfo,
-                  void      *userData,
-                  uint      alignment,
-                  CryptInfo *cryptInfo
-                 )
+Errors Chunk_new(ChunkInfo *chunkInfo,
+                 ChunkInfo *parentChunkInfo,
+                 void      *userData,
+                 uint      alignment,
+                 CryptInfo *cryptInfo
+                )
 {
   assert(chunkInfo != NULL);
 
@@ -561,27 +564,29 @@ Errors Chunks_new(ChunkInfo *chunkInfo,
   return ERROR_NONE;
 }
 
-void Chunks_delete(ChunkInfo *chunkInfo)
+void Chunk_delete(ChunkInfo *chunkInfo)
 {
   assert(chunkInfo != NULL);
 
   UNUSED_VARIABLE(chunkInfo);
 }
 
-Errors Chunks_next(void        *userData,
-                   ChunkHeader *chunkHeader)
+Errors Chunk_next(void        *userData,
+                  ChunkHeader *chunkHeader
+                 )
 {
-  uint64 offset;
   Errors error;
+  uint64 offset;
   Chunk  chunk;
   ulong  bytesRead;
 
   assert(chunkHeader != NULL);
 
   /* get current offset */
-  if (!IO.tellFile(userData,&offset))
+  error = IO.tell(userData,&offset);
+  if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return error;
   }
   chunkHeader->offset = offset;
 
@@ -604,32 +609,35 @@ Errors Chunks_next(void        *userData,
   return ERROR_NONE;
 }
 
-Errors Chunks_skip(void        *userData,
-                   ChunkHeader *chunkHeader
-                  )
+Errors Chunk_skip(void        *userData,
+                  ChunkHeader *chunkHeader
+                 )
 {
+  Errors error;
+
   assert(chunkHeader != NULL);
 
-  if (!IO.seekFile(userData,chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size))
+  error = IO.seek(userData,chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size);
+  if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return error;
   }
 
   return ERROR_NONE;
 }
 
-bool Chunks_eof(void *userData)
+bool Chunk_eof(void *userData)
 {
-  return IO.endOfFile(userData);
+  return IO.eof(userData);
 }
 
-Errors Chunks_open(ChunkInfo   *chunkInfo,
-                   ChunkHeader *chunkHeader,
-                   ChunkId     chunkId,
-                   const int   *definition,
-                   ulong       definitionSize,
-                   void        *data
-                  )
+Errors Chunk_open(ChunkInfo   *chunkInfo,
+                  ChunkHeader *chunkHeader,
+                  ChunkId     chunkId,
+                  const int   *definition,
+                  ulong       definitionSize,
+                  void        *data
+                 )
 {
   Errors error;
   ulong  bytesRead;
@@ -667,15 +675,15 @@ Errors Chunks_open(ChunkInfo   *chunkInfo,
   return ERROR_NONE;
 }
 
-Errors Chunks_create(ChunkInfo  *chunkInfo,
-                     ChunkId    chunkId,
-                     const int  *definition,
-                     ulong      definitionSize,
-                     const void *data
-                    )
+Errors Chunk_create(ChunkInfo  *chunkInfo,
+                    ChunkId    chunkId,
+                    const int  *definition,
+                    ulong      definitionSize,
+                    const void *data
+                   )
 {
-  uint64      offset;
   Errors      error;
+  uint64      offset;
   ChunkHeader chunkHeader;
   ulong       bytesWritten;
 
@@ -692,12 +700,13 @@ Errors Chunks_create(ChunkInfo  *chunkInfo,
   chunkInfo->index          = 0;
 
   /* get size of chunk (without data elements) */
-  chunkInfo->definitionSize = Chunks_getSize(definition,chunkInfo->alignment,data);
+  chunkInfo->definitionSize = Chunk_getSize(definition,chunkInfo->alignment,data);
 
   /* get current offset */
-  if (!IO.tellFile(chunkInfo->userData,&offset))
+  error = IO.tell(chunkInfo->userData,&offset);
+  if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return error;
   }
   chunkInfo->offset = offset;
 
@@ -751,10 +760,10 @@ Errors Chunks_create(ChunkInfo  *chunkInfo,
   return ERROR_NONE;
 }
 
-Errors Chunks_close(ChunkInfo *chunkInfo)
+Errors Chunk_close(ChunkInfo *chunkInfo)
 {
-  uint64      offset;
   Errors      error;
+  uint64      offset;
   ChunkHeader chunkHeader;
   ulong       bytesWritten;
 
@@ -766,14 +775,16 @@ Errors Chunks_close(ChunkInfo *chunkInfo)
       break;
     case CHUNK_MODE_WRITE:
       /* write size to chunk-header */
-      if (!IO.tellFile(chunkInfo->userData,&offset))
+      error = IO.tell(chunkInfo->userData,&offset);
+      if (error != ERROR_NONE)
       {
-        return ERROR_IO_ERROR;
+        return error;
       }
 
-      if (!IO.seekFile(chunkInfo->userData,chunkInfo->offset))
+      error = IO.seek(chunkInfo->userData,chunkInfo->offset);
+      if (error != ERROR_NONE)
       {
-        return ERROR_IO_ERROR;
+        return error;
       }
       chunkHeader.id   = chunkInfo->id;
       chunkHeader.size = chunkInfo->size;
@@ -790,15 +801,17 @@ Errors Chunks_close(ChunkInfo *chunkInfo)
         return error;
       }
 
-      if (!IO.seekFile(chunkInfo->userData,offset))
+      error = IO.seek(chunkInfo->userData,offset);
+      if (error != ERROR_NONE)
       {
-        return ERROR_IO_ERROR;
+        return error;
       }
       break;
     case CHUNK_MODE_READ:
-      if (!IO.seekFile(chunkInfo->userData,chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size))
+      error = IO.seek(chunkInfo->userData,chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size);
+      if (error != ERROR_NONE)
       {
-        return ERROR_IO_ERROR;
+        return error;
       }
       break;
     #ifndef NDEBUG
@@ -811,12 +824,12 @@ Errors Chunks_close(ChunkInfo *chunkInfo)
   return ERROR_NONE; 
 }
 
-Errors Chunks_nextSub(ChunkInfo   *chunkInfo,
-                      ChunkHeader *chunkHeader
-                     )
+Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
+                     ChunkHeader *chunkHeader
+                    )
 {
-  uint64 offset;
   Errors error;
+  uint64 offset;
   Chunk  chunk;
   ulong  bytesRead;
 
@@ -829,9 +842,10 @@ Errors Chunks_nextSub(ChunkInfo   *chunkInfo,
   }
 
   /* get current offset */
-  if (!IO.tellFile(chunkInfo->userData,&offset))
+  error = IO.tell(chunkInfo->userData,&offset);
+  if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return error;
   }
   chunkHeader->offset = offset;
 
@@ -865,9 +879,9 @@ Errors Chunks_nextSub(ChunkInfo   *chunkInfo,
   return ERROR_NONE;
 }
 
-Errors Chunks_skipSub(ChunkInfo   *chunkInfo,
-                      ChunkHeader *chunkHeader
-                     )
+Errors Chunk_skipSub(ChunkInfo   *chunkInfo,
+                     ChunkHeader *chunkHeader
+                    )
 {
   UNUSED_VARIABLE(chunkInfo);
   UNUSED_VARIABLE(chunkHeader);
@@ -877,29 +891,31 @@ Errors Chunks_skipSub(ChunkInfo   *chunkInfo,
   return ERROR_NONE; 
 }
 
-bool Chunks_eofSub(ChunkInfo *chunkInfo)
+bool Chunk_eofSub(ChunkInfo *chunkInfo)
 {
   return chunkInfo->index >= chunkInfo->size;
 }
 
-Errors Chunks_update(ChunkInfo  *chunkInfo,
-                     const void *data
-                    )
+Errors Chunk_update(ChunkInfo  *chunkInfo,
+                    const void *data
+                   )
 {
-  uint64 offset;
   Errors error;
+  uint64 offset;
   ulong  bytesWritten;
 
   /* get current offset */
-  if (!IO.tellFile(chunkInfo->userData,&offset))
+  error = IO.tell(chunkInfo->userData,&offset);
+  if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return error;
   }
 
   /* update */
-  if (!IO.seekFile(chunkInfo->userData,chunkInfo->offset+CHUNK_HEADER_SIZE))
+  error = IO.seek(chunkInfo->userData,chunkInfo->offset+CHUNK_HEADER_SIZE);
+  if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return error;
   }
   error = writeDefinition(chunkInfo->userData,
                           chunkInfo->definition,
@@ -915,19 +931,23 @@ Errors Chunks_update(ChunkInfo  *chunkInfo,
   }
 
   /* restore offset */
-  if (!IO.seekFile(chunkInfo->userData,offset))
+  error = IO.seek(chunkInfo->userData,offset);
+  if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return error;
   }
 
   return ERROR_NONE;
 }
 
-Errors Chunks_readData(ChunkInfo *chunkInfo,
-                       void      *data,
-                       ulong     size
-                      )
+Errors Chunk_readData(ChunkInfo *chunkInfo,
+                      void      *data,
+                      ulong     size
+                     )
 {
+  Errors error;
+  ulong  bytesRead;
+
   assert(chunkInfo != NULL);
 
   if (size > (chunkInfo->size - chunkInfo->index))
@@ -935,7 +955,12 @@ Errors Chunks_readData(ChunkInfo *chunkInfo,
     size = chunkInfo->size - chunkInfo->index;
   }
 
-  if (!IO.readFile(chunkInfo->userData,data,size))
+  error = IO.read(chunkInfo->userData,data,size,&bytesRead);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (size != bytesRead)
   {
     return ERROR_IO_ERROR;
   }
@@ -948,14 +973,17 @@ Errors Chunks_readData(ChunkInfo *chunkInfo,
   return ERROR_NONE;
 }
 
-Errors Chunks_writeData(ChunkInfo  *chunkInfo,
-                        const void *data,
-                        ulong      size
-                       )
+Errors Chunk_writeData(ChunkInfo  *chunkInfo,
+                       const void *data,
+                       ulong      size
+                      )
 {
+  Errors error;
+
   assert(chunkInfo != NULL);
 
-  if (!IO.writeFile(chunkInfo->userData,data,size))
+  error = IO.write(chunkInfo->userData,data,size);
+  if (error != ERROR_NONE)
   {
     return ERROR_IO_ERROR;
   }
@@ -970,22 +998,25 @@ Errors Chunks_writeData(ChunkInfo  *chunkInfo,
   return ERROR_NONE;
 }
 
-Errors Chunks_skipData(ChunkInfo *chunkInfo,
-                     ulong     size
-                    )
+Errors Chunk_skipData(ChunkInfo *chunkInfo,
+                      ulong     size
+                     )
 {
+  Errors error;
   uint64 offset;
 
   assert(chunkInfo != NULL);
 
-  if (!IO.tellFile(chunkInfo->userData,&offset))
+  error = IO.tell(chunkInfo->userData,&offset);
+  if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return error;
   }
   offset += size;
-  if (!IO.seekFile(chunkInfo->userData,offset))
+  error = IO.seek(chunkInfo->userData,offset);
+  if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return error;
   }
   chunkInfo->index += size;
 

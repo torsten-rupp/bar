@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -27,6 +27,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define MAX_BAND_WIDTH_MEASUREMENTS 256
 
 /***************************** Datatypes *******************************/
 
@@ -38,7 +39,7 @@ typedef enum
 
 typedef enum
 {
-  STORAGE_TYPE_FILE,
+  STORAGE_TYPE_FILESYSTEM,
   STORAGE_TYPE_SCP,
   STORAGE_TYPE_SFTP
 } StorageTypes;
@@ -47,19 +48,33 @@ typedef struct
 {
   StorageModes mode;
   StorageTypes type;
+
+  struct
+  {
+    ulong  max;
+    ulong  blockSize;
+    ulong  measurements[MAX_BAND_WIDTH_MEASUREMENTS];
+    uint   measurementNextIndex;
+    ulong  measurementBytes;    // sum of transmitted bytes
+    uint64 measurementTime;     // time for transmission [us]
+  } bandWidth;
+
   union
   {
+    // file storage
     struct
     {
       String     fileName;
       FileHandle fileHandle;
-    } file;
+    } fileSystem;
+    // scp storage
     struct
     {
       SocketHandle    socketHandle;
       LIBSSH2_SESSION *session;
       LIBSSH2_CHANNEL *channel;
     } scp;
+    // sftp storage
     struct
     {
       SocketHandle        socketHandle;
@@ -67,9 +82,40 @@ typedef struct
       LIBSSH2_CHANNEL     *channel;
       LIBSSH2_SFTP        *sftp;
       LIBSSH2_SFTP_HANDLE *sftpHandle;
+      uint64              index;
+      uint64              size;
+      struct
+      {
+        byte              *data;
+        uint64            offset;
+        ulong             length;
+      } readAheadBuffer;
     } sftp;
   };
-} StorageInfo;
+} StorageFileHandle;
+
+typedef struct
+{
+  StorageTypes type;
+  union
+  {
+    struct
+    {
+      DirectoryHandle directoryHandle;
+    } fileSystem;
+    struct
+    {
+      String              pathName;
+      SocketHandle        socketHandle;
+      LIBSSH2_SESSION     *session;
+      LIBSSH2_CHANNEL     *channel;
+      LIBSSH2_SFTP        *sftp;
+      LIBSSH2_SFTP_HANDLE *sftpHandle;
+      char                *buffer;          // buffer for reading file names
+      bool                entryReadFlag;    // TRUE if entry read
+    } sftp;
+  };
+} StorageDirectoryHandle;
 
 /***************************** Variables *******************************/
 
@@ -111,6 +157,7 @@ void Storage_done(void);
 * Input  : storageName - storage name:
 *                          <file name>
 *                          scp:<user name>@<host name>:<file name>
+*                          sftp:<user name>@<host name>:<file name>
 *          options     - options
 * Output : -
 * Return : ERROR_NONE or errorcode
@@ -123,132 +170,188 @@ Errors Storage_prepare(const String  storageName,
 
 /***********************************************************************\
 * Name   : Storage_create
-* Purpose: create new storage
-* Input  : storageInfo - storage info variable
-*          storageName - storage name:
-*                          <file name>
-*                          scp:<user name>@<host name>:<file name>
-*                          sftp:<user name>@<host name>:<file name>
-*          fileSize    - storage file size
-*          options     - options
-* Output : storageInfo - initialized storage info
+* Purpose: create new storage file
+* Input  : storageFileHandle - storage file handle variable
+*          storageName      - storage name:
+*                               <file name>
+*                               scp:<user name>@<host name>:<file name>
+*                               sftp:<user name>@<host name>:<file name>
+*          fileSize         - storage file size
+*          options          - options
+* Output : storageFileHandle - initialized storage file handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_create(StorageInfo   *storageInfo,
-                      const String  storageName,
-                      uint64        fileSize,
-                      const Options *options
+Errors Storage_create(StorageFileHandle *storageFileHandle,
+                      const String      storageName,
+                      uint64            fileSize,
+                      const Options     *options
                      );
 
 /***********************************************************************\
 * Name   : Storage_open
-* Purpose: open storage
-* Input  : storageInfo - storage info variable
-*          storageName - storage name:
-*                          <file name>
-*                          sftp:<user name>@<host name>:<file name>
-*          options     - options
-* Output : storageInfo - initialized storage info
+* Purpose: open storage file
+* Input  : storageFileHandle - storage handle file variable
+*          storageName       - storage name:
+*                                <file name>
+*                                sftp:<user name>@<host name>:<file name>
+*          options           - options
+* Output : storageFileHandle - initialized storage file handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_open(StorageInfo   *storageInfo,
-                    const String  storageName,
-                    const Options *options
+Errors Storage_open(StorageFileHandle *storageFileHandle,
+                    const String      storageName,
+                    const Options     *options
                    );
 
 /***********************************************************************\
 * Name   : Storage_close
 * Purpose: close storage
-* Input  : storageInfo - storage info
+* Input  : storageFileHandle - storage file handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Storage_close(StorageInfo *storageInfo);
+void Storage_close(StorageFileHandle *storageFileHandle);
+
+/***********************************************************************\
+* Name   : Storage_eof
+* Purpose: check if end-of-file in storage
+* Input  : storageFileHandle - storage file handle
+* Output : -
+* Return : TRUE if end-of-file, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_eof(StorageFileHandle *storageFileHandle);
+
+/***********************************************************************\
+* Name   : Storage_read
+* Purpose: read from storage file
+* Input  : storageFileHandle - storage file handle
+*          buffer            - buffer with data to write
+*          size              - data size
+* Output : bytesRead - number of bytes read
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_read(StorageFileHandle *storageFileHandle,
+                    void              *buffer,
+                    ulong             size,
+                    ulong             *bytesRead
+                   );
+
+/***********************************************************************\
+* Name   : Storage_write
+* Purpose: write into storage file
+* Input  : storageFileHandle - storage file handle
+*          buffer            - buffer with data to write
+*          size              - data size
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_write(StorageFileHandle *storageFileHandle,
+                     const void        *buffer,
+                     ulong             size
+                    );
 
 /***********************************************************************\
 * Name   : Storage_getSize
 * Purpose: get storage file size
-* Input  : storageInfo - storage info block
+* Input  : storageFileHandle - storage file handle
 * Output : -
 * Return : size of storage
 * Notes  : -
 \***********************************************************************/
 
-uint64 Storage_getSize(StorageInfo *storageInfo);
+uint64 Storage_getSize(StorageFileHandle *storageFileHandle);
 
 /***********************************************************************\
-* Name   : Storage_read
-* Purpose: read from storage 
-* Input  : storageInfo - storage info block
-*          buffer      - buffer with data to write
-*          size        - data size
-* Output : readBytes - number of bytes read
-* Return : ERROR_NONE or errorcode
+* Name   : Storage_tell
+* Purpose: get current position in storage file
+* Input  : storageFileHandle - storage file handle
+* Output : offset - offset (0..n-1)
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_read(StorageInfo *storageInfo, void *buffer, ulong size, ulong *readBytes);
+Errors Storage_tell(StorageFileHandle *storageFileHandle,
+                    uint64            *offset
+                   );
 
 /***********************************************************************\
-* Name   : Storage_write
-* Purpose: write into storage
-* Input  : storageInfo - storage info block
-*          buffer      - buffer with data to write
-*          size        - data size
+* Name   : Storage_seek
+* Purpose: seek in storage file
+* Input  : storageFileHandle - storage file handle
+*          offset            - offset (0..n-1)
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_write(StorageInfo *storageInfo, const void *buffer, ulong size);
+Errors Storage_seek(StorageFileHandle *storageFileHandle,
+                    uint64            offset
+                   );
 
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
 * Name   : Storage_openDirectory
 * Purpose: open storage
-* Input  : storageInfo - storage info variable
-*          storageName - storage name
-*          options     - options
-* Output : storageInfo - initialized storage info
+* Input  : storageDirectoryBandle - storage directory handle variable
+*          storageName            - storage name
+*          options                - options
+* Output : storageDirectoryHandle - initialized storage directory handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_openDirectory(StorageInfo   *storageInfo,
-                             const String  storageName,
-                             const Options *options
+Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
+                             const String           storageName,
+                             const Options          *options
                             );
 
 /***********************************************************************\
-* Name   : Storage_close
-* Purpose: close storage
-* Input  : storageInfo - storage info
+* Name   : Storage_closeDirectory
+* Purpose: close storage directory
+* Input  : storageDirectoryHandle - storage directory handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Storage_closeDirectory(StorageInfo *storageInfo);
+void Storage_closeDirectory(StorageDirectoryHandle *storageDirectoryHandle);
+
+/***********************************************************************\
+* Name   : Storage_endOfDirectory
+* Purpose: check if end of directory reached
+* Input  : storageDirectoryHandle - storage directory handle
+* Output : -
+* Return : TRUE if not more diretory entries to read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_endOfDirectory(StorageDirectoryHandle *storageDirectoryHandle);
 
 /***********************************************************************\
 * Name   : Storage_readDirectory
 * Purpose: read next directory entry in storage
-* Input  : storageInfo - storage info
-*          fileName    - file name variable
+* Input  : storageDirectoryHandle - storage directory handle
+*          fileName               - file name variable
 * Output : fileName - next file name
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_readDirectory(StorageInfo *storageInfo,
-                             String      fileName
+Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
+                             String                 fileName
                             );
 
 #ifdef __cplusplus
