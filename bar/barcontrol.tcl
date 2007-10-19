@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -105,6 +105,8 @@ set barConfig(archivePartSizeFlag)    0
 set barConfig(archivePartSize)        0
 set barConfig(maxTmpSizeFlag)         0
 set barConfig(maxTmpSize)             0
+set barConfig(maxBandWidthFlag)       0
+set barConfig(maxBandWidth)           0
 set barConfig(sshPort)                0
 set barConfig(sshPublicKeyFileName)   ""
 set barConfig(sshPrivatKeyFileName)   ""
@@ -1837,6 +1839,8 @@ proc resetBarConfig {} \
   set barConfig(archivePartSize)     0
   set barConfig(maxTmpSizeFlag)      0
   set barConfig(maxTmpSize)          0
+  set barConfig(maxBandWidthFlag)    0
+  set barConfig(maxBandWidth)        0
   set barConfig(sshPassword)         ""
   set barConfig(sshPort)             22
   set barConfig(compressAlgorithm)   "bzip9"
@@ -2030,6 +2034,13 @@ proc loadBARConfig { configFileName } \
       set barConfig(maxTmpSize)     $s
       continue
     }
+    if {[scanx $line "max-band-width = %s" s] == 1} \
+    {
+      # max-tmp-size = <size>
+      set barConfig(maxBandWidthFlag) 1
+      set barConfig(maxBandWidth)     $s
+      continue
+    }
     if {[scanx $line "ssh-port = %d" n] == 1} \
     {
       # ssh-port = <port>
@@ -2190,6 +2201,10 @@ proc saveBARConfig { configFileName } \
   if {$barConfig(maxTmpSizeFlag)} \
   {
     puts $handle "max-tmp-size = $barConfig(maxTmpSize)"
+  }
+  if {$barConfig(maxBandWidthFlag)} \
+  {
+    puts $handle "max-band-width = $barConfig(maxBandWidth)"
   }
   puts $handle "ssh-port = $barConfig(sshPort)"
   puts $handle "ssh-public-key = $barConfig(sshPublicKeyFileName)"
@@ -2483,6 +2498,7 @@ proc addBackupJob { jobListWidget } \
   # set other parameters
   Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "archive-part-size"       $barConfig(archivePartSize)
   Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "max-tmp-size"            $barConfig(maxTmpSize)
+  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "max-band-width"          $barConfig(maxBandWidth)
   Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "ssh-port"                $barConfig(sshPort)
   Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "compress-algorithm"      $barConfig(compressAlgorithm)
   Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "crypt-algorithm"         $barConfig(cryptAlgorithm)
@@ -2803,6 +2819,7 @@ wm state . normal
 frame $mainWindow.menu -relief raised -bd 2
   menubutton $mainWindow.menu.file -text "Program" -menu $mainWindow.menu.file.items -underline 0
   menu $mainWindow.menu.file.items
+  $mainWindow.menu.file.items add command -label "New..."     -accelerator "Ctrl-n" -command "event generate . <<Event_new>>"
   $mainWindow.menu.file.items add command -label "Load..."    -accelerator "Ctrl-o" -command "event generate . <<Event_load>>"
   $mainWindow.menu.file.items add command -label "Save"       -accelerator "Ctrl-s" -command "event generate . <<Event_save>>"
   $mainWindow.menu.file.items add command -label "Save as..."                       -command "event generate . <<Event_saveAs>>"
@@ -3305,13 +3322,33 @@ frame .backup
     grid .backup.storage.maxTmpSize -row 1 -column 1 -sticky "w" -padx 2p -pady 2p
     addEnableTrace ::barConfig(maxTmpSizeFlag) 1 .backup.storage.maxTmpSize.size
 
+    label .backup.storage.maxBandWidthTitle -text "Max. band width:"
+    grid .backup.storage.maxBandWidthTitle -row 2 -column 0 -sticky "w" 
+    frame .backup.storage.maxBandWidth
+      radiobutton .backup.storage.maxBandWidth.unlimited -text "unlimited" -anchor w -variable barConfig(maxBandWidthFlag) -value 0
+      grid .backup.storage.maxBandWidth.unlimited -row 0 -column 1 -sticky "w" 
+      radiobutton .backup.storage.maxBandWidth.limitto -text "limit to" -width 8 -anchor w -variable barConfig(maxBandWidthFlag) -value 1
+      grid .backup.storage.maxBandWidth.limitto -row 0 -column 2 -sticky "w" 
+      tixComboBox .backup.storage.maxBandWidth.size -variable barConfig(maxBandWidth) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
+      grid .backup.storage.maxBandWidth.size -row 0 -column 3 -sticky "w" 
+
+     .backup.storage.maxBandWidth.size insert end 64K
+     .backup.storage.maxBandWidth.size insert end 128K
+     .backup.storage.maxBandWidth.size insert end 256K
+     .backup.storage.maxBandWidth.size insert end 512K
+
+      grid rowconfigure    .backup.storage.maxBandWidth { 0 } -weight 1
+      grid columnconfigure .backup.storage.maxBandWidth { 1 } -weight 1
+    grid .backup.storage.maxBandWidth -row 2 -column 1 -sticky "w" -padx 2p -pady 2p
+    addEnableTrace ::barConfig(maxBandWidthFlag) 1 .backup.storage.maxBandWidth.size
+
     label .backup.storage.optionOverwriteArchiveFilesTitle -text "Options:"
-    grid .backup.storage.optionOverwriteArchiveFilesTitle -row 2 -column 0 -sticky "w" 
+    grid .backup.storage.optionOverwriteArchiveFilesTitle -row 3 -column 0 -sticky "w" 
     checkbutton .backup.storage.optionOverwriteArchiveFiles -text "overwrite archive files" -variable barConfig(overwriteArchiveFiles)
-    grid .backup.storage.optionOverwriteArchiveFiles -row 2 -column 1 -sticky "w" 
+    grid .backup.storage.optionOverwriteArchiveFiles -row 3 -column 1 -sticky "w" 
 
     label .backup.storage.destintationTitle -text "Destination:"
-    grid .backup.storage.destintationTitle -row 3 -column 0 -sticky "nw" 
+    grid .backup.storage.destintationTitle -row 4 -column 0 -sticky "nw" 
     frame .backup.storage.destintation
       frame .backup.storage.destintation.type0
         radiobutton .backup.storage.destintation.type0.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
@@ -3416,9 +3453,9 @@ frame .backup
 
       grid rowconfigure    .backup.storage.destintation { 0 } -weight 1
       grid columnconfigure .backup.storage.destintation { 0 } -weight 1
-    grid .backup.storage.destintation -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
+    grid .backup.storage.destintation -row 4 -column 1 -sticky "we"
 
-    grid rowconfigure    .backup.storage { 4 } -weight 1
+    grid rowconfigure    .backup.storage { 5 } -weight 1
     grid columnconfigure .backup.storage { 1 } -weight 1
   pack .backup.storage -side top -fill both -expand yes -in [.backup.tabs subwidget storage]
 
@@ -3524,6 +3561,16 @@ bind . <F5> "event generate . <<Event_addIncludePattern>>"
 bind . <F6> "event generate . <<Event_remIncludePattern>>"
 bind . <F7> "event generate . <<Event_addExcludePattern>>"
 bind . <F8> "event generate . <<Event_remExcludePattern>>"
+
+bind . <<Event_new>> \
+{
+  if {[Dialog:confirm "New configuration?" "New" "Cancel"]} \
+  {
+    barConfigFileName
+    resetBarConfig
+    clearConfigModify
+  }
+}
 
 bind . <<Event_load>> \
 {
