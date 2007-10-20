@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -56,9 +56,9 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 	$(CC) $(CC_FLAGS) -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 %:%.o
-	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) $(foreach z,$(LD_LIBRARIES),-l$z)
-
-#          -Wl,-static $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) -Wl,-dynamic
+	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(foreach z,$(LD_LIBRARIES),-l$z) $(foreach z,$(LD_LIBRARIES),-l$z) \
+          $(foreach z,$(LD_STATIC_LIBRARIES),-Wl,-static -l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z)
 
 #--------------------------------- objects -----------------------------------
 
