@@ -1,10 +1,10 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: command line options parser
-* Systems :
+* Systems: all
 *
 ***********************************************************************/
 
@@ -661,7 +661,8 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
 
 void CmdOption_printHelp(FILE                    *outputHandle,
                          const CommandLineOption commandLineOptions[],
-                         uint                    commandLineOptionCount
+                         uint                    commandLineOptionCount,
+                         int                     level
                         )
 {
   #define PREFIX "Options: "
@@ -681,287 +682,293 @@ void CmdOption_printHelp(FILE                    *outputHandle,
   maxNameLength = 0;
   for (i = 0; i < commandLineOptionCount; i++)
   {
-    n = 0;
-
-    if (commandLineOptions[i].shortName != '\0')
+    if ((level == CMD_LEVEL_ALL) || (level >= commandLineOptions[i].level))
     {
-      n += 3; /* "-x|" */
-    }
+      n = 0;
 
-    assert(commandLineOptions[i].name != NULL);
+      if (commandLineOptions[i].shortName != '\0')
+      {
+        n += 3; /* "-x|" */
+      }
 
-    /* --name */
-    n += 2 + strlen(commandLineOptions[i].name);
-    switch (commandLineOptions[i].type)
-    {
-      case CMD_OPTION_TYPE_INTEGER:
-        n += 4; /* =<n> */
-        if (commandLineOptions[i].integerOption.units != NULL)
-        {
-          n += 1; /* [ */
-          for (j = 0; j < commandLineOptions[i].integerOption.unitCount; j++)
+      assert(commandLineOptions[i].name != NULL);
+
+      /* --name */
+      n += 2 + strlen(commandLineOptions[i].name);
+      switch (commandLineOptions[i].type)
+      {
+        case CMD_OPTION_TYPE_INTEGER:
+          n += 4; /* =<n> */
+          if (commandLineOptions[i].integerOption.units != NULL)
           {
-            if (j > 0) n += 1;
-            n += strlen(commandLineOptions[i].integerOption.units[j].name);
-          }       
-          n += 1; /* ] */
-        }
-        break;
-      case CMD_OPTION_TYPE_INTEGER64:
-        n += 4; /* =<n> */
-        if (commandLineOptions[i].integer64Option.units != NULL)
-        {
-          n += 1; /* [ */
-          for (j = 0; j < commandLineOptions[i].integer64Option.unitCount; j++)
+            n += 1; /* [ */
+            for (j = 0; j < commandLineOptions[i].integerOption.unitCount; j++)
+            {
+              if (j > 0) n += 1;
+              n += strlen(commandLineOptions[i].integerOption.units[j].name);
+            }       
+            n += 1; /* ] */
+          }
+          break;
+        case CMD_OPTION_TYPE_INTEGER64:
+          n += 4; /* =<n> */
+          if (commandLineOptions[i].integer64Option.units != NULL)
           {
-            if (j > 0) n += 1;
-            n += strlen(commandLineOptions[i].integer64Option.units[j].name);
-          }       
-          n += 1; /* ] */
-        }
-        break;
-      case CMD_OPTION_TYPE_DOUBLE:
-        n += 4; /* =<n> */
-        break;
-      case CMD_OPTION_TYPE_BOOLEAN:
-        if (commandLineOptions[i].booleanOption.yesnoFlag) 
-        {
-          n += 9; /* [=yes|no] */
-        }
-        break;
-      case CMD_OPTION_TYPE_ENUM:
-        break;
-      case CMD_OPTION_TYPE_SELECT:
-        n += 7; /* =<name> */
-        break;
-      case CMD_OPTION_TYPE_STRING:
-        n += 2; /* =< */
-        if (commandLineOptions[i].specialOption.helpArgument != NULL)
-        {
-          n += strlen(commandLineOptions[i].stringOption.helpArgument);
-        }
-        else
-        {
-          n += 6; /* string */
-        }
-        n += 1; /* > */
-        break;
-      case CMD_OPTION_TYPE_SPECIAL:
-        n += 2; /* =< */
-        strncat(name,"=<",sizeof(name)-strlen(name));
-        if (commandLineOptions[i].specialOption.helpArgument != NULL)
-        {
-          n += strlen(commandLineOptions[i].specialOption.helpArgument);
-        }
-        else
-        {
-          n += 2; /* ... */
-        }
-        n += 1; /* > */
-        break;
-    }
+            n += 1; /* [ */
+            for (j = 0; j < commandLineOptions[i].integer64Option.unitCount; j++)
+            {
+              if (j > 0) n += 1;
+              n += strlen(commandLineOptions[i].integer64Option.units[j].name);
+            }       
+            n += 1; /* ] */
+          }
+          break;
+        case CMD_OPTION_TYPE_DOUBLE:
+          n += 4; /* =<n> */
+          break;
+        case CMD_OPTION_TYPE_BOOLEAN:
+          if (commandLineOptions[i].booleanOption.yesnoFlag) 
+          {
+            n += 9; /* [=yes|no] */
+          }
+          break;
+        case CMD_OPTION_TYPE_ENUM:
+          break;
+        case CMD_OPTION_TYPE_SELECT:
+          n += 7; /* =<name> */
+          break;
+        case CMD_OPTION_TYPE_STRING:
+          n += 2; /* =< */
+          if (commandLineOptions[i].specialOption.helpArgument != NULL)
+          {
+            n += strlen(commandLineOptions[i].stringOption.helpArgument);
+          }
+          else
+          {
+            n += 6; /* string */
+          }
+          n += 1; /* > */
+          break;
+        case CMD_OPTION_TYPE_SPECIAL:
+          n += 2; /* =< */
+          strncat(name,"=<",sizeof(name)-strlen(name));
+          if (commandLineOptions[i].specialOption.helpArgument != NULL)
+          {
+            n += strlen(commandLineOptions[i].specialOption.helpArgument);
+          }
+          else
+          {
+            n += 2; /* ... */
+          }
+          n += 1; /* > */
+          break;
+      }
 
-    maxNameLength = MAX(n,maxNameLength);
+      maxNameLength = MAX(n,maxNameLength);
+    }
   }
 
   /* output help */
   for (i = 0; i < commandLineOptionCount; i++)
   {
-    /* output prefix */
-    if (i == 0)
+    if ((level == CMD_LEVEL_ALL) || (level >= commandLineOptions[i].level))
     {
-      fprintf(outputHandle,PREFIX);
-    }
-    else
-    {
-      printSpaces(outputHandle,strlen(PREFIX));
-    }
+      /* output prefix */
+      if (i == 0)
+      {
+        fprintf(outputHandle,PREFIX);
+      }
+      else
+      {
+        printSpaces(outputHandle,strlen(PREFIX));
+      }
 
-    /* output name */
-    name[0] = '\0';
-    if (commandLineOptions[i].shortName != '\0')
-    {
-      snprintf(s,sizeof(s)-1,"-%c|",commandLineOptions[i].shortName);
-      strncat(name,s,sizeof(name)-strlen(name));
-    }
-    assert(commandLineOptions[i].name != NULL);
-    strncat(name,"--",sizeof(name)-strlen(name));
-    strncat(name,commandLineOptions[i].name,sizeof(name)-strlen(name));
-    switch (commandLineOptions[i].type)
-    {
-      case CMD_OPTION_TYPE_INTEGER:
-        strncat(name,"=<n>",sizeof(name)-strlen(name));
-        if (commandLineOptions[i].integerOption.units != NULL)
-        {
-          strncat(name,"[",sizeof(name)-strlen(name));
-          for (j = 0; j < commandLineOptions[i].integerOption.unitCount; j++)
+      /* output name */
+      name[0] = '\0';
+      if (commandLineOptions[i].shortName != '\0')
+      {
+        snprintf(s,sizeof(s)-1,"-%c|",commandLineOptions[i].shortName);
+        strncat(name,s,sizeof(name)-strlen(name));
+      }
+      assert(commandLineOptions[i].name != NULL);
+      strncat(name,"--",sizeof(name)-strlen(name));
+      strncat(name,commandLineOptions[i].name,sizeof(name)-strlen(name));
+      switch (commandLineOptions[i].type)
+      {
+        case CMD_OPTION_TYPE_INTEGER:
+          strncat(name,"=<n>",sizeof(name)-strlen(name));
+          if (commandLineOptions[i].integerOption.units != NULL)
           {
-            if (j > 0) strncat(name,"|",sizeof(name)-strlen(name));
-            strncat(name,commandLineOptions[i].integerOption.units[j].name,sizeof(name)-strlen(name));
-          }       
-          strncat(name,"]",sizeof(name)-strlen(name));
-        }
-        break;
-      case CMD_OPTION_TYPE_INTEGER64:
-        strncat(name,"=<n>",sizeof(name)-strlen(name));
-        if (commandLineOptions[i].integer64Option.units != NULL)
-        {
-          strncat(name,"[",sizeof(name)-strlen(name));
-          for (j = 0; j < commandLineOptions[i].integer64Option.unitCount; j++)
+            strncat(name,"[",sizeof(name)-strlen(name));
+            for (j = 0; j < commandLineOptions[i].integerOption.unitCount; j++)
+            {
+              if (j > 0) strncat(name,"|",sizeof(name)-strlen(name));
+              strncat(name,commandLineOptions[i].integerOption.units[j].name,sizeof(name)-strlen(name));
+            }       
+            strncat(name,"]",sizeof(name)-strlen(name));
+          }
+          break;
+        case CMD_OPTION_TYPE_INTEGER64:
+          strncat(name,"=<n>",sizeof(name)-strlen(name));
+          if (commandLineOptions[i].integer64Option.units != NULL)
           {
-            if (j > 0) strncat(name,"|",sizeof(name)-strlen(name));
-            strncat(name,commandLineOptions[i].integer64Option.units[j].name,sizeof(name)-strlen(name));
-          }       
-          strncat(name,"]",sizeof(name)-strlen(name));
-        }
-        break;
-      case CMD_OPTION_TYPE_DOUBLE:
-        strncat(name,"=<n>",sizeof(name)-strlen(name));
-        break;
-      case CMD_OPTION_TYPE_BOOLEAN:
-        if (commandLineOptions[i].booleanOption.yesnoFlag) 
-        {
-          strncat(name,"[=yes|no]",sizeof(name)-strlen(name));
-        }
-        break;
-      case CMD_OPTION_TYPE_ENUM:
-        break;
-      case CMD_OPTION_TYPE_SELECT:
-        strncat(name,"=<name>",sizeof(name)-strlen(name));
-        break;
-      case CMD_OPTION_TYPE_STRING:
-        strncat(name,"=<",sizeof(name)-strlen(name));
-        if (commandLineOptions[i].stringOption.helpArgument != NULL)
-        {
-          strncat(name,commandLineOptions[i].stringOption.helpArgument,sizeof(name)-strlen(name));
-        }
-        else
-        {
-          strncat(name,"string",sizeof(name)-strlen(name));
-        }
-        strncat(name,">",sizeof(name)-strlen(name));
-        break;
-      case CMD_OPTION_TYPE_SPECIAL:
-        strncat(name,"=<",sizeof(name)-strlen(name));
-        if (commandLineOptions[i].specialOption.helpArgument != NULL)
-        {
-          strncat(name,commandLineOptions[i].specialOption.helpArgument,sizeof(name)-strlen(name));
-        }
-        else
-        {
-          strncat(name,"...",sizeof(name)-strlen(name));
-        }
-        strncat(name,">",sizeof(name)-strlen(name));
-        break;
-    }
-    fprintf(outputHandle,"%s",name);
+            strncat(name,"[",sizeof(name)-strlen(name));
+            for (j = 0; j < commandLineOptions[i].integer64Option.unitCount; j++)
+            {
+              if (j > 0) strncat(name,"|",sizeof(name)-strlen(name));
+              strncat(name,commandLineOptions[i].integer64Option.units[j].name,sizeof(name)-strlen(name));
+            }       
+            strncat(name,"]",sizeof(name)-strlen(name));
+          }
+          break;
+        case CMD_OPTION_TYPE_DOUBLE:
+          strncat(name,"=<n>",sizeof(name)-strlen(name));
+          break;
+        case CMD_OPTION_TYPE_BOOLEAN:
+          if (commandLineOptions[i].booleanOption.yesnoFlag) 
+          {
+            strncat(name,"[=yes|no]",sizeof(name)-strlen(name));
+          }
+          break;
+        case CMD_OPTION_TYPE_ENUM:
+          break;
+        case CMD_OPTION_TYPE_SELECT:
+          strncat(name,"=<name>",sizeof(name)-strlen(name));
+          break;
+        case CMD_OPTION_TYPE_STRING:
+          strncat(name,"=<",sizeof(name)-strlen(name));
+          if (commandLineOptions[i].stringOption.helpArgument != NULL)
+          {
+            strncat(name,commandLineOptions[i].stringOption.helpArgument,sizeof(name)-strlen(name));
+          }
+          else
+          {
+            strncat(name,"string",sizeof(name)-strlen(name));
+          }
+          strncat(name,">",sizeof(name)-strlen(name));
+          break;
+        case CMD_OPTION_TYPE_SPECIAL:
+          strncat(name,"=<",sizeof(name)-strlen(name));
+          if (commandLineOptions[i].specialOption.helpArgument != NULL)
+          {
+            strncat(name,commandLineOptions[i].specialOption.helpArgument,sizeof(name)-strlen(name));
+          }
+          else
+          {
+            strncat(name,"...",sizeof(name)-strlen(name));
+          }
+          strncat(name,">",sizeof(name)-strlen(name));
+          break;
+      }
+      fprintf(outputHandle,"%s",name);
 
-    /* output descriptions */
-    printSpaces(outputHandle,maxNameLength-strlen(name));
-    if (commandLineOptions[i].description != NULL)
-    {
-      fprintf(outputHandle," - %s",commandLineOptions[i].description);
-    }
-    switch (commandLineOptions[i].type)
-    {
-      case CMD_OPTION_TYPE_INTEGER:
-        if (commandLineOptions[i].integerOption.rangeFlag)
-        {
-          if      ((commandLineOptions[i].integerOption.min > INT_MIN) && (commandLineOptions[i].integerOption.max < INT_MAX))
+      /* output descriptions */
+      printSpaces(outputHandle,maxNameLength-strlen(name));
+      if (commandLineOptions[i].description != NULL)
+      {
+        fprintf(outputHandle," - %s",commandLineOptions[i].description);
+      }
+      switch (commandLineOptions[i].type)
+      {
+        case CMD_OPTION_TYPE_INTEGER:
+          if (commandLineOptions[i].integerOption.rangeFlag)
           {
-            fprintf(outputHandle," (%d..%d)",commandLineOptions[i].integerOption.min,commandLineOptions[i].integerOption.max);
+            if      ((commandLineOptions[i].integerOption.min > INT_MIN) && (commandLineOptions[i].integerOption.max < INT_MAX))
+            {
+              fprintf(outputHandle," (%d..%d)",commandLineOptions[i].integerOption.min,commandLineOptions[i].integerOption.max);
+            }
+            else if (commandLineOptions[i].integerOption.min > INT_MIN)
+            {
+              fprintf(outputHandle," (>= %d)",commandLineOptions[i].integerOption.min);
+            }
+            else if (commandLineOptions[i].integerOption.max < INT_MAX)
+            {
+              fprintf(outputHandle," (<= %d)",commandLineOptions[i].integerOption.max);
+            }
           }
-          else if (commandLineOptions[i].integerOption.min > INT_MIN)
+          break;
+        case CMD_OPTION_TYPE_INTEGER64:
+          if (commandLineOptions[i].integer64Option.rangeFlag)
           {
-            fprintf(outputHandle," (>= %d)",commandLineOptions[i].integerOption.min);
+            if      ((commandLineOptions[i].integer64Option.min > INT_MIN) && (commandLineOptions[i].integer64Option.max < INT_MAX))
+            {
+              fprintf(outputHandle," (%lld..%lld)",commandLineOptions[i].integer64Option.min,commandLineOptions[i].integer64Option.max);
+            }
+            else if (commandLineOptions[i].integer64Option.min > INT_MIN)
+            {
+              fprintf(outputHandle," (>= %lld)",commandLineOptions[i].integer64Option.min);
+            }
+            else if (commandLineOptions[i].integer64Option.max < INT_MAX)
+            {
+              fprintf(outputHandle," (<= %lld)",commandLineOptions[i].integer64Option.max);
+            }
           }
-          else if (commandLineOptions[i].integerOption.max < INT_MAX)
+          break;
+        case CMD_OPTION_TYPE_DOUBLE:
+          if (commandLineOptions[i].doubleOption.rangeFlag)
           {
-            fprintf(outputHandle," (<= %d)",commandLineOptions[i].integerOption.max);
+            if      ((commandLineOptions[i].doubleOption.min > DBL_MIN) && (commandLineOptions[i].doubleOption.max < DBL_MAX))
+            {
+              fprintf(outputHandle," (%lf..%lf)",commandLineOptions[i].doubleOption.min,commandLineOptions[i].doubleOption.max);
+            }
+            else if (commandLineOptions[i].doubleOption.min > DBL_MIN)
+            {
+              fprintf(outputHandle," (>= %lf)",commandLineOptions[i].doubleOption.min);
+            }
+            else if (commandLineOptions[i].doubleOption.max < DBL_MAX)
+            {
+              fprintf(outputHandle," (<= %lf)",commandLineOptions[i].doubleOption.max);
+            }
           }
-        }
-        break;
-      case CMD_OPTION_TYPE_INTEGER64:
-        if (commandLineOptions[i].integer64Option.rangeFlag)
-        {
-          if      ((commandLineOptions[i].integer64Option.min > INT_MIN) && (commandLineOptions[i].integer64Option.max < INT_MAX))
+          break;
+        case CMD_OPTION_TYPE_BOOLEAN:
+          break;
+        case CMD_OPTION_TYPE_ENUM:
+          break;
+        case CMD_OPTION_TYPE_SELECT:
+          break;
+        case CMD_OPTION_TYPE_STRING:
+          break;
+        case CMD_OPTION_TYPE_SPECIAL:
+          break;
+      }
+      fprintf(outputHandle,"\n");
+      switch (commandLineOptions[i].type)
+      {
+        case CMD_OPTION_TYPE_INTEGER:
+        case CMD_OPTION_TYPE_INTEGER64:
+          break;
+        case CMD_OPTION_TYPE_DOUBLE:
+          break;
+        case CMD_OPTION_TYPE_BOOLEAN:
+          break;
+        case CMD_OPTION_TYPE_ENUM:
+          break;
+        case CMD_OPTION_TYPE_SELECT:
+          maxValueLength = 0;
+          for (j = 0; j < commandLineOptions[i].selectOption.selectCount; j++)
           {
-            fprintf(outputHandle," (%lld..%lld)",commandLineOptions[i].integer64Option.min,commandLineOptions[i].integer64Option.max);
+            maxValueLength = MAX(strlen(commandLineOptions[i].selectOption.selects[j].name),maxValueLength);
           }
-          else if (commandLineOptions[i].integer64Option.min > INT_MIN)
-          {
-            fprintf(outputHandle," (>= %lld)",commandLineOptions[i].integer64Option.min);
-          }
-          else if (commandLineOptions[i].integer64Option.max < INT_MAX)
-          {
-            fprintf(outputHandle," (<= %lld)",commandLineOptions[i].integer64Option.max);
-          }
-        }
-        break;
-      case CMD_OPTION_TYPE_DOUBLE:
-        if (commandLineOptions[i].doubleOption.rangeFlag)
-        {
-          if      ((commandLineOptions[i].doubleOption.min > DBL_MIN) && (commandLineOptions[i].doubleOption.max < DBL_MAX))
-          {
-            fprintf(outputHandle," (%lf..%lf)",commandLineOptions[i].doubleOption.min,commandLineOptions[i].doubleOption.max);
-          }
-          else if (commandLineOptions[i].doubleOption.min > DBL_MIN)
-          {
-            fprintf(outputHandle," (>= %lf)",commandLineOptions[i].doubleOption.min);
-          }
-          else if (commandLineOptions[i].doubleOption.max < DBL_MAX)
-          {
-            fprintf(outputHandle," (<= %lf)",commandLineOptions[i].doubleOption.max);
-          }
-        }
-        break;
-      case CMD_OPTION_TYPE_BOOLEAN:
-        break;
-      case CMD_OPTION_TYPE_ENUM:
-        break;
-      case CMD_OPTION_TYPE_SELECT:
-        break;
-      case CMD_OPTION_TYPE_STRING:
-        break;
-      case CMD_OPTION_TYPE_SPECIAL:
-        break;
-    }
-    fprintf(outputHandle,"\n");
-    switch (commandLineOptions[i].type)
-    {
-      case CMD_OPTION_TYPE_INTEGER:
-      case CMD_OPTION_TYPE_INTEGER64:
-        break;
-      case CMD_OPTION_TYPE_DOUBLE:
-        break;
-      case CMD_OPTION_TYPE_BOOLEAN:
-        break;
-      case CMD_OPTION_TYPE_ENUM:
-        break;
-      case CMD_OPTION_TYPE_SELECT:
-        maxValueLength = 0;
-        for (j = 0; j < commandLineOptions[i].selectOption.selectCount; j++)
-        {
-          maxValueLength = MAX(strlen(commandLineOptions[i].selectOption.selects[j].name),maxValueLength);
-        }
 
-        for (j = 0; j < commandLineOptions[i].selectOption.selectCount; j++)
-        {
-          printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?3:0)+1);
-          fprintf(outputHandle,"%s",commandLineOptions[i].selectOption.selects[j].name);
-          printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].selectOption.selects[j].name));
-          fprintf(outputHandle,": %s",commandLineOptions[i].selectOption.selects[j].description);
-          if (commandLineOptions[i].selectOption.selects[j].value == commandLineOptions[i].defaultValue.select)
+          for (j = 0; j < commandLineOptions[i].selectOption.selectCount; j++)
           {
-            fprintf(outputHandle," (default)");
+            printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?3:0)+1);
+            fprintf(outputHandle,"%s",commandLineOptions[i].selectOption.selects[j].name);
+            printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].selectOption.selects[j].name));
+            fprintf(outputHandle,": %s",commandLineOptions[i].selectOption.selects[j].description);
+            if (commandLineOptions[i].selectOption.selects[j].value == commandLineOptions[i].defaultValue.select)
+            {
+              fprintf(outputHandle," (default)");
+            }
+            fprintf(outputHandle,"\n");
           }
-          fprintf(outputHandle,"\n");
-        }
-        break;
-      case CMD_OPTION_TYPE_STRING:
-        break;
-      case CMD_OPTION_TYPE_SPECIAL:
-        break;
+          break;
+        case CMD_OPTION_TYPE_STRING:
+          break;
+        case CMD_OPTION_TYPE_SPECIAL:
+          break;
+      }
     }
   }
 }

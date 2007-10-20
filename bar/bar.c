@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.32 $
+* $Revision: 1.33 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -87,8 +88,9 @@ LOCAL const char  *serverCAFileName;
 LOCAL const char  *serverCertFileName;
 LOCAL const char  *serverKeyFileName;
 LOCAL Password    *serverPassword;
+LOCAL bool        batchFlag;
 LOCAL bool        versionFlag;
-LOCAL bool        helpFlag;
+LOCAL bool        helpFlag,xhelpFlag,helpInternalFlag;
 
 const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] =
 {
@@ -155,55 +157,59 @@ LOCAL bool cmdParsePassword(void *variable, const char *name, const char *value,
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM     ("create",                   'c',0,command,                                 COMMAND_NONE,COMMAND_CREATE,                                       "create new archive"                            ),
-  CMD_OPTION_ENUM     ("list",                     'l',0,command,                                 COMMAND_NONE,COMMAND_LIST,                                         "list contents of archive"                      ),
-  CMD_OPTION_ENUM     ("test",                     't',0,command,                                 COMMAND_NONE,COMMAND_TEST,                                         "test contents of ardhive"                      ),
-  CMD_OPTION_ENUM     ("extract",                  'x',0,command,                                 COMMAND_NONE,COMMAND_RESTORE,                                      "restore archive"                               ),
+  CMD_OPTION_ENUM         ("create",                   'c',0,0,command,                                 COMMAND_NONE,COMMAND_CREATE,                                       "create new archive"                            ),
+  CMD_OPTION_ENUM         ("list",                     'l',0,0,command,                                 COMMAND_NONE,COMMAND_LIST,                                         "list contents of archive"                      ),
+  CMD_OPTION_ENUM         ("test",                     't',0,0,command,                                 COMMAND_NONE,COMMAND_TEST,                                         "test contents of ardhive"                      ),
+  CMD_OPTION_ENUM         ("extract",                  'x',0,0,command,                                 COMMAND_NONE,COMMAND_RESTORE,                                      "restore archive"                               ),
 
-  CMD_OPTION_SPECIAL  ("config",                   0,  0,NULL,                                    NULL,cmdParseConfigFile,NULL,                                      "configuration file","file name"                ),
+  CMD_OPTION_SPECIAL      ("config",                   0,  1,0,NULL,                                    NULL,cmdParseConfigFile,NULL,                                      "configuration file","file name"                ),
 
-  CMD_OPTION_INTEGER  ("archive-part-size",        's',0,defaultOptions.archivePartSize,          0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "approximated part size"                        ),
-  CMD_OPTION_STRING   ("tmp-directory",            0,  0,defaultOptions.tmpDirectory,             DEFAULT_TMP_DIRECTORY,                                             "temporary directory","path"                    ),
-  CMD_OPTION_INTEGER64("max-tmp-size",             0,  0,defaultOptions.maxTmpSize,               0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "max. size of temporary files"                  ),
-  CMD_OPTION_INTEGER  ("directory-strip",          'p',0,defaultOptions.directoryStripCount,      0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"     ),
-  CMD_OPTION_STRING   ("directory",                0,  0,defaultOptions.directory,                NULL,                                                              "directory to restore files","path"             ),
+  CMD_OPTION_INTEGER      ("archive-part-size",        's',1,0,defaultOptions.archivePartSize,          0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "approximated part size"                        ),
+  CMD_OPTION_STRING       ("tmp-directory",            0,  1,0,defaultOptions.tmpDirectory,             DEFAULT_TMP_DIRECTORY,                                             "temporary directory","path"                    ),
+  CMD_OPTION_INTEGER64    ("max-tmp-size",             0,  1,0,defaultOptions.maxTmpSize,               0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "max. size of temporary files"                  ),
+  CMD_OPTION_INTEGER      ("directory-strip",          'p',1,0,defaultOptions.directoryStripCount,      0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"     ),
+  CMD_OPTION_STRING       ("directory",                0,  0,0,defaultOptions.directory,                NULL,                                                              "directory to restore files","path"             ),
 
-  CMD_OPTION_INTEGER  ("max-band-width",           0,  0,defaultOptions.maxBandWidth,             0,0,LONG_MAX,COMMAND_LINE_BITS_UNITS,                              "max. network band width to use"                 ),
+  CMD_OPTION_INTEGER      ("max-band-width",           0,  1,0,defaultOptions.maxBandWidth,             0,0,LONG_MAX,COMMAND_LINE_BITS_UNITS,                              "max. network band width to use"                 ),
 
-  CMD_OPTION_SELECT   ("pattern-type",             0,  0,defaultOptions.patternType,              PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,               "select pattern type"                           ),
+  CMD_OPTION_SELECT       ("pattern-type",             0,  1,0,defaultOptions.patternType,              PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPE,               "select pattern type"                           ),
 
-  CMD_OPTION_SPECIAL  ("include",                  'i',1,&includePatternList,                     NULL,cmdParseIncludeExclude,NULL,                                  "include pattern","pattern"                     ),
-  CMD_OPTION_SPECIAL  ("exclude",                  '!',1,&excludePatternList,                     NULL,cmdParseIncludeExclude,NULL,                                  "exclude pattern","pattern"                     ),
+  CMD_OPTION_SPECIAL      ("include",                  'i',0,1,&includePatternList,                     NULL,cmdParseIncludeExclude,NULL,                                  "include pattern","pattern"                     ),
+  CMD_OPTION_SPECIAL      ("exclude",                  '!',0,1,&excludePatternList,                     NULL,cmdParseIncludeExclude,NULL,                                  "exclude pattern","pattern"                     ),
  
-  CMD_OPTION_SELECT   ("compress-algorithm",       'z',0,defaultOptions.compressAlgorithm,        COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,   "select compress algorithm to use"              ),
-  CMD_OPTION_INTEGER  ("compress-min-size",        0,  0,defaultOptions.compressMinFileSize,      DEFAULT_COMPRESS_MIN_FILE_SIZE,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,"minimal size of file for compression"          ),
+  CMD_OPTION_SELECT       ("compress-algorithm",       'z',0,0,defaultOptions.compressAlgorithm,        COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM,   "select compress algorithm to use"              ),
+  CMD_OPTION_INTEGER      ("compress-min-size",        0,  1,0,defaultOptions.compressMinFileSize,      DEFAULT_COMPRESS_MIN_FILE_SIZE,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,"minimal size of file for compression"          ),
 
-  CMD_OPTION_SELECT   ("crypt-algorithm",          'y',0,defaultOptions.cryptAlgorithm,           CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,         "select crypt algorithm to use"                 ),
-  CMD_OPTION_SPECIAL  ("crypt-password",           0,  0,&defaultOptions.cryptPassword,           NULL,cmdParsePassword,NULL,                                        "crypt password (use with care!)","password"    ),
+  CMD_OPTION_SELECT       ("crypt-algorithm",          'y',0,0,defaultOptions.cryptAlgorithm,           CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM,         "select crypt algorithm to use"                 ),
+  CMD_OPTION_SPECIAL      ("crypt-password",           0,  0,0,&defaultOptions.cryptPassword,           NULL,cmdParsePassword,NULL,                                        "crypt password (use with care!)","password"    ),
 
-  CMD_OPTION_INTEGER  ("ssh-port",                 0,  0,defaultOptions.sshPort,                  0,0,65535,NULL,                                                    "ssh port"                                      ),
-  CMD_OPTION_STRING   ("ssh-public-key",           0,  0,defaultOptions.sshPublicKeyFileName,     NULL,                                                              "ssh public key file name","file name"          ),
-  CMD_OPTION_STRING   ("ssh-privat-key",           0,  0,defaultOptions.sshPrivatKeyFileName,     NULL,                                                              "ssh privat key file name","file name"          ),
-  CMD_OPTION_SPECIAL  ("ssh-password",             0,  0,&defaultOptions.sshPassword,             NULL,cmdParsePassword,NULL,                                        "ssh password (use with care!)","password"      ),
+  CMD_OPTION_INTEGER      ("ssh-port",                 0,  0,0,defaultOptions.sshPort,                  0,0,65535,NULL,                                                    "ssh port"                                      ),
+  CMD_OPTION_STRING       ("ssh-public-key",           0,  1,0,defaultOptions.sshPublicKeyFileName,     NULL,                                                              "ssh public key file name","file name"          ),
+  CMD_OPTION_STRING       ("ssh-privat-key",           0,  1,0,defaultOptions.sshPrivatKeyFileName,     NULL,                                                              "ssh privat key file name","file name"          ),
+  CMD_OPTION_SPECIAL      ("ssh-password",             0,  0,0,&defaultOptions.sshPassword,             NULL,cmdParsePassword,NULL,                                        "ssh password (use with care!)","password"      ),
 
-  CMD_OPTION_BOOLEAN  ("daemon",                   0,  0,daemonFlag,                              FALSE,                                                             "run in daemon mode"                            ),
-  CMD_OPTION_INTEGER  ("port",                     0,  0,serverPort,                              DEFAULT_SERVER_PORT,0,65535,NULL,                                  "server port"                                   ),
-  CMD_OPTION_INTEGER  ("tls-port",                 0,  0,serverTLSPort,                           DEFAULT_SERVER_TLS_PORT,0,65535,NULL,                              "server TLS (SSL) port"                         ),
-  CMD_OPTION_STRING   ("server-ca-file",           0,  0,serverCAFileName,                        NULL,                                                              "server TLS CA file","file name"                ),
-  CMD_OPTION_STRING   ("server-cert-file",         0,  0,serverCertFileName,                      NULL,                                                              "server TLS certificate file","file name"       ),
-  CMD_OPTION_STRING   ("server-key-file",          0,  0,serverKeyFileName,                       NULL,                                                              "server TLS key file","file name"               ),
-  CMD_OPTION_SPECIAL  ("server-password",          0,  0,&serverPassword,                         NULL,cmdParsePassword,NULL,                                        "server password (use with care!)","password"   ),
+  CMD_OPTION_BOOLEAN      ("daemon",                   0,  1,0,daemonFlag,                              FALSE,                                                             "run in daemon mode"                            ),
+  CMD_OPTION_INTEGER      ("port",                     0,  1,0,serverPort,                              DEFAULT_SERVER_PORT,0,65535,NULL,                                  "server port"                                   ),
+  CMD_OPTION_INTEGER      ("tls-port",                 0,  1,0,serverTLSPort,                           DEFAULT_SERVER_TLS_PORT,0,65535,NULL,                              "server TLS (SSL) port"                         ),
+  CMD_OPTION_STRING       ("server-ca-file",           0,  1,0,serverCAFileName,                        NULL,                                                              "server TLS CA file","file name"                ),
+  CMD_OPTION_STRING       ("server-cert-file",         0,  1,0,serverCertFileName,                      NULL,                                                              "server TLS certificate file","file name"       ),
+  CMD_OPTION_STRING       ("server-key-file",          0,  1,0,serverKeyFileName,                       NULL,                                                              "server TLS key file","file name"               ),
+  CMD_OPTION_SPECIAL      ("server-password",          0,  1,0,&serverPassword,                         NULL,cmdParsePassword,NULL,                                        "server password (use with care!)","password"   ),
 
-//  CMD_OPTION_BOOLEAN  ("incremental",              0,  0,defaultOptions.incrementalFlag,        FALSE,                                                             "overwrite existing files"                      ),
-  CMD_OPTION_BOOLEAN  ("skip-unreadable",          0,  0,defaultOptions.skipUnreadableFlag,       TRUE,                                                              "skip unreadable files"                         ),
-  CMD_OPTION_BOOLEAN  ("overwrite-archives-files", 0,  0,defaultOptions.overwriteArchiveFilesFlag,FALSE,                                                             "overwrite existing archive files"              ),
-  CMD_OPTION_BOOLEAN  ("overwrite-files",          0,  0,defaultOptions.overwriteFilesFlag,       FALSE,                                                             "overwrite existing files"                      ),
-  CMD_OPTION_BOOLEAN  ("no-default-config",        0,  0,defaultOptions.noDefaultConfigFlag,      FALSE,                                                             "do not read personal config file ~/bar/bar.cfg"),
-  CMD_OPTION_BOOLEAN  ("quiet",                    0,  0,defaultOptions.quietFlag,                FALSE,                                                             "surpress any output"                           ),
-  CMD_OPTION_INTEGER_RANGE("verbose",            'v',0,defaultOptions.verboseLevel,             1,0,3,NULL,                                                     "verbosity level"                               ),
+  CMD_OPTION_BOOLEAN      ("batch",                    0,  2,0,batchFlag,                               FALSE,                                                             "run in batch mode"                             ),
 
-  CMD_OPTION_BOOLEAN("version",                    0  ,0,versionFlag,                             FALSE,                                                             "print version"                                 ),
-  CMD_OPTION_BOOLEAN("help",                       'h',0,helpFlag,                                FALSE,                                                             "print this help"                               ),
+//  CMD_OPTION_BOOLEAN      ("incremental",              0,  0,0,defaultOptions.incrementalFlag,        FALSE,                                                             "overwrite existing files"                      ),
+  CMD_OPTION_BOOLEAN      ("skip-unreadable",          0,  0,0,defaultOptions.skipUnreadableFlag,       TRUE,                                                              "skip unreadable files"                         ),
+  CMD_OPTION_BOOLEAN      ("overwrite-archives-files", 0,  0,0,defaultOptions.overwriteArchiveFilesFlag,FALSE,                                                             "overwrite existing archive files"              ),
+  CMD_OPTION_BOOLEAN      ("overwrite-files",          0,  0,0,defaultOptions.overwriteFilesFlag,       FALSE,                                                             "overwrite existing files"                      ),
+  CMD_OPTION_BOOLEAN      ("no-default-config",        0,  1,0,defaultOptions.noDefaultConfigFlag,      FALSE,                                                             "do not read personal config file ~/bar/bar.cfg"),
+  CMD_OPTION_BOOLEAN      ("quiet",                    0,  1,0,defaultOptions.quietFlag,                FALSE,                                                             "surpress any output"                           ),
+  CMD_OPTION_INTEGER_RANGE("verbose",                  'v',1,0,defaultOptions.verboseLevel,             1,0,3,NULL,                                                        "verbosity level"                               ),
+
+  CMD_OPTION_BOOLEAN      ("version",                  0  ,0,0,versionFlag,                             FALSE,                                                             "print version"                                 ),
+  CMD_OPTION_BOOLEAN      ("help",                     'h',0,0,helpFlag,                                FALSE,                                                             "print this help"                               ),
+  CMD_OPTION_BOOLEAN      ("xhelp",                    'h',0,0,xhelpFlag,                               FALSE,                                                             "print this help to extended options"           ),
+  CMD_OPTION_BOOLEAN      ("help-internal",            'h',1,0,helpInternalFlag,                        FALSE,                                                             "print this help to internal options"           ),
 };
 
 /****************************** Macros *********************************/
@@ -420,14 +426,15 @@ LOCAL bool cmdParsePassword(void *variable, const char *name, const char *value,
 * Notes      : -
 \***********************************************************************/
 
-LOCAL void printUsage(const char *programName)
+LOCAL void printUsage(const char *programName, uint level)
 {
   assert(programName != NULL);
 
   printf("Usage: %s [<options>] [--] <archive name>|scp:<name>@<host name>:<archive name>... [<files>...]\n",programName);
   printf("\n");
   CmdOption_printHelp(stdout,
-                      COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS)
+                      COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
+                      level
                      );
 }
 
@@ -658,9 +665,11 @@ int main(int argc, const char *argv[])
     done();
     return EXITCODE_OK;
   }
-  if (helpFlag)
+  if (helpFlag || xhelpFlag || helpInternalFlag)
   {
-    printUsage(argv[0]);
+    if      (helpInternalFlag) printUsage(argv[0],2);
+    else if (xhelpFlag       ) printUsage(argv[0],1);
+    else                       printUsage(argv[0],0);
 
     Pattern_doneList(&excludePatternList);
     Pattern_doneList(&includePatternList);
@@ -672,7 +681,33 @@ int main(int argc, const char *argv[])
   }
 
   error = ERROR_NONE;
-  if (!daemonFlag)
+  if      (daemonFlag)
+  {
+    /* daemon mode -> run server with netwerk */
+    if ((serverPort != 0) || (serverTLSPort != 0))
+    {
+      error = Server_run(serverPort,
+                         serverTLSPort,
+                         serverCAFileName,
+                         serverCertFileName,
+                         serverKeyFileName,
+                         serverPassword
+                        );
+    }
+    else
+    {
+      printError("No port number specified!\n");
+      error = ERROR_INVALID_ARGUMENT;
+    }
+  }
+  else if (batchFlag)
+  {
+    /* batch mode -> run server with standard i/o */
+    error = Server_batch(STDIN_FILENO,
+                         STDOUT_FILENO
+                        );
+  }
+  else
   {
     switch (command)
     {
@@ -756,25 +791,6 @@ int main(int argc, const char *argv[])
         printError("No command given!\n");
         error = ERROR_INVALID_ARGUMENT;
         break;
-    }
-  }
-  else
-  {
-    /* daemon mode -> run server */
-    if ((serverPort != 0) || (serverTLSPort != 0))
-    {
-      error = Server_run(serverPort,
-                         serverTLSPort,
-                         serverCAFileName,
-                         serverCertFileName,
-                         serverKeyFileName,
-                         serverPassword
-                        );
-    }
-    else
-    {
-      printError("No port number specified!\n");
-      error = ERROR_INVALID_ARGUMENT;
     }
   }
 
