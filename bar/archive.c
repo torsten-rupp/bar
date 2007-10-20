@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -792,7 +792,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->cryptAlgorithm                      = archiveInfo->cryptAlgorithm;
   archiveFileInfo->blockLength                         = archiveInfo->blockLength;
 
-  archiveFileInfo->fileType                            = FILETYPE_FILE;
+  archiveFileInfo->fileType                            = FILE_TYPE_FILE;
 
   archiveFileInfo->file.compressAlgorithm              = (fileInfo->size > archiveFileInfo->archiveInfo->compressMinFileSize)?archiveInfo->compressAlgorithm:COMPRESS_ALGORITHM_NONE;
 
@@ -952,7 +952,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->cryptAlgorithm                                = archiveInfo->cryptAlgorithm;
   archiveFileInfo->blockLength                                   = archiveInfo->blockLength;
 
-  archiveFileInfo->fileType                                      = FILETYPE_DIRECTORY;
+  archiveFileInfo->fileType                                      = FILE_TYPE_DIRECTORY;
 
   archiveFileInfo->directory.chunkDirectory.cryptAlgorithm       = archiveInfo->cryptAlgorithm;
 
@@ -1095,7 +1095,7 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->cryptAlgorithm                      = archiveInfo->cryptAlgorithm;
   archiveFileInfo->blockLength                         = archiveInfo->blockLength;
 
-  archiveFileInfo->fileType                            = FILETYPE_LINK;
+  archiveFileInfo->fileType                            = FILE_TYPE_LINK;
 
   archiveFileInfo->link.chunkLink.cryptAlgorithm       = archiveInfo->cryptAlgorithm;
 
@@ -1270,9 +1270,9 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
   /* get file type */
   switch (chunkHeader.id)
   {
-    case CHUNK_ID_FILE:      (*fileType) = FILETYPE_FILE;      break;
-    case CHUNK_ID_DIRECTORY: (*fileType) = FILETYPE_DIRECTORY; break;
-    case CHUNK_ID_LINK:      (*fileType) = FILETYPE_LINK;      break;
+    case CHUNK_ID_FILE:      (*fileType) = FILE_TYPE_FILE;      break;
+    case CHUNK_ID_DIRECTORY: (*fileType) = FILE_TYPE_DIRECTORY; break;
+    case CHUNK_ID_LINK:      (*fileType) = FILE_TYPE_LINK;      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1307,7 +1307,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   /* init archive file info */
   archiveFileInfo->archiveInfo       = archiveInfo;
   archiveFileInfo->mode              = FILE_MODE_READ;
-  archiveFileInfo->fileType          = FILETYPE_FILE;
+  archiveFileInfo->fileType          = FILE_TYPE_FILE;
 
   archiveFileInfo->file.buffer       = NULL;
   archiveFileInfo->file.bufferLength = 0;
@@ -1618,7 +1618,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   /* init archive file info */
   archiveFileInfo->archiveInfo = archiveInfo;
   archiveFileInfo->mode        = FILE_MODE_READ;
-  archiveFileInfo->fileType    = FILETYPE_DIRECTORY;
+  archiveFileInfo->fileType    = FILE_TYPE_DIRECTORY;
 
   /* init file chunk */
   error = Chunk_new(&archiveFileInfo->directory.chunkInfoDirectory,
@@ -1790,7 +1790,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   /* init archive file info */
   archiveFileInfo->archiveInfo = archiveInfo;
   archiveFileInfo->mode        = FILE_MODE_READ;
-  archiveFileInfo->fileType    = FILETYPE_LINK;
+  archiveFileInfo->fileType    = FILE_TYPE_LINK;
 
   /* init file chunk */
   error = Chunk_new(&archiveFileInfo->link.chunkInfoLink,
@@ -1956,7 +1956,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
     case FILE_MODE_WRITE:
       switch (archiveFileInfo->fileType)
       {
-        case FILETYPE_FILE:
+        case FILE_TYPE_FILE:
           /* flush last blocks */
           Compress_flush(&archiveFileInfo->file.compressInfoData);
           if (!archiveFileInfo->file.createdFlag || !Compress_checkBlockIsEmpty(&archiveFileInfo->file.compressInfoData))
@@ -2018,10 +2018,10 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           free(archiveFileInfo->file.buffer);
           String_delete(archiveFileInfo->file.chunkFileEntry.name);
           break;
-        case FILETYPE_DIRECTORY:
+        case FILE_TYPE_DIRECTORY:
           String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
           break;
-        case FILETYPE_LINK:
+        case FILE_TYPE_LINK:
           /* close chunks */
           error = Chunk_close(&archiveFileInfo->link.chunkInfoLinkEntry);
           if (error != ERROR_NONE)
@@ -2051,7 +2051,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
     case FILE_MODE_READ:
       switch (archiveFileInfo->fileType)
       {
-        case FILETYPE_FILE:
+        case FILE_TYPE_FILE:
           /* close chunks */
           error = Chunk_close(&archiveFileInfo->file.chunkInfoFileData);
           if (error != ERROR_NONE)
@@ -2080,10 +2080,10 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           free(archiveFileInfo->file.buffer);
           String_delete(archiveFileInfo->file.chunkFileEntry.name);
           break;
-        case FILETYPE_DIRECTORY:
+        case FILE_TYPE_DIRECTORY:
           String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
           break;
-        case FILETYPE_LINK:
+        case FILE_TYPE_LINK:
           /* close chunks */
           error = Chunk_close(&archiveFileInfo->link.chunkInfoLinkEntry);
           if (error != ERROR_NONE)

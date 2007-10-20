@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/destroyer.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: "destroy" binary files by overwrite/insert/delete bytes;
 *           used for test only!
@@ -10,6 +10,8 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -56,8 +58,8 @@ LOCAL bool helpFlag;
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_BOOLEAN("version",0  ,0,versionFlag,FALSE,"print version"  ),
-  CMD_OPTION_BOOLEAN("help",   'h',0,helpFlag,   FALSE,"print this help"),
+  CMD_OPTION_BOOLEAN("version",0  ,0,0,versionFlag,FALSE,"print version"  ),
+  CMD_OPTION_BOOLEAN("help",   'h',0,0,helpFlag,   FALSE,"print this help"),
 };
 
 /****************************** Macros *********************************/
@@ -87,7 +89,8 @@ LOCAL void printUsage(const char *programName)
   printf("Usage: %s [<options>] [--] <input file> [<output file>]\n",programName);
   printf("\n");
   CmdOption_printHelp(stdout,
-                      COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS)
+                      COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
+                      0
                      );
  }
 

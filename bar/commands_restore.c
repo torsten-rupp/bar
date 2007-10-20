@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -164,7 +166,7 @@ Errors Command_restore(StringList    *archiveFileNameList,
 
       switch (fileType)
       {
-        case FILETYPE_FILE:
+        case FILE_TYPE_FILE:
           {
             String           fileName;
             FileInfo         fileInfo;
@@ -352,7 +354,7 @@ Errors Command_restore(StringList    *archiveFileNameList,
             String_delete(fileName);
           }
           break;
-        case FILETYPE_DIRECTORY:
+        case FILE_TYPE_DIRECTORY:
           {
             String   directoryName;
             FileInfo fileInfo;
@@ -439,7 +441,7 @@ Errors Command_restore(StringList    *archiveFileNameList,
             String_delete(directoryName);
           }
           break;
-        case FILETYPE_LINK:
+        case FILE_TYPE_LINK:
           {
             String   linkName;
             String   fileName;

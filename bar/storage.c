@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
@@ -51,34 +53,6 @@ LOCAL String   defaultSSHPrivatKeyFileName;
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-/***********************************************************************\
-* Name   : getStorageType
-* Purpose: get storage type from storage name
-* Input  : storageName - storage name
-* Output : storageSpecifier - storage specific data (can be NULL)
-* Return : storage type
-* Notes  : -
-\***********************************************************************/
-
-LOCAL StorageTypes getStorageType(const String storageName, String storageSpecifier)
-{
-  if      (String_findCString(storageName,STRING_BEGIN,"scp:") == 0)
-  {
-    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,4,STRING_END);
-    return STORAGE_TYPE_SCP;
-  }
-  else if (String_findCString(storageName,STRING_BEGIN,"sftp:") == 0)
-  {
-    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,5,STRING_END);
-    return STORAGE_TYPE_SFTP;
-  }
-  else
-  {
-    if (storageSpecifier != NULL) String_set(storageSpecifier,storageName);
-    return STORAGE_TYPE_FILESYSTEM;
-  }
-}
 
 /***********************************************************************\
 * Name   : initSSHPassword
@@ -131,52 +105,6 @@ LOCAL bool initSSHPassword(const Options *options)
   {
     return TRUE;
   }
-}
-#endif /* HAVE_SSH2 */
-
-/***********************************************************************\
-* Name   : parseSSHSpecifier
-* Purpose: parse ssh specifier: <user name>@<host name>:<host file name>
-* Input  : sshSpecifier - ssh specifier string
-* Output : userName     - user name (can be NULL)
-*          hostName     - host name (can be NULL)
-*          hostFileName - host file name (can be NULL)
-* Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
-* Notes  : -
-\***********************************************************************/
-
-#ifdef HAVE_SSH2
-LOCAL bool parseSSHSpecifier(const String sshSpecifier,
-                             String       userName,
-                             String       hostName,
-                             String       hostFileName
-                            )
-{
-  long i0,i1;
-
-  assert(sshSpecifier != NULL);
-
-  /* parse connection string */
-  i0 = 0;
-  i1 = String_findChar(sshSpecifier,i0,'@');
-  if (i1 < 0)
-  {
-    printError("No user name given in 'scp' string!\n");
-    return FALSE;
-  }
-  if (userName != NULL) String_sub(userName,sshSpecifier,i0,i1-i0);
-  i0 = i1+1;
-  i1 = String_findChar(sshSpecifier,i0,':');
-  if (i1 < 0)
-  {
-    printError("No host name given in 'scp' string!\n");
-    return FALSE;
-  }
-  if (hostName != NULL) String_sub(hostName,sshSpecifier,i0,i1-i0);
-  i0 = i1+1;
-  if (hostFileName != NULL) String_sub(hostFileName,sshSpecifier,i0,STRING_END);
-
-  return TRUE;
 }
 #endif /* HAVE_SSH2 */
 
@@ -422,6 +350,63 @@ void Storage_done(void)
   Password_delete(defaultSSHPassword);
 }
 
+StorageTypes Storage_getType(const String storageName, String storageSpecifier)
+{
+  if      (String_findCString(storageName,STRING_BEGIN,"ssh:") == 0)
+  {
+    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,4,STRING_END);
+    return STORAGE_TYPE_SSH;
+  }
+  else if (String_findCString(storageName,STRING_BEGIN,"scp:") == 0)
+  {
+    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,4,STRING_END);
+    return STORAGE_TYPE_SCP;
+  }
+  else if (String_findCString(storageName,STRING_BEGIN,"sftp:") == 0)
+  {
+    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,5,STRING_END);
+    return STORAGE_TYPE_SFTP;
+  }
+  else
+  {
+    if (storageSpecifier != NULL) String_set(storageSpecifier,storageName);
+    return STORAGE_TYPE_FILESYSTEM;
+  }
+}
+
+bool Storage_parseSSHSpecifier(const String sshSpecifier,
+                               String       userName,
+                               String       hostName,
+                               String       hostFileName
+                              )
+{
+  long i0,i1;
+
+  assert(sshSpecifier != NULL);
+
+  /* parse connection string */
+  i0 = 0;
+  i1 = String_findChar(sshSpecifier,i0,'@');
+  if (i1 < 0)
+  {
+    printError("No user name given in 'scp' string!\n");
+    return FALSE;
+  }
+  if (userName != NULL) String_sub(userName,sshSpecifier,i0,i1-i0);
+  i0 = i1+1;
+  i1 = String_findChar(sshSpecifier,i0,':');
+  if (i1 < 0)
+  {
+    printError("No host name given in 'scp' string!\n");
+    return FALSE;
+  }
+  if (hostName != NULL) String_sub(hostName,sshSpecifier,i0,i1-i0);
+  i0 = i1+1;
+  if (hostFileName != NULL) String_sub(hostFileName,sshSpecifier,i0,STRING_END);
+
+  return TRUE;
+}
+
 Errors Storage_prepare(const String  storageName,
                        const Options *options
                       )
@@ -432,7 +417,7 @@ Errors Storage_prepare(const String  storageName,
   assert(options != NULL);
 
   storageSpecifier = String_new();
-  switch (getStorageType(storageName,storageSpecifier))
+  switch (Storage_getType(storageName,storageSpecifier))
   {
     case STORAGE_TYPE_FILESYSTEM:
       {
@@ -449,6 +434,7 @@ Errors Storage_prepare(const String  storageName,
         File_delete(storageName);
       }
       break;
+    case STORAGE_TYPE_SSH:
     case STORAGE_TYPE_SCP:
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -464,7 +450,7 @@ Errors Storage_prepare(const String  storageName,
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
-          if (!parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
+          if (!Storage_parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
           {
             String_delete(hostFileName);
             String_delete(hostName);
@@ -556,7 +542,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
   storageFileHandle->bandWidth.measurementTime      = 0;
 
   storageSpecifier = String_new();
-  switch (getStorageType(storageName,storageSpecifier))
+  switch (Storage_getType(storageName,storageSpecifier))
   {
     case STORAGE_TYPE_FILESYSTEM:
       /* init variables */
@@ -575,6 +561,10 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
         return error;
       }
       break;
+    case STORAGE_TYPE_SSH:
+      String_delete(storageSpecifier);
+      return ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         {
@@ -589,7 +579,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
-          if (!parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
+          if (!Storage_parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
           {
             String_delete(hostFileName);
             String_delete(hostName);
@@ -654,6 +644,8 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           String_delete(userName);
         }
       #else /* not HAVE_SSH2 */
+        String_delete(storageSpecifier);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
@@ -670,7 +662,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
-          if (!parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
+          if (!Storage_parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
           {
             String_delete(hostFileName);
             String_delete(hostName);
@@ -750,6 +742,8 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           String_delete(userName);
         }
       #else /* not HAVE_SSH2 */
+        String_delete(storageSpecifier);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     #ifndef NDEBUG
@@ -780,7 +774,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
   storageFileHandle->bandWidth.max = options->maxBandWidth;
 
   storageSpecifier = String_new();
-  switch (getStorageType(storageName,storageSpecifier))
+  switch (Storage_getType(storageName,storageSpecifier))
   {
     case STORAGE_TYPE_FILESYSTEM:
       /* init variables */
@@ -799,6 +793,10 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
         return error;
       }
       break;
+    case STORAGE_TYPE_SSH:
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      String_delete(storageSpecifier);
+      break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         {
@@ -814,7 +812,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
-          if (!parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
+          if (!Storage_parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
           {
             String_delete(hostFileName);
             String_delete(hostName);
@@ -877,6 +875,8 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           String_delete(userName);
         }
       #else /* not HAVE_SSH2 */
+        String_delete(storageSpecifier);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
@@ -903,7 +903,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
-          if (!parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
+          if (!Storage_parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
           {
             String_delete(hostFileName);
             String_delete(hostName);
@@ -1001,6 +1001,8 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           String_delete(userName);
         }
       #else /* not HAVE_SSH2 */
+        String_delete(storageSpecifier);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     #ifndef NDEBUG
@@ -1023,6 +1025,8 @@ void Storage_close(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_FILESYSTEM:
       File_close(&storageFileHandle->fileSystem.fileHandle);
       String_delete(storageFileHandle->fileSystem.fileName);
+      break;
+    case STORAGE_TYPE_SSH:
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
@@ -1076,6 +1080,9 @@ bool Storage_eof(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_FILESYSTEM:
       return File_eof(&storageFileHandle->fileSystem.fileHandle);
       break;
+    case STORAGE_TYPE_SSH:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      break;
     case STORAGE_TYPE_SCP:
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
@@ -1114,6 +1121,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
       {
         return error;
       }
+      break;
+    case STORAGE_TYPE_SSH:
+      return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
@@ -1222,6 +1232,9 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
       {
         return error;
       }
+      break;
+    case STORAGE_TYPE_SSH:
+      return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
@@ -1333,6 +1346,9 @@ uint64 Storage_getSize(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_FILESYSTEM:
       return File_getSize(&storageFileHandle->fileSystem.fileHandle);
       break;
+    case STORAGE_TYPE_SSH:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      break;
     case STORAGE_TYPE_SCP:
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
@@ -1361,8 +1377,11 @@ Errors Storage_tell(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_FILESYSTEM:
       return File_tell(&storageFileHandle->fileSystem.fileHandle,offset);
       break;
-    case STORAGE_TYPE_SCP:
+    case STORAGE_TYPE_SSH:
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      break;
+    case STORAGE_TYPE_SCP:
+      return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SFTP:
       (*offset) = storageFileHandle->sftp.index;
@@ -1389,8 +1408,11 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_FILESYSTEM:
       return File_seek(&storageFileHandle->fileSystem.fileHandle,offset);
       break;
-    case STORAGE_TYPE_SCP:
+    case STORAGE_TYPE_SSH:
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      break;
+    case STORAGE_TYPE_SCP:
+      return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SFTP:
 //??? large file?
@@ -1425,7 +1447,7 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
   assert(options != NULL);
 
   storageSpecifier = String_new();
-  switch (getStorageType(storageName,storageSpecifier))
+  switch (Storage_getType(storageName,storageSpecifier))
   {
     case STORAGE_TYPE_FILESYSTEM:
       /* init variables */
@@ -1441,11 +1463,11 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
         return error;
       }
       break;
+    case STORAGE_TYPE_SSH:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      break;
     case STORAGE_TYPE_SCP:
-      #ifdef HAVE_SSH2
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
+      HALT_INTERNAL_ERROR("scp does not support directory operations");
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -1462,7 +1484,7 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
-          if (!parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
+          if (!Storage_parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
           {
             String_delete(hostFileName);
             String_delete(hostName);
@@ -1562,10 +1584,11 @@ void Storage_closeDirectory(StorageDirectoryHandle *storageDirectoryHandle)
     case STORAGE_TYPE_FILESYSTEM:
       File_closeDirectory(&storageDirectoryHandle->fileSystem.directoryHandle);
       break;
+    case STORAGE_TYPE_SSH:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      break;
     case STORAGE_TYPE_SCP:
-      #ifdef HAVE_SSH2
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
+      HALT_INTERNAL_ERROR("scp does not support directory operations");
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -1596,8 +1619,11 @@ bool Storage_endOfDirectory(StorageDirectoryHandle *storageDirectoryHandle)
     case STORAGE_TYPE_FILESYSTEM:
       endOfDirectoryFlag = File_endOfDirectory(&storageDirectoryHandle->fileSystem.directoryHandle);
       break;
+    case STORAGE_TYPE_SSH:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      break;
     case STORAGE_TYPE_SCP:
-      endOfDirectoryFlag = TRUE;
+      HALT_INTERNAL_ERROR("scp does not support directory operations");
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -1647,8 +1673,11 @@ Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
     case STORAGE_TYPE_FILESYSTEM:
       error = File_readDirectory(&storageDirectoryHandle->fileSystem.directoryHandle,fileName);
       break;
+    case STORAGE_TYPE_SSH:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      break;
     case STORAGE_TYPE_SCP:
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      HALT_INTERNAL_ERROR("scp does not support directory operations");
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2

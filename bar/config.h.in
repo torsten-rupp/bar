@@ -11,6 +11,12 @@
 /* bzip2 installed */
 #undef HAVE_BZ2
 
+/* Define to 1 if you have the `fseeko' function. */
+#undef HAVE_FSEEKO
+
+/* Define to 1 if you have the `ftello' function. */
+#undef HAVE_FTELLO
+
 /* gcrypt installed */
 #undef HAVE_GCRYPT
 
@@ -43,5 +49,11 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
 
 #endif /* __CONFIG__ */

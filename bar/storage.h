@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -12,6 +12,8 @@
 #define __STORAGE__
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <libssh2.h>
@@ -40,6 +42,7 @@ typedef enum
 typedef enum
 {
   STORAGE_TYPE_FILESYSTEM,
+  STORAGE_TYPE_SSH,
   STORAGE_TYPE_SCP,
   STORAGE_TYPE_SFTP
 } StorageTypes;
@@ -67,6 +70,13 @@ typedef struct
       String     fileName;
       FileHandle fileHandle;
     } fileSystem;
+    // ssh storage (remote BAR)
+    struct
+    {
+      SocketHandle        socketHandle;
+      LIBSSH2_SESSION     *session;
+      LIBSSH2_CHANNEL     *channel;
+    } ssh;
     // scp storage
     struct
     {
@@ -150,6 +160,34 @@ Errors Storage_init(void);
 \***********************************************************************/
 
 void Storage_done(void);
+
+/***********************************************************************\
+* Name   : Storage_getType
+* Purpose: get storage type from storage name
+* Input  : storageName - storage name
+* Output : storageSpecifier - storage specific data (can be NULL)
+* Return : storage type
+* Notes  : -
+\***********************************************************************/
+
+StorageTypes Storage_getType(const String storageName, String storageSpecifier);
+
+/***********************************************************************\
+* Name   : Storage_parseSSHSpecifier
+* Purpose: parse ssh specifier: <user name>@<host name>:<host file name>
+* Input  : sshSpecifier - ssh specifier string
+* Output : userName     - user name (can be NULL)
+*          hostName     - host name (can be NULL)
+*          hostFileName - host file name (can be NULL)
+* Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_parseSSHSpecifier(const String sshSpecifier,
+                               String       userName,
+                               String       hostName,
+                               String       hostFileName
+                              );
 
 /***********************************************************************\
 * Name   : Storage_prepare

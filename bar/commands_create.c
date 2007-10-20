@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.31 $
+* $Revision: 1.32 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -315,7 +317,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
       {
         switch (File_getType(name))
         {
-          case FILETYPE_FILE:
+          case FILE_TYPE_FILE:
             error = File_getFileInfo(name,&fileInfo);
             if (error == ERROR_NONE)
             {
@@ -324,7 +326,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
               updateStatusInfo(createInfo);
             }
             break;
-          case FILETYPE_DIRECTORY:
+          case FILE_TYPE_DIRECTORY:
             createInfo->statusInfo.totalFiles++;
             updateStatusInfo(createInfo);
 
@@ -361,7 +363,7 @@ fprintf(stderr,"%s,%d: %lu xx=%lu\n",__FILE__,__LINE__,StringList_count(&nameLis
                   /* detect file type */
                   switch (File_getType(fileName))
                   {
-                    case FILETYPE_FILE:
+                    case FILE_TYPE_FILE:
                       error = File_getFileInfo(fileName,&fileInfo);
                       if (error == ERROR_NONE)
                       {
@@ -370,12 +372,12 @@ fprintf(stderr,"%s,%d: %lu xx=%lu\n",__FILE__,__LINE__,StringList_count(&nameLis
                         updateStatusInfo(createInfo);
                       }
                       break;
-                    case FILETYPE_DIRECTORY:
+                    case FILE_TYPE_DIRECTORY:
                       /* add to name list */
 //fprintf(stderr,"%s,%d: fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
                       StringList_append(&nameList,fileName);
                       break;
-                    case FILETYPE_LINK:
+                    case FILE_TYPE_LINK:
                       createInfo->statusInfo.totalFiles++;
                       updateStatusInfo(createInfo);
                       break;
@@ -390,7 +392,7 @@ fprintf(stderr,"%s,%d: %lu xx=%lu\n",__FILE__,__LINE__,StringList_count(&nameLis
               File_closeDirectory(&directoryHandle);
             }
             break;
-          case FILETYPE_LINK:
+          case FILE_TYPE_LINK:
             createInfo->statusInfo.totalFiles++;
             updateStatusInfo(createInfo);
             break;
@@ -483,12 +485,12 @@ LOCAL void collectorThread(CreateInfo *createInfo)
       {
         switch (File_getType(name))
         {
-          case FILETYPE_FILE:
+          case FILE_TYPE_FILE:
             error = File_getFileInfo(name,&fileInfo);
             if (error == ERROR_NONE)
             {
               /* add to file list */
-              appendToFileList(&createInfo->fileMsgQueue,name,FILETYPE_FILE);
+              appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_FILE);
             }
             else
             {
@@ -496,9 +498,9 @@ LOCAL void collectorThread(CreateInfo *createInfo)
               updateStatusInfo(createInfo);
             }
             break;
-          case FILETYPE_DIRECTORY:
+          case FILE_TYPE_DIRECTORY:
             /* add to file list */
-            appendToFileList(&createInfo->fileMsgQueue,name,FILETYPE_DIRECTORY);
+            appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_DIRECTORY);
 
             /* open directory contents */
             error = File_openDirectory(&directoryHandle,name);
@@ -532,12 +534,12 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   /* detect file type */
                   switch (File_getType(fileName))
                   {
-                    case FILETYPE_FILE:
+                    case FILE_TYPE_FILE:
                       error = File_getFileInfo(fileName,&fileInfo);
                       if (error == ERROR_NONE)
                       {
                         /* add to file list */
-                        appendToFileList(&createInfo->fileMsgQueue,fileName,FILETYPE_FILE);
+                        appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_FILE);
                       }
                       else
                       {
@@ -545,13 +547,13 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                         updateStatusInfo(createInfo);
                       }
                       break;
-                    case FILETYPE_DIRECTORY:
+                    case FILE_TYPE_DIRECTORY:
                       /* add to name list */
                       StringList_append(&nameList,fileName);
                       break;
-                    case FILETYPE_LINK:
+                    case FILE_TYPE_LINK:
                       /* add to file list */
-                      appendToFileList(&createInfo->fileMsgQueue,fileName,FILETYPE_LINK);
+                      appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_LINK);
                       break;
                     default:
                       info(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
@@ -583,9 +585,9 @@ LOCAL void collectorThread(CreateInfo *createInfo)
               updateStatusInfo(createInfo);
             }
             break;
-          case FILETYPE_LINK:
+          case FILE_TYPE_LINK:
             /* add to file list */
-            appendToFileList(&createInfo->fileMsgQueue,name,FILETYPE_LINK);
+            appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_LINK);
             break;
           default:
             info(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
@@ -1060,7 +1062,7 @@ Errors Command_create(const char               *archiveFileName,
 
       switch (fileType)
       {
-        case FILETYPE_FILE:
+        case FILE_TYPE_FILE:
           {
             FileInfo   fileInfo;
             FileHandle fileHandle;
@@ -1190,7 +1192,7 @@ Errors Command_create(const char               *archiveFileName,
             info(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
           }
           break;
-        case FILETYPE_DIRECTORY:
+        case FILE_TYPE_DIRECTORY:
           {
             FileInfo fileInfo;
 
@@ -1234,7 +1236,7 @@ Errors Command_create(const char               *archiveFileName,
             info(1,"ok\n");
           }
           break;
-        case FILETYPE_LINK:
+        case FILE_TYPE_LINK:
           {
             FileInfo fileInfo;
             String   name;

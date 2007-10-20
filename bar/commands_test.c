@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -162,7 +164,7 @@ Errors Command_test(StringList    *archiveFileNameList,
 
       switch (fileType)
       {
-        case FILETYPE_FILE:
+        case FILE_TYPE_FILE:
           {
             String           fileName;
             FileInfo         fileInfo;
@@ -215,7 +217,7 @@ Errors Command_test(StringList    *archiveFileNameList,
                 if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
                 break;
               }
-              if (File_getType(fileName) != FILETYPE_FILE)
+              if (File_getType(fileName) != FILE_TYPE_FILE)
               {
                 info(0,"Not a file '%s'!\n",
                      String_cString(fileName)
@@ -374,7 +376,7 @@ Errors Command_test(StringList    *archiveFileNameList,
             String_delete(fileName);
           }
           break;
-        case FILETYPE_DIRECTORY:
+        case FILE_TYPE_DIRECTORY:
           {
             String   directoryName;
             FileInfo fileInfo;
@@ -417,7 +419,7 @@ Errors Command_test(StringList    *archiveFileNameList,
                 if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
                 break;
               }
-              if (File_getType(directoryName) != FILETYPE_DIRECTORY)
+              if (File_getType(directoryName) != FILE_TYPE_DIRECTORY)
               {
                 info(0,"Not a directory '%s'!\n",
                      String_cString(directoryName)
@@ -462,7 +464,7 @@ Errors Command_test(StringList    *archiveFileNameList,
             String_delete(directoryName);
           }
           break;
-        case FILETYPE_LINK:
+        case FILE_TYPE_LINK:
           {
             String   linkName;
             String   fileName;
@@ -510,7 +512,7 @@ Errors Command_test(StringList    *archiveFileNameList,
                 if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
                 break;
               }
-              if (File_getType(linkName) != FILETYPE_LINK)
+              if (File_getType(linkName) != FILE_TYPE_LINK)
               {
                 info(0,"Not a link '%s'!\n",
                      String_cString(linkName)
