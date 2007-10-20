@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -12,6 +12,8 @@
 #define __SERVER__
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -62,7 +64,7 @@ void Server_done(void);
 
 /***********************************************************************\
 * Name   : Server_run
-* Purpose: run server
+* Purpose: run network server
 * Input  : serverPort     - server port (or 0 to disable)
 *          serverSSLPort  - server SSL port (or 0 to disable)
 *          caFileName   - file with TLS CA or NULL
@@ -81,6 +83,20 @@ Errors Server_run(uint       serverPort,
                   const char *keyFileName,
                   Password   *serverPassword
                  );
+
+/***********************************************************************\
+* Name   : Server_batch
+* Purpose: run batch server
+* Input  : inputDescriptor  - input file descriptor
+*          outputDescriptor - input file descriptor
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Server_batch(int inputDescriptor,
+                    int outputDescriptor
+                   );
 
 #ifdef __cplusplus
   }

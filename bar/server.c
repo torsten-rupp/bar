@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/select.h>
@@ -36,7 +38,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define _SERVER_DEBUG
+#define SERVER_DEBUG
 #define _SIMULATOR
 
 /***************************** Constants *******************************/
@@ -121,6 +123,14 @@ typedef struct
 /* session id */
 typedef byte SessionId[SESSION_ID_LENGTH];
 
+/* client types */
+typedef enum
+{
+  CLIENT_TYPE_NONE,
+  CLIENT_TYPE_FILE,
+  CLIENT_TYPE_NETWORK,
+} ClientTypes;
+
 /* authorization states */
 typedef enum
 {
@@ -129,26 +139,47 @@ typedef enum
   AUTHORIZATION_STATE_FAIL,
 } AuthorizationStates;
 
-/* client info */
+typedef struct
+{
+  ClientTypes         type;
+
+  SessionId           sessionId;
+  AuthorizationStates authorizationState;
+
+  union
+  {
+    /* i/o via vile */
+    struct
+    {
+      FileHandle   fileHandle;
+    } file;
+
+    /* i/o via network */
+    struct
+    {
+      /* connection */
+      String       name;
+      uint         port;
+      SocketHandle socketHandle;
+
+      /* thread */
+      pthread_t    threadId;
+      MsgQueue     commandMsgQueue;
+      bool         exitFlag;
+    } network;
+  };
+
+  /* new job */
+  JobNode *jobNode;
+} ClientInfo;
+
+/* client node */
 typedef struct ClientNode
 {
   NODE_HEADER(struct ClientNode);
 
-  /* thread */
-  pthread_t    threadId;
-  MsgQueue     commandMsgQueue;
-  bool         exitFlag;
-
-  /* connection */
-  String              name;
-  uint                port;
-  SocketHandle        socketHandle;
-  SessionId           sessionId;
-  AuthorizationStates authorizationState;
-  String              commandString;
-
-  /* new job */
-  JobNode      *jobNode;
+  ClientInfo clientInfo;
+  String     commandString;
 } ClientNode;
 
 typedef struct
@@ -156,7 +187,7 @@ typedef struct
   LIST_HEADER(ClientNode);
 } ClientList;
 
-typedef void(*ServerCommandFunction)(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount);
+typedef void(*ServerCommandFunction)(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount);
 
 typedef struct
 {
@@ -475,7 +506,7 @@ LOCAL void deleteJob(JobNode *jobNode)
 /***********************************************************************\
 * Name   : sendResult
 * Purpose: send result to client
-* Input  : clientNode   - client node
+* Input  : clientInfo   - client info
 *          id           - command id
 *          completeFlag - TRUE if command is completed, FALSE otherwise
 *          errorCode    - error code
@@ -486,7 +517,41 @@ LOCAL void deleteJob(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void sendResult(ClientNode *clientNode, uint id, bool completeFlag, uint errorCode, const char *format, ...)
+LOCAL void sendClient(ClientInfo *clientInfo, String data)
+{
+  switch (clientInfo->type)
+  {
+    case CLIENT_TYPE_FILE:
+      File_write(&clientInfo->file.fileHandle,String_cString(data),String_length(data));
+      break;
+    case CLIENT_TYPE_NETWORK:
+//??? blockieren?
+      Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+//fprintf(stderr,"%s,%d: sent data: '%s'",__FILE__,__LINE__,String_cString(result));
+}
+
+/***********************************************************************\
+* Name   : sendResult
+* Purpose: send result to client
+* Input  : clientInfo   - client info
+*          id           - command id
+*          completeFlag - TRUE if command is completed, FALSE otherwise
+*          errorCode    - error code
+*          format       - format string
+*          ...          - optional arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sendResult(ClientInfo *clientInfo, uint id, bool completeFlag, uint errorCode, const char *format, ...)
 {
   String  result;
   va_list arguments;
@@ -499,9 +564,7 @@ LOCAL void sendResult(ClientNode *clientNode, uint id, bool completeFlag, uint e
   va_end(arguments);
   String_appendChar(result,'\n');
 
-//??? blockieren?
-  Network_send(&clientNode->socketHandle,String_cString(result),String_length(result));
-//fprintf(stderr,"%s,%d: sent data: '%s'",__FILE__,__LINE__,String_cString(result));
+  sendClient(clientInfo,result);
 
   String_delete(result);
 }
@@ -559,13 +622,13 @@ LOCAL uint64 getTotalSubDirectorySize(const String subDirectory)
 
       switch (File_getType(fileName))
       {
-        case FILETYPE_FILE:
+        case FILE_TYPE_FILE:
           totalSize += fileInfo.size;
           break;
-        case FILETYPE_DIRECTORY:
+        case FILE_TYPE_DIRECTORY:
           StringList_append(&pathNameList,String_copy(fileName));
           break;
-        case FILETYPE_LINK:
+        case FILE_TYPE_LINK:
           break;
         default:
           break;
@@ -583,7 +646,7 @@ LOCAL uint64 getTotalSubDirectorySize(const String subDirectory)
 
 /*---------------------------------------------------------------------*/
 
-LOCAL void serverCommand_authorize(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   bool okFlag;
 
@@ -591,13 +654,13 @@ LOCAL void serverCommand_authorize(ClientNode *clientNode, uint id, const String
   char s[3];
   char n0,n1;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* get encoded password (to avoid plain text passwords in memory) */
   if (argumentCount < 1)
   {
-    sendResult(clientNode,id,TRUE,1,"expected password");
+    sendResult(clientInfo,id,TRUE,1,"expected password");
     return;
   }
 
@@ -609,7 +672,7 @@ LOCAL void serverCommand_authorize(ClientNode *clientNode, uint id, const String
     while ((z < Password_length(password)) && okFlag)
     {
       n0 = (char)(strtoul(String_subCString(s,arguments[0],z*2,sizeof(s)),NULL,16) & 0xFF);
-      n1 = clientNode->sessionId[z];
+      n1 = clientInfo->sessionId[z];
       okFlag = (Password_get(password,z) == (n0^n1));
       z++;
     } 
@@ -617,23 +680,23 @@ LOCAL void serverCommand_authorize(ClientNode *clientNode, uint id, const String
 
   if (okFlag)
   {
-    clientNode->authorizationState = AUTHORIZATION_STATE_OK;
+    clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
   }
   else
   {
-    clientNode->authorizationState = AUTHORIZATION_STATE_FAIL;
+    clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
   }
 
-  sendResult(clientNode,id,TRUE,0,"");
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
-LOCAL void serverCommand_deviceList(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   Errors       error;
   DeviceHandle deviceHandle;
   String       deviceName;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   UNUSED_VARIABLE(arguments);
@@ -642,7 +705,7 @@ LOCAL void serverCommand_deviceList(ClientNode *clientNode, uint id, const Strin
   error = File_openDevices(&deviceHandle);
   if (error != ERROR_NONE)
   {
-    sendResult(clientNode,id,TRUE,1,"cannot open device list (error: %s)",getErrorText(error));
+    sendResult(clientInfo,id,TRUE,1,"cannot open device list (error: %s)",getErrorText(error));
     return;
   }
 
@@ -652,22 +715,22 @@ LOCAL void serverCommand_deviceList(ClientNode *clientNode, uint id, const Strin
     error = File_readDevice(&deviceHandle,deviceName);
     if (error != ERROR_NONE)
     {
-      sendResult(clientNode,id,TRUE,1,"cannot read device list (error: %s)",getErrorText(error));
+      sendResult(clientInfo,id,TRUE,1,"cannot read device list (error: %s)",getErrorText(error));
       File_closeDevices(&deviceHandle);
       String_delete(deviceName);
       return;
     }
 
-    sendResult(clientNode,id,FALSE,0,"%'S",deviceName);
+    sendResult(clientInfo,id,FALSE,0,"%'S",deviceName);
   }
   String_delete(deviceName);
 
   File_closeDevices(&deviceHandle);
 
-  sendResult(clientNode,id,TRUE,0,"");
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
-LOCAL void serverCommand_fileList(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   bool            totalSizeFlag;
   Errors          error;
@@ -676,12 +739,12 @@ LOCAL void serverCommand_fileList(ClientNode *clientNode, uint id, const String 
   FileInfo        fileInfo;
   uint64          totalSize;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   if (argumentCount < 1)
   {
-    sendResult(clientNode,id,TRUE,1,"expected path name");
+    sendResult(clientInfo,id,TRUE,1,"expected path name");
     return;
   }
   totalSizeFlag = ((argumentCount >= 2) && String_toBoolean(arguments[1],NULL,NULL,0,NULL,0));
@@ -689,7 +752,7 @@ LOCAL void serverCommand_fileList(ClientNode *clientNode, uint id, const String 
   error = File_openDirectory(&directoryHandle,arguments[0]);
   if (error != ERROR_NONE)
   {
-    sendResult(clientNode,id,TRUE,1,"cannot open '%S' (error: %s)",arguments[0],getErrorText(error));
+    sendResult(clientInfo,id,TRUE,1,"cannot open '%S' (error: %s)",arguments[0],getErrorText(error));
     return;
   }
 
@@ -704,14 +767,14 @@ LOCAL void serverCommand_fileList(ClientNode *clientNode, uint id, const String 
       {
         switch (File_getType(fileName))
         {
-          case FILETYPE_FILE:
-            sendResult(clientNode,id,FALSE,0,
+          case FILE_TYPE_FILE:
+            sendResult(clientInfo,id,FALSE,0,
                        "FILE %llu %'S",
                        fileInfo.size,
                        fileName
                       );
             break;
-          case FILETYPE_DIRECTORY:
+          case FILE_TYPE_DIRECTORY:
             if (totalSizeFlag)
             {         
               totalSize = getTotalSubDirectorySize(fileName);
@@ -720,20 +783,20 @@ LOCAL void serverCommand_fileList(ClientNode *clientNode, uint id, const String 
             {
               totalSize = 0;
             }
-            sendResult(clientNode,id,FALSE,0,
+            sendResult(clientInfo,id,FALSE,0,
                        "DIRECTORY %llu %'S",
                        totalSize,
                        fileName
                       );
             break;
-          case FILETYPE_LINK:
-            sendResult(clientNode,id,FALSE,0,
+          case FILE_TYPE_LINK:
+            sendResult(clientInfo,id,FALSE,0,
                        "LINK %'S",
                        fileName
                       );
             break;
           default:
-            sendResult(clientNode,id,FALSE,0,
+            sendResult(clientInfo,id,FALSE,0,
                        "unknown %'S",
                        fileName
                       );
@@ -742,7 +805,7 @@ LOCAL void serverCommand_fileList(ClientNode *clientNode, uint id, const String 
       }
       else
       {
-        sendResult(clientNode,id,FALSE,0,
+        sendResult(clientInfo,id,FALSE,0,
                    "UNKNOWN %'S",
                    fileName
                   );
@@ -750,7 +813,7 @@ LOCAL void serverCommand_fileList(ClientNode *clientNode, uint id, const String 
     }
     else
     {
-      sendResult(clientNode,id,TRUE,1,"cannot read directory '%S' (error: %s)",arguments[0],getErrorText(error));
+      sendResult(clientInfo,id,TRUE,1,"cannot read directory '%S' (error: %s)",arguments[0],getErrorText(error));
       File_closeDirectory(&directoryHandle);
       String_delete(fileName);
       return;
@@ -760,15 +823,15 @@ LOCAL void serverCommand_fileList(ClientNode *clientNode, uint id, const String 
 
   File_closeDirectory(&directoryHandle);
 
-  sendResult(clientNode,id,TRUE,0,"");
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
-LOCAL void serverCommand_jobList(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   JobNode    *jobNode;
   const char *stateText;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   UNUSED_VARIABLE(arguments);
@@ -790,7 +853,7 @@ LOCAL void serverCommand_jobList(ClientNode *clientNode, uint id, const String a
           break; /* not reached */
       #endif /* NDEBUG */
     }
-    sendResult(clientNode,id,FALSE,0,
+    sendResult(clientInfo,id,FALSE,0,
                "%u %'S %s %llu %'s %'s %lu %lu",
                jobNode->id,
                jobNode->name,
@@ -806,23 +869,23 @@ LOCAL void serverCommand_jobList(ClientNode *clientNode, uint id, const String a
   }
   Semaphore_unlock(&jobList.lock);
 
-  sendResult(clientNode,id,TRUE,0,"");
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
-LOCAL void serverCommand_jobInfo(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint       jobId;
   JobNode    *jobNode;
 //  int        errorCode;
   const char *stateText;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* get id */
   if (argumentCount < 1)
   {
-    sendResult(clientNode,id,TRUE,1,"expected job id");
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],NULL,NULL,0);
@@ -852,7 +915,7 @@ LOCAL void serverCommand_jobInfo(ClientNode *clientNode, uint id, const String a
           break; /* not reached */
       #endif /* NDEBUG */
     }
-    sendResult(clientNode,id,TRUE,0,
+    sendResult(clientInfo,id,TRUE,0,
                "%s %lu %llu %lu %llu %lu %llu %lu %llu %f %'S %llu %llu %'S %llu %llu",
                stateText,
                jobNode->runningInfo.doneFiles,
@@ -874,192 +937,192 @@ LOCAL void serverCommand_jobInfo(ClientNode *clientNode, uint id, const String a
   }
   else
   {
-    sendResult(clientNode,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
   }
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_addIncludePattern(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_addIncludePattern(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   String includePattern;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* get include pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientNode,id,TRUE,1,"expected pattern");
+    sendResult(clientInfo,id,TRUE,1,"expected pattern");
     return;
   }
   includePattern = arguments[0];
 
-  if (clientNode->jobNode != NULL)
+  if (clientInfo->jobNode != NULL)
   {
-    Pattern_appendList(&clientNode->jobNode->includePatternList,String_cString(includePattern),PATTERN_TYPE_GLOB);
-    sendResult(clientNode,id,TRUE,0,"");
+    Pattern_appendList(&clientInfo->jobNode->includePatternList,String_cString(includePattern),PATTERN_TYPE_GLOB);
+    sendResult(clientInfo,id,TRUE,0,"");
   }
   else
   {
-    sendResult(clientNode,id,TRUE,1,"no job");
+    sendResult(clientInfo,id,TRUE,1,"no job");
   }
 }
 
-LOCAL void serverCommand_addExcludePattern(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_addExcludePattern(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   String excludePattern;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* get exclude pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientNode,id,TRUE,1,"expected pattern");
+    sendResult(clientInfo,id,TRUE,1,"expected pattern");
     return;
   }
   excludePattern = arguments[0];
 
-  if (clientNode->jobNode != NULL)
+  if (clientInfo->jobNode != NULL)
   {
-    Pattern_appendList(&clientNode->jobNode->excludePatternList,String_cString(excludePattern),PATTERN_TYPE_GLOB);
-    sendResult(clientNode,id,TRUE,0,"");
+    Pattern_appendList(&clientInfo->jobNode->excludePatternList,String_cString(excludePattern),PATTERN_TYPE_GLOB);
+    sendResult(clientInfo,id,TRUE,0,"");
   }
   else
   {
-    sendResult(clientNode,id,TRUE,1,"no job");
+    sendResult(clientInfo,id,TRUE,1,"no job");
   }
 }
 
-LOCAL void serverCommand_getConfigValue(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_getConfigValue(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* get config value name */
   if (argumentCount < 1)
   {
-    sendResult(clientNode,id,TRUE,1,"expected config value name");
+    sendResult(clientInfo,id,TRUE,1,"expected config value name");
     return;
   }
 
-  if (clientNode->jobNode != NULL)
+  if (clientInfo->jobNode != NULL)
   {
     if      (String_equalsCString(arguments[0],"archive-file"))
     {
-      sendResult(clientNode,id,TRUE,0,"%'S",clientNode->jobNode->archiveFileName);
+      sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->jobNode->archiveFileName);
     }
     else if (String_equalsCString(arguments[0],"archive-part-size"))
     {
-      sendResult(clientNode,id,TRUE,0,"%llu",clientNode->jobNode->archivePartSize);
+      sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->jobNode->archivePartSize);
     }
     else if (String_equalsCString(arguments[0],"max-tmp-size"))
     {
-      sendResult(clientNode,id,TRUE,0,"%llu",clientNode->jobNode->maxTmpSize);
+      sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->jobNode->maxTmpSize);
     }
     else if (String_equalsCString(arguments[0],"max-band-width"))
     {
-      sendResult(clientNode,id,TRUE,0,"%'S",clientNode->jobNode->maxBandWidth);
+      sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->jobNode->maxBandWidth);
     }
     else if (String_equalsCString(arguments[0],"compress-algorithm"))
     {
-      sendResult(clientNode,id,TRUE,0,"%'s",Compress_getAlgorithmName(clientNode->jobNode->compressAlgorithm));
+      sendResult(clientInfo,id,TRUE,0,"%'s",Compress_getAlgorithmName(clientInfo->jobNode->compressAlgorithm));
     }
     else if (String_equalsCString(arguments[0],"crypt-algorithm"))
     {
-      sendResult(clientNode,id,TRUE,0,"%'s",Crypt_getAlgorithmName(clientNode->jobNode->cryptAlgorithm));
+      sendResult(clientInfo,id,TRUE,0,"%'s",Crypt_getAlgorithmName(clientInfo->jobNode->cryptAlgorithm));
     }
     else if (String_equalsCString(arguments[0],"skip-unreadable"))
     {
-      sendResult(clientNode,id,TRUE,0,"%d",clientNode->jobNode->skipUnreadableFlag?1:0);
+      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->skipUnreadableFlag?1:0);
     }
     else if (String_equalsCString(arguments[0],"overwrite-archives"))
     {
-      sendResult(clientNode,id,TRUE,0,"%d",clientNode->jobNode->overwriteArchiveFilesFlag?1:0);
+      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->overwriteArchiveFilesFlag?1:0);
     }
     else if (String_equalsCString(arguments[0],"overwrite-files"))
     {
-      sendResult(clientNode,id,TRUE,0,"%d",clientNode->jobNode->overwriteFilesFlag?1:0);
+      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->overwriteFilesFlag?1:0);
     }
     else
     {
-      sendResult(clientNode,id,TRUE,1,"unknown config value");
+      sendResult(clientInfo,id,TRUE,1,"unknown config value");
     }
   }
   else
   {
-    sendResult(clientNode,id,TRUE,1,"no job");
+    sendResult(clientInfo,id,TRUE,1,"no job");
   }
 }
 
-LOCAL void serverCommand_setConfigValue(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_setConfigValue(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* get config value name */
   if (argumentCount < 1)
   {
-    sendResult(clientNode,id,TRUE,1,"expected config name");
+    sendResult(clientInfo,id,TRUE,1,"expected config name");
     return;
   }
   if (argumentCount < 2)
   {
-    sendResult(clientNode,id,TRUE,1,"expected config value");
+    sendResult(clientInfo,id,TRUE,1,"expected config value");
     return;
   }
 
-  if (clientNode->jobNode != NULL)
+  if (clientInfo->jobNode != NULL)
   {
     if      (String_equalsCString(arguments[0],"archive-file"))
     {
       // archive-file = <name>
-      String_set(clientNode->jobNode->archiveFileName,arguments[1]);
-      sendResult(clientNode,id,TRUE,0,"");
+      String_set(clientInfo->jobNode->archiveFileName,arguments[1]);
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"archive-part-size"))
     {
       // archive-part-size = <n>
       const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-      clientNode->jobNode->archivePartSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-      sendResult(clientNode,id,TRUE,0,"");
+      clientInfo->jobNode->archivePartSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"max-tmp-size"))
     {
       // max-tmp-part-size = <n>
       const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-      clientNode->jobNode->maxTmpSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-      sendResult(clientNode,id,TRUE,0,"");
+      clientInfo->jobNode->maxTmpSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"max-band-width"))
     {
       // max-tmp-part-size = <n>
       const StringUnit UNITS[] = {{"K",1024}};
 
-      clientNode->jobNode->maxBandWidth = String_toInteger(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-      sendResult(clientNode,id,TRUE,0,"");
+      clientInfo->jobNode->maxBandWidth = String_toInteger(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"ssh-port"))
     {
       // ssh-port = <n>
-      clientNode->jobNode->sshPort = String_toInteger(arguments[1],NULL,NULL,0);
-      sendResult(clientNode,id,TRUE,0,"");
+      clientInfo->jobNode->sshPort = String_toInteger(arguments[1],NULL,NULL,0);
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"ssh-public-key"))
     {
       // ssh-public-key = <file name>
-      String_set(clientNode->jobNode->sshPublicKeyFileName,arguments[1]);
-      sendResult(clientNode,id,TRUE,0,"");
+      String_set(clientInfo->jobNode->sshPublicKeyFileName,arguments[1]);
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"ssh-prvat-key"))
     {
       // ssh-privat-key = <file name>
-      String_set(clientNode->jobNode->sshPrivatKeyFileName,arguments[1]);
-      sendResult(clientNode,id,TRUE,0,"");
+      String_set(clientInfo->jobNode->sshPrivatKeyFileName,arguments[1]);
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"compress-algorithm"))
     {
@@ -1069,11 +1132,11 @@ LOCAL void serverCommand_setConfigValue(ClientNode *clientNode, uint id, const S
       compressAlgorithm = Compress_getAlgorithm(String_cString(arguments[1]));
       if (compressAlgorithm == COMPRESS_ALGORITHM_UNKNOWN)
       {
-        sendResult(clientNode,id,TRUE,1,"unknown compress algorithm");
+        sendResult(clientInfo,id,TRUE,1,"unknown compress algorithm");
         return;
       }
-      clientNode->jobNode->compressAlgorithm = compressAlgorithm;
-      sendResult(clientNode,id,TRUE,0,"");
+      clientInfo->jobNode->compressAlgorithm = compressAlgorithm;
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"crypt-algorithm"))
     {
@@ -1083,78 +1146,78 @@ LOCAL void serverCommand_setConfigValue(ClientNode *clientNode, uint id, const S
       cryptAlgorithm = Crypt_getAlgorithm(String_cString(arguments[1]));
       if (cryptAlgorithm == CRYPT_ALGORITHM_UNKNOWN)
       {
-        sendResult(clientNode,id,TRUE,1,"unknown crypt algorithm");
+        sendResult(clientInfo,id,TRUE,1,"unknown crypt algorithm");
         return;
       }
-      clientNode->jobNode->cryptAlgorithm = cryptAlgorithm;
-      sendResult(clientNode,id,TRUE,0,"");
+      clientInfo->jobNode->cryptAlgorithm = cryptAlgorithm;
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"skip-unreadable"))
     {
-      clientNode->jobNode->skipUnreadableFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
-      sendResult(clientNode,id,TRUE,0,"");
+      clientInfo->jobNode->skipUnreadableFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"overwrite-archive-files"))
     {
-      clientNode->jobNode->overwriteArchiveFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
-      sendResult(clientNode,id,TRUE,0,"");
+      clientInfo->jobNode->overwriteArchiveFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"overwrite-files"))
     {
-      clientNode->jobNode->overwriteFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
-      sendResult(clientNode,id,TRUE,0,"");
+      clientInfo->jobNode->overwriteFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
+      sendResult(clientInfo,id,TRUE,0,"");
     }
     else
     {
-      sendResult(clientNode,id,TRUE,1,"unknown config value '%S'",arguments[0]);
+      sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",arguments[0]);
     }
   }
   else
   {
-    sendResult(clientNode,id,TRUE,1,"no job");
+    sendResult(clientInfo,id,TRUE,1,"no job");
   }
 }
 
-LOCAL void serverCommand_newJob(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_newJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* get config value name */
   if (argumentCount < 1)
   {
-    sendResult(clientNode,id,TRUE,1,"expected name");
+    sendResult(clientInfo,id,TRUE,1,"expected name");
     return;
   }
 
-  if (clientNode->jobNode != NULL)
+  if (clientInfo->jobNode != NULL)
   {
-    deleteJob(clientNode->jobNode);
+    deleteJob(clientInfo->jobNode);
   }
 
-  clientNode->jobNode = newJob();
-  if (clientNode->jobNode == NULL)
+  clientInfo->jobNode = newJob();
+  if (clientInfo->jobNode == NULL)
   {
-    sendResult(clientNode,id,TRUE,1,"insufficient memory");
+    sendResult(clientInfo,id,TRUE,1,"insufficient memory");
     return;
   }
-  String_set(clientNode->jobNode->name,arguments[0]);
+  String_set(clientInfo->jobNode->name,arguments[0]);
 
-  sendResult(clientNode,id,TRUE,0,"");
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
-LOCAL void serverCommand_addJob(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_addJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   JobNode *jobNode;
   uint    jobId;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  if (clientNode->jobNode != NULL)
+  if (clientInfo->jobNode != NULL)
   {
     /* lock */
     Semaphore_lock(&jobList.lock);
@@ -1175,33 +1238,33 @@ LOCAL void serverCommand_addJob(ClientNode *clientNode, uint id, const String ar
 
     /* add new job to list */
     jobId = getNewJobId();
-    clientNode->jobNode->id = jobId;
-    List_append(&jobList,clientNode->jobNode);
-    clientNode->jobNode = NULL;
+    clientInfo->jobNode->id = jobId;
+    List_append(&jobList,clientInfo->jobNode);
+    clientInfo->jobNode = NULL;
 
     /* unlock */
     Semaphore_unlock(&jobList.lock);
 
-    sendResult(clientNode,id,TRUE,0,"%d",jobId);
+    sendResult(clientInfo,id,TRUE,0,"%d",jobId);
   }
   else
   {
-    sendResult(clientNode,id,TRUE,1,"no job");
+    sendResult(clientInfo,id,TRUE,1,"no job");
   }
 }
 
-LOCAL void serverCommand_abortJob(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   JobNode *jobNode;
   uint    jobId;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* get id */
   if (argumentCount < 1)
   {
-    sendResult(clientNode,id,TRUE,1,"expected job id");
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],NULL,NULL,0);
@@ -1224,29 +1287,29 @@ LOCAL void serverCommand_abortJob(ClientNode *clientNode, uint id, const String 
     {
       Semaphore_waitModified(&jobList.lock);
     }
-    sendResult(clientNode,id,TRUE,0,"");
+    sendResult(clientInfo,id,TRUE,0,"");
   }
   else
   {
-    sendResult(clientNode,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
   }
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_remJob(ClientNode *clientNode, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   JobNode *jobNode;
   uint    jobId;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* get id */
   if (argumentCount < 1)
   {
-    sendResult(clientNode,id,TRUE,1,"expected job id");
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],NULL,NULL,0);
@@ -1267,15 +1330,109 @@ LOCAL void serverCommand_remJob(ClientNode *clientNode, uint id, const String ar
     {
       List_remove(&jobList,jobNode);
     }
-    sendResult(clientNode,id,TRUE,0,"");
+    sendResult(clientInfo,id,TRUE,0,"");
   }
   else
   {
-    sendResult(clientNode,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
   }
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  bool            totalSizeFlag;
+  Errors          error;
+  String          fileName;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected archive name");
+    return;
+  }
+
+#if 0
+  error = File_openDirectory(&directoryHandle,arguments[0]);
+  if (error != ERROR_NONE)
+  {
+    sendResult(clientInfo,id,TRUE,1,"cannot open '%S' (error: %s)",arguments[0],getErrorText(error));
+    return;
+  }
+
+  fileName = String_new();
+  while (!File_endOfDirectory(&directoryHandle))
+  {
+    error = File_readDirectory(&directoryHandle,fileName);
+    if (error == ERROR_NONE)
+    {
+      error = File_getFileInfo(fileName,&fileInfo);
+      if (error == ERROR_NONE)
+      {
+        switch (File_getType(fileName))
+        {
+          case FILE_TYPE_FILE:
+            sendResult(clientInfo,id,FALSE,0,
+                       "FILE %llu %'S",
+                       fileInfo.size,
+                       fileName
+                      );
+            break;
+          case FILE_TYPE_DIRECTORY:
+            if (totalSizeFlag)
+            {         
+              totalSize = getTotalSubDirectorySize(fileName);
+            }
+            else
+            {
+              totalSize = 0;
+            }
+            sendResult(clientInfo,id,FALSE,0,
+                       "DIRECTORY %llu %'S",
+                       totalSize,
+                       fileName
+                      );
+            break;
+          case FILE_TYPE_LINK:
+            sendResult(clientInfo,id,FALSE,0,
+                       "LINK %'S",
+                       fileName
+                      );
+            break;
+          default:
+            sendResult(clientInfo,id,FALSE,0,
+                       "unknown %'S",
+                       fileName
+                      );
+            break;
+        }
+      }
+      else
+      {
+        sendResult(clientInfo,id,FALSE,0,
+                   "UNKNOWN %'S",
+                   fileName
+                  );
+      }
+    }
+    else
+    {
+      sendResult(clientInfo,id,TRUE,1,"cannot read directory '%S' (error: %s)",arguments[0],getErrorText(error));
+      File_closeDirectory(&directoryHandle);
+      String_delete(fileName);
+      return;
+    }
+  }
+  String_delete(fileName);
+
+  File_closeDirectory(&directoryHandle);
+#endif /* 0 */
+
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
 const struct { const char *name; ServerCommandFunction serverCommandFunction; bool authorizationState; } SERVER_COMMANDS[] =
@@ -1293,6 +1450,7 @@ const struct { const char *name; ServerCommandFunction serverCommandFunction; bo
   { "ADD_JOB",             serverCommand_addJob,            AUTHORIZATION_STATE_OK      },
   { "REM_JOB",             serverCommand_remJob,            AUTHORIZATION_STATE_OK      },
   { "ABORT_JOB",           serverCommand_abortJob,          AUTHORIZATION_STATE_OK      },
+  { "ARCHIVE_LIST",        serverCommand_archiveList,       AUTHORIZATION_STATE_OK      },
 };
 
 /***********************************************************************\
@@ -1369,7 +1527,7 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
   }
   if (z >= SIZE_OF_ARRAY(SERVER_COMMANDS))
   {
-fprintf(stderr,"%s,%d: unknown %s\n",__FILE__,__LINE__,String_cString(string));
+fprintf(stderr,"%s,%d: unknown %s\n",__FILE__,__LINE__,String_cString(token));
     String_doneTokenizer(&stringTokenizer);
     return FALSE;
   }
@@ -1404,31 +1562,31 @@ fprintf(stderr,"%s,%d: unknown %s\n",__FILE__,__LINE__,String_cString(string));
 }
 
 /***********************************************************************\
-* Name   : clientThread
-* Purpose: client processing thread
-* Input  : clientNode - client node
+* Name   : networkClientThread
+* Purpose: processing thread for network clients
+* Input  : clientInfo - client info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void clientThread(ClientNode *clientNode)
+LOCAL void networkClientThread(ClientInfo *clientInfo)
 {
   CommandMsg commandMsg;
   String     result;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
 
   result = String_new();
-  while (   !clientNode->exitFlag
-         && MsgQueue_get(&clientNode->commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg))
+  while (   !clientInfo->network.exitFlag
+         && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg))
         )
   {
     /* check authorization */
-    if (clientNode->authorizationState == commandMsg.authorizationState)
+    if (clientInfo->authorizationState == commandMsg.authorizationState)
     {
       /* execute command */
-      commandMsg.serverCommandFunction(clientNode,
+      commandMsg.serverCommandFunction(clientInfo,
                                        commandMsg.id,
                                        Array_cArray(commandMsg.arguments),
                                        Array_length(commandMsg.arguments)
@@ -1437,8 +1595,8 @@ LOCAL void clientThread(ClientNode *clientNode)
     else
     {
       /* authorization failure -> mark for disconnect */
-      sendResult(clientNode,commandMsg.id,TRUE,1,"authorization failure");
-      clientNode->authorizationState = AUTHORIZATION_STATE_FAIL;
+      sendResult(clientInfo,commandMsg.id,TRUE,1,"authorization failure");
+      clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
     }
 
     /* free resources */
@@ -1446,7 +1604,7 @@ LOCAL void clientThread(ClientNode *clientNode)
   }
   String_delete(result);
 
-  clientNode->exitFlag = TRUE;
+  clientInfo->network.exitFlag = TRUE;
 }
 
 /***********************************************************************\
@@ -1469,31 +1627,6 @@ LOCAL void freeCommandMsg(CommandMsg *commandMsg, void *userData)
 }
 
 /***********************************************************************\
-* Name   : freeClientNode
-* Purpose: free client node
-* Input  : clientNode - client node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeClientNode(ClientNode *clientNode)
-{
-  assert(clientNode != NULL);
-
-  /* stop client thread */
-  clientNode->exitFlag = TRUE;
-  MsgQueue_setEndOfMsg(&clientNode->commandMsgQueue);
-  pthread_join(clientNode->threadId,NULL);
-
-  /* delete */
-  MsgQueue_done(&clientNode->commandMsgQueue,(MsgQueueMsgFreeFunction)freeCommandMsg,NULL);
-  String_delete(clientNode->commandString);
-  String_delete(clientNode->name);
-  if (clientNode->jobNode != NULL) deleteJob(clientNode->jobNode);
-}
-
-/***********************************************************************\
 * Name   : getNewSessionId
 * Purpose: get new session id
 * Input  : -
@@ -1509,21 +1642,167 @@ LOCAL void getNewSessionId(SessionId sessionId)
 }
 
 /***********************************************************************\
-* Name   : newClient
-* Purpose: create new client
-* Input  : name         - client name
+* Name   : sendSessionId
+* Purpose: send session id to client
+* Input  : clientInfo - client info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sendSessionId(ClientInfo *clientInfo)
+{
+  String s;
+  uint   z;
+
+  s = String_new();
+  String_appendCString(s,"SESSION ");
+  for (z = 0; z < sizeof(SessionId); z++)
+  {
+    String_format(s,"%02x",clientInfo->sessionId[z]);
+  }
+  String_appendChar(s,'\n');
+  sendClient(clientInfo,s);
+  String_delete(s);
+}
+
+/***********************************************************************\
+* Name   : newFileClient
+* Purpose: create new client with file i/o
+* Input  : clientInfo - client info to initialize
+*          fileHandle - client file handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initFileClient(ClientInfo *clientInfo,
+                          FileHandle fileHandle
+                         )
+{
+  assert(clientInfo != NULL);
+
+  /* initialize */
+  clientInfo->type               = CLIENT_TYPE_FILE;
+//  clientInfo->authorizationState   = AUTHORIZATION_STATE_WAITING;
+clientInfo->authorizationState   = AUTHORIZATION_STATE_OK;
+  clientInfo->file.fileHandle    = fileHandle;
+  clientInfo->jobNode            = NULL;
+
+  /* create and send session id */
+// authorization?
+//  getNewSessionId(clientInfo->sessionId);
+//  sendSessionId(clientInfo);
+}
+
+/***********************************************************************\
+* Name   : newNetworkClient
+* Purpose: create new client with network i/o
+* Input  : clientInfo   - client info to initialize
+*          name         - client name
 *          port         - client port
 *          socketHandle - client socket handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initNetworkClient(ClientInfo   *clientInfo,
+                             const String name,
+                             uint         port,
+                             SocketHandle socketHandle
+                            )
+{
+  assert(clientInfo != NULL);
+
+  /* initialize */
+  clientInfo->type                 = CLIENT_TYPE_NETWORK;
+  clientInfo->authorizationState   = AUTHORIZATION_STATE_WAITING;
+  clientInfo->network.name         = String_copy(name);
+  clientInfo->network.port         = port;
+  clientInfo->network.socketHandle = socketHandle;
+  clientInfo->network.exitFlag     = FALSE;
+  clientInfo->jobNode              = NULL;
+
+  if (!MsgQueue_init(&clientInfo->network.commandMsgQueue,0))
+  {
+    HALT_FATAL_ERROR("Cannot initialise client command message queue!");
+  }
+  if (pthread_create(&clientInfo->network.threadId,NULL,(void*(*)(void*))networkClientThread,clientInfo) != 0)
+  {
+    HALT_FATAL_ERROR("Cannot initialise client thread!");
+  }
+
+  /* create and send session id */
+  getNewSessionId(clientInfo->sessionId);
+  sendSessionId(clientInfo);
+}
+
+/***********************************************************************\
+* Name   : doneClient
+* Purpose: deinitialize client
+* Input  : clientInfo - client info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneClient(ClientInfo *clientInfo)
+{
+  assert(clientInfo != NULL);
+
+  if (clientInfo->jobNode != NULL) deleteJob(clientInfo->jobNode);
+  switch (clientInfo->type)
+  {
+    case CLIENT_TYPE_FILE:
+      break;
+    case CLIENT_TYPE_NETWORK:
+      /* stop client thread */
+      clientInfo->network.exitFlag = TRUE;
+      MsgQueue_setEndOfMsg(&clientInfo->network.commandMsgQueue);
+      pthread_join(clientInfo->network.threadId,NULL);
+
+      /* free resources */
+      MsgQueue_done(&clientInfo->network.commandMsgQueue,(MsgQueueMsgFreeFunction)freeCommandMsg,NULL);
+      String_delete(clientInfo->network.name);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+}
+
+/***********************************************************************\
+* Name   : freeClientNode
+* Purpose: free client node
+* Input  : clientNode - client node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeClientNode(ClientNode *clientNode)
+{
+  assert(clientNode != NULL);
+
+  doneClient(&clientNode->clientInfo);
+  String_delete(clientNode->commandString);
+}
+
+/***********************************************************************\
+* Name   : newClient
+* Purpose: create new client
+* Input  : type - client type
 * Output : -
 * Return : client node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ClientNode *newClient(const String name, uint port, SocketHandle socketHandle)
+LOCAL ClientNode *newClient(void)
 {
   ClientNode *clientNode;
-  String     s;
-  uint       z;
 
   /* create new client node */
   clientNode = LIST_NEW_NODE(ClientNode);
@@ -1533,35 +1812,10 @@ LOCAL ClientNode *newClient(const String name, uint port, SocketHandle socketHan
   }
 
   /* initialize node */
-  clientNode->exitFlag = FALSE;
-
-  clientNode->name               = String_copy(name);
-  clientNode->port               = port;
-  clientNode->socketHandle       = socketHandle;
-  clientNode->authorizationState = AUTHORIZATION_STATE_WAITING;
-  clientNode->commandString      = String_new();
-  clientNode->jobNode            = NULL;
-
-  if (!MsgQueue_init(&clientNode->commandMsgQueue,0))
-  {
-    HALT_FATAL_ERROR("Cannot initialise client command message queue!");
-  }
-  if (pthread_create(&clientNode->threadId,NULL,(void*(*)(void*))clientThread,clientNode) != 0)
-  {
-    HALT_FATAL_ERROR("Cannot initialise client thread!");
-  }
-
-  /* create and send session id */
-  getNewSessionId(clientNode->sessionId);
-  s = String_new();
-  String_appendCString(s,"SESSION ");
-  for (z = 0; z < sizeof(SessionId); z++)
-  {
-    String_format(s,"%02x",clientNode->sessionId[z]);
-  }
-  String_appendChar(s,'\n');
-  Network_send(&clientNode->socketHandle,String_cString(s),String_length(s));
-  String_delete(s);
+  clientNode->clientInfo.type               = CLIENT_TYPE_NONE;
+  clientNode->clientInfo.authorizationState = AUTHORIZATION_STATE_WAITING;
+  clientNode->clientInfo.jobNode            = NULL;
+  clientNode->commandString                 = String_new();
 
   return clientNode;
 }
@@ -1593,11 +1847,11 @@ LOCAL void deleteClient(ClientNode *clientNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void processCommand(ClientNode *clientNode, const String command)
+LOCAL void processCommand(ClientInfo *clientInfo, const String command)
 {
   CommandMsg commandMsg;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
 
   #ifdef SERVER_DEBUG
     fprintf(stderr,"%s,%d: command=%s\n",__FILE__,__LINE__,String_cString(command));
@@ -1605,13 +1859,13 @@ LOCAL void processCommand(ClientNode *clientNode, const String command)
   if (String_equalsCString(command,"VERSION"))
   {
     /* version info */
-    sendResult(clientNode,0,TRUE,0,"%d %d\n",PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR);
+    sendResult(clientInfo,0,TRUE,0,"%d %d\n",PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR);
   }
   #ifndef NDEBUG
     else if (String_equalsCString(command,"QUIT"))
     {
       quitFlag = TRUE;
-      sendResult(clientNode,0,TRUE,0,"ok\n");
+      sendResult(clientInfo,0,TRUE,0,"ok\n");
     }
   #endif /* not NDEBUG */
   else
@@ -1619,12 +1873,43 @@ LOCAL void processCommand(ClientNode *clientNode, const String command)
     /* parse command */
     if (!parseCommand(&commandMsg,command))
     {
-      sendResult(clientNode,0,TRUE,1,"parse error");
+      sendResult(clientInfo,0,TRUE,1,"parse error");
       return;
     }
 
-    /* send command to client thread */
-    MsgQueue_put(&clientNode->commandMsgQueue,&commandMsg,sizeof(commandMsg));
+    switch (clientInfo->type)
+    {
+      case CLIENT_TYPE_FILE:
+        /* check authorization */
+        if (clientInfo->authorizationState == commandMsg.authorizationState)
+        {
+          /* execute */
+          commandMsg.serverCommandFunction(clientInfo,
+                                           commandMsg.id,
+                                           Array_cArray(commandMsg.arguments),
+                                           Array_length(commandMsg.arguments)
+                                          );
+        }
+        else
+        {
+          /* authorization failure -> mark for disconnect */
+          sendResult(clientInfo,commandMsg.id,TRUE,1,"authorization failure");
+          clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
+        }
+
+        /* free resources */
+        freeCommand(&commandMsg);
+        break;
+      case CLIENT_TYPE_NETWORK:
+        /* send command to client thread */
+        MsgQueue_put(&clientInfo->network.commandMsgQueue,&commandMsg,sizeof(commandMsg));
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
   }
 }
 
@@ -1727,7 +2012,7 @@ Errors Server_run(uint       serverPort,
     clientNode = clientList.head;
     while (clientNode != NULL)
     {
-      FD_SET(Network_getSocket(&clientNode->socketHandle),&selectSet);
+      FD_SET(Network_getSocket(&clientNode->clientInfo.network.socketHandle),&selectSet);
       clientNode = clientNode->next;
     }
     select(FD_SETSIZE,&selectSet,NULL,NULL,NULL);
@@ -1742,10 +2027,12 @@ Errors Server_run(uint       serverPort,
       if (error == ERROR_NONE)
       {
         Network_getRemoteInfo(&socketHandle,name,&port);
-        clientNode = newClient(name,port,socketHandle);
+        clientNode = newClient();
+        assert(clientNode != NULL);
+        initNetworkClient(&clientNode->clientInfo,name,port,socketHandle);
         List_append(&clientList,clientNode);
 
-        info(1,"Connected client '%s:%u'\n",String_cString(clientNode->name),clientNode->port);
+        info(1,"Connected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
       }
       else
       {
@@ -1763,10 +2050,12 @@ Errors Server_run(uint       serverPort,
       if (error == ERROR_NONE)
       {
         Network_getRemoteInfo(&socketHandle,name,&port);
-        clientNode = newClient(name,port,socketHandle);
+        clientNode = newClient();
+        assert(clientNode != NULL);
+        initNetworkClient(&clientNode->clientInfo,name,port,socketHandle);
         List_append(&clientList,clientNode);
 
-        info(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->name),clientNode->port);
+        info(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
       }
       else
       {
@@ -1780,9 +2069,9 @@ Errors Server_run(uint       serverPort,
     clientNode = clientList.head;
     while (clientNode != NULL)
     {
-      if (FD_ISSET(Network_getSocket(&clientNode->socketHandle),&selectSet))
+      if (FD_ISSET(Network_getSocket(&clientNode->clientInfo.network.socketHandle),&selectSet))
       {
-        error = Network_receive(&clientNode->socketHandle,buffer,sizeof(buffer),&receivedBytes);
+        error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),&receivedBytes);
         if (error == ERROR_NONE)
         {
           if (receivedBytes > 0)
@@ -1798,11 +2087,11 @@ Errors Server_run(uint       serverPort,
                 }
                 else
                 {
-                  processCommand(clientNode,clientNode->commandString);
+                  processCommand(&clientNode->clientInfo,clientNode->commandString);
                   String_clear(clientNode->commandString);
                 }
               }
-              error = Network_receive(&clientNode->socketHandle,buffer,sizeof(buffer),&receivedBytes);
+              error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),&receivedBytes);
             }
             while ((error == ERROR_NONE) && (receivedBytes > 0));
 
@@ -1811,7 +2100,7 @@ Errors Server_run(uint       serverPort,
           else
           {
             /* disconnect */
-            info(1,"Disconnected client '%s:%u'\n",String_cString(clientNode->name),clientNode->port);
+            info(1,"Disconnected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
 
             deleteClientNode = clientNode;
             clientNode = clientNode->next;
@@ -1834,12 +2123,12 @@ Errors Server_run(uint       serverPort,
     clientNode = clientList.head;
     while (clientNode != NULL)
     {
-      if (clientNode->authorizationState == AUTHORIZATION_STATE_FAIL)
+      if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
       {
         /* authorizaton error -> disconnect  client */
-        info(1,"Disconnected client '%s:%u': authorization failure\n",String_cString(clientNode->name),clientNode->port);
+        info(1,"Disconnected client '%s:%u': authorization failure\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
 
-        Network_disconnect(&clientNode->socketHandle);
+        Network_disconnect(&clientNode->clientInfo.network.socketHandle);
 
         deleteClientNode = clientNode;
         clientNode = clientNode->next;
@@ -1861,6 +2150,62 @@ Errors Server_run(uint       serverPort,
 
   /* free resources */
   List_done(&clientList,(ListNodeFreeFunction)freeClientNode,NULL);
+  List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);
+
+  return ERROR_NONE;
+}
+
+Errors Server_batch(int inputDescriptor,
+                    int outputDescriptor
+                   )
+{
+  Errors     error;
+  FileHandle inputFileHandle,outputFileHandle;
+  ClientInfo clientInfo;
+  String     commandString;
+
+  /* initialize variables */
+  List_init(&jobList);
+  quitFlag = FALSE;
+
+  /* initialize input/output */
+  error = File_openDescriptor(&inputFileHandle,inputDescriptor,FILE_OPENMODE_READ);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialize input (error: %s)!\n",
+               getErrorText(error)
+              );
+    return error;
+  }
+  error = File_openDescriptor(&outputFileHandle,outputDescriptor,FILE_OPENMODE_WRITE);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialize input (error: %s)!\n",
+               getErrorText(error)
+              );
+    File_close(&inputFileHandle);
+    return error;
+  }
+
+  /* init variables */
+  initFileClient(&clientInfo,outputFileHandle);
+
+  /* run server */
+  commandString = String_new();
+  while (!File_eof(&inputFileHandle))
+  {
+    /* read command line */
+    File_readLine(&inputFileHandle,commandString);
+
+    /* process */
+    processCommand(&clientInfo,commandString);
+  }
+  String_delete(commandString);
+
+  /* free resources */
+  doneClient(&clientInfo);
+  File_close(&outputFileHandle);
+  File_close(&inputFileHandle);
   List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);
 
   return ERROR_NONE;
