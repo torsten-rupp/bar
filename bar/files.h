@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -12,6 +12,8 @@
 #define __FILES__
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -34,13 +36,13 @@
 
 typedef enum
 {
-  FILETYPE_NONE,
+  FILE_TYPE_NONE,
 
-  FILETYPE_FILE,
-  FILETYPE_DIRECTORY,
-  FILETYPE_LINK,
+  FILE_TYPE_FILE,
+  FILE_TYPE_DIRECTORY,
+  FILE_TYPE_LINK,
 
-  FILETYPE_UNKNOWN
+  FILE_TYPE_UNKNOWN
 } FileTypes;
 
 typedef enum
@@ -55,7 +57,7 @@ typedef enum
 /* file i/o handle */
 typedef struct
 {
-  int    handle;
+  FILE   *file;
   uint64 index;
   uint64 size;
 } FileHandle;
@@ -64,14 +66,14 @@ typedef struct
 typedef struct
 {
   String        name;
-  DIR           *handle;
+  DIR           *dir;
   struct dirent *entry;
 } DirectoryHandle;
 
 /* device read handle */
 typedef struct
 {
-  FILE *handle;
+  FILE *file;
   char buffer[128];
   bool bufferFilledFlag;
 } DeviceHandle;
@@ -219,9 +221,10 @@ bool File_getTmpDirectoryName(const char *directory, String fileName);
 
 /***********************************************************************\
 * Name   : File_open
-* Purpose: create new file
-* Input  : fileHandle - file handle
-*          fileName   - file name
+* Purpose: open file
+* Input  : fileHandle   - file handle
+*          fileName     - file name
+*          fileOpenMode - file open mode; see FILE_OPENMODES_*
 * Output : fileHandle - file handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -231,6 +234,22 @@ Errors File_open(FileHandle    *fileHandle,
                   const String  fileName,
                   FileOpenModes fileOpenMode
                  );
+
+/***********************************************************************\
+* Name   : File_openDescriptor
+* Purpose: opeen file by descriptor
+* Input  : fileHandle     - file handle
+*          fileDescriptor - file descriptor
+*          fileOpenMode   - file open mode; see FILE_OPENMODES_*
+* Output : fileHandle - file handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_openDescriptor(FileHandle    *fileHandle,
+                           int           fileDescriptor,
+                           FileOpenModes fileOpenMode
+                          );
 
 /***********************************************************************\
 * Name   : File_close

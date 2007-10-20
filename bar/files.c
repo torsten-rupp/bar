@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -9,11 +9,14 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
+//#include <fcntl.h>
+//#include <sys/ioctl.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <utime.h>
@@ -28,6 +31,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define MAX_BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
 
@@ -287,54 +291,53 @@ Errors File_open(FileHandle    *fileHandle,
                  FileOpenModes fileOpenMode
                 )
 {
-  off64_t n;
-  Errors  error;
-  String  pathName;
+  off_t  n;
+  Errors error;
+  String pathName;
 
   assert(fileHandle != NULL);
   assert(fileName != NULL);
+
+  fileHandle->index = 0;
 
   switch (fileOpenMode)
   {
     case FILE_OPENMODE_CREATE:
       /* create file */
-      fileHandle->handle = open(String_cString(fileName),O_RDWR|O_CREAT|O_TRUNC|O_LARGEFILE,0600);
-      if (fileHandle->handle == -1)
+      fileHandle->file = fopen(String_cString(fileName),"wb");
+      if (fileHandle->file == NULL)
       {
         return ERROR_CREATE_FILE;
       }
 
-      fileHandle->index = 0;
       fileHandle->size  = 0;
       break;
     case FILE_OPENMODE_READ:
       /* open file for reading */
-      fileHandle->handle = open(String_cString(fileName),O_RDONLY|O_LARGEFILE,0600);
-      if (fileHandle->handle == -1)
+      fileHandle->file = fopen(String_cString(fileName),"rb");
+      if (fileHandle->file == NULL)
       {
         return ERROR_OPEN_FILE;
       }
 
       /* get file size */
-      if (lseek64(fileHandle->handle,(off64_t)0,SEEK_END) == (off64_t)-1)
+      if (fseeko(fileHandle->file,(off_t)0,SEEK_END) == -1)
       {
-        close(fileHandle->handle);
+        fclose(fileHandle->file);
         return ERROR_IO_ERROR;
       }
-      n = lseek64(fileHandle->handle,0,SEEK_CUR);
-      if (n == (off64_t)-1)
+      n = ftello(fileHandle->file);
+      if (n == (off_t)-1)
       {
-        close(fileHandle->handle);
+        fclose(fileHandle->file);
         return ERROR_IO_ERROR;
       }
       fileHandle->size = (uint64)n;
-      if (lseek64(fileHandle->handle,(off64_t)0,SEEK_SET) == (off64_t)-1)
+      if (fseeko(fileHandle->file,(off_t)0,SEEK_SET) == -1)
       {
-        close(fileHandle->handle);
+        fclose(fileHandle->file);
         return ERROR_IO_ERROR;
       }
-
-      fileHandle->index = 0;
       break;
     case FILE_OPENMODE_WRITE:
       /* create directory if needed */
@@ -349,14 +352,77 @@ Errors File_open(FileHandle    *fileHandle,
       }
       String_delete(pathName);
 
-      /* open file wrote writing */
-      fileHandle->handle = open(String_cString(fileName),O_WRONLY|O_CREAT|O_LARGEFILE,0600);
-      if (fileHandle->handle == -1)
+      /* open existing file for writing */
+      fileHandle->file = fopen(String_cString(fileName),"r+b");
+      if (fileHandle->file == NULL)
+      {
+        if (errno == ENOENT)
+        {
+          fileHandle->file = fopen(String_cString(fileName),"wb");
+          if (fileHandle->file == NULL)
+          {
+            return ERROR_OPEN_FILE;
+          }
+        }
+        else
+        {
+          return ERROR_OPEN_FILE;
+        }
+      }
+
+      fileHandle->size  = 0;
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return ERROR_NONE;
+}
+
+Errors File_openDescriptor(FileHandle    *fileHandle,
+                           int           fileDescriptor,
+                           FileOpenModes fileOpenMode
+                          )
+{
+  off_t n;
+
+  assert(fileHandle != NULL);
+  assert(fileDescriptor >= 0);
+
+  fileHandle->index = 0;
+  fileHandle->size  = 0;
+
+  switch (fileOpenMode)
+  {
+    case FILE_OPENMODE_CREATE:
+      /* create file */
+      fileHandle->file = fdopen(fileDescriptor,"wb");
+      if (fileHandle->file == NULL)
+      {
+        return ERROR_CREATE_FILE;
+      }
+
+      fileHandle->size  = 0;
+      break;
+    case FILE_OPENMODE_READ:
+      /* open file for reading */
+      fileHandle->file = fdopen(fileDescriptor,"rb");
+      if (fileHandle->file == NULL)
+      {
+        return ERROR_OPEN_FILE;
+      }
+      break;
+    case FILE_OPENMODE_WRITE:
+      /* open file for writing */
+      fileHandle->file = fdopen(fileDescriptor,"r+b");
+      if (fileHandle->file == NULL)
       {
         return ERROR_OPEN_FILE;
       }
 
-      fileHandle->index = 0;
       fileHandle->size  = 0;
       break;
     #ifndef NDEBUG
@@ -372,27 +438,33 @@ Errors File_open(FileHandle    *fileHandle,
 Errors File_close(FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
-  assert(fileHandle->handle >= 0);
+  assert(fileHandle->file != NULL);
 
-  close(fileHandle->handle);
-  fileHandle->handle = -1;
+  fclose(fileHandle->file);
+  fileHandle->file = NULL;
 
   return ERROR_NONE;
 }
 
 bool File_eof(FileHandle *fileHandle)
 {
-  off64_t n;
+  int  ch;
+  bool eofFlag;
 
   assert(fileHandle != NULL);
 
-  n = lseek64(fileHandle->handle,0,SEEK_CUR);
-  if (n == (off64_t)-1)
+  ch = getc(fileHandle->file);
+  if (ch != EOF)
   {
-    return TRUE;
+    ungetc(ch,fileHandle->file);
+    eofFlag = FALSE;
+  }
+  else
+  {
+    eofFlag = TRUE;
   }
 
-  return (n >= fileHandle->size);
+  return eofFlag;
 }
 
 Errors File_read(FileHandle *fileHandle,
@@ -406,12 +478,12 @@ Errors File_read(FileHandle *fileHandle,
   assert(fileHandle != NULL);
   assert(bytesRead != NULL);
 
-  n = read(fileHandle->handle,buffer,bufferLength);
-  if (n > 0) fileHandle->index += n;
-  if (n < 0)
+  n = fread(buffer,1,bufferLength,fileHandle->file);
+  if ((n <= 0) && ferror(fileHandle->file))
   {
     return ERROR_IO_ERROR;
   }
+  fileHandle->index += n;
 
   (*bytesRead) = n;
 
@@ -427,7 +499,7 @@ Errors File_write(FileHandle *fileHandle,
 
   assert(fileHandle != NULL);
 
-  n = write(fileHandle->handle,buffer,bufferLength);
+  n = fwrite(buffer,1,bufferLength,fileHandle->file);
   if (n > 0) fileHandle->index += n;
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != bufferLength)
@@ -443,27 +515,25 @@ Errors File_readLine(FileHandle *fileHandle,
                     )
 {
   ssize_t n;
-  char    ch;
+  int     ch;
 
   assert(fileHandle != NULL);
 
-  // ??? optimize
   String_clear(line);
   do
   {
-    n = read(fileHandle->handle,&ch,1);
+    ch = getc(fileHandle->file);
     if (n > 0) fileHandle->index += n;
     if (n < 0)
     {
       return ERROR_IO_ERROR;
     }
-    if ((ch != '\n') && (ch != '\r'))
+    if (((char)ch != '\n') && ((char)ch != '\r'))
     {
       String_appendChar(line,ch);
     }
   }
-  while ((ch != '\n') && (ch != '\r'));
-  if (ch == '\r') read(fileHandle->handle,&ch,1);
+  while ((char)ch != '\n');
 
   return ERROR_NONE;
 }
@@ -486,18 +556,19 @@ uint64 File_getSize(FileHandle *fileHandle)
 
 Errors File_tell(FileHandle *fileHandle, uint64 *offset)
 {
-  off64_t n;
+  off_t n;
 
   assert(fileHandle != NULL);
   assert(offset != NULL);
 
-  n = lseek64(fileHandle->handle,0,SEEK_CUR);
-  if (n == (off64_t)-1)
+  n = ftello(fileHandle->file);
+  if (n == (off_t)-1)
   {
     return ERROR_IO_ERROR;
   }
 // NYI
-assert(n == (off64_t)fileHandle->index);
+assert(sizeof(off_t)==8);
+assert(n == (off_t)fileHandle->index);
 
   (*offset) = fileHandle->index;
 
@@ -510,7 +581,7 @@ Errors File_seek(FileHandle *fileHandle,
 {
   assert(fileHandle != NULL);
 
-  if (lseek64(fileHandle->handle,(off64_t)offset,SEEK_SET) == (off64_t)-1)
+  if (fseeko(fileHandle->file,(off_t)offset,SEEK_SET) == -1)
   {
     return ERROR_IO_ERROR;
   }
@@ -572,8 +643,8 @@ Errors File_openDirectory(DirectoryHandle *directoryHandle,
   assert(directoryHandle != NULL);
   assert(pathName != NULL);
 
-  directoryHandle->handle = opendir(String_cString(pathName));
-  if (directoryHandle->handle == NULL)
+  directoryHandle->dir = opendir(String_cString(pathName));
+  if (directoryHandle->dir == NULL)
   {
     return ERROR_OPEN_DIRECTORY;
   }
@@ -588,7 +659,7 @@ void File_closeDirectory(DirectoryHandle *directoryHandle)
 {
   assert(directoryHandle != NULL);
 
-  closedir(directoryHandle->handle);
+  closedir(directoryHandle->dir);
   String_delete(directoryHandle->name);
 }
 
@@ -599,7 +670,7 @@ bool File_endOfDirectory(DirectoryHandle *directoryHandle)
   /* read entry iff not read */
   if (directoryHandle->entry == NULL)
   {
-    directoryHandle->entry = readdir(directoryHandle->handle);
+    directoryHandle->entry = readdir(directoryHandle->dir);
   }
 
   /* skip "." and ".." entries */
@@ -609,7 +680,7 @@ bool File_endOfDirectory(DirectoryHandle *directoryHandle)
             )
         )
   {
-    directoryHandle->entry = readdir(directoryHandle->handle);
+    directoryHandle->entry = readdir(directoryHandle->dir);
   }
 
   return directoryHandle->entry == NULL;
@@ -625,7 +696,7 @@ Errors File_readDirectory(DirectoryHandle *directoryHandle,
   /* read entry iff not read */
   if (directoryHandle->entry == NULL)
   {
-    directoryHandle->entry = readdir(directoryHandle->handle);
+    directoryHandle->entry = readdir(directoryHandle->dir);
   }
 
   /* skip "." and ".." entries */
@@ -635,7 +706,7 @@ Errors File_readDirectory(DirectoryHandle *directoryHandle,
             )
         )
   {
-    directoryHandle->entry = readdir(directoryHandle->handle);
+    directoryHandle->entry = readdir(directoryHandle->dir);
   }
   if (directoryHandle->entry == NULL)
   {
@@ -654,8 +725,8 @@ Errors File_openDevices(DeviceHandle *deviceHandle)
 {
   assert(deviceHandle != NULL);
 
-  deviceHandle->handle = fopen("/etc/mtab","r");
-  if (deviceHandle->handle == NULL)
+  deviceHandle->file = fopen("/etc/mtab","r");
+  if (deviceHandle->file == NULL)
   {
     return ERROR_OPEN_FILE;
   }
@@ -668,7 +739,7 @@ void File_closeDevices(DeviceHandle *deviceHandle)
 {
   assert(deviceHandle != NULL);
 
-  fclose(deviceHandle->handle);
+  fclose(deviceHandle->file);
 }
 
 bool File_endOfDevices(DeviceHandle *deviceHandle)
@@ -677,14 +748,14 @@ bool File_endOfDevices(DeviceHandle *deviceHandle)
 
   if (!deviceHandle->bufferFilledFlag)
   {
-    if (fgets(deviceHandle->buffer,sizeof(deviceHandle->buffer),deviceHandle->handle) == NULL)
+    if (fgets(deviceHandle->buffer,sizeof(deviceHandle->buffer),deviceHandle->file) == NULL)
     {
       return TRUE;
     }
     deviceHandle->bufferFilledFlag = TRUE;
   }
 
-  return (feof(deviceHandle->handle) != 0);
+  return (feof(deviceHandle->file) != 0);
 }
 
 Errors File_readDevice(DeviceHandle *deviceHandle,
@@ -699,7 +770,7 @@ Errors File_readDevice(DeviceHandle *deviceHandle,
   if (!deviceHandle->bufferFilledFlag)
   {
     /* read line */
-    if (fgets(deviceHandle->buffer,sizeof(deviceHandle->buffer),deviceHandle->handle) == NULL)
+    if (fgets(deviceHandle->buffer,sizeof(deviceHandle->buffer),deviceHandle->file) == NULL)
     {
       return ERROR_IO_ERROR;
     }
@@ -733,14 +804,14 @@ FileTypes File_getType(String fileName)
 
   if (lstat64(String_cString(fileName),&fileStat) == 0)
   {
-    if      (S_ISREG(fileStat.st_mode)) return FILETYPE_FILE;
-    else if (S_ISDIR(fileStat.st_mode)) return FILETYPE_DIRECTORY;
-    else if (S_ISLNK(fileStat.st_mode)) return FILETYPE_LINK;
-    else                                return FILETYPE_UNKNOWN;
+    if      (S_ISREG(fileStat.st_mode)) return FILE_TYPE_FILE;
+    else if (S_ISDIR(fileStat.st_mode)) return FILE_TYPE_DIRECTORY;
+    else if (S_ISLNK(fileStat.st_mode)) return FILE_TYPE_LINK;
+    else                                return FILE_TYPE_UNKNOWN;
   }
   else
   {
-    return FILETYPE_UNKNOWN;
+    return FILE_TYPE_UNKNOWN;
   }
 }
 
@@ -790,7 +861,7 @@ bool File_copy(String sourceFileName,
   #define BUFFER_SIZE (1024*1024)
 
   byte   *buffer;
-  int    sourceHandle,destinationHandle;
+  FILE   *sourceFile,*destinationFile;
   size_t n;
 
   assert(sourceFileName != NULL);
@@ -804,16 +875,16 @@ bool File_copy(String sourceFileName,
   }
 
   /* open files */
-  sourceHandle = open(String_cString(sourceFileName),O_RDONLY|O_LARGEFILE);
-  if (sourceHandle == -1)
+  sourceFile = fopen(String_cString(sourceFileName),"r");
+  if (sourceFile == NULL)
   {
     free(buffer);
     return FALSE;
   }
-  destinationHandle = open(String_cString(destinationFileName),O_RDWR|O_CREAT|O_TRUNC|O_LARGEFILE,0666);
-  if (destinationHandle == -1)
+  destinationFile = fopen(String_cString(destinationFileName),"w");
+  if (destinationFile == NULL)
   {
-    close(sourceHandle);
+    fclose(sourceFile);
     free(buffer);
     return FALSE;
   }
@@ -821,31 +892,33 @@ bool File_copy(String sourceFileName,
   /* copy data */
   do
   {
-    n = read(sourceHandle,buffer,BUFFER_SIZE);
+    n = fread(buffer,1,BUFFER_SIZE,sourceFile);
     if (n > 0)
     {
-      if (write(destinationHandle,buffer,n) != n)
+      if (fwrite(buffer,1,n,destinationFile) != n)
       {
-        close(destinationHandle);
-        close(sourceHandle);
+        fclose(destinationFile);
+        fclose(sourceFile);
+        free(buffer);
+        return FALSE;
+      }
+    }
+    else
+    {
+      if (ferror(sourceFile))
+      {
+        fclose(destinationFile);
+        fclose(sourceFile);
         free(buffer);
         return FALSE;
       }
     }
   }
-  while (n >= BUFFER_SIZE);
-  if (n < 0)
-  {
-    close(destinationHandle);
-    close(sourceHandle);
-    free(buffer);
-    return FALSE;
-  }
+  while (n > 0);
 
   /* close files */
-  close(destinationHandle);
-  close(sourceHandle);
-  
+  fclose(destinationFile);
+  fclose(sourceFile);
 
   /* free resources */
   free(buffer);
