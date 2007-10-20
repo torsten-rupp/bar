@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -258,6 +258,24 @@ void Network_getRemoteInfo(SocketHandle *socketHandle,
                            String name,
                            uint   *port
                           );
+
+/***********************************************************************\
+* Name   : Network_connect
+* Purpose: connect to host
+* Input  : hostName - host name
+*          hostPort - host port
+*          flags    - socket falgs
+* Output : socketHandle - socket handle
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_execute(SocketHandle *socketHandle,
+                       String       hostName,
+                       uint         hostPort,
+                       uint         flags,
+                       const char   *command
+                      );
 
 #ifdef __cplusplus
   }

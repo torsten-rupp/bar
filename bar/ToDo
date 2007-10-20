@@ -6,5 +6,4 @@ ToDo
 - passwort input for crypt password
 - support storage controller for reading archives
 - support ssh-agent (extend libssh2?)
-- network bandwidth limitation
 - logfile
