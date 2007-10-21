@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -387,8 +387,6 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
                            FileOpenModes fileOpenMode
                           )
 {
-  off_t n;
-
   assert(fileHandle != NULL);
   assert(fileDescriptor >= 0);
 
