@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -55,10 +55,24 @@
   extern "C" {
 #endif
 
-LOCAL String getDestinationFileName(String     destinationFileName,
-                                    String     fileName,
-                                    const char *directory,
-                                    uint       directoryStripCount
+/***********************************************************************\
+* Name   : getDestinationFileName
+* Purpose: get destination file name by stripping directory levels and
+*          add destination directory
+* Input  : destinationFileName - destination file name variable
+*          fileName            - original file name
+*          directory           - destination directory
+*          directoryStripCount - number of directories to strip from
+*                                original file name
+* Output : -
+* Return : file name
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getDestinationFileName(String       destinationFileName,
+                                    String       fileName,
+                                    const String directory,
+                                    uint         directoryStripCount
                                    )
 {
   String          pathName,baseName,name;
@@ -67,7 +81,7 @@ LOCAL String getDestinationFileName(String     destinationFileName,
 
   if (directory != NULL)
   {
-    File_setFileNameCString(destinationFileName,directory);
+    File_setFileName(destinationFileName,directory);
   }
   else
   {

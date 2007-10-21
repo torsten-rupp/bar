@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.33 $
+* $Revision: 1.34 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -151,6 +151,7 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHM[] =
   {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256,"Twofish cipher 256bit"},
 };
 
+LOCAL bool cmdParseString(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
 LOCAL bool cmdParseConfigFile(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
 LOCAL bool cmdParseIncludeExclude(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
 LOCAL bool cmdParsePassword(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
@@ -165,10 +166,12 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("config",                   0,  1,0,NULL,                                    NULL,cmdParseConfigFile,NULL,                                      "configuration file","file name"                ),
 
   CMD_OPTION_INTEGER      ("archive-part-size",        's',1,0,defaultOptions.archivePartSize,          0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "approximated part size"                        ),
-  CMD_OPTION_STRING       ("tmp-directory",            0,  1,0,defaultOptions.tmpDirectory,             DEFAULT_TMP_DIRECTORY,                                             "temporary directory","path"                    ),
+//  CMD_OPTION_STRING       ("tmp-directory",            0,  1,0,defaultOptions.tmpDirectory,             DEFAULT_TMP_DIRECTORY,                                             "temporary directory","path"                    ),
+  CMD_OPTION_SPECIAL      ("tmp-directory",            0,  1,0,&defaultOptions.tmpDirectory,            NULL,cmdParseString,NULL,                                          "temporary directory","path"                    ),
   CMD_OPTION_INTEGER64    ("max-tmp-size",             0,  1,0,defaultOptions.maxTmpSize,               0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "max. size of temporary files"                  ),
   CMD_OPTION_INTEGER      ("directory-strip",          'p',1,0,defaultOptions.directoryStripCount,      0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"     ),
-  CMD_OPTION_STRING       ("directory",                0,  0,0,defaultOptions.directory,                NULL,                                                              "directory to restore files","path"             ),
+//  CMD_OPTION_STRING       ("directory",                0,  0,0,defaultOptions.directory,                NULL,                                                              "directory to restore files","path"             ),
+  CMD_OPTION_SPECIAL      ("directory",                0,  0,0,&defaultOptions.directory   ,            NULL,cmdParseString,NULL,                                          "directory to restore files","path"             ),
 
   CMD_OPTION_INTEGER      ("max-band-width",           0,  1,0,defaultOptions.maxBandWidth,             0,0,LONG_MAX,COMMAND_LINE_BITS_UNITS,                              "max. network band width to use"                 ),
 
@@ -184,8 +187,10 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("crypt-password",           0,  0,0,&defaultOptions.cryptPassword,           NULL,cmdParsePassword,NULL,                                        "crypt password (use with care!)","password"    ),
 
   CMD_OPTION_INTEGER      ("ssh-port",                 0,  0,0,defaultOptions.sshPort,                  0,0,65535,NULL,                                                    "ssh port"                                      ),
-  CMD_OPTION_STRING       ("ssh-public-key",           0,  1,0,defaultOptions.sshPublicKeyFileName,     NULL,                                                              "ssh public key file name","file name"          ),
-  CMD_OPTION_STRING       ("ssh-privat-key",           0,  1,0,defaultOptions.sshPrivatKeyFileName,     NULL,                                                              "ssh privat key file name","file name"          ),
+//  CMD_OPTION_STRING       ("ssh-public-key",           0,  1,0,defaultOptions.sshPublicKeyFileName,     NULL,                                                              "ssh public key file name","file name"          ),
+  CMD_OPTION_SPECIAL      ("ssh-public-key",           0,  1,0,&defaultOptions.sshPublicKeyFileName,    NULL,cmdParseString,NULL,                                          "ssh public key file name","file name"          ),
+//  CMD_OPTION_STRING       ("ssh-privat-key",           0,  1,0,defaultOptions.sshPrivatKeyFileName,     NULL,                                                              "ssh privat key file name","file name"          ),
+  CMD_OPTION_SPECIAL      ("ssh-privat-key",           0,  1,0,&defaultOptions.sshPrivatKeyFileName,    NULL,cmdParseString,NULL,                                          "ssh privat key file name","file name"          ),
   CMD_OPTION_SPECIAL      ("ssh-password",             0,  0,0,&defaultOptions.sshPassword,             NULL,cmdParsePassword,NULL,                                        "ssh password (use with care!)","password"      ),
 
   CMD_OPTION_BOOLEAN      ("daemon",                   0,  1,0,daemonFlag,                              FALSE,                                                             "run in daemon mode"                            ),
@@ -336,6 +341,36 @@ LOCAL bool readConfigFile(String fileName)
   /* free resources */
 
   return !failFlag;
+}
+
+/***********************************************************************\
+* Name   : cmdParseString
+* Purpose: command line option call back for parsing string
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdParseString(void *variable, const char *name, const char *value, const void *defaultValue, void *userData)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
+
+  if ((*(String*)variable) != NULL)
+  {
+    String_setCString(*(String*)variable,value);
+  }
+  else
+  {
+    (*(String*)variable) = String_newCString(value);
+  }
+
+  return TRUE;
 }
 
 /***********************************************************************\
@@ -573,6 +608,32 @@ void printError(const char *text, ...)
   va_end(arguments);
 }
 
+void copyOptions(const Options *sourceOptions, Options *destinationOptions)
+{
+  assert(sourceOptions != NULL);
+  assert(destinationOptions != NULL);
+
+  memcpy(destinationOptions,sourceOptions,sizeof(Options));
+  destinationOptions->tmpDirectory         = String_copy(sourceOptions->tmpDirectory);
+  destinationOptions->directory            = String_copy(sourceOptions->directory);
+  destinationOptions->cryptPassword        = Password_copy(sourceOptions->cryptPassword);
+  destinationOptions->sshPublicKeyFileName = String_copy(sourceOptions->sshPublicKeyFileName);
+  destinationOptions->sshPrivatKeyFileName = String_copy(sourceOptions->sshPrivatKeyFileName);
+  destinationOptions->sshPassword          = Password_copy(sourceOptions->sshPassword);
+}
+
+void freeOptions(Options *options)
+{
+  assert(options != NULL);
+
+  String_delete(options->tmpDirectory);
+  String_delete(options->directory);
+  if (options->cryptPassword != NULL) Password_delete(options->cryptPassword);
+  String_delete(options->sshPrivatKeyFileName);
+  String_delete(options->sshPublicKeyFileName);
+  if (options->sshPassword != NULL) Password_delete(options->sshPassword);
+}
+
 /*---------------------------------------------------------------------*/
 
 int main(int argc, const char *argv[])
@@ -795,12 +856,11 @@ int main(int argc, const char *argv[])
   }
 
   /* free resources */
+  freeOptions(&defaultOptions);
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   Pattern_doneList(&excludePatternList);
   Pattern_doneList(&includePatternList);
   Password_delete(serverPassword);
-  Password_delete(defaultOptions.sshPassword);
-  Password_delete(defaultOptions.cryptPassword);
   done();
 
   #ifndef NDEBUG

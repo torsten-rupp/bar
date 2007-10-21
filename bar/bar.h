@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -51,10 +51,10 @@ typedef enum
 typedef struct
 {
   ulong              archivePartSize;
-  const char         *tmpDirectory;
+  String             tmpDirectory;
   uint64             maxTmpSize;
   uint               directoryStripCount;
-  const char         *directory;
+  String             directory;
 
   ulong              maxBandWidth;
 
@@ -66,8 +66,8 @@ typedef struct
   Password           *cryptPassword;
 
   uint               sshPort;
-  const char         *sshPublicKeyFileName;
-  const char         *sshPrivatKeyFileName;
+  String             sshPublicKeyFileName;
+  String             sshPrivatKeyFileName;
   Password           *sshPassword;
 
   bool               skipUnreadableFlag;
@@ -138,6 +138,29 @@ void warning(const char *format, ...);
 \***********************************************************************/
 
 void printError(const char *text, ...);
+
+/***********************************************************************\
+* Name   : copyOptions
+* Purpose: copy options structure
+* Input  : sourceOptions      - source options
+*          destinationOptions - destination options variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void copyOptions(const Options *sourceOptions, Options *destinationOptions);
+
+/***********************************************************************\
+* Name   : freeOptions
+* Purpose: free options
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeOptions(Options *options);
 
 #ifdef __cplusplus
   }

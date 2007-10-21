@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -67,6 +67,8 @@ typedef struct JobNode
   String             archiveFileName;
   PatternList        includePatternList;
   PatternList        excludePatternList;
+  Options            options;
+/*
   uint64             archivePartSize;
   uint64             maxTmpSize;
   ulong              maxBandWidth;
@@ -78,6 +80,7 @@ typedef struct JobNode
   bool               skipUnreadableFlag;
   bool               overwriteArchiveFilesFlag;
   bool               overwriteFilesFlag;
+*/
 
   /* running info */
   struct
@@ -294,7 +297,7 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
 LOCAL void jobThread(JobList *jobList)
 {
   JobNode *jobNode;
-  Options options;
+//  Options options;
 
   while (!quitFlag)
   {
@@ -352,6 +355,7 @@ LOCAL void jobThread(JobList *jobList)
 }
 #else
     /* set options */
+#if 0
     options = defaultOptions;
     options.archivePartSize           = jobNode->archivePartSize;
     options.maxTmpSize                = jobNode->maxTmpSize;
@@ -364,12 +368,13 @@ LOCAL void jobThread(JobList *jobList)
     options.skipUnreadableFlag        = jobNode->skipUnreadableFlag;
     options.overwriteArchiveFilesFlag = jobNode->overwriteArchiveFilesFlag;
     options.overwriteFilesFlag        = jobNode->overwriteFilesFlag;
+#endif /* 0 */
 
     /* create archive */
     jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveFileName),
                                                 &jobNode->includePatternList,
                                                 &jobNode->excludePatternList,
-                                                &options,
+                                                &jobNode->options,
                                                 (CreateStatusInfoFunction)updateCreateStatus,
                                                 jobNode,
                                                 &jobNode->runningInfo.abortRequestFlag
@@ -416,8 +421,7 @@ LOCAL void freeJobNode(JobNode *jobNode)
 
   Pattern_doneList(&jobNode->excludePatternList);
   Pattern_doneList(&jobNode->includePatternList);
-  String_delete(jobNode->sshPrivatKeyFileName);
-  String_delete(jobNode->sshPublicKeyFileName);
+  freeOptions(&jobNode->options);
   String_delete(jobNode->archiveFileName);
   String_delete(jobNode->name);
 
@@ -448,16 +452,17 @@ LOCAL JobNode *newJob(void)
   jobNode->archiveFileName               = String_new();
   Pattern_initList(&jobNode->includePatternList);
   Pattern_initList(&jobNode->excludePatternList);
-  jobNode->archivePartSize               = 0LL;
-  jobNode->maxTmpSize                    = 0LL;
-  jobNode->sshPort                       = 0;
-  jobNode->sshPublicKeyFileName          = String_new();
-  jobNode->sshPrivatKeyFileName          = String_new();
-  jobNode->compressAlgorithm             = COMPRESS_ALGORITHM_UNKNOWN;
-  jobNode->cryptAlgorithm                = CRYPT_ALGORITHM_UNKNOWN;
-  jobNode->skipUnreadableFlag            = TRUE;
-  jobNode->overwriteArchiveFilesFlag     = FALSE;
-  jobNode->overwriteFilesFlag            = FALSE;
+  copyOptions(&defaultOptions,&jobNode->options);
+//  jobNode->archivePartSize               = 0LL;
+//  jobNode->maxTmpSize                    = 0LL;
+//  jobNode->sshPort                       = 0;
+//  jobNode->sshPublicKeyFileName          = String_new();
+//  jobNode->sshPrivatKeyFileName          = String_new();
+//  jobNode->compressAlgorithm             = COMPRESS_ALGORITHM_UNKNOWN;
+//  jobNode->cryptAlgorithm                = CRYPT_ALGORITHM_UNKNOWN;
+//  jobNode->skipUnreadableFlag            = TRUE;
+//  jobNode->overwriteArchiveFilesFlag     = FALSE;
+//  jobNode->overwriteFilesFlag            = FALSE;
 
   jobNode->runningInfo.state             = JOB_STATE_WAITING;
   jobNode->runningInfo.startTime         = 0;
@@ -673,7 +678,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
     {
       n0 = (char)(strtoul(String_subCString(s,arguments[0],z*2,sizeof(s)),NULL,16) & 0xFF);
       n1 = clientInfo->sessionId[z];
-      okFlag = (Password_get(password,z) == (n0^n1));
+      okFlag = (Password_getChar(password,z) == (n0^n1));
       z++;
     } 
   }
@@ -858,9 +863,9 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
                jobNode->id,
                jobNode->name,
                stateText,
-               jobNode->archivePartSize,
-               Compress_getAlgorithmName(jobNode->compressAlgorithm),
-               Crypt_getAlgorithmName(jobNode->cryptAlgorithm),
+               jobNode->options.archivePartSize,
+               Compress_getAlgorithmName(jobNode->options.compressAlgorithm),
+               Crypt_getAlgorithmName(jobNode->options.cryptAlgorithm),
                jobNode->runningInfo.startTime,
                jobNode->runningInfo.estimatedRestTime
               );
@@ -1016,35 +1021,35 @@ LOCAL void serverCommand_getConfigValue(ClientInfo *clientInfo, uint id, const S
     }
     else if (String_equalsCString(arguments[0],"archive-part-size"))
     {
-      sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->jobNode->archivePartSize);
+      sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->jobNode->options.archivePartSize);
     }
     else if (String_equalsCString(arguments[0],"max-tmp-size"))
     {
-      sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->jobNode->maxTmpSize);
+      sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->jobNode->options.maxTmpSize);
     }
     else if (String_equalsCString(arguments[0],"max-band-width"))
     {
-      sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->jobNode->maxBandWidth);
+      sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->jobNode->options.maxBandWidth);
     }
     else if (String_equalsCString(arguments[0],"compress-algorithm"))
     {
-      sendResult(clientInfo,id,TRUE,0,"%'s",Compress_getAlgorithmName(clientInfo->jobNode->compressAlgorithm));
+      sendResult(clientInfo,id,TRUE,0,"%'s",Compress_getAlgorithmName(clientInfo->jobNode->options.compressAlgorithm));
     }
     else if (String_equalsCString(arguments[0],"crypt-algorithm"))
     {
-      sendResult(clientInfo,id,TRUE,0,"%'s",Crypt_getAlgorithmName(clientInfo->jobNode->cryptAlgorithm));
+      sendResult(clientInfo,id,TRUE,0,"%'s",Crypt_getAlgorithmName(clientInfo->jobNode->options.cryptAlgorithm));
     }
     else if (String_equalsCString(arguments[0],"skip-unreadable"))
     {
-      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->skipUnreadableFlag?1:0);
+      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->options.skipUnreadableFlag?1:0);
     }
     else if (String_equalsCString(arguments[0],"overwrite-archives"))
     {
-      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->overwriteArchiveFilesFlag?1:0);
+      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->options.overwriteArchiveFilesFlag?1:0);
     }
     else if (String_equalsCString(arguments[0],"overwrite-files"))
     {
-      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->overwriteFilesFlag?1:0);
+      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->options.overwriteFilesFlag?1:0);
     }
     else
     {
@@ -1087,7 +1092,7 @@ LOCAL void serverCommand_setConfigValue(ClientInfo *clientInfo, uint id, const S
       // archive-part-size = <n>
       const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-      clientInfo->jobNode->archivePartSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+      clientInfo->jobNode->options.archivePartSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"max-tmp-size"))
@@ -1095,7 +1100,7 @@ LOCAL void serverCommand_setConfigValue(ClientInfo *clientInfo, uint id, const S
       // max-tmp-part-size = <n>
       const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-      clientInfo->jobNode->maxTmpSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+      clientInfo->jobNode->options.maxTmpSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"max-band-width"))
@@ -1103,25 +1108,25 @@ LOCAL void serverCommand_setConfigValue(ClientInfo *clientInfo, uint id, const S
       // max-tmp-part-size = <n>
       const StringUnit UNITS[] = {{"K",1024}};
 
-      clientInfo->jobNode->maxBandWidth = String_toInteger(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+      clientInfo->jobNode->options.maxBandWidth = String_toInteger(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"ssh-port"))
     {
       // ssh-port = <n>
-      clientInfo->jobNode->sshPort = String_toInteger(arguments[1],NULL,NULL,0);
+      clientInfo->jobNode->options.sshPort = String_toInteger(arguments[1],NULL,NULL,0);
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"ssh-public-key"))
     {
       // ssh-public-key = <file name>
-      String_set(clientInfo->jobNode->sshPublicKeyFileName,arguments[1]);
+      String_set(clientInfo->jobNode->options.sshPublicKeyFileName,arguments[1]);
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"ssh-prvat-key"))
     {
       // ssh-privat-key = <file name>
-      String_set(clientInfo->jobNode->sshPrivatKeyFileName,arguments[1]);
+      String_set(clientInfo->jobNode->options.sshPrivatKeyFileName,arguments[1]);
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"compress-algorithm"))
@@ -1135,7 +1140,7 @@ LOCAL void serverCommand_setConfigValue(ClientInfo *clientInfo, uint id, const S
         sendResult(clientInfo,id,TRUE,1,"unknown compress algorithm");
         return;
       }
-      clientInfo->jobNode->compressAlgorithm = compressAlgorithm;
+      clientInfo->jobNode->options.compressAlgorithm = compressAlgorithm;
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"crypt-algorithm"))
@@ -1149,22 +1154,22 @@ LOCAL void serverCommand_setConfigValue(ClientInfo *clientInfo, uint id, const S
         sendResult(clientInfo,id,TRUE,1,"unknown crypt algorithm");
         return;
       }
-      clientInfo->jobNode->cryptAlgorithm = cryptAlgorithm;
+      clientInfo->jobNode->options.cryptAlgorithm = cryptAlgorithm;
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"skip-unreadable"))
     {
-      clientInfo->jobNode->skipUnreadableFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
+      clientInfo->jobNode->options.skipUnreadableFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"overwrite-archive-files"))
     {
-      clientInfo->jobNode->overwriteArchiveFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
+      clientInfo->jobNode->options.overwriteArchiveFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else if (String_equalsCString(arguments[0],"overwrite-files"))
     {
-      clientInfo->jobNode->overwriteFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
+      clientInfo->jobNode->options.overwriteFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else

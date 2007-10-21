@@ -9,7 +9,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all
@@ -92,7 +92,7 @@ if ($hFileName ne "")
   print HFILE_HANDLE "\n";
   print HFILE_HANDLE "typedef enum\n";
   print HFILE_HANDLE "{\n";
-  print HFILE_HANDLE "  ".$PREFIX."NONE,\n";
+  print HFILE_HANDLE "  /*   0 */ ".$PREFIX."NONE,\n";
 }
 
 my @names;
@@ -174,6 +174,8 @@ if ($hFileName ne "")
 {
   print HFILE_HANDLE "  ".$PREFIX."UNKNOWN\n";
   print HFILE_HANDLE "} Errors;\n";
+  print HFILE_HANDLE "\n";
+  print HFILE_HANDLE "const char *getErrorText(Errors error);\n";
   print HFILE_HANDLE "\n";
   print HFILE_HANDLE "#endif /* __ARCHIVE_FORMAT__ */\n";
   close(HFILE_HANDLE);

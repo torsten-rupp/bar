@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -137,7 +137,6 @@ LOCAL Errors initSSHSession(SocketHandle    *socketHandle,
   (*session) = libssh2_session_init();
   if ((*session) == NULL)
   {
-    printError("Init ssh session fail!\n");
     return ERROR_SSH_SESSION_FAIL;
   }
   if (libssh2_session_startup(*session,
@@ -145,7 +144,6 @@ LOCAL Errors initSSHSession(SocketHandle    *socketHandle,
                              ) != 0
      )
   {
-    printError("Startup ssh session fail!\n");
     libssh2_session_disconnect(*session,"");
     libssh2_session_free(*session);
     return ERROR_SSH_SESSION_FAIL;
@@ -156,13 +154,12 @@ LOCAL Errors initSSHSession(SocketHandle    *socketHandle,
   if (libssh2_userauth_publickey_fromfile(*session,
 // NYI
                                           String_cString(userName),
-                                          (options->sshPublicKeyFileName != NULL)?options->sshPublicKeyFileName:String_cString(defaultSSHPublicKeyFileName),
-                                          (options->sshPrivatKeyFileName != NULL)?options->sshPrivatKeyFileName:String_cString(defaultSSHPrivatKeyFileName),
+                                          String_cString((options->sshPublicKeyFileName != NULL)?options->sshPublicKeyFileName:defaultSSHPublicKeyFileName),
+                                          String_cString((options->sshPrivatKeyFileName != NULL)?options->sshPrivatKeyFileName:defaultSSHPrivatKeyFileName),
                                           password
                                          ) != 0
      )
   {
-    printError("ssh authentification fail!\n");
     Password_undeploy((options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword);
     libssh2_session_disconnect(*session,"");
     libssh2_session_free(*session);
@@ -176,7 +173,6 @@ LOCAL Errors initSSHSession(SocketHandle    *socketHandle,
                                           ) != 0
      )
   {
-    printError("ssh authentification fail!\n");
     libssh2_session_disconnect(*session,"");
     libssh2_session_free(*session);
     return ERROR_SSH_AUTHENTIFICATION;
@@ -491,7 +487,7 @@ Errors Storage_prepare(const String  storageName,
             String_delete(hostName);
             String_delete(userName);
             String_delete(storageSpecifier);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
           doneSSHSession(session);
           Network_disconnect(&socketHandle);
@@ -616,7 +612,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
             String_delete(hostName);
             String_delete(userName);
             String_delete(storageSpecifier);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
 
           /* open channel */
@@ -699,7 +695,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
             String_delete(hostName);
             String_delete(userName);
             String_delete(storageSpecifier);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
 
           /* open FTP session */
@@ -849,7 +845,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             String_delete(hostName);
             String_delete(userName);
             String_delete(storageSpecifier);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
 
           /* open channel */
@@ -940,7 +936,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             String_delete(hostName);
             String_delete(userName);
             String_delete(storageSpecifier);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
 
           /* open FTP session */
@@ -1525,7 +1521,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String_delete(userName);
             String_delete(storageDirectoryHandle->sftp.pathName);
             String_delete(storageSpecifier);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
 
           /* open FTP session */
