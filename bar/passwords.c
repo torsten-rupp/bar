@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -98,6 +98,19 @@ void Password_delete(Password *password)
   #endif /* HAVE_GCRYPT */
 }
 
+Password *Password_copy(Password *sourcePassword)
+{
+  Password *destinationPassword;
+
+  assert(sourcePassword != NULL);
+
+  destinationPassword = Password_new();
+  assert(destinationPassword != NULL);
+  memcpy(destinationPassword,sourcePassword,sizeof(Password));
+
+  return destinationPassword;
+}
+
 void Password_setCString(Password *password, const char *s)
 {
   #ifdef HAVE_GCRYPT
@@ -142,7 +155,7 @@ uint Password_length(const Password *password)
   return password->length;
 }
 
-char Password_get(const Password *password, uint index)
+char Password_getChar(const Password *password, uint index)
 {
   assert(password != NULL);
 
