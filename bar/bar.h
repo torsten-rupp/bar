@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -50,7 +50,7 @@ typedef enum
 
 typedef struct
 {
-  ulong              archivePartSize;
+  uint64             archivePartSize;
   String             tmpDirectory;
   uint64             maxTmpSize;
   uint               directoryStripCount;
@@ -69,6 +69,8 @@ typedef struct
   String             sshPublicKeyFileName;
   String             sshPrivatKeyFileName;
   Password           *sshPassword;
+
+  String             remoteBARExecutable;
 
   bool               skipUnreadableFlag;
   bool               overwriteArchiveFilesFlag;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.34 $
+* $Revision: 1.35 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -60,6 +60,8 @@
   #define DEFAULT_SERVER_TLS_PORT        0
 #endif /* HAVE_GNU_TLS */
 
+#define DEFAULT_REMOTE_BAR_EXECUTABLE "/home/torsten/bar"
+
 /***************************** Datatypes *******************************/
 
 typedef enum
@@ -106,9 +108,9 @@ const CommandLineUnit COMMAND_LINE_BITS_UNITS[] =
 
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPE[] =
 {
-  {"glob",  PATTERN_TYPE_GLOB,    "glob patterns: * and ?"},
-  {"basic", PATTERN_TYPE_BASIC,   "basic pattern matching"},
-  {"extend",PATTERN_TYPE_EXTENDED,"extended pattern matching"},
+  {"glob",    PATTERN_TYPE_GLOB,          "glob patterns: * and ?"},
+  {"regex",   PATTERN_TYPE_REGEX,         "regular expression pattern matching"},
+  {"extended",PATTERN_TYPE_EXTENDED_REGEX,"extended regular expression pattern matching"},
 };
 
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHM[] =
@@ -165,12 +167,10 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SPECIAL      ("config",                   0,  1,0,NULL,                                    NULL,cmdParseConfigFile,NULL,                                      "configuration file","file name"                ),
 
-  CMD_OPTION_INTEGER      ("archive-part-size",        's',1,0,defaultOptions.archivePartSize,          0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "approximated part size"                        ),
-//  CMD_OPTION_STRING       ("tmp-directory",            0,  1,0,defaultOptions.tmpDirectory,             DEFAULT_TMP_DIRECTORY,                                             "temporary directory","path"                    ),
+  CMD_OPTION_INTEGER64    ("archive-part-size",        's',1,0,defaultOptions.archivePartSize,          0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "approximated part size"                        ),
   CMD_OPTION_SPECIAL      ("tmp-directory",            0,  1,0,&defaultOptions.tmpDirectory,            NULL,cmdParseString,NULL,                                          "temporary directory","path"                    ),
   CMD_OPTION_INTEGER64    ("max-tmp-size",             0,  1,0,defaultOptions.maxTmpSize,               0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "max. size of temporary files"                  ),
   CMD_OPTION_INTEGER      ("directory-strip",          'p',1,0,defaultOptions.directoryStripCount,      0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"     ),
-//  CMD_OPTION_STRING       ("directory",                0,  0,0,defaultOptions.directory,                NULL,                                                              "directory to restore files","path"             ),
   CMD_OPTION_SPECIAL      ("directory",                0,  0,0,&defaultOptions.directory   ,            NULL,cmdParseString,NULL,                                          "directory to restore files","path"             ),
 
   CMD_OPTION_INTEGER      ("max-band-width",           0,  1,0,defaultOptions.maxBandWidth,             0,0,LONG_MAX,COMMAND_LINE_BITS_UNITS,                              "max. network band width to use"                 ),
@@ -187,9 +187,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("crypt-password",           0,  0,0,&defaultOptions.cryptPassword,           NULL,cmdParsePassword,NULL,                                        "crypt password (use with care!)","password"    ),
 
   CMD_OPTION_INTEGER      ("ssh-port",                 0,  0,0,defaultOptions.sshPort,                  0,0,65535,NULL,                                                    "ssh port"                                      ),
-//  CMD_OPTION_STRING       ("ssh-public-key",           0,  1,0,defaultOptions.sshPublicKeyFileName,     NULL,                                                              "ssh public key file name","file name"          ),
   CMD_OPTION_SPECIAL      ("ssh-public-key",           0,  1,0,&defaultOptions.sshPublicKeyFileName,    NULL,cmdParseString,NULL,                                          "ssh public key file name","file name"          ),
-//  CMD_OPTION_STRING       ("ssh-privat-key",           0,  1,0,defaultOptions.sshPrivatKeyFileName,     NULL,                                                              "ssh privat key file name","file name"          ),
   CMD_OPTION_SPECIAL      ("ssh-privat-key",           0,  1,0,&defaultOptions.sshPrivatKeyFileName,    NULL,cmdParseString,NULL,                                          "ssh privat key file name","file name"          ),
   CMD_OPTION_SPECIAL      ("ssh-password",             0,  0,0,&defaultOptions.sshPassword,             NULL,cmdParsePassword,NULL,                                        "ssh password (use with care!)","password"      ),
 
@@ -202,6 +200,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("server-password",          0,  1,0,&serverPassword,                         NULL,cmdParsePassword,NULL,                                        "server password (use with care!)","password"   ),
 
   CMD_OPTION_BOOLEAN      ("batch",                    0,  2,0,batchFlag,                               FALSE,                                                             "run in batch mode"                             ),
+  CMD_OPTION_SPECIAL      ("remote-bar-executable",    0,  1,0,&defaultOptions.remoteBARExecutable,     DEFAULT_REMOTE_BAR_EXECUTABLE,cmdParseString,NULL,                 "remote BAR executable","file name"             ),
 
 //  CMD_OPTION_BOOLEAN      ("incremental",              0,  0,0,defaultOptions.incrementalFlag,        FALSE,                                                             "overwrite existing files"                      ),
   CMD_OPTION_BOOLEAN      ("skip-unreadable",          0,  0,0,defaultOptions.skipUnreadableFlag,       TRUE,                                                              "skip unreadable files"                         ),
@@ -482,64 +481,64 @@ LOCAL void printUsage(const char *programName, uint level)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool init(void)
+LOCAL bool initAll(void)
 {
   Errors error;
 
-  error = Password_init();
+  error = Password_initAll();
   if (error != ERROR_NONE)
   {
     return FALSE;
   }
-  error = Crypt_init();
+  error = Crypt_initAll();
   if (error != ERROR_NONE)
   {
-    Password_done();
+    Password_doneAll();
     return FALSE;
   }
-  error = Pattern_init();
+  error = Pattern_initAll();
   if (error != ERROR_NONE)
   {
-    Crypt_done();
-    Password_done();
+    Crypt_doneAll();
+    Password_doneAll();
     return FALSE;
   }
-  error = Archive_init();
+  error = Archive_initAll();
   if (error != ERROR_NONE)
   {
-    Pattern_done();
-    Crypt_done();
-    Password_done();
+    Pattern_doneAll();
+    Crypt_doneAll();
+    Password_doneAll();
     return FALSE;
   }
-  error = Storage_init();
+  error = Storage_initAll();
   if (error != ERROR_NONE)
   {
-    Archive_done();
-    Pattern_done();
-    Crypt_done();
-    Password_done();
+    Archive_doneAll();
+    Pattern_doneAll();
+    Crypt_doneAll();
+    Password_doneAll();
     return FALSE;
   }
-  error = Network_init();
+  error = Network_initAll();
   if (error != ERROR_NONE)
   {
-    Storage_done();
-    Archive_done();
-    Pattern_done();
-    Crypt_done();
-    Password_done();
+    Storage_doneAll();
+    Archive_doneAll();
+    Pattern_doneAll();
+    Crypt_doneAll();
+    Password_doneAll();
     return FALSE;
   }
-  error = Server_init();
+  error = Server_initAll();
   if (error != ERROR_NONE)
   {
-    Network_done();
-    Storage_done();
-    Archive_done();
-    Pattern_done();
-    Crypt_done();
-    Password_done();
+    Network_doneAll();
+    Storage_doneAll();
+    Archive_doneAll();
+    Pattern_doneAll();
+    Crypt_doneAll();
+    Password_doneAll();
     return FALSE;
   }
 
@@ -555,15 +554,15 @@ LOCAL bool init(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void done(void)
+LOCAL void doneAll(void)
 {
-  Server_done();
-  Network_done();
-  Storage_done();
-  Archive_done();
-  Pattern_done();
-  Crypt_done();
-  Password_done();
+  Server_doneAll();
+  Network_doneAll();
+  Storage_doneAll();
+  Archive_doneAll();
+  Pattern_doneAll();
+  Crypt_doneAll();
+  Password_doneAll();
 }
 
 /*---------------------------------------------------------------------*/
@@ -620,6 +619,7 @@ void copyOptions(const Options *sourceOptions, Options *destinationOptions)
   destinationOptions->sshPublicKeyFileName = String_copy(sourceOptions->sshPublicKeyFileName);
   destinationOptions->sshPrivatKeyFileName = String_copy(sourceOptions->sshPrivatKeyFileName);
   destinationOptions->sshPassword          = Password_copy(sourceOptions->sshPassword);
+  destinationOptions->remoteBARExecutable  = String_copy(sourceOptions->remoteBARExecutable);
 }
 
 void freeOptions(Options *options)
@@ -632,6 +632,7 @@ void freeOptions(Options *options)
   String_delete(options->sshPrivatKeyFileName);
   String_delete(options->sshPublicKeyFileName);
   if (options->sshPassword != NULL) Password_delete(options->sshPassword);
+  String_delete(options->remoteBARExecutable);
 }
 
 /*---------------------------------------------------------------------*/
@@ -642,7 +643,7 @@ int main(int argc, const char *argv[])
   Errors error;
 
   /* init */
-  if (!init())
+  if (!initAll())
   {
     return EXITCODE_INIT_FAIL;
   }
@@ -668,7 +669,7 @@ int main(int argc, const char *argv[])
     Password_delete(serverPassword);
     Password_delete(defaultOptions.sshPassword);
     Password_delete(defaultOptions.cryptPassword);
-    done();
+    doneAll();
     return EXITCODE_INVALID_ARGUMENT;
   }
 
@@ -692,7 +693,7 @@ int main(int argc, const char *argv[])
         Password_delete(serverPassword);
         Password_delete(defaultOptions.sshPassword);
         Password_delete(defaultOptions.cryptPassword);
-        done();
+        doneAll();
         return EXITCODE_CONFIG_ERROR;
       }
     }
@@ -712,7 +713,7 @@ int main(int argc, const char *argv[])
     Password_delete(serverPassword);
     Password_delete(defaultOptions.sshPassword);
     Password_delete(defaultOptions.cryptPassword);
-    done();
+    doneAll();
     return EXITCODE_INVALID_ARGUMENT;
   }
   if (versionFlag)
@@ -723,7 +724,7 @@ int main(int argc, const char *argv[])
     Password_delete(serverPassword);
     Password_delete(defaultOptions.sshPassword);
     Password_delete(defaultOptions.cryptPassword);
-    done();
+    doneAll();
     return EXITCODE_OK;
   }
   if (helpFlag || xhelpFlag || helpInternalFlag)
@@ -737,7 +738,7 @@ int main(int argc, const char *argv[])
     Password_delete(serverPassword);
     Password_delete(defaultOptions.sshPassword);
     Password_delete(defaultOptions.cryptPassword);
-    done();
+    doneAll();
     return EXITCODE_OK;
   }
 
@@ -861,7 +862,7 @@ int main(int argc, const char *argv[])
   Pattern_doneList(&excludePatternList);
   Pattern_doneList(&includePatternList);
   Password_delete(serverPassword);
-  done();
+  doneAll();
 
   #ifndef NDEBUG
     Array_debug();
