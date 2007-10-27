@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -85,9 +85,11 @@ set barControlConfig(currentJobUpdateTime) 1000
 set guiMode 0
 set passwordObfuscator [format "%c%c%c%c%c%c%c%c" [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}]]
 
+# command id counter
+set lastCommandId    0
+
 # server variables
 set server(socketHandle)     -1
-set server(lastCommandId)    0
 set server(authorizedFlag)   0
 
 # BAR configuration
@@ -114,6 +116,7 @@ set barConfig(compressAlgorithm)      ""
 set barConfig(cryptAlgorithm)         ""
 set barConfig(cryptPassword)          ""
 set barConfig(skipUnreadable)         1
+set barConfig(skipNotWritable)        1
 set barConfig(overwriteArchiveFiles)  0
 set barConfig(overwriteFiles)         0
 
@@ -147,9 +150,13 @@ set currentJob(storageTotalBytes)     0
 set jobListTimerId    0
 set currentJobTimerId 0
 
-set fileTreeWidget     ""
-set includedListWidget ""
-set excludedListWidget ""
+set backupFilesTreeWidget    ""
+set backupIncludedListWidget ""
+set backupExcludedListWidget ""
+
+set restoreFilesTreeWidget ""
+set restoreIncludedListWidget ""
+set restoreExcludedListWidget ""
 
 # format of data in file list
 #  {<type> [NONE|INCLUDED|EXCLUDED] <directory open flag>}
@@ -596,6 +603,31 @@ proc addModifyTrace { nameList action } \
   }
 }
 
+#***********************************************************************
+# Name   : addFocusTrace
+# Purpose: add focus trace
+# Input  : widgetList - widget list
+#          inAction   - action to execute when focus in
+#          outAction  - action to execute when focus out
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc addFocusTrace { widgetList inAction outAction } \
+{
+  proc focusTraceHandler { action name1 name2 op } \
+  {
+    eval $action
+  }
+
+  foreach widget $widgetList \
+  {
+    bind $widget <FocusIn>  $inAction
+    bind $widget <FocusOut> $outAction
+  }
+}
+
 # ----------------------------------------------------------------------
 
 #***********************************************************************
@@ -805,7 +837,7 @@ proc obfuscatePassword { password passwordObfuscator } \
 }
 
 #***********************************************************************
-# Name   : Server:connect
+# Name   : BackupServer:connect
 # Purpose: connect to server
 # Input  : hostname - host name
 #          port     - port number
@@ -816,7 +848,7 @@ proc obfuscatePassword { password passwordObfuscator } \
 # Notes  : -
 #***********************************************************************
 
-proc Server:connect { hostname port password tlsFlag } \
+proc BackupServer:connect { hostname port password tlsFlag } \
 {
   global server passwordObfuscator
 
@@ -866,7 +898,7 @@ proc Server:connect { hostname port password tlsFlag } \
     incr z
   }
   set errorCode 0
-  Server:executeCommand errorCode errorText "AUTHORIZE" $s
+  BackupServer:executeCommand errorCode errorText "AUTHORIZE" $s
   if {$errorCode != 0} \
   {
     close $server(socketHandle) 
@@ -878,7 +910,7 @@ proc Server:connect { hostname port password tlsFlag } \
 }
 
 #***********************************************************************
-# Name   : Server:disconnect
+# Name   : BackupServer:disconnect
 # Purpose: disconnect from server
 # Input  : -
 # Output : -
@@ -886,7 +918,7 @@ proc Server:connect { hostname port password tlsFlag } \
 # Notes  : -
 #***********************************************************************
 
-proc Server:disconnect {} \
+proc BackupServer:disconnect {} \
 {
   global server
 
@@ -898,7 +930,7 @@ proc Server:disconnect {} \
 }
 
 #***********************************************************************
-# Name   : Server:sendCommand
+# Name   : BackupServer:sendCommand
 # Purpose: send command to server
 # Input  : command - command
 #          args    - arguments for command
@@ -907,25 +939,25 @@ proc Server:disconnect {} \
 # Notes  : -
 #***********************************************************************
 
-proc Server:sendCommand { command args } \
+proc BackupServer:sendCommand { command args } \
 {
-  global server
+  global server lastCommandId
 
-  incr server(lastCommandId)
+  incr lastCommandId
 
   set arguments [join $args]
 
-  if {[catch {puts $server(socketHandle) "$command $server(lastCommandId) $arguments"; flush $server(socketHandle)}]} \
+  if {[catch {puts $server(socketHandle) "$lastCommandId $command $arguments"; flush $server(socketHandle)}]} \
   {
     return 0
   }
-#puts "sent [clock clicks]: $command $server(lastCommandId) $arguments"
+#puts "sent [clock clicks]: $command $lastCommandId $arguments"
 
-  return $server(lastCommandId)
+  return $lastCommandId
 }
 
 #***********************************************************************
-# Name   : Server:readResult
+# Name   : BackupServer:readResult
 # Purpose: read result from server
 # Input  : commandId - command id
 # Output : _errorCode - error code
@@ -934,7 +966,7 @@ proc Server:sendCommand { command args } \
 # Notes  : -
 #***********************************************************************
 
-proc Server:readResult { commandId _completeFlag _errorCode _result } \
+proc BackupServer:readResult { commandId _completeFlag _errorCode _result } \
 {
   global server
 
@@ -960,7 +992,7 @@ proc Server:readResult { commandId _completeFlag _errorCode _result } \
 }
 
 #***********************************************************************
-# Name   : Server:executeCommand
+# Name   : BackupServer:executeCommand
 # Purpose: execute command
 # Input  : command - command
 #          args    - arguments for command
@@ -970,17 +1002,17 @@ proc Server:readResult { commandId _completeFlag _errorCode _result } \
 # Notes  : -
 #***********************************************************************
 
-proc Server:executeCommand { _errorCode _errorText command args } \
+proc BackupServer:executeCommand { _errorCode _errorText command args } \
 {
   upvar $_errorCode errorCode
   upvar $_errorText errorText
 
-  set commandId [Server:sendCommand $command $args]
+  set commandId [BackupServer:sendCommand $command [join $args]]
   if {$commandId == 0} \
   {
     return 0
   }
-  if {![Server:readResult $commandId completeFlag localErrorCode result]} \
+  if {![BackupServer:readResult $commandId completeFlag localErrorCode result]} \
   {
     return 0
   }
@@ -999,6 +1031,69 @@ proc Server:executeCommand { _errorCode _errorText command args } \
     }
     return 0
   }
+}
+
+proc Restore:open {} \
+{
+  set restoreHandle [open "| /home/torsten/projects/bar/bar --batch" RDWR]
+puts [eof $restoreHandle]
+puts $restoreHandle "VERSION"; flush $restoreHandle
+gets $restoreHandle line
+puts "line=$line"
+gets $restoreHandle line
+puts "line=$line"
+exit 1
+
+  return $restoreHandle
+}
+
+proc Restore:close { restoreHandle } \
+{
+puts $restoreHandle
+  close $restoreHandle
+}
+
+proc Restore:sendCommand { restoreHandle command args } \
+{
+  global server lastCommandId
+
+  incr lastCommandId
+
+  set arguments [join $args]
+
+  if {[catch {puts $restoreHandle "$command $lastCommandId $arguments"; flush $restoreHandle}]} \
+  {
+    return 0
+  }
+#puts "sent [clock clicks]: $command $lastCommandId $arguments"
+
+  return $lastCommandId
+}
+  
+
+proc Restore:readResult { restoreHandle commandId _completeFlag _errorCode _result } \
+{
+  global server
+
+  upvar $_completeFlag completeFlag
+  upvar $_errorCode    errorCode
+  upvar $_result       result
+
+  set id -1
+  while {($id != $commandId) && ($id != 0)} \
+  {
+     if {[eof $restoreHandle]} { puts "obs?"; return 0 }
+    gets $restoreHandle line
+#puts "received [clock clicks] [eof $server(socketHandle)]: $line"
+
+    set completeFlag 0
+    set errorCode    -1
+    set result       ""
+    regexp {(\d+)\s+(\d+)\s+(\d+)\s+(.*)} $line * id completeFlag errorCode result
+  }
+#puts "$completeFlag $errorCode $result"
+
+  return 1
 }
 
 # ----------------------------------------------------------------------
@@ -1028,8 +1123,8 @@ proc updateJobList { jobListWidget } \
 
   # update list
   $jobListWidget delete 0 end
-  set commandId [Server:sendCommand "JOB_LIST"]
-  while {[Server:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
+  set commandId [BackupServer:sendCommand "JOB_LIST"]
+  while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
   {
     scanx $result "%d %S %s %d %S %S %d %d" \
       id \
@@ -1101,8 +1196,8 @@ proc updateCurrentJob { } \
   {
     catch {after cancel $currentJobTimerId}
 
-    set commandId [Server:sendCommand "JOB_INFO" $currentJob(id)]
-    if {[Server:readResult $commandId completeFlag errorCode result] && ($errorCode == 0)} \
+    set commandId [BackupServer:sendCommand "JOB_INFO" $currentJob(id)]
+    if {[BackupServer:readResult $commandId completeFlag errorCode result] && ($errorCode == 0)} \
     {
       scanx $result "%s %lu %lu %lu %lu %lu %lu %lu %lu %f %S %lu %lu %S %lu %lu" \
         state \
@@ -1172,50 +1267,110 @@ proc updateCurrentJob { } \
 #***********************************************************************
 # Name       : itemPathToFileName
 # Purpose    : convert item path to file name
-# Input      : itemPath - item path
+# Input      : widget     - tree-widget
+#              itemPath   - item path
+#              prefixFlag - 1 if item have a prefix, 0 otherwise
 # Output     : -
 # Return     : file name
 # Side-Effect: unknown
 # Notes      : -
 #***********************************************************************
 
-proc itemPathToFileName { itemPath } \
- {
-  global fileTreeWidget
+proc itemPathToFileName { widget itemPath prefixFlag } \
+{
+  set separator [lindex [$widget configure -separator] 4]
+#puts "$itemPath -> #[string range $itemPath [string length $separator] end]#"
 
-  set separator [lindex [$fileTreeWidget configure -separator] 4]
+  if {$prefixFlag} \
+  {
+    set i [string first $separator $itemPath]
+    if {$i >= 0} \
+    {
+      set fileName [string map [list $separator "/"] [string range $itemPath [expr {$i+1}] end]]
+    } \
+    else \
+    {
+      set fileName ""
+    }
+  } \
+  else \
+  {
+    set fileName [string map [list $separator "/"] $itemPath]
+  }
+
+  return $fileName
+}
+
+#***********************************************************************
+# Name       : itemPathToPrefix
+# Purpose    : convert item path to file name
+# Input      : widget   - tree-widget
+#              itemPath - item path
+# Output     : -
+# Return     : file name
+# Side-Effect: unknown
+# Notes      : -
+#***********************************************************************
+
+proc itemPathToPrefix { widget itemPath } \
+{
+  set separator [lindex [$widget configure -separator] 4]
 #puts "$itemPath -> #[string range $itemPath [string length $Separator] end]#"
 
-  return [string map [list $separator "/"] $itemPath]
- }
+  set i [string first $separator $itemPath]
+  if {$i > 0} \
+  {
+    return [string range $itemPath 0 [expr {$i-1}]]
+  } \
+  else \
+  {
+    return $itemPath
+  }
+}
 
 #***********************************************************************
 # Name       : fileNameToItemPath
 # Purpose    : convert file name to item path
-# Input      : fileName - file name
+# Input      : widget   - tree-widget 
+#              prefix   - prefix or ""
+#              fileName - file name
 # Output     : -
 # Return     : item path
 # Side-Effect: unknown
 # Notes      : -
 #***********************************************************************
 
-proc fileNameToItemPath { fileName } \
+proc fileNameToItemPath { widget prefix fileName } \
  {
-  global fileTreeWidget
-
   # get separator
   set separator "/"
-  catch {set separator [lindex [$fileTreeWidget configure -separator] 4]}
+  catch {set separator [lindex [$widget configure -separator] 4]}
 
   # get path name
-   if {($fileName != ".") && ($fileName != "/")} \
+  if {($fileName != "") && ($fileName != ".") && ($fileName != "/")} \
+  {
+    if {$prefix != ""} \
     {
-     return [string map [list "/" $separator] $fileName]
+      set itemPath "$prefix$separator[string map [list "/" $separator] $fileName]"
     } \
-   else \
+    else \
     {
-     return "$separator"
+      set itemPath [string map [list "/" $separator] $fileName]
     }
+  } \
+  else \
+  {
+    if {$prefix != ""} \
+    {
+      set itemPath $prefix
+    } \
+    else \
+    {
+      set itemPath $separator
+    }
+  }
+
+  return $itemPath
  }
 
 # ----------------------------------------------------------------------
@@ -1273,57 +1428,189 @@ proc checkExcluded { fileName } \
 }
 
 #***********************************************************************
-# Name   : clearFileList
-# Purpose: clear file list
-# Input  : -
+# Name   : setEntryState
+# Purpose: set entry state
+# Input  : itemPath - item path
+#          state    - NONE, INCLUDED, EXCLUDED
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc clearFileList { } \
+proc setEntryState { widget itemPath prefixFlag state } \
 {
-  global fileTreeWidget images
+  global barConfig images
 
-  foreach itemPath [$fileTreeWidget info children ""] \
+  # get file name
+  set fileName [itemPathToFileName $widget $itemPath $prefixFlag]
+
+  # get data
+  set data [$widget info data $itemPath]
+  set type              [lindex $data 0]
+  set directoryOpenFlag [lindex $data 2]
+#puts "$itemPath: $state"
+#puts $data
+
+  # get type, exclude flag
+  if     {$state == "INCLUDED"} \
   {
-    $fileTreeWidget delete offsprings $itemPath
-    $fileTreeWidget item configure $itemPath 0 -image $images(folder)
+    if     {$type == "FILE"} \
+    {
+      set image $images(fileIncluded)
+    } \
+    elseif {$type == "DIRECTORY"} \
+    {
+      if {$directoryOpenFlag} \
+      {
+        set image $images(folderIncludedOpen)
+      } \
+      else \
+      {
+        set image $images(folderIncluded)
+      }
+    } \
+    elseif {$type == "LINK"} \
+    {
+      set image $images(linkIncluded)
+    }
+    set index [lsearch -sorted -exact $barConfig(excluded) $fileName]; if {$index >= 0} { set barConfig(excluded) [lreplace $barConfig(excluded) $index $index] }
+    lappend barConfig(included) $fileName; set barConfig(included) [lsort -uniq $barConfig(included)]
+  } \
+  elseif {$state == "EXCLUDED"} \
+  {
+    if     {$type == "FILE"} \
+    {
+      set image $images(fileExcluded)
+    } \
+    elseif {$type == "DIRECTORY"} \
+    {
+      set image $images(folderExcluded)
+      if {$directoryOpenFlag} \
+      {
+        $widget delete offsprings $itemPath
+        lset data 2 0
+      }
+    } \
+    elseif {$type == "LINK"} \
+    {
+      set image $images(linkExcluded)
+    }
+    set index [lsearch -sorted -exact $barConfig(included) $fileName]; if {$index >= 0} { set barConfig(included) [lreplace $barConfig(included) $index $index] }
+    lappend barConfig(excluded) $fileName; set barConfig(excluded) [lsort -uniq $barConfig(excluded)]
+  } \
+  else  \
+  {
+    if     {$type == "FILE"} \
+    {
+      set image $images(file)
+    } \
+    elseif {$type == "DIRECTORY"} \
+    {
+      set image $images(folder)
+    } \
+    elseif {$type == "LINK"} \
+    {
+      set image $images(link)
+    }
+    set index [lsearch -sorted -exact $barConfig(included) $fileName]; if {$index >= 0} { set barConfig(included) [lreplace $barConfig(included) $index $index] }
+    set index [lsearch -sorted -exact $barConfig(excluded) $fileName]; if {$index >= 0} { set barConfig(excluded) [lreplace $barConfig(excluded) $index $index] }
+  }
+  $widget item configure $itemPath 0 -image $image
+
+  # update data
+  lset data 1 $state
+  $widget entryconfigure $itemPath -data $data
+
+  setConfigModify
+}
+
+#***********************************************************************
+# Name   : toggleEntryIncludedExcluded
+# Purpose: toggle entry state: NONE, INCLUDED, EXCLUDED
+# Input  : widget     - files tree widget
+#          itemPath   - item path
+#          prefixFlag - 1 if files have a prefix, 0 otherwise
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc toggleEntryIncludedExcluded { widget itemPath prefixFlag } \
+{
+  # get data
+  set data [$widget info data $itemPath]
+  set type  [lindex $data 0]
+  set state [lindex $data 1]
+
+  # set new state
+  if {$type == "DIRECTORY"} \
+  {
+    if     {$state == "NONE"    } { set state "INCLUDED" } \
+    elseif {$state == "INCLUDED"} { set state "EXCLUDED" } \
+    else                          { set state "NONE"     }
+  } \
+  else \
+  {
+    if     {$state == "NONE"} { set state "EXCLUDED" } \
+    else                      { set state "NONE"     }
+  }
+
+  setEntryState $widget $itemPath $prefixFlag $state
+}
+
+
+#***********************************************************************
+# Name   : clearFileList
+# Purpose: clear file list
+# Input  : widget - files tree-widget
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc clearFileList { widget } \
+{
+  global images
+
+  foreach itemPath [$widget info children ""] \
+  {
+    $widget delete offsprings $itemPath
+    $widget item configure $itemPath 0 -image $images(folder)
   }
 }
 
 #***********************************************************************
-# Name   : addDevice
-# Purpose: add a device to tree-widget
+# Name   : addBackupDevice
+# Purpose: add a device to backup-tree-widget
 # Input  : deviceName - file name/directory name
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc addDevice { deviceName } \
+proc addBackupDevice { deviceName } \
 {
-  global fileTreeWidget
+  global backupFilesTreeWidget
 
-  catch {$fileTreeWidget delete entry $deviceName}
+  catch {$backupFilesTreeWidget delete entry $deviceName}
 
   set n 0
-  set l [$fileTreeWidget info children ""]
-  while {($n < [llength $l]) && (([$fileTreeWidget info data [lindex $l $n]] != {}) || ($deviceName>[lindex $l $n]))} \
+  set l [$backupFilesTreeWidget info children ""]
+  while {($n < [llength $l]) && (([$backupFilesTreeWidget info data [lindex $l $n]] != {}) || ($deviceName>[lindex $l $n]))} \
   {
     incr n
   }
 
-  set style [tixDisplayStyle imagetext -refwindow $fileTreeWidget]
+  set style [tixDisplayStyle imagetext -refwindow $backupFilesTreeWidget]
 
-  $fileTreeWidget add $deviceName -at $n -itemtype imagetext -text $deviceName -image [tix getimage folder] -style $style -data [list "DIRECTORY" "NONE" 0]
-  $fileTreeWidget item create $deviceName 1 -itemtype imagetext -style $style
-  $fileTreeWidget item create $deviceName 2 -itemtype imagetext -style $style
-  $fileTreeWidget item create $deviceName 3 -itemtype imagetext -style $style
+  $backupFilesTreeWidget add $deviceName -at $n -itemtype imagetext -text $deviceName -image [tix getimage folder] -style $style -data [list "DIRECTORY" "NONE" 0]
+  $backupFilesTreeWidget item create $deviceName 1 -itemtype imagetext -style $style
+  $backupFilesTreeWidget item create $deviceName 2 -itemtype imagetext -style $style
+  $backupFilesTreeWidget item create $deviceName 3 -itemtype imagetext -style $style
 }
 
 #***********************************************************************
-# Name   : addEntry
+# Name   : addBackupEntry
 # Purpose: add a file/directory/link entry to tree-widget
 # Input  : fileName - file name/directory name
 #          fileType - FILE|DIRECTORY|LINK
@@ -1333,9 +1620,9 @@ proc addDevice { deviceName } \
 # Notes  : -
 #***********************************************************************
 
-proc addEntry { fileName fileType fileSize } \
+proc addBackupEntry { fileName fileType fileSize } \
 {
-  global fileTreeWidget barConfig images
+  global backupFilesTreeWidget barConfig images
 
   # get parent directory
   if {[file tail $fileName] !=""} \
@@ -1348,118 +1635,118 @@ proc addEntry { fileName fileType fileSize } \
   }
 
   # get item path, parent item path
-  set itemPath       [fileNameToItemPath $fileName       ]
-  set parentItemPath [fileNameToItemPath $parentDirectory]
+  set itemPath       [fileNameToItemPath $backupFilesTreeWidget "" $fileName       ]
+  set parentItemPath [fileNameToItemPath $backupFilesTreeWidget "" $parentDirectory]
 #puts "f=$fileName"
 #puts "i=$itemPath"
 #puts "p=$parentItemPath"
 
-  catch {$fileTreeWidget delete entry $itemPath}
+  catch {$backupFilesTreeWidget delete entry $itemPath}
 
   # create parent entry if it does not exists
-  if {($parentItemPath != "") && ![$fileTreeWidget info exists $parentItemPath]} \
+  if {($parentItemPath != "") && ![$backupFilesTreeWidget info exists $parentItemPath]} \
   {
-    addEntry [file dirname $fileName] "DIRECTORY" 0
+    addBackupEntry [file dirname $fileName] "DIRECTORY" 0
   }
 
   # get excluded flag of entry
   set excludedFlag [checkExcluded $fileName]
 
   # get styles
-  set styleImage     [tixDisplayStyle imagetext -refwindow $fileTreeWidget -anchor w]
-  set styleTextLeft  [tixDisplayStyle text      -refwindow $fileTreeWidget -anchor w]
-  set styleTextRight [tixDisplayStyle text      -refwindow $fileTreeWidget -anchor e]
+  set styleImage     [tixDisplayStyle imagetext -refwindow $backupFilesTreeWidget -anchor w]
+  set styleTextLeft  [tixDisplayStyle text      -refwindow $backupFilesTreeWidget -anchor w]
+  set styleTextRight [tixDisplayStyle text      -refwindow $backupFilesTreeWidget -anchor e]
 
    if     {$fileType=="FILE"} \
    {
-#puts "add file $fileName $itemPath - $parentItemPath - $SortedFlag -- [file tail $fileName]"
+#puts "add file $fileName $itemPath - $parentItemPath -- [file tail $fileName]"
      # find insert position (sort)
      set n 0
-     set l [$fileTreeWidget info children $parentItemPath]
-     while {($n < [llength $l]) && (([lindex [$fileTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     set l [$backupFilesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
      {
        incr n
      }
 
      # add file item
      if {!$excludedFlag} { set image $images(file) } else { set image $images(fileExcluded) }
-     $fileTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
-     $fileTreeWidget item create $itemPath 1 -itemtype text -text "FILE"    -style $styleTextLeft
-     $fileTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
-     $fileTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
+     $backupFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
+     $backupFilesTreeWidget item create $itemPath 1 -itemtype text -text "FILE"    -style $styleTextLeft
+     $backupFilesTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
+     $backupFilesTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
    } \
    elseif {$fileType=="DIRECTORY"} \
    {
 #puts "add directory $fileName"
      # find insert position (sort)
      set n 0
-     set l [$fileTreeWidget info children $parentItemPath]
-     while {($n < [llength $l]) && ([lindex [$fileTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") && ($itemPath > [lindex $l $n])} \
+     set l [$backupFilesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && ([lindex [$backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") && ($itemPath > [lindex $l $n])} \
      {
        incr n
      }
 
      # add directory item
      if {!$excludedFlag} { set image $images(folder) } else { set image $images(folderExcluded) }
-     $fileTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "DIRECTORY" "NONE" 0]
-     $fileTreeWidget item create $itemPath 1 -itemtype text -style $styleTextLeft
-     $fileTreeWidget item create $itemPath 2 -itemtype text -style $styleTextLeft
-     $fileTreeWidget item create $itemPath 3 -itemtype text -style $styleTextLeft
+     $backupFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "DIRECTORY" "NONE" 0]
+     $backupFilesTreeWidget item create $itemPath 1 -itemtype text -style $styleTextLeft
+     $backupFilesTreeWidget item create $itemPath 2 -itemtype text -style $styleTextLeft
+     $backupFilesTreeWidget item create $itemPath 3 -itemtype text -style $styleTextLeft
    } \
    elseif {$fileType=="LINK"} \
    {
 #puts "add link $fileName $RealFilename"
      set n 0
-     set l [$fileTreeWidget info children $parentItemPath]
-     while {($n < [llength $l]) && (([lindex [$fileTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     set l [$backupFilesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
      {
        incr n
      }
 
      # add link item
      if {!$excludedFlag} { set image $images(link) } else { set image $images(linkExcluded) }
-     $fileTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "LINK" "NONE" 0]
-     $fileTreeWidget item create $itemPath 1 -itemtype text -text "LINK" -style $styleTextLeft
-     $fileTreeWidget item create $itemPath 2 -itemtype text              -style $styleTextLeft
-     $fileTreeWidget item create $itemPath 3 -itemtype text              -style $styleTextLeft
+     $backupFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "LINK" "NONE" 0]
+     $backupFilesTreeWidget item create $itemPath 1 -itemtype text -text "LINK" -style $styleTextLeft
+     $backupFilesTreeWidget item create $itemPath 2 -itemtype text              -style $styleTextLeft
+     $backupFilesTreeWidget item create $itemPath 3 -itemtype text              -style $styleTextLeft
    }
 }
 
 #***********************************************************************
-# Name   : openCloseDirectory
-# Purpose: open/close directory
+# Name   : openCloseBackupDirectory
+# Purpose: open/close backup directory
 # Input  : itemPath - item path
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc openCloseDirectory { itemPath } \
+proc openCloseBackupDirectory { itemPath } \
 {
-  global fileTreeWidget includedListWidget excludedListWidget images
+  global backupFilesTreeWidget backupIncludedListWidget backupExcludedListWidget images
 
   # get directory name
-  set directoryName [itemPathToFileName $itemPath]
+  set directoryName [itemPathToFileName $backupFilesTreeWidget $itemPath 0]
 
   # check if existing, add if not exists
-  if {![$fileTreeWidget info exists $itemPath]} \
+  if {![$backupFilesTreeWidget info exists $itemPath]} \
   {
-    addEntry $directoryName "DIRECTORY" 0
+    addBackupEntry $directoryName "DIRECTORY" 0
   }
 
-  # check if parent exist and is open, open it if needed
-  set parentItemPath [$fileTreeWidget info parent $itemPath]
-  if {[$fileTreeWidget info exists $parentItemPath]} \
+  # check if parent exist and is open, open if needed
+  set parentItemPath [$backupFilesTreeWidget info parent $itemPath]
+  if {[$backupFilesTreeWidget info exists $parentItemPath]} \
   {
-    set data [$fileTreeWidget info data $parentItemPath]
+    set data [$backupFilesTreeWidget info data $parentItemPath]
     if {[lindex $data 2] == 0} \
     {
-      openCloseDirectory $parentItemPath
+      openCloseBackupDirectory $parentItemPath
     }
   }
 
   # get data
-  set data [$fileTreeWidget info data $itemPath]
+  set data [$backupFilesTreeWidget info data $itemPath]
   set type              [lindex $data 0]
   set state             [lindex $data 1]
   set directoryOpenFlag [lindex $data 2]
@@ -1468,31 +1755,31 @@ proc openCloseDirectory { itemPath } \
   {
     # get open/closed flag
 
-    $fileTreeWidget delete offsprings $itemPath
+    $backupFilesTreeWidget delete offsprings $itemPath
     if {!$directoryOpenFlag} \
     {
       if     {$state == "INCLUDED"} { set image $images(folderIncludedOpen) } \
       elseif {$state == "EXCLUDED"} { set image $images(folderExcludedOpen) } \
       else                          { set image $images(folderOpen)         }
-      $fileTreeWidget item configure $itemPath 0 -image $image
+      $backupFilesTreeWidget item configure $itemPath 0 -image $image
       update
 
-      set fileName [itemPathToFileName $itemPath]
-      set commandId [Server:sendCommand "FILE_LIST" $fileName 0]
-      while {[Server:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
+      set fileName [itemPathToFileName $backupFilesTreeWidget $itemPath 0]
+      set commandId [BackupServer:sendCommand "FILE_LIST" $fileName 0]
+      while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
       {
 #puts "add file $result"
         if     {[scanx $result "FILE %d %S" fileSize fileName] == 2} \
         {
-          addEntry $fileName "FILE" $fileSize
+          addBackupEntry $fileName "FILE" $fileSize
         } \
         elseif {[scanx $result "DIRECTORY %ld %S" totalSize directoryName] == 2} \
         {
-          addEntry $directoryName "DIRECTORY" $totalSize
+          addBackupEntry $directoryName "DIRECTORY" $totalSize
         } \
         elseif {[scanx $result "LINK %S" linkName] == 1} \
         {
-          addEntry $linkName "LINK" 0
+          addBackupEntry $linkName "LINK" 0
         } else {
   internalError "unknown file type in openclosedirectory"
 }
@@ -1505,19 +1792,19 @@ proc openCloseDirectory { itemPath } \
       if     {$state == "INCLUDED"} { set image $images(folderIncluded) } \
       elseif {$state == "EXCLUDED"} { set image $images(folderExcluded) } \
       else                          { set image $images(folder)         }
-      $fileTreeWidget item configure $itemPath 0 -image $image
+      $backupFilesTreeWidget item configure $itemPath 0 -image $image
 
       set directoryOpenFlag 0
     }
 
     # update data
     lset data 2 $directoryOpenFlag
-    $fileTreeWidget entryconfigure $itemPath -data $data
+    $backupFilesTreeWidget entryconfigure $itemPath -data $data
   }
 }
 
 #***********************************************************************
-# Name   : updateFileTreeStates
+# Name   : backupUpdateFileTreeStates
 # Purpose: update file tree states depending on include/exclude patterns
 # Input  : -
 # Output : -
@@ -1525,17 +1812,17 @@ proc openCloseDirectory { itemPath } \
 # Notes  : -
 #***********************************************************************
 
-proc updateFileTreeStates { } \
+proc backupUpdateFileTreeStates { } \
 {
-  global fileTreeWidget barConfig images
+  global backupFilesTreeWidget barConfig images
 
-  set itemPathList [$fileTreeWidget info children ""]
+  set itemPathList [$backupFilesTreeWidget info children ""]
   while {[llength $itemPathList] > 0} \
   {
     set fileName [lindex $itemPathList 0]; set itemPathList [lreplace $itemPathList 0 0]
-    set itemPath [fileNameToItemPath $fileName]
+    set itemPath [fileNameToItemPath $backupFilesTreeWidget "" $fileName]
 
-    set data [$fileTreeWidget info data $itemPath]
+    set data [$backupFilesTreeWidget info data $itemPath]
     set type              [lindex $data 0]
     set state             [lindex $data 1]
     set directoryOpenFlag [lindex $data 2]
@@ -1543,7 +1830,7 @@ proc updateFileTreeStates { } \
     # add sub-directories to update
     if {($type == "DIRECTORY") && ($state != "EXCLUDED") && $directoryOpenFlag} \
     {
-      foreach z [$fileTreeWidget info children $itemPath] \
+      foreach z [$backupFilesTreeWidget info children $itemPath] \
       {
         lappend itemPathList $z
       }
@@ -1616,7 +1903,7 @@ proc updateFileTreeStates { } \
         set image $images(folderExcluded)
         if {$directoryOpenFlag} \
         {
-          $fileTreeWidget delete offsprings $itemPath
+          $backupFilesTreeWidget delete offsprings $itemPath
           lset data 2 0
         }
       } \
@@ -1640,143 +1927,562 @@ proc updateFileTreeStates { } \
         set image $images(link)
       }
     }
-    $fileTreeWidget item configure [fileNameToItemPath $fileName] 0 -image $image
+    $backupFilesTreeWidget item configure [fileNameToItemPath $backupFilesTreeWidget "" $fileName] 0 -image $image
 
     # update data
     lset data 1 $state
-    $fileTreeWidget entryconfigure $itemPath -data $data
+    $backupFilesTreeWidget entryconfigure $itemPath -data $data
   }
 }
 
 #***********************************************************************
-# Name   : setEntryState
-# Purpose: set entry state
-# Input  : itemPath - item path
-#          state    - NONE, INCLUDED, EXCLUDED
+# Name   : addRestoreEntry
+# Purpose: add a file/directory/link entry to tree-widget
+# Input  : fileName - file name/directory name
+#          fileType - FILE|DIRECTORY|LINK
+#          fileSize - file size
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc setEntryState { itemPath state } \
+proc addRestoreEntry { archiveName fileName fileType fileSize directoryOpenFlag } \
 {
-  global fileTreeWidget barConfig images
+  global restoreFilesTreeWidget barConfig images
 
-  # get file name
-  set fileName [itemPathToFileName $itemPath]
+if {[info level]>5} { error "x" }
 
-  # get data
-  set data [$fileTreeWidget info data $itemPath]
-  set type              [lindex $data 0]
-  set directoryOpenFlag [lindex $data 2]
-#puts "$itemPath: $state"
-#puts $data
-
-  # get type, exclude flag
-  if     {$state == "INCLUDED"} \
+  # get parent directory
+  if {[file tail $fileName] != $fileName} \
   {
-    if     {$type == "FILE"} \
-    {
-      set image $images(fileIncluded)
-    } \
-    elseif {$type == "DIRECTORY"} \
-    {
-      if {$directoryOpenFlag} \
-      {
-        set image $images(folderIncludedOpen)
-      } \
-      else \
-      {
-        set image $images(folderIncluded)
-      }
-    } \
-    elseif {$type == "LINK"} \
-    {
-      set image $images(linkIncluded)
-    }
-    set index [lsearch -sorted -exact $barConfig(excluded) $fileName]; if {$index >= 0} { set barConfig(excluded) [lreplace $barConfig(excluded) $index $index] }
-    lappend barConfig(included) $fileName; set barConfig(included) [lsort -uniq $barConfig(included)]
-  } \
-  elseif {$state == "EXCLUDED"} \
-  {
-    if     {$type == "FILE"} \
-    {
-      set image $images(fileExcluded)
-    } \
-    elseif {$type == "DIRECTORY"} \
-    {
-      set image $images(folderExcluded)
-      if {$directoryOpenFlag} \
-      {
-        $fileTreeWidget delete offsprings $itemPath
-        lset data 2 0
-      }
-    } \
-    elseif {$type == "LINK"} \
-    {
-      set image $images(linkExcluded)
-    }
-    set index [lsearch -sorted -exact $barConfig(included) $fileName]; if {$index >= 0} { set barConfig(included) [lreplace $barConfig(included) $index $index] }
-    lappend barConfig(excluded) $fileName; set barConfig(excluded) [lsort -uniq $barConfig(excluded)]
-  } \
-  else  \
-  {
-    if     {$type == "FILE"} \
-    {
-      set image $images(file)
-    } \
-    elseif {$type == "DIRECTORY"} \
-    {
-      set image $images(folder)
-    } \
-    elseif {$type == "LINK"} \
-    {
-      set image $images(link)
-    }
-    set index [lsearch -sorted -exact $barConfig(included) $fileName]; if {$index >= 0} { set barConfig(included) [lreplace $barConfig(included) $index $index] }
-    set index [lsearch -sorted -exact $barConfig(excluded) $fileName]; if {$index >= 0} { set barConfig(excluded) [lreplace $barConfig(excluded) $index $index] }
-  }
-  $fileTreeWidget item configure $itemPath 0 -image $image
-
-  # update data
-  lset data 1 $state
-  $fileTreeWidget entryconfigure $itemPath -data $data
-
-  setConfigModify
-}
-
-#***********************************************************************
-# Name   : toggleEntryIncludedExcluded
-# Purpose: toggle entry state: NONE, INCLUDED, EXCLUDED
-# Input  : itemPath - item path
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-proc toggleEntryIncludedExcluded { itemPath } \
-{
-  global fileTreeWidget
-
-  # get data
-  set data [$fileTreeWidget info data $itemPath]
-  set type  [lindex $data 0]
-  set state [lindex $data 1]
-
-  # set new state
-  if {$type == "DIRECTORY"} \
-  {
-    if     {$state == "NONE"    } { set state "INCLUDED" } \
-    elseif {$state == "INCLUDED"} { set state "EXCLUDED" } \
-    else                          { set state "NONE"     }
+    set parentDirectory [file dirname $fileName]
   } \
   else \
   {
-    if     {$state == "NONE"} { set state "EXCLUDED" } \
-    else                      { set state "NONE"     }
+    set parentDirectory ""
   }
 
-  setEntryState $itemPath $state
+  # get item path, parent item path
+  set itemPath       [fileNameToItemPath $restoreFilesTreeWidget $archiveName $fileName       ]
+  set parentItemPath [fileNameToItemPath $restoreFilesTreeWidget $archiveName $parentDirectory]
+#puts "a=$archiveName"
+#puts "f=$fileName"
+#puts "D=$parentDirectory"
+#puts "i=$itemPath"
+#puts "p=$parentItemPath"
+#puts ""
+
+  catch {$restoreFilesTreeWidget delete entry $itemPath}
+
+  # create parent entry if it does not exists
+  if {($parentItemPath != "") && ![$restoreFilesTreeWidget info exists $parentItemPath]} \
+  {
+    addRestoreEntry $archiveName [file dirname $fileName] "DIRECTORY" 0 1
+  }
+
+  # get excluded flag of entry
+  set excludedFlag [checkExcluded $fileName]
+
+  # get styles
+  set styleImage     [tixDisplayStyle imagetext -refwindow $restoreFilesTreeWidget -anchor w]
+  set styleTextLeft  [tixDisplayStyle text      -refwindow $restoreFilesTreeWidget -anchor w]
+  set styleTextRight [tixDisplayStyle text      -refwindow $restoreFilesTreeWidget -anchor e]
+
+   if     {$fileType=="FILE"} \
+   {
+#puts "add file $fileName $itemPath - $parentItemPath -- [file tail $fileName]"
+     # find insert position (sort)
+     set n 0
+     set l [$restoreFilesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$restoreFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     {
+       incr n
+     }
+
+     # add file item
+     if {!$excludedFlag} { set image $images(file) } else { set image $images(fileExcluded) }
+     $restoreFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
+     $restoreFilesTreeWidget item create $itemPath 1 -itemtype text -text "FILE"    -style $styleTextLeft
+     $restoreFilesTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
+     $restoreFilesTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
+   } \
+   elseif {$fileType=="DIRECTORY"} \
+   {
+#puts "add directory $fileName"
+     # find insert position (sort)
+     set n 0
+     set l [$restoreFilesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && ([lindex [$restoreFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") && ($itemPath > [lindex $l $n])} \
+     {
+       incr n
+     }
+
+     # add directory item
+     if {$directoryOpenFlag} \
+     {
+       if {!$excludedFlag} { set image $images(folderOpen) } else { set image $images(folderExcluded) }
+     } \
+     else \
+     {
+       if {!$excludedFlag} { set image $images(folder) } else { set image $images(folderExcluded) }
+     }
+     $restoreFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "DIRECTORY" "NONE" $directoryOpenFlag]
+     $restoreFilesTreeWidget item create $itemPath 1 -itemtype text -style $styleTextLeft
+     $restoreFilesTreeWidget item create $itemPath 2 -itemtype text -style $styleTextLeft
+     $restoreFilesTreeWidget item create $itemPath 3 -itemtype text -style $styleTextLeft
+   } \
+   elseif {$fileType=="LINK"} \
+   {
+#puts "add link $fileName $RealFilename"
+     set n 0
+     set l [$restoreFilesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$restoreFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     {
+       incr n
+     }
+
+     # add link item
+     if {!$excludedFlag} { set image $images(link) } else { set image $images(linkExcluded) }
+     $restoreFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "LINK" "NONE" 0]
+     $restoreFilesTreeWidget item create $itemPath 1 -itemtype text -text "LINK" -style $styleTextLeft
+     $restoreFilesTreeWidget item create $itemPath 2 -itemtype text              -style $styleTextLeft
+     $restoreFilesTreeWidget item create $itemPath 3 -itemtype text              -style $styleTextLeft
+   }
+}
+
+#***********************************************************************
+# Name   : openCloseBackupDirectory
+# Purpose: open/close backup directory
+# Input  : itemPath - item path
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc closeRestoreDirectory { itemPath } \
+{
+  global restoreFilesTreeWidget restoreIncludedListWidget restoreExcludedListWidget images
+
+  # get directory name
+  set directoryName [itemPathToFileName $restoreFilesTreeWidget $itemPath 0]
+
+  # get data
+  set data [$restoreFilesTreeWidget info data $itemPath]
+  set type              [lindex $data 0]
+  set state             [lindex $data 1]
+  set directoryOpenFlag [lindex $data 2]
+
+  # close
+  $restoreFilesTreeWidget delete offsprings $itemPath
+  if     {$state == "INCLUDED"} { set image $images(folderIncluded) } \
+  elseif {$state == "EXCLUDED"} { set image $images(folderExcluded) } \
+  else                          { set image $images(folder)         }
+  $restoreFilesTreeWidget item configure $itemPath 0 -image $image
+
+  # update data
+  lset data 2 0
+  $restoreFilesTreeWidget entryconfigure $itemPath -data $data
+}
+
+#***********************************************************************
+# Name   : openCloseRestoreDirectory
+# Purpose: open/close restore directory
+# Input  : itemPath - item path
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc openCloseRestoreDirectory { itemPath } \
+{
+  global restoreFilesTreeWidget restoreIncludedListWidget restoreExcludedListWidget images
+
+  # get archive name
+
+  # get directory name
+  set directoryName [itemPathToFileName $restoreFilesTreeWidget $itemPath 1]
+  set archiveName   [itemPathToPrefix   $restoreFilesTreeWidget $itemPath]
+puts "item=$itemPath dir=$directoryName archiveName=$archiveName"
+
+  # check if existing, add if not exists
+  if {![$restoreFilesTreeWidget info exists $itemPath]} \
+  {
+    addRestoreEntry $archiveName $directoryName "DIRECTORY" 0 0
+  }
+
+  # check if parent exist and is open, open if needed
+  set parentItemPath [$restoreFilesTreeWidget info parent $itemPath]
+  if {[$restoreFilesTreeWidget info exists $parentItemPath]} \
+  {
+    set data [$restoreFilesTreeWidget info data $parentItemPath]
+    if {[lindex $data 2] == 0} \
+    {
+      openCloseRestoreDirectory $parentItemPath
+    }
+  }
+
+  # get data
+  set data [$restoreFilesTreeWidget info data $itemPath]
+  set type              [lindex $data 0]
+  set state             [lindex $data 1]
+  set directoryOpenFlag [lindex $data 2]
+
+  if {$type == "DIRECTORY"} \
+  {
+    # get open/closed flag
+
+    $restoreFilesTreeWidget delete offsprings $itemPath
+    if {!$directoryOpenFlag} \
+    {
+      if     {$state == "INCLUDED"} { set image $images(folderIncludedOpen) } \
+      elseif {$state == "EXCLUDED"} { set image $images(folderExcludedOpen) } \
+      else                          { set image $images(folderOpen)         }
+      $restoreFilesTreeWidget item configure $itemPath 0 -image $image
+      update
+
+      set errorCode 0
+      BackupServer:executeCommand errorCode errorText "CLEAR"
+#      BackupServer:executeCommand errorCode errorText "ADD_INCLUDE_PATTERN" "REGEX" "^$directoryName/\[^/\]+"
+      set commandId [BackupServer:sendCommand "ARCHIVE_LIST" $archiveName]
+      while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
+      {
+#puts "add file #$result#"
+        if     {[scanx $result "FILE %ld %ld %ld %ld %d %d %S" fileSize archiveSize fragmentOffset fragmentSize compressAlgorithm cryptAlgorithm fileName] > 0} \
+        {
+          addRestoreEntry $archiveName $fileName "FILE" $fileSize 0
+        } \
+        elseif {[scanx $result "DIRECTORY %d %S" cryptAlgorithm directoryName] > 0} \
+        {
+          addRestoreEntry $archiveName $directoryName "DIRECTORY" 0 1
+        } \
+        elseif {[scanx $result "LINK %d %S %S " cryptAlgorithm linkName fileName] > 0} \
+        {
+          addRestoreEntry $archiveName $linkName "LINK" 0 0
+        } else {
+  internalError "unknown file type in openclosedirectory: $result"
+}
+      }
+
+      set directoryOpenFlag 1
+    } \
+    else \
+    {
+      if     {$state == "INCLUDED"} { set image $images(folderIncluded) } \
+      elseif {$state == "EXCLUDED"} { set image $images(folderExcluded) } \
+      else                          { set image $images(folder)         }
+      $restoreFilesTreeWidget item configure $itemPath 0 -image $image
+
+      set directoryOpenFlag 0
+    }
+
+    # update data
+    lset data 2 $directoryOpenFlag
+    $restoreFilesTreeWidget entryconfigure $itemPath -data $data
+  }
+}
+
+proc newRestoreArchive { } \
+{
+  global restoreFilesTreeWidget barConfig images
+
+  # delete old of exists
+  foreach itemPath [$restoreFilesTreeWidget info children ""] \
+  {
+    $restoreFilesTreeWidget delete all $itemPath
+  }
+
+  if {$barConfig(storageFileName) != ""} \
+  {
+    set styleImage    [tixDisplayStyle imagetext -refwindow $restoreFilesTreeWidget -anchor w]
+    set styleTextLeft [tixDisplayStyle text      -refwindow $restoreFilesTreeWidget -anchor w]
+
+    # add new
+    switch $barConfig(storageType) \
+    {
+      "FILESYSTEM" \
+      {
+        set fileName $barConfig(storageFileName)
+        set itemPath $barConfig(storageFileName)
+        $restoreFilesTreeWidget add $itemPath -itemtype imagetext -text $fileName -image $images(folder) -style $styleImage -data [list "DIRECTORY" "NONE" 0]
+        $restoreFilesTreeWidget item create $itemPath 1 -itemtype text -style $styleTextLeft
+        $restoreFilesTreeWidget item create $itemPath 2 -itemtype text -style $styleTextLeft
+        $restoreFilesTreeWidget item create $itemPath 3 -itemtype text -style $styleTextLeft
+      }
+      "SCP" \
+      {
+      }
+      "SFTP" \
+      {
+      }
+      default \
+      {
+      }
+    }
+  }
+}
+
+#***********************************************************************
+# Name   : restoreUpdateFileTreeStates
+# Purpose: update file tree states depending on include/exclude patterns
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc restoreUpdateFileTreeStates { } \
+{
+  global backupFilesTreeWidget barConfig images
+
+  set itemPathList [$backupFilesTreeWidget info children ""]
+  while {[llength $itemPathList] > 0} \
+  {
+    set fileName [lindex $itemPathList 0]; set itemPathList [lreplace $itemPathList 0 0]
+    set itemPath [fileNameToItemPath $backupFilesTreeWidget "" $fileName]
+
+    set data [$backupFilesTreeWidget info data $itemPath]
+    set type              [lindex $data 0]
+    set state             [lindex $data 1]
+    set directoryOpenFlag [lindex $data 2]
+
+    # add sub-directories to update
+    if {($type == "DIRECTORY") && ($state != "EXCLUDED") && $directoryOpenFlag} \
+    {
+      foreach z [$backupFilesTreeWidget info children $itemPath] \
+      {
+        lappend itemPathList $z
+      }
+    }
+
+    # get excluded flag of entry
+    set includedFlag [checkIncluded $fileName]
+    set excludedFlag [checkExcluded $fileName]
+
+    # detect new state
+    if     {$excludedFlag} \
+    {
+      set state "EXCLUDED"
+    } \
+    elseif {($state == "INCLUDED") && !$includedFlag} \
+    {
+      if {$excludedFlag} \
+      {
+        set state "EXCLUDED"
+      } \
+      else \
+      {
+        set state "NONE"
+      }
+    } \
+    elseif {($state == "EXCLUDED") && !$excludedFlag} \
+    {
+      if {$includedFlag} \
+      {
+        set state "INCLUDED"
+      } \
+      else \
+      {
+        set state "NONE"
+      }
+    }
+#puts "update $fileName $includedFlag $excludedFlag: $state"
+
+    # update image and state
+    if     {$state == "INCLUDED"} \
+    {
+      if     {$type == "FILE"} \
+      {
+        set image $images(fileIncluded)
+      } \
+      elseif {$type == "DIRECTORY"} \
+      {
+        if {$directoryOpenFlag} \
+        {
+          set image $images(folderIncludedOpen)
+        } \
+        else \
+        {
+          set image $images(folderIncluded)
+        }
+      } \
+      elseif {$type == "LINK"} \
+      {
+        set image $images(linkIncluded)
+      }
+    } \
+    elseif {$state == "EXCLUDED"} \
+    {
+      if     {$type == "FILE"} \
+      {
+        set image $images(fileExcluded)
+      } \
+      elseif {$type == "DIRECTORY"} \
+      {
+        set image $images(folderExcluded)
+        if {$directoryOpenFlag} \
+        {
+          $backupFilesTreeWidget delete offsprings $itemPath
+          lset data 2 0
+        }
+      } \
+      elseif {$type == "LINK"} \
+      {
+        set image $images(linkExcluded)
+      }
+    } \
+    else  \
+    {
+      if     {$type == "FILE"} \
+      {
+        set image $images(file)
+      } \
+      elseif {$type == "DIRECTORY"} \
+      {
+        set image $images(folder)
+      } \
+      elseif {$type == "LINK"} \
+      {
+        set image $images(link)
+      }
+    }
+    $backupFilesTreeWidget item configure [fileNameToItemPath $backupFilesTreeWidget "" $fileName] 0 -image $image
+
+    # update data
+    lset data 1 $state
+    $backupFilesTreeWidget entryconfigure $itemPath -data $data
+  }
+}
+
+#***********************************************************************
+# Name   : restoreUpdateFileTreeStates
+# Purpose: update file tree states depending on include/exclude patterns
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc updateFileTreeStates { widget prefixFlag } \
+{
+  global  barConfig images
+
+  set itemPathList [$widget info children ""]
+  while {[llength $itemPathList] > 0} \
+  {
+    set itemPath [lindex $itemPathList 0]; set itemPathList [lreplace $itemPathList 0 0]
+    set fileName [itemPathToFileName $widget $itemPath $prefixFlag]
+
+    set data [$widget info data $itemPath]
+    set type              [lindex $data 0]
+    set state             [lindex $data 1]
+    set directoryOpenFlag [lindex $data 2]
+
+    # add sub-directories to update
+    if {($type == "DIRECTORY") && ($state != "EXCLUDED") && $directoryOpenFlag} \
+    {
+      foreach z [$widget info children $itemPath] \
+      {
+        lappend itemPathList $z
+      }
+    }
+
+    # get excluded flag of entry
+    set includedFlag [checkIncluded $fileName]
+    set excludedFlag [checkExcluded $fileName]
+
+    # detect new state
+    if     {$excludedFlag} \
+    {
+      set state "EXCLUDED"
+    } \
+    elseif {($state == "INCLUDED") && !$includedFlag} \
+    {
+      if {$excludedFlag} \
+      {
+        set state "EXCLUDED"
+      } \
+      else \
+      {
+        set state "NONE"
+      }
+    } \
+    elseif {($state == "EXCLUDED") && !$excludedFlag} \
+    {
+      if {$includedFlag} \
+      {
+        set state "INCLUDED"
+      } \
+      else \
+      {
+        set state "NONE"
+      }
+    }
+#puts "update $fileName $includedFlag $excludedFlag: $state"
+
+    # update image and state
+    if     {$state == "INCLUDED"} \
+    {
+      if     {$type == "FILE"} \
+      {
+        set image $images(fileIncluded)
+      } \
+      elseif {$type == "DIRECTORY"} \
+      {
+        if {$directoryOpenFlag} \
+        {
+          set image $images(folderIncludedOpen)
+        } \
+        else \
+        {
+          set image $images(folderIncluded)
+        }
+      } \
+      elseif {$type == "LINK"} \
+      {
+        set image $images(linkIncluded)
+      }
+    } \
+    elseif {$state == "EXCLUDED"} \
+    {
+      if     {$type == "FILE"} \
+      {
+        set image $images(fileExcluded)
+      } \
+      elseif {$type == "DIRECTORY"} \
+      {
+        set image $images(folderExcluded)
+        if {$directoryOpenFlag} \
+        {
+          $widget delete offsprings $itemPath
+          lset data 2 0
+        }
+      } \
+      elseif {$type == "LINK"} \
+      {
+        set image $images(linkExcluded)
+      }
+    } \
+    else  \
+    {
+      if     {$type == "FILE"} \
+      {
+        set image $images(file)
+      } \
+      elseif {$type == "DIRECTORY"} \
+      {
+        set image $images(folder)
+      } \
+      elseif {$type == "LINK"} \
+      {
+        set image $images(link)
+      }
+    }
+    $widget item configure $itemPath 0 -image $image
+
+    # update data
+    lset data 1 $state
+    $widget entryconfigure $itemPath -data $data
+  }
 }
 
 # ----------------------------------------------------------------------
@@ -1896,7 +2602,7 @@ proc loadBARControlConfig { configFileName } \
 
 #puts "read $line"
     # parse
-    if     {[scanx $line "server                  = %s" s] == 1} \
+    if     {[scanx $line "server = %s" s] == 1} \
     {
       set barControlConfig(serverHostName) $s
     } \
@@ -1945,7 +2651,9 @@ proc loadBARControlConfig { configFileName } \
 
 proc loadBARConfig { configFileName } \
 {
-  global fileTreeWidget includedListWidget excludedListWidget tk_strictMotif barConfigFileName barConfigModifiedFlag barConfig guiMode errorCode
+  global backupFilesTreeWidget backupIncludedListWidget backupExcludedListWidget
+  global restoreFilesTreeWidget restoreIncludedListWidget restoreExcludedListWidget
+  global tk_strictMotif barConfigFileName barConfigModifiedFlag barConfig guiMode errorCode
 
   # get file name
   if {$configFileName == ""} \
@@ -1968,9 +2676,13 @@ proc loadBARConfig { configFileName } \
   resetBarConfig
   if {$guiMode} \
   {
-    clearFileList
-    $includedListWidget delete 0 end
-    $excludedListWidget delete 0 end
+    clearFileList $backupFilesTreeWidget
+    $backupIncludedListWidget delete 0 end
+    $backupExcludedListWidget delete 0 end
+
+    clearFileList $restoreFilesTreeWidget
+    $restoreIncludedListWidget delete 0 end
+    $restoreExcludedListWidget delete 0 end
   }
 
   # read file
@@ -2082,20 +2794,20 @@ proc loadBARConfig { configFileName } \
       if {$guiMode} \
       {
         set fileName $pattern
-        set itemPath [fileNameToItemPath $fileName]
+        set itemPath [fileNameToItemPath $backupFilesTreeWidget "" $fileName]
 
         # add directory for entry
-        if {![$fileTreeWidget info exists $itemPath]} \
+        if {![$backupFilesTreeWidget info exists $itemPath]} \
         {
           set directoryName [file dirname $fileName]
-          set directoryItemPath [fileNameToItemPath $directoryName]
-          openCloseDirectory $directoryItemPath
+          set directoryItemPath [fileNameToItemPath $backupFilesTreeWidget "" $directoryName]
+          openCloseBackupDirectory $directoryItemPath
         }
 
         # set state of entry to "included"
-        if {[$fileTreeWidget info exists $itemPath]} \
+        if {[$backupFilesTreeWidget info exists $itemPath]} \
         {
-          setEntryState $itemPath "INCLUDED"
+          setEntryState $backupFilesTreeWidget $itemPath 0 "INCLUDED"
         }
       }
       continue
@@ -2135,7 +2847,9 @@ puts "unknown $line"
 
   if {$guiMode} \
   {
-    updateFileTreeStates
+#    backupUpdateFileTreeStates
+    updateFileTreeStates $backupFilesTreeWidget 0
+    updateFileTreeStates $restoreFilesTreeWidget 1
   }
 
   set barConfigFileName $configFileName
@@ -2153,7 +2867,7 @@ puts "unknown $line"
 
 proc saveBARConfig { configFileName } \
 {
-  global includedListWidget excludedListWidget tk_strictMotif barConfigFileName barConfig errorInfo
+  global backupIncludedListWidget backupExcludedListWidget tk_strictMotif barConfigFileName barConfig errorInfo
 
   # get file name
   if {$configFileName == ""} \
@@ -2178,21 +2892,24 @@ proc saveBARConfig { configFileName } \
 
   # write file
   puts $handle "name = [escapeString $barConfig(name)]"
-  if     {$barConfig(storageType) == "FILESYSTEM"} \
+  switch $barConfig(storageType) \
   {
-    puts $handle "archive-filename = [escapeString $barConfig(storageFileName)]"
-  } \
-  elseif {$barConfig(storageType) == "SCP"} \
-  {
-    puts $handle "archive-filename = [escapeString scp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)]"
-  } \
-  elseif {$barConfig(storageType) == "SFTP"} \
-  {
-    puts $handle "archive-filename = [escapeString sftp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)]"
-  } \
-  else \
-  {
-    internalError "unknown storage type '$barConfig(storageType)'"
+    "FILESYSTEM" \
+    {
+      puts $handle "archive-filename = [escapeString $barConfig(storageFileName)]"
+    }
+    "SCP" \
+    {
+      puts $handle "archive-filename = [escapeString scp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)]"
+    }
+    "SFTP" \
+    {
+      puts $handle "archive-filename = [escapeString sftp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)]"
+    }
+    default \
+    {
+      internalError "unknown storage type '$barConfig(storageType)'"
+    }
   }
   if {$barConfig(archivePartSizeFlag)} \
   {
@@ -2211,11 +2928,11 @@ proc saveBARConfig { configFileName } \
   puts $handle "ssh-privat-key = $barConfig(sshPrivatKeyFileName)"
   puts $handle "compress-algorithm = [escapeString $barConfig(compressAlgorithm)]"
   puts $handle "crypt-algorithm = [escapeString $barConfig(cryptAlgorithm)]"
-  foreach pattern [$includedListWidget get 0 end] \
+  foreach pattern [$backupIncludedListWidget get 0 end] \
   {
     puts $handle "include = [escapeString $pattern]"
   }
-  foreach pattern [$excludedListWidget get 0 end] \
+  foreach pattern [$backupExcludedListWidget get 0 end] \
   {
     puts $handle "exclude = [escapeString $pattern]"
   }
@@ -2253,7 +2970,7 @@ proc quit { } \
     }
   }
 
-  Server:disconnect
+  BackupServer:disconnect
 
   destroy .
 }
@@ -2269,7 +2986,7 @@ proc quit { } \
 
 proc addIncludedPattern { pattern } \
 {
-  global barConfig
+  global barConfig backupFilesTreeWidget restoreFilesTreeWidget
 
   if {$pattern == ""} \
   {
@@ -2326,7 +3043,9 @@ proc addIncludedPattern { pattern } \
 
   # add
   lappend barConfig(included) $pattern; set barConfig(included) [lsort -uniq $barConfig(included)]
-  updateFileTreeStates
+#  backupUpdateFileTreeStates
+  updateFileTreeStates $backupFilesTreeWidget 0
+  updateFileTreeStates $restoreFilesTreeWidget 1
   setConfigModify
 }
 
@@ -2341,13 +3060,15 @@ proc addIncludedPattern { pattern } \
 
 proc remIncludedPattern { pattern } \
 {
-  global barConfig
+  global barConfig backupFilesTreeWidget restoreFilesTreeWidget
 
   set index [lsearch -sorted -exact $barConfig(included) $pattern]
   if {$index >= 0} \
   {
     set barConfig(included) [lreplace $barConfig(included) $index $index]
-    updateFileTreeStates
+#    backupUpdateFileTreeStates
+    updateFileTreeStates $backupFilesTreeWidget 0
+    updateFileTreeStates $restoreFilesTreeWidget 1
     setConfigModify
   }
 }
@@ -2363,7 +3084,7 @@ proc remIncludedPattern { pattern } \
 
 proc addExcludedPattern { pattern } \
 {
-  global barConfig
+  global barConfig backupFilesTreeWidget restoreFilesTreeWidget
 
   if {$pattern == ""} \
   {
@@ -2420,7 +3141,9 @@ proc addExcludedPattern { pattern } \
 
   # add
   lappend barConfig(excluded) $pattern; set barConfig(excluded) [lsort -uniq $barConfig(excluded)]
-  updateFileTreeStates
+#  backupUpdateFileTreeStates
+  updateFileTreeStates $backupFilesTreeWidget 0
+  updateFileTreeStates $restoreFilesTreeWidget 1
   setConfigModify
 }
 
@@ -2435,13 +3158,15 @@ proc addExcludedPattern { pattern } \
 
 proc remExcludedPattern { pattern } \
 {
-  global barConfig
+  global barConfig backupFilesTreeWidget restoreFilesTreeWidget
 
   set index [lsearch -sorted -exact $barConfig(excluded) $pattern]
   if {$index >= 0} \
   {
     set barConfig(excluded) [lreplace $barConfig(excluded) $index $index]
-    updateFileTreeStates
+#    backupUpdateFileTreeStates
+    updateFileTreeStates $backupFilesTreeWidget 0
+    updateFileTreeStates $restoreFilesTreeWidget 1
     setConfigModify
   }
 }
@@ -2457,14 +3182,37 @@ proc remExcludedPattern { pattern } \
 
 proc addBackupJob { jobListWidget } \
 {
-  global includedListWidget excludedListWidget barConfig currentJob guiMode
+  global backupIncludedListWidget backupExcludedListWidget barConfig currentJob guiMode
 
   set errorCode 0
 
-  # new job
-  Server:executeCommand errorCode errorText "NEW_JOB" $barConfig(name)
+  # clear settings
+  BackupServer:executeCommand errorCode errorText "CLEAR"
 
-  # set archive file name
+  # add included directories/files
+  foreach pattern $barConfig(included) \
+  {
+    BackupServer:executeCommand errorCode errorText "ADD_INCLUDE_PATTERN" "GLOB" [escapeString $pattern]
+  }
+
+  # add excluded directories/files
+  foreach pattern $barConfig(excluded) \
+  {
+    BackupServer:executeCommand errorCode errorText "ADD_EXCLUDE_PATTERN" "GLOB" [escapeString $pattern]
+  }
+
+  # set other parameters
+  BackupServer:executeCommand errorCode errorText "SET" "archive-part-size"       $barConfig(archivePartSize)
+  BackupServer:executeCommand errorCode errorText "SET" "max-tmp-size"            $barConfig(maxTmpSize)
+  BackupServer:executeCommand errorCode errorText "SET" "max-band-width"          $barConfig(maxBandWidth)
+  BackupServer:executeCommand errorCode errorText "SET" "ssh-port"                $barConfig(sshPort)
+  BackupServer:executeCommand errorCode errorText "SET" "compress-algorithm"      $barConfig(compressAlgorithm)
+  BackupServer:executeCommand errorCode errorText "SET" "crypt-algorithm"         $barConfig(cryptAlgorithm)
+  BackupServer:executeCommand errorCode errorText "SET" "skip-unreadable"         $barConfig(skipUnreadable)
+  BackupServer:executeCommand errorCode errorText "SET" "overwrite-archive-files" $barConfig(overwriteArchiveFiles)
+  BackupServer:executeCommand errorCode errorText "SET" "overwrite-files"         $barConfig(overwriteFiles)
+
+  # add jobs archive file name
   if     {$barConfig(storageType) == "FILESYSTEM"} \
   {
     set archiveFileName $barConfig(storageFileName)
@@ -2481,34 +3229,9 @@ proc addBackupJob { jobListWidget } \
   {
     internalError "unknown storage type '$barConfig(storageType)'"
   }
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "archive-file" $archiveFileName
-
-  # add included directories/files
-  foreach pattern $barConfig(included) \
-  {
-    Server:executeCommand errorCode errorText "ADD_INCLUDE_PATTERN" [escapeString $pattern]
-  }
-
-  # add excluded directories/files
-  foreach pattern $barConfig(excluded) \
-  {
-    Server:executeCommand errorCode errorText "ADD_EXCLUDE_PATTERN" [escapeString $pattern]
-  }
-
-  # set other parameters
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "archive-part-size"       $barConfig(archivePartSize)
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "max-tmp-size"            $barConfig(maxTmpSize)
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "max-band-width"          $barConfig(maxBandWidth)
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "ssh-port"                $barConfig(sshPort)
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "compress-algorithm"      $barConfig(compressAlgorithm)
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "crypt-algorithm"         $barConfig(cryptAlgorithm)
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "skip-unreadable"         $barConfig(skipUnreadable)
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "overwrite-archive-files" $barConfig(overwriteArchiveFiles)
-  Server:executeCommand errorCode errorText "SET_CONFIG_VALUE" "overwrite-files"         $barConfig(overwriteFiles)
-
   if {$errorCode == 0} \
   {
-    if {![Server:executeCommand errorCode errorText "ADD_JOB"]} \
+    if {![BackupServer:executeCommand errorCode errorText "ADD_JOB" [escapeString $barConfig(name)] [escapeString $archiveFileName]]} \
     {
       Dialog:error "Error adding new job: $errorText"
     }
@@ -2537,7 +3260,7 @@ proc addBackupJob { jobListWidget } \
 proc remJob { jobListWidget id } \
 {
   set errorCode 0
-  Server:executeCommand errorCode errorText "REM_JOB" $id
+  BackupServer:executeCommand errorCode errorText "REM_JOB" $id
 
   updateJobList $jobListWidget
 }
@@ -2557,7 +3280,7 @@ proc abortJob { jobListWidget id } \
   global guiMode
 
   set errorCode 0
-  Server:executeCommand errorCode errorText "ABORT_JOB" $id
+  BackupServer:executeCommand errorCode errorText "ABORT_JOB" $id
 
   if {$guiMode} \
   {
@@ -2703,7 +3426,7 @@ while {$z<[llength $argv]} \
       printError "Unknown option '[lindex $argv $z]'!"
       exit 1
     }
-    default
+    default \
     {
       set configName [lindex $argv $z]
     }
@@ -2731,7 +3454,7 @@ if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]
     printError "Cannot initialise TLS/SSL system"
     exit 1
   }
-  if {![Server:connect $barControlConfig(serverHostName) $barControlConfig(serverTLSPort) $barControlConfig(serverPassword) 1]} \
+  if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverTLSPort) $barControlConfig(serverPassword) 1]} \
   {
     printError "Cannot connect to TLS/SSL server '$barControlConfig(serverHostName):$barControlConfig(serverTLSPort)'!"
     exit 1
@@ -2740,7 +3463,7 @@ if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]
 elseif {$barControlConfig(serverPort) != 0} \
 {
   if {$port == 0} { set port $DEFAULT_PORT }
-  if {![Server:connect $barControlConfig(serverHostName) $barControlConfig(serverPort) $barControlConfig(serverPassword) 0]} \
+  if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverPort) $barControlConfig(serverPassword) 0]} \
   {
     printError "Cannot connect to server '$barControlConfig(serverHostName):$barControlConfig(serverPort)'!"
     exit 1
@@ -2760,8 +3483,8 @@ if {$listFlag} \
   set s [format $formatString "Id" "Name" "State" "Part size" "Compress" "Crypt" "Started" "Estimate time"]
   puts $s
   puts [string repeat "-" [string length $s]]
-  set commandId [Server:sendCommand "JOB_LIST"]
-  while {[Server:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
+  set commandId [BackupServer:sendCommand "JOB_LIST"]
+  while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
   {
     scanx $result "%d %S %s %d %S %S %d %d" \
       id \
@@ -2831,9 +3554,9 @@ frame $mainWindow.menu -relief raised -bd 2
 
 #  menubutton $mainWindow.menu.edit -text "Edit" -menu $mainWindow.menu.edit.items -underline 0
 #  menu $mainWindow.menu.edit.items
-#  $mainWindow.menu.edit.items add command -label "None"    -accelerator "*" -command "event generate . <<Event_stateNone>>"
-#  $mainWindow.menu.edit.items add command -label "Include" -accelerator "+" -command "event generate . <<Event_stateIncluded>>"
-#  $mainWindow.menu.edit.items add command -label "Exclude" -accelerator "-" -command "event generate . <<Event_stateExcluded>>"
+#  $mainWindow.menu.edit.items add command -label "None"    -accelerator "*" -command "event generate . <<Event_backupStateNone>>"
+#  $mainWindow.menu.edit.items add command -label "Include" -accelerator "+" -command "event generate . <<Event_backupStateIncluded>>"
+#  $mainWindow.menu.edit.items add command -label "Exclude" -accelerator "-" -command "event generate . <<Event_backupStateExcluded>>"
 #  pack $mainWindow.menu.edit -side left
 pack $mainWindow.menu -side top -fill x
 
@@ -2844,6 +3567,8 @@ tixNoteBook $mainWindow.tabs
   $mainWindow.tabs add restore       -label "Restore (F3)" -underline -1
   $mainWindow.tabs add compressCrypt -label "Compress & crypt (F4)" -underline -1
 pack $mainWindow.tabs -fill both -expand yes -padx 2p -pady 2p
+
+# ----------------------------------------------------------------------
 
 frame .jobs
   labelframe .jobs.selected -text "Selected"
@@ -3114,6 +3839,8 @@ frame .jobs
   grid columnconfigure .jobs { 0 } -weight 1
 pack .jobs -side top -fill both -expand yes -in [$mainWindow.tabs subwidget jobs]
 
+# ----------------------------------------------------------------------
+
 frame .backup
   label .backup.nameTitle -text "Name:"
   grid .backup.nameTitle -row 0 -column 0 -sticky "w"
@@ -3121,9 +3848,9 @@ frame .backup
   grid .backup.name -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
 
   tixNoteBook .backup.tabs
-    .backup.tabs add files         -label "Files"            -underline -1 -raisecmd { focus .backup.files.list }
-    .backup.tabs add filters       -label "Filters"          -underline -1 -raisecmd { focus .backup.filters.included }
-    .backup.tabs add storage       -label "Storage"          -underline -1
+    .backup.tabs add files   -label "Files"   -underline -1 -raisecmd { focus .backup.files.list }
+    .backup.tabs add filters -label "Filters" -underline -1 -raisecmd { focus .backup.filters.included }
+    .backup.tabs add storage -label "Storage" -underline -1
   #  $mainWindow.tabs add misc          -label "Misc"             -underline -1
   grid .backup.tabs -row 1 -column 0 -columnspan 2 -sticky "nswe" -padx 2p -pady 2p
 
@@ -3145,7 +3872,7 @@ frame .backup
     .backup.files.list subwidget hlist header create 3 -itemtype text -text "Modified"
     .backup.files.list subwidget hlist column width 3 -char 15
     grid .backup.files.list -row 0 -column 0 -sticky "nswe" -padx 2p -pady 2p
-    set fileTreeWidget [.backup.files.list subwidget hlist]
+    set backupFilesTreeWidget [.backup.files.list subwidget hlist]
 
     tixPopupMenu .backup.files.list.popup -title "Command"
     .backup.files.list.popup subwidget menu add command -label "Add include"                            -command ""
@@ -3157,7 +3884,7 @@ frame .backup
     .backup.files.list.popup subwidget menu add command -label "Remove include pattern" -state disabled -command ""
     .backup.files.list.popup subwidget menu add command -label "Remove exclude pattern" -state disabled -command ""
 
-    proc filesPopupHandler { widget x y } \
+    proc backupFilesPopupHandler { widget x y } \
     {
       set fileName [$widget nearest $y]
       set extension ""
@@ -3185,22 +3912,22 @@ frame .backup
     }
 
     frame .backup.files.buttons
-      button .backup.files.buttons.stateNone -text "*" -command "event generate . <<Event_stateNone>>"
+      button .backup.files.buttons.stateNone -text "*" -command "event generate . <<Event_backupStateNone>>"
       pack .backup.files.buttons.stateNone -side left -fill x -expand yes
-      button .backup.files.buttons.stateIncluded -text "+" -command "event generate . <<Event_stateIncluded>>"
+      button .backup.files.buttons.stateIncluded -text "+" -command "event generate . <<Event_backupStateIncluded>>"
       pack .backup.files.buttons.stateIncluded -side left -fill x -expand yes
-      button .backup.files.buttons.stateExcluded -text "-" -command "event generate . <<Event_stateExcluded>>"
+      button .backup.files.buttons.stateExcluded -text "-" -command "event generate . <<Event_backupStateExcluded>>"
       pack .backup.files.buttons.stateExcluded -side left -fill x -expand yes
     grid .backup.files.buttons -row 1 -column 0 -sticky "we" -padx 2p -pady 2p
 
-    bind [.backup.files.list subwidget hlist] <Button-3>    "filesPopupHandler %W %x %y"
-    bind [.backup.files.list subwidget hlist] <BackSpace>   "event generate . <<Event_stateNone>>"
-    bind [.backup.files.list subwidget hlist] <Delete>      "event generate . <<Event_stateNone>>"
-    bind [.backup.files.list subwidget hlist] <plus>        "event generate . <<Event_stateIncluded>>"
-    bind [.backup.files.list subwidget hlist] <KP_Add>      "event generate . <<Event_stateIncluded>>"
-    bind [.backup.files.list subwidget hlist] <minus>       "event generate . <<Event_stateExcluded>>"
-    bind [.backup.files.list subwidget hlist] <KP_Subtract> "event generate . <<Event_stateExcluded>>"
-    bind [.backup.files.list subwidget hlist] <space>       "event generate . <<Event_toggleStateNoneIncludedExcluded>>"
+    bind [.backup.files.list subwidget hlist] <Button-3>    "backupFilesPopupHandler %W %x %y"
+    bind [.backup.files.list subwidget hlist] <BackSpace>   "event generate . <<Event_backupStateNone>>"
+    bind [.backup.files.list subwidget hlist] <Delete>      "event generate . <<Event_backupStateNone>>"
+    bind [.backup.files.list subwidget hlist] <plus>        "event generate . <<Event_backupStateIncluded>>"
+    bind [.backup.files.list subwidget hlist] <KP_Add>      "event generate . <<Event_backupStateIncluded>>"
+    bind [.backup.files.list subwidget hlist] <minus>       "event generate . <<Event_backupStateExcluded>>"
+    bind [.backup.files.list subwidget hlist] <KP_Subtract> "event generate . <<Event_backupStateExcluded>>"
+    bind [.backup.files.list subwidget hlist] <space>       "event generate . <<Event_backupToggleStateNoneIncludedExcluded>>"
 
     # fix a bug in tix: end does not use separator-char to detect last entry
     bind [.backup.files.list subwidget hlist] <KeyPress-End> \
@@ -3232,38 +3959,38 @@ frame .backup
     tixScrolledListBox .backup.filters.included -height 1 -scrollbar both -options { listbox.background white  }
     grid .backup.filters.included -row 0 -column 1 -sticky "nswe" -padx 2p -pady 2p
     .backup.filters.included subwidget listbox configure -listvariable barConfig(included) -selectmode extended
-    set includedListWidget [.backup.filters.included subwidget listbox]
+    set backupIncludedListWidget [.backup.filters.included subwidget listbox]
 
     bind [.backup.filters.included subwidget listbox] <Button-1> ".backup.filters.includedButtons.rem configure -state normal"
 
     frame .backup.filters.includedButtons
-      button .backup.filters.includedButtons.add -text "Add (F5)" -command "event generate . <<Event_addIncludePattern>>"
+      button .backup.filters.includedButtons.add -text "Add (F5)" -command "event generate . <<Event_backupAddIncludePattern>>"
       pack .backup.filters.includedButtons.add -side left
-      button .backup.filters.includedButtons.rem -text "Rem (F6)" -state disabled -command "event generate . <<Event_remIncludePattern>>"
+      button .backup.filters.includedButtons.rem -text "Rem (F6)" -state disabled -command "event generate . <<Event_backupRemIncludePattern>>"
       pack .backup.filters.includedButtons.rem -side left
     grid .backup.filters.includedButtons -row 1 -column 1 -sticky "we" -padx 2p -pady 2p
 
-    bind [.backup.filters.included subwidget listbox] <Insert> "event generate . <<Event_addIncludePattern>>"
-    bind [.backup.filters.included subwidget listbox] <Delete> "event generate . <<Event_remIncludePattern>>"
+    bind [.backup.filters.included subwidget listbox] <Insert> "event generate . <<Event_backupAddIncludePattern>>"
+    bind [.backup.filters.included subwidget listbox] <Delete> "event generate . <<Event_backupRemIncludePattern>>"
 
     label .backup.filters.excludedTitle -text "Excluded:"
     grid .backup.filters.excludedTitle -row 2 -column 0 -sticky "nw"
     tixScrolledListBox .backup.filters.excluded -height 1 -scrollbar both -options { listbox.background white }
     grid .backup.filters.excluded -row 2 -column 1 -sticky "nswe" -padx 2p -pady 2p
     .backup.filters.excluded subwidget listbox configure -listvariable barConfig(excluded) -selectmode extended
-    set excludedListWidget [.backup.filters.excluded subwidget listbox]
+    set backupExcludedListWidget [.backup.filters.excluded subwidget listbox]
 
     bind [.backup.filters.excluded subwidget listbox] <Button-1> ".backup.filters.excludedButtons.rem configure -state normal"
 
     frame .backup.filters.excludedButtons
-      button .backup.filters.excludedButtons.add -text "Add (F7)" -command "event generate . <<Event_addExcludePattern>>"
+      button .backup.filters.excludedButtons.add -text "Add (F7)" -command "event generate . <<Event_backupAddExcludePattern>>"
       pack .backup.filters.excludedButtons.add -side left
-      button .backup.filters.excludedButtons.rem -text "Rem (F8)" -state disabled -command "event generate . <<Event_remExcludePattern>>"
+      button .backup.filters.excludedButtons.rem -text "Rem (F8)" -state disabled -command "event generate . <<Event_backupRePattern>>"
       pack .backup.filters.excludedButtons.rem -side left
     grid .backup.filters.excludedButtons -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
 
-    bind [.backup.filters.excluded subwidget listbox] <Insert> "event generate . <<Event_addExcludePattern>>"
-    bind [.backup.filters.excluded subwidget listbox] <Delete> "event generate . <<Event_remExcludePattern>>"
+    bind [.backup.filters.excluded subwidget listbox] <Insert> "event generate . <<Event_backupAddExcludePattern>>"
+    bind [.backup.filters.excluded subwidget listbox] <Delete> "event generate . <<Event_backupRemExcludePattern>>"
 
     label .backup.filters.optionsTitle -text "Options:"
     grid .backup.filters.optionsTitle -row 4 -column 0 -sticky "nw" 
@@ -3347,113 +4074,113 @@ frame .backup
     checkbutton .backup.storage.optionOverwriteArchiveFiles -text "overwrite archive files" -variable barConfig(overwriteArchiveFiles)
     grid .backup.storage.optionOverwriteArchiveFiles -row 3 -column 1 -sticky "w" 
 
-    label .backup.storage.destintationTitle -text "Destination:"
-    grid .backup.storage.destintationTitle -row 4 -column 0 -sticky "nw" 
-    frame .backup.storage.destintation
-      frame .backup.storage.destintation.type0
-        radiobutton .backup.storage.destintation.type0.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
-        grid .backup.storage.destintation.type0.fileSystem -row 0 -column 0 -sticky "nw" 
+    label .backup.storage.destinationTitle -text "Destination:"
+    grid .backup.storage.destinationTitle -row 4 -column 0 -sticky "nw" 
+    frame .backup.storage.destination
+      frame .backup.storage.destination.type0
+        radiobutton .backup.storage.destination.type0.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
+        grid .backup.storage.destination.type0.fileSystem -row 0 -column 0 -sticky "nw" 
 
-        grid rowconfigure    .backup.storage.destintation.type0 { 0 } -weight 1
-        grid columnconfigure .backup.storage.destintation.type0 { 1 } -weight 1
-      grid .backup.storage.destintation.type0 -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
-      labelframe .backup.storage.destintation.fileSystem
-        label .backup.storage.destintation.fileSystem.fileNameTitle -text "File name:"
-        grid .backup.storage.destintation.fileSystem.fileNameTitle -row 0 -column 0 -sticky "w" 
-        entry .backup.storage.destintation.fileSystem.fileName -textvariable barConfig(storageFileName) -bg white
-        grid .backup.storage.destintation.fileSystem.fileName -row 0 -column 1 -sticky "we" 
+        grid rowconfigure    .backup.storage.destination.type0 { 0 } -weight 1
+        grid columnconfigure .backup.storage.destination.type0 { 1 } -weight 1
+      grid .backup.storage.destination.type0 -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+      labelframe .backup.storage.destination.fileSystem
+        label .backup.storage.destination.fileSystem.fileNameTitle -text "File name:"
+        grid .backup.storage.destination.fileSystem.fileNameTitle -row 0 -column 0 -sticky "w" 
+        entry .backup.storage.destination.fileSystem.fileName -textvariable barConfig(storageFileName) -bg white
+        grid .backup.storage.destination.fileSystem.fileName -row 0 -column 1 -sticky "we" 
 
-        grid rowconfigure    .backup.storage.destintation.fileSystem { 0 } -weight 1
-        grid columnconfigure .backup.storage.destintation.fileSystem { 1 } -weight 1
-      grid .backup.storage.destintation.fileSystem -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .backup.storage.destintation.fileSystem.fileNameTitle
-      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .backup.storage.destintation.fileSystem.fileName
+        grid rowconfigure    .backup.storage.destination.fileSystem { 0 } -weight 1
+        grid columnconfigure .backup.storage.destination.fileSystem { 1 } -weight 1
+      grid .backup.storage.destination.fileSystem -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .backup.storage.destination.fileSystem.fileNameTitle
+      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .backup.storage.destination.fileSystem.fileName
 
-      frame .backup.storage.destintation.type1
-        radiobutton .backup.storage.destintation.type1.scp -text "scp" -variable barConfig(storageType) -value "SCP"
-        grid .backup.storage.destintation.type1.scp -row 0 -column 0 -sticky "w" 
-        radiobutton .backup.storage.destintation.type1.sftp -text "sftp" -variable barConfig(storageType) -value "SFTP"
-        grid .backup.storage.destintation.type1.sftp -row 0 -column 1 -sticky "w" 
+      frame .backup.storage.destination.type1
+        radiobutton .backup.storage.destination.type1.ssh -text "scp" -variable barConfig(storageType) -value "SCP"
+        grid .backup.storage.destination.type1.ssh -row 0 -column 0 -sticky "w" 
+        radiobutton .backup.storage.destination.type1.sftp -text "sftp" -variable barConfig(storageType) -value "SFTP"
+        grid .backup.storage.destination.type1.sftp -row 0 -column 1 -sticky "w" 
 
-        grid rowconfigure    .backup.storage.destintation.type1 { 0 } -weight 1
-        grid columnconfigure .backup.storage.destintation.type1 { 2 } -weight 1
-      grid .backup.storage.destintation.type1 -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
-      labelframe .backup.storage.destintation.scp
-        label .backup.storage.destintation.scp.fileNameTitle -text "File name:"
-        grid .backup.storage.destintation.scp.fileNameTitle -row 0 -column 0 -sticky "w" 
-        entry .backup.storage.destintation.scp.fileName -textvariable barConfig(storageFileName) -bg white
-        grid .backup.storage.destintation.scp.fileName -row 0 -column 1 -columnspan 5 -sticky "we" 
+        grid rowconfigure    .backup.storage.destination.type1 { 0 } -weight 1
+        grid columnconfigure .backup.storage.destination.type1 { 2 } -weight 1
+      grid .backup.storage.destination.type1 -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
+      labelframe .backup.storage.destination.ssh
+        label .backup.storage.destination.ssh.fileNameTitle -text "File name:"
+        grid .backup.storage.destination.ssh.fileNameTitle -row 0 -column 0 -sticky "w" 
+        entry .backup.storage.destination.ssh.fileName -textvariable barConfig(storageFileName) -bg white
+        grid .backup.storage.destination.ssh.fileName -row 0 -column 1 -columnspan 5 -sticky "we" 
 
-        label .backup.storage.destintation.scp.loginNameTitle -text "Login:" -state disabled
-        grid .backup.storage.destintation.scp.loginNameTitle -row 1 -column 0 -sticky "w" 
-        entry .backup.storage.destintation.scp.loginName -textvariable barConfig(storageLoginName) -bg white -state disabled
-        grid .backup.storage.destintation.scp.loginName -row 1 -column 1 -sticky "we" 
+        label .backup.storage.destination.ssh.loginNameTitle -text "Login:" -state disabled
+        grid .backup.storage.destination.ssh.loginNameTitle -row 1 -column 0 -sticky "w" 
+        entry .backup.storage.destination.ssh.loginName -textvariable barConfig(storageLoginName) -bg white -state disabled
+        grid .backup.storage.destination.ssh.loginName -row 1 -column 1 -sticky "we" 
 
-    #    label .backup.storage.destintation.scp.loginPasswordTitle -text "Password:" -state disabled
-    #    grid .backup.storage.destintation.scp.loginPasswordTitle -row 0 -column 2 -sticky "w" 
-    #    entry .backup.storage.destintation.scp.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
-    #    grid .backup.storage.destintation.scp.loginPassword -row 0 -column 3 -sticky "we" 
+    #    label .backup.storage.destination.ssh.loginPasswordTitle -text "Password:" -state disabled
+    #    grid .backup.storage.destination.ssh.loginPasswordTitle -row 0 -column 2 -sticky "w" 
+    #    entry .backup.storage.destination.ssh.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
+    #    grid .backup.storage.destination.ssh.loginPassword -row 0 -column 3 -sticky "we" 
 
-        label .backup.storage.destintation.scp.hostNameTitle -text "Host:" -state disabled
-        grid .backup.storage.destintation.scp.hostNameTitle -row 1 -column 2 -sticky "w" 
-        entry .backup.storage.destintation.scp.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
-        grid .backup.storage.destintation.scp.hostName -row 1 -column 3 -sticky "we" 
+        label .backup.storage.destination.ssh.hostNameTitle -text "Host:" -state disabled
+        grid .backup.storage.destination.ssh.hostNameTitle -row 1 -column 2 -sticky "w" 
+        entry .backup.storage.destination.ssh.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
+        grid .backup.storage.destination.ssh.hostName -row 1 -column 3 -sticky "we" 
 
-        label .backup.storage.destintation.scp.sshPortTitle -text "SSH port:" -state disabled
-        grid .backup.storage.destintation.scp.sshPortTitle -row 1 -column 4 -sticky "w" 
-        tixControl .backup.storage.destintation.scp.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 1 -max 65535 -options { entry.background white } -state disabled
-        grid .backup.storage.destintation.scp.sshPort -row 1 -column 5 -sticky "we" 
+        label .backup.storage.destination.ssh.sshPortTitle -text "SSH port:" -state disabled
+        grid .backup.storage.destination.ssh.sshPortTitle -row 1 -column 4 -sticky "w" 
+        tixControl .backup.storage.destination.ssh.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 1 -max 65535 -options { entry.background white } -state disabled
+        grid .backup.storage.destination.ssh.sshPort -row 1 -column 5 -sticky "we" 
 
-        label .backup.storage.destintation.scp.sshPublicKeyFileNameTitle -text "SSH public key:" -state disabled
-        grid .backup.storage.destintation.scp.sshPublicKeyFileNameTitle -row 2 -column 0 -sticky "w" 
-        entry .backup.storage.destintation.scp.sshPublicKeyFileName -textvariable barConfig(sshPublicKeyFileName) -bg white -state disabled
-        grid .backup.storage.destintation.scp.sshPublicKeyFileName -row 2 -column 1 -columnspan 5 -sticky "we" 
+        label .backup.storage.destination.ssh.sshPublicKeyFileNameTitle -text "SSH public key:" -state disabled
+        grid .backup.storage.destination.ssh.sshPublicKeyFileNameTitle -row 2 -column 0 -sticky "w" 
+        entry .backup.storage.destination.ssh.sshPublicKeyFileName -textvariable barConfig(sshPublicKeyFileName) -bg white -state disabled
+        grid .backup.storage.destination.ssh.sshPublicKeyFileName -row 2 -column 1 -columnspan 5 -sticky "we" 
 
-        label .backup.storage.destintation.scp.sshPrivatKeyFileNameTitle -text "SSH privat key:" -state disabled
-        grid .backup.storage.destintation.scp.sshPrivatKeyFileNameTitle -row 3 -column 0 -sticky "w" 
-        entry .backup.storage.destintation.scp.sshPrivatKeyFileName -textvariable barConfig(sshPrivatKeyFileName) -bg white -state disabled
-        grid .backup.storage.destintation.scp.sshPrivatKeyFileName -row 3 -column 1 -columnspan 5 -sticky "we" 
+        label .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle -text "SSH privat key:" -state disabled
+        grid .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle -row 3 -column 0 -sticky "w" 
+        entry .backup.storage.destination.ssh.sshPrivatKeyFileName -textvariable barConfig(sshPrivatKeyFileName) -bg white -state disabled
+        grid .backup.storage.destination.ssh.sshPrivatKeyFileName -row 3 -column 1 -columnspan 5 -sticky "we" 
 
-  #      grid rowconfigure    .backup.storage.destintation.scp { } -weight 1
-        grid columnconfigure .backup.storage.destintation.scp { 1 3 5 } -weight 1
-      grid .backup.storage.destintation.scp -row 3 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.fileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.fileName
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.loginNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.loginName
-    #  addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.loginPasswordTitle
-    #  addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.loginPassword
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.hostNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.hostName
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPortTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPort
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPublicKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPublicKeyFileName
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPrivatKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destintation.scp.sshPrivatKeyFileName
+  #      grid rowconfigure    .backup.storage.destination.ssh { } -weight 1
+        grid columnconfigure .backup.storage.destination.ssh { 1 3 5 } -weight 1
+      grid .backup.storage.destination.ssh -row 3 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.fileNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.fileName
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginName
+    #  addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginPasswordTitle
+    #  addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginPassword
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.hostNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.hostName
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPortTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPort
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPublicKeyFileNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPublicKeyFileName
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPrivatKeyFileName
 
-      frame .backup.storage.destintation.type2
-        radiobutton .backup.storage.destintation.type2.fileSystem -text "DVD" -variable barConfig(storageType) -value "DVD"
-        grid .backup.storage.destintation.type2.fileSystem -row 0 -column 0 -sticky "nw" 
+      frame .backup.storage.destination.type2
+        radiobutton .backup.storage.destination.type2.fileSystem -text "DVD" -variable barConfig(storageType) -value "DVD"
+        grid .backup.storage.destination.type2.fileSystem -row 0 -column 0 -sticky "nw" 
 
-        grid rowconfigure    .backup.storage.destintation.type2 { 0 } -weight 1
-        grid columnconfigure .backup.storage.destintation.type2 { 1 } -weight 1
-      grid .backup.storage.destintation.type2 -row 4 -column 0 -sticky "we" -padx 2p -pady 2p
-      labelframe .backup.storage.destintation.dvd
-        label .backup.storage.destintation.dvd.deviceNameTitle -text "Device name:"
-        grid .backup.storage.destintation.dvd.deviceNameTitle -row 0 -column 0 -sticky "w" 
-        entry .backup.storage.destintation.dvd.deviceName -textvariable barConfig(storageFileName) -bg white
-        grid .backup.storage.destintation.dvd.deviceName -row 0 -column 1 -sticky "we" 
+        grid rowconfigure    .backup.storage.destination.type2 { 0 } -weight 1
+        grid columnconfigure .backup.storage.destination.type2 { 1 } -weight 1
+      grid .backup.storage.destination.type2 -row 4 -column 0 -sticky "we" -padx 2p -pady 2p
+      labelframe .backup.storage.destination.dvd
+        label .backup.storage.destination.dvd.deviceNameTitle -text "Device name:"
+        grid .backup.storage.destination.dvd.deviceNameTitle -row 0 -column 0 -sticky "w" 
+        entry .backup.storage.destination.dvd.deviceName -textvariable barConfig(storageFileName) -bg white
+        grid .backup.storage.destination.dvd.deviceName -row 0 -column 1 -sticky "we" 
 
-        grid rowconfigure    .backup.storage.destintation.dvd { 0 } -weight 1
-        grid columnconfigure .backup.storage.destintation.dvd { 1 } -weight 1
-      grid .backup.storage.destintation.dvd -row 5 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destintation.dvd.deviceNameTitle
-      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destintation.dvd.deviceName
+        grid rowconfigure    .backup.storage.destination.dvd { 0 } -weight 1
+        grid columnconfigure .backup.storage.destination.dvd { 1 } -weight 1
+      grid .backup.storage.destination.dvd -row 5 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destination.dvd.deviceNameTitle
+      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destination.dvd.deviceName
 
-      grid rowconfigure    .backup.storage.destintation { 0 } -weight 1
-      grid columnconfigure .backup.storage.destintation { 0 } -weight 1
-    grid .backup.storage.destintation -row 4 -column 1 -sticky "we"
+      grid rowconfigure    .backup.storage.destination { 0 } -weight 1
+      grid columnconfigure .backup.storage.destination { 0 } -weight 1
+    grid .backup.storage.destination -row 4 -column 1 -sticky "we"
 
     grid rowconfigure    .backup.storage { 5 } -weight 1
     grid columnconfigure .backup.storage { 1 } -weight 1
@@ -3482,6 +4209,8 @@ pack .backup -side top -fill both -expand yes -in [$mainWindow.tabs subwidget ba
 #  grid columnconfigure .misc { 2 } -weight 1
 #pack .misc -side top -fill both -expand yes -in [$mainWindow.tabs subwidget misc]
 
+# ----------------------------------------------------------------------
+
 frame .restore
   label .restore.nameTitle -text "Name:"
   grid .restore.nameTitle -row 0 -column 0 -sticky "w"
@@ -3489,10 +4218,344 @@ frame .restore
   grid .restore.name -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
 
   tixNoteBook .restore.tabs
-    .restore.tabs add archives -label "Archives" -underline -1
-    .restore.tabs add files    -label "Files"    -underline -1
+    .restore.tabs add storage -label "Storage" -underline -1
+    .restore.tabs add files   -label "Files"   -underline -1 -raisecmd { focus .restore.files.list }
+    .restore.tabs add filters -label "Filters" -underline -1
   pack .restore.tabs -side top -fill both -expand yes
   grid .restore.tabs -row 1 -column 0 -columnspan 2 -sticky "nswe" -padx 2p -pady 2p
+
+  frame .restore.storage
+    label .restore.storage.sourceTitle -text "Storage:"
+    grid .restore.storage.sourceTitle -row 0 -column 0 -sticky "nw" 
+    frame .restore.storage.source
+      frame .restore.storage.source.type0
+        radiobutton .restore.storage.source.type0.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
+        grid .restore.storage.source.type0.fileSystem -row 0 -column 0 -sticky "nw" 
+
+        grid rowconfigure    .restore.storage.source.type0 { 0 } -weight 1
+        grid columnconfigure .restore.storage.source.type0 { 1 } -weight 1
+      grid .restore.storage.source.type0 -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+      labelframe .restore.storage.source.fileSystem
+        label .restore.storage.source.fileSystem.fileNameTitle -text "File name:"
+        grid .restore.storage.source.fileSystem.fileNameTitle -row 0 -column 0 -sticky "w" 
+        entry .restore.storage.source.fileSystem.fileName -textvariable barConfig(storageFileName) -bg white
+        grid .restore.storage.source.fileSystem.fileName -row 0 -column 1 -sticky "we"
+        button .restore.storage.source.fileSystem.selectDirectory -image $images(folder) -command \
+        "
+          set old_tk_strictMotif \$tk_strictMotif
+          set tk_strictMotif 0
+          set fileName \[tk_getOpenFile -title \"Select archive\" -initialfile \"\" -filetypes {{\"BAR archive\" \"*.bar\"} {\"all\" \"*\"}} -parent . -defaultextension \".bar\"\]
+          set tk_strictMotif \$old_tk_strictMotif
+          if {\$fileName != \"\"} \
+          {
+            set barConfig(storageFileName) \$fileName
+            newRestoreArchive
+          }
+        "
+        grid .restore.storage.source.fileSystem.selectDirectory -row 0 -column 2
+
+        grid rowconfigure    .restore.storage.source.fileSystem { 0 } -weight 1
+        grid columnconfigure .restore.storage.source.fileSystem { 1 } -weight 1
+      grid .restore.storage.source.fileSystem -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .restore.storage.source.fileSystem.fileNameTitle
+      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .restore.storage.source.fileSystem.fileName
+      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .restore.storage.source.fileSystem.selectDirectory
+
+      frame .restore.storage.source.type1
+        radiobutton .restore.storage.source.type1.ssh -text "ssh" -variable barConfig(storageType) -value "SSH"
+        grid .restore.storage.source.type1.ssh -row 0 -column 0 -sticky "w" 
+        radiobutton .restore.storage.source.type1.scp -text "scp" -variable barConfig(storageType) -value "SCP"
+        grid .restore.storage.source.type1.scp -row 0 -column 1 -sticky "w" 
+        radiobutton .restore.storage.source.type1.sftp -text "sftp" -variable barConfig(storageType) -value "SFTP"
+        grid .restore.storage.source.type1.sftp -row 0 -column 2 -sticky "w" 
+
+        grid rowconfigure    .restore.storage.source.type1 { 0 } -weight 1
+        grid columnconfigure .restore.storage.source.type1 { 3 } -weight 1
+      grid .restore.storage.source.type1 -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
+      labelframe .restore.storage.source.ssh
+        label .restore.storage.source.ssh.fileNameTitle -text "Directory name:"
+        grid .restore.storage.source.ssh.fileNameTitle -row 0 -column 0 -sticky "w" 
+        entry .restore.storage.source.ssh.fileName -textvariable barConfig(storageFileName) -bg white
+        grid .restore.storage.source.ssh.fileName -row 0 -column 1 -columnspan 5 -sticky "we" 
+if {0} {
+        button .restore.storage.source.ssh.selectDirectory -image $images(folder) -command \
+        "
+          set old_tk_strictMotif \$tk_strictMotif
+          set tk_strictMotif 0
+          set fileName \[tk_chooseDirectory -title \"Select directory\" -initialdir \"\" -mustexist 1\]
+          set tk_strictMotif \$old_tk_strictMotif
+          if {\$fileName != \"\"} \
+          {
+            set barConfig(storagefileName) \$fileName
+            newRestoreArchive
+          }
+        "
+        grid .restore.storage.source.ssh.selectDirectory -row 0 -column 5
+}
+
+        label .restore.storage.source.ssh.loginNameTitle -text "Login:" -state disabled
+        grid .restore.storage.source.ssh.loginNameTitle -row 1 -column 0 -sticky "w" 
+        entry .restore.storage.source.ssh.loginName -textvariable barConfig(storageLoginName) -bg white -state disabled
+        grid .restore.storage.source.ssh.loginName -row 1 -column 1 -sticky "we" 
+
+    #    label .restore.storage.source.ssh.loginPasswordTitle -text "Password:" -state disabled
+    #    grid .restore.storage.source.ssh.loginPasswordTitle -row 0 -column 2 -sticky "w" 
+    #    entry .restore.storage.source.ssh.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
+    #    grid .restore.storage.source.ssh.loginPassword -row 0 -column 3 -sticky "we" 
+
+        label .restore.storage.source.ssh.hostNameTitle -text "Host:" -state disabled
+        grid .restore.storage.source.ssh.hostNameTitle -row 1 -column 2 -sticky "w" 
+        entry .restore.storage.source.ssh.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
+        grid .restore.storage.source.ssh.hostName -row 1 -column 3 -sticky "we" 
+
+        label .restore.storage.source.ssh.sshPortTitle -text "SSH port:" -state disabled
+        grid .restore.storage.source.ssh.sshPortTitle -row 1 -column 4 -sticky "w" 
+        tixControl .restore.storage.source.ssh.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 1 -max 65535 -options { entry.background white } -state disabled
+        grid .restore.storage.source.ssh.sshPort -row 1 -column 5 -sticky "we" 
+
+        label .restore.storage.source.ssh.sshPublicKeyFileNameTitle -text "SSH public key:" -state disabled
+        grid .restore.storage.source.ssh.sshPublicKeyFileNameTitle -row 2 -column 0 -sticky "w" 
+        entry .restore.storage.source.ssh.sshPublicKeyFileName -textvariable barConfig(sshPublicKeyFileName) -bg white -state disabled
+        grid .restore.storage.source.ssh.sshPublicKeyFileName -row 2 -column 1 -columnspan 5 -sticky "we" 
+
+        label .restore.storage.source.ssh.sshPrivatKeyFileNameTitle -text "SSH privat key:" -state disabled
+        grid .restore.storage.source.ssh.sshPrivatKeyFileNameTitle -row 3 -column 0 -sticky "w" 
+        entry .restore.storage.source.ssh.sshPrivatKeyFileName -textvariable barConfig(sshPrivatKeyFileName) -bg white -state disabled
+        grid .restore.storage.source.ssh.sshPrivatKeyFileName -row 3 -column 1 -columnspan 5 -sticky "we" 
+
+  #      grid rowconfigure    .restore.storage.source.ssh { } -weight 1
+        grid columnconfigure .restore.storage.source.ssh { 1 3 5 } -weight 1
+      grid .restore.storage.source.ssh -row 3 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.fileNameTitle
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.fileName
+#      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.selectDirectory
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginNameTitle
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginName
+    #  addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginPasswordTitle
+    #  addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginPassword
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.hostNameTitle
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.hostName
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPortTitle
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPort
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPublicKeyFileNameTitle
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPublicKeyFileName
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPrivatKeyFileNameTitle
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPrivatKeyFileName
+
+      frame .restore.storage.source.type2
+        radiobutton .restore.storage.source.type2.dvd -text "DVD" -variable barConfig(storageType) -value "DVD"
+        grid .restore.storage.source.type2.dvd -row 0 -column 0 -sticky "nw" 
+
+        grid rowconfigure    .restore.storage.source.type2 { 0 } -weight 1
+        grid columnconfigure .restore.storage.source.type2 { 1 } -weight 1
+      grid .restore.storage.source.type2 -row 4 -column 0 -sticky "we" -padx 2p -pady 2p
+      labelframe .restore.storage.source.dvd
+        label .restore.storage.source.dvd.deviceNameTitle -text "Device name:"
+        grid .restore.storage.source.dvd.deviceNameTitle -row 0 -column 0 -sticky "w" 
+        entry .restore.storage.source.dvd.deviceName -textvariable barConfig(storageFileName) -bg white
+        grid .restore.storage.source.dvd.deviceName -row 0 -column 1 -sticky "we" 
+        button .restore.storage.source.dvd.selectDirectory -image $images(folder) -command \
+        "
+          set old_tk_strictMotif \$tk_strictMotif
+          set tk_strictMotif 0
+          set fileName \[tk_getOpenFile -title \"Select archive\" -initialfile \"\" -filetypes {{\"BAR archive\" \"*.bar\"} {\"all\" \"*\"}} -parent . -defaultextension \".bar\"\]
+          set tk_strictMotif \$old_tk_strictMotif
+          if {\$fileName != \"\"} \
+          {
+            set barConfig(storagefileName) \$fileName
+            newRestoreArchive
+          }
+         "
+        grid .restore.storage.source.dvd.selectDirectory -row 0 -column 2
+
+        grid rowconfigure    .restore.storage.source.dvd { 0 } -weight 1
+        grid columnconfigure .restore.storage.source.dvd { 1 } -weight 1
+      grid .restore.storage.source.dvd -row 5 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      addEnableTrace ::barConfig(storageType) "DVD" .restore.storage.source.dvd.deviceNameTitle
+      addEnableTrace ::barConfig(storageType) "DVD" .restore.storage.source.dvd.deviceName
+      addEnableTrace ::barConfig(storageType) "DVD" .restore.storage.source.dvd.selectDirectory
+
+      grid rowconfigure    .restore.storage.source { 0 } -weight 1
+      grid columnconfigure .restore.storage.source { 0 } -weight 1
+    grid .restore.storage.source -row 0 -column 1 -sticky "we"
+
+    grid rowconfigure    .restore.storage { 1 } -weight 1
+    grid columnconfigure .restore.storage { 1 } -weight 1
+  pack .restore.storage -side top -fill both -expand yes -in [.restore.tabs subwidget storage]
+
+  frame .restore.files
+    tixTree .restore.files.list -scrollbar both -options \
+    {
+      hlist.separator "|"
+      hlist.columns 4
+      hlist.header yes
+      hlist.indent 16
+    }
+    .restore.files.list subwidget hlist configure -selectmode extended
+
+    .restore.files.list subwidget hlist header create 0 -itemtype text -text "File"
+    .restore.files.list subwidget hlist header create 1 -itemtype text -text "Type"
+    .restore.files.list subwidget hlist column width 1 -char 10
+    .restore.files.list subwidget hlist header create 2 -itemtype text -text "Size"
+    .restore.files.list subwidget hlist column width 2 -char 10
+    .restore.files.list subwidget hlist header create 3 -itemtype text -text "Modified"
+    .restore.files.list subwidget hlist column width 3 -char 15
+    grid .restore.files.list -row 0 -column 0 -sticky "nswe" -padx 2p -pady 2p
+    set restoreFilesTreeWidget [.restore.files.list subwidget hlist]
+
+    frame .restore.files.buttons
+      button .restore.files.buttons.stateNone -text "*" -command "event generate . <<Event_restoreStateNone>>"
+      pack .restore.files.buttons.stateNone -side left -fill x -expand yes
+      button .restore.files.buttons.stateIncluded -text "+" -command "event generate . <<Event_restoreStateIncluded>>"
+      pack .restore.files.buttons.stateIncluded -side left -fill x -expand yes
+      button .restore.files.buttons.stateExcluded -text "-" -command "event generate . <<Event_restoreStateExcluded>>"
+      pack .restore.files.buttons.stateExcluded -side left -fill x -expand yes
+    grid .restore.files.buttons -row 1 -column 0 -sticky "we" -padx 2p -pady 2p
+
+    frame .restore.files.destination
+      label .restore.files.destination.directoryNameTitle -text "Destination directory:"
+      grid .restore.files.destination.directoryNameTitle -row 0 -column 0 -sticky "w" 
+      entry .restore.files.destination.directoryName -textvariable barConfig(destinationDirectoryName) -bg white
+      grid .restore.files.destination.directoryName -row 0 -column 1 -sticky "we"
+      button .restore.files.destination.selectDirectory -image $images(folder) -command \
+      "
+        set old_tk_strictMotif \$tk_strictMotif
+        set tk_strictMotif 0
+        set directoryName \[tk_choosePath -title \"Select directory\" -initialdir \"\" -parent .]
+        set tk_strictMotif \$old_tk_strictMotif
+        if {\$directoryName != \"\"} \
+        {
+          set barConfig(destinationDirectoryName) \$directoryName
+        }
+      "
+      grid .restore.files.destination.selectDirectory -row 0 -column 2
+
+      label .restore.files.destination.directoryStripCountTitle -text "Directory strip count:"
+      grid .restore.files.destination.directoryStripCountTitle -row 1 -column 0 -sticky "w" 
+      tixControl .restore.files.destination.directoryStripCount -width 5 -variable barConfig(destinationStripCount) -label "" -labelside right -integer true -min 0 -options { entry.background white }
+      grid .restore.files.destination.directoryStripCount -row 1 -column 1 -sticky "w" 
+
+      grid rowconfigure    .restore.files.destination { 0 } -weight 1
+      grid columnconfigure .restore.files.destination { 1 } -weight 1
+    grid .restore.files.destination -row 2 -column 0 -sticky "we" -padx 2p -pady 2p 
+
+    tixPopupMenu .restore.files.list.popup -title "Command"
+    .restore.files.list.popup subwidget menu add command -label "Add include"                            -command ""
+    .restore.files.list.popup subwidget menu add command -label "Add exclude"                            -command ""
+    .restore.files.list.popup subwidget menu add command -label "Remove include"                         -command ""
+    .restore.files.list.popup subwidget menu add command -label "Remove exclude"                         -command ""
+    .restore.files.list.popup subwidget menu add command -label "Add include pattern"    -state disabled -command ""
+    .restore.files.list.popup subwidget menu add command -label "Add exclude pattern"    -state disabled -command ""
+    .restore.files.list.popup subwidget menu add command -label "Remove include pattern" -state disabled -command ""
+    .restore.files.list.popup subwidget menu add command -label "Remove exclude pattern" -state disabled -command ""
+
+    proc restoreFilesPopupHandler { widget x y } \
+    {
+      set fileName [$widget nearest $y]
+      set extension ""
+      regexp {.*(\.[^\.]+)} $fileName * extension
+
+      .restore.files.list.popup subwidget menu entryconfigure 0 -label "Add include '$fileName'"    -command "addIncludedPattern $fileName"
+      .restore.files.list.popup subwidget menu entryconfigure 1 -label "Add exclude '$fileName'"    -command "addExcludedPattern $fileName"
+      .restore.files.list.popup subwidget menu entryconfigure 2 -label "Remove include '$fileName'" -command "remIncludedPattern $fileName"
+      .restore.files.list.popup subwidget menu entryconfigure 3 -label "Remove exclude '$fileName'" -command "remExcludedPattern $fileName"
+      if {$extension != ""} \
+      {
+        .restore.files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern *$extension"    -state normal -command "addIncludedPattern *$extension"
+        .restore.files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern *$extension"    -state normal -command "addExcludedPattern *$extension"
+        .restore.files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern *$extension" -state normal -command "remIncludedPattern *$extension"
+        .restore.files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern *$extension" -state normal -command "remExcludedPattern *$extension"
+      } \
+      else \
+      {
+        .restore.files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern -"    -state disabled -command ""
+        .restore.files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern -"    -state disabled -command ""
+        .restore.files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern -" -state disabled -command ""
+        .restore.files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern -" -state disabled -command ""
+      }
+      .restore.files.list.popup post $widget $x $y
+    }
+
+    bind [.restore.files.list subwidget hlist] <Button-3>    "restoreFilesPopupHandler %W %x %y"
+    bind [.restore.files.list subwidget hlist] <BackSpace>   "event generate . <<Event_restoreStateNone>>"
+    bind [.restore.files.list subwidget hlist] <Delete>      "event generate . <<Event_restoreStateNone>>"
+    bind [.restore.files.list subwidget hlist] <plus>        "event generate . <<Event_restoreStateIncluded>>"
+    bind [.restore.files.list subwidget hlist] <KP_Add>      "event generate . <<Event_restoreStateIncluded>>"
+    bind [.restore.files.list subwidget hlist] <minus>       "event generate . <<Event_restoreStateExcluded>>"
+    bind [.restore.files.list subwidget hlist] <KP_Subtract> "event generate . <<Event_restoreStateExcluded>>"
+    bind [.restore.files.list subwidget hlist] <space>       "event generate . <<Event_restoreToggleStateNoneIncludedExcluded>>"
+
+    # fix a bug in tix: end does not use separator-char to detect last entry
+    bind [.restore.files.list subwidget hlist] <KeyPress-End> \
+      "
+       .restore.files.list subwidget hlist yview moveto 1
+       .restore.files.list subwidget hlist anchor set \[lindex \[.restore.files.list subwidget hlist info children /\] end\]
+       break
+      "
+
+    # mouse-wheel events
+    bind [.restore.files.list subwidget hlist] <Button-4> \
+      "
+       set n \[expr {\[string is integer \"%D\"\]?\"%D\":5}\]
+       .restore.files.list subwidget hlist yview scroll -\$n units
+      "
+    bind [.restore.files.list subwidget hlist] <Button-5> \
+      "
+       set n \[expr {\[string is integer \"%D\"\]?\"%D\":5}\]
+       .restore.files.list subwidget hlist yview scroll +\$n units
+      "
+
+    grid rowconfigure    .restore.files { 0 } -weight 1
+    grid columnconfigure .restore.files { 0 } -weight 1
+  pack .restore.files -side top -fill both -expand yes -in [.restore.tabs subwidget files]
+
+  frame .restore.filters
+    label .restore.filters.includedTitle -text "Included:"
+    grid .restore.filters.includedTitle -row 0 -column 0 -sticky "nw"
+    tixScrolledListBox .restore.filters.included -height 1 -scrollbar both -options { listbox.background white  }
+    grid .restore.filters.included -row 0 -column 1 -sticky "nswe" -padx 2p -pady 2p
+    .restore.filters.included subwidget listbox configure -listvariable barConfig(included) -selectmode extended
+    set restoreIncludedListWidget [.restore.filters.included subwidget listbox]
+
+    bind [.restore.filters.included subwidget listbox] <Button-1> ".restore.filters.includedButtons.rem configure -state normal"
+
+    frame .restore.filters.includedButtons
+      button .restore.filters.includedButtons.add -text "Add (F5)" -command "event generate . <<Event_restoreAddIncludePattern>>"
+      pack .restore.filters.includedButtons.add -side left
+      button .restore.filters.includedButtons.rem -text "Rem (F6)" -state disabled -command "event generate . <<Event_restoreRemIncludePattern>>"
+      pack .restore.filters.includedButtons.rem -side left
+    grid .restore.filters.includedButtons -row 1 -column 1 -sticky "we" -padx 2p -pady 2p
+
+    bind [.restore.filters.included subwidget listbox] <Insert> "event generate . <<Event_restoreAddIncludePattern>>"
+    bind [.restore.filters.included subwidget listbox] <Delete> "event generate . <<Event_restoreRemIncludePattern>>"
+
+    label .restore.filters.excludedTitle -text "Excluded:"
+    grid .restore.filters.excludedTitle -row 2 -column 0 -sticky "nw"
+    tixScrolledListBox .restore.filters.excluded -height 1 -scrollbar both -options { listbox.background white }
+    grid .restore.filters.excluded -row 2 -column 1 -sticky "nswe" -padx 2p -pady 2p
+    .restore.filters.excluded subwidget listbox configure -listvariable barConfig(excluded) -selectmode extended
+    set restoreExcludedListWidget [.restore.filters.excluded subwidget listbox]
+
+    bind [.restore.filters.excluded subwidget listbox] <Button-1> ".restore.filters.excludedButtons.rem configure -state normal"
+
+    frame .restore.filters.excludedButtons
+      button .restore.filters.excludedButtons.add -text "Add (F7)" -command "event generate . <<Event_restoreAddExcludePattern>>"
+      pack .restore.filters.excludedButtons.add -side left
+      button .restore.filters.excludedButtons.rem -text "Rem (F8)" -state disabled -command "event generate . <<Event_restoreRemExcludePattern>>"
+      pack .restore.filters.excludedButtons.rem -side left
+    grid .restore.filters.excludedButtons -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
+
+    bind [.restore.filters.excluded subwidget listbox] <Insert> "event generate . <<Event_restoreAddExcludePattern>>"
+    bind [.restore.filters.excluded subwidget listbox] <Delete> "event generate . <<Event_restoreRemExcludePattern>>"
+
+    label .restore.filters.optionsTitle -text "Options:"
+    grid .restore.filters.optionsTitle -row 4 -column 0 -sticky "nw" 
+    checkbutton .restore.filters.optionSkipUnreadable -text "skip not writable files" -variable barConfig(skipNotWritable)
+    grid .restore.filters.optionSkipUnreadable -row 4 -column 1 -sticky "nw" 
+
+    grid rowconfigure    .restore.filters { 0 2 } -weight 1
+    grid columnconfigure .restore.filters { 1 } -weight 1
+  pack .restore.filters -side top -fill both -expand yes -in [.restore.tabs subwidget filters]
 
   frame .restore.buttons
     button .restore.buttons.addRestoreJob -text "Start restore" -command "event generate . <<Event_addRestoreJob>>"
@@ -3504,6 +4567,8 @@ frame .restore
   grid rowconfigure    .restore { 1 } -weight 1
   grid columnconfigure .restore { 1 } -weight 1
 pack .restore -side top -fill both -expand yes -in [$mainWindow.tabs subwidget restore]
+
+# ----------------------------------------------------------------------
 
 frame .compressCrypt
   label .compressCrypt.compressAlgorithmTitle -text "Compress:"
@@ -3533,7 +4598,10 @@ frame .compressCrypt
   grid columnconfigure .compressCrypt { 1 } -weight 1
 pack .compressCrypt -side top -fill both -expand yes -in [$mainWindow.tabs subwidget compressCrypt]
 
-.backup.files.list subwidget hlist configure -command "openCloseDirectory"
+# ----------------------------------------------------------------------
+
+$backupFilesTreeWidget configure -command "openCloseBackupDirectory"
+$restoreFilesTreeWidget configure -command "openCloseRestoreDirectory"
 
 addModifyTrace {::barConfig(name) ::barConfig(included)} \
   "
@@ -3547,6 +4615,16 @@ addModifyTrace {::barConfig(name) ::barConfig(included)} \
       .backup.buttons.addBackupJob configure -state disabled
       .restore.buttons.addRestoreJob configure -state disabled
     }
+  "
+
+addModifyTrace {::barConfig(storageType) ::barConfig(storageFileName)} \
+  "
+    newRestoreArchive
+  "
+addFocusTrace {.restore.storage.source.fileSystem.fileName} \
+  "" \
+  "
+    newRestoreArchive
   "
 
 bind . <Control-o> "event generate . <<Event_load>>"
@@ -3592,35 +4670,67 @@ bind . <<Event_quit>> \
   quit
 }
 
-bind . <<Event_stateNone>> \
+bind . <<Event_backupStateNone>> \
 {
-  foreach itemPath [.backup.files.list subwidget hlist info selection] \
+  foreach itemPath [$backupFilesTreeWidget info selection] \
   {
-    setEntryState $itemPath "NONE"
+    setEntryState $backupFilesTreeWidget $itemPath 0 "NONE"
   }
 }
 
-bind . <<Event_stateIncluded>> \
+bind . <<Event_backupStateIncluded>> \
 {
-  foreach itemPath [.backup.files.list subwidget hlist info selection] \
+  foreach itemPath [$backupFilesTreeWidget info selection] \
   {
-    setEntryState $itemPath "INCLUDED"
+    setEntryState $backupFilesTreeWidget $itemPath 0 "INCLUDED"
   }
 }
 
-bind . <<Event_stateExcluded>> \
+bind . <<Event_backupStateExcluded>> \
 {
-  foreach itemPath [.backup.files.list subwidget hlist info selection] \
+  foreach itemPath [$backupFilesTreeWidget info selection] \
   {
-    setEntryState $itemPath "EXCLUDED"
+    setEntryState $backupFilesTreeWidget $itemPath 0 "EXCLUDED"
   }
 }
 
-bind . <<Event_toggleStateNoneIncludedExcluded>> \
+bind . <<Event_backupToggleStateNoneIncludedExcluded>> \
 {
-  foreach itemPath [.backup.files.list subwidget hlist info selection] \
+  foreach itemPath [$backupFilesTreeWidget info selection] \
   {
-    toggleEntryIncludedExcluded $itemPath
+    toggleEntryIncludedExcluded $backupFilesTreeWidget $itemPath 0
+  }
+}
+
+bind . <<Event_restoreStateNone>> \
+{
+  foreach itemPath [$restoreFilesTreeWidget info selection] \
+  {
+    setEntryState $restoreFilesTreeWidget $itemPath 1 "NONE"
+  }
+}
+
+bind . <<Event_restoreStateIncluded>> \
+{
+  foreach itemPath [$restoreFilesTreeWidget info selection] \
+  {
+    setEntryState $restoreFilesTreeWidget $itemPath 1 "INCLUDED"
+  }
+}
+
+bind . <<Event_restoreStateExcluded>> \
+{
+  foreach itemPath [$restoreFilesTreeWidget info selection] \
+  {
+    setEntryState $restoreFilesTreeWidget $itemPath 1 "EXCLUDED"
+  }
+}
+
+bind . <<Event_restoreToggleStateNoneIncludedExcluded>> \
+{
+  foreach itemPath [$restoreFilesTreeWidget info selection] \
+  {
+    toggleEntryIncludedExcluded $restoreFilesTreeWidget $itemPath 1
   }
 }
 
@@ -3632,15 +4742,15 @@ bind . <<Event_addIncludePattern>> \
 bind . <<Event_remIncludePattern>> \
 {
   set patternList {}
-  foreach index [.backup.filters.included subwidget listbox curselection] \
+  foreach index [$backupIncludedListWidget curselection] \
   {
-    lappend patternList [.backup.filters.included subwidget listbox get $index]
+    lappend patternList [$backupIncludedListWidget get $index]
   }
   foreach pattern $patternList \
   {
     remIncludedPattern $pattern
   }
-  .backup.filters.included subwidget listbox selection clear 0 end
+  $backupIncludedListWidget selection clear 0 end
   .backup.filters.includedButtons.rem configure -state disabled
 }
 
@@ -3652,16 +4762,56 @@ bind . <<Event_addExcludePattern>> \
 bind . <<Event_remExcludePattern>> \
 {
   set patternList {}
-  foreach index [.backup.filters.excluded subwidget listbox curselection] \
+  foreach index [$backupExcludedListWidget curselection] \
   {
-    lappend patternList [.backup.filters.excluded subwidget listbox get $index]
+    lappend patternList [$backupExcludedListWidget get $index]
   }
   foreach pattern $patternList \
   {
     remExcludedPattern $pattern
   }
-  .backup.filters.excluded subwidget listbox selection clear 0 end
+  $backupExcludedListWidget selection clear 0 end
   .backup.filters.excludedButtons.rem configure -state disabled
+}
+
+bind . <<Event_restoreAddIncludePattern>> \
+{
+  addIncludedPattern ""
+}
+
+bind . <<Event_restoreRemIncludePattern>> \
+{
+  set patternList {}
+  foreach index [$restoreIncludedListWidget curselection] \
+  {
+    lappend patternList [$restoreIncludedListWidget get $index]
+  }
+  foreach pattern $patternList \
+  {
+    remIncludedPattern $pattern
+  }
+  $restoreIncludedListWidget selection clear 0 end
+  .restore.filters.includedButtons.rem configure -state disabled
+}
+
+bind . <<Event_restoreAddExcludePattern>> \
+{
+  addExcludedPattern ""
+}
+
+bind . <<Event_restoreRemExcludePattern>> \
+{
+  set patternList {}
+  foreach index [$restoreExcludedListWidget curselection] \
+  {
+    lappend patternList [$restoreExcludedListWidget get $index]
+  }
+  foreach pattern $patternList \
+  {
+    remExcludedPattern $pattern
+  }
+  $restoreExcludedListWidget selection clear 0 end
+  .restore.filters.excludedButtons.rem configure -state disabled
 }
 
 bind . <<Event_selectJob>> \
@@ -3721,15 +4871,17 @@ updateJobList .jobs.list.data
 updateCurrentJob
 
 # read devices
-#set commandId [Server:sendCommand "DEVICE_LIST"]
-#while {[Server:readResult $commandId completeFlag errorCode result]} \
+#set commandId [BackupServer:sendCommand "DEVICE_LIST"]
+#while {[BackupServer:readResult $commandId completeFlag errorCode result]} \
 #{
-#  addDevice $result
+#  addBackupDevice $result
 #}
-addDevice "/"
+addBackupDevice "/"
 
 # load config if given
 resetBarConfig
 if {$configName != ""} { loadBARConfig $configName }
+
+openCloseRestoreDirectory [fileNameToItemPath $restoreFilesTreeWidget "/home/torsten/projects/bar/test.bar" "/"]
 
 # end of file
