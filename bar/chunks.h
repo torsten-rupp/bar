@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems : all
@@ -41,7 +41,7 @@
 #define CHUNK_DATATYPE_INT16    6
 #define CHUNK_DATATYPE_INT32    7
 #define CHUNK_DATATYPE_INT64    8
-#define CHUNK_DATATYPE_NAME     9
+#define CHUNK_DATATYPE_STRING    9
 #define CHUNK_DATATYPE_DATA    10
 #define CHUNK_DATATYPE_CRC32   11
 
@@ -93,8 +93,8 @@ typedef struct ChunkInfo
 #endif
 
 /***********************************************************************\
-* Name   : Chunk_init
-* Purpose: init chunks functions
+* Name   : Chunk_initAll
+* Purpose: init chunks
 * Input  : eof   - call back check end of data
 *          read  - call back read data
 *          write - call back write data
@@ -105,23 +105,23 @@ typedef struct ChunkInfo
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_init(bool(*eof)(void *userData),
-                  Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
-                  Errors(*write)(void *userData, const void *buffer, ulong length),
-                  Errors(*tell)(void *userData, uint64 *offset),
-                  Errors(*seek)(void *userData, uint64 offset)
-                 );
+Errors Chunk_initAll(bool(*eof)(void *userData),
+                     Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
+                     Errors(*write)(void *userData, const void *buffer, ulong length),
+                     Errors(*tell)(void *userData, uint64 *offset),
+                     Errors(*seek)(void *userData, uint64 offset)
+                    );
 
 /***********************************************************************\
-* Name   : Chunk_done
-* Purpose: done chunks functions
+* Name   : Chunk_doneAll
+* Purpose: done chunks
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Chunk_done(void);
+void Chunk_doneAll(void);
 
 /***********************************************************************\
 * Name   : Chunk_idToString
@@ -151,9 +151,9 @@ ulong Chunk_getSize(const int  *definition,
                    );
 
 /***********************************************************************\
-* Name   : Chunk_new
-* Purpose: create new chunk handle
-* Input  : chunkInfo       - chunk info block
+* Name   : Chunk_init
+* Purpose: init chunk info block
+* Input  : chunkInfo       - chunk info block to initialize
 *          parentChunkInfo - parent chunk info block
 *          userData        - user data for i/o
 *          alignment       - alignment to use
@@ -164,23 +164,23 @@ ulong Chunk_getSize(const int  *definition,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_new(ChunkInfo *chunkInfo,
-                 ChunkInfo *parentChunkInfo,
-                 void      *userData,
-                 uint      alignment,
-                 CryptInfo *cryptInfo
-                );
+Errors Chunk_init(ChunkInfo *chunkInfo,
+                  ChunkInfo *parentChunkInfo,
+                  void      *userData,
+                  uint      alignment,
+                  CryptInfo *cryptInfo
+                 );
 
 /***********************************************************************\
-* Name   : Chunk_delete
-* Purpose: delete chunk handle
+* Name   : Chunk_done
+* Purpose: deinit chunk info block
 * Input  : chunkInfo - chunk info block
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Chunk_delete(ChunkInfo *chunkInfo);
+void Chunk_done(ChunkInfo *chunkInfo);
 
 /***********************************************************************\
 * Name   : Chunk_next

@@ -9,7 +9,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/archive_format.pl,v $
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # $Author: torsten $
 # Contents: create header/c file definition from format definition
 # Systems : all
@@ -45,7 +45,7 @@ my $DEFINITION_TYPES =
    "int16"  => "CHUNK_DATATYPE_INT16",
    "int32"  => "CHUNK_DATATYPE_INT32",
    "int64"  => "CHUNK_DATATYPE_INT64",
-   "name"   => "CHUNK_DATATYPE_NAME",
+   "string" => "CHUNK_DATATYPE_STRING",
    "data"   => "CHUNK_DATATYPE_DATA",
    "crc32"  => "CHUNK_DATATYPE_CRC32",
   };
@@ -145,10 +145,10 @@ while ($line=<STDIN>)
         writeHFile("  $1 $2;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
       }
-      elsif ($line =~ /^\s*name\s+(\w+)/)
+      elsif ($line =~ /^\s*string\s+(\w+)/)
       {
         writeHFile("  String $1;\n");
-        push(@parseDefinitions,$DEFINITION_TYPES->{name});
+        push(@parseDefinitions,$DEFINITION_TYPES->{string});
       }
       elsif ($line =~ /^\s*data\s+(\w+)/)
       {

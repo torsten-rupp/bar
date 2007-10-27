@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -205,7 +205,7 @@ LOCAL Errors readDefinition(void      *userData,
             (*((uint64*)data)) = n; data = ((char*)data)+8+PADDING_INT64;
           }
           break;
-        case CHUNK_DATATYPE_NAME:
+        case CHUNK_DATATYPE_STRING:
           {
             uint16 length;
             String s;
@@ -365,7 +365,7 @@ LOCAL Errors writeDefinition(void       *userData,
             p += 4;
           }
           break;
-        case CHUNK_DATATYPE_NAME:
+        case CHUNK_DATATYPE_STRING:
           {
             uint16 length;
             String s;
@@ -433,12 +433,12 @@ LOCAL Errors writeDefinition(void       *userData,
 
 /*---------------------------------------------------------------------*/
 
-Errors Chunk_init(bool(*eof)(void *userData),
-                  Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
-                  Errors(*write)(void *userData, const void *buffer, ulong length),
-                  Errors(*tell)(void *userData, uint64 *offset),
-                  Errors(*seek)(void *userData, uint64 offset)
-                 )
+Errors Chunk_initAll(bool(*eof)(void *userData),
+                      Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
+                      Errors(*write)(void *userData, const void *buffer, ulong length),
+                      Errors(*tell)(void *userData, uint64 *offset),
+                      Errors(*seek)(void *userData, uint64 offset)
+                     )
 {
   assert(eof != NULL);
   assert(read != NULL);
@@ -455,7 +455,7 @@ Errors Chunk_init(bool(*eof)(void *userData),
   return ERROR_NONE;
 }
 
-void Chunk_done(void)
+void Chunk_doneAll(void)
 {
 }
 
@@ -511,7 +511,7 @@ ulong Chunk_getSize(const int  *definition,
         definitionSize += 8;
         if (data != NULL) data = ((char*)data) + 8;
         break;
-      case CHUNK_DATATYPE_NAME:
+      case CHUNK_DATATYPE_STRING:
         {
           String s;
 
@@ -540,12 +540,12 @@ ulong Chunk_getSize(const int  *definition,
   return definitionSize;
 }
 
-Errors Chunk_new(ChunkInfo *chunkInfo,
-                 ChunkInfo *parentChunkInfo,
-                 void      *userData,
-                 uint      alignment,
-                 CryptInfo *cryptInfo
-                )
+Errors Chunk_init(ChunkInfo *chunkInfo,
+                  ChunkInfo *parentChunkInfo,
+                  void      *userData,
+                  uint      alignment,
+                  CryptInfo *cryptInfo
+                 )
 {
   assert(chunkInfo != NULL);
 
@@ -566,7 +566,7 @@ Errors Chunk_new(ChunkInfo *chunkInfo,
   return ERROR_NONE;
 }
 
-void Chunk_delete(ChunkInfo *chunkInfo)
+void Chunk_done(ChunkInfo *chunkInfo)
 {
   assert(chunkInfo != NULL);
 
@@ -810,6 +810,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       }
       break;
     case CHUNK_MODE_READ:
+      /* seek to end of chunk */
       error = IO.seek(chunkInfo->userData,chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size);
       if (error != ERROR_NONE)
       {
