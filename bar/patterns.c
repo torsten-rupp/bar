@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -17,6 +17,8 @@
 #include <assert.h>
 
 #include "global.h"
+#include "lists.h"
+
 #include "bar.h"
 
 #include "patterns.h"
@@ -40,95 +42,32 @@
 #endif
 
 /***********************************************************************\
-* Name   : freePatternNode
-* Purpose: free allocated pattern node
-* Input  : patterNode - pattern node
-* Output : -
-* Return : -
+* Name   : compilePattern
+* Purpose: compile pattern
+* Input  : pattern     - pattern to compile
+*          patternType - pattern type
+* Output : regexBegin - regular expression for matching begin
+*          regexEnd   - regular expression for matching end
+*          regexExcat - regular expression for exact matching
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freePatternNode(PatternNode *patternNode,
-                           void        *userData
-                          )
+LOCAL Errors compilePattern(const char   *pattern,
+                            PatternTypes patternType,
+                            regex_t      *regexBegin,
+                            regex_t      *regexEnd,
+                            regex_t      *regexExact
+                           )
 {
-  assert(patternNode != NULL);
+  String matchString;
+  String regexString;
+  int    regexFlags;
+  ulong  z;
 
-  UNUSED_VARIABLE(userData);
-
-  regfree(&patternNode->regexExact);
-  regfree(&patternNode->regexEnd);
-  regfree(&patternNode->regexBegin);
-  String_delete(((PatternNode*)patternNode)->pattern);
-}
-
-/*---------------------------------------------------------------------*/
-
-Errors Pattern_init(void)
-{
-  return ERROR_NONE;
-}
-
-void Pattern_done(void)
-{
-}
-
-void Pattern_initList(PatternList *patternList)
-{
-  assert(patternList != NULL);
-
-  List_init(patternList);
-}
-
-void Pattern_doneList(PatternList *patternList)
-{
-  assert(patternList != NULL);
-
-  List_done(patternList,(ListNodeFreeFunction)freePatternNode,NULL);
-}
-
-void Pattern_clearList(PatternList *patternList)
-{
-  assert(patternList != NULL);
-
-  List_clear(patternList,(ListNodeFreeFunction)freePatternNode,NULL);
-}
-
-void Pattern_moveList(PatternList *fromPatternList, PatternList *toPatternList)
-{
-  assert(fromPatternList != NULL);
-  assert(toPatternList != NULL);
-
-  List_move(fromPatternList,toPatternList,NULL,NULL,NULL);
-}
-
-Errors Pattern_appendList(PatternList  *patternList,
-                          const char   *pattern,
-                          PatternTypes patternType
-                         )
-{
-  PatternNode *patternNode;
-  long        z;
-  String      matchString;
-  int         regexFlags;
-  String      regexString;
-
-  assert(patternList != NULL);
-  assert(pattern != NULL);
-
-  /* init variables */
   matchString = String_new();
   regexString = String_new();
 
-  /* allocate pattern node */
-  patternNode = LIST_NEW_NODE(PatternNode);
-  if (patternNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  patternNode->pattern = String_newCString(pattern);
-
-  /* compile pattern */
   regexFlags = REG_ICASE|REG_NOSUB;
   switch (patternType)
   {
@@ -159,10 +98,10 @@ Errors Pattern_appendList(PatternList  *patternList,
         z++;
       }     
       break;
-    case PATTERN_TYPE_BASIC:
+    case PATTERN_TYPE_REGEX:
       String_setCString(matchString,pattern);
       break;
-    case PATTERN_TYPE_EXTENDED:
+    case PATTERN_TYPE_EXTENDED_REGEX:
       regexFlags |= REG_EXTENDED;
       String_setCString(matchString,pattern);
       break;
@@ -175,44 +114,193 @@ Errors Pattern_appendList(PatternList  *patternList,
 
   String_set(regexString,matchString);
   if (String_index(regexString,STRING_BEGIN) != '^') String_insertChar(regexString,STRING_BEGIN,'^');
-  if (regcomp(&patternNode->regexBegin,String_cString(regexString),regexFlags) != 0)
+  if (regcomp(regexBegin,String_cString(regexString),regexFlags) != 0)
   {
     String_delete(regexString);
     String_delete(matchString);
-    LIST_DELETE_NODE(patternNode);
     return ERROR_INVALID_PATTERN;
   }
 
   String_set(regexString,matchString);
   if (String_index(regexString,STRING_END) != '$') String_insertChar(regexString,STRING_BEGIN,'$');
-  if (regcomp(&patternNode->regexEnd,String_cString(regexString),regexFlags) != 0)
+  if (regcomp(regexEnd,String_cString(regexString),regexFlags) != 0)
   {
-    regfree(&patternNode->regexBegin);
+    regfree(regexBegin);
     String_delete(regexString);
     String_delete(matchString);
-    LIST_DELETE_NODE(patternNode);
     return ERROR_INVALID_PATTERN;
   }
 
   String_set(regexString,matchString);
   if (String_index(regexString,STRING_BEGIN) != '^') String_insertChar(regexString,STRING_BEGIN,'^');
   if (String_index(regexString,STRING_END) != '$') String_insertChar(regexString,STRING_END,'$');
-  if (regcomp(&patternNode->regexExact,String_cString(regexString),regexFlags) != 0)
+  if (regcomp(regexExact,String_cString(regexString),regexFlags) != 0)
   {
-    regfree(&patternNode->regexEnd);
-    regfree(&patternNode->regexBegin);
+    regfree(regexEnd);
+    regfree(regexBegin);
     String_delete(regexString);
     String_delete(matchString);
-    LIST_DELETE_NODE(patternNode);
     return ERROR_INVALID_PATTERN;
   }
-
-  /* add to list */
-  List_append(patternList,patternNode);
 
   /* free resources */
   String_delete(regexString);
   String_delete(matchString);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : copyPatternNode
+* Purpose: copy allocated pattern node
+* Input  : patterNode - pattern node
+* Output : -
+* Return : copied pattern node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL PatternNode *copyPatternNode(PatternNode *patternNode,
+                                   void        *userData
+                                  )
+{
+  PatternNode *newPatternNode;
+  Errors      error;
+
+  assert(patternNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  /* allocate pattern node */
+  newPatternNode = LIST_NEW_NODE(PatternNode);
+  if (newPatternNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  newPatternNode->type    = patternNode->type;
+  newPatternNode->pattern = String_copy(patternNode->pattern);
+
+  /* compile pattern */
+  error = compilePattern(String_cString(patternNode->pattern),
+                         patternNode->type,
+                         &newPatternNode->regexBegin,
+                         &newPatternNode->regexEnd,
+                         &newPatternNode->regexExact
+                        );
+  if (error != ERROR_NONE)
+  {
+    LIST_DELETE_NODE(newPatternNode);
+    return NULL;
+  }
+
+  return newPatternNode;
+}
+
+/***********************************************************************\
+* Name   : freePatternNode
+* Purpose: free allocated pattern node
+* Input  : patterNode - pattern node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freePatternNode(PatternNode *patternNode,
+                           void        *userData
+                          )
+{
+  assert(patternNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  regfree(&patternNode->regexExact);
+  regfree(&patternNode->regexEnd);
+  regfree(&patternNode->regexBegin);
+  String_delete(((PatternNode*)patternNode)->pattern);
+}
+
+/*---------------------------------------------------------------------*/
+
+Errors Pattern_initAll(void)
+{
+  return ERROR_NONE;
+}
+
+void Pattern_doneAll(void)
+{
+}
+
+void Pattern_initList(PatternList *patternList)
+{
+  assert(patternList != NULL);
+
+  List_init(patternList);
+}
+
+void Pattern_doneList(PatternList *patternList)
+{
+  assert(patternList != NULL);
+
+  List_done(patternList,(ListNodeFreeFunction)freePatternNode,NULL);
+}
+
+void Pattern_clearList(PatternList *patternList)
+{
+  assert(patternList != NULL);
+
+  List_clear(patternList,(ListNodeFreeFunction)freePatternNode,NULL);
+}
+
+void Pattern_copyList(const PatternList *fromPatternList, PatternList *toPatternList)
+{
+  assert(fromPatternList != NULL);
+  assert(toPatternList != NULL);
+
+  List_copy(fromPatternList,toPatternList,NULL,NULL,NULL,(ListNodeCopyFunction)copyPatternNode,NULL);
+}
+
+void Pattern_moveList(PatternList *fromPatternList, PatternList *toPatternList)
+{
+  assert(fromPatternList != NULL);
+  assert(toPatternList != NULL);
+
+  List_move(fromPatternList,toPatternList,NULL,NULL,NULL);
+}
+
+Errors Pattern_appendList(PatternList  *patternList,
+                          const char   *pattern,
+                          PatternTypes patternType
+                         )
+{
+  PatternNode *patternNode;
+  Errors      error;
+
+  assert(patternList != NULL);
+  assert(pattern != NULL);
+
+  /* allocate pattern node */
+  patternNode = LIST_NEW_NODE(PatternNode);
+  if (patternNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  patternNode->type    = patternType;
+  patternNode->pattern = String_newCString(pattern);
+
+  /* compile pattern */
+  error = compilePattern(pattern,
+                         patternType,
+                         &patternNode->regexBegin,
+                         &patternNode->regexEnd,
+                         &patternNode->regexExact
+                        );
+  if (error != ERROR_NONE)
+  {
+    LIST_DELETE_NODE(patternNode);
+    return error;
+  }
+
+  /* add to list */
+  List_append(patternList,patternNode);
 
   return ERROR_NONE;
 }

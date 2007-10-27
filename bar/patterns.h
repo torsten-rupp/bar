@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems : all
@@ -33,8 +33,8 @@
 typedef enum
 {
   PATTERN_TYPE_GLOB,
-  PATTERN_TYPE_BASIC,
-  PATTERN_TYPE_EXTENDED
+  PATTERN_TYPE_REGEX,
+  PATTERN_TYPE_EXTENDED_REGEX
 } PatternTypes;
 
 typedef enum
@@ -50,10 +50,11 @@ typedef struct PatternNode
 {
   NODE_HEADER(struct PatternNode);
 
-  String  pattern;      // file/path name pattern
-  regex_t regexBegin;   // regular expression for matching begin
-  regex_t regexEnd;     // regular expression for matching end
-  regex_t regexExact;   // regular expression for matching exact
+  PatternTypes type;
+  String       pattern;
+  regex_t      regexBegin;   // regular expression for matching begin
+  regex_t      regexEnd;     // regular expression for matching end
+  regex_t      regexExact;   // regular expression for matching exact
 } PatternNode;
 
 typedef struct
@@ -74,7 +75,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Pattern_init
+* Name   : Pattern_initAll
 * Purpose: init patterns
 * Input  : -
 * Output : -
@@ -82,10 +83,10 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Pattern_init(void);
+Errors Pattern_initAll(void);
 
 /***********************************************************************\
-* Name   : Pattern_done
+* Name   : Pattern_doneAll
 * Purpose: deinitialize patterns
 * Input  : -
 * Output : -
@@ -93,7 +94,7 @@ Errors Pattern_init(void);
 * Notes  : -
 \***********************************************************************/
 
-void Pattern_done(void);
+void Pattern_doneAll(void);
 
 /***********************************************************************\
 * Name   : Pattern_initList
@@ -127,6 +128,18 @@ void Pattern_doneList(PatternList *patternList);
 \***********************************************************************/
 
 void Pattern_clearList(PatternList *patternList);
+
+/***********************************************************************\
+* Name   : Pattern_copyList
+* Purpose: copy all patterns from source list to destination list
+* Input  : fromPatternList - from pattern list (source)
+*          toPatternList   - to pattern list (destination)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Pattern_copyList(const PatternList *fromPatternList, PatternList *toPatternList);
 
 /***********************************************************************\
 * Name   : Pattern_moveList
