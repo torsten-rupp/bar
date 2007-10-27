@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.32 $
+* $Revision: 1.33 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -80,7 +80,6 @@ typedef struct
   Semaphore                storageSemaphore;
   uint                     storageCount;                       // number of current storage files
   uint64                   storageBytes;                       // number of bytes in current storage files
-  uint64                   storageTotalBytes;                  // number of total storage bytes
   pthread_t                storageThreadId;                    // storage thread id
   bool                     storageThreadExitFlag;
 
@@ -745,15 +744,16 @@ LOCAL Errors storeArchiveFile(String fileName,
 
     /* send to storage controller */
     Semaphore_lock(&createInfo->storageSemaphore);
-    createInfo->storageCount      += 1;
-    createInfo->storageBytes      += fileSize;
-    createInfo->storageTotalBytes += fileSize;
+    createInfo->storageCount += 1;
+    createInfo->storageBytes += fileSize;
     appendToStorageList(&createInfo->storageMsgQueue,
                         fileName,
                         fileSize,
                         destinationName
                        );
     Semaphore_unlock(&createInfo->storageSemaphore);
+    createInfo->statusInfo.storageTotalBytes += fileSize;
+    updateStatusInfo(createInfo);
 
     /* wait for space in temporary directory */
     if (createInfo->options->maxTmpSize > 0)
@@ -827,9 +827,6 @@ LOCAL void storageThread(CreateInfo *createInfo)
         continue;
       }
       String_set(createInfo->statusInfo.storageName,storageMsg.destinationFileName);
-      createInfo->statusInfo.storageDoneBytes  = 0LL;
-      createInfo->statusInfo.storageTotalBytes = storageMsg.fileSize;
-      updateStatusInfo(createInfo);
 
       /* store data */
       error = File_open(&fileHandle,storageMsg.fileName,FILE_OPENMODE_READ);
@@ -886,7 +883,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
     }
 else
 {
-fprintf(stderr,"%s,%d: FAIL - only delete files \n",__FILE__,__LINE__);
+fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErrorText(error));
 }
     /* delete source file */
     if (!File_delete(storageMsg.fileName))
@@ -946,7 +943,6 @@ Errors Command_create(const char               *archiveFileName,
   createInfo.collectorThreadExitFlag      = FALSE;
   createInfo.storageCount                 = 0;
   createInfo.storageBytes                 = 0LL;
-  createInfo.storageTotalBytes            = 0LL;
   createInfo.storageThreadExitFlag        = FALSE;
   createInfo.error                        = ERROR_NONE;
   createInfo.statusInfoFunction           = createStatusInfoFunction;
@@ -1012,13 +1008,13 @@ Errors Command_create(const char               *archiveFileName,
   error = Archive_create(&archiveInfo,
                          storeArchiveFile,
                          &createInfo,
-                         options,
+                         options/*,
                          options->tmpDirectory,
                          options->archivePartSize,
                          options->compressAlgorithm,
                          options->compressMinFileSize,
                          options->cryptAlgorithm,
-                         options->cryptPassword
+                         options->cryptPassword*/
                         );
   if (error != ERROR_NONE)
   {
@@ -1135,8 +1131,8 @@ Errors Command_create(const char               *archiveFileName,
                 error = Archive_writeFileData(&archiveFileInfo,buffer,n);
                 createInfo.statusInfo.doneBytes += n;
                 createInfo.statusInfo.fileDoneBytes += n;
-                createInfo.statusInfo.compressionRatio = 100.0-(createInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
-//printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
+                createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
+//printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
                 updateStatusInfo(&createInfo);
               }
             }
