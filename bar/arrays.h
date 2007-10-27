@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/arrays.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -60,7 +60,7 @@ typedef char(*ArrayElementIterateFunction)(void *userData, void *data);
 *          buffer       - buffer
 *          bufferLength - length of buffer
 * Output : -
-* Return : string or NULL
+* Return : array or NULL
 * Notes  : -
 \***********************************************************************/
 
@@ -73,7 +73,7 @@ void *__Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong l
 /***********************************************************************\
 * Name   : Array_delete
 * Purpose: delete array
-* Input  : array - string to delete
+* Input  : array - array to delete
 * Output : -
 * Return : -
 * Notes  : -
@@ -83,61 +83,84 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
 
 /***********************************************************************\
 * Name   : Array_clear
-* Purpose: clear string
-* Input  : string - string to clear
+* Purpose: clear array
+* Input  : array - array to clear
 * Output : -
-* Return : cleared string (empty)
+* Return : cleared array (empty)
 * Notes  : -
 \***********************************************************************/
 
-void Array_clear(Array array);
+void Array_clear(Array array, ArrayElementFreeFunction arrayElementFreeFunction, void *arrayElementFreeUserData);
+
+/***********************************************************************\
+* Name   : Array_length
+* Purpose: get array length
+* Input  : array - array
+* Output : -
+* Return : number of elements in array
+* Notes  : -
+\***********************************************************************/
 
 ulong Array_length(Array array);
 
 /***********************************************************************\
-* Name   : String_set, String_setCString, String_setChar,
-*          Stirng_setBuffer
-* Purpose: set string (copy string)
-* Input  : string       - string to set
-*          sourceString - source string
-*          s            - C-string
-*          ch           - character
-*          buffer       - buffer
-*          bufferLength - length of buffer
+* Name   : Array_put
+* Purpose: put element into array
+* Input  : array - array
+*          index - index of element
+*          data  - data
 * Output : -
-* Return : string
+* Return : TRUE if element stored in array, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Array_put(Array array, ulong index, const void *data);
-void Array_get(Array array, ulong index, void *data);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
+* Name   : Array_get
+* Purpose: get element from array
+* Input  : array - array
+*          index - index of element
+*          data  - variable for data (can be NULL)
+* Output : data
 * Return : -
+* Notes  : -
+\***********************************************************************/
+
+void *Array_get(Array array, ulong index, void *data);
+
+/***********************************************************************\
+* Name   : Array_insert
+* Purpose: insert element into array
+* Input  : array     - array
+*          nextIndex - index of next element or ARRAY_END
+*          data      - element data
+* Output : -
+* Return : TRUE if element inserted, FALSE otherweise
 * Notes  : -
 \***********************************************************************/
 
 bool Array_insert(Array array, long nextIndex, const void *data);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Array_append
+* Purpose: append element to array
+* Input  : array - array
+*          data  - element data
 * Output : -
-* Return : -
+* Return : TRUE if element appended, FALSE otherweise
 * Notes  : -
 \***********************************************************************/
 
 bool Array_append(Array array, const void *data);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Array_remove
+* Purpose: remove element from array
+* Input  : array                    - array
+*          index                    - index of element to remove
+*          arrayElementFreeFunction - element free function
+*          arrayElementFreeUserData - user data for free functions
 * Output : -
 * Return : -
 * Notes  : -

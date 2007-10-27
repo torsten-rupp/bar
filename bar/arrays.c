@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/arrays.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -26,7 +26,7 @@
 /***************************** Constants *******************************/
 
 #define DEFAULT_LENGTH 8
-#define DELTA_LENGTH 8
+#define DELTA_LENGTH   8
 
 /***************************** Datatypes *******************************/
 
@@ -165,12 +165,21 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
   }
 }
 
-void Array_clear(Array array)
+void Array_clear(Array array, ArrayElementFreeFunction arrayElementFreeFunction, void *arrayElementFreeUserData)
 {
+  ulong z;
+
   if (array != NULL)
   {
     assert(array->data != NULL);
 
+    if (arrayElementFreeFunction != NULL)
+    {
+      for (z = 0; z < array->length; z++)
+      {
+        arrayElementFreeFunction(array->data+z*array->elementSize,arrayElementFreeUserData);
+      }
+    }
     array->length = 0;
   }
 }
@@ -212,8 +221,10 @@ bool Array_put(Array array, ulong index, const void *data)
   }
 }
 
-void Array_get(Array array, ulong index, void *data)
+void *Array_get(Array array, ulong index, void *data)
 {
+  void *element;
+
   if (array != NULL)
   {
     assert(array->data != NULL);
@@ -221,9 +232,19 @@ void Array_get(Array array, ulong index, void *data)
     /* get element */
     if (index < array->length)
     {
-      memcpy(data,array->data+index*array->elementSize,array->elementSize);
+      if (data != NULL)
+      {
+        memcpy(data,array->data+index*array->elementSize,array->elementSize);
+        element = data;
+      }
+      else
+      {
+        element = array->data+index*array->elementSize;
+      }
     }
   }
+
+  return element;
 }
 
 bool Array_insert(Array array, long nextIndex, const void *data)
