@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -20,6 +20,9 @@
 #include <assert.h>
 
 #include "global.h"
+#include "strings.h"
+
+#include "errors.h"
 
 #include "passwords.h"
 
@@ -44,7 +47,7 @@
   extern "C" {
 #endif
 
-Errors Password_init(void)
+Errors Password_initAll(void)
 {
   #ifndef HAVE_GCRYPT
     int z;
@@ -64,7 +67,7 @@ Errors Password_init(void)
   return ERROR_NONE;
 }
 
-void Password_done(void)
+void Password_doneAll(void)
 {
 }
 
@@ -109,6 +112,27 @@ Password *Password_copy(Password *sourcePassword)
   memcpy(destinationPassword,sourcePassword,sizeof(Password));
 
   return destinationPassword;
+}
+
+void Password_set(Password *password, const String string)
+{
+  #ifdef HAVE_GCRYPT
+  #else /* not HAVE_GCRYPT */
+    uint z;
+  #endif /* HAVE_GCRYPT */
+
+  assert(password != NULL);
+
+  password->length = MIN(String_length(string),MAX_PASSWORD_LENGTH);
+  #ifdef HAVE_GCRYPT
+    memcpy(password->data,String_cString(string),password->length);
+  #else /* not HAVE_GCRYPT */
+    for (z = 0; z < MIN(String_length(string),MAX_PASSWORD_LENGTH); z++)
+    {
+      password->data[z] = String_index(string,z)^obfuscator[z];
+    }
+  #endif /* HAVE_GCRYPT */
+  password->data[password->length] = '\0';
 }
 
 void Password_setCString(Password *password, const char *s)

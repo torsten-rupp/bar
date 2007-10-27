@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "strings.h"
 
 #include "errors.h"
 
@@ -55,7 +56,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Password_init
+* Name   : Password_initAll
 * Purpose: initialize secure password functions
 * Input  : -
 * Output : -
@@ -63,10 +64,10 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Password_init(void);
+Errors Password_initAll(void);
 
 /***********************************************************************\
-* Name   : Password_done
+* Name   : Password_doneAll
 * Purpose: deinitialize secure password functions
 * Input  : -
 * Output : -
@@ -74,7 +75,7 @@ Errors Password_init(void);
 * Notes  : -
 \***********************************************************************/
 
-void Password_done(void);
+void Password_doneAll(void);
 
 /***********************************************************************\
 * Name   : Password_new
@@ -119,6 +120,7 @@ Password *Password_copy(Password *sourcePassword);
 * Notes  : avoid usage of this functions, because 's' is insecure!
 \***********************************************************************/
 
+void Password_set(Password *password, const String string);
 void Password_setCString(Password *password, const char *s);
 
 /***********************************************************************\
