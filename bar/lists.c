@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -44,8 +44,13 @@ void List_init(void *list)
   ((List*)list)->count = 0;
 }
 
-void List_done(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData)
+void List_done(void                 *list,
+               ListNodeFreeFunction listNodeFreeFunction,
+               void                 *listNodeFreeUserData
+              )
 {
+  assert(list != NULL);
+
   List_clear(list,listNodeFreeFunction,listNodeFreeUserData);
 }
 
@@ -61,7 +66,10 @@ List *List_new(void)
   return list;
 }
 
-void List_delete(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData)
+void List_delete(void                 *list,
+                 ListNodeFreeFunction listNodeFreeFunction,
+                 void                 *listNodeFreeUserData
+                )
 {
   assert(list != NULL);
 
@@ -69,7 +77,10 @@ void List_delete(void *list, ListNodeFreeFunction listNodeFreeFunction, void *li
   free(list);
 }
 
-void List_clear(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData)
+void List_clear(void                 *list,
+                ListNodeFreeFunction listNodeFreeFunction,
+                void                 *listNodeFreeUserData
+               )
 {
   Node *node;
 
@@ -97,7 +108,44 @@ void List_clear(void *list, ListNodeFreeFunction listNodeFreeFunction, void *lis
   ((List*)list)->count = 0;
 }
 
-void List_move(void *fromList, void *toList, void *fromListFromNode, void *fromListToNode, void *toListNextNode)
+void List_copy(const void           *fromList,
+               void                 *toList,
+               const void           *fromListFromNode,
+               const void           *fromListToNode,
+               void                 *toListNextNode,
+               ListNodeCopyFunction listNodeCopyFunction,
+               void                 *listNodeCopyUserData
+              )
+{
+  Node *node;
+  Node *newNode;
+  
+  assert(fromList != NULL);
+  assert(toList != NULL);
+  assert(listNodeCopyFunction != NULL);
+
+  if (fromListFromNode == LIST_START) fromListFromNode = ((List*)fromList)->head;
+
+  node = (Node*)fromListFromNode;
+  while (node != fromListToNode)
+  {
+    newNode = listNodeCopyFunction(node,listNodeCopyUserData);
+    List_insert(toList,newNode,toListNextNode);
+    node = node->next;
+  }
+  if (node != NULL)
+  {
+    newNode = listNodeCopyFunction(node,listNodeCopyUserData);
+    List_insert(toList,newNode,toListNextNode);
+  }
+}
+
+void List_move(void *fromList,
+               void *toList,
+               void *fromListFromNode,
+               void *fromListToNode,
+               void *toListNextNode
+              )
 {
   Node *node;
   Node *nextNode;
@@ -142,7 +190,10 @@ unsigned long List_count(void *list)
   return ((List*)list)->count;
 }
 
-void List_insert(void *list, void *node, void *nextNode)
+void List_insert(void *list,
+                 void *node,
+                 void *nextNode
+                )
 {
   assert(list != NULL);
 
@@ -185,7 +236,9 @@ void List_insert(void *list, void *node, void *nextNode)
         );
 }
 
-void List_append(void *list, void *node)
+void List_append(void *list,
+                 void *node
+                )
 {
   assert(list != NULL);
   assert(node != NULL);
@@ -193,7 +246,9 @@ void List_append(void *list, void *node)
   List_insert(list,node,NULL);
 }
 
-void *List_remove(void *list, void *node)
+void *List_remove(void *list,
+                  void *node
+                 )
 {
   void *nextNode;
 
@@ -241,7 +296,10 @@ Node *List_getLast(void *list)
   return node;
 }
 
-Node *List_findFirst(void *list, ListNodeCompareFunction listNodeCompareFunction, void *listNodeCompareUserData)
+Node *List_findFirst(void                    *list,
+                     ListNodeCompareFunction listNodeCompareFunction,
+                     void                    *listNodeCompareUserData
+                    )
 {
   Node *node;
 
@@ -257,7 +315,11 @@ Node *List_findFirst(void *list, ListNodeCompareFunction listNodeCompareFunction
   return node;
 }
 
-Node *List_findNext(void *list, void *node, ListNodeCompareFunction listNodeCompareFunction, void *listNodeCompareUserData)
+Node *List_findNext(void                    *list,
+                    void                    *node,
+                    ListNodeCompareFunction listNodeCompareFunction,
+                    void                    *listNodeCompareUserData
+                   )
 {
   assert(list != NULL);
   assert(listNodeCompareFunction != NULL);

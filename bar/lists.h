@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -45,6 +45,9 @@ typedef struct
 /* delete list node function */
 typedef void(*ListNodeFreeFunction)(void *node, void *userData);
 
+/* copy list node function */
+typedef void*(*ListNodeCopyFunction)(const void *node, void *userData);
+
 /* compare list node function */
 typedef int(*ListNodeCompareFunction)(void *node, void *userData);
 
@@ -87,7 +90,10 @@ void List_init(void *list);
 * Notes  : -
 \***********************************************************************/
 
-void List_done(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData);
+void List_done(void                 *list,
+               ListNodeFreeFunction listNodeFreeFunction,
+               void                 *listNodeFreeUserData
+              );
 
 /***********************************************************************\
 * Name   : List_new
@@ -111,7 +117,10 @@ List *List_new(void);
 * Notes  : -
 \***********************************************************************/
 
-void List_delete(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData);
+void List_delete(void                 *list,
+                 ListNodeFreeFunction listNodeFreeFunction,
+                 void                 *listNodeFreeUserData
+                );
 
 /***********************************************************************\
 * Name   : List_clear
@@ -124,7 +133,33 @@ void List_delete(void *list, ListNodeFreeFunction listNodeFreeFunction, void *li
 * Notes  : -
 \***********************************************************************/
 
-void List_clear(void *list, ListNodeFreeFunction listNodeFreeFunction, void *listNodeFreeUserData);
+void List_clear(void                 *list,
+                ListNodeFreeFunction listNodeFreeFunction,
+                void                 *listNodeFreeUserData
+               );
+
+/***********************************************************************\
+* Name   : List_copy
+* Purpose: copy contents of list
+* Input  : fromList                        - from list
+*          toList                          - to list
+*          fromListFromNode,fromListToNode - from/to node (could be
+*                                            NULL)
+*          toListNextNode                  - insert node before nextNode
+*                                            (could be NULL)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void List_copy(const void           *fromList,
+               void                 *toList,
+               const void           *fromListFromNode,
+               const void           *fromListToNode,
+               void                 *toListNextNode,
+               ListNodeCopyFunction listNodeCopyFunction,
+               void                 *listNodeCopyUserData
+              );
 
 /***********************************************************************\
 * Name   : List_move
@@ -140,7 +175,12 @@ void List_clear(void *list, ListNodeFreeFunction listNodeFreeFunction, void *lis
 * Notes  : -
 \***********************************************************************/
 
-void List_move(void *fromList, void *toList, void *fromListFromNode, void *fromListToNode, void *toListNextNode);
+void List_move(void *fromList,
+               void *toList,
+               void *fromListFromNode,
+               void *fromListToNode,
+               void *toListNextNode
+              );
 
 /***********************************************************************\
 * Name   : List_empty
@@ -175,7 +215,10 @@ unsigned long List_count(void *list);
 * Notes  : -
 \***********************************************************************/
 
-void List_insert(void *list, void *node, void *nextNode);
+void List_insert(void *list,
+                 void *node,
+                 void *nextNode
+                );
 
 /***********************************************************************\
 * Name   : List_append
@@ -187,7 +230,9 @@ void List_insert(void *list, void *node, void *nextNode);
 * Notes  : -
 \***********************************************************************/
 
-void List_append(void *list, void *node);
+void List_append(void *list,
+                 void *node
+                );
 
 /***********************************************************************\
 * Name   : List_remove
@@ -199,7 +244,9 @@ void List_append(void *list, void *node);
 * Notes  : -
 \***********************************************************************/
 
-void *List_remove(void *list, void *node);
+void *List_remove(void *list,
+                  void *node
+                 );
 
 /***********************************************************************\
 * Name   : List_getFirst
@@ -234,7 +281,10 @@ Node *List_getLast(void *list);
 * Notes  : -
 \***********************************************************************/
 
-Node *List_findFirst(void *list, ListNodeCompareFunction listNodeCompareFunction, void *listNodeCompareUserData);
+Node *List_findFirst(void                    *list,
+                     ListNodeCompareFunction listNodeCompareFunction,
+                     void                    *listNodeCompareUserData
+                    );
 
 /***********************************************************************\
 * Name   : List_findNext
@@ -248,7 +298,11 @@ Node *List_findFirst(void *list, ListNodeCompareFunction listNodeCompareFunction
 * Notes  : -
 \***********************************************************************/
 
-Node *List_findNext(void *list, void *node, ListNodeCompareFunction listNodeCompareFunction, void *listNodeCompareUserData);
+Node *List_findNext(void                    *list,
+                    void                    *node,
+                    ListNodeCompareFunction listNodeCompareFunction,
+                    void                    *listNodeCompareUserData
+                   );
 
 #ifdef __cplusplus
   }
