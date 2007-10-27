@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -41,8 +41,6 @@
 
 /***************************** Variables *******************************/
 LOCAL Password *defaultSSHPassword;
-LOCAL String   defaultSSHPublicKeyFileName;
-LOCAL String   defaultSSHPrivatKeyFileName;
 
 /****************************** Macros *********************************/
 
@@ -105,100 +103,6 @@ LOCAL bool initSSHPassword(const Options *options)
   {
     return TRUE;
   }
-}
-#endif /* HAVE_SSH2 */
-
-/***********************************************************************\
-* Name   : initSSHSession
-* Purpose: initialize a SSH session
-* Input  : socketHandle - network socket handle
-*          userName     - user name
-*          options      - options
-* Output : session - initialized session
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-#ifdef HAVE_SSH2
-LOCAL Errors initSSHSession(SocketHandle    *socketHandle,
-                            const String    userName,
-                            const Options   *options,
-                            LIBSSH2_SESSION **session
-                           )
-{
-  const char *password;
-
-  assert(socketHandle != NULL);
-  assert(userName != NULL);
-  assert(options != NULL);
-  assert(session != NULL);
-
-  /* init session */
-  (*session) = libssh2_session_init();
-  if ((*session) == NULL)
-  {
-    return ERROR_SSH_SESSION_FAIL;
-  }
-  if (libssh2_session_startup(*session,
-                              Network_getSocket(socketHandle)
-                             ) != 0
-     )
-  {
-    libssh2_session_disconnect(*session,"");
-    libssh2_session_free(*session);
-    return ERROR_SSH_SESSION_FAIL;
-  }
-
-#if 1
-  password = Password_deploy((options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword);
-  if (libssh2_userauth_publickey_fromfile(*session,
-// NYI
-                                          String_cString(userName),
-                                          String_cString((options->sshPublicKeyFileName != NULL)?options->sshPublicKeyFileName:defaultSSHPublicKeyFileName),
-                                          String_cString((options->sshPrivatKeyFileName != NULL)?options->sshPrivatKeyFileName:defaultSSHPrivatKeyFileName),
-                                          password
-                                         ) != 0
-     )
-  {
-    Password_undeploy((options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword);
-    libssh2_session_disconnect(*session,"");
-    libssh2_session_free(*session);
-    return ERROR_SSH_AUTHENTIFICATION;
-  }
-  Password_undeploy((options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword);
-#else
-  if (libssh2_userauth_keyboard_interactive(*session,
-                                            String_cString(userName),
-                                            NULL
-                                          ) != 0
-     )
-  {
-    libssh2_session_disconnect(*session,"");
-    libssh2_session_free(*session);
-    return ERROR_SSH_AUTHENTIFICATION;
-  }
-#endif /* 0 */
-
-  return ERROR_NONE;
-}
-#endif /* HAVE_SSH2 */
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#ifdef HAVE_SSH2
-LOCAL void doneSSHSession(LIBSSH2_SESSION *session)
-{
-  assert(session != NULL);
-
-  libssh2_session_disconnect(session,"");
-  libssh2_session_free(session);
 }
 #endif /* HAVE_SSH2 */
 
@@ -324,25 +228,15 @@ fprintf(stderr,"%s,%d: == averageBandWidth=%lu storageFileHandle->bandWidth.max=
 
 /*---------------------------------------------------------------------*/
 
-Errors Storage_init(void)
+Errors Storage_initAll(void)
 {
-  defaultSSHPassword          = Password_new();
-  defaultSSHPublicKeyFileName = String_new();
-  defaultSSHPrivatKeyFileName = String_new();
-  File_setFileNameCString(defaultSSHPublicKeyFileName,getenv("HOME"));
-  File_appendFileNameCString(defaultSSHPublicKeyFileName,".ssh");
-  File_appendFileNameCString(defaultSSHPublicKeyFileName,"id_rsa.pub");
-  File_setFileNameCString(defaultSSHPrivatKeyFileName,getenv("HOME"));
-  File_appendFileNameCString(defaultSSHPrivatKeyFileName,".ssh");
-  File_appendFileNameCString(defaultSSHPrivatKeyFileName,"id_rsa");
+  defaultSSHPassword = Password_new();
 
   return ERROR_NONE;
 }
 
-void Storage_done(void)
+void Storage_doneAll(void)
 {
-  String_delete(defaultSSHPrivatKeyFileName);
-  String_delete(defaultSSHPublicKeyFileName);
   Password_delete(defaultSSHPassword);
 }
 
@@ -380,7 +274,7 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
 
   assert(sshSpecifier != NULL);
 
-  /* parse connection string */
+  /* get user name */
   i0 = 0;
   i1 = String_findChar(sshSpecifier,i0,'@');
   if (i1 < 0)
@@ -389,6 +283,8 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
     return FALSE;
   }
   if (userName != NULL) String_sub(userName,sshSpecifier,i0,i1-i0);
+
+  /* get host name */
   i0 = i1+1;
   i1 = String_findChar(sshSpecifier,i0,':');
   if (i1 < 0)
@@ -435,12 +331,11 @@ Errors Storage_prepare(const String  storageName,
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          String          userName;
-          String          hostName;
-          String          hostFileName;
-          Errors          error;
-          SocketHandle    socketHandle;
-          LIBSSH2_SESSION *session;
+          String       userName;
+          String       hostName;
+          String       hostFileName;
+          Errors       error;
+          SocketHandle socketHandle;
 
           /* parse ssh login specification */
           userName     = String_new();
@@ -466,7 +361,16 @@ Errors Storage_prepare(const String  storageName,
           }
 
           /* check if ssh login is possible */
-          error = Network_connect(&socketHandle,hostName,options->sshPort,0);
+          error = Network_connect(&socketHandle,
+                                  SOCKET_TYPE_SSH,
+                                  hostName,
+                                  options->sshPort,
+                                  userName,
+                                  options->sshPublicKeyFileName,
+                                  options->sshPrivatKeyFileName,
+                                  (options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword,
+                                  0
+                                 );
           if (error != ERROR_NONE)
           {
             String_delete(hostFileName);
@@ -475,21 +379,6 @@ Errors Storage_prepare(const String  storageName,
             String_delete(storageSpecifier);
             return error;
           }
-          error = initSSHSession(&socketHandle,
-                                 userName,
-                                 options,
-                                 &session
-                                );
-          if (error != ERROR_NONE)
-          {
-            Network_disconnect(&socketHandle);
-            String_delete(hostFileName);
-            String_delete(hostName);
-            String_delete(userName);
-            String_delete(storageSpecifier);
-            return error;
-          }
-          doneSSHSession(session);
           Network_disconnect(&socketHandle);
 
           /* free resources */
@@ -571,7 +460,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           /* init variables */
           storageFileHandle->type = STORAGE_TYPE_SCP;
 
-          /* parse connection string */
+          /* parse storage string */
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
@@ -586,8 +475,13 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 
           /* open network connection */
           error = Network_connect(&storageFileHandle->scp.socketHandle,
+                                  SOCKET_TYPE_SSH,
                                   hostName,
                                   options->sshPort,
+                                  userName,
+                                  options->sshPublicKeyFileName,
+                                  options->sshPrivatKeyFileName,
+                                  (options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -599,24 +493,8 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
             return error;
           }
 
-          /* init session */
-          error = initSSHSession(&storageFileHandle->scp.socketHandle,
-                                 userName,
-                                 options,
-                                 &storageFileHandle->scp.session
-                                );
-          if (error != ERROR_NONE)
-          {
-            Network_disconnect(&storageFileHandle->scp.socketHandle);
-            String_delete(hostFileName);
-            String_delete(hostName);
-            String_delete(userName);
-            String_delete(storageSpecifier);
-            return error;
-          }
-
-          /* open channel */
-          storageFileHandle->scp.channel = libssh2_scp_send(storageFileHandle->scp.session,
+          /* open channel and send file */
+          storageFileHandle->scp.channel = libssh2_scp_send(Network_getSSHSession(&storageFileHandle->scp.socketHandle),
                                                             String_cString(hostFileName),
 // ???
 0600,
@@ -625,7 +503,6 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           if (storageFileHandle->scp.channel == NULL)
           {
             printError("Init ssh channel fail!\n");
-            doneSSHSession(storageFileHandle->sftp.session);
             Network_disconnect(&storageFileHandle->scp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
@@ -654,7 +531,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           /* init variables */
           storageFileHandle->type = STORAGE_TYPE_SFTP;
 
-          /* parse connection string */
+          /* parse storage string */
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
@@ -669,8 +546,13 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 
           /* open network connection */
           error = Network_connect(&storageFileHandle->sftp.socketHandle,
+                                  SOCKET_TYPE_SSH,
                                   hostName,
                                   options->sshPort,
+                                  userName,
+                                  options->sshPublicKeyFileName,
+                                  options->sshPrivatKeyFileName,
+                                  (options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -682,28 +564,11 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
             return error;
           }
 
-          /* init session */
-          error = initSSHSession(&storageFileHandle->sftp.socketHandle,
-                                 userName,
-                                 options,
-                                 &storageFileHandle->sftp.session
-                                );
-          if (error != ERROR_NONE)
-          {
-            Network_disconnect(&storageFileHandle->sftp.socketHandle);
-            String_delete(hostFileName);
-            String_delete(hostName);
-            String_delete(userName);
-            String_delete(storageSpecifier);
-            return error;
-          }
-
-          /* open FTP session */
-          storageFileHandle->sftp.sftp = libssh2_sftp_init(storageFileHandle->sftp.session);
+          /* init FTP session */
+          storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->scp.socketHandle));
           if (storageFileHandle->sftp.sftp == NULL)
           {
             printError("Init sftp fail!\n");
-            doneSSHSession(storageFileHandle->sftp.session);
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
@@ -723,7 +588,6 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           {
             printError("Create sftp file fail!\n");
             libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
-            doneSSHSession(storageFileHandle->sftp.session);
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
@@ -790,8 +654,8 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_SSH:
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
       String_delete(storageSpecifier);
+      return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
@@ -804,7 +668,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           /* init variables */
           storageFileHandle->type = STORAGE_TYPE_SCP;
 
-          /* parse connection string */
+          /* parse storage string */
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
@@ -819,8 +683,13 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
 
           /* open network connection */
           error = Network_connect(&storageFileHandle->scp.socketHandle,
+                                  SOCKET_TYPE_SSH,
                                   hostName,
                                   options->sshPort,
+                                  userName,
+                                  options->sshPublicKeyFileName,
+                                  options->sshPrivatKeyFileName,
+                                  (options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -832,31 +701,14 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             return error;
           }
 
-          /* init session */
-          error = initSSHSession(&storageFileHandle->scp.socketHandle,
-                                 userName,
-                                 options,
-                                 &storageFileHandle->scp.session
-                                );
-          if (error != ERROR_NONE)
-          {
-            Network_disconnect(&storageFileHandle->scp.socketHandle);
-            String_delete(hostFileName);
-            String_delete(hostName);
-            String_delete(userName);
-            String_delete(storageSpecifier);
-            return error;
-          }
-
-          /* open channel */
-          storageFileHandle->scp.channel = libssh2_scp_recv(storageFileHandle->scp.session,
-                                                          String_cString(hostFileName),
-                                                          &fileInfo
-                                                         );
+          /* open channel and receive file */
+          storageFileHandle->scp.channel = libssh2_scp_recv(Network_getSSHSession(&storageFileHandle->scp.socketHandle),
+                                                            String_cString(hostFileName),
+                                                            &fileInfo
+                                                           );
           if (storageFileHandle->scp.channel == NULL)
           {
             printError("Init ssh channel fail!\n");
-            doneSSHSession(storageFileHandle->sftp.session);
             Network_disconnect(&storageFileHandle->scp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
@@ -895,7 +747,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             HALT_INSUFFICIENT_MEMORY();
           }
 
-          /* parse connection string */
+          /* parse storage string */
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
@@ -910,8 +762,13 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
 
           /* open network connection */
           error = Network_connect(&storageFileHandle->sftp.socketHandle,
+                                  SOCKET_TYPE_SSH,
                                   hostName,
                                   options->sshPort,
+                                  userName,
+                                  options->sshPublicKeyFileName,
+                                  options->sshPrivatKeyFileName,
+                                  (options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -923,28 +780,11 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             return error;
           }
 
-          /* init session */
-          error = initSSHSession(&storageFileHandle->sftp.socketHandle,
-                                 userName,
-                                 options,
-                                 &storageFileHandle->sftp.session
-                                );
-          if (error != ERROR_NONE)
-          {
-            Network_disconnect(&storageFileHandle->sftp.socketHandle);
-            String_delete(hostFileName);
-            String_delete(hostName);
-            String_delete(userName);
-            String_delete(storageSpecifier);
-            return error;
-          }
-
-          /* open FTP session */
-          storageFileHandle->sftp.sftp = libssh2_sftp_init(storageFileHandle->sftp.session);
+          /* init FTP session */
+          storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->scp.socketHandle));
           if (storageFileHandle->sftp.sftp == NULL)
           {
             printError("Init sftp fail!\n");
-            doneSSHSession(storageFileHandle->sftp.session);
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
@@ -963,7 +803,6 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           {
             printError("Create sftp file fail!\n");
             libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
-            doneSSHSession(storageFileHandle->sftp.session);
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
@@ -981,7 +820,6 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             printError("Cannot detect sftp file size!\n");
             libssh2_sftp_close(storageFileHandle->sftp.sftpHandle);
             libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
-            doneSSHSession(storageFileHandle->sftp.session);
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
@@ -1044,7 +882,6 @@ void Storage_close(StorageFileHandle *storageFileHandle)
           #endif /* NDEBUG */
         }
         libssh2_channel_free(storageFileHandle->scp.channel);
-        doneSSHSession(storageFileHandle->sftp.session);
         Network_disconnect(&storageFileHandle->scp.socketHandle);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
@@ -1053,7 +890,6 @@ void Storage_close(StorageFileHandle *storageFileHandle)
       #ifdef HAVE_SSH2
         libssh2_sftp_close(storageFileHandle->sftp.sftpHandle);
         libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
-        doneSSHSession(storageFileHandle->sftp.session);
         Network_disconnect(&storageFileHandle->sftp.socketHandle);
         free(storageFileHandle->sftp.readAheadBuffer.data);
       #else /* not HAVE_SSH2 */
@@ -1476,7 +1312,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           storageDirectoryHandle->type          = STORAGE_TYPE_SFTP;
           storageDirectoryHandle->sftp.pathName = String_new();
 
-          /* parse connection string */
+          /* parse storage string */
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
@@ -1493,8 +1329,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
           /* open network connection */
           error = Network_connect(&storageDirectoryHandle->sftp.socketHandle,
+                                  SOCKET_TYPE_SSH,
                                   hostName,
                                   options->sshPort,
+                                  userName,
+                                  options->sshPublicKeyFileName,
+                                  options->sshPrivatKeyFileName,
+                                  (options->sshPassword != NULL)?options->sshPassword:defaultSSHPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -1507,29 +1348,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             return error;
           }
 
-          /* init session */
-          error = initSSHSession(&storageDirectoryHandle->sftp.socketHandle,
-                                 userName,
-                                 options,
-                                 &storageDirectoryHandle->sftp.session
-                                );
-          if (error != ERROR_NONE)
-          {
-            Network_disconnect(&storageDirectoryHandle->sftp.socketHandle);
-            String_delete(hostFileName);
-            String_delete(hostName);
-            String_delete(userName);
-            String_delete(storageDirectoryHandle->sftp.pathName);
-            String_delete(storageSpecifier);
-            return error;
-          }
-
-          /* open FTP session */
-          storageDirectoryHandle->sftp.sftp = libssh2_sftp_init(storageDirectoryHandle->sftp.session);
+          /* init FTP session */
+          storageDirectoryHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryHandle->sftp.socketHandle));
           if (storageDirectoryHandle->sftp.sftp == NULL)
           {
             printError("Init sftp fail!\n");
-            doneSSHSession(storageDirectoryHandle->sftp.session);
             Network_disconnect(&storageDirectoryHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
@@ -1547,7 +1370,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           {
             printError("Create sftp file fail!\n");
             libssh2_sftp_shutdown(storageDirectoryHandle->sftp.sftp);
-            doneSSHSession(storageDirectoryHandle->sftp.session);
             Network_disconnect(&storageDirectoryHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
@@ -1590,7 +1412,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #ifdef HAVE_SSH2
         libssh2_sftp_closedir(storageDirectoryHandle->sftp.sftpHandle);
         libssh2_sftp_shutdown(storageDirectoryHandle->sftp.sftp);
-        doneSSHSession(storageDirectoryHandle->sftp.session);
         Network_disconnect(&storageDirectoryHandle->sftp.socketHandle);
         String_delete(storageDirectoryHandle->sftp.pathName);
       #else /* not HAVE_SSH2 */

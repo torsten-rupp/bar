@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -16,6 +16,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef HAVE_SSH2
+  #include <libssh2.h>
+#endif /* HAVE_SSH2 */
 #ifdef HAVE_GNU_TLS
   #include <gnutls/gnutls.h>
 #endif /* HAVE_GNU_TLS */
@@ -34,16 +37,35 @@
 typedef enum
 {
   SOCKET_TYPE_PLAIN,
+  SOCKET_TYPE_SSH,
   SOCKET_TYPE_TLS,
 } SocketTypes;
 
 typedef struct
 {
-  SocketTypes      type;
-  int              handle; 
-  #ifdef HAVE_GNU_TLS
-    gnutls_session_t gnuTLSSession;
-  #endif /* HAVE_GNU_TLS */
+  SocketTypes type;
+  int         handle;
+  union
+  {
+    #ifdef HAVE_SSH2
+      struct
+      {
+        LIBSSH2_SESSION *session;
+        int             ioType;
+      } ssh2;
+    #endif /* HAVE_SSH2 */
+    #ifdef HAVE_GNU_TLS
+      struct
+      {
+        gnutls_session_t session;
+      } gnuTLS;
+    #endif /* HAVE_GNU_TLS */
+  };
+/* optimize ???
+  byte  *buffer;
+  ulong index;
+  ulong length;
+*/
 } SocketHandle;
 
 typedef enum
@@ -63,6 +85,36 @@ typedef struct
   #endif /* HAVE_GNU_TLS */
 } ServerSocketHandle;
 
+typedef enum
+{
+  NETWORK_EXECUTE_IO_TYPE_STDOUT,
+  NETWORK_EXECUTE_IO_TYPE_STDERR,
+} NetworkExecuteIOTypes;
+
+#define NETWORK_EXECUTE_IO_MASK_STDOUT (1 << NETWORK_EXECUTE_IO_TYPE_STDOUT)
+#define NETWORK_EXECUTE_IO_MASK_STDERR (1 << NETWORK_EXECUTE_IO_TYPE_STDERR)
+
+typedef struct
+{
+  SocketHandle *socketHandle;
+  #ifdef HAVE_SSH2
+     LIBSSH2_CHANNEL *channel;
+  #endif /* HAVE_SSH2 */
+// optimize ???
+  struct
+  {
+    char data[256];
+    uint index;
+    uint length;
+  } stdoutBuffer;
+  struct
+  {
+    char data[256];
+    uint index;
+    uint length;
+  } stderrBuffer;
+} NetworkExecuteHandle;
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -76,7 +128,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Network_init
+* Name   : Network_initAll
 * Purpose: init network functions
 * Input  : -
 * Output : -
@@ -84,10 +136,10 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Network_init(void);
+Errors Network_initAll(void);
 
 /***********************************************************************\
-* Name   : Network_done
+* Name   : Network_doneAll
 * Purpose: deinitialize network functions
 * Input  : -
 * Output : -
@@ -95,22 +147,32 @@ Errors Network_init(void);
 * Notes  : -
 \***********************************************************************/
 
-void Network_done(void);
+void Network_doneAll(void);
 
 /***********************************************************************\
 * Name   : Network_connect
 * Purpose: connect to host
-* Input  : hostName - host name
-*          hostPort - host port
-*          flags    - socket falgs
+* Input  : socketType           - socket type; see SOCKET_TYPE_*
+*          hostName             - host name
+*          hostPort             - host port
+*          flags                - socket falgs
+*          userName             - SSH login user name
+*          sshPublicKeyFileName - SSH public key file for login
+*          sshPublicKeyFileName - SSH public key file for login
+*          sshPassword          - SSH password
 * Output : socketHandle - socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Network_connect(SocketHandle *socketHandle,
-                       String       hostName,
+                       SocketTypes  socketType,
+                       const String hostName,
                        uint         hostPort,
+                       const String userName,
+                       const String sshPublicKeyFileName,
+                       const String sshPrivatKeyFileName,
+                       Password     *sshPassword,
                        uint         flags
                       );
 
@@ -137,6 +199,61 @@ void Network_disconnect(SocketHandle *socketHandle);
 int Network_getSocket(SocketHandle *socketHandle);
 
 /***********************************************************************\
+* Name   : Network_getSSHSession
+* Purpose: get SSH session from socket handle
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : ssh session
+* Notes  : -
+\***********************************************************************/
+
+#ifdef HAVE_SSH2
+LIBSSH2_SESSION *Network_getSSHSession(SocketHandle *socketHandle);
+#endif /* HAVE_SSH2 */
+
+/***********************************************************************\
+* Name   : Network_eof
+* Purpose: check of end-of-file reached
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : TRUE iff end-of-file reached, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Network_eof(SocketHandle *socketHandle);
+
+/***********************************************************************\
+* Name   : Network_getAvaibleBytes
+* Purpose: get number of available bytes
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : number of available bytes which can be received without
+*          blocking
+* Notes  : -
+\***********************************************************************/
+
+ulong Network_getAvaibleBytes(SocketHandle *socketHandle);
+
+/***********************************************************************\
+* Name   : Network_receive
+* Purpose: receive data from host
+* Input  : socketHandle - socket handle
+*          buffer       - data buffer
+*          timeout      - timeout [ms] or WAIT_FOREVER
+*          maxLength    - max. length of data (in bytes)
+* Output : bytesReceived - number of bytes received
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_receive(SocketHandle *socketHandle,
+                       void         *buffer,
+                       ulong        maxLength,
+                       long         timeout,
+                       ulong        *bytesReceived
+                      );
+
+/***********************************************************************\
 * Name   : Network_send
 * Purpose: send data to host
 * Input  : socketHandle - socket handle
@@ -153,21 +270,34 @@ Errors Network_send(SocketHandle *socketHandle,
                    );
 
 /***********************************************************************\
-* Name   : Network_receive
-* Purpose: 
+* Name   : Network_readLine
+* Purpose: read line from host (end of line: \n or \r\n)
 * Input  : socketHandle - socket handle
-*          buffer       - data buffer
-*          maxLength    - max. length of data (in bytes)
-* Output : receivedBytes - number of bytes received
-* Return : ERROR_NONE or errorcode
+*          line         - string variable
+*          timeout      - timeout [ms] or WAIT_FOREVER
+* Output : line - read line
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Network_receive(SocketHandle *socketHandle,
-                       void         *buffer,
-                       ulong        maxLength,
-                       ulong        *receivedBytes
-                      );
+Errors Network_readLine(SocketHandle *socketHandle,
+                        String       line,
+                        long         timeout
+                       );
+
+/***********************************************************************\
+* Name   : Network_writeLine
+* Purpose: write line to host
+* Input  : socketHandle - socket handle
+*          line         - line to write
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_writeLine(SocketHandle *socketHandle,
+                         const String line
+                        );
 
 /***********************************************************************\
 * Name   : Network_initServer
@@ -183,8 +313,8 @@ Errors Network_receive(SocketHandle *socketHandle,
 \***********************************************************************/
 
 Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
-                          uint               serverPort,
                           ServerTypes        serverType,
+                          uint               serverPort,
                           const char         *caFileName,
                           const char         *certFileName,
                           const char         *keyFileName
@@ -259,23 +389,149 @@ void Network_getRemoteInfo(SocketHandle *socketHandle,
                            uint   *port
                           );
 
+/*---------------------------------------------------------------------*/
+
 /***********************************************************************\
-* Name   : Network_connect
-* Purpose: connect to host
-* Input  : hostName - host name
-*          hostPort - host port
-*          flags    - socket falgs
-* Output : socketHandle - socket handle
-* Return : ERROR_NONE or errorcode
+* Name   : Network_execute
+* Purpose: execute remote command
+* Input  : networkExecuteHandle - network execute handle variable
+*          socketHandle         - SSH socket handle
+*          ioMaks               - i/o mask
+*          command              - command to execute
+* Output : networkExecuteHandle - network execute handle
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Network_execute(SocketHandle *socketHandle,
-                       String       hostName,
-                       uint         hostPort,
-                       uint         flags,
-                       const char   *command
+Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
+                       SocketHandle         *socketHandle,
+                       ulong                ioMask,
+                       const char           *command
                       );
+
+/***********************************************************************\
+* Name   : Network_terminate
+* Purpose: terminate execution of remote command
+* Input  : networkExecuteHandle - network execute handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+int Network_terminate(NetworkExecuteHandle *networkExecuteHandle);
+
+/***********************************************************************\
+* Name   : Network_executeEOF
+* Purpose: check of end-of-data from remote execution
+* Input  : networkExecuteHandle - network execute handle
+*          ioType               - i/o type; see
+*                                 NETWORK_EXECUTE_IO_TYPES_*
+*          timeout              - timeout or WAIT_FOREVER [ms]
+* Output : -
+* Return : TRUE iff end-of-data, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Network_executeEOF(NetworkExecuteHandle  *networkExecuteHandle,
+                        NetworkExecuteIOTypes ioType,
+                        long                  timeout
+                       );
+
+/***********************************************************************\
+* Name   : Network_executeSendEOF
+* Purpose: send end-of-data to remote execution
+* Input  : networkExecuteHandle - network execute handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Network_executeSendEOF(NetworkExecuteHandle *networkExecuteHandle);
+
+/***********************************************************************\
+* Name   : Network_executeWrite
+* Purpose: write data to remote stdin
+* Input  : networkExecuteHandle - network execute handle
+* Output : buffer               - data buffer
+*          length               - length of data
+* Return : ERROR_NONE if data written, error code otherwise
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_executeWrite(NetworkExecuteHandle *networkExecuteHandle,
+                            const void           *buffer,
+                            ulong                length
+                           );
+
+/***********************************************************************\
+* Name   : Network_executeRead
+* Purpose: read remote stdout/stderr
+* Input  : networkExecuteHandle - network execute handle
+*          ioType               - i/o type; see
+*                                 NETWORK_EXECUTE_IO_TYPES_*
+*          buffer               - data buffer
+*          maxLength            - max. size of buffer
+*          timeout              - timeout or WAIT_FOREVER [ms]
+* Output : bytesRead - number of bytes read
+* Return : ERROR_NONE if data written, error code otherwise
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_executeRead(NetworkExecuteHandle  *networkExecuteHandle,
+                           NetworkExecuteIOTypes ioType,
+                           void                  *buffer,
+                           ulong                 maxLength,
+                           long                  timeout,
+                           ulong                 *bytesRead
+                          );
+
+/***********************************************************************\
+* Name   : Network_executeWriteLine
+* Purpose: write line to remote stdin
+* Input  : networkExecuteHandle - network execute handle
+*          line                 - string
+* Output : -
+* Return : ERROR_NONE if data written, error code otherwise
+* Notes  : '\n' is appended
+\***********************************************************************/
+
+Errors Network_executeWriteLine(NetworkExecuteHandle *networkExecuteHandle,
+                                const String         line
+                               );
+
+/***********************************************************************\
+* Name   : Network_executeReadLine
+* Purpose: read line from remote stdout/stderr
+* Input  : networkExecuteHandle - network execute handle
+*          ioType               - i/o type; see
+*                                 NETWORK_EXECUTE_IO_TYPES_*
+*          line                 - string variable
+*          timeout              - timeout or WAIT_FOREVER [ms]
+* Output : -
+* Return : ERROR_NONE if data written, error code otherwise
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
+                               NetworkExecuteIOTypes ioType,
+                               String                line,
+                               long                  timeout
+                              );
+
+/***********************************************************************\
+* Name   : Network_executeFlush
+* Purpose: flush stdout/stderr for remote program
+* Input  : networkExecuteHandle - network execute handle
+*          ioType               - i/o type; see
+*                                 NETWORK_EXECUTE_IO_TYPES_*
+* Output : -
+* Return : ERROR_NONE if data written, error code otherwise
+* Notes  : -
+\***********************************************************************/
+
+void Network_executeFlush(NetworkExecuteHandle  *networkExecuteHandle,
+                          NetworkExecuteIOTypes ioType
+                         );
 
 #ifdef __cplusplus
   }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -73,32 +73,28 @@ typedef struct
     // ssh storage (remote BAR)
     struct
     {
-      SocketHandle        socketHandle;
-      LIBSSH2_SESSION     *session;
-      LIBSSH2_CHANNEL     *channel;
+      SocketHandle     socketHandle;
+      LIBSSH2_CHANNEL *channel;
     } ssh;
     // scp storage
     struct
     {
       SocketHandle    socketHandle;
-      LIBSSH2_SESSION *session;
       LIBSSH2_CHANNEL *channel;
     } scp;
     // sftp storage
     struct
     {
       SocketHandle        socketHandle;
-      LIBSSH2_SESSION     *session;
-      LIBSSH2_CHANNEL     *channel;
       LIBSSH2_SFTP        *sftp;
       LIBSSH2_SFTP_HANDLE *sftpHandle;
       uint64              index;
       uint64              size;
       struct
       {
-        byte              *data;
-        uint64            offset;
-        ulong             length;
+        byte   *data;
+        uint64 offset;
+        ulong  length;
       } readAheadBuffer;
     } sftp;
   };
@@ -140,7 +136,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Storage_init
+* Name   : Storage_initAll
 * Purpose: initialize storage functions
 * Input  : -
 * Output : -
@@ -148,10 +144,10 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_init(void);
+Errors Storage_initAll(void);
 
 /***********************************************************************\
-* Name   : Storage_done
+* Name   : Storage_doneAll
 * Purpose: deinitialize storage functions
 * Input  : -
 * Output : -
@@ -159,7 +155,7 @@ Errors Storage_init(void);
 * Notes  : -
 \***********************************************************************/
 
-void Storage_done(void);
+void Storage_doneAll(void);
 
 /***********************************************************************\
 * Name   : Storage_getType
