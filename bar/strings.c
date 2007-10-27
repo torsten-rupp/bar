@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -68,7 +68,7 @@ typedef struct
   unsigned int     width;
   unsigned int     precision;
   FormatLengthType lengthType;
-  char             quotingChar;
+  char             quoteChar;
   char             conversionChar;
 } FormatToken;
 
@@ -211,7 +211,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   formatToken->width            = 0;
   formatToken->precision        = 0;
   formatToken->lengthType       = FORMAT_LENGTH_TYPE_INTEGER;
-  formatToken->quotingChar      = '\0';
+  formatToken->quoteChar        = '\0';
 
   /* format start character */
   assert((*format)=='%');
@@ -268,7 +268,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   /* quoting character */
   if ((*(format+1) == 's') || (*((format+1)) == 'S'))
   {
-    formatToken->quotingChar = (*format);
+    formatToken->quoteChar = (*format);
     format++;
   }
 
@@ -557,21 +557,21 @@ LOCAL void formatString(struct __String *string,
           data.s = va_arg(arguments,const char*);
           assert(data.s != NULL);
 
-          if (formatToken.quotingChar != '\0')
+          if (formatToken.quoteChar != '\0')
           {
             /* quoted string */
-            String_appendChar(string,formatToken.quotingChar);
+            String_appendChar(string,formatToken.quoteChar);
             s = data.s;
             while ((ch = (*s)) != '\0')
             {
-              if (ch == formatToken.quotingChar)
+              if (ch == formatToken.quoteChar)
               {
                 String_appendChar(string,'\\');
               }
               String_appendChar(string,ch);
               s++;
             }
-            String_appendChar(string,formatToken.quotingChar);
+            String_appendChar(string,formatToken.quoteChar);
           }
           else
           {
@@ -610,22 +610,22 @@ LOCAL void formatString(struct __String *string,
           assert(string != NULL);
           CHECK_VALID(data.string);
 
-          if (formatToken.quotingChar != '\0')
+          if (formatToken.quoteChar != '\0')
           {
             /* quoted string */
-            String_appendChar(string,formatToken.quotingChar);
+            String_appendChar(string,formatToken.quoteChar);
             i = 0;
             while (i < String_length(data.string))
             {
               ch = String_index(data.string,i);
-              if (ch == formatToken.quotingChar)
+              if (ch == formatToken.quoteChar)
               {
                 String_appendChar(string,'\\');
               }
               String_appendChar(string,ch);
               i++;
             }
-            String_appendChar(string,formatToken.quotingChar);
+            String_appendChar(string,formatToken.quoteChar);
           }
           else
           {
@@ -711,6 +711,10 @@ still not implemented
 JAMAICA_HALT_NOT_YET_IMPLEMENTED();
           break;
 #endif /* 0 */
+        case 'y':
+          data.i = va_arg(arguments,int);
+          String_appendChar(string,(data.i != 0)?'1':'0');
+          break;
         case '%':
           String_appendChar(string,'%');
           break;
@@ -740,15 +744,16 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
 /***********************************************************************\
 * Name   : parseString
 * Purpose: parse a string (like scanf)
-* Input  : String    - string
-*          format    - format string
-*          arguments - arguments
-*          stringChars - string chars or NULL
+* Input  : String       - string
+*          format       - format string
+*          arguments    - arguments
+*          stringQuotes - string chars or NULL
 * Output : nextIndex - index of next character in string not parsed
 *                      (can be NULL)
 * Return : TRUE if parsing sucessful, FALSE otherwise
 * Notes  : Additional conversion chars:
 *            S - string
+*            y - boolean
 *          Not implemented conversion chars:
 *            p
 *            n
@@ -757,7 +762,7 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
 LOCAL bool parseString(const struct __String *string,
                        const char            *format,
                        const va_list         arguments,
-                       const char            *stringChars,
+                       const char            *stringQuotes,
                        ulong                 *nextIndex
                       )
 {
@@ -772,11 +777,13 @@ LOCAL bool parseString(const struct __String *string,
     char            *c;
     char            *s;
     void            *p;
+    bool            *b;
     struct __String *string;
   } value;
   char        buffer[64];
   ulong       z;
-  const char  *stringChar;
+  const char  *stringQuote;
+  bool        foundFlag;
 
   index = 0;
   while ((*format) != '\0')
@@ -833,7 +840,7 @@ LOCAL bool parseString(const struct __String *string,
             case FORMAT_LENGTH_TYPE_LONGLONG:
               value.ll = va_arg(arguments,long long int*);
               assert(value.ll != NULL);
-              (*value.ll) = strtol(buffer,NULL,10);
+              (*value.ll) = strtoll(buffer,NULL,10);
               break;
             case FORMAT_LENGTH_TYPE_DOUBLE:
               break;
@@ -957,6 +964,7 @@ LOCAL bool parseString(const struct __String *string,
           }
           buffer[z] = '\0';
 
+          /* convert */
           value.d = va_arg(arguments,double*);
           assert(value.d != NULL);
           (*value.d) = strtod(buffer,NULL);
@@ -966,27 +974,33 @@ LOCAL bool parseString(const struct __String *string,
           value.s = va_arg(arguments,char*);
           assert(value.s != NULL);
 
+          assert(formatToken.width > 0);
+
           z = 0;
           while (   (index < string->length)
                  && !isspace(string->data[index])
                  && (string->data[index] != (*format))
                 )
           {
-            stringChar = (stringChars != NULL)?strchr(stringChars,string->data[index]):NULL;
-            if (stringChar != NULL)
+            stringQuote = NULL;
+            if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+            if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
+
+            if (stringQuote != NULL)
             {
               do
               {
-                /* skip string-char */
+                /* skip quote-char */
                 index++;
+
                 /* get string */
-                while ((index < string->length) && (string->data[index] != (*stringChar)))
+                while ((index < string->length) && (string->data[index] != (*stringQuote)))
                 {
                   if (string->data[index] == '\\')
                   {
                     if (index < string->length)
                     {
-                      if ((formatToken.width == 0) || (z < formatToken.width-1))
+                      if (z < (formatToken.width-1))
                       {
                         value.s[z] = string->data[index];
                         z++;
@@ -996,7 +1010,7 @@ LOCAL bool parseString(const struct __String *string,
                   }
                   else
                   {
-                    if ((formatToken.width == 0) || (z < formatToken.width-1))
+                    if (z < (formatToken.width-1))
                     {
                       value.s[z] = string->data[index];
                       z++;
@@ -1004,16 +1018,19 @@ LOCAL bool parseString(const struct __String *string,
                     index++;
                   }
                 }
-                /* skip string-char */
+
+                /* skip quote-char */
                 index++;
-                /* next string char */
-                stringChar = ((stringChars != NULL) && (index < string->length))?strchr(stringChars,string->data[index]):NULL;
+
+                stringQuote = NULL;
+                if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+                if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
               }
-              while (stringChar != NULL);
+              while (stringQuote != NULL);
             }
             else
             {
-              if ((formatToken.width == 0) || (z < formatToken.width-1))
+              if (z < (formatToken.width-1))
               {
                 value.s[z] = string->data[index];
                 z++;
@@ -1036,40 +1053,56 @@ LOCAL bool parseString(const struct __String *string,
           String_clear(value.string);
           while ((index < string->length) && !isspace(string->data[index]))
           {
-            stringChar = (stringChars != NULL)?strchr(stringChars,string->data[index]):NULL;
-            if (stringChar != NULL)
+            stringQuote = NULL;
+            if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+            if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
+
+            if (stringQuote != NULL)
             {
               do
               {
-                /* skip string-char */
+                /* skip quote-char */
                 index++;
+
                 /* get string */
-                while ((index < string->length) && (string->data[index] != (*stringChar)))
+                while ((index < string->length) && (string->data[index] != (*stringQuote)))
                 {
                   if (string->data[index] == '\\')
                   {
                     if (index < string->length)
                     {
-                      String_appendChar(value.string,string->data[index]);
+                      if ((formatToken.width == 0) || (z < formatToken.width-1))
+                      {
+                        String_appendChar(value.string,string->data[index]);
+                      }
                       index++;
                     }
                   }
                   else
                   {
-                    String_appendChar(value.string,string->data[index]);
+                    if ((formatToken.width == 0) || (z < formatToken.width-1))
+                    {
+                      String_appendChar(value.string,string->data[index]);
+                    }
                     index++;
                   }
                 }
-                /* skip string-char */
+
+                /* skip quote-char */
                 index++;
-                /* next string char */
-                stringChar = ((stringChars != NULL) && (index < string->length))?strchr(stringChars,string->data[index]):NULL;
+
+                stringQuote = NULL;
+                if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+                if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
               }
-              while (stringChar != NULL);
+              while (stringQuote != NULL);
             }
             else
             {
-              String_appendChar(value.string,string->data[index]);
+              if ((formatToken.width == 0) || (z < formatToken.width-1))
+              {
+                String_appendChar(value.string,string->data[index]);
+              }
               index++;
             }
           }
@@ -1143,6 +1176,51 @@ still not implemented
 JAMAICA_HALT_NOT_YET_IMPLEMENTED();
           break;
 #endif /* 0 */
+        case 'y':
+          /* get data */
+          z = 0;
+          while (   (index < string->length)
+                 && !isspace(string->data[index])
+                )
+          {
+            if (z < sizeof(buffer)-1)
+            {
+              buffer[z] = string->data[index];
+              z++;
+            }
+            index++;
+          }
+          buffer[z] = '\0';
+
+          /* convert */
+          value.b = va_arg(arguments,bool*);
+          foundFlag = FALSE;
+          z = 0;
+          while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS)))
+          {
+            if (strcmp(buffer,DEFAULT_TRUE_STRINGS[z]) == 0)
+            {
+              (*value.b) = TRUE;
+              foundFlag = TRUE;
+            }
+            z++;
+          }
+          z = 0;
+          while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS)))
+          {
+            if (strcmp(buffer,DEFAULT_FALSE_STRINGS[z]) == 0)
+            {
+              (*value.b) = FALSE;
+              foundFlag = TRUE;
+            }
+            z++;
+          }
+
+          if (!foundFlag)
+          {
+            return FALSE;
+          }
+          break;
         case '%':
           if ((index >= string->length) || (string->data[index] != '%'))
           {
@@ -1528,9 +1606,13 @@ String __String_copy(const char *fileName, ulong lineNb, String fromString)
     memcpy(&string->data[0],&fromString->data[0],fromString->length);
     string->data[fromString->length] ='\0';
     string->length = fromString->length;
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
+  else
+  {
+    string = NULL;
+  }
 
   return string;
 }
@@ -2460,7 +2542,7 @@ String String_vformat(String string, const char *format, va_list arguments)
 void String_initTokenizer(StringTokenizer *stringTokenizer,
                           const String    string,
                           const char      *separatorChars,
-                          const char      *stringChars,
+                          const char      *stringQuotes,
                           bool            skipEmptyTokens
                          )
 {
@@ -2472,7 +2554,7 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
   stringTokenizer->string          = string;
   stringTokenizer->index           = 0;
   stringTokenizer->separatorChars  = separatorChars;
-  stringTokenizer->stringChars     = stringChars;
+  stringTokenizer->stringQuotes    = stringQuotes;
   stringTokenizer->skipEmptyTokens = skipEmptyTokens;
   #ifdef NDEBUG
     stringTokenizer->token         = String_new();
@@ -2516,13 +2598,13 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   /* get token */
   if (tokenIndex != NULL) (*tokenIndex) = stringTokenizer->index;
   String_clear(stringTokenizer->token);
-  if (stringTokenizer->stringChars != NULL)
+  if (stringTokenizer->stringQuotes != NULL)
   {
     while (   (stringTokenizer->index < stringTokenizer->string->length)
            && (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) == NULL)
           )
     {
-      s = strchr(stringTokenizer->stringChars,stringTokenizer->string->data[stringTokenizer->index]);
+      s = strchr(stringTokenizer->stringQuotes,stringTokenizer->string->data[stringTokenizer->index]);
       if (s != NULL)
       {
         stringTokenizer->index++;
@@ -2533,7 +2615,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
           String_appendChar(stringTokenizer->token,stringTokenizer->string->data[stringTokenizer->index]);
           stringTokenizer->index++;
         }
-        if (stringTokenizer->index >= stringTokenizer->string->length) stringTokenizer->index++;
+        if (stringTokenizer->index < stringTokenizer->string->length) stringTokenizer->index++;
       }
       else
       {
@@ -2582,138 +2664,6 @@ bool String_scan(const String string, const char *format, ...)
   return result;
 }
 
-int String_toInteger(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
-{
-  int  n;
-  char *nextData;
-
-  assert(string != NULL);
-
-  CHECK_VALID(string);
-
-  n = strtol(string->data,&nextData,0);
-  if ((ulong)(nextData-string->data) < string->length)
-  {
-    n = n*getUnitFactor(stringUnits,stringUnitCount,string->data,nextData,nextIndex);
-  }
-  else
-  {
-    if (nextIndex != NULL) (*nextIndex) = STRING_END;
-  }
-
-  return n;
-}
-
-int64 String_toInteger64(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
-{
-  int64 n;
-  char  *nextData;
-
-  assert(string != NULL);
-
-  n = strtoll(string->data,&nextData,0);
-  if ((ulong)(nextData-string->data) < string->length)
-  {
-    n = n*(int64)getUnitFactor(stringUnits,stringUnitCount,string->data,nextData,nextIndex);
-  }
-  else
-  {
-    if (nextIndex != NULL) (*nextIndex) = STRING_END;
-  }
-
-  return n;
-}
-
-double String_toDouble(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
-{
-  double n;
-  char   *nextData;
-
-  assert(string != NULL);
-
-  CHECK_VALID(string);
-
-  n = strtod(string->data,&nextData);
-  if ((ulong)(nextData-string->data) < string->length)
-  {
-    n = n*(double)getUnitFactor(stringUnits,stringUnitCount,string->data,nextData,nextIndex);
-  }
-  else
-  {
-    if (nextIndex != NULL) (*nextIndex) = STRING_END;
-  }
-
-  return n;
-}
-
-double String_toBoolean(const String string, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount)
-{
-  bool       n;
-  bool       foundFlag;
-  const char **strings;
-  uint       stringCount;
-  uint       z;
-
-  assert(string != NULL);
-
-  CHECK_VALID(string);
-
-  n = FALSE;
-  foundFlag = FALSE;
-  if (!foundFlag)
-  {
-    if (trueStrings != NULL)
-    {
-      strings     = trueStrings;
-      stringCount = trueStringCount;
-    }
-    else
-    {
-      strings     = DEFAULT_TRUE_STRINGS;
-      stringCount = SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS);
-    }
-    z = 0;
-    while (!foundFlag && (z < stringCount))
-    {
-      if (strcmp(string->data,strings[z]) == 0)
-      {
-        n = TRUE;
-        foundFlag = TRUE;
-      }
-      z++;
-    }
-  }
-  if (!foundFlag)
-  {
-    if (falseStrings != NULL)
-    {
-      strings     = falseStrings;
-      stringCount = falseStringCount;
-    }
-    else
-    {
-      strings     = DEFAULT_FALSE_STRINGS;
-      stringCount = SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS);
-    }
-    z = 0;
-    while (!foundFlag && (z < stringCount))
-    {
-      if (strcmp(string->data,strings[z]) == 0)
-      {
-        n = FALSE;
-        foundFlag = TRUE;
-      }
-      z++;
-    }
-  }
-  if (!foundFlag)
-  {
-    if (nextIndex != NULL) (*nextIndex) = 0;
-  }
-  
-  return n;
-}
-
 bool String_parse(const String string, const char *format, ulong *nextIndex, ...)
 {
   va_list arguments;
@@ -2725,10 +2675,230 @@ bool String_parse(const String string, const char *format, ulong *nextIndex, ...
   CHECK_VALID(string);
 
   va_start(arguments,nextIndex);
-  result = parseString(string,format,arguments,"\"'",nextIndex);
+  result = parseString(string,format,arguments,STRING_QUOTES,nextIndex);
   va_end(arguments);
 
   return result;
+}
+
+int String_toInteger(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
+{
+  int  n;
+  char *nextData;
+
+  assert(convertString != NULL);
+
+  CHECK_VALID(convertString);
+
+  if (index < convertString->length)
+  {
+    n = strtol(&convertString->data[index],&nextData,0);
+    if ((ulong)(nextData-convertString->data) < convertString->length)
+    {
+      n = n*getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+    }
+    else
+    {
+      if (nextIndex != NULL) (*nextIndex) = STRING_END;
+    }
+  }
+  else
+  {
+    n = 0;
+    if (nextIndex != NULL) (*nextIndex) = index;
+  }
+
+  return n;
+}
+
+int64 String_toInteger64(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
+{
+  int64 n;
+  char  *nextData;
+
+  assert(convertString != NULL);
+
+  if (index < convertString->length)
+  {
+    n = strtoll(&convertString->data[index],&nextData,0);
+    if ((ulong)(nextData-convertString->data) < convertString->length)
+    {
+      n = n*(int64)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+    }
+    else
+    {
+      if (nextIndex != NULL) (*nextIndex) = STRING_END;
+    }
+  }
+  else
+  {
+    n = 0LL;
+    if (nextIndex != NULL) (*nextIndex) = index;
+  }
+
+  return n;
+}
+
+double String_toDouble(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
+{
+  double n;
+  char   *nextData;
+
+  assert(convertString != NULL);
+
+  CHECK_VALID(convertString);
+
+  if (index < convertString->length)
+  {
+    n = strtod(&convertString->data[index],&nextData);
+    if ((ulong)(nextData-convertString->data) < convertString->length)
+    {
+      n = n*(double)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+    }
+    else
+    {
+      if (nextIndex != NULL) (*nextIndex) = STRING_END;
+    }
+  }
+  else
+  {
+    n = 0.0;
+    if (nextIndex != NULL) (*nextIndex) = index;
+  }
+
+  return n;
+}
+
+bool String_toBoolean(const String convertString, ulong index, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount)
+{
+  bool       n;
+  bool       foundFlag;
+  const char **strings;
+  uint       stringCount;
+  uint       z;
+
+  assert(convertString != NULL);
+
+  CHECK_VALID(convertString);
+
+  n = FALSE;
+
+  if (index < convertString->length)
+  {
+    foundFlag = FALSE;
+    if (!foundFlag)
+    {
+      if (trueStrings != NULL)
+      {
+        strings     = trueStrings;
+        stringCount = trueStringCount;
+      }
+      else
+      {
+        strings     = DEFAULT_TRUE_STRINGS;
+        stringCount = SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS);
+      }
+      z = 0;
+      while (!foundFlag && (z < stringCount))
+      {
+        if (strcmp(&convertString->data[index],strings[z]) == 0)
+        {
+          n = TRUE;
+          foundFlag = TRUE;
+        }
+        z++;
+      }
+    }
+    if (!foundFlag)
+    {
+      if (falseStrings != NULL)
+      {
+        strings     = falseStrings;
+        stringCount = falseStringCount;
+      }
+      else
+      {
+        strings     = DEFAULT_FALSE_STRINGS;
+        stringCount = SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS);
+      }
+      z = 0;
+      while (!foundFlag && (z < stringCount))
+      {
+        if (strcmp(&convertString->data[index],strings[z]) == 0)
+        {
+          n = FALSE;
+          foundFlag = TRUE;
+        }
+        z++;
+      }
+    }
+    if (!foundFlag)
+    {
+      if (nextIndex != NULL) (*nextIndex) = index;
+    }
+  }
+  else
+  {
+    n = 0;
+    if (nextIndex != NULL) (*nextIndex) = index;
+  }
+  
+  return n;
+}
+
+String String_toString(String string, const String convertString, ulong index, long *nextIndex, const char *stringQuotes)
+{
+  char *stringQuote;
+
+  if (index < convertString->length)
+  {
+    while ((index < convertString->length) && !isspace(convertString->data[index]))
+    {
+      stringQuote = (stringQuotes != NULL)?strchr(stringQuotes,convertString->data[index]):NULL;
+      if (stringQuote != NULL)
+      {
+        do
+        {
+          /* skip string-char */
+          index++;
+          /* get string */
+          while ((index < convertString->length) && (convertString->data[index] != (*stringQuote)))
+          {
+            if (convertString->data[index] == '\\')
+            {
+              if (index < convertString->length)
+              {
+                String_appendChar(string,convertString->data[index]);
+                index++;
+              }
+            }
+            else
+            {
+              String_appendChar(string,convertString->data[index]);
+              index++;
+            }
+          }
+          /* skip string-char */
+          index++;
+          /* next string char */
+          stringQuote = ((stringQuotes != NULL) && (index < convertString->length))?strchr(stringQuotes,convertString->data[index]):NULL;
+        }
+        while (stringQuote != NULL);
+      }
+      else
+      {
+        String_appendChar(string,convertString->data[index]);
+        index++;
+      }
+    }
+    if (nextIndex != NULL) (*nextIndex) = index;
+  }
+  else
+  {
+    if (nextIndex != NULL) (*nextIndex) = index;
+  }
+
+  return string;
 }
 
 char* String_toCString(const String string)

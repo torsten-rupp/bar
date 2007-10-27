@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -25,6 +25,7 @@
 #define STRING_END   -1
 
 #define STRING_WHITE_SPACES " \t\f\v\n\r"
+#define STRING_QUOTES       "\"'"
 
 /***************************** Datatypes *******************************/
 
@@ -39,7 +40,7 @@ typedef struct
   String     string;
   long       index;
   const char *separatorChars;
-  const char *stringChars;
+  const char *stringQuotes;
   bool       skipEmptyTokens;
   String     token;
 } StringTokenizer;
@@ -420,7 +421,7 @@ String String_vformat(String string, const char *format, va_list arguments);
 * Input  : stringTokenizer - string tokenizer
 *          string          - string
 *          separatorChars  - token seperator characters, e. g. " "
-*          stringChars     - token string escape characters, e. g. ",'
+*          stringQuotes    - token string quote characters, e. g. ",'
 *          skipEmptyTokens - TRUE to skip empty tokens, FALSE to get
 *                            also empty tokens
 * Output : -
@@ -431,7 +432,7 @@ String String_vformat(String string, const char *format, va_list arguments);
 void String_initTokenizer(StringTokenizer *stringTokenizer,
                           const String    string,
                           const char      *separatorChars,
-                          const char      *stringChars,
+                          const char      *stringQuotes,
                           bool            skipEmptyTokens
                          );
 void String_doneTokenizer(StringTokenizer *stringTokenizer);
@@ -459,28 +460,10 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 *          ...    - optional variables
 * Output : -
 * Return : TRUE is scanned, FALSE on error
-* Notes  : -
+* Notes  : for C-strings the max. length have to be specified with %<n>s
 \***********************************************************************/
 
 bool String_scan(const String string, const char *format, ...);
-
-/***********************************************************************\
-* Name   : String_toInteger, String_toInteger64, String_toDouble,
-*          String_toBoolean
-* Purpose: convert string into integer, integer64, double or boolean
-* Input  : string - string to convert
-* Output : nextIndex - index of next character in string not parsed or
-*                      STRING_END if string completely parsed (can be
-*                      NULL)
-*
-* Return : integer/integer64/double value
-* Notes  : -
-\***********************************************************************/
-
-int String_toInteger(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
-int64 String_toInteger64(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
-double String_toDouble(const String string, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
-double String_toBoolean(const String string, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount);
 
 /***********************************************************************\
 * Name   : String_parse
@@ -491,11 +474,42 @@ double String_toBoolean(const String string, long *nextIndex, const char *trueSt
 * Output : nextIndex - index of next character in string not parsed (can
 *                      be NULL)
 * Return : TRUE is parsed, FALSE on error
-* Notes  : %s and %S are parsed as strings which could be enclosed in
-*          "..." or '...'
+* Notes  : extended scan-function:
+*            - match also specified text
+*            - %<n>s will return max. <n-1> characters and always add
+*              all \0 at the end of the string
+*            - %s and %S are parsed as strings which could be enclosed
+*              in "..." or '...'
 \***********************************************************************/
 
 bool String_parse(const String string, const char *format, ulong *nextIndex, ...);
+
+/***********************************************************************\
+* Name   : String_toInteger, String_toInteger64, String_toDouble,
+*          String_toBoolean
+* Purpose: convert string into integer, integer64, double, boolean or
+*          string (string without ' and ")
+* Input  : string                   - string variable (for string)
+*          convertString            - string to convert
+*          index                    - start index
+*          stringUnits              - string units (for integer, double)
+*          stringUnitCount          - number of string units (for
+*                                     integer, double)
+*          trueStrings,falseStrings - string false texts (for boolean)
+*          stringQuotes             - string quotes (for string)
+* Output : nextIndex - index of next character in string not parsed or
+*                      STRING_END if string completely parsed (can be
+*                      NULL)
+*
+* Return : integer/integer64/double/boolean/string value
+* Notes  : -
+\***********************************************************************/
+
+int String_toInteger(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
+int64 String_toInteger64(const String string, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
+double String_toDouble(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
+bool String_toBoolean(const String convertString, ulong index, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount);
+String String_toString(String string, const String convertString, ulong index, long *nextIndex, const char *stringQuotes);
 
 /***********************************************************************\
 * Name   : String_toCString
