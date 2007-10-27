@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -131,8 +131,7 @@ Errors Command_test(StringList    *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         options,
-                         options->cryptPassword
+                         options
                         );
     if (error != ERROR_NONE)
     {
@@ -175,7 +174,7 @@ Errors Command_test(StringList    *archiveFileNameList,
             bool             equalFlag;
             uint64           length;
             ulong            n;
-            ulong            readBytes;
+            ulong            bytesRead;
             ulong            diffIndex;
 
             /* readt file */
@@ -298,7 +297,7 @@ Errors Command_test(StringList    *archiveFileNameList,
                   if (failError == ERROR_NONE) failError = error;
                   break;
                 }
-                error = File_read(&fileHandle,fileBuffer,n,&readBytes);
+                error = File_read(&fileHandle,fileBuffer,n,&bytesRead);
                 if (error != ERROR_NONE)
                 {
                   info(0,"fail\n");
@@ -309,7 +308,7 @@ Errors Command_test(StringList    *archiveFileNameList,
                   if (failError == ERROR_NONE) failError = error;
                   break;
                 }
-                if (n != readBytes)
+                if (n != bytesRead)
                 {
                   equalFlag = FALSE;
                   break;

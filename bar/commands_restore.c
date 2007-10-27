@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -147,8 +147,7 @@ Errors Command_restore(StringList    *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         options,
-                         options->cryptPassword
+                         options
                         );
     if (error != ERROR_NONE)
     {

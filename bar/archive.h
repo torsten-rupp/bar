@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -60,13 +60,6 @@ typedef struct
   void                   *archiveNewFileUserData;    // user data for new archive file call back function
   const Options          *options;
 
-  const char             *tmpDirectory;              // temporary directory
-  uint64                 partSize;                   // approximated size of file part
-  CompressAlgorithms     compressAlgorithm;          // default compression algorithm
-  ulong                  compressMinFileSize;        // min. file size to use compression
-  CryptAlgorithms        cryptAlgorithm;             // default crypt algorithm
-  Password               *password;                  // password
-
   uint                   blockLength;                /* block length for file entry/file
                                                         data (depend on used crypt
                                                         algorithm)
@@ -75,8 +68,7 @@ typedef struct
   uint                   partNumber;                 // file part number
   bool                   fileOpenFlag;               // TRUE iff file is open
   String                 fileName;                   // file name
-//  FileHandle             fileHandle;                 // file handle
-StorageFileHandle storageFileHandle;
+  StorageFileHandle      storageFileHandle;          // storage file handle
 
   bool                   nextChunkHeaderReadFlag;    // TRUE iff next chunk header read
   ChunkHeader            nextChunkHeader;            // next file, directory, link chunk header
@@ -160,7 +152,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Archive_init
+* Name   : Archive_initAll
 * Purpose: init archive functions
 * Input  : -
 * Output : -
@@ -168,10 +160,10 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_init(void);
+Errors Archive_initAll(void);
 
 /***********************************************************************\
-* Name   : Archive_done
+* Name   : Archive_doneAll
 * Purpose: done archive functions
 * Input  : -
 * Output : -
@@ -179,14 +171,16 @@ Errors Archive_init(void);
 * Notes  : -
 \***********************************************************************/
 
-void Archive_done(void);
+void Archive_doneAll(void);
 
 /***********************************************************************\
 * Name   : Archive_create
 * Purpose: create archive
 * Input  : archiveInfo            - archive info block
-*          archiveNewFileFunction -
-*          archiveNewFileUserData -
+*          archiveNewFileFunction - call back for creating new archive
+*                                   file 
+*          archiveNewFileUserData - user data for call back
+*          options                - option settings
 *          partSize               - part size (in bytes)
 *          archiveFileName        - archive file name                    
 *          compressAlgorithm      - compression algorithm to use         
@@ -201,13 +195,7 @@ void Archive_done(void);
 Errors Archive_create(ArchiveInfo            *archiveInfo,
                       ArchiveNewFileFunction archiveNewFileFunction,
                       void                   *archiveNewFileUserData,
-const Options *options,
-                      const char             *tmpDirectory,
-                      uint64                 partSize,
-                      CompressAlgorithms     compressAlgorithm,
-                      ulong                  compressMinFileSize,
-                      CryptAlgorithms        cryptAlgorithm,
-                      Password               *password
+                      const Options          *options
                      );
 
 /***********************************************************************\
@@ -216,7 +204,6 @@ const Options *options,
 * Input  : archiveInfo     - archive info block
 *          archiveFileName - archive file name
 *          options         - option settings
-*          password        - crypt password
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -224,8 +211,7 @@ const Options *options,
 
 Errors Archive_open(ArchiveInfo   *archiveInfo,
                     const String  archiveFileName,
-                    const Options *options,
-                    Password      *password
+                    const Options *options
                    );
 
 /***********************************************************************\
