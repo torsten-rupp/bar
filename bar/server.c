@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -31,6 +31,7 @@
 #include "network.h"
 #include "files.h"
 #include "patterns.h"
+#include "archive.h"
 
 #include "commands_create.h"
 
@@ -57,30 +58,17 @@ typedef struct JobNode
 {
   NODE_HEADER(struct JobNode);
 
-  uint               id;
-  String             name;
+  uint        id;
+  String      name;
   enum
   {
     MODE_BACKUP,
     MODE_RESTORE,
   } mode;
-  String             archiveFileName;
-  PatternList        includePatternList;
-  PatternList        excludePatternList;
-  Options            options;
-/*
-  uint64             archivePartSize;
-  uint64             maxTmpSize;
-  ulong              maxBandWidth;
-  uint               sshPort;
-  String             sshPublicKeyFileName;
-  String             sshPrivatKeyFileName;
-  CompressAlgorithms compressAlgorithm;
-  CryptAlgorithms    cryptAlgorithm;
-  bool               skipUnreadableFlag;
-  bool               overwriteArchiveFilesFlag;
-  bool               overwriteFilesFlag;
-*/
+  String      archiveFileName;
+  PatternList includePatternList;
+  PatternList excludePatternList;
+  Options     options;
 
   /* running info */
   struct
@@ -94,6 +82,9 @@ typedef struct JobNode
     } state;
     time_t startTime;                       // start time [s]
     ulong  estimatedRestTime;               // estimated rest running time [s]
+    double bytesPerSecond;                  // average processed bytes per second
+    double filesPerSecond;                  // average processed files per second
+    double storageBytesPerSecond;           // average processed storage bytes per second
     ulong  doneFiles;                       // number of processed files
     uint64 doneBytes;                       // sum of processed bytes
     ulong  totalFiles;                      // number of total files
@@ -157,7 +148,7 @@ typedef struct
       FileHandle   fileHandle;
     } file;
 
-    /* i/o via network */
+    /* i/o via network and separated processing thread */
     struct
     {
       /* connection */
@@ -172,8 +163,9 @@ typedef struct
     } network;
   };
 
-  /* new job */
-  JobNode *jobNode;
+  PatternList         includePatternList;
+  PatternList         excludePatternList;
+  Options             options;
 } ClientInfo;
 
 /* client node */
@@ -190,7 +182,11 @@ typedef struct
   LIST_HEADER(ClientNode);
 } ClientList;
 
-typedef void(*ServerCommandFunction)(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount);
+typedef void(*ServerCommandFunction)(ClientInfo    *clientInfo,
+                                     uint          id,
+                                     const String  arguments[],
+                                     uint          argumentCount
+                                    );
 
 typedef struct
 {
@@ -233,12 +229,14 @@ LOCAL void updateCreateStatus(Errors                 error,
                              )
 {
   ulong  elapsedTime;
-  double filesPerSecond,bytesPerSecond;
+  double filesPerSecond,bytesPerSecond,storageBytesPerSecond;
   ulong  restFiles;
   uint64 restBytes;
+  uint64 restStorageBytes;
   ulong  estimtedRestTime;
   double sum;
   uint   n;
+static int zz=0;
 
   assert(createStatusInfo != NULL);
   assert(createStatusInfo->fileName != NULL);
@@ -247,13 +245,25 @@ LOCAL void updateCreateStatus(Errors                 error,
 
   /* calculate estimated rest time */
   elapsedTime = (ulong)(time(NULL)-jobNode->runningInfo.startTime);
-  filesPerSecond = (elapsedTime > 0)?(double)createStatusInfo->doneFiles/(double)elapsedTime:0;
-  bytesPerSecond = (elapsedTime > 0)?(double)createStatusInfo->doneBytes/(double)elapsedTime:0;
-  restFiles = (jobNode->runningInfo.totalFiles > createStatusInfo->doneFiles)?jobNode->runningInfo.totalFiles-createStatusInfo->doneFiles:0L;
-  restBytes = (jobNode->runningInfo.totalBytes > createStatusInfo->doneBytes)?jobNode->runningInfo.totalBytes-createStatusInfo->doneBytes:0LL;
+  filesPerSecond        = (elapsedTime > 0)?(double)createStatusInfo->doneFiles/(double)elapsedTime:0;
+  bytesPerSecond        = (elapsedTime > 0)?(double)createStatusInfo->doneBytes/(double)elapsedTime:0;
+  storageBytesPerSecond = (elapsedTime > 0)?(double)createStatusInfo->storageDoneBytes/(double)elapsedTime:0;
+
+zz++;
+if (zz>10) {
+fprintf(stderr,"%s,%d: filesPerSecond=%f bytesPerSecond=%f storageBytesPerSecond=%f %llu %llu\n",__FILE__,__LINE__,filesPerSecond,bytesPerSecond,
+storageBytesPerSecond,
+createStatusInfo->storageDoneBytes,createStatusInfo->storageTotalBytes
+);
+zz=0;
+}
+  restFiles        = (createStatusInfo->totalFiles        > createStatusInfo->doneFiles       )?createStatusInfo->totalFiles       -createStatusInfo->doneFiles       :0L;
+  restBytes        = (createStatusInfo->totalBytes        > createStatusInfo->doneBytes       )?createStatusInfo->totalBytes       -createStatusInfo->doneBytes       :0LL;
+  restStorageBytes = (createStatusInfo->storageTotalBytes > createStatusInfo->storageDoneBytes)?createStatusInfo->storageTotalBytes-createStatusInfo->storageDoneBytes:0LL;
   sum = 0; n = 0;
-  if (filesPerSecond > 0) { sum += (double)restFiles/filesPerSecond; n++; }
-  if (bytesPerSecond > 0) { sum += (double)restBytes/bytesPerSecond; n++; }
+  if (filesPerSecond        > 0) { sum += (double)restFiles/filesPerSecond;               n++; }
+  if (bytesPerSecond        > 0) { sum += (double)restBytes/bytesPerSecond;               n++; }
+  if (storageBytesPerSecond > 0) { sum += (double)restStorageBytes/storageBytesPerSecond; n++; }
   if (n > 0)
   estimtedRestTime = (n > 0)?(ulong)round(sum/n):0;
 /*
@@ -265,23 +275,26 @@ jobNode->runningInfo.totalBytes,
 elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
 */
 
-  jobNode->runningInfo.error             = error;
-  jobNode->runningInfo.doneFiles         = createStatusInfo->doneFiles;
-  jobNode->runningInfo.doneBytes         = createStatusInfo->doneBytes;
-  jobNode->runningInfo.totalFiles        = createStatusInfo->totalFiles;
-  jobNode->runningInfo.totalBytes        = createStatusInfo->totalBytes;
-  jobNode->runningInfo.skippedFiles      = createStatusInfo->skippedFiles;
-  jobNode->runningInfo.skippedBytes      = createStatusInfo->skippedBytes;
-  jobNode->runningInfo.errorFiles        = createStatusInfo->errorFiles;
-  jobNode->runningInfo.errorBytes        = createStatusInfo->errorBytes;
-  jobNode->runningInfo.compressionRatio  = createStatusInfo->compressionRatio;
-  jobNode->runningInfo.estimatedRestTime = estimtedRestTime;
+  jobNode->runningInfo.error                 = error;
+  jobNode->runningInfo.filesPerSecond        = filesPerSecond;
+  jobNode->runningInfo.bytesPerSecond        = bytesPerSecond;
+  jobNode->runningInfo.storageBytesPerSecond = restStorageBytes;
+  jobNode->runningInfo.doneFiles             = createStatusInfo->doneFiles;
+  jobNode->runningInfo.doneBytes             = createStatusInfo->doneBytes;
+  jobNode->runningInfo.totalFiles            = createStatusInfo->totalFiles;
+  jobNode->runningInfo.totalBytes            = createStatusInfo->totalBytes;
+  jobNode->runningInfo.skippedFiles          = createStatusInfo->skippedFiles;
+  jobNode->runningInfo.skippedBytes          = createStatusInfo->skippedBytes;
+  jobNode->runningInfo.errorFiles            = createStatusInfo->errorFiles;
+  jobNode->runningInfo.errorBytes            = createStatusInfo->errorBytes;
+  jobNode->runningInfo.compressionRatio      = createStatusInfo->compressionRatio;
+  jobNode->runningInfo.estimatedRestTime     = estimtedRestTime;
   String_set(jobNode->runningInfo.fileName,createStatusInfo->fileName);
-  jobNode->runningInfo.fileDoneBytes     = createStatusInfo->fileDoneBytes;
-  jobNode->runningInfo.fileTotalBytes    = createStatusInfo->fileTotalBytes;
+  jobNode->runningInfo.fileDoneBytes         = createStatusInfo->fileDoneBytes;
+  jobNode->runningInfo.fileTotalBytes        = createStatusInfo->fileTotalBytes;
   String_set(jobNode->runningInfo.storageName,createStatusInfo->storageName);
-  jobNode->runningInfo.storageDoneBytes  = createStatusInfo->storageDoneBytes;
-  jobNode->runningInfo.storageTotalBytes = createStatusInfo->storageTotalBytes;
+  jobNode->runningInfo.storageDoneBytes      = createStatusInfo->storageDoneBytes;
+  jobNode->runningInfo.storageTotalBytes     = createStatusInfo->storageTotalBytes;
 //fprintf(stderr,"%s,%d: createStatusInfo->fileName=%s\n",__FILE__,__LINE__,String_cString(jobNode->runningInfo.fileName));
 }
 
@@ -354,22 +367,6 @@ LOCAL void jobThread(JobList *jobList)
   }
 }
 #else
-    /* set options */
-#if 0
-    options = defaultOptions;
-    options.archivePartSize           = jobNode->archivePartSize;
-    options.maxTmpSize                = jobNode->maxTmpSize;
-    options.maxBandWidth              = jobNode->maxBandWidth;
-    if (jobNode->compressAlgorithm != COMPRESS_ALGORITHM_UNKNOWN) options.compressAlgorithm = jobNode->compressAlgorithm;
-    if (jobNode->cryptAlgorithm != CRYPT_ALGORITHM_UNKNOWN      ) options.cryptAlgorithm    = jobNode->cryptAlgorithm;
-    if (jobNode->sshPort != 0                                   ) options.sshPort           = jobNode->sshPort;
-    if (!String_empty(jobNode->sshPublicKeyFileName)) options.sshPublicKeyFileName = String_cString(jobNode->sshPublicKeyFileName);
-    if (!String_empty(jobNode->sshPrivatKeyFileName)) options.sshPrivatKeyFileName = String_cString(jobNode->sshPrivatKeyFileName);
-    options.skipUnreadableFlag        = jobNode->skipUnreadableFlag;
-    options.overwriteArchiveFilesFlag = jobNode->overwriteArchiveFilesFlag;
-    options.overwriteFilesFlag        = jobNode->overwriteFilesFlag;
-#endif /* 0 */
-
     /* create archive */
     jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveFileName),
                                                 &jobNode->includePatternList,
@@ -419,9 +416,9 @@ LOCAL void freeJobNode(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
+  freeOptions(&jobNode->options);
   Pattern_doneList(&jobNode->excludePatternList);
   Pattern_doneList(&jobNode->includePatternList);
-  freeOptions(&jobNode->options);
   String_delete(jobNode->archiveFileName);
   String_delete(jobNode->name);
 
@@ -447,22 +444,8 @@ LOCAL JobNode *newJob(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-
-  jobNode->name                          = String_new();
-  jobNode->archiveFileName               = String_new();
   Pattern_initList(&jobNode->includePatternList);
   Pattern_initList(&jobNode->excludePatternList);
-  copyOptions(&defaultOptions,&jobNode->options);
-//  jobNode->archivePartSize               = 0LL;
-//  jobNode->maxTmpSize                    = 0LL;
-//  jobNode->sshPort                       = 0;
-//  jobNode->sshPublicKeyFileName          = String_new();
-//  jobNode->sshPrivatKeyFileName          = String_new();
-//  jobNode->compressAlgorithm             = COMPRESS_ALGORITHM_UNKNOWN;
-//  jobNode->cryptAlgorithm                = CRYPT_ALGORITHM_UNKNOWN;
-//  jobNode->skipUnreadableFlag            = TRUE;
-//  jobNode->overwriteArchiveFilesFlag     = FALSE;
-//  jobNode->overwriteFilesFlag            = FALSE;
 
   jobNode->runningInfo.state             = JOB_STATE_WAITING;
   jobNode->runningInfo.startTime         = 0;
@@ -509,14 +492,10 @@ LOCAL void deleteJob(JobNode *jobNode)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : sendResult
-* Purpose: send result to client
-* Input  : clientInfo   - client info
-*          id           - command id
-*          completeFlag - TRUE if command is completed, FALSE otherwise
-*          errorCode    - error code
-*          format       - format string
-*          ...          - optional arguments
+* Name   : sendClient
+* Purpose: send data to client
+* Input  : clientInfo - client info
+*          data       - data string
 * Output : -
 * Return : -
 * Notes  : -
@@ -524,10 +503,21 @@ LOCAL void deleteJob(JobNode *jobNode)
 
 LOCAL void sendClient(ClientInfo *clientInfo, String data)
 {
+  assert(clientInfo != NULL);
+  assert(data != NULL);
+
+  #ifdef SERVER_DEBUG
+    fprintf(stderr,"%s,%d: result=%s",__FILE__,__LINE__,String_cString(data));
+  #endif /* SERVER_DEBUG */
+
   switch (clientInfo->type)
   {
     case CLIENT_TYPE_FILE:
-      File_write(&clientInfo->file.fileHandle,String_cString(data),String_length(data));
+      if (File_write(&clientInfo->file.fileHandle,String_cString(data),String_length(data)) != ERROR_NONE)
+      {
+fprintf(stderr,"%s,%d: WRITE ERROR X\n",__FILE__,__LINE__);
+      }
+fflush(stdout);
       break;
     case CLIENT_TYPE_NETWORK:
 //??? blockieren?
@@ -752,7 +742,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
     sendResult(clientInfo,id,TRUE,1,"expected path name");
     return;
   }
-  totalSizeFlag = ((argumentCount >= 2) && String_toBoolean(arguments[1],NULL,NULL,0,NULL,0));
+  totalSizeFlag = ((argumentCount >= 2) && String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0));
 
   error = File_openDirectory(&directoryHandle,arguments[0]);
   if (error != ERROR_NONE)
@@ -893,7 +883,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
     sendResult(clientInfo,id,TRUE,1,"expected job id");
     return;
   }
-  jobId = String_toInteger(arguments[0],NULL,NULL,0);
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
   Semaphore_lock(&jobList.lock);
@@ -949,36 +939,62 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   Semaphore_unlock(&jobList.lock);
 }
 
+LOCAL void serverCommand_clear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
+  Pattern_clearList(&clientInfo->includePatternList);
+  Pattern_clearList(&clientInfo->excludePatternList);
+  freeOptions(&clientInfo->options);
+  copyOptions(&defaultOptions,&clientInfo->options); 
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
 LOCAL void serverCommand_addIncludePattern(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  String includePattern;
-
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* get include pattern */
   if (argumentCount < 1)
   {
+    sendResult(clientInfo,id,TRUE,1,"expected pattern type");
+    return;
+  }
+  if (argumentCount < 2)
+  {
     sendResult(clientInfo,id,TRUE,1,"expected pattern");
     return;
   }
-  includePattern = arguments[0];
 
-  if (clientInfo->jobNode != NULL)
+  if      (String_equalsCString(arguments[0],"GLOB"))
   {
-    Pattern_appendList(&clientInfo->jobNode->includePatternList,String_cString(includePattern),PATTERN_TYPE_GLOB);
+    Pattern_appendList(&clientInfo->includePatternList,String_cString(arguments[1]),PATTERN_TYPE_GLOB);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"REGEX"))
+  {
+    Pattern_appendList(&clientInfo->includePatternList,String_cString(arguments[1]),PATTERN_TYPE_REGEX);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"EXTENDED_REGEX"))
+  {
+    Pattern_appendList(&clientInfo->includePatternList,String_cString(arguments[1]),PATTERN_TYPE_EXTENDED_REGEX);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,1,"no job");
+    sendResult(clientInfo,id,TRUE,1,"unknown pattern type");
   }
 }
 
 LOCAL void serverCommand_addExcludePattern(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  String excludePattern;
-
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
@@ -988,20 +1004,29 @@ LOCAL void serverCommand_addExcludePattern(ClientInfo *clientInfo, uint id, cons
     sendResult(clientInfo,id,TRUE,1,"expected pattern");
     return;
   }
-  excludePattern = arguments[0];
 
-  if (clientInfo->jobNode != NULL)
+  if      (String_equalsCString(arguments[0],"GLOB"))
   {
-    Pattern_appendList(&clientInfo->jobNode->excludePatternList,String_cString(excludePattern),PATTERN_TYPE_GLOB);
+    Pattern_appendList(&clientInfo->excludePatternList,String_cString(arguments[1]),PATTERN_TYPE_GLOB);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"REGEX"))
+  {
+    Pattern_appendList(&clientInfo->excludePatternList,String_cString(arguments[1]),PATTERN_TYPE_REGEX);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"EXTENDED_REGEX"))
+  {
+    Pattern_appendList(&clientInfo->excludePatternList,String_cString(arguments[1]),PATTERN_TYPE_EXTENDED_REGEX);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,1,"no job");
+    sendResult(clientInfo,id,TRUE,1,"unknown pattern type");
   }
 }
 
-LOCAL void serverCommand_getConfigValue(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -1013,56 +1038,45 @@ LOCAL void serverCommand_getConfigValue(ClientInfo *clientInfo, uint id, const S
     return;
   }
 
-  if (clientInfo->jobNode != NULL)
+  if      (String_equalsCString(arguments[0],"archive-part-size"))
   {
-    if      (String_equalsCString(arguments[0],"archive-file"))
-    {
-      sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->jobNode->archiveFileName);
-    }
-    else if (String_equalsCString(arguments[0],"archive-part-size"))
-    {
-      sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->jobNode->options.archivePartSize);
-    }
-    else if (String_equalsCString(arguments[0],"max-tmp-size"))
-    {
-      sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->jobNode->options.maxTmpSize);
-    }
-    else if (String_equalsCString(arguments[0],"max-band-width"))
-    {
-      sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->jobNode->options.maxBandWidth);
-    }
-    else if (String_equalsCString(arguments[0],"compress-algorithm"))
-    {
-      sendResult(clientInfo,id,TRUE,0,"%'s",Compress_getAlgorithmName(clientInfo->jobNode->options.compressAlgorithm));
-    }
-    else if (String_equalsCString(arguments[0],"crypt-algorithm"))
-    {
-      sendResult(clientInfo,id,TRUE,0,"%'s",Crypt_getAlgorithmName(clientInfo->jobNode->options.cryptAlgorithm));
-    }
-    else if (String_equalsCString(arguments[0],"skip-unreadable"))
-    {
-      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->options.skipUnreadableFlag?1:0);
-    }
-    else if (String_equalsCString(arguments[0],"overwrite-archives"))
-    {
-      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->options.overwriteArchiveFilesFlag?1:0);
-    }
-    else if (String_equalsCString(arguments[0],"overwrite-files"))
-    {
-      sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->jobNode->options.overwriteFilesFlag?1:0);
-    }
-    else
-    {
-      sendResult(clientInfo,id,TRUE,1,"unknown config value");
-    }
+    sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->options.archivePartSize);
+  }
+  else if (String_equalsCString(arguments[0],"max-tmp-size"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->options.maxTmpSize);
+  }
+  else if (String_equalsCString(arguments[0],"max-band-width"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->options.maxBandWidth);
+  }
+  else if (String_equalsCString(arguments[0],"compress-algorithm"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%'s",Compress_getAlgorithmName(clientInfo->options.compressAlgorithm));
+  }
+  else if (String_equalsCString(arguments[0],"crypt-algorithm"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%'s",Crypt_getAlgorithmName(clientInfo->options.cryptAlgorithm));
+  }
+  else if (String_equalsCString(arguments[0],"skip-unreadable"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.skipUnreadableFlag?1:0);
+  }
+  else if (String_equalsCString(arguments[0],"overwrite-archives"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.overwriteArchiveFilesFlag?1:0);
+  }
+  else if (String_equalsCString(arguments[0],"overwrite-files"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.overwriteFilesFlag?1:0);
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,1,"no job");
+    sendResult(clientInfo,id,TRUE,1,"unknown config value");
   }
 }
 
-LOCAL void serverCommand_setConfigValue(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -1079,183 +1093,163 @@ LOCAL void serverCommand_setConfigValue(ClientInfo *clientInfo, uint id, const S
     return;
   }
 
-  if (clientInfo->jobNode != NULL)
+  if      (String_equalsCString(arguments[0],"archive-part-size"))
   {
-    if      (String_equalsCString(arguments[0],"archive-file"))
-    {
-      // archive-file = <name>
-      String_set(clientInfo->jobNode->archiveFileName,arguments[1]);
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[0],"archive-part-size"))
-    {
-      // archive-part-size = <n>
-      const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
+    // archive-part-size <n>
+    const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-      clientInfo->jobNode->options.archivePartSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[0],"max-tmp-size"))
-    {
-      // max-tmp-part-size = <n>
-      const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
+    clientInfo->options.archivePartSize = String_toInteger64(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"max-tmp-size"))
+  {
+    // max-tmp-part-size <n>
+    const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-      clientInfo->jobNode->options.maxTmpSize = String_toInteger64(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[0],"max-band-width"))
-    {
-      // max-tmp-part-size = <n>
-      const StringUnit UNITS[] = {{"K",1024}};
+    clientInfo->options.maxTmpSize = String_toInteger64(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"max-band-width"))
+  {
+    // max-tmp-part-size <n>
+    const StringUnit UNITS[] = {{"K",1024}};
 
-      clientInfo->jobNode->options.maxBandWidth = String_toInteger(arguments[1],NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[0],"ssh-port"))
-    {
-      // ssh-port = <n>
-      clientInfo->jobNode->options.sshPort = String_toInteger(arguments[1],NULL,NULL,0);
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[0],"ssh-public-key"))
-    {
-      // ssh-public-key = <file name>
-      String_set(clientInfo->jobNode->options.sshPublicKeyFileName,arguments[1]);
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[0],"ssh-prvat-key"))
-    {
-      // ssh-privat-key = <file name>
-      String_set(clientInfo->jobNode->options.sshPrivatKeyFileName,arguments[1]);
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[0],"compress-algorithm"))
-    {
-      // compress-algorithm = <name>
-      CompressAlgorithms compressAlgorithm;
+    clientInfo->options.maxBandWidth = String_toInteger(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"ssh-port"))
+  {
+    // ssh-port <n>
+    clientInfo->options.sshPort = String_toInteger(arguments[1],0,NULL,NULL,0);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"ssh-public-key"))
+  {
+    // ssh-public-key <file name>
+    String_set(clientInfo->options.sshPublicKeyFileName,arguments[1]);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"ssh-prvat-key"))
+  {
+    // ssh-privat-key <file name>
+    String_set(clientInfo->options.sshPrivatKeyFileName,arguments[1]);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"compress-algorithm"))
+  {
+    // compress-algorithm <name>
+    CompressAlgorithms compressAlgorithm;
 
-      compressAlgorithm = Compress_getAlgorithm(String_cString(arguments[1]));
-      if (compressAlgorithm == COMPRESS_ALGORITHM_UNKNOWN)
-      {
-        sendResult(clientInfo,id,TRUE,1,"unknown compress algorithm");
-        return;
-      }
-      clientInfo->jobNode->options.compressAlgorithm = compressAlgorithm;
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[0],"crypt-algorithm"))
+    compressAlgorithm = Compress_getAlgorithm(String_cString(arguments[1]));
+    if (compressAlgorithm == COMPRESS_ALGORITHM_UNKNOWN)
     {
-      // crypt-algorithm = <name>
-      CryptAlgorithms cryptAlgorithm;
+      sendResult(clientInfo,id,TRUE,1,"unknown compress algorithm");
+      return;
+    }
+    clientInfo->options.compressAlgorithm = compressAlgorithm;
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"crypt-algorithm"))
+  {
+    // crypt-algorithm <name>
+    CryptAlgorithms cryptAlgorithm;
 
-      cryptAlgorithm = Crypt_getAlgorithm(String_cString(arguments[1]));
-      if (cryptAlgorithm == CRYPT_ALGORITHM_UNKNOWN)
-      {
-        sendResult(clientInfo,id,TRUE,1,"unknown crypt algorithm");
-        return;
-      }
-      clientInfo->jobNode->options.cryptAlgorithm = cryptAlgorithm;
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[0],"skip-unreadable"))
+    cryptAlgorithm = Crypt_getAlgorithm(String_cString(arguments[1]));
+    if (cryptAlgorithm == CRYPT_ALGORITHM_UNKNOWN)
     {
-      clientInfo->jobNode->options.skipUnreadableFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
-      sendResult(clientInfo,id,TRUE,0,"");
+      sendResult(clientInfo,id,TRUE,1,"unknown crypt algorithm");
+      return;
     }
-    else if (String_equalsCString(arguments[0],"overwrite-archive-files"))
-    {
-      clientInfo->jobNode->options.overwriteArchiveFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[0],"overwrite-files"))
-    {
-      clientInfo->jobNode->options.overwriteFilesFlag = String_toBoolean(arguments[1],NULL,NULL,0,NULL,0);
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else
-    {
-      sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",arguments[0]);
-    }
+    clientInfo->options.cryptAlgorithm = cryptAlgorithm;
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"crypt-password"))
+  {
+    // crypt-password <password>
+    Password_set(clientInfo->options.cryptPassword,arguments[1]);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"skip-unreadable"))
+  {
+    // skip-unreadable 1|0
+    clientInfo->options.skipUnreadableFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"overwrite-archive-files"))
+  {
+    // overwrite-archive-files 1|0
+    clientInfo->options.overwriteArchiveFilesFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"overwrite-files"))
+  {
+    // overwrite-files 1|0
+    clientInfo->options.overwriteFilesFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    sendResult(clientInfo,id,TRUE,0,"");
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,1,"no job");
+    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",arguments[0]);
   }
-}
-
-LOCAL void serverCommand_newJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get config value name */
-  if (argumentCount < 1)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected name");
-    return;
-  }
-
-  if (clientInfo->jobNode != NULL)
-  {
-    deleteJob(clientInfo->jobNode);
-  }
-
-  clientInfo->jobNode = newJob();
-  if (clientInfo->jobNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,1,"insufficient memory");
-    return;
-  }
-  String_set(clientInfo->jobNode->name,arguments[0]);
-
-  sendResult(clientInfo,id,TRUE,0,"");
 }
 
 LOCAL void serverCommand_addJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   JobNode *jobNode;
-  uint    jobId;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  UNUSED_VARIABLE(arguments);
-  UNUSED_VARIABLE(argumentCount);
-
-  if (clientInfo->jobNode != NULL)
+  /* get archive name */
+  if (argumentCount < 1)
   {
-    /* lock */
-    Semaphore_lock(&jobList.lock);
+    sendResult(clientInfo,id,TRUE,1,"expected name");
+    return;
+  }
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected archive name");
+    return;
+  }
 
-    /* clean-up job list */
-    while (List_count(&jobList) >= MAX_JOBS_IN_LIST)
+  /* create new job */
+  jobNode = newJob();
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"insufficient memory");
+    return;
+  }
+  jobNode->name            = String_copy(arguments[0]);
+  jobNode->id              = getNewJobId();
+  jobNode->archiveFileName = String_copy(arguments[1]);
+  Pattern_copyList(&clientInfo->includePatternList,&jobNode->includePatternList);
+  Pattern_copyList(&clientInfo->excludePatternList,&jobNode->excludePatternList);
+  copyOptions(&clientInfo->options,&jobNode->options);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* clean-up job list */
+  while (List_count(&jobList) >= MAX_JOBS_IN_LIST)
+  {
+    jobNode = jobList.head;
+    while ((jobNode != NULL) && (jobNode->runningInfo.state != JOB_STATE_COMPLETED))
     {
-      jobNode = jobList.head;
-      while ((jobNode != NULL) && (jobNode->runningInfo.state != JOB_STATE_COMPLETED))
-      {
-        jobNode = jobNode->next;
-      }
-      if (jobNode != NULL)
-      {
-        List_remove(&jobList,jobNode);
-      }
+      jobNode = jobNode->next;
     }
-
-    /* add new job to list */
-    jobId = getNewJobId();
-    clientInfo->jobNode->id = jobId;
-    List_append(&jobList,clientInfo->jobNode);
-    clientInfo->jobNode = NULL;
-
-    /* unlock */
-    Semaphore_unlock(&jobList.lock);
-
-    sendResult(clientInfo,id,TRUE,0,"%d",jobId);
+    if (jobNode != NULL)
+    {
+      List_remove(&jobList,jobNode);
+    }
   }
-  else
-  {
-    sendResult(clientInfo,id,TRUE,1,"no job");
-  }
+
+  /* add new job to list */
+  List_append(&jobList,jobNode);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"%d",jobNode->id);
 }
 
 LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -1272,7 +1266,7 @@ LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String 
     sendResult(clientInfo,id,TRUE,1,"expected job id");
     return;
   }
-  jobId = String_toInteger(arguments[0],NULL,NULL,0);
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
   Semaphore_lock(&jobList.lock);
@@ -1317,7 +1311,7 @@ LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String ar
     sendResult(clientInfo,id,TRUE,1,"expected job id");
     return;
   }
-  jobId = String_toInteger(arguments[0],NULL,NULL,0);
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
   Semaphore_lock(&jobList.lock);
@@ -1348,9 +1342,10 @@ LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String ar
 
 LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  bool            totalSizeFlag;
   Errors          error;
-  String          fileName;
+  ArchiveInfo     archiveInfo;
+  ArchiveFileInfo archiveFileInfo;
+  FileTypes       fileType;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -1361,101 +1356,201 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
     return;
   }
 
-#if 0
-  error = File_openDirectory(&directoryHandle,arguments[0]);
+  /* open archive */
+  error = Archive_open(&archiveInfo,
+                       arguments[0],
+                       &clientInfo->options
+                      );
   if (error != ERROR_NONE)
   {
-    sendResult(clientInfo,id,TRUE,1,"cannot open '%S' (error: %s)",arguments[0],getErrorText(error));
+    sendResult(clientInfo,id,TRUE,1,"Cannot open '%S' (error: %s)",arguments[0],getErrorText(error));
     return;
   }
 
-  fileName = String_new();
-  while (!File_endOfDirectory(&directoryHandle))
+  /* list contents */
+  while (!Archive_eof(&archiveInfo))
   {
-    error = File_readDirectory(&directoryHandle,fileName);
-    if (error == ERROR_NONE)
+    /* get next file type */
+    error = Archive_getNextFileType(&archiveInfo,
+                                    &archiveFileInfo,
+                                    &fileType
+                                   );
+    if (error != ERROR_NONE)
     {
-      error = File_getFileInfo(fileName,&fileInfo);
-      if (error == ERROR_NONE)
-      {
-        switch (File_getType(fileName))
-        {
-          case FILE_TYPE_FILE:
-            sendResult(clientInfo,id,FALSE,0,
-                       "FILE %llu %'S",
-                       fileInfo.size,
-                       fileName
-                      );
-            break;
-          case FILE_TYPE_DIRECTORY:
-            if (totalSizeFlag)
-            {         
-              totalSize = getTotalSubDirectorySize(fileName);
-            }
-            else
-            {
-              totalSize = 0;
-            }
-            sendResult(clientInfo,id,FALSE,0,
-                       "DIRECTORY %llu %'S",
-                       totalSize,
-                       fileName
-                      );
-            break;
-          case FILE_TYPE_LINK:
-            sendResult(clientInfo,id,FALSE,0,
-                       "LINK %'S",
-                       fileName
-                      );
-            break;
-          default:
-            sendResult(clientInfo,id,FALSE,0,
-                       "unknown %'S",
-                       fileName
-                      );
-            break;
-        }
-      }
-      else
-      {
-        sendResult(clientInfo,id,FALSE,0,
-                   "UNKNOWN %'S",
-                   fileName
-                  );
-      }
+      sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],getErrorText(error));
+      break;
     }
-    else
+
+    switch (fileType)
     {
-      sendResult(clientInfo,id,TRUE,1,"cannot read directory '%S' (error: %s)",arguments[0],getErrorText(error));
-      File_closeDirectory(&directoryHandle);
-      String_delete(fileName);
-      return;
+      case FILE_TYPE_FILE:
+        {
+          ArchiveFileInfo    archiveFileInfo;
+          CompressAlgorithms compressAlgorithm;
+          CryptAlgorithms    cryptAlgorithm;
+          String             fileName;
+          FileInfo           fileInfo;
+          uint64             fragmentOffset,fragmentSize;
+
+          /* open archive file */
+          fileName = String_new();
+          error = Archive_readFileEntry(&archiveInfo,
+                                        &archiveFileInfo,
+                                        &compressAlgorithm,
+                                        &cryptAlgorithm,
+                                        fileName,
+                                        &fileInfo,
+                                        &fragmentOffset,
+                                        &fragmentSize
+                                       );
+          if (error != ERROR_NONE)
+          {
+            sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],getErrorText(error));
+            String_delete(fileName);
+            break;
+          }
+
+          /* match pattern */
+          if (   (List_empty(&clientInfo->includePatternList) || Pattern_matchList(&clientInfo->includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+              && !Pattern_matchList(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+             )
+          {
+            sendResult(clientInfo,id,FALSE,0,
+                       "FILE %llu %llu %llu %llu %d %d %'S",
+                       fileInfo.size,
+                       archiveFileInfo.file.chunkInfoFileData.size,
+                       fragmentOffset,
+                       fragmentSize,
+                       compressAlgorithm,
+                       cryptAlgorithm,
+                       fileName
+                      );
+          }
+
+          /* close archive file, free resources */
+          Archive_closeEntry(&archiveFileInfo);
+          String_delete(fileName);
+        }
+        break;
+      case FILE_TYPE_DIRECTORY:
+        {
+          CryptAlgorithms cryptAlgorithm;
+          String          directoryName;
+          FileInfo        fileInfo;
+
+          /* open archive lin */
+          directoryName = String_new();
+          error = Archive_readDirectoryEntry(&archiveInfo,
+                                             &archiveFileInfo,
+                                             &cryptAlgorithm,
+                                             directoryName,
+                                             &fileInfo
+                                            );
+          if (error != ERROR_NONE)
+          {
+            sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],getErrorText(error));
+            String_delete(directoryName);
+            break;
+          }
+
+          /* match pattern */
+          if (   (List_empty(&clientInfo->includePatternList) || Pattern_matchList(&clientInfo->includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+              && !Pattern_matchList(&clientInfo->excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+             )
+          {
+            sendResult(clientInfo,id,FALSE,0,
+                       "DIRECTORY %d %'S",
+                       cryptAlgorithm,
+                       directoryName
+                      );
+          }
+
+          /* close archive file, free resources */
+          Archive_closeEntry(&archiveFileInfo);
+          String_delete(directoryName);
+        }
+        break;
+      case FILE_TYPE_LINK:
+        {
+          CryptAlgorithms cryptAlgorithm;
+          String          linkName;
+          String          fileName;
+          FileInfo        fileInfo;
+
+          /* open archive lin */
+          linkName = String_new();
+          fileName = String_new();
+          error = Archive_readLinkEntry(&archiveInfo,
+                                        &archiveFileInfo,
+                                        &cryptAlgorithm,
+                                        linkName,
+                                        fileName,
+                                        &fileInfo
+                                       );
+          if (error != ERROR_NONE)
+          {
+            sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],getErrorText(error));
+            String_delete(fileName);
+            String_delete(linkName);
+            break;
+          }
+
+          /* match pattern */
+          if (   (List_empty(&clientInfo->includePatternList) || Pattern_matchList(&clientInfo->includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+              && !Pattern_matchList(&clientInfo->excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+             )
+          {
+            sendResult(clientInfo,id,FALSE,0,
+                       "LINK %d %'S %'S",
+                       cryptAlgorithm,
+                       linkName,
+                       fileName
+                      );
+          }
+
+          /* close archive file, free resources */
+          Archive_closeEntry(&archiveFileInfo);
+          String_delete(fileName);
+          String_delete(linkName);
+        }
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break; /* not reached */
     }
   }
-  String_delete(fileName);
 
-  File_closeDirectory(&directoryHandle);
-#endif /* 0 */
+  /* close archive */
+  Archive_close(&archiveInfo);
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
 
-const struct { const char *name; ServerCommandFunction serverCommandFunction; bool authorizationState; } SERVER_COMMANDS[] =
+const struct
 {
-  { "AUTHORIZE",           serverCommand_authorize,         AUTHORIZATION_STATE_WAITING }, 
-  { "DEVICE_LIST",         serverCommand_deviceList,        AUTHORIZATION_STATE_OK      }, 
-  { "FILE_LIST",           serverCommand_fileList,          AUTHORIZATION_STATE_OK      },
-  { "JOB_LIST",            serverCommand_jobList,           AUTHORIZATION_STATE_OK      },
-  { "JOB_INFO",            serverCommand_jobInfo,           AUTHORIZATION_STATE_OK      },
-  { "ADD_INCLUDE_PATTERN", serverCommand_addIncludePattern, AUTHORIZATION_STATE_OK      },
-  { "ADD_EXCLUDE_PATTERN", serverCommand_addExcludePattern, AUTHORIZATION_STATE_OK      },
-  { "GET_CONFIG_VALUE",    serverCommand_getConfigValue,    AUTHORIZATION_STATE_OK      },
-  { "SET_CONFIG_VALUE",    serverCommand_setConfigValue,    AUTHORIZATION_STATE_OK      },
-  { "NEW_JOB",             serverCommand_newJob,            AUTHORIZATION_STATE_OK      },
-  { "ADD_JOB",             serverCommand_addJob,            AUTHORIZATION_STATE_OK      },
-  { "REM_JOB",             serverCommand_remJob,            AUTHORIZATION_STATE_OK      },
-  { "ABORT_JOB",           serverCommand_abortJob,          AUTHORIZATION_STATE_OK      },
-  { "ARCHIVE_LIST",        serverCommand_archiveList,       AUTHORIZATION_STATE_OK      },
+  const char            *name;
+  const char            *parameters;
+  ServerCommandFunction serverCommandFunction;
+  AuthorizationStates   authorizationState;
+}
+SERVER_COMMANDS[] =
+{
+  { "AUTHORIZE",           "S",   serverCommand_authorize,         AUTHORIZATION_STATE_WAITING }, 
+  { "DEVICE_LIST",         "",    serverCommand_deviceList,        AUTHORIZATION_STATE_OK      }, 
+  { "FILE_LIST",           "S",   serverCommand_fileList,          AUTHORIZATION_STATE_OK      },
+  { "JOB_LIST",            "",    serverCommand_jobList,           AUTHORIZATION_STATE_OK      },
+  { "JOB_INFO",            "i",   serverCommand_jobInfo,           AUTHORIZATION_STATE_OK      },
+  { "CLEAR",               "",    serverCommand_clear,             AUTHORIZATION_STATE_OK      },
+  { "ADD_INCLUDE_PATTERN", "S",   serverCommand_addIncludePattern, AUTHORIZATION_STATE_OK      },
+  { "ADD_EXCLUDE_PATTERN", "S",   serverCommand_addExcludePattern, AUTHORIZATION_STATE_OK      },
+  { "GET",                 "s",   serverCommand_get,               AUTHORIZATION_STATE_OK      },
+  { "SET",                 "s S", serverCommand_set,               AUTHORIZATION_STATE_OK      },
+  { "ADD_JOB",             "",    serverCommand_addJob,            AUTHORIZATION_STATE_OK      },
+  { "REM_JOB",             "i",   serverCommand_remJob,            AUTHORIZATION_STATE_OK      },
+  { "ABORT_JOB",           "i",   serverCommand_abortJob,          AUTHORIZATION_STATE_OK      },
+  { "ARCHIVE_LIST",        "S",   serverCommand_archiveList,       AUTHORIZATION_STATE_OK      },
 };
 
 /***********************************************************************\
@@ -1517,7 +1612,20 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
   assert(commandMsg != NULL);
 
   /* initialize tokenizer */
-  String_initTokenizer(&stringTokenizer,string,STRING_WHITE_SPACES,"\"'",TRUE);
+  String_initTokenizer(&stringTokenizer,string,STRING_WHITE_SPACES,STRING_QUOTES,TRUE);
+
+  /* get id */
+  if (!String_getNextToken(&stringTokenizer,&token,NULL))
+  {
+    String_doneTokenizer(&stringTokenizer);
+    return FALSE;
+  }
+  commandMsg->id = String_toInteger(token,0,&index,NULL,0);
+  if (index != STRING_END)
+  {
+    String_doneTokenizer(&stringTokenizer);
+    return FALSE;
+  }
 
   /* get command */
   if (!String_getNextToken(&stringTokenizer,&token,NULL))
@@ -1538,19 +1646,6 @@ fprintf(stderr,"%s,%d: unknown %s\n",__FILE__,__LINE__,String_cString(token));
   }
   commandMsg->serverCommandFunction = SERVER_COMMANDS[z].serverCommandFunction;
   commandMsg->authorizationState    = SERVER_COMMANDS[z].authorizationState;
-
-  /* get id */
-  if (!String_getNextToken(&stringTokenizer,&token,NULL))
-  {
-    String_doneTokenizer(&stringTokenizer);
-    return FALSE;
-  }
-  commandMsg->id = String_toInteger(token,&index,NULL,0);
-  if (index != STRING_END)
-  {
-    String_doneTokenizer(&stringTokenizer);
-    return FALSE;
-  }
 
   /* get arguments */
   commandMsg->arguments = Array_new(sizeof(String),0);
@@ -1692,7 +1787,10 @@ LOCAL void initFileClient(ClientInfo *clientInfo,
 //  clientInfo->authorizationState   = AUTHORIZATION_STATE_WAITING;
 clientInfo->authorizationState   = AUTHORIZATION_STATE_OK;
   clientInfo->file.fileHandle    = fileHandle;
-  clientInfo->jobNode            = NULL;
+
+  Pattern_initList(&clientInfo->includePatternList);
+  Pattern_initList(&clientInfo->excludePatternList);
+  copyOptions(&defaultOptions,&clientInfo->options);
 
   /* create and send session id */
 // authorization?
@@ -1727,7 +1825,10 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   clientInfo->network.port         = port;
   clientInfo->network.socketHandle = socketHandle;
   clientInfo->network.exitFlag     = FALSE;
-  clientInfo->jobNode              = NULL;
+
+  Pattern_initList(&clientInfo->includePatternList);
+  Pattern_initList(&clientInfo->excludePatternList);
+  copyOptions(&defaultOptions,&clientInfo->options);
 
   if (!MsgQueue_init(&clientInfo->network.commandMsgQueue,0))
   {
@@ -1756,7 +1857,6 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 {
   assert(clientInfo != NULL);
 
-  if (clientInfo->jobNode != NULL) deleteJob(clientInfo->jobNode);
   switch (clientInfo->type)
   {
     case CLIENT_TYPE_FILE:
@@ -1777,6 +1877,10 @@ LOCAL void doneClient(ClientInfo *clientInfo)
         break; /* not reached */
     #endif /* NDEBUG */
   }
+
+  freeOptions(&clientInfo->options);
+  Pattern_doneList(&clientInfo->excludePatternList);
+  Pattern_doneList(&clientInfo->includePatternList);
 }
 
 /***********************************************************************\
@@ -1819,7 +1923,6 @@ LOCAL ClientNode *newClient(void)
   /* initialize node */
   clientNode->clientInfo.type               = CLIENT_TYPE_NONE;
   clientNode->clientInfo.authorizationState = AUTHORIZATION_STATE_WAITING;
-  clientNode->clientInfo.jobNode            = NULL;
   clientNode->commandString                 = String_new();
 
   return clientNode;
@@ -1920,12 +2023,12 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
 
 /*---------------------------------------------------------------------*/
 
-Errors Server_init(void)
+Errors Server_initAll(void)
 {
   return ERROR_NONE;
 }
 
-void Server_done(void)
+void Server_doneAll(void)
 {
 }
 
@@ -2076,46 +2179,40 @@ Errors Server_run(uint       serverPort,
     {
       if (FD_ISSET(Network_getSocket(&clientNode->clientInfo.network.socketHandle),&selectSet))
       {
-        error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),&receivedBytes);
-        if (error == ERROR_NONE)
+        Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
+        if (receivedBytes > 0)
         {
-          if (receivedBytes > 0)
+          /* received data -> process */
+          do
           {
-            /* received data -> process */
-            do
+            for (z = 0; z < receivedBytes; z++)
             {
-              for (z = 0; z < receivedBytes; z++)
+              if (buffer[z] != '\n')
               {
-                if (buffer[z] != '\n')
-                {
-                  String_appendChar(clientNode->commandString,buffer[z]);
-                }
-                else
-                {
-                  processCommand(&clientNode->clientInfo,clientNode->commandString);
-                  String_clear(clientNode->commandString);
-                }
+                String_appendChar(clientNode->commandString,buffer[z]);
               }
-              error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),&receivedBytes);
+              else
+              {
+                processCommand(&clientNode->clientInfo,clientNode->commandString);
+                String_clear(clientNode->commandString);
+              }
             }
-            while ((error == ERROR_NONE) && (receivedBytes > 0));
-
-            clientNode = clientNode->next;
+            error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
           }
-          else
-          {
-            /* disconnect */
-            info(1,"Disconnected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+          while ((error == ERROR_NONE) && (receivedBytes > 0));
 
-            deleteClientNode = clientNode;
-            clientNode = clientNode->next;
-            List_remove(&clientList,deleteClientNode);
-            deleteClient(deleteClientNode);
-          }
+          clientNode = clientNode->next;
         }
         else
         {
+          /* disconnect */
+          info(1,"Disconnected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+
+          deleteClientNode = clientNode;
           clientNode = clientNode->next;
+          List_remove(&clientList,deleteClientNode);
+          Network_disconnect(&deleteClientNode->clientInfo.network.socketHandle);
+          deleteClient(deleteClientNode);
         }
       }
       else
@@ -2133,11 +2230,11 @@ Errors Server_run(uint       serverPort,
         /* authorizaton error -> disconnect  client */
         info(1,"Disconnected client '%s:%u': authorization failure\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
 
-        Network_disconnect(&clientNode->clientInfo.network.socketHandle);
-
         deleteClientNode = clientNode;
         clientNode = clientNode->next;
         List_remove(&clientList,deleteClientNode);
+
+        Network_disconnect(&deleteClientNode->clientInfo.network.socketHandle);
         deleteClient(deleteClientNode);
       }
       else
@@ -2197,7 +2294,8 @@ Errors Server_batch(int inputDescriptor,
 
   /* run server */
   commandString = String_new();
-  while (!File_eof(&inputFileHandle))
+#if 1
+  while (!quitFlag && !File_eof(&inputFileHandle))
   {
     /* read command line */
     File_readLine(&inputFileHandle,commandString);
@@ -2205,6 +2303,15 @@ Errors Server_batch(int inputDescriptor,
     /* process */
     processCommand(&clientInfo,commandString);
   }
+#else /* 0 */
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+String_setCString(commandString,"1 SET crypt-password 'xaver !45'");processCommand(&clientInfo,commandString);
+String_setCString(commandString,"2 ADD_INCLUDE_PATTERN REGEX test/[^/]*");processCommand(&clientInfo,commandString);
+String_setCString(commandString,"3 ARCHIVE_LIST test.bar");processCommand(&clientInfo,commandString);
+//String_setCString(commandString,"3 ARCHIVE_LIST backup/backup-torsten-bar-000.bar");processCommand(&clientInfo,commandString);
+//String_setCString(commandString,"4 ARCHIVE_LIST scp:torsten@it-zo.de:backup/backup-torsten-bar-000.bar");processCommand(&clientInfo,commandString);
+processCommand(&clientInfo,commandString);
+#endif /* 0 */
   String_delete(commandString);
 
   /* free resources */

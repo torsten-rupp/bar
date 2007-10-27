@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "arrays.h"
 
 #include "passwords.h"
 
@@ -27,6 +28,29 @@
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
+
+typedef enum
+{
+  SERVER_RESULT_TYPE_NONE,
+  SERVER_RESULT_TYPE_INT,
+  SERVER_RESULT_TYPE_INT64,
+  SERVER_RESULT_TYPE_DOUBLE,
+  SERVER_RESULT_TYPE_CSTRING,
+  SERVER_RESULT_TYPE_STRING,
+} ServerResultTypes;
+
+typedef struct
+{
+  ServerResultTypes type;
+  union
+  {
+    int    i;
+    int64  l;
+    double d;
+    char   s[256];
+    String string;
+  };
+} ServerResult;
 
 /***************************** Variables *******************************/
 
@@ -41,7 +65,7 @@
 #endif
 
 /***********************************************************************\
-* Name   : Server_init
+* Name   : Server_initAll
 * Purpose: initialize server
 * Input  : -
 * Output : -
@@ -49,10 +73,10 @@
 * Notes  : -
 \***********************************************************************/
 
-Errors Server_init(void);
+Errors Server_initAll(void);
 
 /***********************************************************************\
-* Name   : Server_done
+* Name   : Server_doneAll
 * Purpose: deinitialize server
 * Input  : -
 * Output : -
@@ -60,7 +84,7 @@ Errors Server_init(void);
 * Notes  : -
 \***********************************************************************/
 
-void Server_done(void);
+void Server_doneAll(void);
 
 /***********************************************************************\
 * Name   : Server_run
