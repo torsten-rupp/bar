@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -215,7 +215,7 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const n
 
 /*---------------------------------------------------------------------*/
 
-bool File_getTmpFileName(const char *directory, String fileName)
+bool File_getTmpFileName(const String directory, String fileName)
 {
   char *s;
   int  handle;
@@ -224,11 +224,12 @@ bool File_getTmpFileName(const char *directory, String fileName)
 
   if (directory != NULL)
   {
-    String_format(fileName,"%s%cbar-XXXXXXX",directory,FILES_PATHNAME_SEPARATOR_CHAR);
+    String_set(fileName,directory);
+    File_appendFileNameCString(fileName,"bar-XXXXXXX");
   }
   else
   {
-    String_format(fileName,"bar-XXXXXXX");
+    String_setCString(fileName,"bar-XXXXXXX");
   }
   s = String_toCString(fileName);
   if (s == NULL)
@@ -251,7 +252,7 @@ bool File_getTmpFileName(const char *directory, String fileName)
   return TRUE;
 }
 
-bool File_getTmpDirectoryName(const char *directory, String fileName)
+bool File_getTmpDirectoryName(const String directory, String fileName)
 {
   char *s;
 
@@ -259,11 +260,12 @@ bool File_getTmpDirectoryName(const char *directory, String fileName)
 
   if (directory != NULL)
   {
-    String_format(fileName,"%s%cbar-XXXXXXX",directory,FILES_PATHNAME_SEPARATOR_CHAR);
+    String_set(fileName,directory);
+    File_appendFileNameCString(fileName,"bar-XXXXXXX");
   }
   else
   {
-    String_format(fileName,"bar-XXXXXXX");
+    String_setCString(fileName,"bar-XXXXXXX");
   }
   s = String_toCString(fileName);
   if (s == NULL)

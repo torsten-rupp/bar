@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -203,7 +203,7 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const n
 * Notes  : -
 \***********************************************************************/
 
-bool File_getTmpFileName(const char *directory, String fileName);
+bool File_getTmpFileName(const String directory, String fileName);
 
 /***********************************************************************\
 * Name   : File_getTmpDirectoryName
@@ -215,7 +215,7 @@ bool File_getTmpFileName(const char *directory, String fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool File_getTmpDirectoryName(const char *directory, String fileName);
+bool File_getTmpDirectoryName(const String directory, String fileName);
 
 /*---------------------------------------------------------------------*/
 

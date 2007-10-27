@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -66,7 +66,7 @@ LOCAL const struct { const char *name; CryptAlgorithms cryptAlgorithm; } CRYPT_A
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-Errors Crypt_init(void)
+Errors Crypt_initAll(void)
 {
   /* enable pthread-support before any other function is called */
   gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
@@ -88,7 +88,7 @@ Errors Crypt_init(void)
   return ERROR_NONE;
 }
 
-void Crypt_done(void)
+void Crypt_doneAll(void)
 {
 }
 

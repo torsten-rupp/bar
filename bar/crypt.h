@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems: all
@@ -69,7 +69,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Crypt_init
+* Name   : Crypt_initAll
 * Purpose: initialize crypt functions
 * Input  : -
 * Output : -
@@ -77,10 +77,10 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_init(void);
+Errors Crypt_initAll(void);
 
 /***********************************************************************\
-* Name   : Crypt_done
+* Name   : Crypt_doneAll
 * Purpose: deinitialize crypt functions
 * Input  : -
 * Output : -
@@ -88,7 +88,7 @@ Errors Crypt_init(void);
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_done(void);
+void Crypt_doneAll(void);
 
 /***********************************************************************\
 * Name   : Crypt_getAlgorithmName
