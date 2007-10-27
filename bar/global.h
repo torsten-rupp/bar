@@ -53,7 +53,7 @@
   #define PI 3.14159265358979323846
 #endif
 
-#define MILLIPERSECOND 1000
+#define MILLI_PER_SECOND 1000
 
 /* minimal and maximal values for some scalar data types */
 #define MIN_CHAR           CHAR_MIN
@@ -256,6 +256,12 @@ typedef void               void32;
   do \
   { \
      HALT_INTERNAL_ERROR("unhandled switch case"); \
+  } \
+  while (0)
+#define HALT_INTERNAL_ERROR_UNREACHABLE() \
+  do \
+  { \
+     HALT_INTERNAL_ERROR("unreachable code"); \
   } \
   while (0)
 
