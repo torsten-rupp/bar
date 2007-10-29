@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -48,7 +48,7 @@ typedef struct
   uint64 storageTotalBytes;                // total bytes of current storage
 } CreateStatusInfo;
 
-typedef char(*CreateStatusInfoFunction)(Errors                 error,
+typedef void(*CreateStatusInfoFunction)(Errors                 error,
                                         const CreateStatusInfo *createStatusInfo,
                                         void                   *userData
                                        );

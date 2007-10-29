@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.33 $
+* $Revision: 1.34 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -69,6 +69,8 @@ typedef struct
   PatternList              *includePatternList;
   PatternList              *excludePatternList;
   const Options            *options;
+
+  time_t                   startTime;
 
   MsgQueue                 fileMsgQueue;                       // queue with files to backup
 
@@ -696,11 +698,16 @@ LOCAL Errors storeArchiveFile(String fileName,
                              )
 {
   CreateInfo *createInfo = (CreateInfo*)userData;
-  const char *i0,*i1;
-  ulong      divisor;
+  const char *s0,*s1;
+  ulong      divisor;           
   ulong      n;
   int        d;
-  String     destinationName;
+  String     destinationName; 
+  struct tm  tmStruct;
+  long       i;
+  char       format[4];
+  char       buffer[256];
+  size_t     length;
 
   assert(createInfo != NULL);
 
@@ -709,27 +716,27 @@ LOCAL Errors storeArchiveFile(String fileName,
     /* get destination file name */
     if (partNumber >= 0)
     {
-      i0 = strchr(createInfo->archiveFileName,'#');
-      if (i0 != NULL)
+      s0 = strchr(createInfo->archiveFileName,'#');
+      if (s0 != NULL)
       {
         /* find #...# and get max. divisor for part number */
         divisor = 1;
-        i1 = i0+1;
-        while ((*i1) == '#')
+        s1 = s0+1;
+        while ((*s1) == '#')
         {
-          i1++;
+          s1++;
           if (divisor < 1000000000) divisor*=10;
         }
 
         /* format destination file name */
-        destinationName = String_newBuffer(createInfo->archiveFileName,(ulong)(i0-createInfo->archiveFileName));
+        destinationName = String_newBuffer(createInfo->archiveFileName,(ulong)(s0-createInfo->archiveFileName));
         n = partNumber;
         while (divisor > 0)
         {
           d = n/divisor; n = n%divisor; divisor = divisor/10;
           String_appendChar(destinationName,'0'+d);
         }
-        String_appendCString(destinationName,i1);
+        String_appendCString(destinationName,s1);
       }
       else
       {
@@ -740,6 +747,49 @@ LOCAL Errors storeArchiveFile(String fileName,
     else
     {
       destinationName = String_newCString(createInfo->archiveFileName);
+    }
+    localtime_r(&createInfo->startTime,&tmStruct);
+    i = 0;
+    while ((i = String_findChar(destinationName,i,'%')) >= 0)
+    {
+      if ((i+1) < String_length(destinationName))
+      {
+        switch (String_index(destinationName,i+1))
+        {
+          case 'E':
+          case 'O':
+            format[0] = '%';
+            format[1] = String_index(destinationName,i+1);
+            format[2] = String_index(destinationName,i+2);
+            format[3] = '\0';
+
+            length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
+
+            String_remove(destinationName,i,3);
+            String_insertBuffer(destinationName,i,buffer,length);
+            i += length;
+            break;
+          case '%':
+            String_remove(destinationName,i,1);
+            i += 1;
+            break;
+          default:
+            format[0] = '%';
+            format[1] = String_index(destinationName,i+1);
+            format[2] = '\0';
+
+            length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
+
+            String_remove(destinationName,i,2);
+            String_insertBuffer(destinationName,i,buffer,length);
+            i += length;
+            break;
+        }
+      }
+      else
+      {
+       i += 1;
+      }      
     }
 
     /* send to storage controller */
@@ -883,7 +933,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
     }
 else
 {
-fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErrorText(error));
+fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErrorText(createInfo->error));
 }
     /* delete source file */
     if (!File_delete(storageMsg.fileName))
@@ -940,6 +990,7 @@ Errors Command_create(const char               *archiveFileName,
   createInfo.includePatternList           = includePatternList;
   createInfo.excludePatternList           = excludePatternList;
   createInfo.options                      = options;
+  createInfo.startTime                    = time(NULL);
   createInfo.collectorThreadExitFlag      = FALSE;
   createInfo.storageCount                 = 0;
   createInfo.storageBytes                 = 0LL;
@@ -1069,12 +1120,21 @@ Errors Command_create(const char               *archiveFileName,
             error = File_getFileInfo(fileName,&fileInfo);
             if (error != ERROR_NONE)
             {
-              info(1,"FAIL\n");
-              printError("Cannot get info for file '%s' (error: %s)\n",
-                         String_cString(fileName),
-                         getErrorText(error)
-                        );
-              createInfo.error = error;
+              if (options->skipUnreadableFlag)
+              {
+                info(1,"skipped (reason: %s)\n",
+                     getErrorText(error)
+                    );
+              }
+              else
+              {
+                info(1,"FAIL\n");
+                printError("Cannot get info for file '%s' (error: %s)\n",
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                createInfo.error = error;
+              }
               continue;
             }
 
@@ -1196,12 +1256,21 @@ Errors Command_create(const char               *archiveFileName,
             error = File_getFileInfo(fileName,&fileInfo);
             if (error != ERROR_NONE)
             {
-              info(1,"FAIL\n");
-              printError("Cannot get info for directory '%s' (error: %s)\n",
-                         String_cString(fileName),
-                         getErrorText(error)
-                        );
-              createInfo.error = error;
+              if (options->skipUnreadableFlag)
+              {
+                info(1,"skipped (reason: %s)\n",
+                     getErrorText(error)
+                    );
+              }
+              else
+              {
+                info(1,"FAIL\n");
+                printError("Cannot get info for directory '%s' (error: %s)\n",
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                createInfo.error = error;
+              }
               continue;
             }
 
@@ -1241,12 +1310,21 @@ Errors Command_create(const char               *archiveFileName,
             error = File_getFileInfo(fileName,&fileInfo);
             if (error != ERROR_NONE)
             {
-              info(1,"FAIL\n");
-              printError("Cannot get info for file '%s' (error: %s)\n",
-                         String_cString(fileName),
-                         getErrorText(error)
-                        );
-              createInfo.error = error;
+              if (options->skipUnreadableFlag)
+              {
+                info(1,"skipped (reason: %s)\n",
+                     getErrorText(error)
+                    );
+              }
+              else
+              {
+                info(1,"FAIL\n");
+                printError("Cannot get info for file '%s' (error: %s)\n",
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                createInfo.error = error;
+              }
               continue;
             }
 
@@ -1255,13 +1333,22 @@ Errors Command_create(const char               *archiveFileName,
             error = File_readLink(fileName,name);
             if (error != ERROR_NONE)
             {
-              info(1,"FAIL\n");
-              printError("Cannot read link '%s' (error: %s)\n",
-                         String_cString(fileName),
-                         getErrorText(error)
-                        );
-              String_delete(name);
-              createInfo.error = error;
+              if (options->skipUnreadableFlag)
+              {
+                info(1,"skipped (reason: %s)\n",
+                     getErrorText(error)
+                    );
+              }
+              else
+              {
+                info(1,"FAIL\n");
+                printError("Cannot read link '%s' (error: %s)\n",
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                String_delete(name);
+                createInfo.error = error;
+              }
               continue;
             }
 
