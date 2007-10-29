@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -42,6 +42,20 @@
 #define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
+typedef struct
+{
+  PatternList               *includePatternList;
+  PatternList               *excludePatternList;
+  const Options             *options;
+
+  time_t                    startTime;
+
+  Errors                    error;
+
+  RestoreStatusInfoFunction statusInfoFunction;
+  void                      *statusInfoUserData;
+  RestoreStatusInfo         statusInfo;              // status info
+} RestoreInfo;
 
 /***************************** Variables *******************************/
 
@@ -106,29 +120,71 @@ LOCAL String getDestinationFileName(String       destinationFileName,
   return destinationFileName;
 }
 
+/***********************************************************************\
+* Name   : updateStatusInfo
+* Purpose: update status info
+* Input  : createInfo - create info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateStatusInfo(const RestoreInfo *restoreInfo)
+{
+  assert(restoreInfo != NULL);
+
+  if (restoreInfo->statusInfoFunction != NULL)
+  {
+    restoreInfo->statusInfoFunction(restoreInfo->error,&restoreInfo->statusInfo,restoreInfo->statusInfoUserData);
+  }
+}
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_restore(StringList    *archiveFileNameList,
-                       PatternList   *includePatternList,
-                       PatternList   *excludePatternList,
-                       const Options *options
+Errors Command_restore(StringList                *archiveFileNameList,
+                       PatternList               *includePatternList,
+                       PatternList               *excludePatternList,
+                       const Options             *options,
+                       RestoreStatusInfoFunction restoreStatusInfoFunction,
+                       void                      *restoreStatusInfoUserData,
+                       bool                      *abortRequestFlag
                       )
 {
-  byte             *buffer;
-  FileFragmentList fileFragmentList;
-  String           archiveFileName;
-  Errors           failError;
-  Errors           error;
-  ArchiveInfo      archiveInfo;
-  ArchiveFileInfo  archiveFileInfo;
-  FileTypes        fileType;
-  FileFragmentNode *fileFragmentNode;
+  RestoreInfo       restoreInfo;
+  byte              *buffer;
+  FileFragmentList  fileFragmentList;
+  String            archiveFileName;
+  Errors            failError;
+  Errors            error;
+  ArchiveInfo       archiveInfo;
+  ArchiveFileInfo   archiveFileInfo;
+  FileTypes         fileType;
+  FileFragmentNode  *fileFragmentNode;
 
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
   assert(options != NULL);
+
+  /* initialize variables */
+  restoreInfo.includePatternList           = includePatternList;
+  restoreInfo.excludePatternList           = excludePatternList;
+  restoreInfo.options                      = options;
+  restoreInfo.startTime                    = time(NULL);
+  restoreInfo.statusInfoFunction           = restoreStatusInfoFunction;
+  restoreInfo.statusInfoUserData           = restoreStatusInfoUserData;
+  restoreInfo.statusInfo.doneFiles         = 0L;
+  restoreInfo.statusInfo.doneBytes         = 0LL;
+  restoreInfo.statusInfo.skippedFiles      = 0L;
+  restoreInfo.statusInfo.skippedBytes      = 0LL;
+  restoreInfo.statusInfo.errorFiles        = 0L;
+  restoreInfo.statusInfo.errorBytes        = 0LL;
+  restoreInfo.statusInfo.fileName          = String_new();
+  restoreInfo.statusInfo.fileDoneBytes     = 0LL;
+  restoreInfo.statusInfo.fileTotalBytes    = 0LL;
+  restoreInfo.statusInfo.storageName       = String_new();
+  restoreInfo.statusInfo.storageDoneBytes  = 0LL;
+  restoreInfo.statusInfo.storageTotalBytes = 0LL;
 
   /* allocate resources */
   buffer = malloc(BUFFER_SIZE);
@@ -158,6 +214,8 @@ Errors Command_restore(StringList    *archiveFileNameList,
       if (failError == ERROR_NONE) failError = error;
       continue;
     }
+    String_set(restoreInfo.statusInfo.storageName,archiveFileName);
+    updateStatusInfo(&restoreInfo);
 
     /* read files */
     while (!Archive_eof(&archiveInfo))
@@ -217,6 +275,11 @@ Errors Command_restore(StringList    *archiveFileNameList,
                 && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
+              String_set(restoreInfo.statusInfo.fileName,fileName);
+              restoreInfo.statusInfo.fileDoneBytes = 0LL;
+              restoreInfo.statusInfo.fileTotalBytes = fragmentSize;
+              updateStatusInfo(&restoreInfo);
+
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            fileName,
@@ -286,6 +349,7 @@ Errors Command_restore(StringList    *archiveFileNameList,
                 if (failError == ERROR_NONE) failError = error;
                 continue;
               }
+
               length = 0;
               while (length < fragmentSize)
               {
@@ -313,6 +377,8 @@ Errors Command_restore(StringList    *archiveFileNameList,
                   if (failError == ERROR_NONE) failError = error;
                   break;
                 }
+                restoreInfo.statusInfo.fileDoneBytes += n;
+                updateStatusInfo(&restoreInfo);
 
                 length += n;
               }
@@ -397,6 +463,11 @@ Errors Command_restore(StringList    *archiveFileNameList,
                 && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
+              String_set(restoreInfo.statusInfo.fileName,directoryName);
+              restoreInfo.statusInfo.fileDoneBytes = 0LL;
+              restoreInfo.statusInfo.fileTotalBytes = 00L;
+              updateStatusInfo(&restoreInfo);
+
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            directoryName,
@@ -488,6 +559,11 @@ Errors Command_restore(StringList    *archiveFileNameList,
                 && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
+              String_set(restoreInfo.statusInfo.fileName,linkName);
+              restoreInfo.statusInfo.fileDoneBytes = 0LL;
+              restoreInfo.statusInfo.fileTotalBytes = 00L;
+              updateStatusInfo(&restoreInfo);
+
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            linkName,
