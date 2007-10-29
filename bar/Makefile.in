@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -65,8 +65,9 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 BAR_SOURCES        = bar.c \
                      commands_create.c \
                      commands_list.c \
-                     commands_restore.c \
                      commands_test.c \
+                     commands_compare.c \
+                     commands_restore.c \
                      files.c \
                      archive.c \
                      chunks.c \
@@ -253,6 +254,7 @@ standard_test: bar
 	./bar -c test/$(BAR_FILE) test/data $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -c test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -x test/test*.bar $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
 
@@ -263,6 +265,7 @@ standard_test_destroy: bar destroyer
 	./destroyer test/test.bar m:0 > test/test.bar_destroyed
 	./bar -l test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -t test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -c test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -x test/test.bar_destroyed $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
 
@@ -374,3 +377,6 @@ backup-itzo: bar
           -! /home/torsten/Mail/trash \
           -! "*.mov" -! "*.avi" \
           /home/torsten
+
+upload: bar
+	scp bar torsten@it-zo.de:

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.35 $
+* $Revision: 1.36 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -71,6 +71,7 @@ typedef enum
   COMMAND_CREATE,
   COMMAND_LIST,
   COMMAND_TEST,
+  COMMAND_COMPARE,
   COMMAND_RESTORE,
 
   COMMAND_UNKNOWN,
@@ -90,6 +91,8 @@ LOCAL const char  *serverCAFileName;
 LOCAL const char  *serverCertFileName;
 LOCAL const char  *serverKeyFileName;
 LOCAL Password    *serverPassword;
+LOCAL const char  *logFileName;
+
 LOCAL bool        batchFlag;
 LOCAL bool        versionFlag;
 LOCAL bool        helpFlag,xhelpFlag,helpInternalFlag;
@@ -162,13 +165,14 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
   CMD_OPTION_ENUM         ("create",                   'c',0,0,command,                                 COMMAND_NONE,COMMAND_CREATE,                                       "create new archive"                            ),
   CMD_OPTION_ENUM         ("list",                     'l',0,0,command,                                 COMMAND_NONE,COMMAND_LIST,                                         "list contents of archive"                      ),
-  CMD_OPTION_ENUM         ("test",                     't',0,0,command,                                 COMMAND_NONE,COMMAND_TEST,                                         "test contents of ardhive"                      ),
+  CMD_OPTION_ENUM         ("test",                     't',0,0,command,                                 COMMAND_NONE,COMMAND_TEST,                                         "test contents of archive"                      ),
+  CMD_OPTION_ENUM         ("compare",                  'd',0,0,command,                                 COMMAND_NONE,COMMAND_COMPARE,                                      "compare contents of archive with files"        ),
   CMD_OPTION_ENUM         ("extract",                  'x',0,0,command,                                 COMMAND_NONE,COMMAND_RESTORE,                                      "restore archive"                               ),
 
   CMD_OPTION_SPECIAL      ("config",                   0,  1,0,NULL,                                    NULL,cmdParseConfigFile,NULL,                                      "configuration file","file name"                ),
 
   CMD_OPTION_INTEGER64    ("archive-part-size",        's',1,0,defaultOptions.archivePartSize,          0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "approximated part size"                        ),
-  CMD_OPTION_SPECIAL      ("tmp-directory",            0,  1,0,&defaultOptions.tmpDirectory,            NULL,cmdParseString,NULL,                                          "temporary directory","path"                    ),
+  CMD_OPTION_SPECIAL      ("tmp-directory",            0,  1,0,&defaultOptions.tmpDirectory,            DEFAULT_TMP_DIRECTORY,cmdParseString,NULL,                         "temporary directory","path"                    ),
   CMD_OPTION_INTEGER64    ("max-tmp-size",             0,  1,0,defaultOptions.maxTmpSize,               0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "max. size of temporary files"                  ),
   CMD_OPTION_INTEGER      ("directory-strip",          'p',1,0,defaultOptions.directoryStripCount,      0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"     ),
   CMD_OPTION_SPECIAL      ("directory",                0,  0,0,&defaultOptions.directory   ,            NULL,cmdParseString,NULL,                                          "directory to restore files","path"             ),
@@ -806,6 +810,7 @@ int main(int argc, const char *argv[])
         break;
       case COMMAND_LIST:
       case COMMAND_TEST:
+      case COMMAND_COMPARE:
       case COMMAND_RESTORE:
         {
           StringList fileNameList;
@@ -834,11 +839,21 @@ int main(int argc, const char *argv[])
                                    &defaultOptions
                                   );
               break;
+            case COMMAND_COMPARE:
+              error = Command_compare(&fileNameList,
+                                      &includePatternList,
+                                      &excludePatternList,
+                                      &defaultOptions
+                                     );
+              break;
             case COMMAND_RESTORE:
               error = Command_restore(&fileNameList,
                                       &includePatternList,
                                       &excludePatternList,
-                                      &defaultOptions
+                                      &defaultOptions,
+                                      NULL,
+                                      NULL,
+                                      NULL
                                      );
               break;
             default:

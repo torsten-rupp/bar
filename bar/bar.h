@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -47,6 +47,16 @@ typedef enum
 
   EXITCODE_UNKNOWN=128
 } ExitCodes;
+
+typedef enum
+{
+  LOG_GROUP_IO_ERROR,
+  LOG_GROUP_FILE_ACCESS_DENIED,
+  LOG_GROUP_FILE_MISSING,
+
+  LOG_GROUP_FILE_OK,
+  LOG_GROUP_FILE_SKIPPED,
+} LogGroups;
 
 typedef struct
 {
