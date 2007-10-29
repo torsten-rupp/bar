@@ -1,0 +1,24 @@
+--- libssh2-0.17/src/sftp.c	2007-08-07 05:45:54.000000000 +0900
++++ libssh2-0.17-with-seek-fix/src/sftp.c	2007-10-18 20:01:43.000000000 +0900
+@@ -1521,7 +1521,7 @@
+  * Set the read/write pointer to an arbitrary position within the file
+  */
+ LIBSSH2_API void
+-libssh2_sftp_seek(LIBSSH2_SFTP_HANDLE * handle, size_t offset)
++libssh2_sftp_seek(LIBSSH2_SFTP_HANDLE * handle, libssh2_uint64_t offset)
+ {
+     handle->u.file.offset = offset;
+ }
+--- libssh2-0.17/include/libssh2_sftp.h	2007-06-25 21:08:10.000000000 +0900
++++ libssh2-0.17-with-seek-fix/include/libssh2_sftp.h	2007-10-18 19:57:35.000000000 +0900
+@@ -205,8 +205,8 @@
+ #define libssh2_sftp_close(handle)                  libssh2_sftp_close_handle(handle)
+ #define libssh2_sftp_closedir(handle)               libssh2_sftp_close_handle(handle)
+ 
+-LIBSSH2_API void libssh2_sftp_seek(LIBSSH2_SFTP_HANDLE *handle, size_t offset);
+-#define libssh2_sftp_rewind(handle)         libssh2_sftp_seek((handle), 0)
++LIBSSH2_API void libssh2_sftp_seek(LIBSSH2_SFTP_HANDLE *handle, libssh2_uint64_t offset);
++#define libssh2_sftp_rewind(handle)         libssh2_sftp_seek((handle), 0LL)
+ 
+ LIBSSH2_API size_t libssh2_sftp_tell(LIBSSH2_SFTP_HANDLE *handle);
+ 

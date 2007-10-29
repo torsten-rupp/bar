@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.21 $
+* $Source: /home/torsten/cvs/bar/commands_compare.c,v $
+* $Revision: 1.1 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -33,7 +33,7 @@
 #include "archive.h"
 #include "filefragmentlists.h"
 
-#include "commands_test.h"
+#include "commands_compare.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -55,13 +55,43 @@
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : compare
+* Purpose: compare memory
+* Input  : p0,p1  - memory to compare
+*          length - size of memory blocks (in bytes)
+* Output : -
+* Return : number of equal bytes or length of memory blocks are equal
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ulong compare(const void *p0, const void *p1, ulong length)
+{
+  const char *b0,*b1;
+  ulong      i;
+
+  b0 = (char*)p0;
+  b1 = (char*)p1;
+  i = 0;
+  while (   (i < length)
+         && ((*b0) == (*b1))
+        )
+  {
+    i++;
+    b0++;
+    b1++;
+  }
+
+  return i;
+}
+
 /*---------------------------------------------------------------------*/
 
-Errors Command_test(StringList    *archiveFileNameList,
-                    PatternList   *includePatternList,
-                    PatternList   *excludePatternList,
-                    const Options *options
-                   )
+Errors Command_compare(StringList    *archiveFileNameList,
+                       PatternList   *includePatternList,
+                       PatternList   *excludePatternList,
+                       const Options *options
+                      )
 {
   byte             *archiveBuffer,*fileBuffer;
   FileFragmentList fileFragmentList;
@@ -139,8 +169,13 @@ Errors Command_test(StringList    *archiveFileNameList,
             FileInfo         fileInfo;
             uint64           fragmentOffset,fragmentSize;
             FileFragmentNode *fileFragmentNode;
+//            FileInfo   localFileInfo;
+            FileHandle       fileHandle;
+            bool             equalFlag;
             uint64           length;
             ulong            n;
+            ulong            bytesRead;
+            ulong            diffIndex;
 
             /* read file */
             fileName = String_new();
@@ -170,6 +205,28 @@ Errors Command_test(StringList    *archiveFileNameList,
             {
               info(0,"Test file '%s'...",String_cString(fileName));
 
+              /* check file */
+              if (!File_exists(fileName))
+              {
+                info(0,"File '%s' does not exists!\n",
+                     String_cString(fileName)
+                    );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
+                break;
+              }
+              if (File_getType(fileName) != FILE_TYPE_FILE)
+              {
+                info(0,"Not a file '%s'!\n",
+                     String_cString(fileName)
+                    );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                if (failError == ERROR_NONE) failError = ERROR_WRONG_FILE_TYPE;
+                break;
+              }
+
               /* get file fragment list */
               fileFragmentNode = FileFragmentList_findFile(&fileFragmentList,fileName);
               if (fileFragmentNode == NULL)
@@ -178,13 +235,57 @@ Errors Command_test(StringList    *archiveFileNameList,
               }
 //FileFragmentList_print(fileFragmentNode,String_cString(fileName));
 
-              /* test file content */
-              length = 0;
-              while (length < fragmentSize)
+              /* open file */
+              error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+              if (error != ERROR_NONE)
+              {
+                info(0,"fail\n");
+                printError("Cannot open file '%s' (error: %s)\n",
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                if (failError == ERROR_NONE) failError = error;
+                continue;
+              }
+
+              /* check file size */
+              if (fileInfo.size != File_getSize(&fileHandle))
+              {
+                info(0,"differ in size: expected %lld bytes, found %lld bytes\n",
+                     fileInfo.size,
+                     File_getSize(&fileHandle)
+                    );
+                File_close(&fileHandle);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                if (failError == ERROR_NONE) failError = ERROR_FILES_DIFFER;
+                continue;
+              }
+
+              /* check file content */
+              error = File_seek(&fileHandle,fragmentOffset);
+              if (error != ERROR_NONE)
+              {
+                info(0,"fail\n");
+                printError("Cannot read file '%s' (error: %s)\n",
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                File_close(&fileHandle);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                if (failError == ERROR_NONE) failError = error;
+                continue;
+              }
+              length    = 0;
+              equalFlag = TRUE;
+              while ((length < fragmentSize) && equalFlag)
               {
                 n = MIN(fragmentSize-length,BUFFER_SIZE);
 
-                /* read archive file */
+                /* read archive, file */
                 error = Archive_readFileData(&archiveFileInfo,archiveBuffer,n);
                 if (error != ERROR_NONE)
                 {
@@ -196,9 +297,34 @@ Errors Command_test(StringList    *archiveFileNameList,
                   if (failError == ERROR_NONE) failError = error;
                   break;
                 }
+                error = File_read(&fileHandle,fileBuffer,n,&bytesRead);
+                if (error != ERROR_NONE)
+                {
+                  info(0,"fail\n");
+                  printError("Cannot read file '%s' (error: %s)\n",
+                             String_cString(fileName),
+                             getErrorText(error)
+                            );
+                  if (failError == ERROR_NONE) failError = error;
+                  break;
+                }
+                if (n != bytesRead)
+                {
+                  equalFlag = FALSE;
+                  break;
+                }
+
+                /* compare */
+                diffIndex = compare(archiveBuffer,fileBuffer,n);
+                equalFlag = (diffIndex >= n);
+                if (!equalFlag)
+                {
+                  break;
+                }
 
                 length += n;
               }
+              File_close(&fileHandle);
               if (failError != ERROR_NONE)
               {
                 Archive_closeEntry(&archiveFileInfo);
@@ -206,7 +332,24 @@ Errors Command_test(StringList    *archiveFileNameList,
                 continue;
               }
 
-              info(0,"ok\n");
+#if 0
+              /* get local file info */
+              /* check file time, permissions, file owner/group */
+#endif /* 0 */
+              if (equalFlag)
+              {
+                info(0,"ok\n");
+              }
+              else
+              {
+                info(0,"differ at offset %llu\n",
+                     fragmentOffset+length+diffIndex
+                    );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                if (failError == ERROR_NONE) failError = ERROR_FILES_DIFFER;
+                continue;
+              }
 
               /* add fragment to file fragment list */
               FileFragmentList_add(fileFragmentNode,fragmentOffset,fragmentSize);
@@ -234,6 +377,8 @@ Errors Command_test(StringList    *archiveFileNameList,
           {
             String   directoryName;
             FileInfo fileInfo;
+//            String   localFileName;
+//            FileInfo localFileInfo;
 
             /* read directory */
             directoryName = String_new();
@@ -260,6 +405,45 @@ Errors Command_test(StringList    *archiveFileNameList,
             {
               info(0,"Test directory '%s'...",String_cString(directoryName));
 
+              /* check directory */
+              if (!File_exists(directoryName))
+              {
+                info(0,"Directory '%s' does not exists!\n",
+                     String_cString(directoryName)
+                    );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(directoryName);
+                if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
+                break;
+              }
+              if (File_getType(directoryName) != FILE_TYPE_DIRECTORY)
+              {
+                info(0,"Not a directory '%s'!\n",
+                     String_cString(directoryName)
+                    );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(directoryName);
+                if (failError == ERROR_NONE) failError = ERROR_WRONG_FILE_TYPE;
+                break;
+              }
+
+#if 0
+              /* get local file info */
+              error = File_getFileInfo(directoryName,&localFileInfo);
+              if (error != ERROR_NONE)
+              {
+                printError("Cannot not read local directory '%s' (error: %s)!\n",
+                           String_cString(directoryName),
+                           getErrorText(error)
+                          );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(directoryName);
+                if (failError == ERROR_NONE) failError = error;
+                break;
+              }
+
+              /* check file time, permissions, file owner/group */
+#endif /* 0 */
               info(0,"ok\n");
 
               /* free resources */
@@ -280,6 +464,8 @@ Errors Command_test(StringList    *archiveFileNameList,
             String   linkName;
             String   fileName;
             FileInfo fileInfo;
+            String   localFileName;
+//            FileInfo localFileInfo;
 
             /* read link */
             linkName = String_new();
@@ -309,6 +495,79 @@ Errors Command_test(StringList    *archiveFileNameList,
             {
               info(0,"Test link '%s'...",String_cString(linkName));
 
+              /* check link */
+              if (!File_exists(linkName))
+              {
+                info(0,"Link '%s' does not exists!\n",
+                     String_cString(linkName)
+                    );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                String_delete(linkName);
+                if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
+                break;
+              }
+              if (File_getType(linkName) != FILE_TYPE_LINK)
+              {
+                info(0,"Not a link '%s'!\n",
+                     String_cString(linkName)
+                    );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                String_delete(linkName);
+                if (failError == ERROR_NONE) failError = ERROR_WRONG_FILE_TYPE;
+                break;
+              }
+
+              /* check link content */
+              localFileName = String_new();
+              error = File_readLink(linkName,localFileName);
+              if (error != ERROR_NONE)
+              {
+                printError("Cannot not read local file '%s' (error: %s)!\n",
+                           String_cString(linkName),
+                           getErrorText(error)
+                          );
+                String_delete(localFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                String_delete(linkName);
+                if (failError == ERROR_NONE) failError = error;
+                break;
+              }
+              if (!String_equals(fileName,localFileName))
+              {
+                info(0,"Link '%s' does not contain file '%s'!\n",
+                     String_cString(linkName),
+                     String_cString(fileName)
+                    );
+                String_delete(localFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                String_delete(linkName);
+                if (failError == ERROR_NONE) failError = ERROR_FILES_DIFFER;
+                break;
+              }
+              String_delete(localFileName);
+
+#if 0
+              /* get local file info */
+              error = File_getFileInfo(linkName,&localFileInfo);
+              if (error != ERROR_NONE)
+              {
+                printError("Cannot not read local file '%s' (error: %s)!\n",
+                           String_cString(linkName),
+                           getErrorText(error)
+                          );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                String_delete(linkName);
+                if (failError == ERROR_NONE) failError = error;
+                break;
+              }
+
+              /* check file time, permissions, file owner/group */
+#endif /* 0 */
               info(0,"ok\n");
 
               /* free resources */

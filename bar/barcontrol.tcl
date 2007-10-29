@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -96,55 +96,65 @@ set server(authorizedFlag)   0
 set barConfigFileName     ""
 set barConfigModifiedFlag 0
 
-set barConfig(name)                   ""
-set barConfig(included)               {}
-set barConfig(excluded)               {}
-set barConfig(storageType)            ""
-set barConfig(storageFileName)        ""
-set barConfig(storageLoginName)       ""
-set barConfig(storageHostName)        ""
-set barConfig(archivePartSizeFlag)    0
-set barConfig(archivePartSize)        0
-set barConfig(maxTmpSizeFlag)         0
-set barConfig(maxTmpSize)             0
-set barConfig(maxBandWidthFlag)       0
-set barConfig(maxBandWidth)           0
-set barConfig(sshPort)                0
-set barConfig(sshPublicKeyFileName)   ""
-set barConfig(sshPrivatKeyFileName)   ""
-set barConfig(compressAlgorithm)      ""
-set barConfig(cryptAlgorithm)         ""
-set barConfig(cryptPassword)          ""
-set barConfig(skipUnreadable)         1
-set barConfig(skipNotWritable)        1
-set barConfig(overwriteArchiveFiles)  0
-set barConfig(overwriteFiles)         0
+set barConfig(name)                            ""
+set barConfig(included)                        {}
+set barConfig(excluded)                        {}
+set barConfig(storageType)                     ""
+set barConfig(storageFileName)                 ""
+set barConfig(storageLoginName)                ""
+set barConfig(storageHostName)                 ""
+set barConfig(archivePartSizeFlag)             0
+set barConfig(archivePartSize)                 0
+set barConfig(maxTmpSizeFlag)                  0
+set barConfig(maxTmpSize)                      0
+set barConfig(maxBandWidthFlag)                0
+set barConfig(maxBandWidth)                    0
+set barConfig(sshPort)                         0
+set barConfig(sshPublicKeyFileName)            ""
+set barConfig(sshPrivatKeyFileName)            ""
+set barConfig(compressAlgorithm)               ""
+set barConfig(cryptAlgorithm)                  ""
+set barConfig(cryptPassword)                   ""
+set barConfig(destinationDirectoryName)        ""
+set barConfig(destinationStripCount)           0
+set barConfig(skipUnreadable)                  1
+set barConfig(skipNotWritable)                 1
+set barConfig(overwriteArchiveFiles)           0
+set barConfig(overwriteFiles)                  0
 
-set currentJob(id)                    0
-set currentJob(error)                 0
-set currentJob(doneFiles)             0
-set currentJob(doneBytes)             0
-set currentJob(doneBytesShort)        0
-set currentJob(doneBytesShortUnit)    "K"
-set currentJob(totalFiles)            0
-set currentJob(totalBytes)            0
-set currentJob(totalBytesShort)       0
-set currentJob(totalBytesShortUnit)   "K"
-set currentJob(skippedFiles)          0
-set currentJob(skippedBytes)          0
-set currentJob(skippedBytesShort)     0
-set currentJob(skippedBytesShortUnit) "K"
-set currentJob(errorFiles)            0
-set currentJob(errorBytes)            0
-set currentJob(errorBytesShort)       0
-set currentJob(errorBytesShortUnit)   "K"
-set currentJob(compressionRatio)      0
-set currentJob(fileName)              ""
-set currentJob(fileDoneBytes)         0
-set currentJob(fileTotalBytes)        0
-set currentJob(storageName)           ""
-set currentJob(storageDoneBytes)      0
-set currentJob(storageTotalBytes)     0
+set currentJob(id)                             0
+set currentJob(error)                          0
+set currentJob(doneFiles)                      0
+set currentJob(doneBytes)                      0
+set currentJob(doneBytesShort)                 0
+set currentJob(doneBytesShortUnit)             "KBytes"
+set currentJob(totalFiles)                     0
+set currentJob(totalBytes)                     0
+set currentJob(totalBytesShort)                0
+set currentJob(totalBytesShortUnit)            "KBytes"
+set currentJob(skippedFiles)                   0
+set currentJob(skippedBytes)                   0
+set currentJob(skippedBytesShort)              0
+set currentJob(skippedBytesShortUnit)          "KBytes"
+set currentJob(errorFiles)                     0
+set currentJob(errorBytes)                     0
+set currentJob(errorBytesShort)                0
+set currentJob(errorBytesShortUnit)            "KBytes"
+set currentJob(filesPerSecond)                 0
+set currentJob(filesPerSecondUnit)             "files/s"
+set currentJob(bytesPerSecond)                 0
+set currentJob(bytesPerSecondShort)            0
+set currentJob(bytesPerSecondShortUnit)        "KBytes/s"
+set currentJob(storageBytesPerSecond)          0
+set currentJob(storageBytesPerSecondShort)     0
+set currentJob(storageBytesPerSecondShortUnit) "KBytes/s"
+set currentJob(compressionRatio)               0  
+set currentJob(fileName)                       "" 
+set currentJob(fileDoneBytes)                  0  
+set currentJob(fileTotalBytes)                 0  
+set currentJob(storageName)                    "" 
+set currentJob(storageDoneBytes)               0  
+set currentJob(storageTotalBytes)              0  
 
 # misc.
 set jobListTimerId    0
@@ -754,35 +764,6 @@ proc stringToBytes { s } \
 }
 
 #***********************************************************************
-# Name   : 
-# Purpose: 
-# Input  : -
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-proc passwordObfuscate { password $passwordObfuscator } \
-{
-  if {$passwordObfuscator != ""} \
-  {
-    set passwordObfuscatorBytes [stringToBytes $passwordObfuscator]
-    set passwordBytes           [stringToBytes $password          ]
-    set password ""
-    for {set z 0} {$z < [llength $passwordBytes]} {incr z} \
-    {
-      set n0 [expr {([llength $passwordBytes          ]>0)?[lindex $passwordBytes           [expr {$z%[llength $passwordBytes          ]}]]:0}]
-      set n1 [expr {([llength $passwordObfuscatorBytes]>0)?[lindex $passwordObfuscatorBytes [expr {$z%[llength $passwordObfuscatorBytes]}]]:0}]
-#puts "$n0 $n1: [expr {$n0^$n1}]-[format "%c" [expr {$n0^$n1}]]"
-      append password [format "%c" [expr {$n0^$n1}]]
-    }
-#puts $password
-  }
-
-  return $password
-}
-
-#***********************************************************************
 # Name   : obfuscate
 # Purpose: obfuscate character
 # Input  : ch         - character
@@ -1199,7 +1180,7 @@ proc updateCurrentJob { } \
     set commandId [BackupServer:sendCommand "JOB_INFO" $currentJob(id)]
     if {[BackupServer:readResult $commandId completeFlag errorCode result] && ($errorCode == 0)} \
     {
-      scanx $result "%s %lu %lu %lu %lu %lu %lu %lu %lu %f %S %lu %lu %S %lu %lu" \
+      scanx $result "%s %lu %lu %lu %lu %lu %lu %lu %lu %f %f %f %f %S %lu %lu %S %lu %lu" \
         state \
         currentJob(doneFiles) \
         currentJob(doneBytes) \
@@ -1209,6 +1190,9 @@ proc updateCurrentJob { } \
         currentJob(skippedBytes) \
         currentJob(errorFiles) \
         currentJob(errorBytes) \
+        filesPerSecond \
+        currentJob(bytesPerSecond) \
+        currentJob(storageBytesPerSecond) \
         ratio \
         currentJob(fileName) \
         currentJob(fileDoneBytes) \
@@ -1217,48 +1201,63 @@ proc updateCurrentJob { } \
         currentJob(storageDoneBytes) \
         currentJob(storageTotalBytes)
 
-      if     {$currentJob(doneBytes)    > 1024*1024*1024} { set currentJob(doneBytesShort)    [format "%.1f" [expr {double($currentJob(doneBytes))/(1024*1024*1024)   }]]; set currentJob(doneBytesShortUnit)    "G" } \
-      elseif {$currentJob(doneBytes)    >      1024*1024} { set currentJob(doneBytesShort)    [format "%.1f" [expr {double($currentJob(doneBytes))/(     1024*1024)   }]]; set currentJob(doneBytesShortUnit)    "M" } \
-      else                                                { set currentJob(doneBytesShort)    [format "%.1f" [expr {double($currentJob(doneBytes))/(          1024)   }]]; set currentJob(doneBytesShortUnit)    "K" }
-      if     {$currentJob(totalBytes)   > 1024*1024*1024} { set currentJob(totalBytesShort)   [format "%.1f" [expr {double($currentJob(totalBytes))/(1024*1024*1024)  }]]; set currentJob(totalBytesShortUnit)   "G" } \
-      elseif {$currentJob(totalBytes)   >      1024*1024} { set currentJob(totalBytesShort)   [format "%.1f" [expr {double($currentJob(totalBytes))/(     1024*1024)  }]]; set currentJob(totalBytesShortUnit)   "M" } \
-      else                                                { set currentJob(totalBytesShort)   [format "%.1f" [expr {double($currentJob(totalBytes))/(          1024)  }]]; set currentJob(totalBytesShortUnit)   "K" }
-      if     {$currentJob(skippedBytes) > 1024*1024*1024} { set currentJob(skippedBytesShort) [format "%.1f" [expr {double($currentJob(skippedBytes))/(1024*1024*1024)}]]; set currentJob(skippedBytesShortUnit) "G" } \
-      elseif {$currentJob(skippedBytes) >      1024*1024} { set currentJob(skippedBytesShort) [format "%.1f" [expr {double($currentJob(skippedBytes))/(     1024*1024)}]]; set currentJob(skippedBytesShortUnit) "M" } \
-      else                                                { set currentJob(skippedBytesShort) [format "%.1f" [expr {double($currentJob(skippedBytes))/(          1024)}]]; set currentJob(skippedBytesShortUnit) "K" }
-      if     {$currentJob(errorBytes)   > 1024*1024*1024} { set currentJob(errorBytesShort)   [format "%.1f" [expr {double($currentJob(errorBytes))/(1024*1024*1024)  }]]; set currentJob(errorBytesShortUnit)   "G" } \
-      elseif {$currentJob(errorBytes)   >      1024*1024} { set currentJob(errorBytesShort)   [format "%.1f" [expr {double($currentJob(errorBytes))/(     1024*1024)  }]]; set currentJob(errorBytesShortUnit)   "M" } \
-      else                                                { set currentJob(errorBytesShort)   [format "%.1f" [expr {double($currentJob(errorBytes))/(          1024)  }]]; set currentJob(errorBytesShortUnit)   "K" }
+      if     {$currentJob(doneBytes)            > 1024*1024*1024} { set currentJob(doneBytesShort)             [format "%.1f" [expr {double($currentJob(doneBytes)            )/(1024*1024*1024)}]]; set currentJob(doneBytesShortUnit)             "GBytes"   } \
+      elseif {$currentJob(doneBytes)            >      1024*1024} { set currentJob(doneBytesShort)             [format "%.1f" [expr {double($currentJob(doneBytes)            )/(     1024*1024)}]]; set currentJob(doneBytesShortUnit)             "MBytes"   } \
+      else                                                        { set currentJob(doneBytesShort)             [format "%.1f" [expr {double($currentJob(doneBytes)            )/(          1024)}]]; set currentJob(doneBytesShortUnit)             "KBytes"   }   
+      if     {$currentJob(totalBytes)           > 1024*1024*1024} { set currentJob(totalBytesShort)            [format "%.1f" [expr {double($currentJob(totalBytes)           )/(1024*1024*1024)}]]; set currentJob(totalBytesShortUnit)            "GBytes"   } \
+      elseif {$currentJob(totalBytes)           >      1024*1024} { set currentJob(totalBytesShort)            [format "%.1f" [expr {double($currentJob(totalBytes)           )/(     1024*1024)}]]; set currentJob(totalBytesShortUnit)            "MBytes"   } \
+      else                                                        { set currentJob(totalBytesShort)            [format "%.1f" [expr {double($currentJob(totalBytes)           )/(          1024)}]]; set currentJob(totalBytesShortUnit)            "KBytes"   }   
+      if     {$currentJob(skippedBytes)         > 1024*1024*1024} { set currentJob(skippedBytesShort)          [format "%.1f" [expr {double($currentJob(skippedBytes)         )/(1024*1024*1024)}]]; set currentJob(skippedBytesShortUnit)          "GBytes"   } \
+      elseif {$currentJob(skippedBytes)         >      1024*1024} { set currentJob(skippedBytesShort)          [format "%.1f" [expr {double($currentJob(skippedBytes)         )/(     1024*1024)}]]; set currentJob(skippedBytesShortUnit)          "MBytes"   } \
+      else                                                        { set currentJob(skippedBytesShort)          [format "%.1f" [expr {double($currentJob(skippedBytes)         )/(          1024)}]]; set currentJob(skippedBytesShortUnit)          "KBytes"   }   
+      if     {$currentJob(errorBytes)           > 1024*1024*1024} { set currentJob(errorBytesShort)            [format "%.1f" [expr {double($currentJob(errorBytes)           )/(1024*1024*1024)}]]; set currentJob(errorBytesShortUnit)            "GBytes"   } \
+      elseif {$currentJob(errorBytes)           >      1024*1024} { set currentJob(errorBytesShort)            [format "%.1f" [expr {double($currentJob(errorBytes)           )/(     1024*1024)}]]; set currentJob(errorBytesShortUnit)            "MBytes"   } \
+      else                                                        { set currentJob(errorBytesShort)            [format "%.1f" [expr {double($currentJob(errorBytes)           )/(          1024)}]]; set currentJob(errorBytesShortUnit)            "KBytes"   }   
+      if     {$currentJob(bytesPerSecond)       > 1024*1024*1024} { set currentJob(bytesPerSecondShort)        [format "%.1f" [expr {double($currentJob(bytesPerSecond)       )/(1024*1024*1024)}]]; set currentJob(bytesPerSecondUnit)             "GBytes/s" } \
+      elseif {$currentJob(bytesPerSecond)       >      1024*1024} { set currentJob(bytesPerSecondShort)        [format "%.1f" [expr {double($currentJob(bytesPerSecond)       )/(     1024*1024)}]]; set currentJob(bytesPerSecondShortUnit)        "MBytes/s" } \
+      else                                                        { set currentJob(bytesPerSecondShort)        [format "%.1f" [expr {double($currentJob(bytesPerSecond)       )/(          1024)}]]; set currentJob(bytesPerSecondShortUnit)        "KBytes/s" }
+      if     {$currentJob(storageBytesPerSecond)> 1024*1024*1024} { set currentJob(storageBytesPerSecondShort) [format "%.1f" [expr {double($currentJob(storageBytesPerSecond))/(1024*1024*1024)}]]; set currentJob(storageBytesPerSecondShortUnit) "GBytes/s" } \
+      elseif {$currentJob(storageBytesPerSecond)>      1024*1024} { set currentJob(storageBytesPerSecondShort) [format "%.1f" [expr {double($currentJob(storageBytesPerSecond))/(     1024*1024)}]]; set currentJob(storageBytesPerSecondShortUnit) "MBytes/s" } \
+      else                                                        { set currentJob(storageBytesPerSecondShort) [format "%.1f" [expr {double($currentJob(storageBytesPerSecond))/(          1024)}]]; set currentJob(storageBytesPerSecondShortUnit) "KBytes/s" }
 
+      set currentJob(filesPerSecond)   [format "%.1f" $filesPerSecond]
       set currentJob(compressionRatio) [format "%.1f" $ratio]
     }
   } \
   else \
   {
-    set currentJob(doneFiles)             0
-    set currentJob(doneBytes)             0
-    set currentJob(doneBytesShort)        0
-    set currentJob(doneBytesShortUnit)    "K"
-    set currentJob(totalFiles)            0
-    set currentJob(totalBytes)            0
-    set currentJob(totalBytesShort)       0
-    set currentJob(totalBytesShortUnit)   "K"
-    set currentJob(skippedFiles)          0
-    set currentJob(skippedBytes)          0
-    set currentJob(skippedBytesShort)     0
-    set currentJob(skippedBytesShortUnit) "K"
-    set currentJob(errorFiles)            0
-    set currentJob(errorBytes)            0
-    set currentJob(errorBytesShort)       0
-    set currentJob(errorBytesShortUnit)   "K"
-    set currentJob(compressionRatio)      0
-    set currentJob(fileName)              ""
-    set currentJob(fileDoneBytes)         ""
-    set currentJob(fileTotalBytes)        ""
-    set currentJob(storageName)           ""
-    set currentJob(storageName)           ""
-    set currentJob(storageDoneBytes)      ""
-    set currentJob(storageTotalBytes)     ""
+    set currentJob(doneFiles)                      0
+    set currentJob(doneBytes)                      0
+    set currentJob(doneBytesShort)                 0
+    set currentJob(doneBytesShortUnit)             "KBytes"
+    set currentJob(totalFiles)                     0
+    set currentJob(totalBytes)                     0
+    set currentJob(totalBytesShort)                0
+    set currentJob(totalBytesShortUnit)            "KBytes"
+    set currentJob(skippedFiles)                   0
+    set currentJob(skippedBytes)                   0
+    set currentJob(skippedBytesShort)              0
+    set currentJob(skippedBytesShortUnit)          "KBytes"
+    set currentJob(errorFiles)                     0
+    set currentJob(errorBytes)                     0
+    set currentJob(errorBytesShort)                0
+    set currentJob(errorBytesShortUnit)            "KBytes"
+    set currentJob(filesPerSecond)                 0
+    set currentJob(filesPerSecondUnit)             "files/s"
+    set currentJob(bytesPerSecond)                 0
+    set currentJob(bytesPerSecondShort)            0
+    set currentJob(bytesPerSecondShortUnit)        "KBytes/s"
+    set currentJob(storageBytesPerSecond)          0
+    set currentJob(storageBytesPerSecondShort)     0
+    set currentJob(storageBytesPerSecondShortUnit) "KBytes/s"
+    set currentJob(compressionRatio)               0
+    set currentJob(fileName)                       ""
+    set currentJob(fileDoneBytes)                  ""
+    set currentJob(fileTotalBytes)                 ""
+    set currentJob(storageName)                    ""
+    set currentJob(storageName)                    ""
+    set currentJob(storageDoneBytes)               ""
+    set currentJob(storageTotalBytes)              ""
   }
 
   set currentJobTimerId [after $barControlConfig(currentJobUpdateTime) "updateCurrentJob"]
@@ -1950,7 +1949,7 @@ proc addRestoreEntry { archiveName fileName fileType fileSize directoryOpenFlag 
 {
   global restoreFilesTreeWidget barConfig images
 
-if {[info level]>5} { error "x" }
+if {[info level]>15} { error "x" }
 
   # get parent directory
   if {[file tail $fileName] != $fileName} \
@@ -2748,7 +2747,7 @@ proc loadBARConfig { configFileName } \
     }
     if {[scanx $line "max-band-width = %s" s] == 1} \
     {
-      # max-tmp-size = <size>
+      # max-band-width = <bits/s>
       set barConfig(maxBandWidthFlag) 1
       set barConfig(maxBandWidth)     $s
       continue
@@ -3231,7 +3230,79 @@ proc addBackupJob { jobListWidget } \
   }
   if {$errorCode == 0} \
   {
-    if {![BackupServer:executeCommand errorCode errorText "ADD_JOB" [escapeString $barConfig(name)] [escapeString $archiveFileName]]} \
+    if {![BackupServer:executeCommand errorCode errorText "ADD_JOB" "BACKUP" [escapeString $barConfig(name)] [escapeString $archiveFileName]]} \
+    {
+      Dialog:error "Error adding new job: $errorText"
+    }
+  } \
+  else \
+  {
+    Dialog:error "Error adding new job: $errorText"
+  }
+
+  if {$guiMode} \
+  {
+    updateJobList $jobListWidget
+  }
+}
+
+#***********************************************************************
+# Name   : addBackupJob
+# Purpose: add new backup job
+# Input  : jobListWidget - job list widget
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc addRestoreJob { jobListWidget } \
+{
+  global backupIncludedListWidget backupExcludedListWidget barConfig currentJob guiMode
+
+  set errorCode 0
+
+  # clear settings
+  BackupServer:executeCommand errorCode errorText "CLEAR"
+
+  # add included directories/files
+  foreach pattern $barConfig(included) \
+  {
+    BackupServer:executeCommand errorCode errorText "ADD_INCLUDE_PATTERN" "GLOB" [escapeString $pattern]
+  }
+
+  # add excluded directories/files
+  foreach pattern $barConfig(excluded) \
+  {
+    BackupServer:executeCommand errorCode errorText "ADD_EXCLUDE_PATTERN" "GLOB" [escapeString $pattern]
+  }
+
+  # set other parameters
+  BackupServer:executeCommand errorCode errorText "SET" "max-band-width"          $barConfig(maxBandWidth)
+  BackupServer:executeCommand errorCode errorText "SET" "ssh-port"                $barConfig(sshPort)
+  BackupServer:executeCommand errorCode errorText "SET" "overwrite-files"         $barConfig(overwriteFiles)
+  BackupServer:executeCommand errorCode errorText "SET" "destination-directory"   $barConfig(destinationDirectoryName)
+  BackupServer:executeCommand errorCode errorText "SET" "destination-strip-count" $barConfig(destinationStripCount)
+
+  # add jobs archive file name
+  if     {$barConfig(storageType) == "FILESYSTEM"} \
+  {
+    set archiveFileName $barConfig(storageFileName)
+  } \
+  elseif {$barConfig(storageType) == "SCP"} \
+  {
+    set archiveFileName "scp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
+  } \
+  elseif {$barConfig(storageType) == "SFTP"} \
+  {
+    set archiveFileName "sftp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
+  } \
+  else \
+  {
+    internalError "unknown storage type '$barConfig(storageType)'"
+  }
+  if {$errorCode == 0} \
+  {
+    if {![BackupServer:executeCommand errorCode errorText "ADD_JOB" "RESTORE" [escapeString $barConfig(name)] [escapeString $archiveFileName]]} \
     {
       Dialog:error "Error adding new job: $errorText"
     }
@@ -3590,7 +3661,7 @@ frame .jobs
 
       entry .jobs.selected.done.bytesShort -width 6 -textvariable currentJob(doneBytesShort) -justify right -border 0 -state readonly
       grid .jobs.selected.done.bytesShort -row 0 -column 5 -sticky "w" 
-      label .jobs.selected.done.bytesShortUnit -width 3 -textvariable currentJob(doneBytesShortUnit)
+      label .jobs.selected.done.bytesShortUnit -width 8 -textvariable currentJob(doneBytesShortUnit) -justify left
       grid .jobs.selected.done.bytesShortUnit -row 0 -column 6 -sticky "w"
 
       label .jobs.selected.done.compressRatioTitle -text "Ratio"
@@ -3601,7 +3672,7 @@ frame .jobs
       grid .jobs.selected.done.compressRatioPostfix -row 0 -column 9 -sticky "w" 
 
       grid rowconfigure    .jobs.selected.done { 0 } -weight 1
-      grid columnconfigure .jobs.selected.done { 13 } -weight 1
+      grid columnconfigure .jobs.selected.done { 10 } -weight 1
     grid .jobs.selected.done -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
 
     label .jobs.selected.skippedTitle -text "Skipped:"
@@ -3622,7 +3693,7 @@ frame .jobs
 
       entry .jobs.selected.skipped.bytesShort -width 6 -textvariable currentJob(skippedBytesShort) -justify right -border 0 -state readonly
       grid .jobs.selected.skipped.bytesShort -row 0 -column 5 -sticky "w" 
-      label .jobs.selected.skipped.bytesShortUnit -width 3 -textvariable currentJob(skippedBytesShortUnit)
+      label .jobs.selected.skipped.bytesShortUnit -width 8 -textvariable currentJob(skippedBytesShortUnit) -justify left
       grid .jobs.selected.skipped.bytesShortUnit -row 0 -column 6 -sticky "w"
 
       grid rowconfigure    .jobs.selected.skipped { 0 } -weight 1
@@ -3647,7 +3718,7 @@ frame .jobs
 
       entry .jobs.selected.error.bytesShort -width 6 -textvariable currentJob(errorBytesShort) -justify right -border 0 -state readonly
       grid .jobs.selected.error.bytesShort -row 0 -column 5 -sticky "w" 
-      label .jobs.selected.error.bytesShortUnit -width 3 -textvariable currentJob(errorBytesShortUnit)
+      label .jobs.selected.error.bytesShortUnit -width 8 -textvariable currentJob(errorBytesShortUnit) -justify left
       grid .jobs.selected.error.bytesShortUnit -row 0 -column 6 -sticky "w"
 
       grid rowconfigure    .jobs.selected.error { 0 } -weight 1
@@ -3672,11 +3743,21 @@ frame .jobs
 
       entry .jobs.selected.total.bytesShort -width 6 -textvariable currentJob(totalBytesShort) -justify right -border 0 -state readonly
       grid .jobs.selected.total.bytesShort -row 0 -column 5 -sticky "w" 
-      label .jobs.selected.total.bytesShortUnit -width 3 -textvariable currentJob(totalBytesShortUnit)
+      label .jobs.selected.total.bytesShortUnit -width 8 -textvariable currentJob(totalBytesShortUnit) -justify left
       grid .jobs.selected.total.bytesShortUnit -row 0 -column 6 -sticky "w" 
 
+      entry .jobs.selected.total.filesPerSecond -width 6 -textvariable currentJob(filesPerSecond) -justify right -border 0 -state readonly
+      grid .jobs.selected.total.filesPerSecond -row 0 -column 7 -sticky "w" 
+      label .jobs.selected.total.filesPerSecondUnit -width 8 -textvariable currentJob(filesPerSecondUnit) -justify left
+      grid .jobs.selected.total.filesPerSecondUnit -row 0 -column 8 -sticky "w"
+
+      entry .jobs.selected.total.bytesPerSecond -width 6 -textvariable currentJob(bytesPerSecondShort) -justify right -border 0 -state readonly
+      grid .jobs.selected.total.bytesPerSecond -row 0 -column 9 -sticky "w" 
+      label .jobs.selected.total.bytesPerSecondUnit -width 8 -textvariable currentJob(bytesPerSecondShortUnit) -justify left
+      grid .jobs.selected.total.bytesPerSecondUnit -row 0 -column 10 -sticky "w"
+
       grid rowconfigure    .jobs.selected.total { 0 } -weight 1
-      grid columnconfigure .jobs.selected.total { 7 } -weight 1
+      grid columnconfigure .jobs.selected.total { 11 } -weight 1
     grid .jobs.selected.total -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
 
     label .jobs.selected.currentFileNameTitle -text "File:"
@@ -4011,6 +4092,8 @@ frame .backup
       grid .backup.storage.split.size -row 0 -column 2 -sticky "w" 
       tixComboBox .backup.storage.split.archivePartSize -variable barConfig(archivePartSize) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
       grid .backup.storage.split.archivePartSize -row 0 -column 3 -sticky "w" 
+      label .backup.storage.split.unit -text "bytes"
+      grid .backup.storage.split.unit -row 0 -column 4 -sticky "w" 
 
      .backup.storage.split.archivePartSize insert end 32M
      .backup.storage.split.archivePartSize insert end 64M
@@ -4033,6 +4116,8 @@ frame .backup
       grid .backup.storage.maxTmpSize.limitto -row 0 -column 2 -sticky "w" 
       tixComboBox .backup.storage.maxTmpSize.size -variable barConfig(maxTmpSize) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
       grid .backup.storage.maxTmpSize.size -row 0 -column 3 -sticky "w" 
+      label .backup.storage.maxTmpSize.unit -text "bytes"
+      grid .backup.storage.maxTmpSize.unit -row 0 -column 4 -sticky "w" 
 
      .backup.storage.maxTmpSize.size insert end 32M
      .backup.storage.maxTmpSize.size insert end 64M
@@ -4058,6 +4143,8 @@ frame .backup
       grid .backup.storage.maxBandWidth.limitto -row 0 -column 2 -sticky "w" 
       tixComboBox .backup.storage.maxBandWidth.size -variable barConfig(maxBandWidth) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
       grid .backup.storage.maxBandWidth.size -row 0 -column 3 -sticky "w" 
+      label .backup.storage.maxBandWidth.unit -text "bits/s"
+      grid .backup.storage.maxBandWidth.unit -row 0 -column 4 -sticky "w" 
 
      .backup.storage.maxBandWidth.size insert end 64K
      .backup.storage.maxBandWidth.size insert end 128K
@@ -4882,6 +4969,6 @@ addBackupDevice "/"
 resetBarConfig
 if {$configName != ""} { loadBARConfig $configName }
 
-openCloseRestoreDirectory [fileNameToItemPath $restoreFilesTreeWidget "/home/torsten/projects/bar/test.bar" "/"]
+#openCloseRestoreDirectory [fileNameToItemPath $restoreFilesTreeWidget "/home/torsten/projects/bar/test.bar" "/"]
 
 # end of file

@@ -8,7 +8,7 @@
  * See the file "license.terms" for information on usage and redistribution
  * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
- * RCS: @(#) $Id: tclScanx.c,v 1.1 2007-10-15 08:51:09 torsten Exp $
+ * RCS: @(#) $Id: tclScanx.c,v 1.2 2007-10-29 10:15:25 torsten Exp $
  */
 
 #include "tclInt.h"
@@ -861,7 +861,7 @@ Tcl_ScanxObjCmd(dummy, interp, objc, objv)
 		if (width == 0) {
 		    width = (size_t) ~0;
 		}
-                quotedString =(Tcl_UniChar*)malloc(strlen(string));
+                quotedString =(char*)malloc(strlen(string));
                 if (quotedString == NULL) {
                     Tcl_WrongNumArgs(interp, 1, objv,
                                      "string to long - insufficient memory");

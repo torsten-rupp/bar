@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -54,21 +54,23 @@
 /***************************** Datatypes *******************************/
 
 /* backup/restore job */
+typedef enum
+{
+  JOB_TYPE_BACKUP,
+  JOB_TYPE_RESTORE,
+} JobTypes;
+
 typedef struct JobNode
 {
   NODE_HEADER(struct JobNode);
 
-  uint        id;
+  JobTypes    type;
   String      name;
-  enum
-  {
-    MODE_BACKUP,
-    MODE_RESTORE,
-  } mode;
-  String      archiveFileName;
+  String      archiveName;
   PatternList includePatternList;
   PatternList excludePatternList;
   Options     options;
+  uint        id;
 
   /* running info */
   struct
@@ -82,9 +84,6 @@ typedef struct JobNode
     } state;
     time_t startTime;                       // start time [s]
     ulong  estimatedRestTime;               // estimated rest running time [s]
-    double bytesPerSecond;                  // average processed bytes per second
-    double filesPerSecond;                  // average processed files per second
-    double storageBytesPerSecond;           // average processed storage bytes per second
     ulong  doneFiles;                       // number of processed files
     uint64 doneBytes;                       // sum of processed bytes
     ulong  totalFiles;                      // number of total files
@@ -93,6 +92,9 @@ typedef struct JobNode
     uint64 skippedBytes;                    // sum of skippped bytes
     ulong  errorFiles;                      // number of files with errors
     uint64 errorBytes;                      // sum of bytes of files with errors
+    double filesPerSecond;                  // average processed files per second
+    double bytesPerSecond;                  // average processed bytes per second
+    double storageBytesPerSecond;           // average processed storage bytes per second
     double compressionRatio;
     String fileName;                        // current file
     uint64 fileDoneBytes;                   // current file bytes done
@@ -236,7 +238,7 @@ LOCAL void updateCreateStatus(Errors                 error,
   ulong  estimtedRestTime;
   double sum;
   uint   n;
-static int zz=0;
+//static int zz=0;
 
   assert(createStatusInfo != NULL);
   assert(createStatusInfo->fileName != NULL);
@@ -249,6 +251,7 @@ static int zz=0;
   bytesPerSecond        = (elapsedTime > 0)?(double)createStatusInfo->doneBytes/(double)elapsedTime:0;
   storageBytesPerSecond = (elapsedTime > 0)?(double)createStatusInfo->storageDoneBytes/(double)elapsedTime:0;
 
+/*
 zz++;
 if (zz>10) {
 fprintf(stderr,"%s,%d: filesPerSecond=%f bytesPerSecond=%f storageBytesPerSecond=%f %llu %llu\n",__FILE__,__LINE__,filesPerSecond,bytesPerSecond,
@@ -257,6 +260,8 @@ createStatusInfo->storageDoneBytes,createStatusInfo->storageTotalBytes
 );
 zz=0;
 }
+*/
+
   restFiles        = (createStatusInfo->totalFiles        > createStatusInfo->doneFiles       )?createStatusInfo->totalFiles       -createStatusInfo->doneFiles       :0L;
   restBytes        = (createStatusInfo->totalBytes        > createStatusInfo->doneBytes       )?createStatusInfo->totalBytes       -createStatusInfo->doneBytes       :0LL;
   restStorageBytes = (createStatusInfo->storageTotalBytes > createStatusInfo->storageDoneBytes)?createStatusInfo->storageTotalBytes-createStatusInfo->storageDoneBytes:0LL;
@@ -276,9 +281,6 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
 */
 
   jobNode->runningInfo.error                 = error;
-  jobNode->runningInfo.filesPerSecond        = filesPerSecond;
-  jobNode->runningInfo.bytesPerSecond        = bytesPerSecond;
-  jobNode->runningInfo.storageBytesPerSecond = restStorageBytes;
   jobNode->runningInfo.doneFiles             = createStatusInfo->doneFiles;
   jobNode->runningInfo.doneBytes             = createStatusInfo->doneBytes;
   jobNode->runningInfo.totalFiles            = createStatusInfo->totalFiles;
@@ -287,6 +289,9 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
   jobNode->runningInfo.skippedBytes          = createStatusInfo->skippedBytes;
   jobNode->runningInfo.errorFiles            = createStatusInfo->errorFiles;
   jobNode->runningInfo.errorBytes            = createStatusInfo->errorBytes;
+  jobNode->runningInfo.filesPerSecond        = filesPerSecond;
+  jobNode->runningInfo.bytesPerSecond        = bytesPerSecond;
+  jobNode->runningInfo.storageBytesPerSecond = storageBytesPerSecond;
   jobNode->runningInfo.compressionRatio      = createStatusInfo->compressionRatio;
   jobNode->runningInfo.estimatedRestTime     = estimtedRestTime;
   String_set(jobNode->runningInfo.fileName,createStatusInfo->fileName);
@@ -367,15 +372,31 @@ LOCAL void jobThread(JobList *jobList)
   }
 }
 #else
-    /* create archive */
-    jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveFileName),
-                                                &jobNode->includePatternList,
-                                                &jobNode->excludePatternList,
-                                                &jobNode->options,
-                                                (CreateStatusInfoFunction)updateCreateStatus,
-                                                jobNode,
-                                                &jobNode->runningInfo.abortRequestFlag
-                                               );
+    switch (jobNode->type)
+    {
+      case JOB_TYPE_BACKUP:
+        /* create archive */
+        jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveName),
+                                                    &jobNode->includePatternList,
+                                                    &jobNode->excludePatternList,
+                                                    &jobNode->options,
+                                                    (CreateStatusInfoFunction)updateCreateStatus,
+                                                    jobNode,
+                                                    &jobNode->runningInfo.abortRequestFlag
+                                                   );
+        break;
+      case JOB_TYPE_RESTORE:
+        jobNode->runningInfo.error = Command_restore(String_cString(jobNode->archiveName),
+                                                     &jobNode->includePatternList,
+                                                     &jobNode->excludePatternList,
+                                                     &jobNode->options,
+                                                     (CreateStatusInfoFunction)updateCreateStatus,
+                                                     jobNode,
+                                                     &jobNode->runningInfo.abortRequestFlag
+                                                    );
+jobNode->runningInfo.error = ERROR_STILL_NOT_IMPLEMENTED;
+        break;
+    }
 
 #endif /* SIMULATOR */
 
@@ -416,14 +437,14 @@ LOCAL void freeJobNode(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
+  String_delete(jobNode->runningInfo.fileName);
+  String_delete(jobNode->runningInfo.storageName);
+
   freeOptions(&jobNode->options);
   Pattern_doneList(&jobNode->excludePatternList);
   Pattern_doneList(&jobNode->includePatternList);
-  String_delete(jobNode->archiveFileName);
+  String_delete(jobNode->archiveName);
   String_delete(jobNode->name);
-
-  String_delete(jobNode->runningInfo.fileName);
-  String_delete(jobNode->runningInfo.storageName);
 }
 
 /***********************************************************************\
@@ -435,7 +456,7 @@ LOCAL void freeJobNode(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *newJob(void)
+LOCAL JobNode *newJob(JobTypes jobType)
 {
   JobNode *jobNode;
 
@@ -444,30 +465,38 @@ LOCAL JobNode *newJob(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  jobNode->type        = jobType;
+  jobNode->name        = String_new();
+  jobNode->archiveName = String_new();
   Pattern_initList(&jobNode->includePatternList);
   Pattern_initList(&jobNode->excludePatternList);
+  copyOptions(&defaultOptions,&jobNode->options);
+  jobNode->id          = 0;
 
-  jobNode->runningInfo.state             = JOB_STATE_WAITING;
-  jobNode->runningInfo.startTime         = 0;
-  jobNode->runningInfo.estimatedRestTime = 0;
-  jobNode->runningInfo.doneFiles         = 0L;
-  jobNode->runningInfo.doneBytes         = 0LL;
-  jobNode->runningInfo.totalFiles        = 0L;
-  jobNode->runningInfo.totalBytes        = 0LL;
-  jobNode->runningInfo.skippedFiles      = 0L;
-  jobNode->runningInfo.skippedBytes      = 0LL;
-  jobNode->runningInfo.totalFiles        = 0L;
-  jobNode->runningInfo.totalBytes        = 0LL;
-  jobNode->runningInfo.compressionRatio  = 0.0;
-  jobNode->runningInfo.fileName          = String_new();
-  jobNode->runningInfo.fileDoneBytes     = 0LL;
-  jobNode->runningInfo.fileTotalBytes    = 0LL;
-  jobNode->runningInfo.storageName       = String_new();
-  jobNode->runningInfo.storageDoneBytes  = 0LL;
-  jobNode->runningInfo.storageTotalBytes = 0LL;
+  jobNode->runningInfo.state                 = JOB_STATE_WAITING;
+  jobNode->runningInfo.startTime             = 0;
+  jobNode->runningInfo.estimatedRestTime     = 0;
+  jobNode->runningInfo.doneFiles             = 0L;
+  jobNode->runningInfo.doneBytes             = 0LL;
+  jobNode->runningInfo.totalFiles            = 0L;
+  jobNode->runningInfo.totalBytes            = 0LL;
+  jobNode->runningInfo.skippedFiles          = 0L;
+  jobNode->runningInfo.skippedBytes          = 0LL;
+  jobNode->runningInfo.totalFiles            = 0L;
+  jobNode->runningInfo.totalBytes            = 0LL;
+  jobNode->runningInfo.filesPerSecond        = 0.0;
+  jobNode->runningInfo.bytesPerSecond        = 0.0;
+  jobNode->runningInfo.storageBytesPerSecond = 0.0;
+  jobNode->runningInfo.compressionRatio      = 0.0;
+  jobNode->runningInfo.fileName              = String_new();
+  jobNode->runningInfo.fileDoneBytes         = 0LL;
+  jobNode->runningInfo.fileTotalBytes        = 0LL;
+  jobNode->runningInfo.storageName           = String_new();
+  jobNode->runningInfo.storageDoneBytes      = 0LL;
+  jobNode->runningInfo.storageTotalBytes     = 0LL;
 
-  jobNode->runningInfo.abortRequestFlag  = FALSE;
-  jobNode->runningInfo.error             = ERROR_NONE;
+  jobNode->runningInfo.abortRequestFlag      = FALSE;
+  jobNode->runningInfo.error                 = ERROR_NONE;
 
   return jobNode;  
 }
@@ -911,7 +940,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
       #endif /* NDEBUG */
     }
     sendResult(clientInfo,id,TRUE,0,
-               "%s %lu %llu %lu %llu %lu %llu %lu %llu %f %'S %llu %llu %'S %llu %llu",
+               "%s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %f %'S %llu %llu %'S %llu %llu",
                stateText,
                jobNode->runningInfo.doneFiles,
                jobNode->runningInfo.doneBytes,
@@ -921,6 +950,9 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
                jobNode->runningInfo.skippedBytes,
                jobNode->runningInfo.errorFiles,
                jobNode->runningInfo.errorBytes,
+               jobNode->runningInfo.filesPerSecond,
+               jobNode->runningInfo.bytesPerSecond,
+               jobNode->runningInfo.storageBytesPerSecond,
                jobNode->runningInfo.compressionRatio,
                jobNode->runningInfo.fileName,
                jobNode->runningInfo.fileDoneBytes,
@@ -1195,7 +1227,8 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
 
 LOCAL void serverCommand_addJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  JobNode *jobNode;
+  JobTypes jobType;
+  JobNode  *jobNode;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -1203,28 +1236,48 @@ LOCAL void serverCommand_addJob(ClientInfo *clientInfo, uint id, const String ar
   /* get archive name */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,1,"expected name");
+    sendResult(clientInfo,id,TRUE,1,"expected type");
     return;
   }
   if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected name");
+    return;
+  }
+  if (argumentCount < 3)
   {
     sendResult(clientInfo,id,TRUE,1,"expected archive name");
     return;
   }
 
+  /* get job type */
+  if      (String_equalsCString(arguments[0],"BACKUP"))
+  {
+    jobType = JOB_TYPE_BACKUP;
+  }
+  else if (String_equalsCString(arguments[0],"RESTORE"))
+  {
+    jobType = JOB_TYPE_RESTORE;
+  }
+  else
+  {
+    sendResult(clientInfo,id,TRUE,1,"unknown job type");
+    return;
+  }
+
   /* create new job */
-  jobNode = newJob();
+  jobNode = newJob(jobType);
   if (jobNode == NULL)
   {
     sendResult(clientInfo,id,TRUE,1,"insufficient memory");
     return;
   }
-  jobNode->name            = String_copy(arguments[0]);
-  jobNode->id              = getNewJobId();
-  jobNode->archiveFileName = String_copy(arguments[1]);
+  String_set(jobNode->name,arguments[1]);
+  jobNode->id = getNewJobId();
+  String_set(jobNode->archiveName,arguments[2]);
   Pattern_copyList(&clientInfo->includePatternList,&jobNode->includePatternList);
   Pattern_copyList(&clientInfo->excludePatternList,&jobNode->excludePatternList);
-  copyOptions(&clientInfo->options,&jobNode->options);
+  freeOptions(&jobNode->options); copyOptions(&clientInfo->options,&jobNode->options);
 
   /* lock */
   Semaphore_lock(&jobList.lock);
