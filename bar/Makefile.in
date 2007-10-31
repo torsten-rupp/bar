@@ -3,12 +3,19 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
 #			   
 # ----------------------------------------------------------------------------
+
+#------------------------------------ paths ----------------------------------
+
+INSTALL_DIR     = @INSTALL_DIR@
+INSTALL_BIN_DIR = @INSTALL_BIN_DIR@
+CONFIG_DIR      = @CONFIG_DIR@
+TLS_DIR         = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
@@ -28,12 +35,16 @@ LD_STATIC_LIBRARIES = @STATIC_LIBRARIES@
 
 #---------------------------------- commands----------------------------------
 
+CP         = cp
+DIFF       = diff
 ECHO       = echo
 ECHO_NO_LF = echo -n
+INSTALL    = @INSTALL@
+MKDIR      = mkdir
+PERL       = @PERL@
 RMF        = rm -f
 RMRF       = rm -rf
-PERL       = @PERL@
-DIFF       = diff
+TAR        = tar
 
 #------------------------ specific variables/settings ------------------------
 
@@ -53,7 +64,7 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 #---------------------------------- rules ------------------------------------
 
 %.o:%.c
-	$(CC) $(CC_FLAGS) -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 %:%.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
@@ -101,8 +112,12 @@ DESTROYER_SOURCES  = destroyer.c \
 
 DESTROYER_OBJECTS  = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
 
-OTHER_SOURCES      = archive_format.def \
+OTHER_SOURCES      = errors.pl \
+                     errors.def \
+                     archive_format.pl \
+                     archive_format.def \
                      barcontrol.tcl \
+                     bar.cfg \
 
 INTERMEDIATE       = errors.h \
                      errors.c \
@@ -120,14 +135,17 @@ TARGETS            = bar \
 #------------------------------ dependencies ---------------------------------
 
 .PHONY: all clean distclean depend
-all:		$(TARGETS)
+all: $(TARGETS) cert barcontrol.tcl
 
 clean:
-		$(RMF) $(BAR_OBJECTS)
-		$(RMF) $(DESTROYER_OBJECTS)
-		$(RMF) $(INTERMEDIATE)
-		$(RMF) $(TLS_FILES)
-		$(RMF) $(TARGETS)
+	$(RMF) $(BAR_OBJECTS)
+	$(RMF) $(DESTROYER_OBJECTS)
+	$(RMF) $(INTERMEDIATE)
+	$(RMF) $(TARGETS)
+	$(RMF) $(TLS_FILES)
+	$(RMRF) $(DISTRIBUTION_NAME)
+	$(RMF) $(DISTRIBUTION_NAME).tgz
+	$(MAKE) -C tcl clean
 
 distclean: clean
 	$(RMF) Makefile Makefile.depend
@@ -144,12 +162,8 @@ Makefile.depend: $(BAR_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
           $(CC) -MM >> Makefile.depend $$z; \
         done;
 
-# create Backup Archiver
-bar: $(BAR_OBJECTS)
-
-# create destroyer (for testing only!)
-destroyer: $(DESTROYER_OBJECTS) 
-	$(LD) $(LD_FLAGS) -o $@ $^ -lc -lpthread
+# create BAR
+bar@EXEEXT@: $(BAR_OBJECTS)
 
 errors.h: errors.def
 	$(PERL) errors.pl < $^ -h $@
@@ -163,7 +177,7 @@ archive_format.c: archive_format.def
 
 # create SSL certificates
 .PHONY: cert clean_cert
-cert: bar-ca.pem bar-key.pem bar-server-cert.pem bar-server-key.pem
+cert: $(TLS_FILES)
 
 clean_cert:
 	$(RMF) $(TLS_FILES)
@@ -197,6 +211,38 @@ bar-server-cert.pem: bar-server-key.pem
           --load-ca-privkey bar-key.pem \
           --outfile $@ \
           1>/dev/null 2>/dev/null
+
+# create destroyer (for testing only!)
+destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
+	$(LD) $(LD_FLAGS) -o $@ $^ -lc -lpthread
+
+# create BAR frontend
+barcontrol.tcl: tcl/scanx.so
+
+tcl/scanx.so: tcl/scanx.c
+	$(MAKE) -C tcl $(@F)
+
+# install/uninstall
+.PHONY: install uninstall
+install:
+	if test ! -d "$(DESTDIR)$(INSTALL_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(INSTALL_DIR)"; fi
+	if test ! -d "$(DESTDIR)$(INSTALL_BIN_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"; fi
+	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	if test ! -d "$(DESTDIR)$(CONFIG_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)"; fi
+	$(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(CONFIG_DIR)"
+	if test ! -d "$(DESTDIR)$(TLS_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(TLS_DIR)"; fi
+	if test ! -d "$(DESTDIR)$(TLS_DIR)/certs"; then $(INSTALL) -d "$(DESTDIR)$(TLS_DIR)/certs"; fi
+	$(INSTALL) -m 644 bar-ca.pem "$(DESTDIR)$(TLS_DIR)/certs"
+	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(TLS_DIR)/certs"
+	if test ! -d "$(DESTDIR)$(TLS_DIR)/private"; then $(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"; fi
+	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(TLS_DIR)/private"
+
+uinstall:
+	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"
+	$(RMF) "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"
+	$(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-ca.pem"
+	$(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-server-cert.pem"
+	$(RMF) "$(DESTDIR)$(TLS_DIR)/private/bar-server-key.pem"
 
 # run server
 .PHONY: barserver barserver_ssl
@@ -269,23 +315,38 @@ standard_test_destroy: bar destroyer
 	./bar -x test/test.bar_destroyed $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
 
-.PHONY: dist
+.PHONY: dist $(DISTRIBUTION_NAME).tgz
 dist: $(DISTRIBUTION_NAME).tgz
 
 $(DISTRIBUTION_NAME).tgz:
-	$(TAR) cjf $@ \
-          $(BAR_SOURCES) \
-          $(DESTROYER_SOURCES) \
-          $(OTHER_SOURCES) \
-          configure \
-          configure.in \
-          Makefile.in \
-          config.h.in \
-          bitmaps \
-          ssl \
-          tcl \
-          ToDo \
-          README \
+	$(MKDIR) $(DISTRIBUTION_NAME)
+	$(CP) \
+          $(sort $(BAR_SOURCES) \
+                 $(patsubst %.c,%.h,$(BAR_SOURCES)) \
+                 $(DESTROYER_SOURCES) \
+                 $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
+                 $(OTHER_SOURCES) \
+                 barcontrol.tcl \
+                 configure \
+                 configure.in \
+                 Makefile.in \
+                 config.h.in \
+                 ToDo \
+                 README \
+          ) \
+          $(DISTRIBUTION_NAME)
+	$(MKDIR) $(DISTRIBUTION_NAME)/bin
+	$(CP) bin/config.guess bin/config.sub bin/install-sh $(DISTRIBUTION_NAME)/bin
+	$(MKDIR) $(DISTRIBUTION_NAME)/bitmaps
+	$(CP) bitmaps/*.gif $(DISTRIBUTION_NAME)/bitmaps
+	$(MKDIR) $(DISTRIBUTION_NAME)/ssl
+	$(CP) ssl/*.tmpl $(DISTRIBUTION_NAME)/ssl
+	$(MKDIR) $(DISTRIBUTION_NAME)/tcl
+	$(CP) tcl/Makefile tcl/*.c tcl/*.tcl $(DISTRIBUTION_NAME)/tcl
+	$(MKDIR) $(DISTRIBUTION_NAME)/misc
+	$(CP) misc/*.patch $(DISTRIBUTION_NAME)/misc
+	$(TAR) cjf $@ $(DISTRIBUTION_NAME)
+	$(RMRF) $(DISTRIBUTION_NAME)
 
 -include Makefile.depend
 
