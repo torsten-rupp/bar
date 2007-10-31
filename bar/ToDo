@@ -4,6 +4,7 @@ ToDo
 - check if file date/permission/owner/group is correct
 - internal pipeling of commands for e. g. repacking, remove/add encryption
 - passwort input for crypt password
-- support storage controller for reading archives
 - support ssh-agent (extend libssh2?)
 - logfile
+- overwrite archive files check
+- incremental backups
