@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -200,14 +200,6 @@ LOCAL void printLinkInfo(const String    linkName,
         );
 }
 
-LOCAL void listDirect(void)
-{
-}
-
-LOCAL void listRemoteBatch()
-{
-}
-
 /*---------------------------------------------------------------------*/
 
 Errors Command_list(StringList    *archiveFileNameList,
@@ -220,8 +212,8 @@ Errors Command_list(StringList    *archiveFileNameList,
   String       storageSpecifier;
   Errors       failError;
 bool         remoteBarFlag;
-  SSHSocketList sshSocketList;
-  SSHSocketNode *sshSocketNode;
+//  SSHSocketList sshSocketList;
+//  SSHSocketNode *sshSocketNode;
   SocketHandle  socketHandle;
 
   assert(archiveFileNameList != NULL);
@@ -466,11 +458,10 @@ remoteBarFlag=FALSE;
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(userName);
-            printError("Cannot not parse storage name '%s' (error: %s)!\n",
-                       String_cString(storageSpecifier),
-                       getErrorText(error)
+            printError("Cannot not parse storage name '%s'!\n",
+                       String_cString(storageSpecifier)
                       );
-            if (failError == ERROR_NONE) failError = error;
+            if (failError == ERROR_NONE) failError = ERROR_INIT_TLS;
             break;
           }
 

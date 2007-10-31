@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/arrays.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -225,6 +225,7 @@ void *Array_get(Array array, ulong index, void *data)
 {
   void *element;
 
+  element = NULL;
   if (array != NULL)
   {
     assert(array->data != NULL);

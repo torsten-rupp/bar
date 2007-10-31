@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1051,6 +1051,7 @@ LOCAL bool parseString(const struct __String *string,
           CHECK_VALID(value.string);
 
           String_clear(value.string);
+          z = 0;
           while ((index < string->length) && !isspace(string->data[index]))
           {
             stringQuote = NULL;
@@ -1074,6 +1075,7 @@ LOCAL bool parseString(const struct __String *string,
                       if ((formatToken.width == 0) || (z < formatToken.width-1))
                       {
                         String_appendChar(value.string,string->data[index]);
+                        z++;
                       }
                       index++;
                     }
@@ -1083,6 +1085,7 @@ LOCAL bool parseString(const struct __String *string,
                     if ((formatToken.width == 0) || (z < formatToken.width-1))
                     {
                       String_appendChar(value.string,string->data[index]);
+                      z++;
                     }
                     index++;
                   }
@@ -1102,6 +1105,7 @@ LOCAL bool parseString(const struct __String *string,
               if ((formatToken.width == 0) || (z < formatToken.width-1))
               {
                 String_appendChar(value.string,string->data[index]);
+                z++;
               }
               index++;
             }

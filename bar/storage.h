@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -118,6 +118,7 @@ typedef struct
       LIBSSH2_SFTP        *sftp;
       LIBSSH2_SFTP_HANDLE *sftpHandle;
       char                *buffer;          // buffer for reading file names
+      ulong               bufferLength;
       bool                entryReadFlag;    // TRUE if entry read
     } sftp;
   };

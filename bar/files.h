@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -542,6 +542,7 @@ bool File_copy(String sourceFileName,
 \***********************************************************************/
 
 bool File_exists(String fileName);
+bool File_existsCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_getInfo

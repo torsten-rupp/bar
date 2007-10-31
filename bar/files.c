@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -514,8 +514,7 @@ Errors File_readLine(FileHandle *fileHandle,
                      String     line
                     )
 {
-  ssize_t n;
-  int     ch;
+  int ch;
 
   assert(fileHandle != NULL);
 
@@ -523,8 +522,8 @@ Errors File_readLine(FileHandle *fileHandle,
   do
   {
     ch = getc(fileHandle->file);
-    if (n > 0) fileHandle->index += n;
-    if (n < 0)
+    if (ch >= 0) fileHandle->index += 1;
+    if (ch < 0)
     {
       return ERROR_IO_ERROR;
     }
@@ -935,6 +934,15 @@ bool File_exists(String fileName)
   assert(fileName != NULL);
 
   return (stat(String_cString(fileName),&fileStat) == 0);
+}
+
+bool File_existsCString(const char *fileName)
+{
+  struct stat fileStat;
+
+  assert(fileName != NULL);
+
+  return (stat(fileName,&fileStat) == 0);
 }
 
 Errors File_getFileInfo(String   fileName,

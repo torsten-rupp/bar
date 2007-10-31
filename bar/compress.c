@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -628,6 +628,8 @@ Errors Compress_new(CompressInfo       *compressInfo,
       #ifdef HAVE_Z
         {
           int compressionLevel;
+
+          compressionLevel = 0;
           switch (compressAlgorithm)
           {
             case COMPRESS_ALGORITHM_ZIP_0: compressionLevel = 0; break;
@@ -641,6 +643,9 @@ Errors Compress_new(CompressInfo       *compressInfo,
             case COMPRESS_ALGORITHM_ZIP_8: compressionLevel = 8; break;
             case COMPRESS_ALGORITHM_ZIP_9: compressionLevel = 9; break;
             default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
               break;
           }
           compressInfo->zlib.stream.zalloc = Z_NULL;
@@ -686,6 +691,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
     case COMPRESS_ALGORITHM_BZIP2_9:
       #ifdef HAVE_BZ2
         {
+          compressInfo->bzlib.compressionLevel = 0;
           switch (compressAlgorithm)
           {
             case COMPRESS_ALGORITHM_BZIP2_1: compressInfo->bzlib.compressionLevel = 1; break;
@@ -698,6 +704,9 @@ Errors Compress_new(CompressInfo       *compressInfo,
             case COMPRESS_ALGORITHM_BZIP2_8: compressInfo->bzlib.compressionLevel = 8; break;
             case COMPRESS_ALGORITHM_BZIP2_9: compressInfo->bzlib.compressionLevel = 9; break;
             default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
               break;
           }
           compressInfo->bzlib.stream.bzalloc = NULL;
@@ -849,6 +858,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
         {
           int zlibError;
 
+          zlibError = Z_ERRNO;
           switch (compressInfo->compressMode)
           {
             case COMPRESS_MODE_DEFLATE:
@@ -885,6 +895,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
         {
           int bzlibError;
 
+          bzlibError = BZ_PARAM_ERROR;
           switch (compressInfo->compressMode)
           {
             case COMPRESS_MODE_DEFLATE:
@@ -985,6 +996,7 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo)
 
   assert(compressInfo != NULL);
 
+  length = 0LL;
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
@@ -1037,6 +1049,7 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
 
   assert(compressInfo != NULL);
 
+  length = 0LL;
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:

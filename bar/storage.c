@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -1431,6 +1431,7 @@ bool Storage_endOfDirectory(StorageDirectoryHandle *storageDirectoryHandle)
 
   assert(storageDirectoryHandle != NULL);
 
+  endOfDirectoryFlag = TRUE;
   switch (storageDirectoryHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
@@ -1460,6 +1461,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           {
             storageDirectoryHandle->sftp.entryReadFlag = TRUE;
           }
+          storageDirectoryHandle->sftp.bufferLength = n;
         }
 
         endOfDirectoryFlag = !storageDirectoryHandle->sftp.entryReadFlag;
@@ -1485,6 +1487,7 @@ Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
 
   assert(storageDirectoryHandle != NULL);
 
+  error = ERROR_UNKNOWN;
   switch (storageDirectoryHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
@@ -1513,10 +1516,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           {
             return ERROR_IO_ERROR;
           }
+          storageDirectoryHandle->sftp.bufferLength = n;
         }
 
         String_set(fileName,storageDirectoryHandle->sftp.pathName);
-        File_appendFileNameBuffer(fileName,storageDirectoryHandle->sftp.buffer,n);
+        File_appendFileNameBuffer(fileName,storageDirectoryHandle->sftp.buffer,storageDirectoryHandle->sftp.bufferLength);
 
         storageDirectoryHandle->sftp.entryReadFlag = FALSE;
       }

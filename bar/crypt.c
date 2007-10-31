@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -176,6 +176,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
         int    gcryptError;
         size_t n;
 
+        gcryptAlgorithm = 0;
         switch (cryptAlgorithm)
         {
           case CRYPT_ALGORITHM_3DES:       gcryptAlgorithm = GCRY_CIPHER_3DES;       break;
@@ -190,7 +191,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
             #ifndef NDEBUG
               HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
             #endif /* NDEBUG */
-            break; /* not reached */
+            break;
         }
         gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
                                             GCRYCTL_GET_BLKLEN,
@@ -261,6 +262,7 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
           return ERROR_NO_PASSWORD;
         }
 
+        gcryptAlgorithm = 0;
         switch (cryptAlgorithm)
         {
           case CRYPT_ALGORITHM_3DES:       gcryptAlgorithm = GCRY_CIPHER_3DES;       break;
@@ -309,6 +311,7 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
         cryptInfo->blockLength = n;
 
         /* get key length */
+        keyLength = 0;
         switch (cryptAlgorithm)
         {
           case CRYPT_ALGORITHM_3DES:       keyLength = 192; break;
@@ -451,6 +454,7 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
         if (seed != 0)
         {
           /* get IV length */
+          ivLength = 0;
           switch (cryptInfo->cryptAlgorithm)
           {
             case CRYPT_ALGORITHM_3DES:       ivLength = 192; break;

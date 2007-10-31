@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -487,6 +487,7 @@ bool CmdOption_parse(const char              *argv[],
         if (i < commandLineOptionCount)
         {
           /* get option value */
+          value = NULL;
           if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER  )
                    || (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER64)
                    || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE   )
@@ -519,10 +520,6 @@ bool CmdOption_parse(const char              *argv[],
               /* skip '=' */
               s++;
               value = s;
-            }
-            else
-            {
-              value = NULL;
             }
           }
 
@@ -875,15 +872,27 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           {
             if      ((commandLineOptions[i].integerOption.min > INT_MIN) && (commandLineOptions[i].integerOption.max < INT_MAX))
             {
-              fprintf(outputHandle," (%d..%d)",commandLineOptions[i].integerOption.min,commandLineOptions[i].integerOption.max);
+              fprintf(outputHandle," (%d..%d",commandLineOptions[i].integerOption.min,commandLineOptions[i].integerOption.max);
             }
             else if (commandLineOptions[i].integerOption.min > INT_MIN)
             {
-              fprintf(outputHandle," (>= %d)",commandLineOptions[i].integerOption.min);
+              fprintf(outputHandle," (>= %d",commandLineOptions[i].integerOption.min);
             }
             else if (commandLineOptions[i].integerOption.max < INT_MAX)
             {
-              fprintf(outputHandle," (<= %d)",commandLineOptions[i].integerOption.max);
+              fprintf(outputHandle," (<= %d",commandLineOptions[i].integerOption.max);
+            }
+            if (commandLineOptions[i].defaultValue.n != 0)
+            {
+              fprintf(outputHandle,", default: %d",commandLineOptions[i].defaultValue.n);
+            }
+            fprintf(outputHandle,")");
+          }
+          else 
+          {
+            if (commandLineOptions[i].defaultValue.n != 0)
+            {
+              fprintf(outputHandle," (default: %d)",commandLineOptions[i].defaultValue.n);
             }
           }
           break;
@@ -892,15 +901,27 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           {
             if      ((commandLineOptions[i].integer64Option.min > INT_MIN) && (commandLineOptions[i].integer64Option.max < INT_MAX))
             {
-              fprintf(outputHandle," (%lld..%lld)",commandLineOptions[i].integer64Option.min,commandLineOptions[i].integer64Option.max);
+              fprintf(outputHandle," (%lld..%lld",commandLineOptions[i].integer64Option.min,commandLineOptions[i].integer64Option.max);
             }
             else if (commandLineOptions[i].integer64Option.min > INT_MIN)
             {
-              fprintf(outputHandle," (>= %lld)",commandLineOptions[i].integer64Option.min);
+              fprintf(outputHandle," (>= %lld",commandLineOptions[i].integer64Option.min);
             }
             else if (commandLineOptions[i].integer64Option.max < INT_MAX)
             {
-              fprintf(outputHandle," (<= %lld)",commandLineOptions[i].integer64Option.max);
+              fprintf(outputHandle," (<= %lld",commandLineOptions[i].integer64Option.max);
+            }
+            if (commandLineOptions[i].defaultValue.l != 0LL)
+            {
+              fprintf(outputHandle,", default: %lld",commandLineOptions[i].defaultValue.l);
+            }
+            fprintf(outputHandle,")");
+          }
+          else
+          {
+            if (commandLineOptions[i].defaultValue.l != 0LL)
+            {
+              fprintf(outputHandle," (default: %lld)",commandLineOptions[i].defaultValue.l);
             }
           }
           break;
@@ -909,15 +930,27 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           {
             if      ((commandLineOptions[i].doubleOption.min > DBL_MIN) && (commandLineOptions[i].doubleOption.max < DBL_MAX))
             {
-              fprintf(outputHandle," (%lf..%lf)",commandLineOptions[i].doubleOption.min,commandLineOptions[i].doubleOption.max);
+              fprintf(outputHandle," (%lf..%lf",commandLineOptions[i].doubleOption.min,commandLineOptions[i].doubleOption.max);
             }
             else if (commandLineOptions[i].doubleOption.min > DBL_MIN)
             {
-              fprintf(outputHandle," (>= %lf)",commandLineOptions[i].doubleOption.min);
+              fprintf(outputHandle," (>= %lf",commandLineOptions[i].doubleOption.min);
             }
             else if (commandLineOptions[i].doubleOption.max < DBL_MAX)
             {
-              fprintf(outputHandle," (<= %lf)",commandLineOptions[i].doubleOption.max);
+              fprintf(outputHandle," (<= %lf",commandLineOptions[i].doubleOption.max);
+            }
+            if (commandLineOptions[i].defaultValue.d != 0.0)
+            {
+              fprintf(outputHandle,", default: %lf",commandLineOptions[i].defaultValue.d);
+            }
+            fprintf(outputHandle,")");
+          }
+          else
+          {
+            if (commandLineOptions[i].defaultValue.d != 0.0)
+            {
+              fprintf(outputHandle," (default: %lf)",commandLineOptions[i].defaultValue.d);
             }
           }
           break;
@@ -928,6 +961,10 @@ void CmdOption_printHelp(FILE                    *outputHandle,
         case CMD_OPTION_TYPE_SELECT:
           break;
         case CMD_OPTION_TYPE_STRING:
+          if (commandLineOptions[i].defaultValue.string != NULL)
+          {
+            fprintf(outputHandle," (default: %s)",commandLineOptions[i].defaultValue.string);
+          }
           break;
         case CMD_OPTION_TYPE_SPECIAL:
           break;

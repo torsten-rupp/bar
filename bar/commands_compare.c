@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_compare.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -281,6 +281,7 @@ Errors Command_compare(StringList    *archiveFileNameList,
               }
               length    = 0;
               equalFlag = TRUE;
+              diffIndex = 0;
               while ((length < fragmentSize) && equalFlag)
               {
                 n = MIN(fragmentSize-length,BUFFER_SIZE);

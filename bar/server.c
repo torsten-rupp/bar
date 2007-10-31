@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -34,12 +34,13 @@
 #include "archive.h"
 
 #include "commands_create.h"
+#include "commands_restore.h"
 
 #include "server.h"
 
 /****************** Conditional compilation switches *******************/
 
-#define SERVER_DEBUG
+#define _SERVER_DEBUG
 #define _SIMULATOR
 
 /***************************** Constants *******************************/
@@ -269,7 +270,6 @@ zz=0;
   if (filesPerSecond        > 0) { sum += (double)restFiles/filesPerSecond;               n++; }
   if (bytesPerSecond        > 0) { sum += (double)restBytes/bytesPerSecond;               n++; }
   if (storageBytesPerSecond > 0) { sum += (double)restStorageBytes/storageBytesPerSecond; n++; }
-  if (n > 0)
   estimtedRestTime = (n > 0)?(ulong)round(sum/n):0;
 /*
 fprintf(stderr,"%s,%d: createStatusInfo->doneFiles=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- elapsedTime=%lus filesPerSecond=%f bytesPerSecond=%f estimtedRestTime=%lus\n",__FILE__,__LINE__,
@@ -301,6 +301,63 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
   jobNode->runningInfo.storageDoneBytes      = createStatusInfo->storageDoneBytes;
   jobNode->runningInfo.storageTotalBytes     = createStatusInfo->storageTotalBytes;
 //fprintf(stderr,"%s,%d: createStatusInfo->fileName=%s\n",__FILE__,__LINE__,String_cString(jobNode->runningInfo.fileName));
+}
+
+/***********************************************************************\
+* Name   : updateRestoreStatus
+* Purpose: update restore status
+* Input  : restoreStatusInfo - create status info data
+*          jobNode           - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateRestoreStatus(Errors                  error,
+                               const RestoreStatusInfo *restoreStatusInfo,
+                               JobNode                 *jobNode
+                              )
+{
+  ulong  elapsedTime;
+  double filesPerSecond,bytesPerSecond,storageBytesPerSecond;
+
+  assert(restoreStatusInfo != NULL);
+  assert(restoreStatusInfo->fileName != NULL);
+  assert(restoreStatusInfo->storageName != NULL);
+  assert(jobNode != NULL);
+
+  /* calculate estimated rest time */
+  elapsedTime = (ulong)(time(NULL)-jobNode->runningInfo.startTime);
+  filesPerSecond        = (elapsedTime > 0)?(double)restoreStatusInfo->doneFiles/(double)elapsedTime:0;
+  bytesPerSecond        = (elapsedTime > 0)?(double)restoreStatusInfo->doneBytes/(double)elapsedTime:0;
+  storageBytesPerSecond = (elapsedTime > 0)?(double)restoreStatusInfo->storageDoneBytes/(double)elapsedTime:0;
+
+/*
+fprintf(stderr,"%s,%d: restoreStatusInfo->doneFiles=%lu restoreStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- elapsedTime=%lus filesPerSecond=%f bytesPerSecond=%f estimtedRestTime=%lus\n",__FILE__,__LINE__,
+restoreStatusInfo->doneFiles,
+restoreStatusInfo->doneBytes,
+jobNode->runningInfo.totalFiles,
+jobNode->runningInfo.totalBytes,
+elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
+*/
+
+  jobNode->runningInfo.error                 = error;
+  jobNode->runningInfo.doneFiles             = restoreStatusInfo->doneFiles;
+  jobNode->runningInfo.doneBytes             = restoreStatusInfo->doneBytes;
+  jobNode->runningInfo.skippedFiles          = restoreStatusInfo->skippedFiles;
+  jobNode->runningInfo.skippedBytes          = restoreStatusInfo->skippedBytes;
+  jobNode->runningInfo.errorFiles            = restoreStatusInfo->errorFiles;
+  jobNode->runningInfo.errorBytes            = restoreStatusInfo->errorBytes;
+  jobNode->runningInfo.filesPerSecond        = filesPerSecond;
+  jobNode->runningInfo.bytesPerSecond        = bytesPerSecond;
+  jobNode->runningInfo.storageBytesPerSecond = storageBytesPerSecond;
+  String_set(jobNode->runningInfo.fileName,restoreStatusInfo->fileName);
+  jobNode->runningInfo.fileDoneBytes         = restoreStatusInfo->fileDoneBytes;
+  jobNode->runningInfo.fileTotalBytes        = restoreStatusInfo->fileTotalBytes;
+  String_set(jobNode->runningInfo.storageName,restoreStatusInfo->storageName);
+  jobNode->runningInfo.storageDoneBytes      = restoreStatusInfo->storageDoneBytes;
+  jobNode->runningInfo.storageTotalBytes     = restoreStatusInfo->storageTotalBytes;
+//fprintf(stderr,"%s,%d: restoreStatusInfo->fileName=%s\n",__FILE__,__LINE__,String_cString(jobNode->runningInfo.fileName));
 }
 
 /***********************************************************************\
@@ -386,15 +443,21 @@ LOCAL void jobThread(JobList *jobList)
                                                    );
         break;
       case JOB_TYPE_RESTORE:
-        jobNode->runningInfo.error = Command_restore(String_cString(jobNode->archiveName),
-                                                     &jobNode->includePatternList,
-                                                     &jobNode->excludePatternList,
-                                                     &jobNode->options,
-                                                     (CreateStatusInfoFunction)updateCreateStatus,
-                                                     jobNode,
-                                                     &jobNode->runningInfo.abortRequestFlag
-                                                    );
-jobNode->runningInfo.error = ERROR_STILL_NOT_IMPLEMENTED;
+        {
+          StringList archiveFileNameList;
+
+          StringList_init(&archiveFileNameList);
+          StringList_append(&archiveFileNameList,jobNode->archiveName);
+          jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
+                                                       &jobNode->includePatternList,
+                                                       &jobNode->excludePatternList,
+                                                       &jobNode->options,
+                                                       (RestoreStatusInfoFunction)updateRestoreStatus,
+                                                       jobNode,
+                                                       &jobNode->runningInfo.abortRequestFlag
+                                                      );
+          StringList_done(&archiveFileNameList);
+        }
         break;
     }
 
@@ -501,6 +564,7 @@ LOCAL JobNode *newJob(JobTypes jobType)
   return jobNode;  
 }
 
+#if 0
 /***********************************************************************\
 * Name   : deleteJob
 * Purpose: delete job
@@ -517,6 +581,7 @@ LOCAL void deleteJob(JobNode *jobNode)
   freeJobNode(jobNode);
   LIST_DELETE_NODE(jobNode);
 }
+#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 
@@ -552,11 +617,11 @@ fflush(stdout);
 //??? blockieren?
       Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 //fprintf(stderr,"%s,%d: sent data: '%s'",__FILE__,__LINE__,String_cString(result));
 }
@@ -865,6 +930,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   jobNode = jobList.head;
   while (jobNode != NULL)
   {
+    stateText = "";
     switch (jobNode->runningInfo.state)
     {
       case JOB_STATE_WAITING:   stateText = "WAITING";   break;
@@ -927,6 +993,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   /* format result */
   if (jobNode != NULL)
   {
+    stateText = "";
     switch (jobNode->runningInfo.state)
     {
       case JOB_STATE_WAITING:   stateText = "WAITING";   break;
@@ -1924,11 +1991,11 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       MsgQueue_done(&clientInfo->network.commandMsgQueue,(MsgQueueMsgFreeFunction)freeCommandMsg,NULL);
       String_delete(clientInfo->network.name);
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   freeOptions(&clientInfo->options);
@@ -2065,11 +2132,11 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
         /* send command to client thread */
         MsgQueue_put(&clientInfo->network.commandMsgQueue,&commandMsg,sizeof(commandMsg));
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break;
     }
   }
 }
@@ -2143,14 +2210,14 @@ Errors Server_run(uint       serverPort,
                                 );
       if (error != ERROR_NONE)
       {
-        printError("Cannot initialize SSL/TLS server (error: %s)!\n",
+        printError("Cannot initialize TLS/SSL server (error: %s)!\n",
                    getErrorText(error)
                   );
         Network_doneServer(&serverSocketHandle);
         return FALSE;
       }
   #else /* not HAVE_GNU_TLS */
-    printError("SSL/TLS server is not supported!\n");
+    printError("TLS/SSL server is not supported!\n");
     Network_doneServer(&serverSocketHandle);
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GNU_TLS */

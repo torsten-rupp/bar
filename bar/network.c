@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -297,6 +297,7 @@ bool Network_eof(SocketHandle *socketHandle)
 
   assert(socketHandle != NULL);
 
+  eofFlag = TRUE;
   switch (socketHandle->type)
   {
     case SOCKET_TYPE_PLAIN:
@@ -381,6 +382,7 @@ Errors Network_receive(SocketHandle *socketHandle,
   assert(socketHandle != NULL);
   assert(bytesReceived != NULL);
 
+  n = -1L;
   switch (socketHandle->type)
   {
     case SOCKET_TYPE_PLAIN:
@@ -423,7 +425,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         }
       #else /* not HAVE_GNU_TLS */
-        n = 0L;
       #endif /* HAVE_GNU_TLS */
       break;
     #ifndef NDEBUG
@@ -446,6 +447,7 @@ Errors Network_send(SocketHandle *socketHandle,
 
   assert(socketHandle != NULL);
 
+  sentBytes = -1L;
   switch (socketHandle->type)
   {
     case SOCKET_TYPE_PLAIN:
@@ -594,13 +596,20 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
       break;
     case SERVER_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
-        if (   (caFileName == NULL)
-            || (certFileName == NULL)
-            || (keyFileName == NULL)
-           )
+        if ((caFileName == NULL) || !File_existsCString(caFileName))
         {
           close(serverSocketHandle->handle);
-          return ERROR_INIT_TLS;
+          return ERROR_NO_TLS_CA;
+        }
+        if ((certFileName == NULL) || !File_existsCString(certFileName))
+        {
+          close(serverSocketHandle->handle);
+          return ERROR_NO_TLS_CERTIFICATE;
+        }
+        if ((keyFileName == NULL) || !File_existsCString(keyFileName))
+        {
+          close(serverSocketHandle->handle);
+          return ERROR_NO_TLS_KEY;
         }
 
         if (gnutls_certificate_allocate_credentials(&serverSocketHandle->gnuTLSCredentials) != 0)
@@ -616,7 +625,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
         {
           gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
           close(serverSocketHandle->handle);
-          return ERROR_INIT_TLS;
+          return ERROR_INVALID_TLS_CA;
         }
         result = gnutls_certificate_set_x509_key_file(serverSocketHandle->gnuTLSCredentials,
                                                       certFileName,
@@ -627,7 +636,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
         {
           gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
           close(serverSocketHandle->handle);
-          return ERROR_INIT_TLS;
+          return ERROR_INVALID_TLS_CERTIFICATE;
         }
 
         gnutls_dh_params_init(&serverSocketHandle->gnuTLSDHParams);
@@ -914,6 +923,7 @@ bool Network_executeEOF(NetworkExecuteHandle  *networkExecuteHandle,
 
   assert(networkExecuteHandle != NULL);
 
+  eofFlag = TRUE;
   switch (ioType)
   {
     case NETWORK_EXECUTE_IO_TYPE_STDOUT:
@@ -1006,6 +1016,7 @@ Errors Network_executeRead(NetworkExecuteHandle  *networkExecuteHandle,
 
   assert(networkExecuteHandle != NULL);
 
+  n = -1L;
   #ifdef HAVE_SSH2
     if (timeout == WAIT_FOREVER)
     {

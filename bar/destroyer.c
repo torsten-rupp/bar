@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/destroyer.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: "destroy" binary files by overwrite/insert/delete bytes;
 *           used for test only!
@@ -24,13 +24,11 @@
 #include "cmdoptions.h"
 #include "strings.h"
 
+#include "destroyer.h"
+
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-
-#define VERSION "0.01"
-
-#define MAX_DEFINITIONS 256
 
 #define POSITION_RANDOM -1
 
@@ -40,7 +38,6 @@ typedef enum
   DEFINITION_TYPE_INSERT,
   DEFINITION_TYPE_DELETE,
 } DefinitionTypes;
-
 
 /***************************** Datatypes *******************************/
 

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -322,6 +322,7 @@ bool Pattern_match(PatternNode       *patternNode,
   assert(patternNode != NULL);
   assert(s != NULL);
 
+  matchFlag = FALSE;
   switch (patternMatchMode)
   {
     case PATTERN_MATCH_MODE_BEGIN:
