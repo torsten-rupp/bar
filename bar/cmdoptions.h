@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -107,6 +107,8 @@ typedef struct CommandLineOption
   {
     bool                          rangeFlag;            // TRUE iff range should be printed in help
     double                        min,max;              // valid range
+    const CommandLineUnit         *units;               // list with units
+    uint                          unitCount;            // number of units
   } doubleOption;
   struct
   {
@@ -127,12 +129,24 @@ typedef struct CommandLineOption
   } stringOption;
   struct
   {
-    bool(*parseSpecial)(void *variable, const char *name, const char *value, const void *defaultValue, void *userData);
+    bool(*parseSpecial)(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
     void                          *userData;            // user data for parse special
     const char                    *helpArgument;        // text for help argument
   } specialOption;
   const char                    *description;
 } CommandLineOption;
+
+typedef union
+{
+  int    n;
+  int64  l;
+  double d;
+  bool   b;
+  uint   enumeration;
+  uint   select;
+  char   *string;
+  void   *special;
+} OptionVariable;
 
 /* example
 
@@ -194,36 +208,238 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
 /******************************* Macros *******************************/
 #define CMD_OPTION_INTEGER(name,shortName,level,priority,variable,defaultValue,min,max,units,description) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_INTEGER,{&variable},{defaultValue,0LL,0.0,FALSE,{0},{NULL}},{FALSE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},{FALSE,0,0,NULL,0},{0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_INTEGER,\
+    {&variable},\
+    {defaultValue,0LL,0.0,FALSE,{0},{NULL}},\
+    {FALSE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE},\
+    {0},\
+    {NULL,0},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description \
+  }
 #define CMD_OPTION_INTEGER_RANGE(name,shortName,level,priority,variable,defaultValue,min,max,units,description) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_INTEGER,{&variable},{defaultValue,0LL,0.0,FALSE,{0},{NULL}},{TRUE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},{FALSE,0,0,NULL,0},{0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_INTEGER,\
+    {&variable},\
+    {defaultValue,0LL,0.0,FALSE,{0},{NULL}},\
+    {TRUE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE},\
+    {0},\
+    {NULL,0},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description\
+  }
 
 #define CMD_OPTION_INTEGER64(name,shortName,level,priority,variable,defaultValue,min,max,units,description) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_INTEGER64,{&variable},{0,defaultValue,0.0,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},{0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_INTEGER64,\
+    {&variable},\
+    {0,defaultValue,0.0,FALSE,{0},{NULL}},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE},\
+    {0},\
+    {NULL,0},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description \
+  }
 #define CMD_OPTION_INTEGER64_RANGE(name,shortName,level,priority,variable,defaultValue,min,max,units,description) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_INTEGER64,{&variable},{0,defaultValue,0.0,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{TRUE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},{0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_INTEGER64,\
+    {&variable},\
+    {0,defaultValue,0.0,FALSE,{0},{NULL}},\
+    {FALSE,0,0,NULL,0},\
+    {TRUE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE},\
+    {0},\
+    {NULL,0},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description\
+   }
 
-#define CMD_OPTION_DOUBLE(name,shortName,level,priority,variable,defaultValue,min,max,description) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_DOUBLE,{&variable},{0,0LL,defaultValue,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,min,max},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
-#define CMD_OPTION_DOUBLE_RANGE(name,shortName,level,priority,variable,defaultValue,description) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_DOUBLE,{&variable},{0,0LL,defaultValue,FALSE,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{TRUE,min,max},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
+#define CMD_OPTION_DOUBLE(name,shortName,level,priority,variable,defaultValue,min,max,units,description) \
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_DOUBLE,\
+    {&variable},\
+    {0,0LL,defaultValue,FALSE,{0},{NULL}},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {FALSE},\
+    {0},\
+    {NULL,0},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description\
+  }
+#define CMD_OPTION_DOUBLE_RANGE(name,shortName,level,priority,variable,defaultValue,min,max,units,description) \
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_DOUBLE,\
+    {&variable},\
+    {0,0LL,defaultValue,FALSE,{0},{NULL}},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0,0,NULL,0},\
+    {TRUE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {FALSE},\
+    {0},\
+    {NULL,0},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description\
+  }
 
 #define CMD_OPTION_BOOLEAN(name,shortName,level,priority,variable,defaultValue,description) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_BOOLEAN,{&variable},{0,0LL,0.0,defaultValue,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_BOOLEAN,\
+    {&variable},\
+    {0,0LL,0.0,defaultValue,{0},{NULL}},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE},\
+    {0},\
+    {NULL,0},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description\
+  }
 #define CMD_OPTION_BOOLEAN_YESNO(name,shortName,level,priority,variable,defaultValue,description) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_BOOLEAN,{&variable},{0,0LL,0.0,defaultValue,{0},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{TRUE},{0},{NULL,0},{NULL},{NULL,NULL,NULL},description }
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_BOOLEAN,\
+    {&variable},\
+    {0,0LL,0.0,defaultValue,{0},{NULL}},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {TRUE},\
+    {0},\
+    {NULL,0},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description\
+  }
 
 #define CMD_OPTION_ENUM(name,shortName,level,priority,variable,defaultValue,value,description) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_ENUM,{&variable},{0,0LL,0.0,FALSE,{defaultValue},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},{value},{NULL,0},{NULL},{NULL,NULL,NULL},description }
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_ENUM,\
+    {&variable},\
+    {0,0LL,0.0,FALSE,{defaultValue},{NULL}},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE},\
+    {value},\
+    {NULL,0},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description\
+  }
 
 #define CMD_OPTION_SELECT(name,shortName,level,priority,variable,defaultValue,selects,description) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_SELECT,{&variable},{0,0LL,0.0,FALSE,{defaultValue},{NULL}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},{0},{selects,sizeof(selects)/sizeof(CommandLineOptionSelect)},{NULL},{NULL,NULL,NULL},description }
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_SELECT,\
+    {&variable},\
+    {0,0LL,0.0,FALSE,{defaultValue},{NULL}},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE},\
+    {0},\
+    {selects,sizeof(selects)/sizeof(CommandLineOptionSelect)},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description\
+  }
 
 #define CMD_OPTION_STRING(name,shortName,level,priority,variable,defaultValue,description,helpArgument) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_STRING,{&variable},{0,0LL,0.0,FALSE,{0},{defaultValue}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},{0},{NULL,0},{helpArgument},{NULL,NULL,NULL},description }
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_STRING,\
+    {&variable},\
+    {0,0LL,0.0,FALSE,{0},{defaultValue}},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE},\
+    {0},\
+    {NULL,0},\
+    {helpArgument},\
+    {NULL,NULL,NULL},\
+    description\
+  }
 
 #define CMD_OPTION_SPECIAL(name,shortName,level,priority,variablePointer,defaultValue,parseSpecial,userData,description,helpArgument) \
-  { name,shortName,level,priority,CMD_OPTION_TYPE_SPECIAL,{variablePointer},{0,0LL,0.0,FALSE,{0},{(void*)defaultValue}},{FALSE,0,0,NULL,0},{FALSE,0,0,NULL,0},{FALSE,0.0,0.0},{FALSE},{0},{NULL,0},{NULL},{parseSpecial,userData,helpArgument},description}
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_SPECIAL,\
+    {variablePointer},\
+    {0,0LL,0.0,FALSE,{0},{(void*)defaultValue}},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE},{0},{NULL,0},\
+    {NULL},\
+    {parseSpecial,userData,helpArgument},\
+    description\
+  }
 
 /***************************** Functions ******************************/
 
@@ -247,7 +463,7 @@ bool CmdOption_init(const CommandLineOption commandLineOptions[],
                    );
 
 /***********************************************************************
-* Name   : CmdOption_init
+* Name   : CmdOption_done
 * Purpose: deinit command line options
 * Input  : commandLineOptions     - array with command line options
 *                                   spezification

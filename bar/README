@@ -9,6 +9,9 @@ Features
   without decompressing/decryption of the whole archive
 * direct copy of archives to remote computer via SSH
   (SCP or SFTP)
+* can store archives on DVD (with external tools)
+* support pre- and post-processing of DVD images (e. g.
+  for including functions of dvdisaster)
 * daemon-mode with control over plain and TSL network
   connection
 * nice graphical frontend (written in TclTk)
@@ -41,6 +44,19 @@ the passphrase used for encryption can read the contents
 of the files nor the file meta data, e. g. file names (as
 long as the used encryption algorithm is not broken by
 someone).
+
+DVD
+
+For storing archive files on DVD an external like "growisofs"
+is needed which is actually writing data to a DVD. BAR
+create the archive files in a temporary directory and then
+call the external tool for burning the DVD. The tool "growisofs"
+is recommented for storing archive files directly on DVD. An
+ISO image can also be created first e. g. with mkisofs. BAR
+support external pre- and post-processing commands when
+creating an ISO-image and burning a DVD. With these commands
+e. g. dvdisaster can be integrated into BAR to create
+RS-protected backup DVDs!
 
 Contact
 

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -89,6 +89,15 @@ typedef struct
   uint32 groupId;
   uint32 permission;
 } FileInfo;
+
+/* file system info data */
+typedef struct
+{
+  ulong  blockSize;            // size of block [bytes]
+  uint64 freeBytes;
+  uint64 totalBytes;
+  uint   maxFileNameLength;
+} FileSystemInfo;
 
 /***************************** Variables *******************************/
 
@@ -203,19 +212,19 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const n
 * Notes  : -
 \***********************************************************************/
 
-bool File_getTmpFileName(const String directory, String fileName);
+Errors File_getTmpFileName(const String directory, String fileName);
 
 /***********************************************************************\
 * Name   : File_getTmpDirectoryName
 * Purpose: create and get a temporary directory name
-* Input  : directory - directory to create temporary file
-*          fileName  - variable for temporary file name
+* Input  : directory     - directory to create temporary file
+*          directoryName - variable for temporary directory name
 * Output : -
 * Return : TRUE iff temporary directory created, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool File_getTmpDirectoryName(const String directory, String fileName);
+Errors File_getTmpDirectoryName(const String directory, String directoryName);
 
 /*---------------------------------------------------------------------*/
 
@@ -231,9 +240,9 @@ bool File_getTmpDirectoryName(const String directory, String fileName);
 \***********************************************************************/
 
 Errors File_open(FileHandle    *fileHandle,
-                  const String  fileName,
-                  FileOpenModes fileOpenMode
-                 );
+                 const String  fileName,
+                 FileOpenModes fileOpenMode
+                );
 
 /***********************************************************************\
 * Name   : File_openDescriptor
@@ -435,6 +444,8 @@ Errors File_readDirectory(DirectoryHandle *directoryHandle,
                           String          fileName
                          );
 
+/*---------------------------------------------------------------------*/
+
 /***********************************************************************\
 * Name   : File_openDevices
 * Purpose: open devices for reading
@@ -482,6 +493,8 @@ Errors File_readDevice(DeviceHandle *deviceHandle,
                        String       deviceName
                       );
 
+/*---------------------------------------------------------------------*/
+
 /***********************************************************************\
 * Name   : File_getType
 * Purpose: get file type
@@ -491,7 +504,7 @@ Errors File_readDevice(DeviceHandle *deviceHandle,
 * Notes  : -
 \***********************************************************************/
 
-FileTypes File_getType(String fileName);
+FileTypes File_getType(const String fileName);
 
 /***********************************************************************\
 * Name   : File_delete
@@ -502,7 +515,7 @@ FileTypes File_getType(String fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool File_delete(String fileName);
+Errors File_delete(const String fileName, bool recursiveFlag);
 
 /***********************************************************************\
 * Name   : File_rename
@@ -511,12 +524,13 @@ bool File_delete(String fileName);
 *          newFileName - new file name
 * Output : -
 * Return : TRUE if file/directory/link renamed, FALSE otherwise
-* Notes  : -
+* Notes  : if files are not on the same logical device the file is
+*          copied
 \***********************************************************************/
 
-bool File_rename(String oldFileName,
-                 String newFileName
-                );
+Errors File_rename(const String oldFileName,
+                   const String newFileName
+                  );
 
 /***********************************************************************\
 * Name   : File_copy
@@ -528,9 +542,9 @@ bool File_rename(String oldFileName,
 * Notes  : -
 \***********************************************************************/
 
-bool File_copy(String sourceFileName,
-               String destinationFileName
-              );
+Errors File_copy(const String sourceFileName,
+                 const String destinationFileName
+                );
 
 /***********************************************************************\
 * Name   : File_exists
@@ -541,7 +555,7 @@ bool File_copy(String sourceFileName,
 * Notes  : -
 \***********************************************************************/
 
-bool File_exists(String fileName);
+bool File_exists(const String fileName);
 bool File_existsCString(const char *fileName);
 
 /***********************************************************************\
@@ -553,8 +567,8 @@ bool File_existsCString(const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-Errors File_getFileInfo(String   fileName,
-                        FileInfo *fileInfo
+Errors File_getFileInfo(const String fileName,
+                        FileInfo     *fileInfo
                        );
 
 /***********************************************************************\
@@ -567,8 +581,8 @@ Errors File_getFileInfo(String   fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_setFileInfo(String   fileName,
-                        FileInfo *fileInfo
+Errors File_setFileInfo(const String fileName,
+                        FileInfo     *fileInfo
                        );
 
 /***********************************************************************\
@@ -580,8 +594,8 @@ Errors File_setFileInfo(String   fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_readLink(String linkName,
-                     String fileName
+Errors File_readLink(const String linkName,
+                     String       fileName
                     );
 
 /***********************************************************************\
@@ -594,9 +608,23 @@ Errors File_readLink(String linkName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_link(String linkName,
-                 String fileName
+Errors File_link(const String linkName,
+                 const String fileName
                 );
+
+
+/***********************************************************************\
+* Name   : File_getFileSystemInfo
+* Purpose: get file system info
+* Input  : pathName - path name
+* Output : fileSystemInfo - file system info
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors File_getFileSystemInfo(const          String pathName,
+                              FileSystemInfo *fileSystemInfo
+                             );
 
 #ifdef __cplusplus
   }

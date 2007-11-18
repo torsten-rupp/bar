@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -28,7 +28,6 @@
 #include "crypt.h"
 #include "archive_format.h"
 #include "files.h"
-#include "storage.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -68,7 +67,7 @@ typedef struct
   uint                   partNumber;                 // file part number
   bool                   fileOpenFlag;               // TRUE iff file is open
   String                 fileName;                   // file name
-  StorageFileHandle      storageFileHandle;          // storage file handle
+  FileHandle             fileHandle;                 // file handle
 
   bool                   nextChunkHeaderReadFlag;    // TRUE iff next chunk header read
   ChunkHeader            nextChunkHeader;            // next file, directory, link chunk header

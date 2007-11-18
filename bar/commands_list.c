@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -435,6 +435,7 @@ remoteBarFlag=FALSE;
       case STORAGE_TYPE_SSH:
         {
           String               userName,hostName,hostFileName;
+          SSHServer            sshServer;
           NetworkExecuteHandle networkExecuteHandle;
           String               line;
           ulong                fileCount;
@@ -468,21 +469,22 @@ remoteBarFlag=FALSE;
           /* start remote BAR via SSH (if not already started) */
           if (!remoteBarFlag)
           {
+            getSSHServer(hostName,options,&sshServer);
             error = Network_connect(&socketHandle,
                                     SOCKET_TYPE_SSH,
                                     hostName,
-                                    options->sshPort,
+                                    sshServer.port,
                                     userName,
-                                    options->sshPublicKeyFileName,
-                                    options->sshPrivatKeyFileName,
-                                    options->sshPassword,
+                                    sshServer.publicKeyFileName,
+                                    sshServer.privatKeyFileName,
+                                    sshServer.password,
                                     0
                                    );
             if (error != ERROR_NONE)
             {
               printError("Cannot not connecto to '%s:%d' (error: %s)!\n",
                          String_cString(hostName),
-                         options->sshPort,
+                         sshServer.port,
                          getErrorText(error)
                         );
               String_delete(hostFileName);

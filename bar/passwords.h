@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -78,7 +78,7 @@ Errors Password_initAll(void);
 void Password_doneAll(void);
 
 /***********************************************************************\
-* Name   : Password_new
+* Name   : Password_new, Password_newCString
 * Purpose: create new password
 * Input  : -
 * Output : -
@@ -87,6 +87,7 @@ void Password_doneAll(void);
 \***********************************************************************/
 
 Password *Password_new(void);
+Password *Password_newCString(const char *s);
 
 /***********************************************************************\
 * Name   : Password_delete
@@ -108,10 +109,10 @@ void Password_delete(Password *password);
 * Notes  : -
 \***********************************************************************/
 
-Password *Password_copy(Password *sourcePassword);
+Password *Password_copy(const Password *sourcePassword);
 
 /***********************************************************************\
-* Name   : Password_setCString
+* Name   : Passwort_set, Password_setCString
 * Purpose: set password from C-string
 * Input  : password - password handle
 *          s        - C-string
@@ -120,7 +121,8 @@ Password *Password_copy(Password *sourcePassword);
 * Notes  : avoid usage of this functions, because 's' is insecure!
 \***********************************************************************/
 
-void Password_set(Password *password, const String string);
+void Password_set(Password *password, const Password *fromPassword);
+void Password_setString(Password *password, const String string);
 void Password_setCString(Password *password, const char *s);
 
 /***********************************************************************\

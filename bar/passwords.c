@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -89,32 +89,68 @@ Password *Password_new(void)
   return password;
 }
 
-void Password_delete(Password *password)
+Password *Password_newCString(const char *s)
 {
-  assert(password != NULL);
+  Password *password;
 
-  #ifdef HAVE_GCRYPT
-    gcry_free(password);
-  #else /* not HAVE_GCRYPT */
-    memset(password,0,sizeof(Password));
-    free(password);
-  #endif /* HAVE_GCRYPT */
+  password = Password_new();
+  Password_setCString(password,s);
+
+  return password;
 }
 
-Password *Password_copy(Password *sourcePassword)
+void Password_delete(Password *password)
+{
+  if (password != NULL)
+  {
+    #ifdef HAVE_GCRYPT
+      gcry_free(password);
+    #else /* not HAVE_GCRYPT */
+      memset(password,0,sizeof(Password));
+      free(password);
+    #endif /* HAVE_GCRYPT */
+  }
+}
+
+Password *Password_copy(const Password *sourcePassword)
 {
   Password *destinationPassword;
 
-  assert(sourcePassword != NULL);
-
-  destinationPassword = Password_new();
-  assert(destinationPassword != NULL);
-  memcpy(destinationPassword,sourcePassword,sizeof(Password));
+  if (sourcePassword != NULL)
+  {
+    destinationPassword = Password_new();
+    assert(destinationPassword != NULL);
+    memcpy(destinationPassword,sourcePassword,sizeof(Password));
+  }
+  else
+  {
+    destinationPassword = NULL;
+  }
 
   return destinationPassword;
 }
 
-void Password_set(Password *password, const String string)
+void Password_set(Password *password, const Password *fromPassword)
+{
+  #ifdef HAVE_GCRYPT
+  #else /* not HAVE_GCRYPT */
+    uint z;
+  #endif /* HAVE_GCRYPT */
+
+  assert(password != NULL);
+
+  if (fromPassword != NULL)
+  {
+    password->length = fromPassword->length;
+    memcpy(password->data,fromPassword->data,sizeof(password->data));
+  }
+  else
+  {
+    password->length = 0;
+  }
+}
+
+void Password_setString(Password *password, const String string)
 {
   #ifdef HAVE_GCRYPT
   #else /* not HAVE_GCRYPT */
@@ -174,16 +210,12 @@ void Password_appendChar(Password *password, char ch)
 
 uint Password_length(const Password *password)
 {
-  assert(password != NULL);
-
-  return password->length;
+  return (password != NULL)?password->length:0;
 }
 
 char Password_getChar(const Password *password, uint index)
 {
-  assert(password != NULL);
-
-  if (index < password->length)
+  if ((password != NULL) && (index < password->length))
   {
     #ifdef HAVE_GCRYPT
       return password->data[index];
@@ -204,30 +236,37 @@ const char *Password_deploy(Password *password)
     uint z;
   #endif /* HAVE_GCRYPT */
 
-  assert(password != NULL);
-  assert(password->length <= MAX_PASSWORD_LENGTH);
+  if (password != NULL)
+  {
+    assert(password->length <= MAX_PASSWORD_LENGTH);
 
-  #ifdef HAVE_GCRYPT
-    return password->data;
-  #else /* not HAVE_GCRYPT */
-    for (z = 0; z < password->length; z++)
-    {
-      password->plain[z] = password->data[z]^obfuscator[z];
-    }
-    password->plain[password->length] = '\0';
-    return password->plain;
-  #endif /* HAVE_GCRYPT */
+    #ifdef HAVE_GCRYPT
+      return password->data;
+    #else /* not HAVE_GCRYPT */
+      for (z = 0; z < password->length; z++)
+      {
+        password->plain[z] = password->data[z]^obfuscator[z];
+      }
+      password->plain[password->length] = '\0';
+      return password->plain;
+    #endif /* HAVE_GCRYPT */
+  }
+  else
+  {
+    return "";
+  }
 }
 
 void Password_undeploy(Password *password)
 {
-  assert(password != NULL);
-
-  #ifdef HAVE_GCRYPT
-    UNUSED_VARIABLE(password);
-  #else /* not HAVE_GCRYPT */
-    memset(password->plain,0,MAX_PASSWORD_LENGTH);
-  #endif /* HAVE_GCRYPT */
+  if (password != NULL)
+  {
+    #ifdef HAVE_GCRYPT
+      UNUSED_VARIABLE(password);
+    #else /* not HAVE_GCRYPT */
+      memset(password->plain,0,MAX_PASSWORD_LENGTH);
+    #endif /* HAVE_GCRYPT */
+  }
 }
 
 #ifdef __cplusplus

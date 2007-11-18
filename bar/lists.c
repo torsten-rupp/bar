@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -62,6 +62,34 @@ List *List_new(void)
   if (list == NULL) return NULL;
 
   List_init(list);
+
+  return list;
+}
+
+List *List_duplicate(const void           *fromList,
+                     const void           *fromListFromNode,
+                     const void           *fromListToNode,
+                     ListNodeCopyFunction listNodeCopyFunction,
+                     void                 *listNodeCopyUserData
+                    )
+{
+  List *list;
+
+  assert(fromList != NULL);
+  assert(listNodeCopyFunction != NULL);
+
+  list = (List*)malloc(sizeof(List));
+  if (list == NULL) return NULL;
+
+  List_init(list);
+  List_copy(fromList,
+            list,
+            fromListFromNode,
+            fromListToNode,
+            NULL,
+            listNodeCopyFunction,
+            listNodeCopyUserData
+           );
 
   return list;
 }

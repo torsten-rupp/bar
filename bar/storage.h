@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -16,12 +16,15 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <libssh2.h>
-#include <libssh2_sftp.h>
+#ifdef HAVE_SSH2
+  #include <libssh2.h>
+  #include <libssh2_sftp.h>
+#endif /* HAVE_SSH2 */
 #include <assert.h>
 
 #include "global.h"
 #include "strings.h"
+#include "stringlists.h"
 #include "files.h"
 #include "errors.h"
 #include "network.h"
@@ -44,47 +47,78 @@ typedef enum
   STORAGE_TYPE_FILESYSTEM,
   STORAGE_TYPE_SSH,
   STORAGE_TYPE_SCP,
-  STORAGE_TYPE_SFTP
+  STORAGE_TYPE_SFTP,
+  STORAGE_TYPE_DVD,
+  STORAGE_TYPE_DEVICE
 } StorageTypes;
+
+typedef bool(*StorageRequestVolumeFunction)(void *userData,
+                                            uint volumeNumber
+                                           );
 
 typedef struct
 {
-  StorageModes mode;
-  StorageTypes type;
+  ulong  max;
+  ulong  blockSize;
+  ulong  measurements[MAX_BAND_WIDTH_MEASUREMENTS];
+  uint   measurementNextIndex;
+  ulong  measurementBytes;    // sum of transmitted bytes
+  uint64 measurementTime;     // time for transmission [us]
+} StorageBandWidth;
 
-  struct
-  {
-    ulong  max;
-    ulong  blockSize;
-    ulong  measurements[MAX_BAND_WIDTH_MEASUREMENTS];
-    uint   measurementNextIndex;
-    ulong  measurementBytes;    // sum of transmitted bytes
-    uint64 measurementTime;     // time for transmission [us]
-  } bandWidth;
+typedef struct
+{
+  StorageModes                 mode;
+  StorageTypes                 type;
+  const Options                *options;
+
+  StorageRequestVolumeFunction requestVolumeFunction;
+  void                         *requestVolumeUserData;
+  uint                         volumeNumber;          
+  uint                         requestedVolumeNumber; 
 
   union
   {
     // file storage
     struct
     {
-      String     fileName;
       FileHandle fileHandle;
     } fileSystem;
     // ssh storage (remote BAR)
     struct
     {
+      String           hostName;
+      uint             hostPort;
+      String           sshLoginName;
+      String           sshPublicKeyFileName;
+      String           sshPrivatKeyFileName;
+      Password         *sshPassword;
       SocketHandle     socketHandle;
-      LIBSSH2_CHANNEL *channel;
+      LIBSSH2_CHANNEL  *channel;
+      StorageBandWidth bandWidth;
     } ssh;
     // scp storage
     struct
     {
-      SocketHandle    socketHandle;
-      LIBSSH2_CHANNEL *channel;
+      String           hostName;
+      uint             hostPort;
+      String           sshLoginName;
+      String           sshPublicKeyFileName;
+      String           sshPrivatKeyFileName;
+      Password         *sshPassword;
+      SocketHandle     socketHandle;
+      LIBSSH2_CHANNEL  *channel;
+      StorageBandWidth bandWidth;
     } scp;
     // sftp storage
     struct
     {
+      String              hostName;
+      uint                hostPort;
+      String              sshLoginName;
+      String              sshPublicKeyFileName;
+      String              sshPrivatKeyFileName;
+      Password            *sshPassword;
       SocketHandle        socketHandle;
       LIBSSH2_SFTP        *sftp;
       LIBSSH2_SFTP_HANDLE *sftpHandle;
@@ -96,7 +130,34 @@ typedef struct
         uint64 offset;
         ulong  length;
       } readAheadBuffer;
+      StorageBandWidth    bandWidth;
     } sftp;
+    // dvd storage
+    struct
+    {
+      Device     device;
+      String     name;
+      uint       steps;
+      String     directory;
+      uint64     volumeSize;
+      uint       volumeNumber;
+      StringList fileNameList;
+      String     fileName;
+      FileHandle fileHandle;
+      uint64     totalSize;
+    } dvd;
+    // device storage
+    struct
+    {
+      Device     device;
+      String     name;
+      String     directory;
+      uint       volumeNumber;
+      StringList fileNameList;
+      String     fileName;
+      FileHandle fileHandle;
+      uint64     totalSize;
+    } device;
   };
 } StorageFileHandle;
 
@@ -121,6 +182,10 @@ typedef struct
       ulong               bufferLength;
       bool                entryReadFlag;    // TRUE if entry read
     } sftp;
+    struct
+    {
+      DirectoryHandle directoryHandle;
+    } dvd;
   };
 } StorageDirectoryHandle;
 
@@ -167,15 +232,17 @@ void Storage_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-StorageTypes Storage_getType(const String storageName, String storageSpecifier);
+StorageTypes Storage_getType(const String storageName,
+                             String       storageSpecifier
+                            );
 
 /***********************************************************************\
 * Name   : Storage_parseSSHSpecifier
-* Purpose: parse ssh specifier: <user name>@<host name>:<host file name>
+* Purpose: parse ssh specifier: <user name>@<host name>:<file name>
 * Input  : sshSpecifier - ssh specifier string
 * Output : userName     - user name (can be NULL)
 *          hostName     - host name (can be NULL)
-*          hostFileName - host file name (can be NULL)
+*          fileName     - file name (can be NULL)
 * Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
@@ -183,8 +250,25 @@ StorageTypes Storage_getType(const String storageName, String storageSpecifier);
 bool Storage_parseSSHSpecifier(const String sshSpecifier,
                                String       userName,
                                String       hostName,
-                               String       hostFileName
+                               String       fileName
                               );
+
+/***********************************************************************\
+* Name   : Storage_parseDevicepecifier
+* Purpose: parse device specifier: <device name>:<file name>
+* Input  : deviceSpecifier   - device specifier string
+*          defaultDeviceName - default device name
+* Output : deviceName - device name (can be NULL)
+*          fileName   - file name (can be NULL)
+* Return : TRUE if DVD specifier parsed, FALSE if specifier invalid
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
+                                  const String defaultDeviceName,
+                                  String       deviceName,
+                                  String       fileName
+                                 );
 
 /***********************************************************************\
 * Name   : Storage_prepare
@@ -204,22 +288,89 @@ Errors Storage_prepare(const String  storageName,
                       );
 
 /***********************************************************************\
+* Name   : Storage_init
+* Purpose: init new storage file
+* Input  : storageFileHandle            - storage file handle variable
+*          storageName                  - storage name:
+*                                           <file name>
+*                                           scp:<user name>@<host name>:<file name>
+*                                           sftp:<user name>@<host name>:<file name>
+*          options                      - options
+*          storageRequestVolumeFunction - volume request call back
+*          storageRequestVolumeUserData - user data for volume request
+*                                         call back
+* Output : storageFileHandle - initialized storage file handle
+*          fileName          - file name (without storage specifier
+*                              prefix)
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_init(StorageFileHandle            *storageFileHandle,
+                    const String                 storageName,
+                    const Options                *options,
+                    StorageRequestVolumeFunction storageRequestVolumeFunction,
+                    void                         *storageRequestVolumeUserData,
+                    String                       fileName
+                   );
+
+/***********************************************************************\
+* Name   : Storage_done
+* Purpose: deinit storage file
+* Input  : storageFileHandle - storage file handle variable
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_done(StorageFileHandle *storageFileHandle);
+
+/***********************************************************************\
+* Name   : Storage_preProcess
+* Purpose: pre-process storage
+* Input  : storageFileHandle - storage file handle
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_preProcess(StorageFileHandle *storageFileHandle);
+
+/***********************************************************************\
+* Name   : Storage_postProcess
+* Purpose: post-process storage
+* Input  : storageFileHandle - storage file handle
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
+                           bool              finalFlag
+                          );
+
+uint Storage_getVolumeNumber(const StorageFileHandle *storageFileHandle);
+void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
+                             uint              volumeNumber
+                            );
+
+/***********************************************************************\
 * Name   : Storage_create
 * Purpose: create new storage file
-* Input  : storageFileHandle - storage file handle variable
+* Input  : storageFileHandle - storage file handle
 *          storageName      - storage name:
 *                               <file name>
 *                               scp:<user name>@<host name>:<file name>
 *                               sftp:<user name>@<host name>:<file name>
 *          fileSize         - storage file size
 *          options          - options
-* Output : storageFileHandle - initialized storage file handle
+* Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Storage_create(StorageFileHandle *storageFileHandle,
-                      const String      storageName,
+                      const String      fileName,
                       uint64            fileSize,
                       const Options     *options
                      );
@@ -227,24 +378,24 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 /***********************************************************************\
 * Name   : Storage_open
 * Purpose: open storage file
-* Input  : storageFileHandle - storage handle file variable
+* Input  : storageFileHandle - storage handle file
 *          storageName       - storage name:
 *                                <file name>
 *                                sftp:<user name>@<host name>:<file name>
 *          options           - options
-* Output : storageFileHandle - initialized storage file handle
+* Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Storage_open(StorageFileHandle *storageFileHandle,
-                    const String      storageName,
+                    const String      fileName,
                     const Options     *options
                    );
 
 /***********************************************************************\
 * Name   : Storage_close
-* Purpose: close storage
+* Purpose: close storage file
 * Input  : storageFileHandle - storage file handle
 * Output : -
 * Return : -
@@ -255,7 +406,7 @@ void Storage_close(StorageFileHandle *storageFileHandle);
 
 /***********************************************************************\
 * Name   : Storage_eof
-* Purpose: check if end-of-file in storage
+* Purpose: check if end-of-file in storage file
 * Input  : storageFileHandle - storage file handle
 * Output : -
 * Return : TRUE if end-of-file, FALSE otherwise

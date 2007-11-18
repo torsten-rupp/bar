@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -32,6 +32,7 @@
 #include "files.h"
 #include "patterns.h"
 #include "archive.h"
+#include "storage.h"
 
 #include "commands_create.h"
 #include "commands_restore.h"
@@ -41,6 +42,7 @@
 /****************** Conditional compilation switches *******************/
 
 #define _SERVER_DEBUG
+#define _NO_SESSION_ID
 #define _SIMULATOR
 
 /***************************** Constants *******************************/
@@ -61,6 +63,16 @@ typedef enum
   JOB_TYPE_RESTORE,
 } JobTypes;
 
+typedef enum
+{
+  JOB_STATE_WAITING,
+  JOB_STATE_RUNNING,
+  JOB_STATE_REQUEST_VOLUME,
+  JOB_STATE_COMPLETED,
+  JOB_STATE_ERROR,
+  JOB_STATE_ABORTED
+} JobStates;
+
 typedef struct JobNode
 {
   NODE_HEADER(struct JobNode);
@@ -72,40 +84,36 @@ typedef struct JobNode
   PatternList excludePatternList;
   Options     options;
   uint        id;
+  JobStates   state;
+  uint        requestedVolumeNumber;           // requested volume number
+  uint        volumeNumber;                    // loaded volume number
+  bool        requestedAbortFlag;              // TRUE for abort operation
 
   /* running info */
   struct
   {
-    enum
-    {
-      JOB_STATE_WAITING,
-      JOB_STATE_RUNNING,
-      JOB_STATE_COMPLETED,
-      JOB_STATE_ERROR
-    } state;
-    time_t startTime;                       // start time [s]
-    ulong  estimatedRestTime;               // estimated rest running time [s]
-    ulong  doneFiles;                       // number of processed files
-    uint64 doneBytes;                       // sum of processed bytes
-    ulong  totalFiles;                      // number of total files
-    uint64 totalBytes;                      // sum of total bytes
-    ulong  skippedFiles;                    // number of skipped files
-    uint64 skippedBytes;                    // sum of skippped bytes
-    ulong  errorFiles;                      // number of files with errors
-    uint64 errorBytes;                      // sum of bytes of files with errors
-    double filesPerSecond;                  // average processed files per second
-    double bytesPerSecond;                  // average processed bytes per second
-    double storageBytesPerSecond;           // average processed storage bytes per second
-    double compressionRatio;
-    String fileName;                        // current file
-    uint64 fileDoneBytes;                   // current file bytes done
-    uint64 fileTotalBytes;                  // current file bytes total
-    String storageName;                     // current storage file
-    uint64 storageDoneBytes;                // current storage file bytes done
-    uint64 storageTotalBytes;               // current storage file bytes total
-
-    bool   abortRequestFlag;                // TRUE for abort operation
-    Errors error;
+    Errors    error;
+    time_t    startTime;                       // start time [s]
+    ulong     estimatedRestTime;               // estimated rest running time [s]
+    ulong     doneFiles;                       // number of processed files
+    uint64    doneBytes;                       // sum of processed bytes
+    ulong     totalFiles;                      // number of total files
+    uint64    totalBytes;                      // sum of total bytes
+    ulong     skippedFiles;                    // number of skipped files
+    uint64    skippedBytes;                    // sum of skippped bytes
+    ulong     errorFiles;                      // number of files with errors
+    uint64    errorBytes;                      // sum of bytes of files with errors
+    double    filesPerSecond;                  // average processed files per second
+    double    bytesPerSecond;                  // average processed bytes per second
+    double    storageBytesPerSecond;           // average processed storage bytes per second
+    uint64    archiveBytes;                    // number of bytes stored in archive
+    double    compressionRatio;
+    String    fileName;                        // current file
+    uint64    fileDoneBytes;                   // current file bytes done
+    uint64    fileTotalBytes;                  // current file bytes total
+    String    storageName;                     // current storage file
+    uint64    storageDoneBytes;                // current storage file bytes done
+    uint64    storageTotalBytes;               // current storage file bytes total
   } runningInfo;
 } JobNode;
 
@@ -219,16 +227,17 @@ LOCAL bool       quitFlag;
 /***********************************************************************\
 * Name   : updateCreateStatus
 * Purpose: update create status
-* Input  : createStatusInfo - create status info data
-*          jobNode          - job node
+* Input  : jobNode          - job node
+*          error            - error code
+*          createStatusInfo - create status info data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateCreateStatus(Errors                 error,
-                              const CreateStatusInfo *createStatusInfo,
-                              JobNode                *jobNode
+LOCAL void updateCreateStatus(JobNode                *jobNode,
+                              Errors                 error,
+                              const CreateStatusInfo *createStatusInfo
                              )
 {
   ulong  elapsedTime;
@@ -241,10 +250,10 @@ LOCAL void updateCreateStatus(Errors                 error,
   uint   n;
 //static int zz=0;
 
+  assert(jobNode != NULL);
   assert(createStatusInfo != NULL);
   assert(createStatusInfo->fileName != NULL);
   assert(createStatusInfo->storageName != NULL);
-  assert(jobNode != NULL);
 
   /* calculate estimated rest time */
   elapsedTime = (ulong)(time(NULL)-jobNode->runningInfo.startTime);
@@ -292,6 +301,7 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
   jobNode->runningInfo.filesPerSecond        = filesPerSecond;
   jobNode->runningInfo.bytesPerSecond        = bytesPerSecond;
   jobNode->runningInfo.storageBytesPerSecond = storageBytesPerSecond;
+  jobNode->runningInfo.archiveBytes          = createStatusInfo->archiveBytes;
   jobNode->runningInfo.compressionRatio      = createStatusInfo->compressionRatio;
   jobNode->runningInfo.estimatedRestTime     = estimtedRestTime;
   String_set(jobNode->runningInfo.fileName,createStatusInfo->fileName);
@@ -306,25 +316,26 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
 /***********************************************************************\
 * Name   : updateRestoreStatus
 * Purpose: update restore status
-* Input  : restoreStatusInfo - create status info data
-*          jobNode           - job node
+* Input  : jobNode           - job node
+*          error             - error code
+*          restoreStatusInfo - create status info data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateRestoreStatus(Errors                  error,
-                               const RestoreStatusInfo *restoreStatusInfo,
-                               JobNode                 *jobNode
+LOCAL void updateRestoreStatus(JobNode                 *jobNode,
+                               Errors                  error,
+                               const RestoreStatusInfo *restoreStatusInfo
                               )
 {
   ulong  elapsedTime;
   double filesPerSecond,bytesPerSecond,storageBytesPerSecond;
 
+  assert(jobNode != NULL);
   assert(restoreStatusInfo != NULL);
   assert(restoreStatusInfo->fileName != NULL);
   assert(restoreStatusInfo->storageName != NULL);
-  assert(jobNode != NULL);
 
   /* calculate estimated rest time */
   elapsedTime = (ulong)(time(NULL)-jobNode->runningInfo.startTime);
@@ -351,6 +362,9 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
   jobNode->runningInfo.filesPerSecond        = filesPerSecond;
   jobNode->runningInfo.bytesPerSecond        = bytesPerSecond;
   jobNode->runningInfo.storageBytesPerSecond = storageBytesPerSecond;
+  jobNode->runningInfo.archiveBytes          = 0LL;
+  jobNode->runningInfo.compressionRatio      = 0.0;
+  jobNode->runningInfo.estimatedRestTime     = 0;
   String_set(jobNode->runningInfo.fileName,restoreStatusInfo->fileName);
   jobNode->runningInfo.fileDoneBytes         = restoreStatusInfo->fileDoneBytes;
   jobNode->runningInfo.fileTotalBytes        = restoreStatusInfo->fileTotalBytes;
@@ -358,6 +372,46 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
   jobNode->runningInfo.storageDoneBytes      = restoreStatusInfo->storageDoneBytes;
   jobNode->runningInfo.storageTotalBytes     = restoreStatusInfo->storageTotalBytes;
 //fprintf(stderr,"%s,%d: restoreStatusInfo->fileName=%s\n",__FILE__,__LINE__,String_cString(jobNode->runningInfo.fileName));
+}
+
+/***********************************************************************\
+* Name   : storageRequestVolume
+* Purpose: request volume call-back
+* Input  : jobNode      - job node
+*          volumeNumber - volume number
+* Output : -
+* Return : TRUE if volume loaded, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool storageRequestVolume(JobNode *jobNode,
+                                uint    volumeNumber
+                               )
+{
+  assert(jobNode != NULL);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* request volume */
+  jobNode->requestedVolumeNumber = volumeNumber;
+
+  /* wait until volume is available or job is aborted */
+  assert(jobNode->state = JOB_STATE_RUNNING);
+  jobNode->state = JOB_STATE_REQUEST_VOLUME;
+  do
+  {
+    Semaphore_waitModified(&jobList.lock);
+  }
+  while (   (jobNode->volumeNumber != jobNode->requestedVolumeNumber)
+         && !jobNode->requestedAbortFlag
+        );
+  jobNode->state = JOB_STATE_RUNNING;
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  return TRUE;
 }
 
 /***********************************************************************\
@@ -381,7 +435,7 @@ LOCAL void jobThread(JobList *jobList)
     do
     {
       jobNode = jobList->head;
-      while ((jobNode != NULL) && (jobNode->runningInfo.state != JOB_STATE_WAITING))
+      while ((jobNode != NULL) && (jobNode->state != JOB_STATE_WAITING))
       {
         jobNode = jobNode->next;
       }
@@ -390,7 +444,7 @@ LOCAL void jobThread(JobList *jobList)
     while (!quitFlag && (jobNode == NULL));
     if (jobNode != NULL)
     {
-      jobNode->runningInfo.state = JOB_STATE_RUNNING;
+      jobNode->state = JOB_STATE_RUNNING;
     }
     Semaphore_unlock(&jobList->lock);    /* unlock is ok; job is protected by running state */
     if (quitFlag) break;
@@ -409,12 +463,12 @@ LOCAL void jobThread(JobList *jobList)
   for (z=0;z<120;z++)
   {
     extern void sleep(int);
-    if (jobNode->runningInfo.abortRequestFlag) break;
+    if (jobNode->requestedAbortFlag) break;
 
     fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
     sleep(1);
 
-    if (z==40) { 
+    if (z==40) {
       jobNode->runningInfo.totalFiles+=80;
       jobNode->runningInfo.totalBytes+=8000;
     }
@@ -439,7 +493,9 @@ LOCAL void jobThread(JobList *jobList)
                                                     &jobNode->options,
                                                     (CreateStatusInfoFunction)updateCreateStatus,
                                                     jobNode,
-                                                    &jobNode->runningInfo.abortRequestFlag
+                                                    (StorageRequestVolumeFunction)storageRequestVolume,
+                                                    jobNode,
+                                                    &jobNode->requestedAbortFlag
                                                    );
         break;
       case JOB_TYPE_RESTORE:
@@ -454,7 +510,7 @@ LOCAL void jobThread(JobList *jobList)
                                                        &jobNode->options,
                                                        (RestoreStatusInfoFunction)updateRestoreStatus,
                                                        jobNode,
-                                                       &jobNode->runningInfo.abortRequestFlag
+                                                       &jobNode->requestedAbortFlag
                                                       );
           StringList_done(&archiveFileNameList);
         }
@@ -465,7 +521,18 @@ LOCAL void jobThread(JobList *jobList)
 
     /* done job (lock list to signal modifcation to waiting threads) */
     Semaphore_lock(&jobList->lock);
-    jobNode->runningInfo.state = (jobNode->runningInfo.error == ERROR_NONE)?JOB_STATE_COMPLETED:JOB_STATE_ERROR;
+    if      (jobNode->requestedAbortFlag)
+    {
+      jobNode->state = JOB_STATE_ABORTED;
+    }
+    else if (jobNode->runningInfo.error != ERROR_NONE)
+    {
+      jobNode->state = JOB_STATE_ERROR;
+    }
+    else
+    {
+      jobNode->state = JOB_STATE_COMPLETED;
+    }
     Semaphore_unlock(&jobList->lock);
   }
 }
@@ -528,15 +595,19 @@ LOCAL JobNode *newJob(JobTypes jobType)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  jobNode->type        = jobType;
-  jobNode->name        = String_new();
-  jobNode->archiveName = String_new();
+  jobNode->type                  = jobType;
+  jobNode->name                  = String_new();
+  jobNode->archiveName           = String_new();
   Pattern_initList(&jobNode->includePatternList);
   Pattern_initList(&jobNode->excludePatternList);
   copyOptions(&defaultOptions,&jobNode->options);
-  jobNode->id          = 0;
+  jobNode->id                    = 0;
+  jobNode->state                 = JOB_STATE_WAITING;
+  jobNode->requestedVolumeNumber = 0;
+  jobNode->volumeNumber          = 0;
+  jobNode->requestedAbortFlag    = FALSE;
 
-  jobNode->runningInfo.state                 = JOB_STATE_WAITING;
+  jobNode->runningInfo.error                 = ERROR_NONE;
   jobNode->runningInfo.startTime             = 0;
   jobNode->runningInfo.estimatedRestTime     = 0;
   jobNode->runningInfo.doneFiles             = 0L;
@@ -550,6 +621,7 @@ LOCAL JobNode *newJob(JobTypes jobType)
   jobNode->runningInfo.filesPerSecond        = 0.0;
   jobNode->runningInfo.bytesPerSecond        = 0.0;
   jobNode->runningInfo.storageBytesPerSecond = 0.0;
+  jobNode->runningInfo.archiveBytes          = 0LL;
   jobNode->runningInfo.compressionRatio      = 0.0;
   jobNode->runningInfo.fileName              = String_new();
   jobNode->runningInfo.fileDoneBytes         = 0LL;
@@ -558,10 +630,7 @@ LOCAL JobNode *newJob(JobTypes jobType)
   jobNode->runningInfo.storageDoneBytes      = 0LL;
   jobNode->runningInfo.storageTotalBytes     = 0LL;
 
-  jobNode->runningInfo.abortRequestFlag      = FALSE;
-  jobNode->runningInfo.error                 = ERROR_NONE;
-
-  return jobNode;  
+  return jobNode;
 }
 
 #if 0
@@ -659,6 +728,37 @@ LOCAL void sendResult(ClientInfo *clientInfo, uint id, bool completeFlag, uint e
 }
 
 /*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : getJobStateText
+* Purpose: get text for job state
+* Input  : jobState - job state
+* Output : -
+* Return : text
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char *getJobStateText(JobStates jobState)
+{
+  const char *stateText;
+
+  switch (jobState)
+  {
+    case JOB_STATE_WAITING:        stateText = "waiting";        break;
+    case JOB_STATE_RUNNING:        stateText = "running";        break;
+    case JOB_STATE_REQUEST_VOLUME: stateText = "request volume"; break;
+    case JOB_STATE_COMPLETED:      stateText = "completed";      break;
+    case JOB_STATE_ERROR:          stateText = "ERROR";          break;
+    case JOB_STATE_ABORTED:        stateText = "aborted";        break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return stateText;
+}
 
 /***********************************************************************\
 * Name   : getTotalSubDirectorySize
@@ -760,11 +860,11 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
     z = 0;
     while ((z < Password_length(password)) && okFlag)
     {
-      n0 = (char)(strtoul(String_subCString(s,arguments[0],z*2,sizeof(s)),NULL,16) & 0xFF);
+      n0 = (char)(strtoul(String_subCString(s,arguments[0],z*2,2),NULL,16) & 0xFF);
       n1 = clientInfo->sessionId[z];
       okFlag = (Password_getChar(password,z) == (n0^n1));
       z++;
-    } 
+    }
   }
 
   if (okFlag)
@@ -865,7 +965,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
             break;
           case FILE_TYPE_DIRECTORY:
             if (totalSizeFlag)
-            {         
+            {
               totalSize = getTotalSubDirectorySize(fileName);
             }
             else
@@ -917,8 +1017,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  JobNode    *jobNode;
-  const char *stateText;
+  JobNode *jobNode;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -930,24 +1029,11 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   jobNode = jobList.head;
   while (jobNode != NULL)
   {
-    stateText = "";
-    switch (jobNode->runningInfo.state)
-    {
-      case JOB_STATE_WAITING:   stateText = "WAITING";   break;
-      case JOB_STATE_RUNNING:   stateText = "RUNNING";   break;
-      case JOB_STATE_COMPLETED: stateText = "COMPLETED"; break;
-      case JOB_STATE_ERROR:     stateText = "ERROR";     break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
-      #endif /* NDEBUG */
-    }
     sendResult(clientInfo,id,FALSE,0,
-               "%u %'S %s %llu %'s %'s %lu %lu",
+               "%u %'S %'s %llu %'s %'s %lu %lu",
                jobNode->id,
                jobNode->name,
-               stateText,
+               getJobStateText(jobNode->state),
                jobNode->options.archivePartSize,
                Compress_getAlgorithmName(jobNode->options.compressAlgorithm),
                Crypt_getAlgorithmName(jobNode->options.cryptAlgorithm),
@@ -964,10 +1050,9 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
 
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  uint       jobId;
-  JobNode    *jobNode;
+  uint    jobId;
+  JobNode *jobNode;
 //  int        errorCode;
-  const char *stateText;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -993,22 +1078,9 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   /* format result */
   if (jobNode != NULL)
   {
-    stateText = "";
-    switch (jobNode->runningInfo.state)
-    {
-      case JOB_STATE_WAITING:   stateText = "WAITING";   break;
-      case JOB_STATE_RUNNING:   stateText = "RUNNING";   break;
-      case JOB_STATE_COMPLETED: stateText = "COMPLETED"; break;
-      case JOB_STATE_ERROR:     stateText = "ERROR";     break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
-      #endif /* NDEBUG */
-    }
     sendResult(clientInfo,id,TRUE,0,
-               "%s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %f %'S %llu %llu %'S %llu %llu",
-               stateText,
+               "%'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %d",
+               getJobStateText(jobNode->state),
                jobNode->runningInfo.doneFiles,
                jobNode->runningInfo.doneBytes,
                jobNode->runningInfo.totalFiles,
@@ -1020,13 +1092,16 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
                jobNode->runningInfo.filesPerSecond,
                jobNode->runningInfo.bytesPerSecond,
                jobNode->runningInfo.storageBytesPerSecond,
+               jobNode->runningInfo.archiveBytes,
                jobNode->runningInfo.compressionRatio,
                jobNode->runningInfo.fileName,
                jobNode->runningInfo.fileDoneBytes,
                jobNode->runningInfo.fileTotalBytes,
                jobNode->runningInfo.storageName,
                jobNode->runningInfo.storageDoneBytes,
-               jobNode->runningInfo.storageTotalBytes
+               jobNode->runningInfo.storageTotalBytes,
+               jobNode->volumeNumber,
+               jobNode->requestedVolumeNumber
               );
   }
   else
@@ -1049,7 +1124,7 @@ LOCAL void serverCommand_clear(ClientInfo *clientInfo, uint id, const String arg
   Pattern_clearList(&clientInfo->includePatternList);
   Pattern_clearList(&clientInfo->excludePatternList);
   freeOptions(&clientInfo->options);
-  copyOptions(&defaultOptions,&clientInfo->options); 
+  copyOptions(&defaultOptions,&clientInfo->options);
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
@@ -1157,6 +1232,14 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String argum
   {
     sendResult(clientInfo,id,TRUE,0,"%'s",Crypt_getAlgorithmName(clientInfo->options.cryptAlgorithm));
   }
+  else if (String_equalsCString(arguments[0],"load-volume-command"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%S",clientInfo->options.device.loadVolumeCommand);
+  }
+  else if (String_equalsCString(arguments[0],"volume-size"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->options.device.volumeSize);
+  }
   else if (String_equalsCString(arguments[0],"skip-unreadable"))
   {
     sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.skipUnreadableFlag?1:0);
@@ -1168,6 +1251,10 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String argum
   else if (String_equalsCString(arguments[0],"overwrite-files"))
   {
     sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.overwriteFilesFlag?1:0);
+  }
+  else if (String_equalsCString(arguments[0],"ecc"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.errorCorrectionCodesFlag?1:0);
   }
   else
   {
@@ -1197,41 +1284,55 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
     // archive-part-size <n>
     const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-    clientInfo->options.archivePartSize = String_toInteger64(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    clientInfo->options.archivePartSize = (uint64)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"max-tmp-size"))
   {
-    // max-tmp-part-size <n>
+    // max-tmp-size <n>
     const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-    clientInfo->options.maxTmpSize = String_toInteger64(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    clientInfo->options.maxTmpSize = (uint64)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"max-band-width"))
   {
-    // max-tmp-part-size <n>
+    // max-band-width <n>
     const StringUnit UNITS[] = {{"K",1024}};
 
-    clientInfo->options.maxBandWidth = String_toInteger(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    clientInfo->options.maxBandWidth = (ulong)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"ssh-port"))
   {
     // ssh-port <n>
-    clientInfo->options.sshPort = String_toInteger(arguments[1],0,NULL,NULL,0);
+    clientInfo->options.sshServer.port = String_toInteger(arguments[1],0,NULL,NULL,0);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"ssh-public-key"))
   {
     // ssh-public-key <file name>
-    String_set(clientInfo->options.sshPublicKeyFileName,arguments[1]);
+    String_set(clientInfo->options.sshServer.publicKeyFileName,arguments[1]);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"ssh-prvat-key"))
   {
     // ssh-privat-key <file name>
-    String_set(clientInfo->options.sshPrivatKeyFileName,arguments[1]);
+    String_set(clientInfo->options.sshServer.privatKeyFileName,arguments[1]);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"volume-size"))
+  {
+    // volume-size <n>
+    const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
+
+    clientInfo->options.device.volumeSize = (uint64)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"load-volume-command"))
+  {
+    // load-volume-command <s>
+    String_set(clientInfo->options.device.loadVolumeCommand,arguments[1]);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"compress-algorithm"))
@@ -1265,7 +1366,7 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
   else if (String_equalsCString(arguments[0],"crypt-password"))
   {
     // crypt-password <password>
-    Password_set(clientInfo->options.cryptPassword,arguments[1]);
+    Password_setString(clientInfo->options.cryptPassword,arguments[1]);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"skip-unreadable"))
@@ -1284,6 +1385,12 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
   {
     // overwrite-files 1|0
     clientInfo->options.overwriteFilesFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"ecc"))
+  {
+    // overwrite-archive-files 1|0
+    clientInfo->options.errorCorrectionCodesFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else
@@ -1353,7 +1460,11 @@ LOCAL void serverCommand_addJob(ClientInfo *clientInfo, uint id, const String ar
   while (List_count(&jobList) >= MAX_JOBS_IN_LIST)
   {
     jobNode = jobList.head;
-    while ((jobNode != NULL) && (jobNode->runningInfo.state != JOB_STATE_COMPLETED))
+    while (   (jobNode != NULL)
+           && (jobNode->state != JOB_STATE_WAITING)
+           && (jobNode->state != JOB_STATE_COMPLETED)
+           && (jobNode->state != JOB_STATE_ERROR)
+          )
     {
       jobNode = jobNode->next;
     }
@@ -1372,10 +1483,56 @@ LOCAL void serverCommand_addJob(ClientInfo *clientInfo, uint id, const String ar
   sendResult(clientInfo,id,TRUE,0,"%d",jobNode->id);
 }
 
+LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = jobList.head;
+  while ((jobNode != NULL) && (jobNode->id != jobId))
+  {
+    jobNode = jobNode->next;
+  }
+  if (jobNode != NULL)
+  {
+    /* remove job in list if waiting, completed or in error state */
+    if (   (jobNode->state == JOB_STATE_WAITING)
+        || (jobNode->state == JOB_STATE_COMPLETED)
+        || (jobNode->state == JOB_STATE_ERROR)
+       )
+    {
+      List_remove(&jobList,jobNode);
+    }
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+  }
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
 LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  JobNode *jobNode;
   uint    jobId;
+  JobNode *jobNode;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -1401,8 +1558,8 @@ LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String 
   if (jobNode != NULL)
   {
     /* check if job running, remove job in list */
-    jobNode->runningInfo.abortRequestFlag = TRUE;
-    while (jobNode->runningInfo.state == JOB_STATE_RUNNING)
+    jobNode->requestedAbortFlag = TRUE;
+    while (jobNode->state == JOB_STATE_RUNNING)
     {
       Semaphore_waitModified(&jobList.lock);
     }
@@ -1417,10 +1574,11 @@ LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String 
   Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_volume(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  JobNode *jobNode;
   uint    jobId;
+  uint    volumeNumber;
+  JobNode *jobNode;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -1433,6 +1591,14 @@ LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String ar
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
+  /* get volume number */
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected volume number");
+    return;
+  }
+  volumeNumber = String_toInteger(arguments[1],0,NULL,NULL,0);
+
   /* lock */
   Semaphore_lock(&jobList.lock);
 
@@ -1442,13 +1608,10 @@ LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String ar
   {
     jobNode = jobNode->next;
   }
+
   if (jobNode != NULL)
   {
-    /* remove job in list if not running */
-    if (jobNode->runningInfo.state != JOB_STATE_RUNNING)
-    {
-      List_remove(&jobList,jobNode);
-    }
+    jobNode->volumeNumber = volumeNumber;
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else
@@ -1657,8 +1820,8 @@ const struct
 }
 SERVER_COMMANDS[] =
 {
-  { "AUTHORIZE",           "S",   serverCommand_authorize,         AUTHORIZATION_STATE_WAITING }, 
-  { "DEVICE_LIST",         "",    serverCommand_deviceList,        AUTHORIZATION_STATE_OK      }, 
+  { "AUTHORIZE",           "S",   serverCommand_authorize,         AUTHORIZATION_STATE_WAITING },
+  { "DEVICE_LIST",         "",    serverCommand_deviceList,        AUTHORIZATION_STATE_OK      },
   { "FILE_LIST",           "S",   serverCommand_fileList,          AUTHORIZATION_STATE_OK      },
   { "JOB_LIST",            "",    serverCommand_jobList,           AUTHORIZATION_STATE_OK      },
   { "JOB_INFO",            "i",   serverCommand_jobInfo,           AUTHORIZATION_STATE_OK      },
@@ -1670,6 +1833,7 @@ SERVER_COMMANDS[] =
   { "ADD_JOB",             "",    serverCommand_addJob,            AUTHORIZATION_STATE_OK      },
   { "REM_JOB",             "i",   serverCommand_remJob,            AUTHORIZATION_STATE_OK      },
   { "ABORT_JOB",           "i",   serverCommand_abortJob,          AUTHORIZATION_STATE_OK      },
+  { "VOLUME",              "S i", serverCommand_volume,            AUTHORIZATION_STATE_OK      },
   { "ARCHIVE_LIST",        "S",   serverCommand_archiveList,       AUTHORIZATION_STATE_OK      },
 };
 
@@ -1857,8 +2021,11 @@ LOCAL void freeCommandMsg(CommandMsg *commandMsg, void *userData)
 
 LOCAL void getNewSessionId(SessionId sessionId)
 {
-  Crypt_randomize(sessionId,sizeof(SessionId));
-//  memset(sessionId,0,sizeof(SessionId));
+  #ifndef NO_SESSION_ID
+    Crypt_randomize(sessionId,sizeof(SessionId));
+  #else /* not NO_SESSION_ID */
+    memset(sessionId,0,sizeof(SessionId));
+  #endif /* NO_SESSION_ID */
 }
 
 /***********************************************************************\

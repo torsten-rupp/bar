@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -39,6 +39,7 @@ typedef struct
   uint64 skippedBytes;                     // sum of skipped bytes
   ulong  errorFiles;                       // number of files with errors
   uint64 errorBytes;                       // sum of byste in files with errors
+  uint64 archiveBytes;                     // number of bytes in stored in archive
   double compressionRatio;                 // compression ratio
   String fileName;                         // current file name
   uint64 fileDoneBytes;                    // number of bytes processed of current file
@@ -46,11 +47,12 @@ typedef struct
   String storageName;                      // current storage name
   uint64 storageDoneBytes;                 // number of bytes processed of current storage
   uint64 storageTotalBytes;                // total bytes of current storage
+  uint   volumeNumber;                     // current volume number
 } CreateStatusInfo;
 
-typedef void(*CreateStatusInfoFunction)(Errors                 error,
-                                        const CreateStatusInfo *createStatusInfo,
-                                        void                   *userData
+typedef void(*CreateStatusInfoFunction)(void                   *userData,
+                                        Errors                 error,
+                                        const CreateStatusInfo *createStatusInfo
                                        );
 
 /***************************** Variables *******************************/
@@ -68,27 +70,33 @@ typedef void(*CreateStatusInfoFunction)(Errors                 error,
 /***********************************************************************\
 * Name   : Command_create
 * Purpose: create archive
-* Input  : archiveFileName          - archive file name
-*          includeList              - include list
-*          excludeList              - exclude list
-*          optiosn                  - options
-*          createStatusInfoFunction - status info call back function
-*                                     (can be NULL)
-*          createStatusInfoUserData - user data for status info function
-*          abortRequestFlag         - flag to request abort (can be
-*                                     NULL)
+* Input  : archiveFileName              - archive file name
+*          includeList                  - include list
+*          excludeList                  - exclude list
+*          optiosn                      - options
+*          createStatusInfoFunction     - status info call back function
+*                                         (can be NULL)
+*          createStatusInfoUserData     - user data for status info
+*                                         function
+*          storageRequestVolumeFunction - request volume call back
+*                                         function
+*          storageRequestVolumeUserData - user data for request volume
+*          abortRequestFlag             - flag to request abort (can be
+*                                         NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_create(const char               *archiveFileName,
-                      PatternList              *includePatternList,
-                      PatternList              *excludePatternList,
-                      const Options            *options,
-                      CreateStatusInfoFunction createStatusInfoFunction,
-                      void                     *createStatusInfoUserData,
-                      bool                     *abortRequestFlag
+Errors Command_create(const char                   *archiveFileName,
+                      PatternList                  *includePatternList,
+                      PatternList                  *excludePatternList,
+                      const Options                *options,
+                      CreateStatusInfoFunction     createStatusInfoFunction,
+                      void                         *createStatusInfoUserData,
+                      StorageRequestVolumeFunction storageRequestVolumeFunction,
+                      void                         *storageRequestVolumeUserData,
+                      bool                         *abortRequestFlag
                      );
 
 #ifdef __cplusplus

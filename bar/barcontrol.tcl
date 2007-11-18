@@ -5,7 +5,7 @@ exec wish "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -89,8 +89,8 @@ set passwordObfuscator [format "%c%c%c%c%c%c%c%c" [expr {int(rand()*256)}] [expr
 set lastCommandId    0
 
 # server variables
-set server(socketHandle)     -1
-set server(authorizedFlag)   0
+set server(socketHandle)   -1
+set server(authorizedFlag) 0
 
 # BAR configuration
 set barConfigFileName     ""
@@ -103,6 +103,7 @@ set barConfig(storageType)                     ""
 set barConfig(storageFileName)                 ""
 set barConfig(storageLoginName)                ""
 set barConfig(storageHostName)                 ""
+set barConfig(storageDeviceName)               ""
 set barConfig(archivePartSizeFlag)             0
 set barConfig(archivePartSize)                 0
 set barConfig(maxTmpSizeFlag)                  0
@@ -117,10 +118,12 @@ set barConfig(cryptAlgorithm)                  ""
 set barConfig(cryptPassword)                   ""
 set barConfig(destinationDirectoryName)        ""
 set barConfig(destinationStripCount)           0
-set barConfig(skipUnreadable)                  1
-set barConfig(skipNotWritable)                 1
-set barConfig(overwriteArchiveFiles)           0
-set barConfig(overwriteFiles)                  0
+set barConfig(volumeSize)                      0
+set barConfig(skipUnreadableFlag)              1
+set barConfig(skipNotWritableFlag)             1
+set barConfig(overwriteArchiveFilesFlag)       0
+set barConfig(overwriteFilesFlag)              0
+set barConfig(errorCorrectionCodesFlag)        1
 
 set currentJob(id)                             0
 set currentJob(error)                          0
@@ -141,10 +144,12 @@ set currentJob(errorBytes)                     0
 set currentJob(errorBytesShort)                0
 set currentJob(errorBytesShortUnit)            "KBytes"
 set currentJob(filesPerSecond)                 0
-set currentJob(filesPerSecondUnit)             "files/s"
 set currentJob(bytesPerSecond)                 0
 set currentJob(bytesPerSecondShort)            0
 set currentJob(bytesPerSecondShortUnit)        "KBytes/s"
+set currentJob(archiveBytes)                   0
+set currentJob(archiveBytesShort)              0
+set currentJob(archiveBytesShortUnit)          "KBytes"
 set currentJob(storageBytesPerSecond)          0
 set currentJob(storageBytesPerSecondShort)     0
 set currentJob(storageBytesPerSecondShortUnit) "KBytes/s"
@@ -155,6 +160,12 @@ set currentJob(fileTotalBytes)                 0
 set currentJob(storageName)                    "" 
 set currentJob(storageDoneBytes)               0  
 set currentJob(storageTotalBytes)              0  
+set currentJob(storageTotalBytesShort)         0
+set currentJob(storageTotalBytesShortUnit)     "KBytes"
+set currentJob(volumeNumber)                   0
+set currentJob(requestedVolumeNumber)          0
+set currentJob(requestedVolumeNumberDialogFlag) 0
+set currentJob(message)                        ""
 
 # misc.
 set jobListTimerId    0
@@ -424,6 +435,23 @@ proc Dialog:ok { message } \
 }
 
 #***********************************************************************
+# Name   : Dialog:query
+# Purpose: show query-dialog
+# Input  : title   - title text
+#          message - message
+#          yesText - yes text
+#          noText  - no text
+# Output : -
+# Return : 1 for "yes", 0 for "no"
+# Notes  : -
+#***********************************************************************
+
+proc Dialog:query { title message yesText noText } \
+{
+  return [expr {([Dialog:select $title $message "" [list [list $yesText] [list $noText Escape]]]==0)?1:0}]
+}
+
+#***********************************************************************
 # Name   : Dialog:confirm
 # Purpose: show confirm-dialog
 # Input  : message - message
@@ -436,7 +464,7 @@ proc Dialog:ok { message } \
 
 proc Dialog:confirm { message yesText noText } \
 {
-  return [expr {([Dialog:select "Confirm" $message "" [list [list $yesText] [list $noText Escape]]]==0)?1:0}]
+  return [Dialog:query "Confirm" $message $yesText $noText]
 }
 
 #***********************************************************************
@@ -724,6 +752,20 @@ proc stringToBoolean { s } \
 }
 
 #***********************************************************************
+# Name   : stringToBoolean
+# Purpose: convert string to boolean value
+# Input  : s - string
+# Output : -
+# Return : 1 or 0 (default 0)
+# Notes  : -
+#***********************************************************************
+
+proc booleanToString { n } \
+{
+  return [expr {$n?"yes":"no"}]
+}
+
+#***********************************************************************
 # Name   : formatByteSize
 # Purpose: format byte size in human readable format
 # Input  : n - byte size
@@ -738,6 +780,34 @@ proc formatByteSize { n } \
   elseif {$n >      1024*1024} { return [format "%.1fM" [expr {double($n)/(     1024*1024)}]] } \
   elseif {$n >           1024} { return [format "%.1fK" [expr {double($n)/(          1024)}]] } \
   else                         { return [format "%d"    $n                                  ] }
+}
+
+#***********************************************************************
+# Name       : getTmpFileName
+# Purpose    : path - path to create temporary file
+# Input      : -
+# Output     : -
+# Return     : filename
+# Side-Effect: unknown
+# Notes      : -
+#***********************************************************************
+
+proc getTmpFileName { {path "/tmp"} } \
+{
+  set n [clock clicks]
+  while {[file exists [file join $path [format "barcontrol-%08x" $n]]]} \
+  {
+    incr n
+  }
+  set tmpFileName [file join $path [format "barcontrol-%08x" $n]]
+
+  if {[catch {set handle [open $tmpFileName "w"]}]} \
+  {
+    return ""
+  }
+  close $handle
+
+  return $tmpFileName
 }
 
 # ----------------------------------------------------------------------
@@ -818,6 +888,42 @@ proc obfuscatePassword { password passwordObfuscator } \
 }
 
 #***********************************************************************
+# Name   : memorySizeToBytes
+# Purpose: convert memory size into bytes
+# Input  : s - memory size string <n>(G|M|K)
+# Output : -
+# Return : bytes
+# Notes  : -
+#***********************************************************************
+
+proc memorySizeToBytes { s } \
+{
+  if     {[regexp {(\d+)G} $s * t]} \
+  {
+    set n [expr {int($t)*1024*1024*1024}]
+  } \
+  elseif {[regexp {(\d+)M} $s * t]} \
+  {
+    set n [expr {int($t)*1024*1024}]
+  } \
+  elseif {[regexp {(\d+)K} $s * t]} \
+  {
+    set n [expr {int($t)*1024}]
+  } \
+  elseif {[string is integer $s]} \
+  {
+    set n [expr {int($s)}]
+  } \
+  else \
+  {
+    set n 0
+  }
+
+  return $n
+}
+
+
+#***********************************************************************
 # Name   : BackupServer:connect
 # Purpose: connect to server
 # Input  : hostname - host name
@@ -858,11 +964,12 @@ proc BackupServer:connect { hostname port password tlsFlag } \
     set server(socketHandle) -1
     return
   }
-#puts $sessionId
+#puts "sessionid=$sessionId"
 
-  # authorize]
+  # authorize
   set passwordObfuscatorBytes [stringToBytes $passwordObfuscator]
   set passwordBytes           [stringToBytes $password          ]
+#puts $passwordBytes
   set s ""
   set z 0
   foreach {h l} [split $sessionId {}] \
@@ -871,7 +978,7 @@ proc BackupServer:connect { hostname port password tlsFlag } \
     set n0 [expr {([llength $passwordBytes          ]>0)?[lindex $passwordBytes           [expr {$z%[llength $passwordBytes          ]}]]:0}]
     set n1 [expr {([llength $passwordObfuscatorBytes]>0)?[lindex $passwordObfuscatorBytes [expr {$z%[llength $passwordObfuscatorBytes]}]]:0}]
     scan "0x$h$l" "%x" n2
-#puts "n $n0 $n1"
+#puts "n $n0 $n1 $n2 [expr {$n0^$n1}] [expr {$n0^$n1^$n2}]"
 
     append s [format "%02x" [expr {$n0^$n1^$n2}]]
 #puts $s
@@ -959,6 +1066,12 @@ proc BackupServer:readResult { commandId _completeFlag _errorCode _result } \
   while {($id != $commandId) && ($id != 0)} \
   {
      if {[eof $server(socketHandle)]} { puts "obs?"; return 0 }
+#puts "read [clock clicks] [eof $server(socketHandle)]"
+    while {[fblocked $server(socketHandle)]} \
+    {
+puts "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX blocked"
+after 100
+}
     gets $server(socketHandle) line
 #puts "received [clock clicks] [eof $server(socketHandle)]: $line"
 
@@ -988,6 +1101,7 @@ proc BackupServer:executeCommand { _errorCode _errorText command args } \
   upvar $_errorCode errorCode
   upvar $_errorText errorText
 
+#puts "start 1"
   set commandId [BackupServer:sendCommand $command [join $args]]
   if {$commandId == 0} \
   {
@@ -997,6 +1111,7 @@ proc BackupServer:executeCommand { _errorCode _errorText command args } \
   {
     return 0
   }
+#puts "end 1"
 #puts "execute result: $localErrorCode '$result' [expr {$localErrorCode == 0}]"
 
   if {$localErrorCode == 0} \
@@ -1104,10 +1219,12 @@ proc updateJobList { jobListWidget } \
 
   # update list
   $jobListWidget delete 0 end
+#puts "start 3"
   set commandId [BackupServer:sendCommand "JOB_LIST"]
   while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
   {
-    scanx $result "%d %S %s %d %S %S %d %d" \
+#puts "1: $result"
+    scanx $result "%d %S %S %d %S %S %d %d" \
       id \
       name \
       state \
@@ -1116,6 +1233,7 @@ proc updateJobList { jobListWidget } \
       cryptAlgorithm \
       startTime \
       estimatedRestTime
+#puts "1: ok"
 
     set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
     set estimatedRestHours   [expr {int($estimatedRestTime%(24*60*60)/(60*60))}]
@@ -1126,13 +1244,14 @@ proc updateJobList { jobListWidget } \
       $id \
       $name \
       $state \
-      [formatByteSize $archivePartSize] \
+      [expr {($archivePartSize > 0)?[formatByteSize $archivePartSize]:"-"}] \
       $compressAlgorithm \
       $cryptAlgorithm \
       [expr {($startTime > 0)?[clock format $startTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
       [format "%2d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds] \
     ]
   }
+#puts "end 3"
 
   # restore selection
   if     {$selectedId > 0} \
@@ -1173,14 +1292,16 @@ proc updateCurrentJob { } \
 {
   global currentJob currentJobTimerId barControlConfig
 
+  catch {after cancel $currentJobTimerId}
+
   if {$currentJob(id) != 0} \
   {
-    catch {after cancel $currentJobTimerId}
-
+#puts "start 2"
     set commandId [BackupServer:sendCommand "JOB_INFO" $currentJob(id)]
     if {[BackupServer:readResult $commandId completeFlag errorCode result] && ($errorCode == 0)} \
     {
-      scanx $result "%s %lu %lu %lu %lu %lu %lu %lu %lu %f %f %f %f %S %lu %lu %S %lu %lu" \
+#puts "2: $result"
+      scanx $result "%S %lu %lu %lu %lu %lu %lu %lu %lu %f %f %f %lu %f %S %lu %lu %S %lu %lu %d %d" \
         state \
         currentJob(doneFiles) \
         currentJob(doneBytes) \
@@ -1193,36 +1314,47 @@ proc updateCurrentJob { } \
         filesPerSecond \
         currentJob(bytesPerSecond) \
         currentJob(storageBytesPerSecond) \
+        currentJob(archiveBytes) \
         ratio \
         currentJob(fileName) \
         currentJob(fileDoneBytes) \
         currentJob(fileTotalBytes) \
         currentJob(storageName) \
         currentJob(storageDoneBytes) \
-        currentJob(storageTotalBytes)
+        currentJob(storageTotalBytes) \
+        currentJob(volumeNumber) \
+        currentJob(requestedVolumeNumber)
+#puts "2: ok"
 
       if     {$currentJob(doneBytes)            > 1024*1024*1024} { set currentJob(doneBytesShort)             [format "%.1f" [expr {double($currentJob(doneBytes)            )/(1024*1024*1024)}]]; set currentJob(doneBytesShortUnit)             "GBytes"   } \
       elseif {$currentJob(doneBytes)            >      1024*1024} { set currentJob(doneBytesShort)             [format "%.1f" [expr {double($currentJob(doneBytes)            )/(     1024*1024)}]]; set currentJob(doneBytesShortUnit)             "MBytes"   } \
-      else                                                        { set currentJob(doneBytesShort)             [format "%.1f" [expr {double($currentJob(doneBytes)            )/(          1024)}]]; set currentJob(doneBytesShortUnit)             "KBytes"   }   
+      else                                                        { set currentJob(doneBytesShort)             [format "%.1f" [expr {double($currentJob(doneBytes)            )/(          1024)}]]; set currentJob(doneBytesShortUnit)             "KBytes"   }
       if     {$currentJob(totalBytes)           > 1024*1024*1024} { set currentJob(totalBytesShort)            [format "%.1f" [expr {double($currentJob(totalBytes)           )/(1024*1024*1024)}]]; set currentJob(totalBytesShortUnit)            "GBytes"   } \
       elseif {$currentJob(totalBytes)           >      1024*1024} { set currentJob(totalBytesShort)            [format "%.1f" [expr {double($currentJob(totalBytes)           )/(     1024*1024)}]]; set currentJob(totalBytesShortUnit)            "MBytes"   } \
-      else                                                        { set currentJob(totalBytesShort)            [format "%.1f" [expr {double($currentJob(totalBytes)           )/(          1024)}]]; set currentJob(totalBytesShortUnit)            "KBytes"   }   
+      else                                                        { set currentJob(totalBytesShort)            [format "%.1f" [expr {double($currentJob(totalBytes)           )/(          1024)}]]; set currentJob(totalBytesShortUnit)            "KBytes"   }
       if     {$currentJob(skippedBytes)         > 1024*1024*1024} { set currentJob(skippedBytesShort)          [format "%.1f" [expr {double($currentJob(skippedBytes)         )/(1024*1024*1024)}]]; set currentJob(skippedBytesShortUnit)          "GBytes"   } \
       elseif {$currentJob(skippedBytes)         >      1024*1024} { set currentJob(skippedBytesShort)          [format "%.1f" [expr {double($currentJob(skippedBytes)         )/(     1024*1024)}]]; set currentJob(skippedBytesShortUnit)          "MBytes"   } \
-      else                                                        { set currentJob(skippedBytesShort)          [format "%.1f" [expr {double($currentJob(skippedBytes)         )/(          1024)}]]; set currentJob(skippedBytesShortUnit)          "KBytes"   }   
+      else                                                        { set currentJob(skippedBytesShort)          [format "%.1f" [expr {double($currentJob(skippedBytes)         )/(          1024)}]]; set currentJob(skippedBytesShortUnit)          "KBytes"   }
       if     {$currentJob(errorBytes)           > 1024*1024*1024} { set currentJob(errorBytesShort)            [format "%.1f" [expr {double($currentJob(errorBytes)           )/(1024*1024*1024)}]]; set currentJob(errorBytesShortUnit)            "GBytes"   } \
       elseif {$currentJob(errorBytes)           >      1024*1024} { set currentJob(errorBytesShort)            [format "%.1f" [expr {double($currentJob(errorBytes)           )/(     1024*1024)}]]; set currentJob(errorBytesShortUnit)            "MBytes"   } \
-      else                                                        { set currentJob(errorBytesShort)            [format "%.1f" [expr {double($currentJob(errorBytes)           )/(          1024)}]]; set currentJob(errorBytesShortUnit)            "KBytes"   }   
+      else                                                        { set currentJob(errorBytesShort)            [format "%.1f" [expr {double($currentJob(errorBytes)           )/(          1024)}]]; set currentJob(errorBytesShortUnit)            "KBytes"   }
       if     {$currentJob(bytesPerSecond)       > 1024*1024*1024} { set currentJob(bytesPerSecondShort)        [format "%.1f" [expr {double($currentJob(bytesPerSecond)       )/(1024*1024*1024)}]]; set currentJob(bytesPerSecondUnit)             "GBytes/s" } \
       elseif {$currentJob(bytesPerSecond)       >      1024*1024} { set currentJob(bytesPerSecondShort)        [format "%.1f" [expr {double($currentJob(bytesPerSecond)       )/(     1024*1024)}]]; set currentJob(bytesPerSecondShortUnit)        "MBytes/s" } \
       else                                                        { set currentJob(bytesPerSecondShort)        [format "%.1f" [expr {double($currentJob(bytesPerSecond)       )/(          1024)}]]; set currentJob(bytesPerSecondShortUnit)        "KBytes/s" }
       if     {$currentJob(storageBytesPerSecond)> 1024*1024*1024} { set currentJob(storageBytesPerSecondShort) [format "%.1f" [expr {double($currentJob(storageBytesPerSecond))/(1024*1024*1024)}]]; set currentJob(storageBytesPerSecondShortUnit) "GBytes/s" } \
       elseif {$currentJob(storageBytesPerSecond)>      1024*1024} { set currentJob(storageBytesPerSecondShort) [format "%.1f" [expr {double($currentJob(storageBytesPerSecond))/(     1024*1024)}]]; set currentJob(storageBytesPerSecondShortUnit) "MBytes/s" } \
       else                                                        { set currentJob(storageBytesPerSecondShort) [format "%.1f" [expr {double($currentJob(storageBytesPerSecond))/(          1024)}]]; set currentJob(storageBytesPerSecondShortUnit) "KBytes/s" }
+      if     {$currentJob(archiveBytes)         > 1024*1024*1024} { set currentJob(archiveBytesShort)          [format "%.1f" [expr {double($currentJob(archiveBytes)         )/(1024*1024*1024)}]]; set currentJob(archiveBytesShortUnit)          "GBytes"   } \
+      elseif {$currentJob(archiveBytes)         >      1024*1024} { set currentJob(archiveBytesShort)          [format "%.1f" [expr {double($currentJob(archiveBytes)         )/(     1024*1024)}]]; set currentJob(archiveBytesShortUnit)          "MBytes"   } \
+      else                                                        { set currentJob(archiveBytesShort)          [format "%.1f" [expr {double($currentJob(archiveBytes)         )/(          1024)}]]; set currentJob(archiveBytesShortUnit)          "KBytes"   }
+      if     {$currentJob(storageTotalBytes)    > 1024*1024*1024} { set currentJob(storageTotalBytesShort)     [format "%.1f" [expr {double($currentJob(storageTotalBytes)    )/(1024*1024*1024)}]]; set currentJob(storageTotalBytesShortUnit)     "GBytes"   } \
+      elseif {$currentJob(storageTotalBytes)    >      1024*1024} { set currentJob(storageTotalBytesShort)     [format "%.1f" [expr {double($currentJob(storageTotalBytes)    )/(     1024*1024)}]]; set currentJob(storageTotalBytesShortUnit)     "MBytes"   } \
+      else                                                        { set currentJob(storageTotalBytesShort)     [format "%.1f" [expr {double($currentJob(storageTotalBytes)    )/(          1024)}]]; set currentJob(storageTotalBytesShortUnit)     "KBytes"   }
 
       set currentJob(filesPerSecond)   [format "%.1f" $filesPerSecond]
       set currentJob(compressionRatio) [format "%.1f" $ratio]
     }
+#puts "end 2"
   } \
   else \
   {
@@ -1256,8 +1388,12 @@ proc updateCurrentJob { } \
     set currentJob(fileTotalBytes)                 ""
     set currentJob(storageName)                    ""
     set currentJob(storageName)                    ""
-    set currentJob(storageDoneBytes)               ""
-    set currentJob(storageTotalBytes)              ""
+    set currentJob(storageDoneBytes)               0
+    set currentJob(storageTotalBytes)              0
+    set currentJob(storageTotalBytesShort)         0
+    set currentJob(storageTotalBytesUnit)          "KBytes"
+    set currentJob(volumeNumber)                   0
+    set currentJob(requestedVolumeNumber)          0
   }
 
   set currentJobTimerId [after $barControlConfig(currentJobUpdateTime) "updateCurrentJob"]
@@ -2547,7 +2683,7 @@ proc resetBarConfig {} \
   set barConfig(maxBandWidthFlag)    0
   set barConfig(maxBandWidth)        0
   set barConfig(sshPassword)         ""
-  set barConfig(sshPort)             22
+  set barConfig(sshPort)             0
   set barConfig(compressAlgorithm)   "bzip9"
   set barConfig(cryptAlgorithm)      "none"
   set barConfig(cryptPassword)       ""
@@ -2715,12 +2851,30 @@ proc loadBARConfig { configFileName } \
         set barConfig(storageHostName)  $hostName
         set barConfig(storageFileName)  $fileName
       } \
-      elseif {[regexp {^sft@:([^@]*)@([^:]*):(.*)} $s * loginName hostName fileName]} \
+      elseif {[regexp {^sftp:([^@]*)@([^:]*):(.*)} $s * loginName hostName fileName]} \
       {
         set barConfig(storageType)      "SFTP"
         set barConfig(storageLoginName) $loginName
         set barConfig(storageHostName)  $hostName
         set barConfig(storageFileName)  $fileName
+      } \
+      elseif {[regexp {^dvd:([^:]*):(.*)} $s * deviceName fileName]} \
+      {
+        set barConfig(storageType)       "DVD"
+        set barConfig(storageDeviceName) $deviceName
+        set barConfig(storageFileName)   $fileName
+      } \
+      elseif {[regexp {^dvd:(.*)} $s * fileName]} \
+      {
+        set barConfig(storageType)       "DVD"
+        set barConfig(storageDeviceName) ""
+        set barConfig(storageFileName)   $fileName
+      } \
+      elseif {[regexp {^([^:]*):(.*)} $s * deviceName fileName]} \
+      {
+        set barConfig(storageType)       "DEVICE"
+        set barConfig(storageDeviceName) $deviceName
+        set barConfig(storageFileName)   $fileName
       } \
       else \
       {
@@ -2736,6 +2890,12 @@ proc loadBARConfig { configFileName } \
       # archive-part-size = <size>
       set barConfig(archivePartSizeFlag) 1
       set barConfig(archivePartSize)     $s
+      continue
+    }
+    if {[scanx $line "volume-size = %s" s] == 1} \
+    {
+      # volume-size = <size>
+      set barConfig(volumeSize) $s
       continue
     }
     if {[scanx $line "max-tmp-size = %s" s] == 1} \
@@ -2823,19 +2983,25 @@ proc loadBARConfig { configFileName } \
     if {[scanx $line "skip-unreadable = %s" s] == 1} \
     {
       # skip-unreadable = [yes|no]
-      set barConfig(skipUnreadable) [stringToBoolean $s]
+      set barConfig(skipUnreadableFlag) [stringToBoolean $s]
       continue
     }
     if {[scanx $line "overwrite-archive-files = %s" s] == 1} \
     {
       # overwrite-archive-files = [yes|no]
-      set barConfig(overWriteArchiveFiles) [stringToBoolean $s]
+      set barConfig(overWriteArchiveFilesFlag) [stringToBoolean $s]
       continue
     }
     if {[scanx $line "overwrite-files = %s" s] == 1} \
     {
       # overwrite-archive-files = [yes|no]
-      set barConfig(overwriteFiles) [stringToBoolean $s]
+      set barConfig(overwriteFilesFlag) [stringToBoolean $s]
+      continue
+    }
+    if {[scanx $line "ecc = %s" s] == 1} \
+    {
+      # ecc = [yes|no]
+      set barConfig(errorCorrectionCodesFlag) [stringToBoolean $s]
       continue
     }
 puts "unknown $line"
@@ -2882,10 +3048,11 @@ proc saveBARConfig { configFileName } \
     if {$configFileName == ""} { return }
   }
 
-  # open file
-  if {[catch {set handle [open $configFileName "w"]}]} \
+  # open temporay file
+  set tmpFileName [getTmpFileName]
+  if {[catch {set handle [open $tmpFileName "w"]}]} \
   {
-    Dialog:error "Cannot open file '$configFileName' (error: [lindex $errorInfo 2])"
+    Dialog:error "Cannot open file '$tmpFileName' (error: [lindex $errorInfo 2])"
     return;
   }
 
@@ -2904,6 +3071,21 @@ proc saveBARConfig { configFileName } \
     "SFTP" \
     {
       puts $handle "archive-filename = [escapeString sftp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)]"
+    }
+    "DVD" \
+    {
+      if {$barConfig(storageDeviceName) != ""} \
+      {
+        puts $handle "archive-filename = [escapeString dvd:$barConfig(storageDeviceName):$barConfig(storageFileName)]"
+      } \
+      else \
+      {
+        puts $handle "archive-filename = [escapeString dvd:$barConfig(storageFileName)]"
+      }
+    }
+    "DEVICE" \
+    {
+      puts $handle "archive-filename = [escapeString $barConfig(storageDeviceName):$barConfig(storageFileName)]"
     }
     default \
     {
@@ -2927,6 +3109,7 @@ proc saveBARConfig { configFileName } \
   puts $handle "ssh-privat-key = $barConfig(sshPrivatKeyFileName)"
   puts $handle "compress-algorithm = [escapeString $barConfig(compressAlgorithm)]"
   puts $handle "crypt-algorithm = [escapeString $barConfig(cryptAlgorithm)]"
+  puts $handle "volume-size = $barConfig(volumeSize)"
   foreach pattern [$backupIncludedListWidget get 0 end] \
   {
     puts $handle "include = [escapeString $pattern]"
@@ -2935,13 +3118,25 @@ proc saveBARConfig { configFileName } \
   {
     puts $handle "exclude = [escapeString $pattern]"
   }
-  puts $handle "skip-unreadable = $barConfig(skipUnreadable)"
-  puts $handle "overwrite-archive-files = $barConfig(overwriteArchiveFiles)"
-  puts $handle "overwrite-files = $barConfig(overwriteFiles)"
+  puts $handle "skip-unreadable = [booleanToString $barConfig(skipUnreadableFlag)]"
+  puts $handle "overwrite-archive-files = [booleanToString $barConfig(overwriteArchiveFilesFlag)]"
+  puts $handle "overwrite-files = [booleanToString $barConfig(overwriteFilesFlag)]"
+  puts $handle "ecc = [booleanToString $barConfig(errorCorrectionCodesFlag)]"
 
   # close file
   close $handle
 
+  # make backup file, rename temporary file
+  catch {file rename $configFileName "$configFileName~"}
+  if {[catch {file copy -force $tmpFileName $configFileName}]} \
+  {
+    Dialog:error "Cannot copy file '$tmpFileName' to '$configFileName' (error: [lindex $errorInfo 2])"
+    catch {file rename "$configFileName~" $configFileName}
+    return
+  }
+  catch {file delete $tmpFileName}
+
+  # reset modify flag
   set barConfigFileName $configFileName
   clearConfigModify
 }
@@ -3207,9 +3402,11 @@ proc addBackupJob { jobListWidget } \
   BackupServer:executeCommand errorCode errorText "SET" "ssh-port"                $barConfig(sshPort)
   BackupServer:executeCommand errorCode errorText "SET" "compress-algorithm"      $barConfig(compressAlgorithm)
   BackupServer:executeCommand errorCode errorText "SET" "crypt-algorithm"         $barConfig(cryptAlgorithm)
-  BackupServer:executeCommand errorCode errorText "SET" "skip-unreadable"         $barConfig(skipUnreadable)
-  BackupServer:executeCommand errorCode errorText "SET" "overwrite-archive-files" $barConfig(overwriteArchiveFiles)
-  BackupServer:executeCommand errorCode errorText "SET" "overwrite-files"         $barConfig(overwriteFiles)
+  BackupServer:executeCommand errorCode errorText "SET" "volume-size"             $barConfig(volumeSize)
+  BackupServer:executeCommand errorCode errorText "SET" "skip-unreadable"         $barConfig(skipUnreadableFlag)
+  BackupServer:executeCommand errorCode errorText "SET" "overwrite-archive-files" $barConfig(overwriteArchiveFilesFlag)
+  BackupServer:executeCommand errorCode errorText "SET" "overwrite-files"         $barConfig(overwriteFilesFlag)
+  BackupServer:executeCommand errorCode errorText "SET" "ecc"                     $barConfig(errorCorrectionCodesFlag)
 
   # add jobs archive file name
   if     {$barConfig(storageType) == "FILESYSTEM"} \
@@ -3223,6 +3420,14 @@ proc addBackupJob { jobListWidget } \
   elseif {$barConfig(storageType) == "SFTP"} \
   {
     set archiveFileName "sftp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
+  } \
+  elseif {$barConfig(storageType) == "DVD"} \
+  {
+    set archiveFileName "dvd:$barConfig(storageDeviceName):$barConfig(storageFileName)"
+  } \
+  elseif {$barConfig(storageType) == "DEVICE"} \
+  {
+    set archiveFileName "$barConfig(storageDeviceName):$barConfig(storageFileName)"
   } \
   else \
   {
@@ -3279,7 +3484,7 @@ proc addRestoreJob { jobListWidget } \
   # set other parameters
   BackupServer:executeCommand errorCode errorText "SET" "max-band-width"          $barConfig(maxBandWidth)
   BackupServer:executeCommand errorCode errorText "SET" "ssh-port"                $barConfig(sshPort)
-  BackupServer:executeCommand errorCode errorText "SET" "overwrite-files"         $barConfig(overwriteFiles)
+  BackupServer:executeCommand errorCode errorText "SET" "overwrite-files"         $barConfig(overwriteFilesFlag)
   BackupServer:executeCommand errorCode errorText "SET" "destination-directory"   $barConfig(destinationDirectoryName)
   BackupServer:executeCommand errorCode errorText "SET" "destination-strip-count" $barConfig(destinationStripCount)
 
@@ -3295,6 +3500,10 @@ proc addRestoreJob { jobListWidget } \
   elseif {$barConfig(storageType) == "SFTP"} \
   {
     set archiveFileName "sftp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
+  } \
+  elseif {$barConfig(storageType) == "DEVICE"} \
+  {
+    set archiveFileName "$barConfig(storageDeviceName):$barConfig(storageFileName)"
   } \
   else \
   {
@@ -3425,7 +3634,7 @@ while {$z<[llength $argv]} \
       }
       set port [lindex $argv $z]
     }
-    "^--tls-port=" \
+    "^--tls-port=" - \
     "^--ssl-port=" \
     {
       set s [string range [lindex $argv $z] [expr {[string first "=" [lindex $argv $z]]+1}] end]
@@ -3436,7 +3645,7 @@ while {$z<[llength $argv]} \
       }
       set barControlConfig(serverTLSPort) $s
     }
-    "^--tls-port$" \
+    "^--tls-port$" - \
     "^--ssl-port$" \
     {
       incr z
@@ -3557,7 +3766,7 @@ if {$listFlag} \
   set commandId [BackupServer:sendCommand "JOB_LIST"]
   while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
   {
-    scanx $result "%d %S %s %d %S %S %d %d" \
+    scanx $result "%d %S %S %d %S %S %d %d" \
       id \
       name \
       state \
@@ -3641,134 +3850,168 @@ pack $mainWindow.tabs -fill both -expand yes -padx 2p -pady 2p
 
 # ----------------------------------------------------------------------
 
+
+
 frame .jobs
   labelframe .jobs.selected -text "Selected"
-    label .jobs.selected.doneTitle -text "Done:"
-    grid .jobs.selected.doneTitle -row 0 -column 0 -sticky "w" 
-    frame .jobs.selected.done
-      entry .jobs.selected.done.files -width 10 -textvariable currentJob(doneFiles) -justify right -border 0 -state readonly
-      grid .jobs.selected.done.files -row 0 -column 0 -sticky "w" 
-      label .jobs.selected.done.filesPostfix -text "files"
-      grid .jobs.selected.done.filesPostfix -row 0 -column 1 -sticky "w" 
+    label .jobs.selected.done -text "Done:"
+    grid .jobs.selected.done -row 0 -column 0 -sticky "w" 
 
-      entry .jobs.selected.done.bytes -width 20 -textvariable currentJob(doneBytes) -justify right -border 0 -state readonly
-      grid .jobs.selected.done.bytes -row 0 -column 2 -sticky "w" 
-      label .jobs.selected.done.bytesPostfix -text "bytes"
-      grid .jobs.selected.done.bytesPostfix -row 0 -column 3 -sticky "w" 
+    frame .jobs.selected.doneFiles
+      entry .jobs.selected.doneFiles.data -width 10 -textvariable currentJob(doneFiles) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.doneFiles.data -side left
+      label .jobs.selected.doneFiles.unit -text "files" -anchor w
+      pack .jobs.selected.doneFiles.unit -side left
+    grid .jobs.selected.doneFiles -row 0 -column 1 -sticky "w" -padx 2p -pady 2p
 
-      label .jobs.selected.done.separator -text "/"
-      grid .jobs.selected.done.separator -row 0 -column 4 -sticky "w" 
+    frame .jobs.selected.doneBytes
+      entry .jobs.selected.doneBytes.data -width 20 -textvariable currentJob(doneBytes) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.doneBytes.data -side left
+      label .jobs.selected.doneBytes.unit -text "bytes" -anchor w
+      pack .jobs.selected.doneBytes.unit -side left
+    grid .jobs.selected.doneBytes -row 0 -column 2 -sticky "w" -padx 2p -pady 2p
 
-      entry .jobs.selected.done.bytesShort -width 6 -textvariable currentJob(doneBytesShort) -justify right -border 0 -state readonly
-      grid .jobs.selected.done.bytesShort -row 0 -column 5 -sticky "w" 
-      label .jobs.selected.done.bytesShortUnit -width 8 -textvariable currentJob(doneBytesShortUnit) -justify left
-      grid .jobs.selected.done.bytesShortUnit -row 0 -column 6 -sticky "w"
+    label .jobs.selected.doneSeparator1 -text "/"
+    grid .jobs.selected.doneSeparator1 -row 0 -column 3 -sticky "w" 
 
-      label .jobs.selected.done.compressRatioTitle -text "Ratio"
-      grid .jobs.selected.done.compressRatioTitle -row 0 -column 7 -sticky "w" 
-      entry .jobs.selected.done.compressRatio -width 5 -textvariable currentJob(compressionRatio) -justify right -border 0 -state readonly
-      grid .jobs.selected.done.compressRatio -row 0 -column 8 -sticky "w" 
-      label .jobs.selected.done.compressRatioPostfix -text "%"
-      grid .jobs.selected.done.compressRatioPostfix -row 0 -column 9 -sticky "w" 
+    frame .jobs.selected.doneBytesShort
+      entry .jobs.selected.doneBytesShort.data -width 6 -textvariable currentJob(doneBytesShort) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.doneBytesShort.data -side left
+      label .jobs.selected.doneBytesShort.unit -width 8 -textvariable currentJob(doneBytesShortUnit) -anchor w
+      pack .jobs.selected.doneBytesShort.unit -side left
+    grid .jobs.selected.doneBytesShort -row 0 -column 4 -sticky "w" -padx 2p -pady 2p
 
-      grid rowconfigure    .jobs.selected.done { 0 } -weight 1
-      grid columnconfigure .jobs.selected.done { 10 } -weight 1
-    grid .jobs.selected.done -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
+    label .jobs.selected.stored -text "Stored:"
+    grid .jobs.selected.stored -row 1 -column 0 -sticky "w" 
 
-    label .jobs.selected.skippedTitle -text "Skipped:"
-    grid .jobs.selected.skippedTitle -row 1 -column 0 -sticky "w" 
-    frame .jobs.selected.skipped
-      entry .jobs.selected.skipped.files -width 10 -textvariable currentJob(skippedFiles) -justify right -border 0 -state readonly
-      grid .jobs.selected.skipped.files -row 0 -column 0 -sticky "w" 
-      label .jobs.selected.skipped.filesPostfix -text "files"
-      grid .jobs.selected.skipped.filesPostfix -row 0 -column 1 -sticky "w" 
+    frame .jobs.selected.storageTotalBytes
+      entry .jobs.selected.storageTotalBytes.data -width 20 -textvariable currentJob(archiveBytes) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.storageTotalBytes.data -side left
+      label .jobs.selected.storageTotalBytes.postfix -text "bytes" -anchor w
+      pack .jobs.selected.storageTotalBytes.postfix -side left
+    grid .jobs.selected.storageTotalBytes -row 1 -column 2 -sticky "w" -padx 2p -pady 2p
 
-      entry .jobs.selected.skipped.bytes -width 20 -textvariable currentJob(skippedBytes) -justify right -border 0 -state readonly
-      grid .jobs.selected.skipped.bytes -row 0 -column 2 -sticky "w" 
-      label .jobs.selected.skipped.bytesPostfix -text "bytes"
-      grid .jobs.selected.skipped.bytesPostfix -row 0 -column 3 -sticky "w" 
+    label .jobs.selected.doneSeparator2 -text "/"
+    grid .jobs.selected.doneSeparator2 -row 1 -column 3 -sticky "w" 
 
-      label .jobs.selected.skipped.separator -text "/"
-      grid .jobs.selected.skipped.separator -row 0 -column 4 -sticky "w" 
+    frame .jobs.selected.doneStorageTotalBytesShort
+      entry .jobs.selected.doneStorageTotalBytesShort.data -width 6 -textvariable currentJob(archiveBytesShort) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.doneStorageTotalBytesShort.data -side left
+      label .jobs.selected.doneStorageTotalBytesShort.unit -width 8 -textvariable currentJob(archiveBytesShortUnit) -anchor w
+      pack .jobs.selected.doneStorageTotalBytesShort.unit -side left
+    grid .jobs.selected.doneStorageTotalBytesShort -row 1 -column 4 -sticky "w" -padx 2p -pady 2p
 
-      entry .jobs.selected.skipped.bytesShort -width 6 -textvariable currentJob(skippedBytesShort) -justify right -border 0 -state readonly
-      grid .jobs.selected.skipped.bytesShort -row 0 -column 5 -sticky "w" 
-      label .jobs.selected.skipped.bytesShortUnit -width 8 -textvariable currentJob(skippedBytesShortUnit) -justify left
-      grid .jobs.selected.skipped.bytesShortUnit -row 0 -column 6 -sticky "w"
+    frame .jobs.selected.doneCompressRatio
+      label .jobs.selected.doneCompressRatio.title -text "Ratio"
+      pack .jobs.selected.doneCompressRatio.title -side left
+      entry .jobs.selected.doneCompressRatio.data -width 7 -textvariable currentJob(compressionRatio) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.doneCompressRatio.data -side left
+      label .jobs.selected.doneCompressRatio.postfix -text "%" -anchor w
+      pack .jobs.selected.doneCompressRatio.postfix -side left
+    grid .jobs.selected.doneCompressRatio -row 1 -column 5 -sticky "w" -padx 2p -pady 2p
 
-      grid rowconfigure    .jobs.selected.skipped { 0 } -weight 1
-      grid columnconfigure .jobs.selected.skipped { 7 } -weight 1
-    grid .jobs.selected.skipped -row 1 -column 1 -sticky "we" -padx 2p -pady 2p
+    label .jobs.selected.skipped -text "Skipped:"
+    grid .jobs.selected.skipped -row 2 -column 0 -sticky "w" 
 
-    label .jobs.selected.errorTitle -text "Errors:"
-    grid .jobs.selected.errorTitle -row 2 -column 0 -sticky "w" 
-    frame .jobs.selected.error
-      entry .jobs.selected.error.files -width 10 -textvariable currentJob(errorFiles) -justify right -border 0 -state readonly
-      grid .jobs.selected.error.files -row 0 -column 0 -sticky "w" 
-      label .jobs.selected.error.filesPostfix -text "files"
-      grid .jobs.selected.error.filesPostfix -row 0 -column 1 -sticky "w" 
+    frame .jobs.selected.skippedFiles
+      entry .jobs.selected.skippedFiles.data -width 10 -textvariable currentJob(skippedFiles) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.skippedFiles.data -side left
+      label .jobs.selected.skippedFiles.unit -text "files" -anchor w
+      pack .jobs.selected.skippedFiles.unit -side left
+    grid .jobs.selected.skippedFiles -row 2 -column 1 -sticky "w" -padx 2p -pady 2p
 
-      entry .jobs.selected.error.bytes -width 20 -textvariable currentJob(errorBytes) -justify right -border 0 -state readonly
-      grid .jobs.selected.error.bytes -row 0 -column 2 -sticky "w" 
-      label .jobs.selected.error.bytesPostfix -text "bytes"
-      grid .jobs.selected.error.bytesPostfix -row 0 -column 3 -sticky "w" 
+    frame .jobs.selected.skippedBytes
+      entry .jobs.selected.skippedBytes.data -width 20 -textvariable currentJob(skippedBytes) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.skippedBytes.data -side left
+      label .jobs.selected.skippedBytes.unit -text "bytes" -anchor w
+      pack .jobs.selected.skippedBytes.unit -side left
+    grid .jobs.selected.skippedBytes -row 2 -column 2 -sticky "w" -padx 2p -pady 2p
 
-      label .jobs.selected.error.separator -text "/"
-      grid .jobs.selected.error.separator -row 0 -column 4 -sticky "w" 
+    label .jobs.selected.skippedSeparator -text "/"
+    grid .jobs.selected.skippedSeparator -row 2 -column 3 -sticky "w" 
 
-      entry .jobs.selected.error.bytesShort -width 6 -textvariable currentJob(errorBytesShort) -justify right -border 0 -state readonly
-      grid .jobs.selected.error.bytesShort -row 0 -column 5 -sticky "w" 
-      label .jobs.selected.error.bytesShortUnit -width 8 -textvariable currentJob(errorBytesShortUnit) -justify left
-      grid .jobs.selected.error.bytesShortUnit -row 0 -column 6 -sticky "w"
+    frame .jobs.selected.skippedBytesShort
+      entry .jobs.selected.skippedBytesShort.data -width 6 -textvariable currentJob(skippedBytesShort) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.skippedBytesShort.data -side left
+      label .jobs.selected.skippedBytesShort.unit -width 8 -textvariable currentJob(skippedBytesShortUnit) -anchor w
+      pack .jobs.selected.skippedBytesShort.unit -side left
+    grid .jobs.selected.skippedBytesShort -row 2 -column 4 -sticky "w" -padx 2p -pady 2p
 
-      grid rowconfigure    .jobs.selected.error { 0 } -weight 1
-      grid columnconfigure .jobs.selected.error { 7 } -weight 1
-    grid .jobs.selected.error -row 2 -column 1 -sticky "we" -padx 2p -pady 2p
+    label .jobs.selected.error -text "Errors:"
+    grid .jobs.selected.error -row 3 -column 0 -sticky "w" 
 
-    label .jobs.selected.totalTitle -text "Total:"
-    grid .jobs.selected.totalTitle -row 3 -column 0 -sticky "w" 
-    frame .jobs.selected.total
-      entry .jobs.selected.total.files -width 10 -textvariable currentJob(totalFiles) -justify right -border 0 -state readonly
-      grid .jobs.selected.total.files -row 0 -column 0 -sticky "w" 
-      label .jobs.selected.total.filesPostfix -text "files"
-      grid .jobs.selected.total.filesPostfix -row 0 -column 1 -sticky "w" 
+    frame .jobs.selected.errorFiles
+      entry .jobs.selected.errorFiles.data -width 10 -textvariable currentJob(errorFiles) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.errorFiles.data -side left
+      label .jobs.selected.errorFiles.unit -text "files" -anchor w
+      pack .jobs.selected.errorFiles.unit -side left
+    grid .jobs.selected.errorFiles -row 3 -column 1 -sticky "w" -padx 2p -pady 2p
 
-      entry .jobs.selected.total.bytes -width 20 -textvariable currentJob(totalBytes) -justify right -border 0 -state readonly
-      grid .jobs.selected.total.bytes -row 0 -column 2 -sticky "w" 
-      label .jobs.selected.total.bytesPostfix -text "bytes"
-      grid .jobs.selected.total.bytesPostfix -row 0 -column 3 -sticky "w" 
+    frame .jobs.selected.errorBytes
+      entry .jobs.selected.errorBytes.data -width 20 -textvariable currentJob(errorBytes) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.errorBytes.data -side left
+      label .jobs.selected.errorBytes.unit -text "bytes"
+      pack .jobs.selected.errorBytes.unit -side left
+    grid .jobs.selected.errorBytes -row 3 -column 2 -sticky "w" -padx 2p -pady 2p
 
-      label .jobs.selected.total.separator -text "/"
-      grid .jobs.selected.total.separator -row 0 -column 4 -sticky "w" 
+    label .jobs.selected.errorSeparator -text "/"
+    grid .jobs.selected.errorSeparator -row 3 -column 3 -sticky "w" 
 
-      entry .jobs.selected.total.bytesShort -width 6 -textvariable currentJob(totalBytesShort) -justify right -border 0 -state readonly
-      grid .jobs.selected.total.bytesShort -row 0 -column 5 -sticky "w" 
-      label .jobs.selected.total.bytesShortUnit -width 8 -textvariable currentJob(totalBytesShortUnit) -justify left
-      grid .jobs.selected.total.bytesShortUnit -row 0 -column 6 -sticky "w" 
+    frame .jobs.selected.errorBytesShort
+      entry .jobs.selected.errorBytesShort.data -width 6 -textvariable currentJob(errorBytesShort) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.errorBytesShort.data -side left
+      label .jobs.selected.errorBytesShort.unit -width 8 -textvariable currentJob(errorBytesShortUnit) -anchor w
+      pack .jobs.selected.errorBytesShort.unit -side left
+    grid .jobs.selected.errorBytesShort -row 3 -column 4 -sticky "w" -padx 2p -pady 2p
 
-      entry .jobs.selected.total.filesPerSecond -width 6 -textvariable currentJob(filesPerSecond) -justify right -border 0 -state readonly
-      grid .jobs.selected.total.filesPerSecond -row 0 -column 7 -sticky "w" 
-      label .jobs.selected.total.filesPerSecondUnit -width 8 -textvariable currentJob(filesPerSecondUnit) -justify left
-      grid .jobs.selected.total.filesPerSecondUnit -row 0 -column 8 -sticky "w"
+    label .jobs.selected.total -text "Total:"
+    grid .jobs.selected.total -row 4 -column 0 -sticky "w" 
 
-      entry .jobs.selected.total.bytesPerSecond -width 6 -textvariable currentJob(bytesPerSecondShort) -justify right -border 0 -state readonly
-      grid .jobs.selected.total.bytesPerSecond -row 0 -column 9 -sticky "w" 
-      label .jobs.selected.total.bytesPerSecondUnit -width 8 -textvariable currentJob(bytesPerSecondShortUnit) -justify left
-      grid .jobs.selected.total.bytesPerSecondUnit -row 0 -column 10 -sticky "w"
+    frame .jobs.selected.totalFiles
+      entry .jobs.selected.totalFiles.data -width 10 -textvariable currentJob(totalFiles) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.totalFiles.data -side left
+      label .jobs.selected.totalFiles.unit -text "files" -anchor w
+      pack .jobs.selected.totalFiles.unit -side left
+    grid .jobs.selected.totalFiles -row 4 -column 1 -sticky "w" -padx 2p -pady 2p
 
-      grid rowconfigure    .jobs.selected.total { 0 } -weight 1
-      grid columnconfigure .jobs.selected.total { 11 } -weight 1
-    grid .jobs.selected.total -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
+    frame .jobs.selected.totalBytes
+      entry .jobs.selected.totalBytes.data -width 20 -textvariable currentJob(totalBytes) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.totalBytes.data -side left
+      label .jobs.selected.totalBytes.unit -text "bytes"
+      pack .jobs.selected.totalBytes.unit -side left
+    grid .jobs.selected.totalBytes -row 4 -column 2 -sticky "w" -padx 2p -pady 2p
+
+    label .jobs.selected.totalSeparator -text "/"
+    grid .jobs.selected.totalSeparator -row 4 -column 3 -sticky "w" 
+
+    frame .jobs.selected.totalBytesShort
+      entry .jobs.selected.totalBytesShort.data -width 6 -textvariable currentJob(totalBytesShort) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.totalBytesShort.data -side left
+      label .jobs.selected.totalBytesShort.unit -width 8 -textvariable currentJob(totalBytesShortUnit) -anchor w
+      pack .jobs.selected.totalBytesShort.unit -side left
+    grid .jobs.selected.totalBytesShort -row 4 -column 4 -sticky "w" -padx 2p -pady 2p
+
+    frame .jobs.selected.doneFilesPerSecond
+      entry .jobs.selected.doneFilesPerSecond.data -width 10 -textvariable currentJob(filesPerSecond) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.doneFilesPerSecond.data -side left
+      label .jobs.selected.doneFilesPerSecond.unit -text "files/s" -anchor w
+      pack .jobs.selected.doneFilesPerSecond.unit -side left
+    grid .jobs.selected.doneFilesPerSecond -row 4 -column 5 -sticky "w" -padx 2p -pady 2p
+
+    frame .jobs.selected.doneBytesPerSecond
+      entry .jobs.selected.doneBytesPerSecond.data -width 10 -textvariable currentJob(bytesPerSecondShort) -justify right -borderwidth 0 -state readonly
+      pack .jobs.selected.doneBytesPerSecond.data -side left
+      label .jobs.selected.doneBytesPerSecond.unit -width 8 -textvariable currentJob(bytesPerSecondShortUnit) -anchor w
+      pack .jobs.selected.doneBytesPerSecond.unit -side left
+    grid .jobs.selected.doneBytesPerSecond -row 4 -column 6 -sticky "w" -padx 2p -pady 2p
 
     label .jobs.selected.currentFileNameTitle -text "File:"
-    grid .jobs.selected.currentFileNameTitle -row 4 -column 0 -sticky "w"
-    entry .jobs.selected.currentFileName -textvariable currentJob(fileName) -border 0 -state readonly
-#entry .jobs.selected.done.percentageContainer.x
-#pack .jobs.selected.done.percentageContainer.x -fill x -expand yes
-    grid .jobs.selected.currentFileName -row 4 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.currentFileNameTitle -row 5 -column 0 -sticky "w"
+    entry .jobs.selected.currentFileName -textvariable currentJob(fileName) -borderwidth 0 -state readonly
+    grid .jobs.selected.currentFileName -row 5 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
 
     Dialog:progressbar .jobs.selected.filePercentage
-    grid .jobs.selected.filePercentage -row 5 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.filePercentage -row 6 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(fileDoneBytes) \
       "
         global currentJob
@@ -3791,12 +4034,37 @@ frame .jobs
       "
 
     label .jobs.selected.storageNameTitle -text "Storage:"
-    grid .jobs.selected.storageNameTitle -row 6 -column 0 -sticky "w"
-    entry .jobs.selected.storageName -textvariable currentJob(storageName) -border 0 -state readonly
-    grid .jobs.selected.storageName -row 6 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.storageNameTitle -row 7 -column 0 -sticky "w"
+    entry .jobs.selected.storageName -textvariable currentJob(storageName) -borderwidth 0 -state readonly
+    grid .jobs.selected.storageName -row 7 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
 
     Dialog:progressbar .jobs.selected.storagePercentage
-    grid .jobs.selected.storagePercentage -row 7 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.storagePercentage -row 8 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
+    addModifyTrace ::currentJob(storageDoneBytes) \
+      "
+        global currentJob
+
+        if {\$currentJob(storageTotalBytes) > 0} \
+        {
+          set p \[expr {double(\$currentJob(storageDoneBytes))/\$currentJob(storageTotalBytes)}]
+          Dialog:progressbar .jobs.selected.storagePercentage update \$p
+        }
+      "
+    addModifyTrace ::currentJob(storageTotalBytes) \
+      "
+        global currentJob
+
+        if {\$currentJob(storageTotalBytes) > 0} \
+        {
+          set p \[expr {double(\$currentJob(storageDoneBytes))/\$currentJob(storageTotalBytes)}]
+          Dialog:progressbar .jobs.selected.storagePercentage update \$p
+        }
+      "
+
+    label .jobs.selected.storageVolumeTitle -text "Volume:"
+    grid .jobs.selected.storageVolumeTitle -row 9 -column 0 -sticky "w"
+    Dialog:progressbar .jobs.selected.storageVolume
+    grid .jobs.selected.storageVolume -row 9 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(storageDoneBytes) \
       "
         global currentJob
@@ -3819,9 +4087,9 @@ frame .jobs
       "
 
     label .jobs.selected.totalFilesPercentageTitle -text "Total files:"
-    grid .jobs.selected.totalFilesPercentageTitle -row 8 -column 0 -sticky "w"
+    grid .jobs.selected.totalFilesPercentageTitle -row 10 -column 0 -sticky "w"
     Dialog:progressbar .jobs.selected.totalFilesPercentage
-    grid .jobs.selected.totalFilesPercentage -row 8 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.totalFilesPercentage -row 10 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(doneFiles) \
       "
         global currentJob
@@ -3844,9 +4112,9 @@ frame .jobs
       "
 
     label .jobs.selected.totalBytesPercentageTitle -text "Total bytes:"
-    grid .jobs.selected.totalBytesPercentageTitle -row 9 -column 0 -sticky "w"
+    grid .jobs.selected.totalBytesPercentageTitle -row 11 -column 0 -sticky "w"
     Dialog:progressbar .jobs.selected.totalBytesPercentage
-    grid .jobs.selected.totalBytesPercentage -row 9 -column 1 -columnspan 4 -sticky "we" -padx 2p -pady 2p
+    grid .jobs.selected.totalBytesPercentage -row 11 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
     addModifyTrace ::currentJob(doneBytes) \
       "
         global currentJob
@@ -3868,26 +4136,20 @@ frame .jobs
         }
       "
 
+    label .jobs.selected.messageTitle -text "Message:"
+    grid .jobs.selected.messageTitle -row 12 -column 0 -sticky "w"
+    entry .jobs.selected.message -textvariable currentJob(message) -borderwidth 0 -highlightthickness 0 -state readonly -font -*-*-bold-*-*-*-*-*-*-*-*-*-*-*-*
+    grid .jobs.selected.message -row 12 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
+
 #    grid rowconfigure    .jobs.selected { 0 } -weight 1
     grid columnconfigure .jobs.selected { 4 } -weight 1
   grid .jobs.selected -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
-  addModifyTrace ::currentJob(id) \
-    "
-      if {\$::currentJob(id) != 0} \
-      {
-         .jobs.selected configure -text \"Selected #\$::currentJob(id)\"
-      } \
-      else \
-      {
-         .jobs.selected configure -text \"Selected\"
-      }
-    "
 
   frame .jobs.list
     mclistbox::mclistbox .jobs.list.data -height 1 -bg white -labelanchor w -selectmode single -xscrollcommand ".jobs.list.xscroll set" -yscrollcommand ".jobs.list.yscroll set"
     .jobs.list.data column add id                -label "Id"             -width 5
     .jobs.list.data column add name              -label "name"           -width 12
-    .jobs.list.data column add state             -label "State"          -width 12
+    .jobs.list.data column add state             -label "State"          -width 16
     .jobs.list.data column add archivePartSize   -label "Part size"      -width 8
     .jobs.list.data column add compressAlgortihm -label "Compress"       -width 10
     .jobs.list.data column add cryptAlgorithm    -label "Crypt"          -width 10
@@ -3904,10 +4166,12 @@ frame .jobs
   grid .jobs.list -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
 
   frame .jobs.buttons
-    button .jobs.buttons.abort -text "Abort" -command "event generate . <<Event_abortJob>>"
+    button .jobs.buttons.abort -text "Abort" -state disabled -command "event generate . <<Event_abortJob>>"
     pack .jobs.buttons.abort -side left -padx 2p
-    button .jobs.buttons.rem -text "Rem (Del)" -command "event generate . <<Event_remJob>>"
+    button .jobs.buttons.rem -text "Rem (Del)" -state disabled -command "event generate . <<Event_remJob>>"
     pack .jobs.buttons.rem -side left -padx 2p
+    button .jobs.buttons.volume -text "Volume" -state disabled -command "event generate . <<Event_volume>>"
+    pack .jobs.buttons.volume -side left -padx 2p
     button .jobs.buttons.quit -text "Quit" -command "event generate . <<Event_quit>>"
     pack .jobs.buttons.quit -side right -padx 2p
   grid .jobs.buttons -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
@@ -3971,16 +4235,16 @@ frame .backup
       set extension ""
       regexp {.*(\.[^\.]+)} $fileName * extension
 
-      .backup.files.list.popup subwidget menu entryconfigure 0 -label "Add include '$fileName'"    -command "addIncludedPattern $fileName"
-      .backup.files.list.popup subwidget menu entryconfigure 1 -label "Add exclude '$fileName'"    -command "addExcludedPattern $fileName"
-      .backup.files.list.popup subwidget menu entryconfigure 2 -label "Remove include '$fileName'" -command "remIncludedPattern $fileName"
-      .backup.files.list.popup subwidget menu entryconfigure 3 -label "Remove exclude '$fileName'" -command "remExcludedPattern $fileName"
+      .backup.files.list.popup subwidget menu entryconfigure 0 -label "Add include '$fileName'"    -command "backupAddIncludedPattern $fileName"
+      .backup.files.list.popup subwidget menu entryconfigure 1 -label "Add exclude '$fileName'"    -command "backupAddExcludedPattern $fileName"
+      .backup.files.list.popup subwidget menu entryconfigure 2 -label "Remove include '$fileName'" -command "backupRemIncludedPattern $fileName"
+      .backup.files.list.popup subwidget menu entryconfigure 3 -label "Remove exclude '$fileName'" -command "backupRemExcludedPattern $fileName"
       if {$extension != ""} \
       {
-        .backup.files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern *$extension"    -state normal -command "addIncludedPattern *$extension"
-        .backup.files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern *$extension"    -state normal -command "addExcludedPattern *$extension"
-        .backup.files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern *$extension" -state normal -command "remIncludedPattern *$extension"
-        .backup.files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern *$extension" -state normal -command "remExcludedPattern *$extension"
+        .backup.files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern *$extension"    -state normal -command "backupAddIncludedPattern *$extension"
+        .backup.files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern *$extension"    -state normal -command "backupAddExcludedPattern *$extension"
+        .backup.files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern *$extension" -state normal -command "backupRemIncludedPattern *$extension"
+        .backup.files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern *$extension" -state normal -command "backupRemExcludedPattern *$extension"
       } \
       else \
       {
@@ -4066,7 +4330,7 @@ frame .backup
     frame .backup.filters.excludedButtons
       button .backup.filters.excludedButtons.add -text "Add (F7)" -command "event generate . <<Event_backupAddExcludePattern>>"
       pack .backup.filters.excludedButtons.add -side left
-      button .backup.filters.excludedButtons.rem -text "Rem (F8)" -state disabled -command "event generate . <<Event_backupRePattern>>"
+      button .backup.filters.excludedButtons.rem -text "Rem (F8)" -state disabled -command "event generate . <<Event_backupRemExcludePattern>>"
       pack .backup.filters.excludedButtons.rem -side left
     grid .backup.filters.excludedButtons -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
 
@@ -4075,7 +4339,7 @@ frame .backup
 
     label .backup.filters.optionsTitle -text "Options:"
     grid .backup.filters.optionsTitle -row 4 -column 0 -sticky "nw" 
-    checkbutton .backup.filters.optionSkipUnreadable -text "skip unreable files" -variable barConfig(skipUnreadable)
+    checkbutton .backup.filters.optionSkipUnreadable -text "skip unreable files" -variable barConfig(skipUnreadableFlag)
     grid .backup.filters.optionSkipUnreadable -row 4 -column 1 -sticky "nw" 
 
     grid rowconfigure    .backup.filters { 0 2 } -weight 1
@@ -4101,6 +4365,7 @@ frame .backup
      .backup.storage.split.archivePartSize insert end 256M
      .backup.storage.split.archivePartSize insert end 512M
      .backup.storage.split.archivePartSize insert end 1G
+     .backup.storage.split.archivePartSize insert end 2G
 
       grid rowconfigure    .backup.storage.split { 0 } -weight 1
       grid columnconfigure .backup.storage.split { 1 } -weight 1
@@ -4134,31 +4399,9 @@ frame .backup
     grid .backup.storage.maxTmpSize -row 1 -column 1 -sticky "w" -padx 2p -pady 2p
     addEnableTrace ::barConfig(maxTmpSizeFlag) 1 .backup.storage.maxTmpSize.size
 
-    label .backup.storage.maxBandWidthTitle -text "Max. band width:"
-    grid .backup.storage.maxBandWidthTitle -row 2 -column 0 -sticky "w" 
-    frame .backup.storage.maxBandWidth
-      radiobutton .backup.storage.maxBandWidth.unlimited -text "unlimited" -anchor w -variable barConfig(maxBandWidthFlag) -value 0
-      grid .backup.storage.maxBandWidth.unlimited -row 0 -column 1 -sticky "w" 
-      radiobutton .backup.storage.maxBandWidth.limitto -text "limit to" -width 8 -anchor w -variable barConfig(maxBandWidthFlag) -value 1
-      grid .backup.storage.maxBandWidth.limitto -row 0 -column 2 -sticky "w" 
-      tixComboBox .backup.storage.maxBandWidth.size -variable barConfig(maxBandWidth) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
-      grid .backup.storage.maxBandWidth.size -row 0 -column 3 -sticky "w" 
-      label .backup.storage.maxBandWidth.unit -text "bits/s"
-      grid .backup.storage.maxBandWidth.unit -row 0 -column 4 -sticky "w" 
-
-     .backup.storage.maxBandWidth.size insert end 64K
-     .backup.storage.maxBandWidth.size insert end 128K
-     .backup.storage.maxBandWidth.size insert end 256K
-     .backup.storage.maxBandWidth.size insert end 512K
-
-      grid rowconfigure    .backup.storage.maxBandWidth { 0 } -weight 1
-      grid columnconfigure .backup.storage.maxBandWidth { 1 } -weight 1
-    grid .backup.storage.maxBandWidth -row 2 -column 1 -sticky "w" -padx 2p -pady 2p
-    addEnableTrace ::barConfig(maxBandWidthFlag) 1 .backup.storage.maxBandWidth.size
-
     label .backup.storage.optionOverwriteArchiveFilesTitle -text "Options:"
     grid .backup.storage.optionOverwriteArchiveFilesTitle -row 3 -column 0 -sticky "w" 
-    checkbutton .backup.storage.optionOverwriteArchiveFiles -text "overwrite archive files" -variable barConfig(overwriteArchiveFiles)
+    checkbutton .backup.storage.optionOverwriteArchiveFiles -text "overwrite archive files" -variable barConfig(overwriteArchiveFilesFlag)
     grid .backup.storage.optionOverwriteArchiveFiles -row 3 -column 1 -sticky "w" 
 
     label .backup.storage.destinationTitle -text "Destination:"
@@ -4196,55 +4439,133 @@ frame .backup
         label .backup.storage.destination.ssh.fileNameTitle -text "File name:"
         grid .backup.storage.destination.ssh.fileNameTitle -row 0 -column 0 -sticky "w" 
         entry .backup.storage.destination.ssh.fileName -textvariable barConfig(storageFileName) -bg white
-        grid .backup.storage.destination.ssh.fileName -row 0 -column 1 -columnspan 5 -sticky "we" 
+        grid .backup.storage.destination.ssh.fileName -row 0 -column 1 -sticky "we" 
 
-        label .backup.storage.destination.ssh.loginNameTitle -text "Login:" -state disabled
-        grid .backup.storage.destination.ssh.loginNameTitle -row 1 -column 0 -sticky "w" 
-        entry .backup.storage.destination.ssh.loginName -textvariable barConfig(storageLoginName) -bg white -state disabled
-        grid .backup.storage.destination.ssh.loginName -row 1 -column 1 -sticky "we" 
+        label .backup.storage.destination.ssh.loginTitle -text "Login:" -state disabled
+        grid .backup.storage.destination.ssh.loginTitle -row 1 -column 0 -sticky "w" 
+        frame .backup.storage.destination.ssh.login
+          entry .backup.storage.destination.ssh.login.name -textvariable barConfig(storageLoginName) -bg white -state disabled
+          pack .backup.storage.destination.ssh.login.name -side left -fill x -expand yes
 
-    #    label .backup.storage.destination.ssh.loginPasswordTitle -text "Password:" -state disabled
-    #    grid .backup.storage.destination.ssh.loginPasswordTitle -row 0 -column 2 -sticky "w" 
-    #    entry .backup.storage.destination.ssh.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
-    #    grid .backup.storage.destination.ssh.loginPassword -row 0 -column 3 -sticky "we" 
+      #    label .backup.storage.destination.ssh.loginPasswordTitle -text "Password:" -state disabled
+      #    pack .backup.storage.destination.ssh.loginPasswordTitle -row 0 -column 2 -sticky "w" 
+      #    entry .backup.storage.destination.ssh.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
+      #    pack .backup.storage.destination.ssh.loginPassword -row 0 -column 3 -sticky "we" 
 
-        label .backup.storage.destination.ssh.hostNameTitle -text "Host:" -state disabled
-        grid .backup.storage.destination.ssh.hostNameTitle -row 1 -column 2 -sticky "w" 
-        entry .backup.storage.destination.ssh.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
-        grid .backup.storage.destination.ssh.hostName -row 1 -column 3 -sticky "we" 
+          label .backup.storage.destination.ssh.login.hostNameTitle -text "Host:" -state disabled
+          pack .backup.storage.destination.ssh.login.hostNameTitle -side left
+          entry .backup.storage.destination.ssh.login.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
+          pack .backup.storage.destination.ssh.login.hostName -side left -fill x -expand yes
 
-        label .backup.storage.destination.ssh.sshPortTitle -text "SSH port:" -state disabled
-        grid .backup.storage.destination.ssh.sshPortTitle -row 1 -column 4 -sticky "w" 
-        tixControl .backup.storage.destination.ssh.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 1 -max 65535 -options { entry.background white } -state disabled
-        grid .backup.storage.destination.ssh.sshPort -row 1 -column 5 -sticky "we" 
+          label .backup.storage.destination.ssh.login.sshPortTitle -text "SSH port:" -state disabled
+          pack .backup.storage.destination.ssh.login.sshPortTitle -side left
+          tixControl .backup.storage.destination.ssh.login.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 0 -max 65535 -options { entry.background white } -state disabled
+          pack .backup.storage.destination.ssh.login.sshPort -side left -fill x -expand yes
+        grid .backup.storage.destination.ssh.login -row 1 -column 1 -sticky "we"
 
         label .backup.storage.destination.ssh.sshPublicKeyFileNameTitle -text "SSH public key:" -state disabled
         grid .backup.storage.destination.ssh.sshPublicKeyFileNameTitle -row 2 -column 0 -sticky "w" 
-        entry .backup.storage.destination.ssh.sshPublicKeyFileName -textvariable barConfig(sshPublicKeyFileName) -bg white -state disabled
-        grid .backup.storage.destination.ssh.sshPublicKeyFileName -row 2 -column 1 -columnspan 5 -sticky "we" 
+        frame .backup.storage.destination.ssh.sshPublicKeyFileName
+          entry .backup.storage.destination.ssh.sshPublicKeyFileName.data -textvariable barConfig(sshPublicKeyFileName) -bg white -state disabled
+          pack .backup.storage.destination.ssh.sshPublicKeyFileName.data -side left -fill x -expand yes
+          button .backup.storage.destination.ssh.sshPublicKeyFileName.select -image $images(folder) -command \
+          "
+            set old_tk_strictMotif \$tk_strictMotif
+            set tk_strictMotif 0
+            set fileName \[tk_getOpenFile -title \"Select SSH public key file\" -initialfile \"\" -filetypes {{\"Public key\" \"*.pub\"} {\"all\" \"*\"}} -parent . -defaultextension \".pub\"\]
+            set tk_strictMotif \$old_tk_strictMotif
+            if {\$fileName != \"\"} \
+            {
+              set barConfig(sshPublicKeyFileName) \$fileName
+            }
+          "
+          pack .backup.storage.destination.ssh.sshPublicKeyFileName.select -side left
+        grid .backup.storage.destination.ssh.sshPublicKeyFileName -row 2 -column 1 -sticky "we"
 
         label .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle -text "SSH privat key:" -state disabled
         grid .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle -row 3 -column 0 -sticky "w" 
-        entry .backup.storage.destination.ssh.sshPrivatKeyFileName -textvariable barConfig(sshPrivatKeyFileName) -bg white -state disabled
-        grid .backup.storage.destination.ssh.sshPrivatKeyFileName -row 3 -column 1 -columnspan 5 -sticky "we" 
+        frame .backup.storage.destination.ssh.sshPrivatKeyFileName
+          entry .backup.storage.destination.ssh.sshPrivatKeyFileName.data -textvariable barConfig(sshPrivatKeyFileName) -bg white -state disabled
+          pack .backup.storage.destination.ssh.sshPrivatKeyFileName.data -side left -fill x -expand yes
+          button .backup.storage.destination.ssh.sshPrivatKeyFileName.select -image $images(folder) -command \
+          "
+            set old_tk_strictMotif \$tk_strictMotif
+            set tk_strictMotif 0
+            set fileName \[tk_getOpenFile -title \"Select SSH privat key file\" -initialfile \"\" -filetypes {{\"all\" \"*\"}} -parent . -defaultextension \"\"\]
+            set tk_strictMotif \$old_tk_strictMotif
+            if {\$fileName != \"\"} \
+            {
+              set barConfig(sshPrivatKeyFileName) \$fileName
+            }
+          "
+          pack .backup.storage.destination.ssh.sshPrivatKeyFileName.select -side left
+        grid .backup.storage.destination.ssh.sshPrivatKeyFileName -row 3 -column 1 -sticky "we"
+
+        label .backup.storage.destination.ssh.maxBandWidthTitle -text "Max. band width:"
+        grid .backup.storage.destination.ssh.maxBandWidthTitle -row 4 -column 0 -sticky "w" 
+        frame .backup.storage.destination.ssh.maxBandWidth
+          radiobutton .backup.storage.destination.ssh.maxBandWidth.unlimited -text "unlimited" -anchor w -variable barConfig(maxBandWidthFlag) -value 0
+          grid .backup.storage.destination.ssh.maxBandWidth.unlimited -row 0 -column 1 -sticky "w" 
+          radiobutton .backup.storage.destination.ssh.maxBandWidth.limitto -text "limit to" -width 8 -anchor w -variable barConfig(maxBandWidthFlag) -value 1
+          grid .backup.storage.destination.ssh.maxBandWidth.limitto -row 0 -column 2 -sticky "w" 
+          tixComboBox .backup.storage.destination.ssh.maxBandWidth.size -variable barConfig(maxBandWidth) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
+          grid .backup.storage.destination.ssh.maxBandWidth.size -row 0 -column 3 -sticky "w" 
+          label .backup.storage.destination.ssh.maxBandWidth.unit -text "bits/s"
+          grid .backup.storage.destination.ssh.maxBandWidth.unit -row 0 -column 4 -sticky "w" 
+
+         .backup.storage.destination.ssh.maxBandWidth.size insert end 64K
+         .backup.storage.destination.ssh.maxBandWidth.size insert end 128K
+         .backup.storage.destination.ssh.maxBandWidth.size insert end 256K
+         .backup.storage.destination.ssh.maxBandWidth.size insert end 512K
+
+          grid rowconfigure    .backup.storage.destination.ssh.maxBandWidth { 0 } -weight 1
+          grid columnconfigure .backup.storage.destination.ssh.maxBandWidth { 1 } -weight 1
+        grid .backup.storage.destination.ssh.maxBandWidth -row 4 -column 1 -sticky "w" -padx 2p -pady 2p
+        addEnableTrace ::barConfig(maxBandWidthFlag) 1 .backup.storage.destination.ssh.maxBandWidth.size
 
   #      grid rowconfigure    .backup.storage.destination.ssh { } -weight 1
-        grid columnconfigure .backup.storage.destination.ssh { 1 3 5 } -weight 1
+        grid columnconfigure .backup.storage.destination.ssh { 1 } -weight 1
       grid .backup.storage.destination.ssh -row 3 -column 0 -sticky "nswe" -padx 2p -pady 2p
       addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.fileNameTitle
       addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.fileName
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginName
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.login.name
     #  addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginPasswordTitle
     #  addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginPassword
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.hostNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.hostName
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPortTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPort
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.login.hostNameTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.login.hostName
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.login.sshPortTitle
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.login.sshPort
       addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPublicKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPublicKeyFileName
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPublicKeyFileName.data
       addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPrivatKeyFileName
+      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPrivatKeyFileName.data
+      addModifyTrace {::barConfig(storageType)} \
+      {
+        if {($::barConfig(storageType) == "SCP") || ($::barConfig(storageType) == "SFTP")} \
+        {
+          .backup.storage.destination.ssh.maxBandWidthTitle      configure -state normal
+          .backup.storage.destination.ssh.maxBandWidth.unlimited configure -state normal
+          .backup.storage.destination.ssh.maxBandWidth.limitto   configure -state normal
+          .backup.storage.destination.ssh.maxBandWidth.unit      configure -state normal
+          if {$::barConfig(maxBandWidthFlag)} \
+          {
+            .backup.storage.destination.ssh.maxBandWidth.size configure -state normal
+          } \
+          else \
+          {
+            .backup.storage.destination.ssh.maxBandWidth.size configure -state disabled
+          }
+        } \
+        else \
+        {
+          .backup.storage.destination.ssh.maxBandWidthTitle      configure -state disabled
+          .backup.storage.destination.ssh.maxBandWidth.unlimited configure -state disabled
+          .backup.storage.destination.ssh.maxBandWidth.limitto   configure -state disabled
+          .backup.storage.destination.ssh.maxBandWidth.size      configure -state disabled
+          .backup.storage.destination.ssh.maxBandWidth.unit      configure -state disabled
+        }
+      }
 
       frame .backup.storage.destination.type2
         radiobutton .backup.storage.destination.type2.fileSystem -text "DVD" -variable barConfig(storageType) -value "DVD"
@@ -4254,16 +4575,134 @@ frame .backup
         grid columnconfigure .backup.storage.destination.type2 { 1 } -weight 1
       grid .backup.storage.destination.type2 -row 4 -column 0 -sticky "we" -padx 2p -pady 2p
       labelframe .backup.storage.destination.dvd
-        label .backup.storage.destination.dvd.deviceNameTitle -text "Device name:"
+        label .backup.storage.destination.dvd.deviceNameTitle -text "DVD device:"
         grid .backup.storage.destination.dvd.deviceNameTitle -row 0 -column 0 -sticky "w" 
-        entry .backup.storage.destination.dvd.deviceName -textvariable barConfig(storageFileName) -bg white
+        entry .backup.storage.destination.dvd.deviceName -textvariable barConfig(storageDeviceName) -bg white
         grid .backup.storage.destination.dvd.deviceName -row 0 -column 1 -sticky "we" 
 
-        grid rowconfigure    .backup.storage.destination.dvd { 0 } -weight 1
+        label .backup.storage.destination.dvd.fileNameTitle -text "File name:"
+        grid .backup.storage.destination.dvd.fileNameTitle -row 1 -column 0 -sticky "w" 
+        entry .backup.storage.destination.dvd.fileName -textvariable barConfig(storageFileName) -bg white
+        grid .backup.storage.destination.dvd.fileName -row 1 -column 1 -columnspan 5 -sticky "we" 
+
+        label .backup.storage.destination.dvd.volumeSizeTitle -text "Size:"
+        grid .backup.storage.destination.dvd.volumeSizeTitle -row 2 -column 0 -sticky "w"
+        frame .backup.storage.destination.dvd.volumeSize
+          tixComboBox .backup.storage.destination.dvd.volumeSize.size -variable barConfig(volumeSize) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
+          pack .backup.storage.destination.dvd.volumeSize.size -side left
+          label .backup.storage.destination.dvd.volumeSize.unit -text "bytes"
+          pack .backup.storage.destination.dvd.volumeSize.unit -side left
+        grid .backup.storage.destination.dvd.volumeSize -row 2 -column 1 -sticky "w"
+
+        label .backup.storage.destination.dvd.eccTitle -text "Options:"
+        grid .backup.storage.destination.dvd.eccTitle -row 3 -column 0 -sticky "w"
+        checkbutton .backup.storage.destination.dvd.ecc -text "add error-correction codes" -variable barConfig(errorCorrectionCodesFlag)
+        grid .backup.storage.destination.dvd.ecc -row 3 -column 1 -sticky "w" 
+
+       .backup.storage.destination.dvd.volumeSize.size insert end 2G
+       .backup.storage.destination.dvd.volumeSize.size insert end 3G
+       .backup.storage.destination.dvd.volumeSize.size insert end 3.6G
+       .backup.storage.destination.dvd.volumeSize.size insert end 4G
+
+        grid rowconfigure    .backup.storage.destination.dvd { 4 } -weight 1
         grid columnconfigure .backup.storage.destination.dvd { 1 } -weight 1
       grid .backup.storage.destination.dvd -row 5 -column 0 -sticky "nswe" -padx 2p -pady 2p
       addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destination.dvd.deviceNameTitle
       addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destination.dvd.deviceName
+      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destination.dvd.fileNameTitle
+      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destination.dvd.fileName
+      addModifyTrace {::barConfig(storageType)} \
+      {
+        if {$::barConfig(storageType)=="DVD"} \
+        {
+          .backup.storage.destination.dvd.volumeSizeTitle configure -state normal
+          .backup.storage.destination.dvd.volumeSize.size configure -state normal
+          .backup.storage.destination.dvd.volumeSize.unit configure -state normal
+          if     {!$::barConfig(archivePartSizeFlag)} \
+          {
+            set ::barConfig(archivePartSizeFlag) 1
+            set ::barConfig(archivePartSize)     "2G"
+          } \
+          elseif {[memorySizeToBytes $::barConfig(archivePartSize)] > 2*1024*1024*1024} \
+          {
+            set ::barConfig(volumeSize) "2G"
+          }
+          .backup.storage.split.unlimited configure -state disabled
+        } \
+        else \
+        {
+          .backup.storage.destination.dvd.volumeSizeTitle configure -state disabled
+          .backup.storage.destination.dvd.volumeSize.size configure -state disabled
+          .backup.storage.destination.dvd.volumeSize.unit configure -state disabled
+          .backup.storage.split.unlimited configure -state normal
+        }
+      }
+
+      frame .backup.storage.destination.type3
+        radiobutton .backup.storage.destination.type3.fileSystem -text "Device" -variable barConfig(storageType) -value "DEVICE"
+        grid .backup.storage.destination.type3.fileSystem -row 0 -column 0 -sticky "nw" 
+
+        grid rowconfigure    .backup.storage.destination.type3 { 0 } -weight 1
+        grid columnconfigure .backup.storage.destination.type3 { 1 } -weight 1
+      grid .backup.storage.destination.type3 -row 6 -column 0 -sticky "we" -padx 2p -pady 2p
+      labelframe .backup.storage.destination.device
+        label .backup.storage.destination.device.nameTitle -text "Device name:"
+        grid .backup.storage.destination.device.nameTitle -row 0 -column 0 -sticky "w" 
+        entry .backup.storage.destination.device.name -textvariable barConfig(storageDeviceName) -bg white
+        grid .backup.storage.destination.device.name -row 0 -column 1 -sticky "we" 
+
+        label .backup.storage.destination.device.fileNameTitle -text "File name:"
+        grid .backup.storage.destination.device.fileNameTitle -row 1 -column 0 -sticky "w" 
+        entry .backup.storage.destination.device.fileName -textvariable barConfig(storageFileName) -bg white
+        grid .backup.storage.destination.device.fileName -row 1 -column 1 -columnspan 5 -sticky "we" 
+
+        label .backup.storage.destination.device.volumeSizeTitle -text "Size:"
+        grid .backup.storage.destination.device.volumeSizeTitle -row 2 -column 0 -sticky "w"
+        frame .backup.storage.destination.device.volumeSize
+          tixComboBox .backup.storage.destination.device.volumeSize.size -variable barConfig(volumeSize) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
+          pack .backup.storage.destination.device.volumeSize.size -side left
+          label .backup.storage.destination.device.volumeSize.unit -text "bytes"
+          pack .backup.storage.destination.device.volumeSize.unit -side left
+        grid .backup.storage.destination.device.volumeSize -row 2 -column 1 -sticky "w"
+
+       .backup.storage.destination.device.volumeSize.size insert end 2G
+       .backup.storage.destination.device.volumeSize.size insert end 3G
+       .backup.storage.destination.device.volumeSize.size insert end 3.6G
+       .backup.storage.destination.device.volumeSize.size insert end 4G
+
+        grid rowconfigure    .backup.storage.destination.device { 3 } -weight 1
+        grid columnconfigure .backup.storage.destination.device { 1 } -weight 1
+      grid .backup.storage.destination.device -row 7 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      addEnableTrace ::barConfig(storageType) "DEVICE" .backup.storage.destination.device.nameTitle
+      addEnableTrace ::barConfig(storageType) "DEVICE" .backup.storage.destination.device.name
+      addEnableTrace ::barConfig(storageType) "DEVICE" .backup.storage.destination.device.fileNameTitle
+      addEnableTrace ::barConfig(storageType) "DEVICE" .backup.storage.destination.device.fileName
+      addModifyTrace {::barConfig(storageType)} \
+      {
+        if {$::barConfig(storageType)=="DEVICE"} \
+        {
+          .backup.storage.destination.device.volumeSizeTitle configure -state normal
+          .backup.storage.destination.device.volumeSize.size configure -state normal
+          .backup.storage.destination.device.volumeSize.unit configure -state normal
+          if     {!$::barConfig(archivePartSizeFlag)} \
+          {
+            set ::barConfig(archivePartSizeFlag) 1
+            set ::barConfig(archivePartSize)     "2G"
+          } \
+          elseif {[memorySizeToBytes $::barConfig(archivePartSize)] > 2*1024*1024*1024} \
+          {
+            set ::barConfig(volumeSize) "2G"
+          }
+          .backup.storage.split.unlimited configure -state disabled
+        } \
+        else \
+        {
+          .backup.storage.destination.device.volumeSizeTitle configure -state disabled
+          .backup.storage.destination.device.volumeSize.size configure -state disabled
+          .backup.storage.destination.device.volumeSize.unit configure -state disabled
+          .backup.storage.split.unlimited configure -state normal
+        }
+      }
 
       grid rowconfigure    .backup.storage.destination { 0 } -weight 1
       grid columnconfigure .backup.storage.destination { 0 } -weight 1
@@ -4284,18 +4723,6 @@ frame .backup
   grid columnconfigure .backup { 1 } -weight 1
 pack .backup -side top -fill both -expand yes -in [$mainWindow.tabs subwidget backup]
 
-#frame .misc
-#  label .misc.optionsTitle -text "Options:"
-#  grid .misc.optionsTitle -row 0 -column 0 -sticky "nw" 
-#  checkbutton .misc.optionSkipUnreadable -text "skip unreable files" -variable barConfig(skipUnreadable)
-#  grid .misc.optionSkipUnreadable -row 0 -column 1 -sticky "nw" 
-#  checkbutton .misc.optionOverwriteFiles -text "overwrite files" -variable barConfig(overwriteFiles)
-#  grid .misc.optionOverwriteFiles -row 2 -column 1 -sticky "nw" 
-
-#  grid rowconfigure    .misc { 1 } -weight 1
-#  grid columnconfigure .misc { 2 } -weight 1
-#pack .misc -side top -fill both -expand yes -in [$mainWindow.tabs subwidget misc]
-
 # ----------------------------------------------------------------------
 
 frame .restore
@@ -4312,7 +4739,7 @@ frame .restore
   grid .restore.tabs -row 1 -column 0 -columnspan 2 -sticky "nswe" -padx 2p -pady 2p
 
   frame .restore.storage
-    label .restore.storage.sourceTitle -text "Storage:"
+    label .restore.storage.sourceTitle -text "Source:"
     grid .restore.storage.sourceTitle -row 0 -column 0 -sticky "nw" 
     frame .restore.storage.source
       frame .restore.storage.source.type0
@@ -4380,68 +4807,103 @@ if {0} {
         grid .restore.storage.source.ssh.selectDirectory -row 0 -column 5
 }
 
-        label .restore.storage.source.ssh.loginNameTitle -text "Login:" -state disabled
-        grid .restore.storage.source.ssh.loginNameTitle -row 1 -column 0 -sticky "w" 
-        entry .restore.storage.source.ssh.loginName -textvariable barConfig(storageLoginName) -bg white -state disabled
-        grid .restore.storage.source.ssh.loginName -row 1 -column 1 -sticky "we" 
+        label .restore.storage.source.ssh.loginTitle -text "Login:" -state disabled
+        grid .restore.storage.source.ssh.loginTitle -row 1 -column 0 -sticky "w" 
+        frame .restore.storage.source.ssh.login
+          entry .restore.storage.source.ssh.login.name -textvariable barConfig(storageLoginName) -bg white -state disabled
+          pack .restore.storage.source.ssh.login.name -side left -fill x -expand yes
 
-    #    label .restore.storage.source.ssh.loginPasswordTitle -text "Password:" -state disabled
-    #    grid .restore.storage.source.ssh.loginPasswordTitle -row 0 -column 2 -sticky "w" 
-    #    entry .restore.storage.source.ssh.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
-    #    grid .restore.storage.source.ssh.loginPassword -row 0 -column 3 -sticky "we" 
+      #    label .restore.storage.source.ssh.login.passwordTitle -text "Password:" -state disabled
+      #    grid .restore.storage.source.ssh.login.passwordTitle -row 0 -column 2 -sticky "w" 
+      #    entry .restore.storage.source.ssh.login.password -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
+      #    grid .restore.storage.source.ssh.login.password -row 0 -column 3 -sticky "we" 
 
-        label .restore.storage.source.ssh.hostNameTitle -text "Host:" -state disabled
-        grid .restore.storage.source.ssh.hostNameTitle -row 1 -column 2 -sticky "w" 
-        entry .restore.storage.source.ssh.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
-        grid .restore.storage.source.ssh.hostName -row 1 -column 3 -sticky "we" 
+          label .restore.storage.source.ssh.login.hostNameTitle -text "Host:" -state disabled
+          pack .restore.storage.source.ssh.login.hostNameTitle -side left
+          entry .restore.storage.source.ssh.login.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
+          pack .restore.storage.source.ssh.login.hostName -side left -fill x -expand yes
 
-        label .restore.storage.source.ssh.sshPortTitle -text "SSH port:" -state disabled
-        grid .restore.storage.source.ssh.sshPortTitle -row 1 -column 4 -sticky "w" 
-        tixControl .restore.storage.source.ssh.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 1 -max 65535 -options { entry.background white } -state disabled
-        grid .restore.storage.source.ssh.sshPort -row 1 -column 5 -sticky "we" 
+          label .restore.storage.source.ssh.login.sshPortTitle -text "SSH port:" -state disabled
+          pack .restore.storage.source.ssh.login.sshPortTitle -side left
+          tixControl .restore.storage.source.ssh.login.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 0 -max 65535 -options { entry.background white } -state disabled
+          pack .restore.storage.source.ssh.login.sshPort -side left -fill x -expand yes
+        grid .restore.storage.source.ssh.login -row 1 -column 1 -sticky "we"
 
         label .restore.storage.source.ssh.sshPublicKeyFileNameTitle -text "SSH public key:" -state disabled
         grid .restore.storage.source.ssh.sshPublicKeyFileNameTitle -row 2 -column 0 -sticky "w" 
-        entry .restore.storage.source.ssh.sshPublicKeyFileName -textvariable barConfig(sshPublicKeyFileName) -bg white -state disabled
-        grid .restore.storage.source.ssh.sshPublicKeyFileName -row 2 -column 1 -columnspan 5 -sticky "we" 
+        frame .restore.storage.source.ssh.sshPublicKeyFileName
+          entry .restore.storage.source.ssh.sshPublicKeyFileName.data -textvariable barConfig(sshPublicKeyFileName) -bg white -state disabled
+          pack .restore.storage.source.ssh.sshPublicKeyFileName.data -side left -fill x -expand yes
+          button .restore.storage.source.ssh.sshPublicKeyFileName.select -image $images(folder) -command \
+          "
+            set old_tk_strictMotif \$tk_strictMotif
+            set tk_strictMotif 0
+            set fileName \[tk_getOpenFile -title \"Select SSH public key file\" -initialfile \"\" -filetypes {{\"Public key\" \"*.pub\"} {\"all\" \"*\"}} -parent . -defaultextension \".pub\"\]
+            set tk_strictMotif \$old_tk_strictMotif
+            if {\$fileName != \"\"} \
+            {
+              set barConfig(sshPublicKeyFileName) \$fileName
+            }
+          "
+          pack .restore.storage.source.ssh.sshPublicKeyFileName.select -side left
+        grid .restore.storage.source.ssh.sshPublicKeyFileName -row 2 -column 1 -sticky "we"
 
         label .restore.storage.source.ssh.sshPrivatKeyFileNameTitle -text "SSH privat key:" -state disabled
         grid .restore.storage.source.ssh.sshPrivatKeyFileNameTitle -row 3 -column 0 -sticky "w" 
-        entry .restore.storage.source.ssh.sshPrivatKeyFileName -textvariable barConfig(sshPrivatKeyFileName) -bg white -state disabled
-        grid .restore.storage.source.ssh.sshPrivatKeyFileName -row 3 -column 1 -columnspan 5 -sticky "we" 
+        frame .restore.storage.source.ssh.sshPrivatKeyFileName
+          entry .restore.storage.source.ssh.sshPrivatKeyFileName.data -textvariable barConfig(sshPrivatKeyFileName) -bg white -state disabled
+          pack .restore.storage.source.ssh.sshPrivatKeyFileName.data -side left -fill x -expand yes
+          button .restore.storage.source.ssh.sshPrivatKeyFileName.select -image $images(folder) -command \
+          "
+            set old_tk_strictMotif \$tk_strictMotif
+            set tk_strictMotif 0
+            set fileName \[tk_getOpenFile -title \"Select SSH privat key file\" -initialfile \"\" -filetypes {{\"all\" \"*\"}} -parent . -defaultextension \"\"\]
+            set tk_strictMotif \$old_tk_strictMotif
+            if {\$fileName != \"\"} \
+            {
+              set barConfig(sshPrivatKeyFileName) \$fileName
+            }
+          "
+          pack .restore.storage.source.ssh.sshPrivatKeyFileName.select -side left
+        grid .restore.storage.source.ssh.sshPrivatKeyFileName -row 3 -column 1 -sticky "we"
 
   #      grid rowconfigure    .restore.storage.source.ssh { } -weight 1
-        grid columnconfigure .restore.storage.source.ssh { 1 3 5 } -weight 1
+        grid columnconfigure .restore.storage.source.ssh { 1 } -weight 1
       grid .restore.storage.source.ssh -row 3 -column 0 -sticky "nswe" -padx 2p -pady 2p
       addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.fileNameTitle
       addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.fileName
 #      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.selectDirectory
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginNameTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginName
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginTitle
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.login.name
     #  addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginPasswordTitle
     #  addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginPassword
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.hostNameTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.hostName
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPortTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPort
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.login.hostNameTitle
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.login.hostName
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.login.sshPortTitle
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.login.sshPort
       addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPublicKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPublicKeyFileName
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPublicKeyFileName.data
       addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPrivatKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPrivatKeyFileName
+      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPrivatKeyFileName.data
 
       frame .restore.storage.source.type2
-        radiobutton .restore.storage.source.type2.dvd -text "DVD" -variable barConfig(storageType) -value "DVD"
-        grid .restore.storage.source.type2.dvd -row 0 -column 0 -sticky "nw" 
+        radiobutton .restore.storage.source.type2.device -text "Device" -variable barConfig(storageType) -value "DEVICE"
+        grid .restore.storage.source.type2.device -row 0 -column 0 -sticky "nw" 
 
         grid rowconfigure    .restore.storage.source.type2 { 0 } -weight 1
         grid columnconfigure .restore.storage.source.type2 { 1 } -weight 1
       grid .restore.storage.source.type2 -row 4 -column 0 -sticky "we" -padx 2p -pady 2p
-      labelframe .restore.storage.source.dvd
-        label .restore.storage.source.dvd.deviceNameTitle -text "Device name:"
-        grid .restore.storage.source.dvd.deviceNameTitle -row 0 -column 0 -sticky "w" 
-        entry .restore.storage.source.dvd.deviceName -textvariable barConfig(storageFileName) -bg white
-        grid .restore.storage.source.dvd.deviceName -row 0 -column 1 -sticky "we" 
-        button .restore.storage.source.dvd.selectDirectory -image $images(folder) -command \
+      labelframe .restore.storage.source.device
+        label .restore.storage.source.device.nameTitle -text "Device name:"
+        grid .restore.storage.source.device.nameTitle -row 0 -column 0 -sticky "w" 
+        entry .restore.storage.source.device.name -textvariable barConfig(storageDeviceName) -bg white
+        grid .restore.storage.source.device.name -row 0 -column 1 -sticky "we" 
+
+        label .restore.storage.source.device.fileNameTitle -text "File name:"
+        grid .restore.storage.source.device.fileNameTitle -row 1 -column 0 -sticky "w" 
+        entry .restore.storage.source.device.fileName -textvariable barConfig(storageFileName) -bg white
+        grid .restore.storage.source.device.fileName -row 1 -column 1 -sticky "we" 
+        button .restore.storage.source.device.selectDirectory -image $images(folder) -command \
         "
           set old_tk_strictMotif \$tk_strictMotif
           set tk_strictMotif 0
@@ -4453,14 +4915,16 @@ if {0} {
             newRestoreArchive
           }
          "
-        grid .restore.storage.source.dvd.selectDirectory -row 0 -column 2
+        grid .restore.storage.source.device.selectDirectory -row 0 -column 2
 
-        grid rowconfigure    .restore.storage.source.dvd { 0 } -weight 1
-        grid columnconfigure .restore.storage.source.dvd { 1 } -weight 1
-      grid .restore.storage.source.dvd -row 5 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) "DVD" .restore.storage.source.dvd.deviceNameTitle
-      addEnableTrace ::barConfig(storageType) "DVD" .restore.storage.source.dvd.deviceName
-      addEnableTrace ::barConfig(storageType) "DVD" .restore.storage.source.dvd.selectDirectory
+        grid rowconfigure    .restore.storage.source.device { 2 } -weight 1
+        grid columnconfigure .restore.storage.source.device { 1 } -weight 1
+      grid .restore.storage.source.device -row 5 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      addEnableTrace ::barConfig(storageType) "DEVICE" .restore.storage.source.device.nameTitle
+      addEnableTrace ::barConfig(storageType) "DEVICE" .restore.storage.source.device.name
+      addEnableTrace ::barConfig(storageType) "DEVICE" .restore.storage.source.device.fileNameTitle
+      addEnableTrace ::barConfig(storageType) "DEVICE" .restore.storage.source.device.fileName
+      addEnableTrace ::barConfig(storageType) "DEVICE" .restore.storage.source.device.selectDirectory
 
       grid rowconfigure    .restore.storage.source { 0 } -weight 1
       grid columnconfigure .restore.storage.source { 0 } -weight 1
@@ -4542,16 +5006,16 @@ if {0} {
       set extension ""
       regexp {.*(\.[^\.]+)} $fileName * extension
 
-      .restore.files.list.popup subwidget menu entryconfigure 0 -label "Add include '$fileName'"    -command "addIncludedPattern $fileName"
-      .restore.files.list.popup subwidget menu entryconfigure 1 -label "Add exclude '$fileName'"    -command "addExcludedPattern $fileName"
-      .restore.files.list.popup subwidget menu entryconfigure 2 -label "Remove include '$fileName'" -command "remIncludedPattern $fileName"
-      .restore.files.list.popup subwidget menu entryconfigure 3 -label "Remove exclude '$fileName'" -command "remExcludedPattern $fileName"
+      .restore.files.list.popup subwidget menu entryconfigure 0 -label "Add include '$fileName'"    -command "restoreAddIncludedPattern $fileName"
+      .restore.files.list.popup subwidget menu entryconfigure 1 -label "Add exclude '$fileName'"    -command "restoreAddExcludedPattern $fileName"
+      .restore.files.list.popup subwidget menu entryconfigure 2 -label "Remove include '$fileName'" -command "restoreRemIncludedPattern $fileName"
+      .restore.files.list.popup subwidget menu entryconfigure 3 -label "Remove exclude '$fileName'" -command "restoreRemExcludedPattern $fileName"
       if {$extension != ""} \
       {
-        .restore.files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern *$extension"    -state normal -command "addIncludedPattern *$extension"
-        .restore.files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern *$extension"    -state normal -command "addExcludedPattern *$extension"
-        .restore.files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern *$extension" -state normal -command "remIncludedPattern *$extension"
-        .restore.files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern *$extension" -state normal -command "remExcludedPattern *$extension"
+        .restore.files.list.popup subwidget menu entryconfigure 4 -label "Add include pattern *$extension"    -state normal -command "restoreAddIncludedPattern *$extension"
+        .restore.files.list.popup subwidget menu entryconfigure 5 -label "Add exclude pattern *$extension"    -state normal -command "restoreAddExcludedPattern *$extension"
+        .restore.files.list.popup subwidget menu entryconfigure 6 -label "Remove include pattern *$extension" -state normal -command "restoreRemIncludedPattern *$extension"
+        .restore.files.list.popup subwidget menu entryconfigure 7 -label "Remove exclude pattern *$extension" -state normal -command "restoreRemExcludedPattern *$extension"
       } \
       else \
       {
@@ -4637,7 +5101,7 @@ if {0} {
 
     label .restore.filters.optionsTitle -text "Options:"
     grid .restore.filters.optionsTitle -row 4 -column 0 -sticky "nw" 
-    checkbutton .restore.filters.optionSkipUnreadable -text "skip not writable files" -variable barConfig(skipNotWritable)
+    checkbutton .restore.filters.optionSkipUnreadable -text "skip not writable files" -variable barConfig(skipNotWritableFlag)
     grid .restore.filters.optionSkipUnreadable -row 4 -column 1 -sticky "nw" 
 
     grid rowconfigure    .restore.filters { 0 2 } -weight 1
@@ -4690,6 +5154,21 @@ pack .compressCrypt -side top -fill both -expand yes -in [$mainWindow.tabs subwi
 $backupFilesTreeWidget configure -command "openCloseBackupDirectory"
 $restoreFilesTreeWidget configure -command "openCloseRestoreDirectory"
 
+addModifyTrace ::currentJob(id) \
+  "
+    if {\$::currentJob(id) != 0} \
+    {
+       .jobs.selected configure -text \"Selected #\$::currentJob(id)\"
+       .jobs.buttons.abort configure -state normal
+       .jobs.buttons.rem configure -state normal
+    } \
+    else \
+    {
+       .jobs.selected configure -text \"Selected\"
+       .jobs.buttons.abort configure -state disabled
+       .jobs.buttons.rem configure -state disabled
+    }
+  "
 addModifyTrace {::barConfig(name) ::barConfig(included)} \
   "
     if {(\$::barConfig(name) != \"\") && (\$::barConfig(included) != {})} \
@@ -4713,6 +5192,37 @@ addFocusTrace {.restore.storage.source.fileSystem.fileName} \
   "
     newRestoreArchive
   "
+addModifyTrace {::currentJob(requestedVolumeNumber)} \
+  {
+    if {($::currentJob(volumeNumber) != $::currentJob(requestedVolumeNumber)) && ($::currentJob(requestedVolumeNumber) > 0)} \
+    {
+if {0} {
+      switch [Dialog:select "Request" "Please insert volume #$::currentJob(requestedVolumeNumber) into drive." "" [list [list "Continue"] [list "Abort job"] [list "Cancel" Escape]]]
+      {
+        0 \
+        {
+          set errorCode 0
+          BackupServer:executeCommand errorCode errorText "VOLUME" $::currentJob(id) $::currentJob(requestedVolumeNumber)
+        }
+        1 \
+        {
+          set errorCode 0
+          BackupServer:executeCommand errorCode errorText "ABORT_JOB" $::currentJob(id)
+        }
+        2 \
+        {
+        }
+      }
+}
+      .jobs.buttons.volume configure -state normal
+      set ::currentJob(message) "Please insert volume #$::currentJob(requestedVolumeNumber) into drive."
+    } \
+    else \
+    {
+      .jobs.buttons.volume configure -state disabled
+      set ::currentJob(message) ""
+    }
+  }
 
 bind . <Control-o> "event generate . <<Event_load>>"
 bind . <Control-s> "event generate . <<Event_save>>"
@@ -4722,10 +5232,10 @@ bind . <F1> "$mainWindow.tabs raise jobs"
 bind . <F2> "$mainWindow.tabs raise backup"
 bind . <F3> "$mainWindow.tabs raise restore"
 bind . <F4> "$mainWindow.tabs raise compressCrypt"
-bind . <F5> "event generate . <<Event_addIncludePattern>>"
-bind . <F6> "event generate . <<Event_remIncludePattern>>"
-bind . <F7> "event generate . <<Event_addExcludePattern>>"
-bind . <F8> "event generate . <<Event_remExcludePattern>>"
+bind . <F5> "event generate . <<Event_backupAddIncludePattern>>"
+bind . <F6> "event generate . <<Event_backupRemIncludePattern>>"
+bind . <F7> "event generate . <<Event_backupAddExcludePattern>>"
+bind . <F8> "event generate . <<Event_backupRemExcludePattern>>"
 
 bind . <<Event_new>> \
 {
@@ -4821,12 +5331,12 @@ bind . <<Event_restoreToggleStateNoneIncludedExcluded>> \
   }
 }
 
-bind . <<Event_addIncludePattern>> \
+bind . <<Event_backupAddIncludePattern>> \
 {
   addIncludedPattern ""
 }
 
-bind . <<Event_remIncludePattern>> \
+bind . <<Event_backupRemIncludePattern>> \
 {
   set patternList {}
   foreach index [$backupIncludedListWidget curselection] \
@@ -4841,18 +5351,20 @@ bind . <<Event_remIncludePattern>> \
   .backup.filters.includedButtons.rem configure -state disabled
 }
 
-bind . <<Event_addExcludePattern>> \
+bind . <<Event_backupAddExcludePattern>> \
 {
   addExcludedPattern ""
 }
 
-bind . <<Event_remExcludePattern>> \
+bind . <<Event_backupRemExcludePattern>> \
 {
+puts 11323
   set patternList {}
   foreach index [$backupExcludedListWidget curselection] \
   {
     lappend patternList [$backupExcludedListWidget get $index]
   }
+puts $patternList
   foreach pattern $patternList \
   {
     remExcludedPattern $pattern
@@ -4933,6 +5445,7 @@ bind . <<Event_remJob>> \
   {
     set id [lindex [lindex [.jobs.list.data get $n $n] 0] 0]
     remJob .jobs.list.data $id
+    set currentJob(id) 0
   }
 }
 
@@ -4947,6 +5460,12 @@ bind . <<Event_abortJob>> \
       abortJob .jobs.list.data $id
     }
   }
+}
+
+bind . <<Event_volume>> \
+{
+  set errorCode 0
+  BackupServer:executeCommand errorCode errorText "VOLUME" $::currentJob(id) $::currentJob(requestedVolumeNumber)
 }
 
 update

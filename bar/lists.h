@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -107,6 +107,26 @@ void List_done(void                 *list,
 List *List_new(void);
 
 /***********************************************************************\
+* Name   : List_duplicate
+* Purpose: duplicate list
+* Input  : fromList                        - from list
+*          fromListFromNode,fromListToNode - from/to node (could be
+*                                            NULL)
+*          listNodeCopyFunction            - node copy function
+*          listNodeCopyUserData            - node copy user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+List *List_duplicate(const void           *fromList,
+                     const void           *fromListFromNode,
+                     const void           *fromListToNode,
+                     ListNodeCopyFunction listNodeCopyFunction,
+                     void                 *listNodeCopyUserData
+                    );
+
+/***********************************************************************\
 * Name   : List_delete
 * Purpose: free all nodes and delete list
 * Input  : list                 - list to free
@@ -147,6 +167,8 @@ void List_clear(void                 *list,
 *                                            NULL)
 *          toListNextNode                  - insert node before nextNode
 *                                            (could be NULL)
+*          listNodeCopyFunction            - node copy function
+*          listNodeCopyUserData            - node copy user data
 * Output : -
 * Return : -
 * Notes  : -

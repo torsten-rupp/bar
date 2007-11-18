@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <assert.h>
 
 #include "global.h"
@@ -60,6 +61,59 @@ typedef enum
 
 typedef struct
 {
+  uint     port;
+  String   loginName;
+  String   publicKeyFileName;
+  String   privatKeyFileName;
+  Password *password;
+} SSHServer;
+
+typedef struct SSHServerNode
+{
+  NODE_HEADER(struct SSHServerNode);
+
+  String    name;
+  SSHServer sshServer;
+} SSHServerNode;
+
+typedef struct
+{
+  LIST_HEADER(SSHServerNode);
+} SSHServerList;
+
+typedef struct
+{
+  String requestVolumeCommand;
+  String unloadVolumeCommand;
+  String loadVolumeCommand;
+  uint64 volumeSize;
+
+  String imagePreProcessCommand;
+  String imagePostProcessCommand;
+  String imageCommand;
+  String eccPreProcessCommand;
+  String eccPostProcessCommand;
+  String eccCommand;
+  String writePreProcessCommand;
+  String writePostProcessCommand;
+  String writeCommand;
+} Device;
+
+typedef struct DeviceNode
+{
+  NODE_HEADER(struct DeviceNode);
+
+  String name;
+  Device device;
+} DeviceNode;
+
+typedef struct
+{
+  LIST_HEADER(DeviceNode);
+} DeviceList;
+
+typedef struct
+{
   uint64             archivePartSize;
   String             tmpDirectory;
   uint64             maxTmpSize;
@@ -75,17 +129,22 @@ typedef struct
   ulong              compressMinFileSize;
   Password           *cryptPassword;
 
-  uint               sshPort;
-  String             sshPublicKeyFileName;
-  String             sshPrivatKeyFileName;
-  Password           *sshPassword;
+  SSHServer          sshServer;
+  SSHServerList      *sshServerList;
+  SSHServer          defaultSSHServer;
 
   String             remoteBARExecutable;
+
+  String             deviceName;
+  Device             device;
+  DeviceList         *deviceList;
+  Device             defaultDevice;
 
   bool               skipUnreadableFlag;
   bool               overwriteArchiveFilesFlag;
   bool               overwriteFilesFlag;
   bool               noDefaultConfigFlag;
+  bool               errorCorrectionCodesFlag;
   bool               quietFlag;
   long               verboseLevel;
 } Options;
@@ -94,6 +153,17 @@ typedef struct
 extern Options defaultOptions;
 
 /****************************** Macros *********************************/
+
+#define BYTES_SHORT(n) (((n)>(1024LL*1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL): \
+                        ((n)>       (1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL): \
+                        ((n)>                1024LL)?(double)(n)/(double)(1024LL*1024LL*1024LL): \
+                        (double)(n) \
+                       )
+#define BYTES_UNIT(n) (((n)>(1024LL*1024LL*1024LL))?"GB": \
+                       ((n)>       (1024LL*1024LL))?"MB": \
+                       ((n)>                1024LL)?"KB": \
+                       "bytes" \
+                      )
 
 /***************************** Forwards ********************************/
 
@@ -115,29 +185,31 @@ extern Options defaultOptions;
 const char *getErrorText(Errors error);
 
 /***********************************************************************\
-* Name   : info
+* Name   : info, vinfo
 * Purpose: output info
 * Input  : verboseLevel - verbosity level
 *          format       - format string (like printf)
 *          ...          - optional arguments (like printf)
+*          arguments    - arguments
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void info(uint verboseLevel, const char *format, ...);
+void vinfo(uint verboseLevel, const char *format, va_list arguments);
 
 /***********************************************************************\
 * Name   : warning
 * Purpose: output warning
-* Input  : format - format string (like printf)
-*          ...    - optional arguments (like printf)
+* Input  : text - format string (like printf)
+*          ...  - optional arguments (like printf)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void warning(const char *format, ...);
+void printWarning(const char *text, ...);
 
 /***********************************************************************\
 * Name   : printError
@@ -173,6 +245,38 @@ void copyOptions(const Options *sourceOptions, Options *destinationOptions);
 \***********************************************************************/
 
 void freeOptions(Options *options);
+
+/***********************************************************************\
+* Name   : getSSHServer
+* Purpose: get SSH server data
+* Input  : name    - server name
+*          options - options
+* Output : sshServer - SSH server data from server list or default
+*                      server values
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void getSSHServer(const String  name,
+                  const Options *options,
+                  SSHServer     *sshServer
+                 );
+
+/***********************************************************************\
+* Name   : getDevice
+* Purpose: get device data
+* Input  : name    - device name
+*          options - options
+* Output : device - device data from devie list or default
+*                   device values
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void getDevice(const String  name,
+               const Options *options,
+               Device        *device
+              );
 
 #ifdef __cplusplus
   }

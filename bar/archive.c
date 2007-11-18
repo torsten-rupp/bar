@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.31 $
+* $Revision: 1.32 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -23,7 +23,6 @@
 #include "archive_format.h"
 #include "chunks.h"
 #include "files.h"
-#include "storage.h"
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
@@ -74,12 +73,12 @@ LOCAL Errors getNextChunkHeader(ArchiveInfo *archiveInfo, ChunkHeader *chunkHead
 
   if (!archiveInfo->nextChunkHeaderReadFlag)
   {
-    if (Chunk_eof(&archiveInfo->storageFileHandle))
+    if (Chunk_eof(&archiveInfo->fileHandle))
     {
       return ERROR_END_OF_ARCHIVE;
     }
 
-    error = Chunk_next(&archiveInfo->storageFileHandle,chunkHeader);
+    error = Chunk_next(&archiveInfo->fileHandle,chunkHeader);
     if (error != ERROR_NONE)
     {
       return error;
@@ -140,7 +139,7 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
     if (archiveInfo->fileOpenFlag)
     {
       /* get file size */
-      fileSize = Storage_getSize(&archiveInfo->storageFileHandle);
+      fileSize = File_getSize(&archiveInfo->fileHandle);
 
       if      (   !headerWrittenFlag
                && (fileSize+headerLength >= archiveInfo->options->archivePartSize)
@@ -178,13 +177,14 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
 
   /* get output filename */
   archiveInfo->fileName = String_new();
-  if (!File_getTmpFileName(archiveInfo->options->tmpDirectory,archiveInfo->fileName))
+  error = File_getTmpFileName(archiveInfo->options->tmpDirectory,archiveInfo->fileName);
+  if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return error;
   }
 
   /* create file */
-  error = Storage_create(&archiveInfo->storageFileHandle,archiveInfo->fileName,0,archiveInfo->options);
+  error = File_open(&archiveInfo->fileHandle,archiveInfo->fileName,FILE_OPENMODE_CREATE);
   if (error != ERROR_NONE)
   {
     String_delete(archiveInfo->fileName);
@@ -214,8 +214,8 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo)
   assert(archiveInfo->fileOpenFlag);
 
   /* close file */
-  size = Storage_getSize(&archiveInfo->storageFileHandle);
-  Storage_close(&archiveInfo->storageFileHandle);
+  size = File_getSize(&archiveInfo->fileHandle);
+  File_close(&archiveInfo->fileHandle);
 
   if (archiveInfo->archiveNewFileFunction != NULL)
   {
@@ -614,11 +614,11 @@ Errors Archive_initAll(void)
   Errors error;
 
   /* init chunks*/
-  error = Chunk_initAll((bool(*)(void*))Storage_eof,
-                        (Errors(*)(void*,void*,ulong,ulong*))Storage_read,
-                        (Errors(*)(void*,const void*,ulong))Storage_write,
-                        (Errors(*)(void*,uint64*))Storage_tell,
-                        (Errors(*)(void*,uint64))Storage_seek
+  error = Chunk_initAll((bool(*)(void*))File_eof,
+                        (Errors(*)(void*,void*,ulong,ulong*))File_read,
+                        (Errors(*)(void*,const void*,ulong))File_write,
+                        (Errors(*)(void*,uint64*))File_tell,
+                        (Errors(*)(void*,uint64))File_seek
                        );
   if (error != ERROR_NONE)
   {
@@ -690,8 +690,8 @@ Errors Archive_open(ArchiveInfo   *archiveInfo,
 
   archiveInfo->nextChunkHeaderReadFlag = FALSE;
 
-  /* open storage */
-  error = Storage_open(&archiveInfo->storageFileHandle,archiveInfo->fileName,options);
+  /* open file */
+  error = File_open(&archiveInfo->fileHandle,archiveInfo->fileName,FILE_OPENMODE_READ);
   if (error != ERROR_NONE)
   {
     String_delete(archiveInfo->fileName);
@@ -711,7 +711,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo)
 
   /* find next file, directory, link chunk */
   chunkHeaderFoundFlag = FALSE;
-  while (!Storage_eof(&archiveInfo->storageFileHandle) && !chunkHeaderFoundFlag)
+  while (!File_eof(&archiveInfo->fileHandle) && !chunkHeaderFoundFlag)
   {
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (error != ERROR_NONE)
@@ -731,7 +731,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo)
       {
         return error;
       }
-      warning("Skipped unexpected chunk '%s'\n",Chunk_idToString(chunkHeader.id));
+      printWarning("Skipped unexpected chunk '%s'\n",Chunk_idToString(chunkHeader.id));
     }
   }
 
@@ -804,7 +804,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   /* init file-chunk */
   error = Chunk_init(&archiveFileInfo->file.chunkInfoFile,
                      NULL,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      0,
                      NULL
                     );
@@ -875,7 +875,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   /* init entry/dat file-chunks */
   error = Chunk_init(&archiveFileInfo->file.chunkInfoFileEntry,
                      &archiveFileInfo->file.chunkInfoFile,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      archiveFileInfo->blockLength,
                      &archiveFileInfo->file.cryptInfoFileEntry
                     );
@@ -891,7 +891,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   }
   error = Chunk_init(&archiveFileInfo->file.chunkInfoFileData,
                      &archiveFileInfo->file.chunkInfoFile,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      archiveFileInfo->blockLength,
                      &archiveFileInfo->file.cryptInfoFileData
                     );
@@ -950,7 +950,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   /* init directory chunk */
   error = Chunk_init(&archiveFileInfo->directory.chunkInfoDirectory,
                      NULL,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      0,
                      NULL
                     );
@@ -975,7 +975,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   /* init directory entry chunk */
   error = Chunk_init(&archiveFileInfo->directory.chunkInfoDirectoryEntry,
                      &archiveFileInfo->directory.chunkInfoDirectory,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      archiveFileInfo->blockLength,
                      &archiveFileInfo->directory.cryptInfoDirectoryEntry
                     );
@@ -1094,7 +1094,7 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   /* init link-chunk */
   error = Chunk_init(&archiveFileInfo->link.chunkInfoLink,
                      NULL,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      0,
                      NULL
                     );
@@ -1121,7 +1121,7 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   /* init link entry chunk */
   error = Chunk_init(&archiveFileInfo->link.chunkInfoLinkEntry,
                      &archiveFileInfo->link.chunkInfoLink,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      archiveFileInfo->blockLength,
                      &archiveFileInfo->link.cryptInfoLinkEntry
                     );
@@ -1237,7 +1237,7 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
         && (chunkHeader.id != CHUNK_ID_LINK)
        )
     {
-      error = Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+      error = Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
       if (error != ERROR_NONE)
       {
         return error;
@@ -1298,7 +1298,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   /* init file chunk */
   error = Chunk_init(&archiveFileInfo->file.chunkInfoFile,
                      NULL,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      0,
                      NULL
                     );
@@ -1319,7 +1319,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 
     if (chunkHeader.id != CHUNK_ID_FILE)
     {
-      error = Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+      error = Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
       if (error != ERROR_NONE)
       {
         Chunk_done(&archiveFileInfo->file.chunkInfoFile);
@@ -1341,7 +1341,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
   archiveFileInfo->cryptAlgorithm         = archiveFileInfo->file.chunkFile.cryptAlgorithm;
@@ -1352,7 +1352,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
   assert(archiveFileInfo->blockLength > 0);
@@ -1374,7 +1374,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   {
     free(archiveFileInfo->file.buffer);
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
   error = Crypt_new(&archiveFileInfo->file.cryptInfoFileData,
@@ -1386,7 +1386,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     Crypt_delete(&archiveFileInfo->file.cryptInfoFileEntry);
     free(archiveFileInfo->file.buffer);
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
   error = Crypt_new(&archiveFileInfo->file.cryptInfoData,
@@ -1399,7 +1399,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     Crypt_delete(&archiveFileInfo->file.cryptInfoFileEntry);
     free(archiveFileInfo->file.buffer);
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
 
@@ -1416,14 +1416,14 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     Crypt_delete(&archiveFileInfo->file.cryptInfoFileEntry);
     free(archiveFileInfo->file.buffer);
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return ERROR_COMPRESS_ERROR;
   }
 
   /* init file entry/data chunks */
   error = Chunk_init(&archiveFileInfo->file.chunkInfoFileEntry,
                      &archiveFileInfo->file.chunkInfoFile,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      archiveFileInfo->blockLength,
                      &archiveFileInfo->file.cryptInfoFileEntry
                     );
@@ -1435,12 +1435,12 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     Crypt_delete(&archiveFileInfo->file.cryptInfoFileEntry);
     free(archiveFileInfo->file.buffer);
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
   error = Chunk_init(&archiveFileInfo->file.chunkInfoFileData,
                      &archiveFileInfo->file.chunkInfoFile,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      archiveFileInfo->blockLength,
                      &archiveFileInfo->file.cryptInfoFileData
                     );
@@ -1453,7 +1453,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     Crypt_delete(&archiveFileInfo->file.cryptInfoFileEntry);
     free(archiveFileInfo->file.buffer);
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
 
@@ -1537,7 +1537,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     Crypt_delete(&archiveFileInfo->file.cryptInfoFileEntry);
     free(archiveFileInfo->file.buffer);
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
 
     if      (error != ERROR_NONE) return error;
     else if (!foundFileEntry)     return ERROR_NO_FILE_ENTRY;
@@ -1578,7 +1578,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   /* init file chunk */
   error = Chunk_init(&archiveFileInfo->directory.chunkInfoDirectory,
                      NULL,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      0,
                      NULL
                     );
@@ -1599,7 +1599,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
 
     if (chunkHeader.id != CHUNK_ID_DIRECTORY)
     {
-      error = Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+      error = Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
       if (error != ERROR_NONE)
       {
         Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
@@ -1621,7 +1621,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
   archiveFileInfo->cryptAlgorithm = archiveFileInfo->directory.chunkDirectory.cryptAlgorithm;
@@ -1631,7 +1631,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
   assert(archiveFileInfo->blockLength > 0);
@@ -1644,14 +1644,14 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
 
   /* init directory entry */
   error = Chunk_init(&archiveFileInfo->directory.chunkInfoDirectoryEntry,
                      &archiveFileInfo->directory.chunkInfoDirectory,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      archiveFileInfo->blockLength,
                      &archiveFileInfo->directory.cryptInfoDirectoryEntry
                     );
@@ -1659,7 +1659,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   {
     Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
     Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
 
@@ -1716,7 +1716,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
     Chunk_done(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
     Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
     Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
 
     if      (error != ERROR_NONE)  return error;
     else if (!foundDirectoryEntry) return ERROR_NO_DIRECTORY_ENTRY;
@@ -1752,7 +1752,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   /* init file chunk */
   error = Chunk_init(&archiveFileInfo->link.chunkInfoLink,
                      NULL,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      0,
                      NULL
                     );
@@ -1773,7 +1773,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
 
     if (chunkHeader.id != CHUNK_ID_LINK)
     {
-      Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+      Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
       if (error != ERROR_NONE)
       {
         Chunk_done(&archiveFileInfo->link.chunkInfoLink);
@@ -1795,7 +1795,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveFileInfo->link.chunkInfoLink);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
   archiveFileInfo->cryptAlgorithm = archiveFileInfo->link.chunkLink.cryptAlgorithm;
@@ -1805,7 +1805,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveFileInfo->link.chunkInfoLink);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
   assert(archiveFileInfo->blockLength > 0);
@@ -1818,14 +1818,14 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveFileInfo->link.chunkInfoLink);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
 
   /* init link entry */
   error = Chunk_init(&archiveFileInfo->link.chunkInfoLinkEntry,
                      &archiveFileInfo->link.chunkInfoLink,
-                     &archiveInfo->storageFileHandle,
+                     &archiveInfo->fileHandle,
                      archiveFileInfo->blockLength,
                      &archiveFileInfo->link.cryptInfoLinkEntry
                     );
@@ -1833,7 +1833,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   {
     Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
     Chunk_done(&archiveFileInfo->link.chunkInfoLink);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
     return error;
   }
 
@@ -1891,7 +1891,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
     Chunk_done(&archiveFileInfo->link.chunkInfoLinkEntry);
     Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
     Chunk_done(&archiveFileInfo->link.chunkInfoLink);
-    Chunk_skip(&archiveInfo->storageFileHandle,&chunkHeader);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
 
     if      (error != ERROR_NONE) return error;
     else if (!foundLinkEntry)     return ERROR_NO_LINK_ENTRY;
@@ -2168,7 +2168,7 @@ uint64 Archive_getSize(ArchiveFileInfo *archiveFileInfo)
 {
   assert(archiveFileInfo != NULL);
 
-  return Storage_getSize(&archiveFileInfo->archiveInfo->storageFileHandle);
+  return File_getSize(&archiveFileInfo->archiveInfo->fileHandle);
 }
 
 #ifdef __cplusplus

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -15,16 +15,16 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-//#include <fcntl.h>
-//#include <sys/ioctl.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <utime.h>
+#include <sys/statvfs.h>
 #include <errno.h>
 #include <assert.h>
 
 #include "global.h"
 #include "strings.h"
+#include "stringlists.h"
 
 #include "files.h"
 
@@ -215,7 +215,7 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const n
 
 /*---------------------------------------------------------------------*/
 
-bool File_getTmpFileName(const String directory, String fileName)
+Errors File_getTmpFileName(const String directory, String fileName)
 {
   char *s;
   int  handle;
@@ -241,7 +241,7 @@ bool File_getTmpFileName(const String directory, String fileName)
   if (handle == -1)
   {
     free(s);
-    return FALSE;
+    return ERROR_IO_ERROR;
   }
   close(handle);
 
@@ -249,25 +249,25 @@ bool File_getTmpFileName(const String directory, String fileName)
 
   free(s);
 
-  return TRUE;
+  return ERROR_NONE;
 }
 
-bool File_getTmpDirectoryName(const String directory, String fileName)
+Errors File_getTmpDirectoryName(const String directory, String directoryName)
 {
   char *s;
 
-  assert(fileName != NULL);
+  assert(directoryName != NULL);
 
   if (directory != NULL)
   {
-    String_set(fileName,directory);
-    File_appendFileNameCString(fileName,"bar-XXXXXXX");
+    String_set(directoryName,directory);
+    File_appendFileNameCString(directoryName,"bar-XXXXXXX");
   }
   else
   {
-    String_setCString(fileName,"bar-XXXXXXX");
+    String_setCString(directoryName,"bar-XXXXXXX");
   }
-  s = String_toCString(fileName);
+  s = String_toCString(directoryName);
   if (s == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -276,14 +276,14 @@ bool File_getTmpDirectoryName(const String directory, String fileName)
   if (mkdtemp(s) == NULL)
   {
     free(s);
-    return FALSE;
+    return ERROR_IO_ERROR;
   }
 
-  String_setBuffer(fileName,s,strlen(s));
+  String_setBuffer(directoryName,s,strlen(s));
 
   free(s);
 
-  return TRUE;
+  return ERROR_NONE;
 }
 
 /*---------------------------------------------------------------------*/
@@ -795,7 +795,7 @@ Errors File_readDevice(DeviceHandle *deviceHandle,
   return ERROR_NONE;
 }
 
-FileTypes File_getType(String fileName)
+FileTypes File_getType(const String fileName)
 {
   struct stat64 fileStat;
 
@@ -814,48 +814,148 @@ FileTypes File_getType(String fileName)
   }
 }
 
-bool File_delete(String fileName)
+Errors File_delete(const String fileName, bool recursiveFlag)
 {
   struct stat64 fileStat;
 
   assert(fileName != NULL);
 
-  if (lstat64(String_cString(fileName),&fileStat) == 0)
+  if (lstat64(String_cString(fileName),&fileStat) != 0)
   {
-    if      (   S_ISREG(fileStat.st_mode)
-             || S_ISLNK(fileStat.st_mode)
-            )
+    return ERROR_IO_ERROR;
+  }
+
+  if      (   S_ISREG(fileStat.st_mode)
+           || S_ISLNK(fileStat.st_mode)
+          )
+  {
+    if (unlink(String_cString(fileName)) != 0)
     {
-      return (unlink(String_cString(fileName)) == 0);
+      return ERROR_IO_ERROR;
     }
-    else if (S_ISDIR(fileStat.st_mode))
+  }
+  else if (S_ISDIR(fileStat.st_mode))
+  {
+    Errors        error;
+    StringList    directoryList;
+    DIR           *dir;
+    struct dirent *entry;
+    String        directoryName;
+    bool          emptyFlag;
+    String        name;
+
+    if (recursiveFlag)
     {
-      return (rmdir(String_cString(fileName)) == 0);
+      /* delete entries in directory */
+      error = ERROR_NONE;
+      StringList_init(&directoryList);
+      StringList_append(&directoryList,fileName);
+      directoryName = String_new();
+      name = String_new();
+      while (!StringList_empty(&directoryList) && (error == ERROR_NONE))
+      {
+        StringList_getFirst(&directoryList,directoryName);
+
+        emptyFlag = TRUE;
+        dir = opendir(String_cString(directoryName));
+        if (dir != NULL)
+        {
+          while (((entry = readdir(dir)) != NULL) && (error == ERROR_NONE))
+          {
+            if (   (strcmp(entry->d_name,"." ) != 0)
+                && (strcmp(entry->d_name,"..") != 0)
+               )
+            {
+              String_set(name,directoryName);
+              File_appendFileNameCString(name,entry->d_name);
+
+              if (lstat64(String_cString(name),&fileStat) == 0)
+              {
+                if      (   S_ISREG(fileStat.st_mode)
+                         || S_ISLNK(fileStat.st_mode)
+                        )
+                {
+/*
+                  if (unlink(String_cString(name)) != 0)
+                  {
+                    error = ERROR_IO_ERROR;
+                  }
+*/
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                }
+                else if (S_ISDIR(fileStat.st_mode))
+                {
+                  StringList_append(&directoryList,name);
+                }
+              }
+
+              emptyFlag = FALSE;
+            }
+          }
+          closedir(dir);
+
+          if (emptyFlag)
+          {
+/*
+            if (rmdir(String_cString(directoryName)) != 0)
+            {
+              error = ERROR_IO_ERROR;
+            }
+*/
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          }
+        }
+      }
+      String_delete(name);
+      String_delete(directoryName);
+      StringList_done(&directoryList);
     }
     else
     {
-      return FALSE;
+      if (rmdir(String_cString(fileName)) != 0)
+      {
+        error = ERROR_IO_ERROR;
+      }
     }
+
+    return error;
   }
-  else
-  {
-    return FALSE;
-  }
+
+  return ERROR_NONE;
 }
 
-bool File_rename(String oldFileName,
-                 String newFileName
-                )
+Errors File_rename(const String oldFileName,
+                   const String newFileName
+                  )
 {
+  Errors error;
+
   assert(oldFileName != NULL);
   assert(newFileName != NULL);
 
-  return (rename(String_cString(oldFileName),String_cString(newFileName)) == 0);
+  /* try rename */
+  if (rename(String_cString(oldFileName),String_cString(newFileName)) != 0)
+  {
+    /* copy to new file */
+    error = File_copy(oldFileName,newFileName);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    /* delete old file */
+    if (unlink(String_cString(oldFileName)) != 0)
+    {
+      return ERROR_IO_ERROR;
+    }
+  }
+
+  return ERROR_NONE;
 }
 
-bool File_copy(String sourceFileName,
-               String destinationFileName
-              )
+Errors File_copy(const String sourceFileName,
+                 const String destinationFileName
+                )
 {
   #define BUFFER_SIZE (1024*1024)
 
@@ -870,7 +970,7 @@ bool File_copy(String sourceFileName,
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
-    return FALSE;
+    return ERROR_INSUFFICIENT_MEMORY;
   }
 
   /* open files */
@@ -878,14 +978,14 @@ bool File_copy(String sourceFileName,
   if (sourceFile == NULL)
   {
     free(buffer);
-    return FALSE;
+    return ERROR_OPEN_FILE;
   }
   destinationFile = fopen(String_cString(destinationFileName),"w");
   if (destinationFile == NULL)
   {
     fclose(sourceFile);
     free(buffer);
-    return FALSE;
+    return ERROR_OPEN_FILE;
   }
 
   /* copy data */
@@ -899,7 +999,7 @@ bool File_copy(String sourceFileName,
         fclose(destinationFile);
         fclose(sourceFile);
         free(buffer);
-        return FALSE;
+        return ERROR_IO_ERROR;
       }
     }
     else
@@ -909,7 +1009,7 @@ bool File_copy(String sourceFileName,
         fclose(destinationFile);
         fclose(sourceFile);
         free(buffer);
-        return FALSE;
+        return ERROR_IO_ERROR;
       }
     }
   }
@@ -922,12 +1022,12 @@ bool File_copy(String sourceFileName,
   /* free resources */
   free(buffer);
 
-  return TRUE;
+  return ERROR_NONE;
 
   #undef BUFFER_SIZE
 }
 
-bool File_exists(String fileName)
+bool File_exists(const String fileName)
 {
   struct stat fileStat;
 
@@ -945,8 +1045,8 @@ bool File_existsCString(const char *fileName)
   return (stat(fileName,&fileStat) == 0);
 }
 
-Errors File_getFileInfo(String   fileName,
-                        FileInfo *fileInfo
+Errors File_getFileInfo(const String fileName,
+                        FileInfo     *fileInfo
                        )
 {
   struct stat64 fileStat;
@@ -970,8 +1070,8 @@ Errors File_getFileInfo(String   fileName,
   return ERROR_NONE;
 }
 
-Errors File_setFileInfo(String   fileName,
-                        FileInfo *fileInfo
+Errors File_setFileInfo(const String fileName,
+                        FileInfo     *fileInfo
                        )
 {
   struct utimbuf utimeBuffer;
@@ -997,8 +1097,8 @@ Errors File_setFileInfo(String   fileName,
   return ERROR_NONE;
 }
 
-Errors File_readLink(String linkName,
-                     String fileName
+Errors File_readLink(const String linkName,
+                     String       fileName
                     )
 {
   #define BUFFER_SIZE  256
@@ -1043,8 +1143,8 @@ Errors File_readLink(String linkName,
   }
 }
 
-Errors File_link(String linkName,
-                 String fileName
+Errors File_link(const String linkName,
+                 const String fileName
                 )
 {
   assert(linkName != NULL);
@@ -1055,6 +1155,28 @@ Errors File_link(String linkName,
   {
     return ERROR_IO_ERROR;
   }
+
+  return ERROR_NONE;
+}
+
+Errors File_getFileSystemInfo(const          String pathName,
+                              FileSystemInfo *fileSystemInfo
+                             )
+{
+  struct statvfs fileSystemStat;
+
+  assert(pathName != NULL);
+  assert(fileSystemInfo != NULL);
+
+  if (statvfs(String_cString(pathName),&fileSystemStat) != 0)
+  {
+    return ERROR_IO_ERROR;
+  }
+
+  fileSystemInfo->blockSize         = fileSystemStat.f_bsize;
+  fileSystemInfo->freeBytes         = (uint64)fileSystemStat.f_bavail*(uint64)fileSystemStat.f_bsize;
+  fileSystemInfo->totalBytes        = (uint64)fileSystemStat.f_blocks*(uint64)fileSystemStat.f_frsize;
+  fileSystemInfo->maxFileNameLength = (uint64)fileSystemStat.f_namemax;
 
   return ERROR_NONE;
 }

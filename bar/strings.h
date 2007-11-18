@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -178,7 +178,8 @@ char *String_subCString(char *s, const String fromString, ulong index, long leng
 char *String_subBuffer(char *buffer, const String fromString, ulong index, long length);
 
 /***********************************************************************\
-* Name   : String_append, String_appendCString, String_appendChar
+* Name   : String_append, String_appendSub, String_appendCString,
+*          String_appendChar
 * Purpose: append to string
 * Input  : string                - string
 *          appendString/s/buffer - string to append
@@ -190,12 +191,14 @@ char *String_subBuffer(char *buffer, const String fromString, ulong index, long 
 \***********************************************************************/
 
 String String_append(String string, String appendString);
+String String_appendSub(String string, const String fromString, ulong fromIndex, long fromLength);
 String String_appendBuffer(String string, const char *buffer, ulong bufferLength);
 String String_appendCString(String string, const char *s);
 String String_appendChar(String string, char ch);
 
 /***********************************************************************\
-* Name   : String_insert, String_insertCString, String_insertChar
+* Name   : String_insert, String_insertSub, String_insertCString,
+*          String_insertChar
 * Purpose: insert into string
 * Input  : string                - string
 *          index                 - index where to insert
@@ -208,6 +211,7 @@ String String_appendChar(String string, char ch);
 \***********************************************************************/
 
 String String_insert(String string, ulong index, const String insertString);
+String String_insertSub(String string, ulong index, const String fromString, ulong fromIndex, long fromLength);
 String String_insertBuffer(String string, ulong index, const char *buffer, ulong bufferLength);
 String String_insertCString(String string, ulong index, const char *s);
 String String_insertChar(String string, ulong index, char ch);

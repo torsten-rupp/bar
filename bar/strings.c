@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -407,8 +407,8 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            ensureStringLength(string,string->length+length);
-            snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.i);
+            ensureStringLength(string,string->length+length+1);
+            snprintf(&string->data[string->length],length,formatToken.token,data.i);
           }
           break;
         case 'i':
@@ -425,8 +425,8 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length);
-                  snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.i);
+                  ensureStringLength(string,string->length+length+1);
+                  snprintf(&string->data[string->length],length,formatToken.token,data.i);
                 }
               }
               break;
@@ -440,8 +440,8 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length);
-                  snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.l);
+                  ensureStringLength(string,string->length+length+1);
+                  snprintf(&string->data[string->length],length,formatToken.token,data.l);
                 }
               }
               break;
@@ -456,8 +456,8 @@ LOCAL void formatString(struct __String *string,
                   }
                   else
                   {
-                    ensureStringLength(string,string->length+length);
-                    snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.ll);
+                    ensureStringLength(string,string->length+length+1);
+                    snprintf(&string->data[string->length],length,formatToken.token,data.ll);
                   }
                 #else /* not _LONG_LONG || HAVE_LONG_LONG */
                   HALT_INTERNAL_ERROR("long long not supported");
@@ -487,8 +487,8 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length);
-                  snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.ui);
+                  ensureStringLength(string,string->length+length+1);
+                  snprintf(&string->data[string->length],length,formatToken.token,data.ui);
                 }
               }
               break;
@@ -502,8 +502,8 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length);
-                  snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.ul);
+                  ensureStringLength(string,string->length+length+1);
+                  snprintf(&string->data[string->length],length,formatToken.token,data.ul);
                 }
               }
               break;
@@ -518,8 +518,8 @@ LOCAL void formatString(struct __String *string,
                   }
                   else
                   {
-                    ensureStringLength(string,string->length+length);
-                    snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.ull);
+                    ensureStringLength(string,string->length+length+1);
+                    snprintf(&string->data[string->length],length,formatToken.token,data.ull);
                   }
                 #else /* not _LONG_LONG || HAVE_LONG_LONG */
                   HALT_INTERNAL_ERROR("long long not supported");
@@ -549,8 +549,8 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            ensureStringLength(string,string->length+length);
-            snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.d);
+            ensureStringLength(string,string->length+length+1);
+            snprintf(&string->data[string->length],length,formatToken.token,data.d);
           }
           break;
         case 's':
@@ -583,8 +583,8 @@ LOCAL void formatString(struct __String *string,
             }
             else
             {
-              ensureStringLength(string,string->length+length);
-              snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.d);
+              ensureStringLength(string,string->length+length+1);
+              snprintf(&string->data[string->length],length,formatToken.token,data.d);
             }
           }
           break;
@@ -600,8 +600,8 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            ensureStringLength(string,string->length+length);
-            snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,data.p);
+            ensureStringLength(string,string->length+length+1);
+            snprintf(&string->data[string->length],length,formatToken.token,data.p);
           }
           break;
 
@@ -637,8 +637,8 @@ LOCAL void formatString(struct __String *string,
             }
             else
             {
-              ensureStringLength(string,string->length + length);
-              snprintf(&string->data[string->length],sizeof(buffer),formatToken.token,String_cString(data.string));
+              ensureStringLength(string,string->length+length+1);
+              snprintf(&string->data[string->length],length,formatToken.token,String_cString(data.string));
             }
           }
           break;
@@ -727,8 +727,8 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           }
           else
           {
-            ensureStringLength(string,string->length+length);
-            snprintf(&string->data[string->length],sizeof(buffer),formatToken.token);
+            ensureStringLength(string,string->length+length+1);
+            snprintf(&string->data[string->length],length,formatToken.token);
           }
           break;
       }
@@ -1052,7 +1052,10 @@ LOCAL bool parseString(const struct __String *string,
 
           String_clear(value.string);
           z = 0;
-          while ((index < string->length) && !isspace(string->data[index]))
+          while (   (index < string->length)
+                 && !isspace(string->data[index])
+                 && (string->data[index] != (*format))
+                )
           {
             stringQuote = NULL;
             if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
@@ -1488,8 +1491,6 @@ String String_clear(String string)
 
 String String_set(String string, const String sourceString)
 {
-  ulong n;
-
   CHECK_VALID(string);
 
   if (string != NULL)
@@ -1500,11 +1501,10 @@ String String_set(String string, const String sourceString)
     {
       assert(sourceString->data != NULL);
 
-      n = sourceString->length;
-      ensureStringLength(string,n+1);
+      ensureStringLength(string,sourceString->length+1);
       memcpy(&string->data[0],&sourceString->data[0],sourceString->length);
-      string->data[n] = '\0';
-      string->length = n;
+      string->data[sourceString->length] = '\0';
+      string->length = sourceString->length;
     }
     else
     {
@@ -1606,7 +1606,7 @@ String __String_copy(const char *fileName, ulong lineNb, String fromString)
       return NULL;
     }
 
-    ensureStringLength(string,fromString->length);
+    ensureStringLength(string,fromString->length+1);
     memcpy(&string->data[0],&fromString->data[0],fromString->length);
     string->data[fromString->length] ='\0';
     string->length = fromString->length;
@@ -1621,7 +1621,7 @@ String __String_copy(const char *fileName, ulong lineNb, String fromString)
   return string;
 }
 
-String String_sub(String string, const String fromString, ulong index, long length)
+String String_sub(String string, const String fromString, ulong fromIndex, long fromLength)
 {
   ulong n;
 
@@ -1636,18 +1636,18 @@ String String_sub(String string, const String fromString, ulong index, long leng
     {
       assert(fromString->data != NULL);
 
-      if (index < fromString->length)
+      if (fromIndex < fromString->length)
       {
-        if (index == STRING_END)
+        if (fromIndex == STRING_END)
         {
-          n = MIN(fromString->length,fromString->length-index);
+          n = MIN(fromString->length,fromString->length-fromIndex);
         }
         else
         {
-          n = MIN(length,fromString->length-index);
+          n = MIN(fromLength,fromString->length-fromIndex);
         }
-        ensureStringLength(string,n);
-        memcpy(&string->data[0],&fromString->data[index],n);
+        ensureStringLength(string,n+1);
+        memcpy(&string->data[0],&fromString->data[fromIndex],n);
         string->data[n] ='\0';
         string->length = n;
       }
@@ -1664,7 +1664,7 @@ String String_sub(String string, const String fromString, ulong index, long leng
   return string;
 }
 
-char *String_subCString(char *s, const String fromString, ulong index, long length)
+char *String_subCString(char *s, const String fromString, ulong fromIndex, long fromLength)
 {
   ulong n;
 
@@ -1672,16 +1672,16 @@ char *String_subCString(char *s, const String fromString, ulong index, long leng
 
   CHECK_VALID(fromString);
 
-  if (length > 0)
+  if (fromLength > 0)
   {
     if (fromString != NULL)
     {
       assert(fromString->data != NULL);
 
-      if (index < fromString->length)
+      if (fromIndex < fromString->length)
       {
-        n = MIN(length-1,fromString->length-index);
-        memcpy(s,&fromString->data[index],n);
+        n = MIN(fromLength,fromString->length-fromIndex);
+        memcpy(s,&fromString->data[fromIndex],n);
         s[n] = '\0';
       }
       else
@@ -1698,7 +1698,7 @@ char *String_subCString(char *s, const String fromString, ulong index, long leng
   return s;
 }
 
-char *String_subBuffer(char *buffer, const String fromString, ulong index, long length)
+char *String_subBuffer(char *buffer, const String fromString, ulong fromIndex, long fromLength)
 {
   ulong n;
 
@@ -1706,26 +1706,26 @@ char *String_subBuffer(char *buffer, const String fromString, ulong index, long 
 
   CHECK_VALID(fromString);
 
-  if (length > 0)
+  if (fromLength > 0)
   {
     if (fromString != NULL)
     {
       assert(fromString->data != NULL);
 
-      if (index < fromString->length)
+      if (fromIndex < fromString->length)
       {
-        n = MIN(length,fromString->length-index);
-        memcpy(&buffer[0],&fromString->data[index],n);
-        memset(&buffer[n],0,length-n);
+        n = MIN(fromLength,fromString->length-fromIndex);
+        memcpy(&buffer[0],&fromString->data[fromIndex],n);
+        memset(&buffer[n],0,fromLength-n);
       }
       else
       {
-        memset(buffer,0,length);
+        memset(buffer,0,fromLength);
       }
     }
     else
     {
-      memset(buffer,0,length);
+      memset(buffer,0,fromLength);
     }
   }
 
@@ -1749,6 +1749,43 @@ String String_append(String string, const String appendString)
       memcpy(&string->data[string->length],&appendString->data[0],appendString->length);
       string->data[n] = '\0';
       string->length = n;
+    }
+  }
+
+  UPDATE_VALID(string);
+
+  return string;
+}
+
+String String_appendSub(String string, const String fromString, ulong fromIndex, long fromLength)
+{
+  ulong n;
+
+  CHECK_VALID(string);
+  CHECK_VALID(fromString);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+    if (fromString != NULL)
+    {
+      assert(fromString->data != NULL);
+
+      if (fromIndex < fromString->length)
+      {
+        if (fromIndex == STRING_END)
+        {
+          n = MIN(fromString->length,fromString->length-fromIndex);
+        }
+        else
+        {
+          n = MIN(fromLength,fromString->length-fromIndex);
+        }
+        ensureStringLength(string,string->length+n+1);
+        memcpy(&string->data[string->length],&fromString->data[fromIndex],n);
+        string->data[string->length+n] ='\0';
+        string->length += n;
+      }
     }
   }
 
@@ -1845,6 +1882,54 @@ String String_insert(String string, ulong index, const String insertString)
         memcpy(&string->data[index],&insertString->data[0],insertString->length);
         string->data[n] = '\0';
         string->length = n;
+      }
+    }
+  }
+
+  UPDATE_VALID(string);
+
+  return string;
+}
+
+String String_insertSub(String string, ulong index, const String fromString, ulong fromIndex, long fromLength)
+{
+  ulong n;
+
+  CHECK_VALID(string);
+  CHECK_VALID(fromString);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    if (fromString != NULL)
+    {
+      if (fromIndex < fromString->length)
+      {
+        if (fromIndex == STRING_END)
+        {
+          n = MIN(fromString->length,fromString->length-fromIndex);
+        }
+        else
+        {
+          n = MIN(fromLength,fromString->length-fromIndex);
+        }
+
+        if      (index == STRING_END)
+        {
+          ensureStringLength(string,string->length+n+1);
+          memcpy(&string->data[string->length],&fromString->data[fromIndex],n);
+          string->data[string->length+n] = '\0';
+          string->length += n;
+        }
+        else if (index <= string->length)
+        {
+          ensureStringLength(string,string->length+n+1);
+          memmove(&string->data[index+n],&string->data[index],string->length-index);
+          memcpy(&string->data[index],&fromString->data[fromIndex],n);
+          string->data[string->length+n] = '\0';
+          string->length += n;
+        }
       }
     }
   }
@@ -2196,7 +2281,7 @@ long String_find(const String string, ulong index, const String findString)
   findIndex = -1;
 
   z = (index != STRING_BEGIN)?index:0;
-  while (((z+findString->length) < string->length) && (findIndex < 0))
+  while (((z+findString->length) <= string->length) && (findIndex < 0))
   {
     i = 0;
     while ((i < findString->length) && (string->data[z+i] == findString->data[i]))
@@ -2226,7 +2311,7 @@ long String_findCString(const String string, ulong index, const char *s)
 
   sLength = strlen(s);
   z = (index != STRING_BEGIN)?index:0;
-  while (((z+sLength) < string->length) && (findIndex < 0))
+  while (((z+sLength) <= string->length) && (findIndex < 0))
   {
     i = 0;
     while ((i < sLength) && (string->data[z+i] == s[i]))

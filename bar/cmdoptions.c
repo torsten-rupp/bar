@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -56,7 +56,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                         )
 {
   uint  i,n;
-  char  number[64],unit[32];
+  char  number[128],unit[32];
   ulong factor;
 
   assert(commandLineOption != NULL);
@@ -73,8 +73,8 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       if (i > 0)
       {
         while ((i > 1) && !isdigit(value[i-1])) { i--; }
-        n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n);number[n] = '\0';
-        n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n);unit[n]   = '\0';
+        n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
+        n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
       }
       else
       {
@@ -110,7 +110,10 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         factor = 1;
       }
 
+      /* calculate value */
       (*commandLineOption->variable.n) = strtoll(value,NULL,0)*factor;
+
+      /* check range */
       if (   ((*commandLineOption->variable.n) < commandLineOption->integerOption.min)
           || ((*commandLineOption->variable.n) > commandLineOption->integerOption.max)
          )
@@ -135,8 +138,8 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       if (i > 0)
       {
         while ((i > 1) && !isdigit(value[i-1])) { i--; }
-        n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n);number[n] = '\0';
-        n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n);unit[n]   = '\0';
+        n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
+        n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
       }
       else
       {
@@ -172,7 +175,9 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         factor = 1;
       }
 
+      /* calculate value */
       (*commandLineOption->variable.n) = strtoll(value,NULL,0)*factor;
+
       if (   ((*commandLineOption->variable.n) < commandLineOption->integer64Option.min)
           || ((*commandLineOption->variable.n) > commandLineOption->integer64Option.max)
          )
@@ -191,6 +196,49 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       break;
     case CMD_OPTION_TYPE_DOUBLE:
       assert(commandLineOption->variable.d != NULL);
+
+      /* split number, unit */
+      i = strlen(value);
+      if (i > 0)
+      {
+        while ((i > 1) && !isdigit(value[i-1])) { i--; }
+        n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
+        n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
+      }
+      else
+      {
+        number[0] = '\0';
+        unit[0]   = '\0';
+      }
+
+      /* find factor */
+      if (unit[0] != '\0')
+      {
+        if (commandLineOption->doubleOption.units != NULL)
+        {
+          i = 0;
+          while ((i < commandLineOption->doubleOption.unitCount) && (strcmp(commandLineOption->doubleOption.units[i].name,unit) != 0))
+          {
+            i++;
+          }
+          if (i >= commandLineOption->doubleOption.unitCount)
+          {
+            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+            return FALSE;
+          }
+          factor = commandLineOption->doubleOption.units[i].factor;
+        }
+        else
+        {
+          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+          return FALSE;
+        }
+      }
+      else
+      {
+        factor = 1;
+      }
+
       (*commandLineOption->variable.d) = strtod(value,0);
       if (   ((*commandLineOption->variable.d) < commandLineOption->doubleOption.min)
           || ((*commandLineOption->variable.d) > commandLineOption->doubleOption.max)
@@ -259,13 +307,12 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
       (*commandLineOption->variable.string) = strdup(value);
       break;
-
     case CMD_OPTION_TYPE_SPECIAL:
-      if (!commandLineOption->specialOption.parseSpecial(commandLineOption->variable.special,
+      if (!commandLineOption->specialOption.parseSpecial(commandLineOption->specialOption.userData,
+                                                         commandLineOption->variable.special,
                                                          commandLineOption->name,
                                                          value,
-                                                         commandLineOption->defaultValue.p,
-                                                         commandLineOption->specialOption.userData
+                                                         commandLineOption->defaultValue.p
                                                         )
          )
       {
@@ -353,11 +400,11 @@ bool CmdOption_init(const CommandLineOption commandLineOptions[],
       case CMD_OPTION_TYPE_SPECIAL:
         if (commandLineOptions[i].defaultValue.p != NULL)
         {
-          if (!commandLineOptions[i].specialOption.parseSpecial(commandLineOptions[i].variable.special,
+          if (!commandLineOptions[i].specialOption.parseSpecial(commandLineOptions[i].specialOption.userData,
+                                                                commandLineOptions[i].variable.special,
                                                                 commandLineOptions[i].name,
                                                                 commandLineOptions[i].defaultValue.p,
-                                                                NULL,
-                                                                commandLineOptions[i].specialOption.userData
+                                                                NULL
                                                                )
              )
           {

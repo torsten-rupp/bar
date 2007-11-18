@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -101,7 +101,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                        SocketTypes  socketType,
                        const String hostName,
                        uint         hostPort,
-                       const String userName,
+                       const String sshLoginName,
                        const String sshPublicKeyFileName,
                        const String sshPrivatKeyFileName,
                        Password     *sshPassword,
@@ -164,9 +164,16 @@ Errors Network_connect(SocketHandle *socketHandle,
       {
         const char *password;
 
-        assert(userName != NULL);
+        assert(sshLoginName != NULL);
 
         /* initialise variables */
+
+        /* check login name */
+        if (String_empty(sshLoginName))
+        {
+          close(socketHandle->handle);
+          return ERROR_NO_SSH_LOGIN_NAME;
+        }
 
         /* init session */
         socketHandle->ssh2.session = libssh2_session_init();
@@ -190,7 +197,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         password = Password_deploy(sshPassword);
         if (libssh2_userauth_publickey_fromfile(socketHandle->ssh2.session,
       // NYI
-                                                String_cString(userName),
+                                                String_cString(sshLoginName),
                                                 String_cString((sshPublicKeyFileName != NULL)?sshPublicKeyFileName:defaultSSHPublicKeyFileName),
                                                 String_cString((sshPrivatKeyFileName != NULL)?sshPrivatKeyFileName:defaultSSHPrivatKeyFileName),
                                                 password
@@ -206,7 +213,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         Password_undeploy(sshPassword);
 #else
         if (libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,
-                                                  String_cString(userName),
+                                                  String_cString(sshLoginName),
                                                   NULL
                                                 ) != 0
            )
@@ -256,6 +263,7 @@ void Network_disconnect(SocketHandle *socketHandle)
       #ifdef HAVE_SSH2
         libssh2_session_disconnect(socketHandle->ssh2.session,"");
         libssh2_session_free(socketHandle->ssh2.session);
+        sleep(1);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;

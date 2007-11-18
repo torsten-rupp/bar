@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.34 $
+* $Revision: 1.35 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -35,6 +35,7 @@
 #include "archive.h"
 #include "crypt.h"
 #include "storage.h"
+#include "misc.h"
 
 #include "commands_create.h"
 
@@ -65,31 +66,32 @@ typedef struct
 
 typedef struct
 {
-  const char               *archiveFileName;
-  PatternList              *includePatternList;
-  PatternList              *excludePatternList;
-  const Options            *options;
+  PatternList                 *includePatternList;
+  PatternList                 *excludePatternList;
+  const Options               *options;
 
-  time_t                   startTime;
+  StorageFileHandle           storageFileHandle;
+  String                      fileName;
+  time_t                      startTime;
 
-  MsgQueue                 fileMsgQueue;                       // queue with files to backup
+  MsgQueue                    fileMsgQueue;                       // queue with files to backup
 
-  pthread_t                collectorSumThreadId;               // files collector sum thread id
-  pthread_t                collectorThreadId;                  // files collector thread id
-  bool                     collectorThreadExitFlag;
+  pthread_t                   collectorSumThreadId;               // files collector sum thread id
+  pthread_t                   collectorThreadId;                  // files collector thread id
+  bool                        collectorThreadExitFlag;
 
-  MsgQueue                 storageMsgQueue;                    // queue with storage files
-  Semaphore                storageSemaphore;
-  uint                     storageCount;                       // number of current storage files
-  uint64                   storageBytes;                       // number of bytes in current storage files
-  pthread_t                storageThreadId;                    // storage thread id
-  bool                     storageThreadExitFlag;
+  MsgQueue                    storageMsgQueue;                    // queue with storage files
+  Semaphore                   storageSemaphore;
+  uint                        storageCount;                       // number of current storage files
+  uint64                      storageBytes;                       // number of bytes in current storage files
+  pthread_t                   storageThreadId;                    // storage thread id
+  bool                        storageThreadExitFlag;
 
-  Errors                   error;
+  Errors                      failError;
 
-  CreateStatusInfoFunction statusInfoFunction;
-  void                     *statusInfoUserData;
-  CreateStatusInfo         statusInfo;              // status info
+  CreateStatusInfoFunction    statusInfoFunction;
+  void                        *statusInfoUserData;
+  CreateStatusInfo            statusInfo;                         // status info
 } CreateInfo;
 
 /***************************** Variables *******************************/
@@ -119,7 +121,10 @@ LOCAL void updateStatusInfo(const CreateInfo *createInfo)
 
   if (createInfo->statusInfoFunction != NULL)
   {
-    createInfo->statusInfoFunction(createInfo->error,&createInfo->statusInfo,createInfo->statusInfoUserData);
+    createInfo->statusInfoFunction(createInfo->statusInfoUserData,
+                                   createInfo->failError,
+                                   &createInfo->statusInfo
+                                  );
   }
 }
 
@@ -279,7 +284,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
 
   includePatternNode = createInfo->includePatternList->head;
   while (   !createInfo->collectorThreadExitFlag
-         && (createInfo->error == ERROR_NONE)
+         && (createInfo->failError == ERROR_NONE)
          && (includePatternNode != NULL)
         )
   {
@@ -306,7 +311,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
     /* find files */
     StringList_append(&nameList,basePath);
     while (   !createInfo->collectorThreadExitFlag
-           && (createInfo->error == ERROR_NONE)
+           && (createInfo->failError == ERROR_NONE)
            && !StringList_empty(&nameList)
           )
     {
@@ -338,7 +343,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
               /* read directory contents */
               fileName = String_new();
               while (   !createInfo->collectorThreadExitFlag
-                     && (createInfo->error == ERROR_NONE)
+                     && (createInfo->failError == ERROR_NONE)
                      && !File_endOfDirectory(&directoryHandle)
                     )
               {
@@ -446,7 +451,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
 
   includePatternNode = createInfo->includePatternList->head;
   while (   !createInfo->collectorThreadExitFlag
-         && (createInfo->error == ERROR_NONE)
+         && (createInfo->failError == ERROR_NONE)
          && (includePatternNode != NULL)
         )
   {
@@ -474,7 +479,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
     /* find files */
     StringList_append(&nameList,basePath);
     while (   !createInfo->collectorThreadExitFlag
-           && (createInfo->error == ERROR_NONE)
+           && (createInfo->failError == ERROR_NONE)
            && !StringList_empty(&nameList)
           )
     {
@@ -510,7 +515,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
               /* read directory contents */
               fileName = String_new();
               while (   !createInfo->collectorThreadExitFlag
-                     && (createInfo->error == ERROR_NONE)
+                     && (createInfo->failError == ERROR_NONE)
                      && !File_endOfDirectory(&directoryHandle)
                     )
               {
@@ -698,7 +703,7 @@ LOCAL Errors storeArchiveFile(String fileName,
                              )
 {
   CreateInfo *createInfo = (CreateInfo*)userData;
-  const char *s0,*s1;
+  long       i0,i1;
   ulong      divisor;           
   ulong      n;
   int        d;
@@ -714,39 +719,40 @@ LOCAL Errors storeArchiveFile(String fileName,
   if (completeFlag)
   {
     /* get destination file name */
+    destinationName = String_new();
     if (partNumber >= 0)
     {
-      s0 = strchr(createInfo->archiveFileName,'#');
-      if (s0 != NULL)
+      i0 = String_findChar(createInfo->fileName,STRING_BEGIN,'#');
+      if (i0 >= 0)
       {
         /* find #...# and get max. divisor for part number */
         divisor = 1;
-        s1 = s0+1;
-        while ((*s1) == '#')
+        i1 = i0+1;
+        while ((i1 < String_length(createInfo->fileName) && String_index(createInfo->fileName,i1) == '#'))
         {
-          s1++;
+          i1++;
           if (divisor < 1000000000) divisor*=10;
         }
 
         /* format destination file name */
-        destinationName = String_newBuffer(createInfo->archiveFileName,(ulong)(s0-createInfo->archiveFileName));
+        String_sub(destinationName,createInfo->fileName,0,i0);
         n = partNumber;
         while (divisor > 0)
         {
           d = n/divisor; n = n%divisor; divisor = divisor/10;
           String_appendChar(destinationName,'0'+d);
         }
-        String_appendCString(destinationName,s1);
+        String_appendSub(destinationName,createInfo->fileName,i1,STRING_END);
       }
       else
       {
         /* format destination file name */
-        destinationName = String_format(String_new(),"%s.%06d",createInfo->archiveFileName,partNumber);
+        String_format(destinationName,"%S.%06d",createInfo->fileName,partNumber);
       }
     }
     else
     {
-      destinationName = String_newCString(createInfo->archiveFileName);
+      String_set(destinationName,createInfo->fileName);
     }
     localtime_r(&createInfo->startTime,&tmStruct);
     i = 0;
@@ -834,12 +840,11 @@ LOCAL Errors storeArchiveFile(String fileName,
 
 LOCAL void storageThread(CreateInfo *createInfo)
 {
-  byte              *buffer;
-  StorageMsg        storageMsg;
-  StorageFileHandle storageFileHandle;
-  Errors            error;
-  FileHandle        fileHandle;
-  ulong             n;
+  byte       *buffer;
+  StorageMsg storageMsg;
+  Errors     error;
+  FileHandle fileHandle;
+  ulong      n;
 
   assert(createInfo != NULL);
 
@@ -849,16 +854,38 @@ LOCAL void storageThread(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
+  /* initial pre-process */
+  error = Storage_preProcess(&createInfo->storageFileHandle);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot pre-process storage (error: %s)!\n",
+               getErrorText(error)
+              );
+    createInfo->failError = error;
+  }
+
   while (   !createInfo->storageThreadExitFlag
          && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg))
         )
   {
-    if (createInfo->error == ERROR_NONE)
+    if (createInfo->failError == ERROR_NONE)
     {
+      /* pre-process */
+      error = Storage_preProcess(&createInfo->storageFileHandle);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot pre-process file '%s' (error: %s)!\n",
+                   String_cString(storageMsg.fileName),
+                   getErrorText(error)
+                  );
+        createInfo->failError = error;
+        continue;
+      }
+
       info(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageMsg.destinationFileName));
 
-      /* open storage */
-      error = Storage_create(&storageFileHandle,
+      /* create storage file */
+      error = Storage_create(&createInfo->storageFileHandle,
                              storageMsg.destinationFileName,
                              storageMsg.fileSize,
                              createInfo->options
@@ -870,10 +897,10 @@ LOCAL void storageThread(CreateInfo *createInfo)
                    String_cString(storageMsg.destinationFileName),
                    getErrorText(error)
                   );
-        File_delete(storageMsg.fileName);
+        File_delete(storageMsg.fileName,FALSE);
         String_delete(storageMsg.fileName);
         String_delete(storageMsg.destinationFileName);
-        createInfo->error = error;
+        createInfo->failError = error;
         continue;
       }
       String_set(createInfo->statusInfo.storageName,storageMsg.destinationFileName);
@@ -887,10 +914,10 @@ LOCAL void storageThread(CreateInfo *createInfo)
                    String_cString(storageMsg.fileName),
                    getErrorText(error)
                   );
-        File_delete(storageMsg.fileName);
+        File_delete(storageMsg.fileName,FALSE);
         String_delete(storageMsg.fileName);
         String_delete(storageMsg.destinationFileName);
-        createInfo->error = error;
+        createInfo->failError = error;
         continue;
       }
       do
@@ -903,10 +930,10 @@ LOCAL void storageThread(CreateInfo *createInfo)
                      String_cString(storageMsg.fileName),
                      getErrorText(error)
                     );
-          createInfo->error = error;
+          createInfo->failError = error;
           break;
         }
-        error = Storage_write(&storageFileHandle,buffer,n);
+        error = Storage_write(&createInfo->storageFileHandle,buffer,n);
         if (error != ERROR_NONE)
         {
           info(0,"FAIL!\n");
@@ -914,7 +941,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
                      String_cString(storageMsg.destinationFileName),
                      getErrorText(error)
                     );
-          createInfo->error = error;
+          createInfo->failError = error;
           break;
         }
         createInfo->statusInfo.storageDoneBytes += n;
@@ -923,24 +950,40 @@ LOCAL void storageThread(CreateInfo *createInfo)
       while (!createInfo->storageThreadExitFlag && !File_eof(&fileHandle));
       File_close(&fileHandle);
 
-      /* close storage */
-      Storage_close(&storageFileHandle);
+      /* close storage file */
+      Storage_close(&createInfo->storageFileHandle);
 
-      if (createInfo->error == ERROR_NONE)
+      if (createInfo->failError == ERROR_NONE)
       {
         info(0,"ok\n");
+      }
+
+      /* post-process */
+      if (createInfo->failError == ERROR_NONE)
+      {
+        error = Storage_postProcess(&createInfo->storageFileHandle,FALSE);
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot post-process storage file '%s' (error: %s)!\n",
+                     String_cString(storageMsg.fileName),
+                     getErrorText(error)
+                    );
+          createInfo->failError = error;
+        }
       }
     }
 else
 {
-fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErrorText(createInfo->error));
+fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErrorText(createInfo->failError));
 }
     /* delete source file */
-    if (!File_delete(storageMsg.fileName))
+    error = File_delete(storageMsg.fileName,FALSE);
+    if (error != ERROR_NONE)
     {
-      warning("Cannot delete file '%s'!\n",
-              String_cString(storageMsg.fileName)
-             );
+      printWarning("Cannot delete file '%s' (error: %s)!\n",
+                   String_cString(storageMsg.fileName),
+                   getErrorText(error)
+                  );
     }
 
     /* update storage info */
@@ -956,6 +999,19 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
     String_delete(storageMsg.destinationFileName);
   }
 
+  if (createInfo->failError == ERROR_NONE)
+  {
+    /* final post-process */
+    error = Storage_postProcess(&createInfo->storageFileHandle,TRUE);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot post-process storage (error: %s)!\n",
+                 getErrorText(error)
+                );
+      createInfo->failError = error;
+    }
+  }
+
   /* free resoures */
   free(buffer);
 
@@ -964,13 +1020,15 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_create(const char               *archiveFileName,
-                      PatternList              *includePatternList,
-                      PatternList              *excludePatternList,
-                      const Options            *options,
-                      CreateStatusInfoFunction createStatusInfoFunction,
-                      void                     *createStatusInfoUserData,
-                      bool                     *abortRequestFlag
+Errors Command_create(const char                   *archiveFileName,
+                      PatternList                  *includePatternList,
+                      PatternList                  *excludePatternList,
+                      const Options                *options,
+                      CreateStatusInfoFunction     createStatusInfoFunction,
+                      void                         *createStatusInfoUserData,
+                      StorageRequestVolumeFunction storageRequestVolumeFunction,
+                      void                         *storageRequestVolumeUserData,
+                      bool                         *abortRequestFlag
                      )
 {
   CreateInfo      createInfo;
@@ -986,16 +1044,16 @@ Errors Command_create(const char               *archiveFileName,
   assert(excludePatternList != NULL);
 
   /* initialise variables */
-  createInfo.archiveFileName              = archiveFileName;
   createInfo.includePatternList           = includePatternList;
   createInfo.excludePatternList           = excludePatternList;
   createInfo.options                      = options;
+  createInfo.fileName                     = String_new();
   createInfo.startTime                    = time(NULL);
   createInfo.collectorThreadExitFlag      = FALSE;
   createInfo.storageCount                 = 0;
   createInfo.storageBytes                 = 0LL;
   createInfo.storageThreadExitFlag        = FALSE;
-  createInfo.error                        = ERROR_NONE;
+  createInfo.failError                    = ERROR_NONE;
   createInfo.statusInfoFunction           = createStatusInfoFunction;
   createInfo.statusInfoUserData           = createStatusInfoUserData;
   createInfo.statusInfo.doneFiles         = 0L;
@@ -1006,6 +1064,7 @@ Errors Command_create(const char               *archiveFileName,
   createInfo.statusInfo.skippedBytes      = 0LL;
   createInfo.statusInfo.errorFiles        = 0L;
   createInfo.statusInfo.errorBytes        = 0LL;
+  createInfo.statusInfo.archiveBytes      = 0LL;
   createInfo.statusInfo.compressionRatio  = 0.0;
   createInfo.statusInfo.fileName          = String_new();
   createInfo.statusInfo.fileDoneBytes     = 0LL;
@@ -1022,7 +1081,7 @@ Errors Command_create(const char               *archiveFileName,
   }
   fileName = String_new();
 
-  /* init file name list, list locka and list signal */
+  /* init file name list, list lock and list signal */
   if (!MsgQueue_init(&createInfo.fileMsgQueue,MAX_FILE_MSG_QUEUE_ENTRIES))
   {
     HALT_FATAL_ERROR("Cannot initialise file message queue!");
@@ -1036,11 +1095,17 @@ Errors Command_create(const char               *archiveFileName,
     HALT_FATAL_ERROR("Cannot initialise storage semaphore!");
   }
 
-  /* prepare storage */
-  error = Storage_prepare(String_setCString(fileName,archiveFileName),options);
+  /* init storage */
+  error = Storage_init(&createInfo.storageFileHandle,
+                       String_setCString(fileName,archiveFileName),
+                       createInfo.options,
+                       storageRequestVolumeFunction,
+                       storageRequestVolumeUserData,
+                       createInfo.fileName
+                      );
   if (error != ERROR_NONE)
   {
-    printError("Cannot prepare storage of file '%s' (error: %s)\n",
+    printError("Cannot create storage '%s' (error: %s)\n",
                archiveFileName,
                getErrorText(error)
               );
@@ -1052,7 +1117,7 @@ Errors Command_create(const char               *archiveFileName,
     String_delete(createInfo.statusInfo.fileName);
     String_delete(createInfo.statusInfo.storageName);
 
-    return FALSE;
+    return error;
   }
 
   /* create new archive */
@@ -1081,7 +1146,7 @@ Errors Command_create(const char               *archiveFileName,
     String_delete(createInfo.statusInfo.fileName);
     String_delete(createInfo.statusInfo.storageName);
 
-    return FALSE;
+    return error;
   }
 
   /* start threads */
@@ -1103,7 +1168,7 @@ Errors Command_create(const char               *archiveFileName,
          && getNextFile(&createInfo.fileMsgQueue,fileName,&fileType)
         )
   {
-    if (createInfo.error == ERROR_NONE)
+    if (createInfo.failError == ERROR_NONE)
     {
       info(1,"Add '%s'...",String_cString(fileName));
 
@@ -1133,7 +1198,7 @@ Errors Command_create(const char               *archiveFileName,
                            String_cString(fileName),
                            getErrorText(error)
                           );
-                createInfo.error = error;
+                createInfo.failError = error;
               }
               continue;
             }
@@ -1155,12 +1220,12 @@ Errors Command_create(const char               *archiveFileName,
                            String_cString(fileName),
                            getErrorText(error)
                           );
-                createInfo.error = error;
+                createInfo.failError = error;
               }
               continue;
             }
 
-            /* new file */
+            /* create new archive file entry */
             error = Archive_newFileEntry(&archiveInfo,
                                          &archiveFileInfo,
                                          fileName,
@@ -1173,7 +1238,7 @@ Errors Command_create(const char               *archiveFileName,
                          String_cString(fileName),
                          getErrorText(error)
                         );
-              createInfo.error = error;
+              createInfo.failError = error;
               break;
             }
             String_set(createInfo.statusInfo.fileName,fileName);
@@ -1191,6 +1256,7 @@ Errors Command_create(const char               *archiveFileName,
                 error = Archive_writeFileData(&archiveFileInfo,buffer,n);
                 createInfo.statusInfo.doneBytes += n;
                 createInfo.statusInfo.fileDoneBytes += n;
+                createInfo.statusInfo.archiveBytes = createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo);
                 createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
 //printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
                 updateStatusInfo(&createInfo);
@@ -1198,7 +1264,7 @@ Errors Command_create(const char               *archiveFileName,
             }
             while (   ((abortRequestFlag == NULL) || !(*abortRequestFlag))
                    && (n > 0)
-                   && (createInfo.error == ERROR_NONE)
+                   && (createInfo.failError == ERROR_NONE)
                    && (error == ERROR_NONE)
                   );
             if ((abortRequestFlag != NULL) && (*abortRequestFlag))
@@ -1216,7 +1282,7 @@ Errors Command_create(const char               *archiveFileName,
                         );
               File_close(&fileHandle);
               Archive_closeEntry(&archiveFileInfo);
-              createInfo.error = error;
+              createInfo.failError = error;
               break;
             }
 
@@ -1233,7 +1299,7 @@ Errors Command_create(const char               *archiveFileName,
               printError("Cannot close archive file (error: %s)!\n",
                          getErrorText(error)
                         );
-              createInfo.error = error;
+              createInfo.failError = error;
               break;
             }
 
@@ -1269,7 +1335,7 @@ Errors Command_create(const char               *archiveFileName,
                            String_cString(fileName),
                            getErrorText(error)
                           );
-                createInfo.error = error;
+                createInfo.failError = error;
               }
               continue;
             }
@@ -1287,7 +1353,7 @@ Errors Command_create(const char               *archiveFileName,
                          String_cString(fileName),
                          getErrorText(error)
                         );
-              createInfo.error = error;
+              createInfo.failError = error;
               break;
             }
 
@@ -1323,7 +1389,7 @@ Errors Command_create(const char               *archiveFileName,
                            String_cString(fileName),
                            getErrorText(error)
                           );
-                createInfo.error = error;
+                createInfo.failError = error;
               }
               continue;
             }
@@ -1347,7 +1413,7 @@ Errors Command_create(const char               *archiveFileName,
                            getErrorText(error)
                           );
                 String_delete(name);
-                createInfo.error = error;
+                createInfo.failError = error;
               }
               continue;
             }
@@ -1367,7 +1433,7 @@ Errors Command_create(const char               *archiveFileName,
                          getErrorText(error)
                         );
               String_delete(name);
-              createInfo.error = error;
+              createInfo.failError = error;
               break;
             }
 
@@ -1394,7 +1460,7 @@ Errors Command_create(const char               *archiveFileName,
   {
     createInfo.collectorThreadExitFlag = TRUE;
     createInfo.storageThreadExitFlag   = TRUE;
-    createInfo.error = ERROR_ABORTED;
+    createInfo.failError = ERROR_ABORTED;
   }
 
   /* close archive */
@@ -1414,6 +1480,7 @@ Errors Command_create(const char               *archiveFileName,
   info(2,"%lu file(s) with errors\n",createInfo.statusInfo.errorFiles);
 
   /* free resources */
+  Storage_done(&createInfo.storageFileHandle);
   Semaphore_done(&createInfo.storageSemaphore);
   MsgQueue_done(&createInfo.storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
   MsgQueue_done(&createInfo.fileMsgQueue,(MsgQueueMsgFreeFunction)freeFileMsg,NULL);
@@ -1421,8 +1488,9 @@ Errors Command_create(const char               *archiveFileName,
   free(buffer);
   String_delete(createInfo.statusInfo.fileName);
   String_delete(createInfo.statusInfo.storageName);
+  String_delete(createInfo.fileName);
 
-  return createInfo.error;
+  return createInfo.failError;
 }
 
 #ifdef __cplusplus

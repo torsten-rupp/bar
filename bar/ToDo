@@ -8,3 +8,5 @@ ToDo
 - logfile
 - overwrite archive files check
 - incremental backups
+- dvd storage
+- ssl server: check common name? 

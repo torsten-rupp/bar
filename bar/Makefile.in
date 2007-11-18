@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -32,6 +32,7 @@ LD_FLAGS            = @LD_FLAGS@
 LD_LIBRARY_PATHS    = @LIBRARY_PATHS@
 LD_LIBRARIES        = c m pthread @LIBRARIES@
 LD_STATIC_LIBRARIES = @STATIC_LIBRARIES@
+
 
 #---------------------------------- commands----------------------------------
 
@@ -63,6 +64,9 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 #---------------------------------- rules ------------------------------------
 
+# disable implicit rule for *.y -> *.c
+%.c:%.y
+
 %.o:%.c
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
@@ -73,64 +77,68 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 #--------------------------------- objects -----------------------------------
 
-BAR_SOURCES        = bar.c \
-                     commands_create.c \
-                     commands_list.c \
-                     commands_test.c \
-                     commands_compare.c \
-                     commands_restore.c \
-                     files.c \
-                     archive.c \
-                     chunks.c \
-                     patterns.c \
-                     compress.c \
-                     crypt.c \
-                     passwords.c \
-                     storage.c \
-                     network.c \
-                     server.c \
-                     \
-                     global.c \
-                     cmdoptions.c \
-                     lists.c \
-                     strings.c \
-                     stringlists.c \
-                     msgqueues.c \
-                     semaphores.c \
-                     filefragmentlists.c \
-                     arrays.c \
+BAR_SOURCES          = bar.c \
+                       errors.c \
+                       commands_create.c \
+                       commands_list.c \
+                       commands_test.c \
+                       commands_compare.c \
+                       commands_restore.c \
+                       files.c \
+                       archive.c \
+                       archive_format.c \
+                       chunks.c \
+                       patterns.c \
+                       compress.c \
+                       crypt.c \
+                       passwords.c \
+                       misc.c \
+                       storage.c \
+                       network.c \
+                       server.c \
+                       \
+                       global.c \
+                       cmdoptions.c \
+                       configvalues.c \
+                       lists.c \
+                       strings.c \
+                       stringlists.c \
+                       msgqueues.c \
+                       semaphores.c \
+                       filefragmentlists.c \
+                       arrays.c \
 
-BAR_OBJECTS        = $(foreach z,$(BAR_SOURCES),$(subst .c,.o,$z)) \
-                     errors.o \
-                     archive_format.o
+BAR_OBJECTS          = $(foreach z,$(BAR_SOURCES),$(subst .c,.o,$z)) \
+                       errors.o \
+                       archive_format.o
 
-DESTROYER_SOURCES  = destroyer.c \
-                     global.c \
-                     cmdoptions.c \
-                     lists.c \
-                     strings.c \
+DESTROYER_SOURCES    = destroyer.c \
+                       global.c \
+                       cmdoptions.c \
+                       lists.c \
+                       strings.c \
 
-DESTROYER_OBJECTS  = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
+DESTROYER_OBJECTS    = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
 
-OTHER_SOURCES      = errors.pl \
-                     errors.def \
-                     archive_format.pl \
-                     archive_format.def \
-                     barcontrol.tcl \
-                     bar.cfg \
+OTHER_SOURCES        = errors.pl \
+                       errors.def \
+                       archive_format.pl \
+                       archive_format.def \
+                       barcontrol.tcl \
+                       bar.cfg \
 
-INTERMEDIATE       = errors.h \
-                     errors.c \
-                     archive_format.c \
-                     archive_format.h \
+INTERMEDIATE         = errors.c \
+                       errors.h \
+                       archive_format.c \
+                       archive_format.h \
 
-TLS_FILES          = bar-key.pem \
-                     bar-ca.pem \
-                     bar-server-key.pem \
-                     bar-server-cert.pem \
+TLS_FILES            = bar-key.pem \
+                       bar-ca.pem \
+                       bar-server-key.pem \
+                       bar-server-cert.pem \
 
-TARGETS            = bar \
-                     destroyer \
+TARGETS              = bar \
+                       destroyer \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -158,18 +166,20 @@ depend: Makefile.depend
 # create dependencies
 Makefile.depend: $(BAR_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
 	$(ECHO) > Makefile.depend
-	for z in $(BAR_SOURCES) $(DESTROYER_SOURCES) archive_format.c; do \
+	for z in $(BAR_SOURCES) $(DESTROYER_SOURCES); do \
           $(CC) -MM >> Makefile.depend $$z; \
         done;
 
 # create BAR
 bar@EXEEXT@: $(BAR_OBJECTS)
 
+# error definition
 errors.h: errors.def
 	$(PERL) errors.pl < $^ -h $@
 errors.c: errors.def
 	$(PERL) errors.pl < $^ -c $@
 
+# archive format definition
 archive_format.h: archive_format.def
 	$(PERL) archive_format.pl < $^ -h $@
 archive_format.c: archive_format.def
@@ -247,10 +257,10 @@ uinstall:
 # run server
 .PHONY: barserver barserver_ssl
 barserver: bar
-	./bar --daemon
+	nice ./bar --daemon
 
 barserver_ssl: bar $(TLS_FILES)
-	./bar --daemon --server-ca-file=bar-ca.pem --server-cert-file=bar-server-cert.pem --server-key-file=bar-server-key.pem --verbose=0
+	nice ./bar --daemon --server-ca-file=bar-ca.pem --server-cert-file=bar-server-cert.pem --server-key-file=bar-server-key.pem --verbose=0
 
 # do test
 .PHONY: test test1 test2 test3 test4 test_all
@@ -405,7 +415,7 @@ backup-tooru: bar
           -c scp:torsten@tooru.dyndns.org:backup-torsten-###.bar \
           --ssh-port=49856 \
           --compress-algorithm=bzip9 \
-          --crypt-algorithm=aes256 \
+          --crypt-algorithm=AES256 \
           --crypt-password=franz \
           -s 128M \
           --max-tmp-size=256M \
@@ -416,7 +426,7 @@ backup-tooru: bar
           -! /home/torsten/trash \
           -! /home/torsten/other \
           -! /home/torsten/Mail/trash \
-          -! "*.mov" -! "*.avi" \
+          -! "*.mpeg" -! "*.mov" -! "*.avi" -! "*.iso" \
           /home/torsten
 
 backup-itzo: bar
@@ -424,7 +434,7 @@ backup-itzo: bar
           -c scp:torsten@it-zo.de:backup/backup-torsten-###.bar \
           --ssh-port=2222 \
           --compress-algorithm=bzip9 \
-          --crypt-algorithm=aes256 \
+          --crypt-algorithm=AES256 \
           --crypt-password=franz \
           -s 128M \
           --max-tmp-size=256M \
@@ -436,7 +446,26 @@ backup-itzo: bar
           -! /home/torsten/trash \
           -! /home/torsten/other \
           -! /home/torsten/Mail/trash \
-          -! "*.mov" -! "*.avi" \
+          -! "*.mpeg" -! "*.mov" -! "*.avi" -! "*.iso" \
+          /home/torsten
+
+backup-dvd:
+	./bar \
+          -c dvd:backup-torsten-###.bar \
+          --compress-algorithm=bzip9 \
+          --crypt-algorithm=AES256 \
+          --crypt-password=franz \
+          -s 128M \
+          --max-tmp-size=256M \
+          --skip-unreadable \
+          --verbose=1 \
+          -! /home/torsten/tmp \
+          -! /home/torsten/aicas \
+          -! /home/torsten/public \
+          -! /home/torsten/trash \
+          -! /home/torsten/other \
+          -! /home/torsten/Mail/trash \
+          -! "*.mpeg" -! "*.mov" -! "*.avi" -! "*.iso" \
           /home/torsten
 
 upload: bar

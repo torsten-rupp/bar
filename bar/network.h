@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -51,7 +51,6 @@ typedef struct
       struct
       {
         LIBSSH2_SESSION *session;
-        int             ioType;
       } ssh2;
     #endif /* HAVE_SSH2 */
     #ifdef HAVE_GNU_TLS
@@ -156,7 +155,7 @@ void Network_doneAll(void);
 *          hostName             - host name
 *          hostPort             - host port
 *          flags                - socket falgs
-*          userName             - SSH login user name
+*          sshLoginName         - SSH login user name
 *          sshPublicKeyFileName - SSH public key file for login
 *          sshPublicKeyFileName - SSH public key file for login
 *          sshPassword          - SSH password
@@ -169,7 +168,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                        SocketTypes  socketType,
                        const String hostName,
                        uint         hostPort,
-                       const String userName,
+                       const String sshLoginName,
                        const String sshPublicKeyFileName,
                        const String sshPrivatKeyFileName,
                        Password     *sshPassword,
