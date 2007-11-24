@@ -1,11 +1,11 @@
 #!/bin/sh
 #\
-exec wish "$0" "$@"
+exec tclsh "$0" "$@"
 
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.15 $
+# $Revision: 1.16 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -29,40 +29,8 @@ lappend auto_path $env(HOME)/sources/tcl-lib
 lappend auto_path $env(HOME)/sources/tcltk-lib
 
 # load packages
-if {[catch {package require Tix}]} \
-{
-  # check if 'tix' is in any sub-directory of package path
-  set l ""
-  foreach z "$auto_oldpath $tcl_pkgPath" \
-  {
-    set l [lindex [glob -path $z/ -type f -nocomplain -- libTix*] 0]
-    if {$l!=""} { break }
-    set l [lindex [glob -path $z/ -type f -nocomplain -- libtix*] 0]
-    if {$l!=""} { break }
-  }
-  # output error info
-  if {$l!=""} \
-  {
-    puts "ERROR: Found '$l' (permission: [file attribute $l -permission]), but it seems not"
-    puts "to be usable or accessable. Please check if"
-    puts "  - version is correct,"
-    puts "  - file is accessable (permission 755 or more),"
-    puts "  - directory of file is included in search path of system linker."
-  } \
-  else \
-  {
-    puts "Package 'Tix' cannot be found (library libtix*, libTix* not found). Please check if"
-    puts "  - 'Tix*' package is installed in '$tcl_pkgPath',"
-    puts "  - '$tcl_pkgPath/Tix*' is accessable,"
-    puts "  - library libtix* or libTix* exists somewhere in '$tcl_pkgPath'."
-  }
-  exit 104
-}
-package require tools
-package require mclistbox
 package require tls
-
-load "[pwd]/tcl/scanx.so"
+package require scanx
 
 # ---------------------------- constants/variables ---------------------------
 
@@ -163,6 +131,7 @@ set currentJob(storageTotalBytes)              0
 set currentJob(storageTotalBytesShort)         0
 set currentJob(storageTotalBytesShortUnit)     "KBytes"
 set currentJob(volumeNumber)                   0
+set currentJob(volumeProgress)                 0.0
 set currentJob(requestedVolumeNumber)          0
 set currentJob(requestedVolumeNumberDialogFlag) 0
 set currentJob(message)                        ""
@@ -181,65 +150,6 @@ set restoreExcludedListWidget ""
 
 # format of data in file list
 #  {<type> [NONE|INCLUDED|EXCLUDED] <directory open flag>}
-
-# --------------------------------- images -----------------------------------
-
-# images
-set images(folder) [image create photo -data \
-{
-  R0lGODlhEAAMAKEDAAD//wAAAPD/gP///yH5BAEAAAMALAAAAAAQAAwAAAIgnINhyycvVFsB
-  QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==
-}]
-set images(folderOpen) [image create photo -data \
-{
-  R0lGODlhEAAMAMIEAAD//wAAAP//AFtXRv///////////////yH5BAEAAAAALAAAAAAQAAwA
-  AAMtCBoc+nCJKVx8gVIbm/9cMAhjSZLhCa5jpr1VNrjw5Ih0XQFZXt++F2Ox+jwSADs=
-}]
-set images(folderIncluded) [image create photo -data \
-{
-  R0lGODlhEAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAQAAwAAAIgnINhyycvVFsB
-  QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==
-}]
-set images(folderIncludedOpen) [image create photo -data \
-{
-  R0lGODlhEAAMAMIEAAD//wAAAADNAFtXRv///////////////yH5BAEKAAAALAAAAAAQAAwA
-  AAMtCBoc+nCJKVx8gVIbm/9cMAhjSZLhCa5jpr1VNrjw5Ih0XQFZXt++F2Ox+jwSADs=
-}]
-set images(folderExcluded) [image create photo -data \
-{
-  R0lGODlhEAAMAMIEAP8AAAD//wAAAPD/gP///////////////yH5BAEKAAEALAAAAAAQAAwA
-  AAMzCBDSEjCoqMC448lJFc5VxAiVU2rMVQ1rFglY5V0orMpYfVut3rKe2m+HGsY4G4eygUwA
-}]
-set images(file) [image create photo -data \
-{
-  R0lGODlhDAAMAKEDAAD//wAAAP//8////yH5BAEAAAMALAAAAAAMAAwAAAIdXI43a+IfWHsO
-  rUBpnFls3HlXKHLZR6Kh2n3JOxQAOw==
-}]
-set images(fileIncluded) [image create photo -data \
-{
-  R0lGODlhDAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAMAAwAAAIdXI43a+IfWHsO
-  rUBpnFls3HlXKHLZR6Kh2n3JOxQAOw==
-}]
-set images(fileExcluded) [image create photo -data \
-{
-  R0lGODlhDAAMAMIEAP8AAAAAAAD/////8////////////////yH5BAEKAAIALAAAAAAMAAwA
-  AAMqCBDcISqOOUOEio4rbN7K04ERMIjBVFbCSJpnm5YZKpHirSoYrNEOhyIBADs=
-}]
-set images(link) [image create photo -data \
-{
-  R0lGODlhDAAMAMIDAAD//wAAAP//8////////////////////yH5BAEKAAAALAAAAAAMAAwA
-  AAMmCLG88ErIGWAcS7IXBM4a5zXh1XSVSabdtwwCO75lS9dTHnNnAyQAOw==
-}]
-set images(linkIncluded) [image create photo -data \
-{
-  R0lGODlhDAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAMAAwAAAIjXI43a+IfWBPH
-  oRVstVjvOCUZmFEJ1ZlfikBsyU2Pa4jJUAAAOw==
-}]
-set images(linkExcluded) [image create photo -data \
-{
-  R0lGODlhDAAMAMIEAP8AAAAAAAD/////8////////////////yH5BAEKAAcALAAAAAAMAAwA
-  AAMuCBDccSqOOUOEis17bPbL0Q2R9IxEGQznmkZrS5YAK4IMLMIBMQOYGmWjcjQUCQA7
-}]
 
 # -------------------------------- functions ---------------------------------
 
@@ -716,8 +626,9 @@ proc printUsage { } \
   puts "         --port=<server port>         - server port number"
   puts "         -p|--tls-port=<server port>  - server TLS (SSL) port number"
   puts "         --list                       - list jobs and quit"
-  puts "         --start                      - add new job and quit"
-  puts "         --abort=<id>                 - abort running job and quit"
+  puts "         --start                      - add new job"
+  puts "         --abort=<id>                 - abort running job"
+  puts "         --quit                       - quit"
   puts "         --password=<password>        - server password (use with care!)"
   puts "         --help                       - print this help"
 }
@@ -1065,7 +976,12 @@ proc BackupServer:readResult { commandId _completeFlag _errorCode _result } \
   set id -1
   while {($id != $commandId) && ($id != 0)} \
   {
-     if {[eof $server(socketHandle)]} { puts "obs?"; return 0 }
+     if {[eof $server(socketHandle)]} \
+     {
+       catch {close $server(socketHandle)}
+       set server(socketHandle) -1
+       return 0
+     }
 #puts "read [clock clicks] [eof $server(socketHandle)]"
     while {[fblocked $server(socketHandle)]} \
     {
@@ -1301,7 +1217,7 @@ proc updateCurrentJob { } \
     if {[BackupServer:readResult $commandId completeFlag errorCode result] && ($errorCode == 0)} \
     {
 #puts "2: $result"
-      scanx $result "%S %lu %lu %lu %lu %lu %lu %lu %lu %f %f %f %lu %f %S %lu %lu %S %lu %lu %d %d" \
+      scanx $result "%S %lu %lu %lu %lu %lu %lu %lu %lu %f %f %f %lu %f %S %lu %lu %S %lu %lu %d %f %d" \
         state \
         currentJob(doneFiles) \
         currentJob(doneBytes) \
@@ -1323,6 +1239,7 @@ proc updateCurrentJob { } \
         currentJob(storageDoneBytes) \
         currentJob(storageTotalBytes) \
         currentJob(volumeNumber) \
+        currentJob(volumeProgress) \
         currentJob(requestedVolumeNumber)
 #puts "2: ok"
 
@@ -1384,8 +1301,8 @@ proc updateCurrentJob { } \
     set currentJob(storageBytesPerSecondShortUnit) "KBytes/s"
     set currentJob(compressionRatio)               0
     set currentJob(fileName)                       ""
-    set currentJob(fileDoneBytes)                  ""
-    set currentJob(fileTotalBytes)                 ""
+    set currentJob(fileDoneBytes)                  0
+    set currentJob(fileTotalBytes)                 0
     set currentJob(storageName)                    ""
     set currentJob(storageName)                    ""
     set currentJob(storageDoneBytes)               0
@@ -1830,7 +1747,7 @@ proc addBackupEntry { fileName fileType fileSize } \
    } \
    elseif {$fileType=="LINK"} \
    {
-#puts "add link $fileName $RealFilename"
+#puts "add link $fileName"
      set n 0
      set l [$backupFilesTreeWidget info children $parentItemPath]
      while {($n < [llength $l]) && (([lindex [$backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
@@ -1844,7 +1761,43 @@ proc addBackupEntry { fileName fileType fileSize } \
      $backupFilesTreeWidget item create $itemPath 1 -itemtype text -text "LINK" -style $styleTextLeft
      $backupFilesTreeWidget item create $itemPath 2 -itemtype text              -style $styleTextLeft
      $backupFilesTreeWidget item create $itemPath 3 -itemtype text              -style $styleTextLeft
-   }
+   } \
+   elseif {$fileType=="DEVICE"} \
+   {
+#puts "add file $fileName $itemPath - $parentItemPath -- [file tail $fileName]"
+     # find insert position (sort)
+     set n 0
+     set l [$backupFilesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     {
+       incr n
+     }
+
+     # add file item
+     if {!$excludedFlag} { set image $images(file) } else { set image $images(fileExcluded) }
+     $backupFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
+     $backupFilesTreeWidget item create $itemPath 1 -itemtype text -text "DEVICE"  -style $styleTextLeft
+     $backupFilesTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
+     $backupFilesTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
+   } \
+   elseif {$fileType=="SOCKET"} \
+   {
+#puts "add file $fileName $itemPath - $parentItemPath -- [file tail $fileName]"
+     # find insert position (sort)
+     set n 0
+     set l [$backupFilesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     {
+       incr n
+     }
+
+     # add file item
+     if {!$excludedFlag} { set image $images(file) } else { set image $images(fileExcluded) }
+     $backupFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
+     $backupFilesTreeWidget item create $itemPath 1 -itemtype text -text "SOCKET"  -style $styleTextLeft
+     $backupFilesTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
+     $backupFilesTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
+   } \
 }
 
 #***********************************************************************
@@ -1860,6 +1813,7 @@ proc openCloseBackupDirectory { itemPath } \
 {
   global backupFilesTreeWidget backupIncludedListWidget backupExcludedListWidget images
 
+#puts $itemPath
   # get directory name
   set directoryName [itemPathToFileName $backupFilesTreeWidget $itemPath 0]
 
@@ -1868,9 +1822,13 @@ proc openCloseBackupDirectory { itemPath } \
   {
     addBackupEntry $directoryName "DIRECTORY" 0
   }
+#puts [$backupFilesTreeWidget info exists $itemPath]
+#puts [$backupFilesTreeWidget info data $itemPath]
 
   # check if parent exist and is open, open if needed
   set parentItemPath [$backupFilesTreeWidget info parent $itemPath]
+#  set data [$backupFilesTreeWidget info data $parentItemPath]
+#puts "$parentItemPath: $data"
   if {[$backupFilesTreeWidget info exists $parentItemPath]} \
   {
     set data [$backupFilesTreeWidget info data $parentItemPath]
@@ -1878,6 +1836,8 @@ proc openCloseBackupDirectory { itemPath } \
     {
       openCloseBackupDirectory $parentItemPath
     }
+    set data [$backupFilesTreeWidget info data $parentItemPath]
+    if {[lindex $data 0] == "LINK"} { return }
   }
 
   # get data
@@ -1915,8 +1875,16 @@ proc openCloseBackupDirectory { itemPath } \
         elseif {[scanx $result "LINK %S" linkName] == 1} \
         {
           addBackupEntry $linkName "LINK" 0
+        } \
+        elseif {[scanx $result "DEVICE %S" deviceName] == 1} \
+        {
+          addBackupEntry $deviceName "DEVICE" 0
+        } \
+        elseif {[scanx $result "SOCKET %S" socketName] == 1} \
+        {
+          addBackupEntry $socketName "SOCKET" 0
         } else {
-  internalError "unknown file type in openclosedirectory"
+  internalError "unknown file type in openclosedirectory: $result"
 }
       }
 
@@ -2168,7 +2136,7 @@ if {[info level]>15} { error "x" }
    } \
    elseif {$fileType=="LINK"} \
    {
-#puts "add link $fileName $RealFilename"
+#puts "add link $fileName"
      set n 0
      set l [$restoreFilesTreeWidget info children $parentItemPath]
      while {($n < [llength $l]) && (([lindex [$restoreFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
@@ -2633,9 +2601,12 @@ proc updateFileTreeStates { widget prefixFlag } \
 
 proc clearConfigModify {} \
 {
-  global barConfigFileName barConfigModifiedFlag
+  global barConfigFileName guiMode barConfigModifiedFlag
 
-  wm title . "$barConfigFileName"
+  if {$guiMode} \
+  {  
+    wm title . "$barConfigFileName"
+  }
   set barConfigModifiedFlag 0
 }
 
@@ -3032,7 +3003,7 @@ puts "unknown $line"
 
 proc saveBARConfig { configFileName } \
 {
-  global backupIncludedListWidget backupExcludedListWidget tk_strictMotif barConfigFileName barConfig errorInfo
+  global backupIncludedListWidget backupExcludedListWidget tk_strictMotif barConfigFileName barConfig errorCode
 
   # get file name
   if {$configFileName == ""} \
@@ -3052,7 +3023,7 @@ proc saveBARConfig { configFileName } \
   set tmpFileName [getTmpFileName]
   if {[catch {set handle [open $tmpFileName "w"]}]} \
   {
-    Dialog:error "Cannot open file '$tmpFileName' (error: [lindex $errorInfo 2])"
+    Dialog:error "Cannot open file '$tmpFileName' (error: [lindex $errorCode 2])"
     return;
   }
 
@@ -3130,8 +3101,9 @@ proc saveBARConfig { configFileName } \
   catch {file rename $configFileName "$configFileName~"}
   if {[catch {file copy -force $tmpFileName $configFileName}]} \
   {
-    Dialog:error "Cannot copy file '$tmpFileName' to '$configFileName' (error: [lindex $errorInfo 2])"
+    Dialog:error "Cannot store file '$configFileName' (error: [lindex $errorCode 2])"
     catch {file rename "$configFileName~" $configFileName}
+    catch {file delete $tmpFileName}
     return
   }
   catch {file delete $tmpFileName}
@@ -3379,6 +3351,7 @@ proc addBackupJob { jobListWidget } \
   global backupIncludedListWidget backupExcludedListWidget barConfig currentJob guiMode
 
   set errorCode 0
+  set errorText ""
 
   # clear settings
   BackupServer:executeCommand errorCode errorText "CLEAR"
@@ -3437,12 +3410,26 @@ proc addBackupJob { jobListWidget } \
   {
     if {![BackupServer:executeCommand errorCode errorText "ADD_JOB" "BACKUP" [escapeString $barConfig(name)] [escapeString $archiveFileName]]} \
     {
-      Dialog:error "Error adding new job: $errorText"
+      if {$guiMode} \
+      {
+        Dialog:error "Error adding new job: $errorText"
+      } \
+      else \
+      {
+        puts stderr "Error adding new job: $errorText"
+      }
     }
   } \
   else \
   {
-    Dialog:error "Error adding new job: $errorText"
+    if {$guiMode} \
+    {
+      Dialog:error "Error adding new job: $errorText"
+    } \
+    else \
+    {
+      puts stderr "Error adding new job: $errorText"
+    }
   }
 
   if {$guiMode} \
@@ -3578,6 +3565,7 @@ set configName ""
 set listFlag   0
 set startFlag  0
 set abortId    0
+set quitFlag   0
 set guiMode    1
 set z 0
 while {$z<[llength $argv]} \
@@ -3682,6 +3670,11 @@ while {$z<[llength $argv]} \
       set abortId [lindex $argv $z]
       set guiMode 0
     }
+    "^--quit$" \
+    {
+      set quitFlag 1
+      set guiMode 0
+    }
     "^--password=" \
     {
       set s [string range [lindex $argv $z] [expr {[string first "=" [lindex $argv $z]]+1}] end]
@@ -3719,95 +3712,212 @@ while {$z<[llength $argv]} \
   incr z
 }
 
+if {![info exists tk_version] && !$guiMode} \
+{
+  # get password
+  if {$barControlConfig(serverPassword) == ""} \
+  {
+    if {[info exists env(SSH_ASKPASS)]} \
+    {
+      set barControlConfig(serverPassword) [obfuscatePassword [exec sh -c $env(SSH_ASKPASS)] $passwordObfuscator]
+    } \
+    else \
+    {
+      puts -nonewline stdout "Server password: "; flush stdout
+      set barControlConfig(serverPassword) [obfuscatePassword [exec sh -c "read -s password; echo \$password; unset password"] $passwordObfuscator]
+      puts ""
+    }
+  }
+
+  # connect to server
+  if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]} \
+  {
+    if {[catch {tls::init -cafile $barControlConfig(serverCAFileName)}]} \
+    {
+      printError "Cannot initialise TLS/SSL system"
+      exit 1
+    }
+    if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverTLSPort) $barControlConfig(serverPassword) 1]} \
+    {
+      printError "Cannot connect to TLS/SSL server '$barControlConfig(serverHostName):$barControlConfig(serverTLSPort)'!"
+      exit 1
+    }
+  } \
+  elseif {$barControlConfig(serverPort) != 0} \
+  {
+    if {$port == 0} { set port $DEFAULT_PORT }
+    if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverPort) $barControlConfig(serverPassword) 0]} \
+    {
+      printError "Cannot connect to server '$barControlConfig(serverHostName):$barControlConfig(serverPort)'!"
+      exit 1
+    }
+  } \
+  else  \
+  {
+    printError "Cannot connect to server '$barControlConfig(serverHostName)'!"
+    exit 1
+  }
+
+  # non-GUI commands
+  if {$listFlag} \
+  {
+    set formatString "%3s %-20s %-20s %10s %-10s %-10s %-20s %-20s"
+
+    set s [format $formatString "Id" "Name" "State" "Part size" "Compress" "Crypt" "Started" "Estimate time"]
+    puts $s
+    puts [string repeat "-" [string length $s]]
+    set commandId [BackupServer:sendCommand "JOB_LIST"]
+    while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
+    {
+      scanx $result "%d %S %S %d %S %S %d %d" \
+        id \
+        name \
+        state \
+        archivePartSize \
+        compressAlgorithm \
+        cryptAlgorithm \
+        startTime \
+        estimatedRestTime
+
+      set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
+      set estimatedRestHours   [expr {int($estimatedRestTime%(24*60*60)/(60*60))}]
+      set estimatedRestMinutes [expr {int($estimatedRestTime%(60*60   )/60     )}]
+      set estimatedRestSeconds [expr {int($estimatedRestTime%(60)              )}]
+
+      puts [format $formatString \
+        $id \
+        $name \
+        $state \
+        [formatByteSize $archivePartSize] \
+        $compressAlgorithm \
+        $cryptAlgorithm \
+        [expr {($startTime > 0)?[clock format $startTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
+        [format "%d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds] \
+      ]
+    }
+    puts [string repeat "-" [string length $s]]
+  }
+  if {$startFlag} \
+  {
+    if {$configName != ""} \
+    {
+      loadBARConfig $configName
+      addBackupJob ""
+    }
+  }
+  if {$abortId != 0} \
+  {
+    abortJob "" $abortId
+  }
+  if {$quitFlag} \
+  {
+    # disconnect
+    BackupServer:disconnect
+    exit 0
+  }
+}
+
+# run in GUI mode
+if {![info exists tk_version]} \
+{
+  catch {[eval "exec wish $argv0 -- [join $argv] >@stdout 2>@stderr"]}
+  exit 0
+}
+
+# load GUI packages
+if {[catch {package require Tix}]} \
+{
+  # check if 'tix' is in any sub-directory of package path
+  set l ""
+  foreach z "$auto_oldpath $tcl_pkgPath" \
+  {
+    set l [lindex [glob -path $z/ -type f -nocomplain -- libTix*] 0]
+    if {$l!=""} { break }
+    set l [lindex [glob -path $z/ -type f -nocomplain -- libtix*] 0]
+    if {$l!=""} { break }
+  }
+  # output error info
+  if {$l!=""} \
+  {
+    puts "ERROR: Found '$l' (permission: [file attribute $l -permission]), but it seems not"
+    puts "to be usable or accessable. Please check if"
+    puts "  - version is correct,"
+    puts "  - file is accessable (permission 755 or more),"
+    puts "  - directory of file is included in search path of system linker."
+  } \
+  else \
+  {
+    puts "Package 'Tix' cannot be found (library libtix*, libTix* not found). Please check if"
+    puts "  - 'Tix*' package is installed in '$tcl_pkgPath',"
+    puts "  - '$tcl_pkgPath/Tix*' is accessable,"
+    puts "  - library libtix* or libTix* exists somewhere in '$tcl_pkgPath'."
+  }
+  exit 104
+}
+package require mclistbox
+
+# images
+set images(folder) [image create photo -data \
+{
+  R0lGODlhEAAMAKEDAAD//wAAAPD/gP///yH5BAEAAAMALAAAAAAQAAwAAAIgnINhyycvVFsB
+  QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==
+}]
+set images(folderOpen) [image create photo -data \
+{
+  R0lGODlhEAAMAMIEAAD//wAAAP//AFtXRv///////////////yH5BAEAAAAALAAAAAAQAAwA
+  AAMtCBoc+nCJKVx8gVIbm/9cMAhjSZLhCa5jpr1VNrjw5Ih0XQFZXt++F2Ox+jwSADs=
+}]
+set images(folderIncluded) [image create photo -data \
+{
+  R0lGODlhEAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAQAAwAAAIgnINhyycvVFsB
+  QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==
+}]
+set images(folderIncludedOpen) [image create photo -data \
+{
+  R0lGODlhEAAMAMIEAAD//wAAAADNAFtXRv///////////////yH5BAEKAAAALAAAAAAQAAwA
+  AAMtCBoc+nCJKVx8gVIbm/9cMAhjSZLhCa5jpr1VNrjw5Ih0XQFZXt++F2Ox+jwSADs=
+}]
+set images(folderExcluded) [image create photo -data \
+{
+  R0lGODlhEAAMAMIEAP8AAAD//wAAAPD/gP///////////////yH5BAEKAAEALAAAAAAQAAwA
+  AAMzCBDSEjCoqMC448lJFc5VxAiVU2rMVQ1rFglY5V0orMpYfVut3rKe2m+HGsY4G4eygUwA
+}]
+set images(file) [image create photo -data \
+{
+  R0lGODlhDAAMAKEDAAD//wAAAP//8////yH5BAEAAAMALAAAAAAMAAwAAAIdXI43a+IfWHsO
+  rUBpnFls3HlXKHLZR6Kh2n3JOxQAOw==
+}]
+set images(fileIncluded) [image create photo -data \
+{
+  R0lGODlhDAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAMAAwAAAIdXI43a+IfWHsO
+  rUBpnFls3HlXKHLZR6Kh2n3JOxQAOw==
+}]
+set images(fileExcluded) [image create photo -data \
+{
+  R0lGODlhDAAMAMIEAP8AAAAAAAD/////8////////////////yH5BAEKAAIALAAAAAAMAAwA
+  AAMqCBDcISqOOUOEio4rbN7K04ERMIjBVFbCSJpnm5YZKpHirSoYrNEOhyIBADs=
+}]
+set images(link) [image create photo -data \
+{
+  R0lGODlhDAAMAMIDAAD//wAAAP//8////////////////////yH5BAEKAAAALAAAAAAMAAwA
+  AAMmCLG88ErIGWAcS7IXBM4a5zXh1XSVSabdtwwCO75lS9dTHnNnAyQAOw==
+}]
+set images(linkIncluded) [image create photo -data \
+{
+  R0lGODlhDAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAMAAwAAAIjXI43a+IfWBPH
+  oRVstVjvOCUZmFEJ1ZlfikBsyU2Pa4jJUAAAOw==
+}]
+set images(linkExcluded) [image create photo -data \
+{
+  R0lGODlhDAAMAMIEAP8AAAAAAAD/////8////////////////yH5BAEKAAcALAAAAAAMAAwA
+  AAMuCBDccSqOOUOEis17bPbL0Q2R9IxEGQznmkZrS5YAK4IMLMIBMQOYGmWjcjQUCQA7
+}]
+
 # get password
 if {$barControlConfig(serverPassword) == ""} \
 {
   wm state . withdrawn
   set barControlConfig(serverPassword) [obfuscatePassword [Dialog:password "Server password"] $passwordObfuscator]
-}
-
-# connect to server
-if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]} \
-{
-  if {[catch {tls::init -cafile $barControlConfig(serverCAFileName)}]} \
-  {
-    printError "Cannot initialise TLS/SSL system"
-    exit 1
-  }
-  if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverTLSPort) $barControlConfig(serverPassword) 1]} \
-  {
-    printError "Cannot connect to TLS/SSL server '$barControlConfig(serverHostName):$barControlConfig(serverTLSPort)'!"
-    exit 1
-  }
-} \
-elseif {$barControlConfig(serverPort) != 0} \
-{
-  if {$port == 0} { set port $DEFAULT_PORT }
-  if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverPort) $barControlConfig(serverPassword) 0]} \
-  {
-    printError "Cannot connect to server '$barControlConfig(serverHostName):$barControlConfig(serverPort)'!"
-    exit 1
-  }
-} \
-else  \
-{
-  printError "Cannot connect to server '$barControlConfig(serverHostName)'!"
-  exit 1
-}
-
-# non-GUI commands
-if {$listFlag} \
-{
-  set formatString "%3s %-20s %-20s %10s %-10s %-10s %-20s %-20s"
-
-  set s [format $formatString "Id" "Name" "State" "Part size" "Compress" "Crypt" "Started" "Estimate time"]
-  puts $s
-  puts [string repeat "-" [string length $s]]
-  set commandId [BackupServer:sendCommand "JOB_LIST"]
-  while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
-  {
-    scanx $result "%d %S %S %d %S %S %d %d" \
-      id \
-      name \
-      state \
-      archivePartSize \
-      compressAlgorithm \
-      cryptAlgorithm \
-      startTime \
-      estimatedRestTime
-
-    set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
-    set estimatedRestHours   [expr {int($estimatedRestTime%(24*60*60)/(60*60))}]
-    set estimatedRestMinutes [expr {int($estimatedRestTime%(60*60   )/60     )}]
-    set estimatedRestSeconds [expr {int($estimatedRestTime%(60)              )}]
-
-    puts [format $formatString \
-      $id \
-      $name \
-      $state \
-      [formatByteSize $archivePartSize] \
-      $compressAlgorithm \
-      $cryptAlgorithm \
-      [expr {($startTime > 0)?[clock format $startTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
-      [format "%d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds] \
-    ]
-  }
-  puts [string repeat "-" [string length $s]]
-  exit 0
-}
-if {$startFlag} \
-{
-  if {$configName != ""} \
-  {
-    loadBARConfig $configName
-    addBackupJob ""
-  }
-  exit 0
-}
-if {$abortId != 0} \
-{
-  abortJob "" $abortId
-  exit 0
 }
 
 # init main window
@@ -3842,15 +3952,12 @@ pack $mainWindow.menu -side top -fill x
 
 # window
 tixNoteBook $mainWindow.tabs
-  $mainWindow.tabs add jobs          -label "Jobs (F1)"    -underline -1 -raisecmd { focus .jobs.list }
-  $mainWindow.tabs add backup        -label "Backup (F2)"  -underline -1
-  $mainWindow.tabs add restore       -label "Restore (F3)" -underline -1
-  $mainWindow.tabs add compressCrypt -label "Compress & crypt (F4)" -underline -1
+  $mainWindow.tabs add jobs    -label "Jobs (F1)"    -underline -1 -raisecmd { focus .jobs.list.data }
+  $mainWindow.tabs add backup  -label "Backup (F2)"  -underline -1
+  $mainWindow.tabs add restore -label "Restore (F3)" -underline -1
 pack $mainWindow.tabs -fill both -expand yes -padx 2p -pady 2p
 
 # ----------------------------------------------------------------------
-
-
 
 frame .jobs
   labelframe .jobs.selected -text "Selected"
@@ -4012,26 +4119,6 @@ frame .jobs
 
     Dialog:progressbar .jobs.selected.filePercentage
     grid .jobs.selected.filePercentage -row 6 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
-    addModifyTrace ::currentJob(fileDoneBytes) \
-      "
-        global currentJob
-
-        if {\$currentJob(fileTotalBytes) > 0} \
-        {
-          set p \[expr {double(\$currentJob(fileDoneBytes))/\$currentJob(fileTotalBytes)}]
-          Dialog:progressbar .jobs.selected.filePercentage update \$p
-        }
-      "
-    addModifyTrace ::currentJob(fileTotalBytes) \
-      "
-        global currentJob
-
-        if {\$currentJob(fileTotalBytes) > 0} \
-        {
-          set p \[expr {double(\$currentJob(fileDoneBytes))/\$currentJob(fileTotalBytes)}]
-          Dialog:progressbar .jobs.selected.filePercentage update \$p
-        }
-      "
 
     label .jobs.selected.storageNameTitle -text "Storage:"
     grid .jobs.selected.storageNameTitle -row 7 -column 0 -sticky "w"
@@ -4040,101 +4127,21 @@ frame .jobs
 
     Dialog:progressbar .jobs.selected.storagePercentage
     grid .jobs.selected.storagePercentage -row 8 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
-    addModifyTrace ::currentJob(storageDoneBytes) \
-      "
-        global currentJob
-
-        if {\$currentJob(storageTotalBytes) > 0} \
-        {
-          set p \[expr {double(\$currentJob(storageDoneBytes))/\$currentJob(storageTotalBytes)}]
-          Dialog:progressbar .jobs.selected.storagePercentage update \$p
-        }
-      "
-    addModifyTrace ::currentJob(storageTotalBytes) \
-      "
-        global currentJob
-
-        if {\$currentJob(storageTotalBytes) > 0} \
-        {
-          set p \[expr {double(\$currentJob(storageDoneBytes))/\$currentJob(storageTotalBytes)}]
-          Dialog:progressbar .jobs.selected.storagePercentage update \$p
-        }
-      "
 
     label .jobs.selected.storageVolumeTitle -text "Volume:"
     grid .jobs.selected.storageVolumeTitle -row 9 -column 0 -sticky "w"
     Dialog:progressbar .jobs.selected.storageVolume
     grid .jobs.selected.storageVolume -row 9 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
-    addModifyTrace ::currentJob(storageDoneBytes) \
-      "
-        global currentJob
-
-        if {\$currentJob(storageTotalBytes) > 0} \
-        {
-          set p \[expr {double(\$currentJob(storageDoneBytes))/\$currentJob(storageTotalBytes)}]
-          Dialog:progressbar .jobs.selected.storagePercentage update \$p
-        }
-      "
-    addModifyTrace ::currentJob(storageTotalBytes) \
-      "
-        global currentJob
-
-        if {\$currentJob(storageTotalBytes) > 0} \
-        {
-          set p \[expr {double(\$currentJob(storageDoneBytes))/\$currentJob(storageTotalBytes)}]
-          Dialog:progressbar .jobs.selected.storagePercentage update \$p
-        }
-      "
 
     label .jobs.selected.totalFilesPercentageTitle -text "Total files:"
     grid .jobs.selected.totalFilesPercentageTitle -row 10 -column 0 -sticky "w"
     Dialog:progressbar .jobs.selected.totalFilesPercentage
     grid .jobs.selected.totalFilesPercentage -row 10 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
-    addModifyTrace ::currentJob(doneFiles) \
-      "
-        global currentJob
-
-        if {\$currentJob(totalFiles) > 0} \
-        {
-          set p \[expr {double(\$currentJob(doneFiles))/\$currentJob(totalFiles)}]
-          Dialog:progressbar .jobs.selected.totalFilesPercentage update \$p
-        }
-      "
-    addModifyTrace ::currentJob(totalFiles) \
-      "
-        global currentJob
-
-        if {\$currentJob(totalFiles) > 0} \
-        {
-          set p \[expr {double(\$currentJob(doneFiles))/\$currentJob(totalFiles)}]
-          Dialog:progressbar .jobs.selected.totalFilesPercentage update \$p
-        }
-      "
 
     label .jobs.selected.totalBytesPercentageTitle -text "Total bytes:"
     grid .jobs.selected.totalBytesPercentageTitle -row 11 -column 0 -sticky "w"
     Dialog:progressbar .jobs.selected.totalBytesPercentage
     grid .jobs.selected.totalBytesPercentage -row 11 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
-    addModifyTrace ::currentJob(doneBytes) \
-      "
-        global currentJob
-
-        if {\$currentJob(totalBytes) > 0} \
-        {
-          set p \[expr {double(\$currentJob(doneBytes))/\$currentJob(totalBytes)}]
-          Dialog:progressbar .jobs.selected.totalBytesPercentage update \$p
-        }
-      "
-    addModifyTrace ::currentJob(totalBytes) \
-      "
-        global currentJob
-
-        if {\$currentJob(totalBytes) > 0} \
-        {
-          set p \[expr {double(\$currentJob(doneBytes))/\$currentJob(totalBytes)}]
-          Dialog:progressbar .jobs.selected.totalBytesPercentage update \$p
-        }
-      "
 
     label .jobs.selected.messageTitle -text "Message:"
     grid .jobs.selected.messageTitle -row 12 -column 0 -sticky "w"
@@ -4148,7 +4155,7 @@ frame .jobs
   frame .jobs.list
     mclistbox::mclistbox .jobs.list.data -height 1 -bg white -labelanchor w -selectmode single -xscrollcommand ".jobs.list.xscroll set" -yscrollcommand ".jobs.list.yscroll set"
     .jobs.list.data column add id                -label "Id"             -width 5
-    .jobs.list.data column add name              -label "name"           -width 12
+    .jobs.list.data column add name              -label "Name"           -width 12
     .jobs.list.data column add state             -label "State"          -width 16
     .jobs.list.data column add archivePartSize   -label "Part size"      -width 8
     .jobs.list.data column add compressAlgortihm -label "Compress"       -width 10
@@ -4399,74 +4406,107 @@ frame .backup
     grid .backup.storage.maxTmpSize -row 1 -column 1 -sticky "w" -padx 2p -pady 2p
     addEnableTrace ::barConfig(maxTmpSizeFlag) 1 .backup.storage.maxTmpSize.size
 
-    label .backup.storage.optionOverwriteArchiveFilesTitle -text "Options:"
-    grid .backup.storage.optionOverwriteArchiveFilesTitle -row 3 -column 0 -sticky "w" 
-    checkbutton .backup.storage.optionOverwriteArchiveFiles -text "overwrite archive files" -variable barConfig(overwriteArchiveFilesFlag)
-    grid .backup.storage.optionOverwriteArchiveFiles -row 3 -column 1 -sticky "w" 
+    label .backup.storage.compressAlgorithmTitle -text "Compress:"
+    grid .backup.storage.compressAlgorithmTitle -row 2 -column 0 -sticky "w" 
+    tk_optionMenu .backup.storage.compressAlgorithm barConfig(compressAlgorithm) \
+      "none" "zip0" "zip1" "zip2" "zip3" "zip4" "zip5" "zip6" "zip7" "zip8" "zip9" "bzip1" "bzip2" "bzip3" "bzip4" "bzip5" "bzip6" "bzip7" "bzip8" "bzip9"
+    grid .backup.storage.compressAlgorithm -row 2 -column 1 -sticky "w" -padx 2p -pady 2p
+
+    label .backup.storage.cryptAlgorithmTitle -text "Crypt:"
+    grid .backup.storage.cryptAlgorithmTitle -row 3 -column 0 -sticky "w" 
+    tk_optionMenu .backup.storage.cryptAlgorithm barConfig(cryptAlgorithm) \
+      "none" "3DES" "CAST5" "BLOWFISH" "AES128" "AES192" "AES256" "TWOFISH128" "TWOFISH256"
+    grid .backup.storage.cryptAlgorithm -row 3 -column 1 -sticky "w" -padx 2p -pady 2p
+
+    label .backup.storage.cryptPasswordTitle -text "Password:"
+    grid .backup.storage.cryptPasswordTitle -row 4 -column 0 -sticky "w" 
+    entry .backup.storage.cryptPassword -textvariable barConfig(cryptPassword) -bg white -show "*"
+    grid .backup.storage.cryptPassword -row 4 -column 1 -sticky "w" -padx 2p -pady 2p
 
     label .backup.storage.destinationTitle -text "Destination:"
-    grid .backup.storage.destinationTitle -row 4 -column 0 -sticky "nw" 
+    grid .backup.storage.destinationTitle -row 5 -column 0 -sticky "nw" 
     frame .backup.storage.destination
-      frame .backup.storage.destination.type0
-        radiobutton .backup.storage.destination.type0.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
-        grid .backup.storage.destination.type0.fileSystem -row 0 -column 0 -sticky "nw" 
+      frame .backup.storage.destination.type
+        radiobutton .backup.storage.destination.type.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
+        grid .backup.storage.destination.type.fileSystem -row 0 -column 0 -sticky "w"
 
-        grid rowconfigure    .backup.storage.destination.type0 { 0 } -weight 1
-        grid columnconfigure .backup.storage.destination.type0 { 1 } -weight 1
-      grid .backup.storage.destination.type0 -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+        radiobutton .backup.storage.destination.type.ssh -text "scp" -variable barConfig(storageType) -value "SCP"
+        grid .backup.storage.destination.type.ssh -row 0 -column 1 -sticky "w" 
+
+        radiobutton .backup.storage.destination.type.sftp -text "sftp" -variable barConfig(storageType) -value "SFTP"
+        grid .backup.storage.destination.type.sftp -row 0 -column 2 -sticky "w" 
+
+        radiobutton .backup.storage.destination.type.dvd -text "DVD" -variable barConfig(storageType) -value "DVD"
+        grid .backup.storage.destination.type.dvd -row 0 -column 3 -sticky "w"
+
+        radiobutton .backup.storage.destination.type.device -text "Device" -variable barConfig(storageType) -value "DEVICE"
+        grid .backup.storage.destination.type.device -row 0 -column 4 -sticky "w"
+
+        grid rowconfigure    .backup.storage.destination.type { 0 } -weight 1
+        grid columnconfigure .backup.storage.destination.type { 5 } -weight 1
+      grid .backup.storage.destination.type -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+
       labelframe .backup.storage.destination.fileSystem
         label .backup.storage.destination.fileSystem.fileNameTitle -text "File name:"
         grid .backup.storage.destination.fileSystem.fileNameTitle -row 0 -column 0 -sticky "w" 
         entry .backup.storage.destination.fileSystem.fileName -textvariable barConfig(storageFileName) -bg white
         grid .backup.storage.destination.fileSystem.fileName -row 0 -column 1 -sticky "we" 
 
-        grid rowconfigure    .backup.storage.destination.fileSystem { 0 } -weight 1
+        label .backup.storage.destination.fileSystem.optionsTitle -text "Options:"
+        grid .backup.storage.destination.fileSystem.optionsTitle -row 1 -column 0 -sticky "w" 
+        frame .backup.storage.destination.fileSystem.options
+          checkbutton .backup.storage.destination.fileSystem.options.overwriteArchiveFiles -text "overwrite archive files" -variable barConfig(overwriteArchiveFilesFlag)
+          grid .backup.storage.destination.fileSystem.options.overwriteArchiveFiles -row 0 -column 0 -sticky "w" 
+
+          grid columnconfigure .backup.storage.destination.fileSystem.options { 0 } -weight 1
+        grid .backup.storage.destination.fileSystem.options -row 1 -column 1 -sticky "we"
+
+#        grid rowconfigure    .backup.storage.destination.fileSystem { 2 } -weight 1
         grid columnconfigure .backup.storage.destination.fileSystem { 1 } -weight 1
-      grid .backup.storage.destination.fileSystem -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .backup.storage.destination.fileSystem.fileNameTitle
-      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .backup.storage.destination.fileSystem.fileName
+      addModifyTrace {::barConfig(storageType)} \
+      {
+        if {$::barConfig(storageType)=="FILESYSTEM"} \
+        {
+          grid .backup.storage.destination.fileSystem -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
+        } \
+        else \
+        {
+          grid forget .backup.storage.destination.fileSystem
+        }
+      }
 
-      frame .backup.storage.destination.type1
-        radiobutton .backup.storage.destination.type1.ssh -text "scp" -variable barConfig(storageType) -value "SCP"
-        grid .backup.storage.destination.type1.ssh -row 0 -column 0 -sticky "w" 
-        radiobutton .backup.storage.destination.type1.sftp -text "sftp" -variable barConfig(storageType) -value "SFTP"
-        grid .backup.storage.destination.type1.sftp -row 0 -column 1 -sticky "w" 
-
-        grid rowconfigure    .backup.storage.destination.type1 { 0 } -weight 1
-        grid columnconfigure .backup.storage.destination.type1 { 2 } -weight 1
-      grid .backup.storage.destination.type1 -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
       labelframe .backup.storage.destination.ssh
         label .backup.storage.destination.ssh.fileNameTitle -text "File name:"
         grid .backup.storage.destination.ssh.fileNameTitle -row 0 -column 0 -sticky "w" 
         entry .backup.storage.destination.ssh.fileName -textvariable barConfig(storageFileName) -bg white
         grid .backup.storage.destination.ssh.fileName -row 0 -column 1 -sticky "we" 
 
-        label .backup.storage.destination.ssh.loginTitle -text "Login:" -state disabled
+        label .backup.storage.destination.ssh.loginTitle -text "Login:"
         grid .backup.storage.destination.ssh.loginTitle -row 1 -column 0 -sticky "w" 
         frame .backup.storage.destination.ssh.login
-          entry .backup.storage.destination.ssh.login.name -textvariable barConfig(storageLoginName) -bg white -state disabled
+          entry .backup.storage.destination.ssh.login.name -textvariable barConfig(storageLoginName) -bg white
           pack .backup.storage.destination.ssh.login.name -side left -fill x -expand yes
 
-      #    label .backup.storage.destination.ssh.loginPasswordTitle -text "Password:" -state disabled
+      #    label .backup.storage.destination.ssh.loginPasswordTitle -text "Password:"
       #    pack .backup.storage.destination.ssh.loginPasswordTitle -row 0 -column 2 -sticky "w" 
-      #    entry .backup.storage.destination.ssh.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
+      #    entry .backup.storage.destination.ssh.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*"
       #    pack .backup.storage.destination.ssh.loginPassword -row 0 -column 3 -sticky "we" 
 
-          label .backup.storage.destination.ssh.login.hostNameTitle -text "Host:" -state disabled
+          label .backup.storage.destination.ssh.login.hostNameTitle -text "Host:"
           pack .backup.storage.destination.ssh.login.hostNameTitle -side left
-          entry .backup.storage.destination.ssh.login.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
+          entry .backup.storage.destination.ssh.login.hostName -textvariable barConfig(storageHostName) -bg white
           pack .backup.storage.destination.ssh.login.hostName -side left -fill x -expand yes
 
-          label .backup.storage.destination.ssh.login.sshPortTitle -text "SSH port:" -state disabled
+          label .backup.storage.destination.ssh.login.sshPortTitle -text "SSH port:"
           pack .backup.storage.destination.ssh.login.sshPortTitle -side left
-          tixControl .backup.storage.destination.ssh.login.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 0 -max 65535 -options { entry.background white } -state disabled
+          tixControl .backup.storage.destination.ssh.login.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 0 -max 65535 -options { entry.background white }
           pack .backup.storage.destination.ssh.login.sshPort -side left -fill x -expand yes
         grid .backup.storage.destination.ssh.login -row 1 -column 1 -sticky "we"
 
-        label .backup.storage.destination.ssh.sshPublicKeyFileNameTitle -text "SSH public key:" -state disabled
+        label .backup.storage.destination.ssh.sshPublicKeyFileNameTitle -text "SSH public key:"
         grid .backup.storage.destination.ssh.sshPublicKeyFileNameTitle -row 2 -column 0 -sticky "w" 
         frame .backup.storage.destination.ssh.sshPublicKeyFileName
-          entry .backup.storage.destination.ssh.sshPublicKeyFileName.data -textvariable barConfig(sshPublicKeyFileName) -bg white -state disabled
+          entry .backup.storage.destination.ssh.sshPublicKeyFileName.data -textvariable barConfig(sshPublicKeyFileName) -bg white
           pack .backup.storage.destination.ssh.sshPublicKeyFileName.data -side left -fill x -expand yes
           button .backup.storage.destination.ssh.sshPublicKeyFileName.select -image $images(folder) -command \
           "
@@ -4482,10 +4522,10 @@ frame .backup
           pack .backup.storage.destination.ssh.sshPublicKeyFileName.select -side left
         grid .backup.storage.destination.ssh.sshPublicKeyFileName -row 2 -column 1 -sticky "we"
 
-        label .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle -text "SSH privat key:" -state disabled
+        label .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle -text "SSH privat key:"
         grid .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle -row 3 -column 0 -sticky "w" 
         frame .backup.storage.destination.ssh.sshPrivatKeyFileName
-          entry .backup.storage.destination.ssh.sshPrivatKeyFileName.data -textvariable barConfig(sshPrivatKeyFileName) -bg white -state disabled
+          entry .backup.storage.destination.ssh.sshPrivatKeyFileName.data -textvariable barConfig(sshPrivatKeyFileName) -bg white
           pack .backup.storage.destination.ssh.sshPrivatKeyFileName.data -side left -fill x -expand yes
           button .backup.storage.destination.ssh.sshPrivatKeyFileName.select -image $images(folder) -command \
           "
@@ -4525,55 +4565,18 @@ frame .backup
 
   #      grid rowconfigure    .backup.storage.destination.ssh { } -weight 1
         grid columnconfigure .backup.storage.destination.ssh { 1 } -weight 1
-      grid .backup.storage.destination.ssh -row 3 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.fileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.fileName
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.login.name
-    #  addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginPasswordTitle
-    #  addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.loginPassword
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.login.hostNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.login.hostName
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.login.sshPortTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.login.sshPort
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPublicKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPublicKeyFileName.data
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SCP" "SFTP"} .backup.storage.destination.ssh.sshPrivatKeyFileName.data
       addModifyTrace {::barConfig(storageType)} \
       {
         if {($::barConfig(storageType) == "SCP") || ($::barConfig(storageType) == "SFTP")} \
         {
-          .backup.storage.destination.ssh.maxBandWidthTitle      configure -state normal
-          .backup.storage.destination.ssh.maxBandWidth.unlimited configure -state normal
-          .backup.storage.destination.ssh.maxBandWidth.limitto   configure -state normal
-          .backup.storage.destination.ssh.maxBandWidth.unit      configure -state normal
-          if {$::barConfig(maxBandWidthFlag)} \
-          {
-            .backup.storage.destination.ssh.maxBandWidth.size configure -state normal
-          } \
-          else \
-          {
-            .backup.storage.destination.ssh.maxBandWidth.size configure -state disabled
-          }
+          grid .backup.storage.destination.ssh -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
         } \
         else \
         {
-          .backup.storage.destination.ssh.maxBandWidthTitle      configure -state disabled
-          .backup.storage.destination.ssh.maxBandWidth.unlimited configure -state disabled
-          .backup.storage.destination.ssh.maxBandWidth.limitto   configure -state disabled
-          .backup.storage.destination.ssh.maxBandWidth.size      configure -state disabled
-          .backup.storage.destination.ssh.maxBandWidth.unit      configure -state disabled
+          grid forget .backup.storage.destination.ssh
         }
       }
 
-      frame .backup.storage.destination.type2
-        radiobutton .backup.storage.destination.type2.fileSystem -text "DVD" -variable barConfig(storageType) -value "DVD"
-        grid .backup.storage.destination.type2.fileSystem -row 0 -column 0 -sticky "nw" 
-
-        grid rowconfigure    .backup.storage.destination.type2 { 0 } -weight 1
-        grid columnconfigure .backup.storage.destination.type2 { 1 } -weight 1
-      grid .backup.storage.destination.type2 -row 4 -column 0 -sticky "we" -padx 2p -pady 2p
       labelframe .backup.storage.destination.dvd
         label .backup.storage.destination.dvd.deviceNameTitle -text "DVD device:"
         grid .backup.storage.destination.dvd.deviceNameTitle -row 0 -column 0 -sticky "w" 
@@ -4594,10 +4597,14 @@ frame .backup
           pack .backup.storage.destination.dvd.volumeSize.unit -side left
         grid .backup.storage.destination.dvd.volumeSize -row 2 -column 1 -sticky "w"
 
-        label .backup.storage.destination.dvd.eccTitle -text "Options:"
-        grid .backup.storage.destination.dvd.eccTitle -row 3 -column 0 -sticky "w"
-        checkbutton .backup.storage.destination.dvd.ecc -text "add error-correction codes" -variable barConfig(errorCorrectionCodesFlag)
-        grid .backup.storage.destination.dvd.ecc -row 3 -column 1 -sticky "w" 
+        label .backup.storage.destination.dvd.optionsTitle -text "Options:"
+        grid .backup.storage.destination.dvd.optionsTitle -row 3 -column 0 -sticky "w"
+        frame .backup.storage.destination.dvd.options
+          checkbutton .backup.storage.destination.dvd.options.ecc -text "add error-correction codes" -variable barConfig(errorCorrectionCodesFlag)
+          grid .backup.storage.destination.dvd.options.ecc -row 0 -column 0 -sticky "w" 
+
+          grid columnconfigure .backup.storage.destination.dvd.options { 0 } -weight 1
+        grid .backup.storage.destination.dvd.options -row 3 -column 1 -sticky "we"
 
        .backup.storage.destination.dvd.volumeSize.size insert end 2G
        .backup.storage.destination.dvd.volumeSize.size insert end 3G
@@ -4606,45 +4613,18 @@ frame .backup
 
         grid rowconfigure    .backup.storage.destination.dvd { 4 } -weight 1
         grid columnconfigure .backup.storage.destination.dvd { 1 } -weight 1
-      grid .backup.storage.destination.dvd -row 5 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destination.dvd.deviceNameTitle
-      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destination.dvd.deviceName
-      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destination.dvd.fileNameTitle
-      addEnableTrace ::barConfig(storageType) "DVD" .backup.storage.destination.dvd.fileName
       addModifyTrace {::barConfig(storageType)} \
       {
         if {$::barConfig(storageType)=="DVD"} \
         {
-          .backup.storage.destination.dvd.volumeSizeTitle configure -state normal
-          .backup.storage.destination.dvd.volumeSize.size configure -state normal
-          .backup.storage.destination.dvd.volumeSize.unit configure -state normal
-          if     {!$::barConfig(archivePartSizeFlag)} \
-          {
-            set ::barConfig(archivePartSizeFlag) 1
-            set ::barConfig(archivePartSize)     "2G"
-          } \
-          elseif {[memorySizeToBytes $::barConfig(archivePartSize)] > 2*1024*1024*1024} \
-          {
-            set ::barConfig(volumeSize) "2G"
-          }
-          .backup.storage.split.unlimited configure -state disabled
+          grid .backup.storage.destination.dvd -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
         } \
         else \
         {
-          .backup.storage.destination.dvd.volumeSizeTitle configure -state disabled
-          .backup.storage.destination.dvd.volumeSize.size configure -state disabled
-          .backup.storage.destination.dvd.volumeSize.unit configure -state disabled
-          .backup.storage.split.unlimited configure -state normal
+          grid forget .backup.storage.destination.dvd
         }
       }
 
-      frame .backup.storage.destination.type3
-        radiobutton .backup.storage.destination.type3.fileSystem -text "Device" -variable barConfig(storageType) -value "DEVICE"
-        grid .backup.storage.destination.type3.fileSystem -row 0 -column 0 -sticky "nw" 
-
-        grid rowconfigure    .backup.storage.destination.type3 { 0 } -weight 1
-        grid columnconfigure .backup.storage.destination.type3 { 1 } -weight 1
-      grid .backup.storage.destination.type3 -row 6 -column 0 -sticky "we" -padx 2p -pady 2p
       labelframe .backup.storage.destination.device
         label .backup.storage.destination.device.nameTitle -text "Device name:"
         grid .backup.storage.destination.device.nameTitle -row 0 -column 0 -sticky "w" 
@@ -4672,43 +4652,23 @@ frame .backup
 
         grid rowconfigure    .backup.storage.destination.device { 3 } -weight 1
         grid columnconfigure .backup.storage.destination.device { 1 } -weight 1
-      grid .backup.storage.destination.device -row 7 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) "DEVICE" .backup.storage.destination.device.nameTitle
-      addEnableTrace ::barConfig(storageType) "DEVICE" .backup.storage.destination.device.name
-      addEnableTrace ::barConfig(storageType) "DEVICE" .backup.storage.destination.device.fileNameTitle
-      addEnableTrace ::barConfig(storageType) "DEVICE" .backup.storage.destination.device.fileName
       addModifyTrace {::barConfig(storageType)} \
       {
         if {$::barConfig(storageType)=="DEVICE"} \
         {
-          .backup.storage.destination.device.volumeSizeTitle configure -state normal
-          .backup.storage.destination.device.volumeSize.size configure -state normal
-          .backup.storage.destination.device.volumeSize.unit configure -state normal
-          if     {!$::barConfig(archivePartSizeFlag)} \
-          {
-            set ::barConfig(archivePartSizeFlag) 1
-            set ::barConfig(archivePartSize)     "2G"
-          } \
-          elseif {[memorySizeToBytes $::barConfig(archivePartSize)] > 2*1024*1024*1024} \
-          {
-            set ::barConfig(volumeSize) "2G"
-          }
-          .backup.storage.split.unlimited configure -state disabled
+          grid .backup.storage.destination.device -row 7 -column 0 -sticky "nswe" -padx 2p -pady 2p
         } \
         else \
         {
-          .backup.storage.destination.device.volumeSizeTitle configure -state disabled
-          .backup.storage.destination.device.volumeSize.size configure -state disabled
-          .backup.storage.destination.device.volumeSize.unit configure -state disabled
-          .backup.storage.split.unlimited configure -state normal
+          grid forget .backup.storage.destination.device
         }
       }
 
       grid rowconfigure    .backup.storage.destination { 0 } -weight 1
       grid columnconfigure .backup.storage.destination { 0 } -weight 1
-    grid .backup.storage.destination -row 4 -column 1 -sticky "we"
+    grid .backup.storage.destination -row 5 -column 1 -sticky "we"
 
-    grid rowconfigure    .backup.storage { 5 } -weight 1
+    grid rowconfigure    .backup.storage { 6 } -weight 1
     grid columnconfigure .backup.storage { 1 } -weight 1
   pack .backup.storage -side top -fill both -expand yes -in [.backup.tabs subwidget storage]
 
@@ -4739,16 +4699,35 @@ frame .restore
   grid .restore.tabs -row 1 -column 0 -columnspan 2 -sticky "nswe" -padx 2p -pady 2p
 
   frame .restore.storage
-    label .restore.storage.sourceTitle -text "Source:"
-    grid .restore.storage.sourceTitle -row 0 -column 0 -sticky "nw" 
-    frame .restore.storage.source
-      frame .restore.storage.source.type0
-        radiobutton .restore.storage.source.type0.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
-        grid .restore.storage.source.type0.fileSystem -row 0 -column 0 -sticky "nw" 
+    label .restore.storage.cryptPasswordTitle -text "Password:"
+    grid .restore.storage.cryptPasswordTitle -row 0 -column 0 -sticky "w" 
+    entry .restore.storage.cryptPassword -textvariable barConfig(cryptPassword) -bg white -show "*"
+    grid .restore.storage.cryptPassword -row 0 -column 1 -sticky "w" -padx 2p -pady 2p
 
-        grid rowconfigure    .restore.storage.source.type0 { 0 } -weight 1
-        grid columnconfigure .restore.storage.source.type0 { 1 } -weight 1
-      grid .restore.storage.source.type0 -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+    label .restore.storage.sourceTitle -text "Source:"
+    grid .restore.storage.sourceTitle -row 2 -column 0 -sticky "nw" 
+    frame .restore.storage.source
+      frame .restore.storage.source.type
+        radiobutton .restore.storage.source.type.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
+        grid .restore.storage.source.type.fileSystem -row 0 -column 0 -sticky "nw" 
+
+
+        radiobutton .restore.storage.source.type.ssh -text "ssh" -variable barConfig(storageType) -value "SSH"
+        grid .restore.storage.source.type.ssh -row 0 -column 1 -sticky "w" 
+
+        radiobutton .restore.storage.source.type.scp -text "scp" -variable barConfig(storageType) -value "SCP"
+        grid .restore.storage.source.type.scp -row 0 -column 2 -sticky "w" 
+
+        radiobutton .restore.storage.source.type.sftp -text "sftp" -variable barConfig(storageType) -value "SFTP"
+        grid .restore.storage.source.type.sftp -row 0 -column 3 -sticky "w" 
+
+        radiobutton .restore.storage.source.type.device -text "Device" -variable barConfig(storageType) -value "DEVICE"
+        grid .restore.storage.source.type.device -row 0 -column 4 -sticky "nw" 
+
+        grid rowconfigure    .restore.storage.source.type { 0 } -weight 1
+        grid columnconfigure .restore.storage.source.type { 5 } -weight 1
+      grid .restore.storage.source.type -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+
       labelframe .restore.storage.source.fileSystem
         label .restore.storage.source.fileSystem.fileNameTitle -text "File name:"
         grid .restore.storage.source.fileSystem.fileNameTitle -row 0 -column 0 -sticky "w" 
@@ -4770,22 +4749,18 @@ frame .restore
 
         grid rowconfigure    .restore.storage.source.fileSystem { 0 } -weight 1
         grid columnconfigure .restore.storage.source.fileSystem { 1 } -weight 1
-      grid .restore.storage.source.fileSystem -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .restore.storage.source.fileSystem.fileNameTitle
-      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .restore.storage.source.fileSystem.fileName
-      addEnableTrace ::barConfig(storageType) "FILESYSTEM" .restore.storage.source.fileSystem.selectDirectory
+      addModifyTrace {::barConfig(storageType)} \
+      {
+        if {$::barConfig(storageType) == "FILESYSTEM"} \
+        {
+          grid .restore.storage.source.fileSystem -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
+        } \
+        else \
+        {
+          grid forget .restore.storage.source.fileSystem
+        }
+      }
 
-      frame .restore.storage.source.type1
-        radiobutton .restore.storage.source.type1.ssh -text "ssh" -variable barConfig(storageType) -value "SSH"
-        grid .restore.storage.source.type1.ssh -row 0 -column 0 -sticky "w" 
-        radiobutton .restore.storage.source.type1.scp -text "scp" -variable barConfig(storageType) -value "SCP"
-        grid .restore.storage.source.type1.scp -row 0 -column 1 -sticky "w" 
-        radiobutton .restore.storage.source.type1.sftp -text "sftp" -variable barConfig(storageType) -value "SFTP"
-        grid .restore.storage.source.type1.sftp -row 0 -column 2 -sticky "w" 
-
-        grid rowconfigure    .restore.storage.source.type1 { 0 } -weight 1
-        grid columnconfigure .restore.storage.source.type1 { 3 } -weight 1
-      grid .restore.storage.source.type1 -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
       labelframe .restore.storage.source.ssh
         label .restore.storage.source.ssh.fileNameTitle -text "Directory name:"
         grid .restore.storage.source.ssh.fileNameTitle -row 0 -column 0 -sticky "w" 
@@ -4807,32 +4782,32 @@ if {0} {
         grid .restore.storage.source.ssh.selectDirectory -row 0 -column 5
 }
 
-        label .restore.storage.source.ssh.loginTitle -text "Login:" -state disabled
+        label .restore.storage.source.ssh.loginTitle -text "Login:"
         grid .restore.storage.source.ssh.loginTitle -row 1 -column 0 -sticky "w" 
         frame .restore.storage.source.ssh.login
-          entry .restore.storage.source.ssh.login.name -textvariable barConfig(storageLoginName) -bg white -state disabled
+          entry .restore.storage.source.ssh.login.name -textvariable barConfig(storageLoginName) -bg white
           pack .restore.storage.source.ssh.login.name -side left -fill x -expand yes
 
-      #    label .restore.storage.source.ssh.login.passwordTitle -text "Password:" -state disabled
+      #    label .restore.storage.source.ssh.login.passwordTitle -text "Password:"
       #    grid .restore.storage.source.ssh.login.passwordTitle -row 0 -column 2 -sticky "w" 
-      #    entry .restore.storage.source.ssh.login.password -textvariable barConfig(sshPassword) -bg white -show "*" -state disabled
+      #    entry .restore.storage.source.ssh.login.password -textvariable barConfig(sshPassword) -bg white -show "*"
       #    grid .restore.storage.source.ssh.login.password -row 0 -column 3 -sticky "we" 
 
-          label .restore.storage.source.ssh.login.hostNameTitle -text "Host:" -state disabled
+          label .restore.storage.source.ssh.login.hostNameTitle -text "Host:"
           pack .restore.storage.source.ssh.login.hostNameTitle -side left
-          entry .restore.storage.source.ssh.login.hostName -textvariable barConfig(storageHostName) -bg white -state disabled
+          entry .restore.storage.source.ssh.login.hostName -textvariable barConfig(storageHostName) -bg white
           pack .restore.storage.source.ssh.login.hostName -side left -fill x -expand yes
 
-          label .restore.storage.source.ssh.login.sshPortTitle -text "SSH port:" -state disabled
+          label .restore.storage.source.ssh.login.sshPortTitle -text "SSH port:"
           pack .restore.storage.source.ssh.login.sshPortTitle -side left
-          tixControl .restore.storage.source.ssh.login.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 0 -max 65535 -options { entry.background white } -state disabled
+          tixControl .restore.storage.source.ssh.login.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 0 -max 65535 -options { entry.background white }
           pack .restore.storage.source.ssh.login.sshPort -side left -fill x -expand yes
         grid .restore.storage.source.ssh.login -row 1 -column 1 -sticky "we"
 
-        label .restore.storage.source.ssh.sshPublicKeyFileNameTitle -text "SSH public key:" -state disabled
+        label .restore.storage.source.ssh.sshPublicKeyFileNameTitle -text "SSH public key:"
         grid .restore.storage.source.ssh.sshPublicKeyFileNameTitle -row 2 -column 0 -sticky "w" 
         frame .restore.storage.source.ssh.sshPublicKeyFileName
-          entry .restore.storage.source.ssh.sshPublicKeyFileName.data -textvariable barConfig(sshPublicKeyFileName) -bg white -state disabled
+          entry .restore.storage.source.ssh.sshPublicKeyFileName.data -textvariable barConfig(sshPublicKeyFileName) -bg white
           pack .restore.storage.source.ssh.sshPublicKeyFileName.data -side left -fill x -expand yes
           button .restore.storage.source.ssh.sshPublicKeyFileName.select -image $images(folder) -command \
           "
@@ -4848,10 +4823,10 @@ if {0} {
           pack .restore.storage.source.ssh.sshPublicKeyFileName.select -side left
         grid .restore.storage.source.ssh.sshPublicKeyFileName -row 2 -column 1 -sticky "we"
 
-        label .restore.storage.source.ssh.sshPrivatKeyFileNameTitle -text "SSH privat key:" -state disabled
+        label .restore.storage.source.ssh.sshPrivatKeyFileNameTitle -text "SSH privat key:"
         grid .restore.storage.source.ssh.sshPrivatKeyFileNameTitle -row 3 -column 0 -sticky "w" 
         frame .restore.storage.source.ssh.sshPrivatKeyFileName
-          entry .restore.storage.source.ssh.sshPrivatKeyFileName.data -textvariable barConfig(sshPrivatKeyFileName) -bg white -state disabled
+          entry .restore.storage.source.ssh.sshPrivatKeyFileName.data -textvariable barConfig(sshPrivatKeyFileName) -bg white
           pack .restore.storage.source.ssh.sshPrivatKeyFileName.data -side left -fill x -expand yes
           button .restore.storage.source.ssh.sshPrivatKeyFileName.select -image $images(folder) -command \
           "
@@ -4869,30 +4844,18 @@ if {0} {
 
   #      grid rowconfigure    .restore.storage.source.ssh { } -weight 1
         grid columnconfigure .restore.storage.source.ssh { 1 } -weight 1
-      grid .restore.storage.source.ssh -row 3 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.fileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.fileName
-#      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.selectDirectory
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.login.name
-    #  addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginPasswordTitle
-    #  addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.loginPassword
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.login.hostNameTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.login.hostName
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.login.sshPortTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.login.sshPort
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPublicKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPublicKeyFileName.data
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPrivatKeyFileNameTitle
-      addEnableTrace ::barConfig(storageType) {"SSH" "SCP" "SFTP"} .restore.storage.source.ssh.sshPrivatKeyFileName.data
+      addModifyTrace {::barConfig(storageType)} \
+      {
+        if {($::barConfig(storageType) == "SSH") || ($::barConfig(storageType) == "SCP") || ($::barConfig(storageType) == "SFTP")} \
+        {
+          grid .restore.storage.source.ssh -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
+        } \
+        else \
+        {
+          grid forget .restore.storage.source.ssh
+        }
+      }
 
-      frame .restore.storage.source.type2
-        radiobutton .restore.storage.source.type2.device -text "Device" -variable barConfig(storageType) -value "DEVICE"
-        grid .restore.storage.source.type2.device -row 0 -column 0 -sticky "nw" 
-
-        grid rowconfigure    .restore.storage.source.type2 { 0 } -weight 1
-        grid columnconfigure .restore.storage.source.type2 { 1 } -weight 1
-      grid .restore.storage.source.type2 -row 4 -column 0 -sticky "we" -padx 2p -pady 2p
       labelframe .restore.storage.source.device
         label .restore.storage.source.device.nameTitle -text "Device name:"
         grid .restore.storage.source.device.nameTitle -row 0 -column 0 -sticky "w" 
@@ -4919,18 +4882,23 @@ if {0} {
 
         grid rowconfigure    .restore.storage.source.device { 2 } -weight 1
         grid columnconfigure .restore.storage.source.device { 1 } -weight 1
-      grid .restore.storage.source.device -row 5 -column 0 -sticky "nswe" -padx 2p -pady 2p
-      addEnableTrace ::barConfig(storageType) "DEVICE" .restore.storage.source.device.nameTitle
-      addEnableTrace ::barConfig(storageType) "DEVICE" .restore.storage.source.device.name
-      addEnableTrace ::barConfig(storageType) "DEVICE" .restore.storage.source.device.fileNameTitle
-      addEnableTrace ::barConfig(storageType) "DEVICE" .restore.storage.source.device.fileName
-      addEnableTrace ::barConfig(storageType) "DEVICE" .restore.storage.source.device.selectDirectory
+      addModifyTrace {::barConfig(storageType)} \
+      {
+        if {$::barConfig(storageType) == "DEVICE"} \
+        {
+          grid .restore.storage.source.device -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
+        } \
+        else \
+        {
+          grid forget .restore.storage.source.device
+        }
+      }
 
       grid rowconfigure    .restore.storage.source { 0 } -weight 1
       grid columnconfigure .restore.storage.source { 0 } -weight 1
-    grid .restore.storage.source -row 0 -column 1 -sticky "we"
+    grid .restore.storage.source -row 2 -column 1 -sticky "we"
 
-    grid rowconfigure    .restore.storage { 1 } -weight 1
+    grid rowconfigure    .restore.storage { 3 } -weight 1
     grid columnconfigure .restore.storage { 1 } -weight 1
   pack .restore.storage -side top -fill both -expand yes -in [.restore.tabs subwidget storage]
 
@@ -5121,36 +5089,6 @@ pack .restore -side top -fill both -expand yes -in [$mainWindow.tabs subwidget r
 
 # ----------------------------------------------------------------------
 
-frame .compressCrypt
-  label .compressCrypt.compressAlgorithmTitle -text "Compress:"
-  grid .compressCrypt.compressAlgorithmTitle -row 0 -column 0 -sticky "w" 
-  tk_optionMenu .compressCrypt.compressAlgorithm barConfig(compressAlgorithm) \
-    "none" "zip0" "zip1" "zip2" "zip3" "zip4" "zip5" "zip6" "zip7" "zip8" "zip9" "bzip1" "bzip2" "bzip3" "bzip4" "bzip5" "bzip6" "bzip7" "bzip8" "bzip9"
-  grid .compressCrypt.compressAlgorithm -row 0 -column 1 -sticky "w" -padx 2p -pady 2p
-
-  label .compressCrypt.cryptAlgorithmTitle -text "Crypt:"
-  grid .compressCrypt.cryptAlgorithmTitle -row 1 -column 0 -sticky "w" 
-  tk_optionMenu .compressCrypt.cryptAlgorithm barConfig(cryptAlgorithm) \
-    "none" "3DES" "CAST5" "BLOWFISH" "AES128" "AES192" "AES256" "TWOFISH128" "TWOFISH256"
-  grid .compressCrypt.cryptAlgorithm -row 1 -column 1 -sticky "w" -padx 2p -pady 2p
-
-#  label .compressCrypt.passwordTitle -text "Password:"
-#  grid .compressCrypt.passwordTitle -row 2 -column 0 -sticky "w" 
-#  entry .compressCrypt.password -textvariable barConfig(cryptPassword) -bg white -show "*" -state disabled
-#  grid .compressCrypt.password -row 2 -column 1 -sticky "we" -padx 2p -pady 2p
-#  addDisableTrace ::barConfig(cryptAlgorithm) "none" .compressCrypt.password
-
-  frame .compressCrypt.buttons
-    button .compressCrypt.buttons.quit -text "Quit" -command "event generate . <<Event_quit>>"
-    pack .compressCrypt.buttons.quit -side right -padx 2p
-  grid .compressCrypt.buttons -row 2 -column 0 -columnspan 2 -sticky "swe" -padx 2p -pady 2p
-
-  grid rowconfigure    .compressCrypt { 2 } -weight 1
-  grid columnconfigure .compressCrypt { 1 } -weight 1
-pack .compressCrypt -side top -fill both -expand yes -in [$mainWindow.tabs subwidget compressCrypt]
-
-# ----------------------------------------------------------------------
-
 $backupFilesTreeWidget configure -command "openCloseBackupDirectory"
 $restoreFilesTreeWidget configure -command "openCloseRestoreDirectory"
 
@@ -5169,6 +5107,72 @@ addModifyTrace ::currentJob(id) \
        .jobs.buttons.rem configure -state disabled
     }
   "
+addModifyTrace ::currentJob(fileDoneBytes) \
+  "
+    global currentJob
+
+    if {\$currentJob(fileTotalBytes) > 0} \
+    {
+      set p \[expr {double(\$currentJob(fileDoneBytes))/\$currentJob(fileTotalBytes)}]
+      Dialog:progressbar .jobs.selected.filePercentage update \$p
+    }
+  "
+addModifyTrace ::currentJob(fileTotalBytes) \
+  "
+    global currentJob
+
+    if {\$currentJob(fileTotalBytes) > 0} \
+    {
+      set p \[expr {double(\$currentJob(fileDoneBytes))/\$currentJob(fileTotalBytes)}]
+      Dialog:progressbar .jobs.selected.filePercentage update \$p
+    }
+  "
+addModifyTrace ::currentJob(storageDoneBytes) \
+  "
+    global currentJob
+
+    if {\$currentJob(storageTotalBytes) > 0} \
+    {
+      set p \[expr {double(\$currentJob(storageDoneBytes))/\$currentJob(storageTotalBytes)}]
+      Dialog:progressbar .jobs.selected.storagePercentage update \$p
+    }
+  "
+addModifyTrace ::currentJob(doneBytes) \
+  "
+    global currentJob
+
+    if {\$currentJob(totalBytes) > 0} \
+    {
+      set p \[expr {double(\$currentJob(doneBytes))/\$currentJob(totalBytes)}]
+      Dialog:progressbar .jobs.selected.totalBytesPercentage update \$p
+    }
+  "
+addModifyTrace ::currentJob(doneFiles) \
+  "
+    global currentJob
+
+    if {\$currentJob(totalFiles) > 0} \
+    {
+      set p \[expr {double(\$currentJob(doneFiles))/\$currentJob(totalFiles)}]
+      Dialog:progressbar .jobs.selected.totalFilesPercentage update \$p
+    }
+  "
+addModifyTrace ::currentJob(storageTotalBytes) \
+  "
+    global currentJob
+
+    if {\$currentJob(storageTotalBytes) > 0} \
+    {
+      set p \[expr {double(\$currentJob(storageDoneBytes))/\$currentJob(storageTotalBytes)}]
+      Dialog:progressbar .jobs.selected.storagePercentage update \$p
+    }
+  "
+addModifyTrace ::currentJob(volumeProgress) \
+  "
+    global currentJob
+
+    Dialog:progressbar .jobs.selected.storageVolume update \$::currentJob(volumeProgress)
+  "
 addModifyTrace {::barConfig(name) ::barConfig(included)} \
   "
     if {(\$::barConfig(name) != \"\") && (\$::barConfig(included) != {})} \
@@ -5180,6 +5184,26 @@ addModifyTrace {::barConfig(name) ::barConfig(included)} \
     {
       .backup.buttons.addBackupJob configure -state disabled
       .restore.buttons.addRestoreJob configure -state disabled
+    }
+  "
+addModifyTrace ::currentJob(totalFiles) \
+  "
+    global currentJob
+
+    if {\$currentJob(totalFiles) > 0} \
+    {
+      set p \[expr {double(\$currentJob(doneFiles))/\$currentJob(totalFiles)}]
+      Dialog:progressbar .jobs.selected.totalFilesPercentage update \$p
+    }
+  "
+addModifyTrace ::currentJob(totalBytes) \
+  "
+    global currentJob
+
+    if {\$currentJob(totalBytes) > 0} \
+    {
+      set p \[expr {double(\$currentJob(doneBytes))/\$currentJob(totalBytes)}]
+      Dialog:progressbar .jobs.selected.totalBytesPercentage update \$p
     }
   "
 
@@ -5231,7 +5255,6 @@ bind . <Control-q> "event generate . <<Event_quit>>"
 bind . <F1> "$mainWindow.tabs raise jobs"
 bind . <F2> "$mainWindow.tabs raise backup"
 bind . <F3> "$mainWindow.tabs raise restore"
-bind . <F4> "$mainWindow.tabs raise compressCrypt"
 bind . <F5> "event generate . <<Event_backupAddIncludePattern>>"
 bind . <F6> "event generate . <<Event_backupRemIncludePattern>>"
 bind . <F7> "event generate . <<Event_backupAddExcludePattern>>"
@@ -5443,9 +5466,9 @@ bind . <<Event_remJob>> \
   set n [.jobs.list.data curselection]
   if {$n != {}} \
   {
+    set currentJob(id) 0
     set id [lindex [lindex [.jobs.list.data get $n $n] 0] 0]
     remJob .jobs.list.data $id
-    set currentJob(id) 0
   }
 }
 
@@ -5472,6 +5495,35 @@ update
 
 # config modify trace
 trace add variable barConfig write "setConfigModify"
+
+  # connect to server
+  if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]} \
+  {
+    if {[catch {tls::init -cafile $barControlConfig(serverCAFileName)}]} \
+    {
+      printError "Cannot initialise TLS/SSL system"
+      exit 1
+    }
+    if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverTLSPort) $barControlConfig(serverPassword) 1]} \
+    {
+      printError "Cannot connect to TLS/SSL server '$barControlConfig(serverHostName):$barControlConfig(serverTLSPort)'!"
+      exit 1
+    }
+  } \
+  elseif {$barControlConfig(serverPort) != 0} \
+  {
+    if {$port == 0} { set port $DEFAULT_PORT }
+    if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverPort) $barControlConfig(serverPassword) 0]} \
+    {
+      printError "Cannot connect to server '$barControlConfig(serverHostName):$barControlConfig(serverPort)'!"
+      exit 1
+    }
+  } \
+  else  \
+  {
+    printError "Cannot connect to server '$barControlConfig(serverHostName)'!"
+    exit 1
+  }
 
 updateJobList .jobs.list.data
 updateCurrentJob
