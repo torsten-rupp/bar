@@ -1,7 +1,5 @@
-TCL_PATH    = /tools/tk-8.4a1
-TCL_LIB     = 
-#TCL_LIB     = -ltcl8.4
-TCL_INCLUDE = -I$(TCL_PATH)/include -I$(TCL_PATH)/generic
+VERSION = 1.0
+INSTALL_PATH = /usr/local
 
 CC                  = gcc
 CC_FLAGS            = -Wall -g -O0
@@ -10,25 +8,25 @@ CC_INCLUDES         =
 
 LD                  = ld
 LD_FLAGS            = -G -z text
-LD_LIBRARY_PATHS    = /usr/lib /usr/local/lib
+LD_LIBRARY_PATHS    = /usr/local/lib /usr/lib
 LD_LIBRARIES        = 
-#tcl8.4 dl nsl m
 LD_STATIC_LIBRARIES = 
 
 %.o:%.c
 	$(CC) $(CC_FLAGS) $(CC_DEFINES) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 .PHONY: all clean
-all: scanx.so
+all: libscanx.so pkgIndex.tcl
 
 clean:
-	rm -f scanx.so scanx.o tclScanx.o
+	rm -f scanx.o tclScanx.o libscanx.so
+	rm -f pkgIndex.tcl
 
 scanx.o: scanx.c
 
 tclScanx.o: tclScanx.c
 
-scanx.so: scanx.o tclScanx.o
+libscanx.so: scanx.o tclScanx.o
 	$(LD) \
           $(LD_FLAGS) \
           -o $@ \
@@ -37,10 +35,15 @@ scanx.so: scanx.o tclScanx.o
           $(foreach z,$(LD_LIBRARIES),-l$z)
 
 .PHONY: test
-test: scanx.so
+test: libscanx.so
 	tclsh scanx_test.tcl
 
-install:
-	install -d $(TCL_PATH)/lib/scanx
-	install scanx.so $(TCL_PATH)/lib/scanx
-	install pkgIndex.tcl $(TCL_PATH)/lib/scanx
+pkgIndex.tcl:
+	@echo >$@  '# pkgIndex.tcl - scanx'
+	@echo >>$@ ''
+	@echo >>$@ 'package ifneeded scanx $(VERSION) "[list load [file join $$dir .. libscanx$(VERSION).so]]"'
+
+install: libscanx.so pkgIndex.tcl
+	install -d $(INSTALL_PATH)/lib/scanx$(VERSION)
+	install libscanx.so $(INSTALL_PATH)/lib/libscanx$(VERSION).so
+	install pkgIndex.tcl $(INSTALL_PATH)/lib/scanx$(VERSION)

@@ -1,4 +1,4 @@
-load "[pwd]/scanx.so"
+load "[pwd]/libscanx.so"
 
 set s "This is '\\\"Hel\\'o World!\\\"'"
 

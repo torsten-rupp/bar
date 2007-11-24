@@ -10,7 +10,7 @@ static char *extensionName = "scanx";
 static char *extensionVersion = "1.0.0.0";
 
 /* Tcl_CmdProc declaration(s) */
-static char usage[] = "Usage: scanx ";
+// static char usage[] = "Usage: scanx ";
 
 /* extended version of Tcl "scan" command */
 int Tcl_ScanxObjCmd(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);

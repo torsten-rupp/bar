@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -41,6 +41,8 @@ typedef enum
   FILE_TYPE_FILE,
   FILE_TYPE_DIRECTORY,
   FILE_TYPE_LINK,
+  FILE_TYPE_DEVICE,
+  FILE_TYPE_SOCKET,
 
   FILE_TYPE_UNKNOWN
 } FileTypes;
@@ -547,7 +549,7 @@ Errors File_copy(const String sourceFileName,
                 );
 
 /***********************************************************************\
-* Name   : File_exists
+* Name   : File_exists, File_existsCString
 * Purpose: check if file exists
 * Input  : fileName - file name
 * Output : -
@@ -557,6 +559,42 @@ Errors File_copy(const String sourceFileName,
 
 bool File_exists(const String fileName);
 bool File_existsCString(const char *fileName);
+
+/***********************************************************************\
+* Name   : File_isFile, File_isFileCString
+* Purpose: check if file
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if file, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isFile(const String fileName);
+bool File_isFileCString(const char *fileName);
+
+/***********************************************************************\
+* Name   : File_isDirectory, File_isDirectoryCString
+* Purpose: check if file directory
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if directory, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isDirectory(const String fileName);
+bool File_isDirectoryCString(const char *fileName);
+
+/***********************************************************************\
+* Name   : File_isFileReadable, File_isFileReadableCString
+* Purpose: check if file and is readable
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if file and is readable, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isFileReadable(const String fileName);
+bool File_isFileReadableCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_getInfo

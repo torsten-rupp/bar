@@ -1,0 +1,65 @@
+#! /bin/sh
+
+# /etc/init.d/FOO
+#   and its symbolic link
+# /(usr/)sbin/rcFOO
+
+### BEGIN INIT INFO
+# Provides:          barserver
+# Required-Start:    $syslog $local_fs $network
+# X-UnitedLinux-Should-Start: $time ypbind sendmail
+# Required-Stop:     $syslog $local_fs $network
+# X-UnitedLinux-Should-Stop: $time ypbind sendmail
+# Default-Start:     3 5
+# Default-Stop:      0 1 2 6
+# Short-Description: BAR server daemon 
+# Description:       Start BAR server for backup/restore
+### END INIT INFO
+ 
+# check for binaries
+BAR_BIN=/usr/local/bin/bar
+if test ! -x $BAR_BIN; then
+  echo "$BAR_BIN not installed"
+  exit 5
+fi
+
+# check for existence of needed config file
+BAR_CONFIG=/etc/bar.cfg
+if test ! -r $BAR_CONFIG; then
+  echo "$BAR_CONFIG cannot be read"
+  exit 6
+fi
+
+# source LSB init functions
+#. /lib/lsb/init-functions
+
+# shell functions sourced from /etc/rc.status:
+. /etc/rc.status
+
+case "$1" in
+    start)
+	echo -n "Starting BAR server "
+	startproc nice $BAR_BIN --daemon --verbose=3
+	rc_status -v
+	;;
+    stop)
+	echo -n "Shutting down BAR server "
+	killproc -TERM $BAR_BIN
+	rc_status -v
+	;;
+    restart)
+	$0 stop
+	$0 start
+	rc_status
+	;;
+    status)
+	echo -n "Checking for service BAR server "
+	checkproc $BAR_BIN
+	rc_status -v
+	;;
+    *)
+	echo "Usage: $0 {start|stop|status|restart}"
+	exit 1
+	;;
+esac
+rc_exit

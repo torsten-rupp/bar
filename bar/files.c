@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -532,7 +532,12 @@ Errors File_readLine(FileHandle *fileHandle,
       String_appendChar(line,ch);
     }
   }
-  while ((char)ch != '\n');
+  while (((char)ch != '\r') && ((char)ch != '\n'));
+  if      ((char)ch == '\r')
+  {
+    ch = getc(fileHandle->file);
+    if (ch != '\n') ungetc(ch,fileHandle->file);
+  }
 
   return ERROR_NONE;
 }
@@ -803,10 +808,13 @@ FileTypes File_getType(const String fileName)
 
   if (lstat64(String_cString(fileName),&fileStat) == 0)
   {
-    if      (S_ISREG(fileStat.st_mode)) return FILE_TYPE_FILE;
-    else if (S_ISDIR(fileStat.st_mode)) return FILE_TYPE_DIRECTORY;
-    else if (S_ISLNK(fileStat.st_mode)) return FILE_TYPE_LINK;
-    else                                return FILE_TYPE_UNKNOWN;
+    if      (S_ISREG(fileStat.st_mode))  return FILE_TYPE_FILE;
+    else if (S_ISDIR(fileStat.st_mode))  return FILE_TYPE_DIRECTORY;
+    else if (S_ISLNK(fileStat.st_mode))  return FILE_TYPE_LINK;
+    else if (S_ISCHR(fileStat.st_mode))  return FILE_TYPE_DEVICE;
+    else if (S_ISBLK(fileStat.st_mode))  return FILE_TYPE_DEVICE;
+    else if (S_ISSOCK(fileStat.st_mode)) return FILE_TYPE_SOCKET;
+    else                                 return FILE_TYPE_UNKNOWN;
   }
   else
   {
@@ -1043,6 +1051,86 @@ bool File_existsCString(const char *fileName)
   assert(fileName != NULL);
 
   return (stat(fileName,&fileStat) == 0);
+}
+
+bool File_isFile(const String fileName)
+{
+  struct stat fileStat;
+
+  assert(fileName != NULL);
+
+  return (   (stat(String_cString(fileName),&fileStat) == 0)
+          && S_ISREG(fileStat.st_mode)
+         );
+}
+
+bool File_isFileCString(const char *fileName)
+{
+  struct stat fileStat;
+
+  assert(fileName != NULL);
+
+  return (   (stat(fileName,&fileStat) == 0)
+          && S_ISREG(fileStat.st_mode)
+         );
+}
+
+bool File_isDirectory(const String fileName)
+{
+  struct stat fileStat;
+
+  assert(fileName != NULL);
+
+  return (   (stat(String_cString(fileName),&fileStat) == 0)
+          && S_ISDIR(fileStat.st_mode)
+         );
+}
+
+bool File_isDirectoryCString(const char *fileName)
+{
+  struct stat fileStat;
+
+  assert(fileName != NULL);
+
+  return (   (stat(fileName,&fileStat) == 0)
+          && S_ISDIR(fileStat.st_mode)
+         );
+}
+
+bool File_isFileReadable(const String fileName)
+{
+  FILE *file;
+
+  assert(fileName != NULL);
+
+  file = fopen(String_cString(fileName),"r");
+  if (file != NULL)
+  {
+    fclose(file);
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool File_isFileReadableCString(const char *fileName)
+{
+  FILE *file;
+
+  assert(fileName != NULL);
+
+  file = fopen(fileName,"r");
+  if (file != NULL)
+  {
+    fclose(file);
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 Errors File_getFileInfo(const String fileName,
