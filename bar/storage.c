@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -38,20 +38,20 @@
 #define MAX_BUFFER_SIZE     (4*1024)
 #define MAX_FILENAME_LENGTH (4*1024)
 
-#define UNLOAD_VOLUME_DELAY_TIME 10000 /* [ms] */
-#define LOAD_VOLUME_DELAY_TIME   10000 /* [ms] */
+#define UNLOAD_VOLUME_DELAY_TIME 10000000LL /* [us] */
+#define LOAD_VOLUME_DELAY_TIME   10000000LL /* [us] */
 
 #define MAX_CD_SIZE  (700LL*1024LL*1024LL)
 #define MAX_DVD_SIZE (4613734LL*1024LL)
 
 #define DVD_VOLUME_SIZE            MAX_DVD_SIZE
 #define DVD_VOLUME_ECC_SIZE        (3600LL*1024LL*1024LL)
-#define DVD_UNLOAD_VOLUME_COMMAND  "echo eject -r %d"
-#define DVD_LOAD_VOLUME_COMMAND    "echo eject -t %d"
-#define DVD_WRITE_COMMAND          "echo growisofs -r -Z %d -A BAR -V Backup -volset %n -quiet %f 1>/dev/null 2>/dev/null"
-#define DVD_IMAGE_COMMAND          "echo mkisofs -V Backup -volset %n -o %i %f 1>/dev/null 2>/dev/null"
-#define DVD_ECC_COMMAND            "echo dvdisaster -mRS02 -n dvd -c -i %i 1>/dev/null 2>/dev/null"
-#define DVD_WRITE_IMAGE_COMMAND    "echo growisofs -Z %d -use-the-force-luke=dao:$s 1>/dev/null 2>/dev/null"
+#define DVD_UNLOAD_VOLUME_COMMAND  "sh -c \"echo eject -r %device\""
+#define DVD_LOAD_VOLUME_COMMAND    "sh -c \"echo eject -t %device\""
+#define DVD_WRITE_COMMAND          "sh -c \"echo growisofs -r -Z %device -A BAR -V Backup -volset %number -quiet %file\""
+#define DVD_IMAGE_COMMAND          "mkisofs -v -V Backup -volset %number -o %image %file"
+#define DVD_ECC_COMMAND            "dvdisaster -mRS02 -n dvd -c -i %image -v"
+#define DVD_WRITE_IMAGE_COMMAND    "growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload"
 
 /***************************** Datatypes *******************************/
 
@@ -123,65 +123,6 @@ LOCAL bool initSSHPassword(const Options *options)
 #endif /* HAVE_SSH2 */
 
 /***********************************************************************\
-* Name   : getTimestamp
-* Purpose: get timestamp
-* Input  : -
-* Output : -
-* Return : timestamp [us]
-* Notes  : -
-\***********************************************************************/
-
-LOCAL uint64 getTimestamp(void)
-{
-  struct timeval tv;
-
-  if (gettimeofday(&tv,NULL) == 0)
-  {
-//fprintf(stderr,"%s,%d: %ld %ld\n",__FILE__,__LINE__,tv.tv_sec,tv.tv_usec);
-    return (uint64)tv.tv_usec+(uint64)tv.tv_sec*1000000LL;
-  }
-  else
-  {
-    return 0LL;
-  }
-}
-
-/***********************************************************************\
-* Name   : udelay
-* Purpose: delay program execution
-* Input  : time - delay time [us]
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void udelay(uint64 time)
-{
-  struct timespec ts;
-
-//fprintf(stderr,"%s,%d: us=%llu\n",__FILE__,__LINE__,time);
-  ts.tv_sec  = (ulong)(time/1000000LL);
-  ts.tv_nsec = (ulong)((time%1000000LL)*1000);
-  while (nanosleep(&ts,&ts) == -1)
-  {
-  }  
-}
-
-/***********************************************************************\
-* Name   : delay
-* Purpose: delay program execution
-* Input  : time - delay time [ms]
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void delay(ulong time)
-{
-  udelay((uint64)time*1000LL);
-}
-
-/***********************************************************************\
 * Name   : limitBandWidth
 * Purpose: limit used band width
 * Input  : storageBandWidth - storage band width
@@ -245,7 +186,7 @@ else {
         delayTime = 0LL;
 fprintf(stderr,"%s,%d: == averageBandWidth=%lu storageBandWidth->max=%lu deleta=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidth->max,storageBandWidth->measurementTime);
 }
-      if (delayTime > 0) udelay(delayTime);
+      if (delayTime > 0) Misc_udelay(delayTime);
 
       /* calculate bandwidth */
       storageBandWidth->measurements[storageBandWidth->measurementNextIndex] = (ulong)(((uint64)storageBandWidth->measurementBytes*8LL*1000000LL)/(storageBandWidth->measurementTime+delayTime));
@@ -256,6 +197,118 @@ fprintf(stderr,"%s,%d: == averageBandWidth=%lu storageBandWidth->max=%lu deleta=
       storageBandWidth->measurementTime  = 0;
     }
   }
+}
+
+/***********************************************************************\
+* Name   : processIOmkisofs
+* Purpose: process mkisofs output
+* Input  : storageFileHandle - storage file handle variable
+*          line              - line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void processIOmkisofs(StorageFileHandle *storageFileHandle,
+                            const String      line
+                           )
+{
+  String s;
+  double p;
+
+  s = String_new();
+  if (String_match(line,".* ([0-9\\.]+)% done.*",NULL,s,NULL))
+  {
+//fprintf(stderr,"%s,%d: mkisofs: %s\n",__FILE__,__LINE__,String_cString(line));
+    p = String_toDouble(s,0,NULL,NULL,0);
+    storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
+    storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->dvd.step*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
+
+    if (storageFileHandle->storageStatusInfoFunction != NULL)
+    {
+      storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
+    }
+  }
+  String_delete(s);
+}
+
+/***********************************************************************\
+* Name   : processIOdvdisaster
+* Purpose: process dvdisaster output
+* Input  : storageFileHandle - storage file handle variable
+*          line              - line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void processIOdvdisaster(StorageFileHandle *storageFileHandle,
+                               const String      line
+                              )
+{
+  String s;
+  double p;
+
+  s = String_new();
+  if (String_match(line,".*adding space\\): +([0-9\\.]+)%",NULL,s,NULL))
+  {
+//fprintf(stderr,"%s,%d: dvdisaster1: %s\n",__FILE__,__LINE__,String_cString(line));
+    p = String_toDouble(s,0,NULL,NULL,0);
+    storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
+    storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->dvd.step+0)*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
+
+    if (storageFileHandle->storageStatusInfoFunction != NULL)
+    {
+      storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
+    }
+  }
+  if (String_match(line,".*generation: +([0-9\\.]+)%",NULL,s,NULL))
+  {
+//fprintf(stderr,"%s,%d: dvdisaster2: %s\n",__FILE__,__LINE__,String_cString(line));
+    p = String_toDouble(s,0,NULL,NULL,0);
+    storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
+    storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->dvd.step+1)*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
+
+    if (storageFileHandle->storageStatusInfoFunction != NULL)
+    {
+      storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
+    }
+  }
+
+  String_delete(s);
+}
+
+/***********************************************************************\
+* Name   : processIOgrowisofs
+* Purpose: process growisofs output
+* Input  : storageFileHandle - storage file handle variable
+*          line              - line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
+                              const String      line
+                             )
+{
+  String s;
+  double p;
+
+  s = String_new();
+  if (String_match(line,".* \\(([0-9\\.]+)%\\) .*",NULL,s,NULL))
+  {
+//fprintf(stderr,"%s,%d: growisofs2: %s\n",__FILE__,__LINE__,String_cString(line));
+    p = String_toDouble(s,0,NULL,NULL,0);
+    storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
+    storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->dvd.step*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
+
+    if (storageFileHandle->storageStatusInfoFunction != NULL)
+    {
+      storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
+    }
+  }
+  String_delete(s);
 }
 
 /*---------------------------------------------------------------------*/
@@ -533,6 +586,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const Options                *options,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
+                    StorageStatusInfoFunction    storageStatusInfoFunction,
+                    void                         *storageStatusInfoUserData,
                     String                       fileName
                    )
 {
@@ -544,11 +599,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   assert(options != NULL);
   assert(fileName != NULL);
 
-  storageFileHandle->options               = options;
-  storageFileHandle->requestVolumeFunction = storageRequestVolumeFunction;
-  storageFileHandle->requestVolumeUserData = storageRequestVolumeUserData;
-  storageFileHandle->volumeNumber          = 0;
-  storageFileHandle->requestedVolumeNumber = 0;
+  storageFileHandle->options                   = options;
+  storageFileHandle->requestVolumeFunction     = storageRequestVolumeFunction;
+  storageFileHandle->requestVolumeUserData     = storageRequestVolumeUserData;
+  storageFileHandle->storageStatusInfoFunction = storageStatusInfoFunction;
+  storageFileHandle->storageStatusInfoUserData = storageStatusInfoUserData;
+  storageFileHandle->volumeNumber              = 0;
+  storageFileHandle->requestedVolumeNumber     = 0;
 
   storageSpecifier = String_new();
   switch (Storage_getType(storageName,storageSpecifier))
@@ -717,10 +774,10 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         storageFileHandle->type             = STORAGE_TYPE_DVD;
         StringList_init(&storageFileHandle->device.fileNameList);
         storageFileHandle->dvd.name         = deviceName;
-        storageFileHandle->dvd.steps        = options->errorCorrectionCodesFlag?3:1;
+        storageFileHandle->dvd.steps        = options->errorCorrectionCodesFlag?4:1;
         storageFileHandle->dvd.directory    = String_new();
         storageFileHandle->dvd.volumeSize   = (storageFileHandle->dvd.device.volumeSize >= 0LL)?storageFileHandle->dvd.device.volumeSize:(options->errorCorrectionCodesFlag?DVD_VOLUME_ECC_SIZE:DVD_VOLUME_SIZE);
-        storageFileHandle->dvd.volumeNumber = 0;
+        storageFileHandle->dvd.step         = 0;
         storageFileHandle->dvd.fileName     = String_new();
         storageFileHandle->dvd.totalSize    = 0LL;
 
@@ -810,6 +867,9 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     #endif /* NDEBUG */
   }
   String_delete(storageSpecifier);
+
+  storageFileHandle->runningInfo.volumeNumber   = 0;
+  storageFileHandle->runningInfo.volumeProgress = 0;
 
   return ERROR_NONE;
 }
@@ -936,13 +996,13 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
         /* check if new volume is required */
         if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
         {
-          executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%d"; executeMacros[0].string = storageFileHandle->device.name;
-          executeMacros[1].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[1].name = "%n"; executeMacros[1].i      = storageFileHandle->requestedVolumeNumber;
+          executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%device"; executeMacros[0].string = storageFileHandle->device.name;
+          executeMacros[1].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[1].name = "%number"; executeMacros[1].i      = storageFileHandle->requestedVolumeNumber;
 
           /* sleep a short time to give hardware time for finishing volume, then unload current volume */
-          delay(UNLOAD_VOLUME_DELAY_TIME);
+          Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
           command = (storageFileHandle->dvd.device.unloadVolumeCommand != NULL)?String_cString(storageFileHandle->dvd.device.unloadVolumeCommand):DVD_UNLOAD_VOLUME_COMMAND;
-          Misc_executeCommand(command,executeMacros,SIZE_OF_ARRAY(executeMacros),"Unload DVD");
+          Misc_executeCommand(command,executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Unload DVD");
 
           /* request new volume */
           if      (storageFileHandle->requestVolumeFunction != NULL)
@@ -955,7 +1015,7 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
           else if (storageFileHandle->dvd.device.requestVolumeCommand != NULL)
           {
             /* request new volume via external command */
-            volumeLoadedFlag = (Misc_executeCommand(String_cString(storageFileHandle->dvd.device.unloadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),"Request new DVD") == ERROR_NONE);
+            volumeLoadedFlag = (Misc_executeCommand(String_cString(storageFileHandle->dvd.device.unloadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Request new DVD") == ERROR_NONE);
           }
           else
           {
@@ -964,8 +1024,8 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
 
           /* load volume, then sleep a short time to give hardware time for reading volume information */
           command = (storageFileHandle->dvd.device.loadVolumeCommand != NULL)?String_cString(storageFileHandle->dvd.device.unloadVolumeCommand):DVD_UNLOAD_VOLUME_COMMAND;
-          Misc_executeCommand(command,executeMacros,SIZE_OF_ARRAY(executeMacros),"Load DVD");
-          delay(LOAD_VOLUME_DELAY_TIME);
+          Misc_executeCommand(command,executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Load DVD");
+          Misc_udelay(LOAD_VOLUME_DELAY_TIME);
 
           if (volumeLoadedFlag)
           {
@@ -986,12 +1046,12 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
         /* check if new volume is required */
         if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
         {
-          executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%d"; executeMacros[0].string = storageFileHandle->device.name;
-          executeMacros[1].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[1].name = "%n"; executeMacros[1].i      = storageFileHandle->requestedVolumeNumber;
+          executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%device"; executeMacros[0].string = storageFileHandle->device.name;
+          executeMacros[1].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[1].name = "%number"; executeMacros[1].i      = storageFileHandle->requestedVolumeNumber;
 
           /* sleep a short time to give hardware time for finishing volume; unload current volume */
-          delay(UNLOAD_VOLUME_DELAY_TIME);
-          Misc_executeCommand(String_cString(storageFileHandle->dvd.device.unloadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),"Unload volume");
+          Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
+          Misc_executeCommand(String_cString(storageFileHandle->dvd.device.unloadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Unload volume");
 
           /* request new volume */
           if      (storageFileHandle->requestVolumeFunction != NULL)
@@ -1004,7 +1064,7 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
           else if (storageFileHandle->dvd.device.requestVolumeCommand != NULL)
           {
             /* request new volume via external command */
-            volumeLoadedFlag = (Misc_executeCommand(String_cString(storageFileHandle->dvd.device.loadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),"Request new volume") == ERROR_NONE);
+            volumeLoadedFlag = (Misc_executeCommand(String_cString(storageFileHandle->dvd.device.loadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Request new volume") == ERROR_NONE);
           }
           else
           {
@@ -1012,8 +1072,8 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
           }
 
           /* load volume; sleep a short time to give hardware time for reading volume information */
-          Misc_executeCommand(String_cString(storageFileHandle->dvd.device.loadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),"Load volume");
-          delay(LOAD_VOLUME_DELAY_TIME);
+          Misc_executeCommand(String_cString(storageFileHandle->dvd.device.loadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Load volume");
+          Misc_udelay(LOAD_VOLUME_DELAY_TIME);
 
           if (volumeLoadedFlag)
           {
@@ -1061,13 +1121,22 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_DVD:
       {
         String       imageFileName;
-        ExecuteMacro executeMacros[3];
+        ExecuteMacro executeMacros[5];
         const char    *command;
         String       fileName;
         Errors       error;
+        FileInfo     fileInfo;
 
-        if (finalFlag || (storageFileHandle->device.totalSize > storageFileHandle->dvd.volumeSize))
+        if (finalFlag || (storageFileHandle->dvd.totalSize > storageFileHandle->dvd.volumeSize))
         {
+          /* update info */
+          storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
+          storageFileHandle->runningInfo.volumeProgress = 0.0;
+          if (storageFileHandle->storageStatusInfoFunction != NULL)
+          {
+            storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
+          }
+
           /* get temporary image file name */
           imageFileName = String_new();
           error = File_getTmpFileName(storageFileHandle->options->tmpDirectory,imageFileName);
@@ -1077,32 +1146,80 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           }
 
           /* init macros */
-          executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%d"; executeMacros[0].string = storageFileHandle->dvd.name;
-          executeMacros[1].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[1].name = "%f"; executeMacros[1].string = storageFileHandle->dvd.directory;
-          executeMacros[2].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[2].name = "%i"; executeMacros[2].string = imageFileName;
-          executeMacros[3].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[3].name = "%n"; executeMacros[3].i      = storageFileHandle->dvd.volumeNumber;
+          executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%device";  executeMacros[0].string = storageFileHandle->dvd.name;
+          executeMacros[1].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[1].name = "%file";    executeMacros[1].string = storageFileHandle->dvd.directory;
+          executeMacros[2].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[2].name = "%image";   executeMacros[2].string = imageFileName;
+          executeMacros[3].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[3].name = "%sectors"; executeMacros[3].i      = 0;
+          executeMacros[4].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[4].name = "%number";  executeMacros[4].i      = storageFileHandle->volumeNumber;
 
           if (storageFileHandle->options->errorCorrectionCodesFlag)
           {
             /* create DVD image */
-            command = (storageFileHandle->dvd.device.imageCommand != NULL)?String_cString(storageFileHandle->dvd.device.imageCommand):DVD_IMAGE_COMMAND;
-            if (error == ERROR_NONE) error = Misc_executeCommand(command,executeMacros,SIZE_OF_ARRAY(executeMacros),"Make DVD image #%d",storageFileHandle->volumeNumber);
+            if (error == ERROR_NONE)
+            {
+              storageFileHandle->dvd.step = 0;
+              command = (storageFileHandle->dvd.device.imageCommand != NULL)?String_cString(storageFileHandle->dvd.device.imageCommand):DVD_IMAGE_COMMAND;
+              error = Misc_executeCommand(command,
+                                          executeMacros,SIZE_OF_ARRAY(executeMacros),
+                                          (ExecuteIOFunction)processIOmkisofs,
+                                          (ExecuteIOFunction)processIOmkisofs,
+                                          storageFileHandle,
+                                          "Make DVD image #%d",storageFileHandle->volumeNumber
+                                         );
+            }
 
             /* add error-correction codes to DVD image */
-            command = (storageFileHandle->dvd.device.eccCommand != NULL)?String_cString(storageFileHandle->dvd.device.eccCommand):DVD_ECC_COMMAND;
-            if (error == ERROR_NONE) error = Misc_executeCommand(command,executeMacros,SIZE_OF_ARRAY(executeMacros),"Make DVD image #%d",storageFileHandle->volumeNumber);
+            if (error == ERROR_NONE)
+            {
+              storageFileHandle->dvd.step = 1;
+              command = (storageFileHandle->dvd.device.eccCommand != NULL)?String_cString(storageFileHandle->dvd.device.eccCommand):DVD_ECC_COMMAND;
+              error = Misc_executeCommand(command,
+                                          executeMacros,SIZE_OF_ARRAY(executeMacros),
+                                          (ExecuteIOFunction)processIOdvdisaster,
+                                          (ExecuteIOFunction)processIOdvdisaster,
+                                          storageFileHandle,
+                                          "Add ECC to image #%d",storageFileHandle->volumeNumber
+                                         );
+            }
+
+            /* get number of image sectors */
+            if (File_getFileInfo(imageFileName,&fileInfo) == ERROR_NONE)
+            {
+              executeMacros[3].i = (ulong)(fileInfo.size/2048LL);
+            }
 
             /* write to DVD */
-            command = (storageFileHandle->dvd.device.writeCommand != NULL)?String_cString(storageFileHandle->dvd.device.writeCommand):DVD_WRITE_IMAGE_COMMAND;
-            if (error == ERROR_NONE) error = Misc_executeCommand(command,executeMacros,SIZE_OF_ARRAY(executeMacros),"Write DVD #%d",storageFileHandle->volumeNumber);
+            if (error == ERROR_NONE)
+            {
+              storageFileHandle->dvd.step = 3;
+              command = (storageFileHandle->dvd.device.writeCommand != NULL)?String_cString(storageFileHandle->dvd.device.writeCommand):DVD_WRITE_IMAGE_COMMAND;
+              error = Misc_executeCommand(command,
+                                          executeMacros,SIZE_OF_ARRAY(executeMacros),
+                                          (ExecuteIOFunction)processIOgrowisofs,
+                                          (ExecuteIOFunction)processIOgrowisofs,
+                                          storageFileHandle,
+                                          "Write DVD #%d",storageFileHandle->volumeNumber
+                                         );
+            }
           }
           else
           {
             /* write to DVD */
-            command = (storageFileHandle->dvd.device.writeCommand != NULL)?String_cString(storageFileHandle->dvd.device.writeCommand):DVD_WRITE_COMMAND;
-            if (error == ERROR_NONE) error = Misc_executeCommand(command,executeMacros,SIZE_OF_ARRAY(executeMacros),"Write DVD #%d",storageFileHandle->volumeNumber);
+            if (error == ERROR_NONE)
+            {
+              storageFileHandle->dvd.step = 0;
+              command = (storageFileHandle->dvd.device.writeCommand != NULL)?String_cString(storageFileHandle->dvd.device.writeCommand):DVD_WRITE_COMMAND;
+              error = Misc_executeCommand(command,
+                                          executeMacros,SIZE_OF_ARRAY(executeMacros),
+                                          (ExecuteIOFunction)processIOgrowisofs,
+                                          NULL,
+                                          storageFileHandle,
+                                          "Write DVD #%d",storageFileHandle->volumeNumber
+                                         );
+            }
           }
 
+          /* delete image */
           if (error != ERROR_NONE)
           {
             File_delete(imageFileName,FALSE);
@@ -1111,6 +1228,14 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           }
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
+
+          /* update info */
+          storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
+          storageFileHandle->runningInfo.volumeProgress = 1.0;
+          if (storageFileHandle->storageStatusInfoFunction != NULL)
+          {
+            storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
+          }
 
           /* delete stored files */
           fileName = String_new();
@@ -1126,6 +1251,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           }
           String_delete(fileName);
 
+          /* reset size */
           storageFileHandle->dvd.totalSize = 0;
 
           /* request next volume */
@@ -1136,7 +1262,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_DEVICE:
       {
         String       imageFileName;
-        ExecuteMacro executeMacros[3];
+        ExecuteMacro executeMacros[4];
         String       fileName;
         Errors       error;
 
@@ -1151,20 +1277,20 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           }
 
           /* init macros */
-          executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%d"; executeMacros[0].string = storageFileHandle->device.name;
-          executeMacros[1].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[1].name = "%f"; executeMacros[1].string = storageFileHandle->device.directory;
-          executeMacros[2].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[2].name = "%i"; executeMacros[2].string = imageFileName;
-          executeMacros[3].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[3].name = "%n"; executeMacros[3].i      = storageFileHandle->device.volumeNumber;
+          executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%device"; executeMacros[0].string = storageFileHandle->device.name;
+          executeMacros[1].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[1].name = "%file";   executeMacros[1].string = storageFileHandle->device.directory;
+          executeMacros[2].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[2].name = "%image";  executeMacros[2].string = imageFileName;
+          executeMacros[3].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[3].name = "%number"; executeMacros[3].i      = storageFileHandle->device.volumeNumber;
 
           /* create image */
-          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.imagePreProcessCommand ),executeMacros,SIZE_OF_ARRAY(executeMacros),"Make image pre-processing of volume #%d",storageFileHandle->volumeNumber);
-          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.imageCommand           ),executeMacros,SIZE_OF_ARRAY(executeMacros),"Make image volume #%d",storageFileHandle->volumeNumber);
-          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.imagePostProcessCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),"Make image post-processing of volume #%d",storageFileHandle->volumeNumber);
+          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.imagePreProcessCommand ),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Make image pre-processing of volume #%d",storageFileHandle->volumeNumber);
+          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.imageCommand           ),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Make image volume #%d",storageFileHandle->volumeNumber);
+          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.imagePostProcessCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Make image post-processing of volume #%d",storageFileHandle->volumeNumber);
 
           /* write onto device */
-          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.writePreProcessCommand ),executeMacros,SIZE_OF_ARRAY(executeMacros),"Write device pre-processing of volume #%d",storageFileHandle->volumeNumber);
-          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.writeCommand           ),executeMacros,SIZE_OF_ARRAY(executeMacros),"Write device volume #%d",storageFileHandle->volumeNumber);
-          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.writePostProcessCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),"Write device post-processing of volume #%d",storageFileHandle->volumeNumber);
+          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.writePreProcessCommand ),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Write device pre-processing of volume #%d",storageFileHandle->volumeNumber);
+          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.writeCommand           ),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Write device volume #%d",storageFileHandle->volumeNumber);
+          if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.writePostProcessCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Write device post-processing of volume #%d",storageFileHandle->volumeNumber);
 
           if (error != ERROR_NONE)
           {
@@ -1798,7 +1924,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
           while (writtenBytes < size)
           {
             /* get start time */
-            startTimestamp = getTimestamp();
+            startTimestamp = Misc_getTimestamp();
 
             /* send data */
             if (storageFileHandle->scp.bandWidth.max > 0)
@@ -1822,7 +1948,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             storageFileHandle->sftp.index += (uint64)n;
 
             /* get end time, transmission time */
-            endTimestamp = getTimestamp();
+            endTimestamp = Misc_getTimestamp();
             assert(endTimestamp >= startTimestamp);
 
             /* limit used band width if requested */
@@ -1844,7 +1970,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
           while (writtenBytes < size)
           {
             /* get start time */
-            startTimestamp = getTimestamp();
+            startTimestamp = Misc_getTimestamp();
 
             /* send data */
             if (storageFileHandle->sftp.bandWidth.max > 0)
@@ -1867,7 +1993,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             size -= n;
 
             /* get end time, transmission time */
-            endTimestamp = getTimestamp();
+            endTimestamp = Misc_getTimestamp();
             assert(endTimestamp >= startTimestamp);
 
             /* limit used band width if requested */

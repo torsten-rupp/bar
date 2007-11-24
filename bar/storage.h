@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -36,6 +36,21 @@
 
 /***************************** Datatypes *******************************/
 
+typedef bool(*StorageRequestVolumeFunction)(void *userData,
+                                            uint volumeNumber
+                                           );
+
+/* status info data */
+typedef struct
+{
+  uint   volumeNumber;                     // current volume number
+  double volumeProgress;                   // current volume progress [0..100]
+} StorageStatusInfo;
+
+typedef bool(*StorageStatusInfoFunction)(void *userData,
+                                         const StorageStatusInfo *storageStatusInfo
+                                        );
+
 typedef enum
 {
   STORAGE_MODE_READ,
@@ -51,10 +66,6 @@ typedef enum
   STORAGE_TYPE_DVD,
   STORAGE_TYPE_DEVICE
 } StorageTypes;
-
-typedef bool(*StorageRequestVolumeFunction)(void *userData,
-                                            uint volumeNumber
-                                           );
 
 typedef struct
 {
@@ -74,6 +85,8 @@ typedef struct
 
   StorageRequestVolumeFunction requestVolumeFunction;
   void                         *requestVolumeUserData;
+  StorageStatusInfoFunction    storageStatusInfoFunction;
+  void                         *storageStatusInfoUserData;
   uint                         volumeNumber;          
   uint                         requestedVolumeNumber; 
 
@@ -135,16 +148,20 @@ typedef struct
     // dvd storage
     struct
     {
-      Device     device;
-      String     name;
-      uint       steps;
-      String     directory;
-      uint64     volumeSize;
-      uint       volumeNumber;
-      StringList fileNameList;
-      String     fileName;
+      Device     device;                               // dvd device name
+      String     name;                                 // 
+      uint       steps;                                // number of step to create dvd
+      String     directory;                            //
+      uint64     volumeSize;                           // size of dvd [bytes]
+
+      uint       step;                                 // current step number
+      double     progress;                             // progress of current step
+
+      StringList fileNameList;                         // list with file names
+ 
+      String     fileName;                             // current file name
       FileHandle fileHandle;
-      uint64     totalSize;
+      uint64     totalSize;                            // current size of dvd [bytes]
     } dvd;
     // device storage
     struct
@@ -159,6 +176,8 @@ typedef struct
       uint64     totalSize;
     } device;
   };
+
+  StorageStatusInfo runningInfo;
 } StorageFileHandle;
 
 typedef struct
@@ -311,6 +330,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const Options                *options,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
+                    StorageStatusInfoFunction    storageStatusInfoFunction,
+                    void                         *storageStatusInfoUserData,
                     String                       fileName
                    );
 

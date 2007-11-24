@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -114,6 +114,8 @@ typedef struct JobNode
     String    storageName;                     // current storage file
     uint64    storageDoneBytes;                // current storage file bytes done
     uint64    storageTotalBytes;               // current storage file bytes total
+    uint      volumeNumber;                    // current volume number
+    double    volumeProgress;                  // current volume progress
   } runningInfo;
 } JobNode;
 
@@ -310,6 +312,8 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
   String_set(jobNode->runningInfo.storageName,createStatusInfo->storageName);
   jobNode->runningInfo.storageDoneBytes      = createStatusInfo->storageDoneBytes;
   jobNode->runningInfo.storageTotalBytes     = createStatusInfo->storageTotalBytes;
+  jobNode->runningInfo.volumeNumber          = createStatusInfo->volumeNumber;
+  jobNode->runningInfo.volumeProgress        = createStatusInfo->volumeProgress;
 //fprintf(stderr,"%s,%d: createStatusInfo->fileName=%s\n",__FILE__,__LINE__,String_cString(jobNode->runningInfo.fileName));
 }
 
@@ -371,6 +375,8 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
   String_set(jobNode->runningInfo.storageName,restoreStatusInfo->storageName);
   jobNode->runningInfo.storageDoneBytes      = restoreStatusInfo->storageDoneBytes;
   jobNode->runningInfo.storageTotalBytes     = restoreStatusInfo->storageTotalBytes;
+  jobNode->runningInfo.volumeNumber          = 0; // ???
+  jobNode->runningInfo.volumeProgress        = 0.0; // ???
 //fprintf(stderr,"%s,%d: restoreStatusInfo->fileName=%s\n",__FILE__,__LINE__,String_cString(jobNode->runningInfo.fileName));
 }
 
@@ -629,6 +635,8 @@ LOCAL JobNode *newJob(JobTypes jobType)
   jobNode->runningInfo.storageName           = String_new();
   jobNode->runningInfo.storageDoneBytes      = 0LL;
   jobNode->runningInfo.storageTotalBytes     = 0LL;
+  jobNode->runningInfo.volumeNumber          = 0;
+  jobNode->runningInfo.volumeProgress        = 0.0;
 
   return jobNode;
 }
@@ -984,11 +992,19 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
                        fileName
                       );
             break;
-          default:
+          case FILE_TYPE_DEVICE:
             sendResult(clientInfo,id,FALSE,0,
-                       "unknown %'S",
+                       "DEVICE %'S",
                        fileName
                       );
+            break;
+          case FILE_TYPE_SOCKET:
+            sendResult(clientInfo,id,FALSE,0,
+                       "SOCKET %'S",
+                       fileName
+                      );
+            break;
+          default:
             break;
         }
       }
@@ -1079,7 +1095,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   if (jobNode != NULL)
   {
     sendResult(clientInfo,id,TRUE,0,
-               "%'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %d",
+               "%'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %f %d",
                getJobStateText(jobNode->state),
                jobNode->runningInfo.doneFiles,
                jobNode->runningInfo.doneBytes,
@@ -1100,7 +1116,8 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
                jobNode->runningInfo.storageName,
                jobNode->runningInfo.storageDoneBytes,
                jobNode->runningInfo.storageTotalBytes,
-               jobNode->volumeNumber,
+               jobNode->runningInfo.volumeNumber,
+               jobNode->runningInfo.volumeProgress,
                jobNode->requestedVolumeNumber
               );
   }
@@ -1721,7 +1738,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           String          directoryName;
           FileInfo        fileInfo;
 
-          /* open archive lin */
+          /* open archive directory */
           directoryName = String_new();
           error = Archive_readDirectoryEntry(&archiveInfo,
                                              &archiveFileInfo,
@@ -1760,7 +1777,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           String          fileName;
           FileInfo        fileInfo;
 
-          /* open archive lin */
+          /* open archive link */
           linkName = String_new();
           fileName = String_new();
           error = Archive_readLinkEntry(&archiveInfo,

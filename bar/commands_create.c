@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.35 $
+* $Revision: 1.36 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -126,6 +126,29 @@ LOCAL void updateStatusInfo(const CreateInfo *createInfo)
                                    &createInfo->statusInfo
                                   );
   }
+}
+
+/***********************************************************************\
+* Name   : updateStorageStatusInfo
+* Purpose: update storage info data
+* Input  : createInfo        - create info
+*          storageStatusInfo - storage status info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateStorageStatusInfo(CreateInfo              *createInfo,
+                                   const StorageStatusInfo *storageStatusInfo
+                                  )
+{
+  assert(createInfo != NULL);
+  assert(storageStatusInfo != NULL);
+
+  createInfo->statusInfo.volumeNumber   = storageStatusInfo->volumeNumber;
+  createInfo->statusInfo.volumeProgress = storageStatusInfo->volumeProgress;
+
+  updateStatusInfo(createInfo);
 }
 
 /***********************************************************************\
@@ -953,7 +976,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
       /* close storage file */
       Storage_close(&createInfo->storageFileHandle);
 
-      if (createInfo->failError == ERROR_NONE)
+      if (error == ERROR_NONE)
       {
         info(0,"ok\n");
       }
@@ -1072,6 +1095,8 @@ Errors Command_create(const char                   *archiveFileName,
   createInfo.statusInfo.storageName       = String_new();
   createInfo.statusInfo.storageDoneBytes  = 0LL;
   createInfo.statusInfo.storageTotalBytes = 0LL;
+  createInfo.statusInfo.volumeNumber      = 0;
+  createInfo.statusInfo.volumeProgress    = 0.0;
 
   /* allocate resources */
   buffer = malloc(BUFFER_SIZE);
@@ -1101,6 +1126,8 @@ Errors Command_create(const char                   *archiveFileName,
                        createInfo.options,
                        storageRequestVolumeFunction,
                        storageRequestVolumeUserData,
+                       (StorageStatusInfoFunction)updateStorageStatusInfo,
+                       &createInfo,
                        createInfo.fileName
                       );
   if (error != ERROR_NONE)
@@ -1124,13 +1151,7 @@ Errors Command_create(const char                   *archiveFileName,
   error = Archive_create(&archiveInfo,
                          storeArchiveFile,
                          &createInfo,
-                         options/*,
-                         options->tmpDirectory,
-                         options->archivePartSize,
-                         options->compressAlgorithm,
-                         options->compressMinFileSize,
-                         options->cryptAlgorithm,
-                         options->cryptPassword*/
+                         options
                         );
   if (error != ERROR_NONE)
   {
@@ -1458,9 +1479,9 @@ Errors Command_create(const char                   *archiveFileName,
   }
   if ((abortRequestFlag != NULL) && (*abortRequestFlag))
   {
+    createInfo.failError = ERROR_ABORTED;
     createInfo.collectorThreadExitFlag = TRUE;
     createInfo.storageThreadExitFlag   = TRUE;
-    createInfo.failError = ERROR_ABORTED;
   }
 
   /* close archive */
