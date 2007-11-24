@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -37,7 +37,8 @@ typedef struct __String* String;
 /* internal tokenizer data */
 typedef struct
 {
-  String     string;
+  const char *data;
+  ulong      length;
   long       index;
   const char *separatorChars;
   const char *stringQuotes;
@@ -420,7 +421,8 @@ String String_format(String string, const char *format, ...);
 String String_vformat(String string, const char *format, va_list arguments);
 
 /***********************************************************************\
-* Name   : String_initTokenizer, String_doneTokenizer
+* Name   : String_initTokenizer, String_initTokenizerCString,
+*          String_doneTokenizer
 * Purpose: initialise/deinitialise string tokenizer
 * Input  : stringTokenizer - string tokenizer
 *          string          - string
@@ -439,6 +441,12 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
                           const char      *stringQuotes,
                           bool            skipEmptyTokens
                          );
+void String_initTokenizerCString(StringTokenizer *stringTokenizer,
+                                 const char      *s,
+                                 const char      *separatorChars,
+                                 const char      *stringQuotes,
+                                 bool            skipEmptyTokens
+                                );
 void String_doneTokenizer(StringTokenizer *stringTokenizer);
 
 /***********************************************************************\
@@ -487,6 +495,21 @@ bool String_scan(const String string, const char *format, ...);
 \***********************************************************************/
 
 bool String_parse(const String string, const char *format, ulong *nextIndex, ...);
+
+/***********************************************************************\
+* Name   : String_match
+* Purpose: match string pattern
+* Input  : string      - string
+*          pattern     - pattern
+*          matchString - match string (can be NULL)
+*          ...         - optional sub-patterns (strings), last value
+*                        have to be NULL!
+* Output : -
+* Return : TRUE if pattern is matching, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool String_match(const String string, const char *pattern, String matchString, ...);
 
 /***********************************************************************\
 * Name   : String_toInteger, String_toInteger64, String_toDouble,

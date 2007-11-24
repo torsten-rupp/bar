@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <sys/types.h>
+#include <regex.h>
 #include <assert.h>
 
 #include "global.h"
@@ -2640,7 +2642,31 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
 
   CHECK_VALID(string);
 
-  stringTokenizer->string          = string;
+  stringTokenizer->data            = string->data;
+  stringTokenizer->length          = string->length;
+  stringTokenizer->index           = 0;
+  stringTokenizer->separatorChars  = separatorChars;
+  stringTokenizer->stringQuotes    = stringQuotes;
+  stringTokenizer->skipEmptyTokens = skipEmptyTokens;
+  #ifdef NDEBUG
+    stringTokenizer->token         = String_new();
+  #else /* not DEBUG */
+    stringTokenizer->token         = __String_new(__FILE__,__LINE__);
+  #endif /* NDEBUG */
+}
+
+void String_initTokenizerCString(StringTokenizer *stringTokenizer,
+                                 const char      *s,
+                                 const char      *separatorChars,
+                                 const char      *stringQuotes,
+                                 bool            skipEmptyTokens
+                                )
+{
+  assert(stringTokenizer != NULL);
+  assert(s != NULL);
+
+  stringTokenizer->data            = s;
+  stringTokenizer->length          = strlen(s);
   stringTokenizer->index           = 0;
   stringTokenizer->separatorChars  = separatorChars;
   stringTokenizer->stringQuotes    = stringQuotes;
@@ -2655,7 +2681,7 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
 void String_doneTokenizer(StringTokenizer *stringTokenizer)
 {
   assert(stringTokenizer != NULL);
-  assert(stringTokenizer->string != NULL);
+  assert(stringTokenizer->data != NULL);
 
   String_delete(stringTokenizer->token);
 }
@@ -2667,7 +2693,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   assert(stringTokenizer != NULL);
 
   /* check index */
-  if (stringTokenizer->index >= stringTokenizer->string->length)
+  if (stringTokenizer->index >= stringTokenizer->length)
   {
     return FALSE;
   }
@@ -2675,13 +2701,13 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   if (stringTokenizer->skipEmptyTokens)
   {
     /* skip separator chars */
-    while (   (stringTokenizer->index < stringTokenizer->string->length)
-           && (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) != NULL)
+    while (   (stringTokenizer->index < stringTokenizer->length)
+           && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) != NULL)
           )
     {
       stringTokenizer->index++;
     }
-    if (stringTokenizer->index >= stringTokenizer->string->length) return FALSE;
+    if (stringTokenizer->index >= stringTokenizer->length) return FALSE;
   }
 
   /* get token */
@@ -2689,45 +2715,45 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   String_clear(stringTokenizer->token);
   if (stringTokenizer->stringQuotes != NULL)
   {
-    while (   (stringTokenizer->index < stringTokenizer->string->length)
-           && (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) == NULL)
+    while (   (stringTokenizer->index < stringTokenizer->length)
+           && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) == NULL)
           )
     {
-      s = strchr(stringTokenizer->stringQuotes,stringTokenizer->string->data[stringTokenizer->index]);
+      s = strchr(stringTokenizer->stringQuotes,stringTokenizer->data[stringTokenizer->index]);
       if (s != NULL)
       {
         stringTokenizer->index++;
-        while (   (stringTokenizer->index < stringTokenizer->string->length)
-               && (stringTokenizer->string->data[stringTokenizer->index] != (*s))
+        while (   (stringTokenizer->index < stringTokenizer->length)
+               && (stringTokenizer->data[stringTokenizer->index] != (*s))
               )
         {
-          String_appendChar(stringTokenizer->token,stringTokenizer->string->data[stringTokenizer->index]);
+          String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
           stringTokenizer->index++;
         }
-        if (stringTokenizer->index < stringTokenizer->string->length) stringTokenizer->index++;
+        if (stringTokenizer->index < stringTokenizer->length) stringTokenizer->index++;
       }
       else
       {
-        String_appendChar(stringTokenizer->token,stringTokenizer->string->data[stringTokenizer->index]);
+        String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
         stringTokenizer->index++;
       }
     }
   }
   else
   {
-    while (   (stringTokenizer->index < stringTokenizer->string->length)
-           && (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) == NULL)
+    while (   (stringTokenizer->index < stringTokenizer->length)
+           && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) == NULL)
           )
     {
-      String_appendChar(stringTokenizer->token,stringTokenizer->string->data[stringTokenizer->index]);
+      String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
       stringTokenizer->index++;
     }
   }
   if (token != NULL) (*token) = stringTokenizer->token;
 
   /* skip token separator */
-  if (   (stringTokenizer->index < stringTokenizer->string->length)
-      && (strchr(stringTokenizer->separatorChars,stringTokenizer->string->data[stringTokenizer->index]) != NULL)
+  if (   (stringTokenizer->index < stringTokenizer->length)
+      && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) != NULL)
      )
   {
     stringTokenizer->index++;
@@ -2768,6 +2794,73 @@ bool String_parse(const String string, const char *format, ulong *nextIndex, ...
   va_end(arguments);
 
   return result;
+}
+
+bool String_match(const String string, const char *pattern, String matchString, ...)
+{
+  String     subPattern;
+  regex_t    regex;
+  va_list    arguments;
+  uint       subPatternCount;
+  regmatch_t *subPatterns;
+  bool       matchFlag;
+  uint       z;
+
+  /* compile pattern */
+  if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
+  {
+    return FALSE;
+  }
+
+  /* count sub-patterns */
+  subPatternCount = 1;
+  va_start(arguments,matchString);
+  do
+  {
+    subPattern = (String)va_arg(arguments,void*);
+    if (subPattern != NULL) subPatternCount++;
+  }
+  while (subPattern != NULL);
+  va_end(arguments);
+
+  /* allocate sub-patterns array */
+  subPatterns = (regmatch_t*)malloc(subPatternCount*sizeof(regmatch_t));
+  if (subPatterns == NULL)
+  {
+    regfree(&regex);
+    return FALSE;
+  }
+
+  /* match */
+  matchFlag = (regexec(&regex,String_cString(string),subPatternCount,subPatterns,0) == 0);
+
+  /* get sub-patterns */
+  if (matchFlag)
+  {
+    if (matchString != NULL)
+    {
+      String_setBuffer(subPattern,&string->data[subPatterns[0].rm_so],subPatterns[0].rm_eo-subPatterns[0].rm_so);
+    }
+
+    z = 1;
+    va_start(arguments,matchString);
+    do
+    {
+      subPattern = (String)va_arg(arguments,void*);
+      if ((subPattern != NULL) && (subPatterns[z].rm_so != -1))
+      {
+        String_setBuffer(subPattern,&string->data[subPatterns[z].rm_so],subPatterns[z].rm_eo-subPatterns[z].rm_so);
+      }
+      z++;
+    }
+    while (subPattern != NULL);
+  }
+
+  /* free resources */
+  free(subPatterns);
+  regfree(&regex);
+
+  return matchFlag;
 }
 
 int String_toInteger(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
