@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems : all
@@ -125,7 +125,7 @@ void StringList_move(StringList *fromStringList, StringList *toStringList);
 * Notes  : -
 \***********************************************************************/
 
-bool StringList_empty(StringList *stringList);
+bool StringList_empty(const StringList *stringList);
 
 /***********************************************************************\
 * Name   : StringList_count
@@ -136,7 +136,7 @@ bool StringList_empty(StringList *stringList);
 * Notes  : -
 \***********************************************************************/
 
-unsigned long StringList_count(StringList *stringList);
+unsigned long StringList_count(const StringList *stringList);
 
 /***********************************************************************\
 * Name   : StringList_insert/StringList_insertCString/
@@ -206,6 +206,17 @@ String StringList_getFirst(StringList *stringList, String string);
 \***********************************************************************/
 
 String StringList_getLast(StringList *stringList, String string);
+
+/***********************************************************************\
+* Name   : StringList_toCStringArray
+* Purpose: allocate array with C strings from string list
+* Input  : stringList - string list
+* Output : -
+* Return : C string array or NULL if insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+const char* const *StringList_toCStringArray(const StringList *stringList);
 
 #ifdef __cplusplus
   }

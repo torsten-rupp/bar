@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -126,14 +126,14 @@ void StringList_move(StringList *fromStringList, StringList *toStringList)
   List_move(fromStringList,toStringList,NULL,NULL,NULL);
 }
 
-bool StringList_empty(StringList *stringList)
+bool StringList_empty(const StringList *stringList)
 {
   assert(stringList != NULL);
 
   return List_empty(stringList);
 }
 
-unsigned long StringList_count(StringList *stringList)
+unsigned long StringList_count(const StringList *stringList)
 {
   assert(stringList != NULL);
 
@@ -248,6 +248,30 @@ String StringList_getLast(StringList *stringList, String string)
   }
 
   return string;
+}
+
+const char* const *StringList_toCStringArray(const StringList *stringList)
+{
+  char const  **cStringArray;
+  StringNode *stringNode;
+  uint       z;
+
+  assert(stringList != NULL);
+
+  cStringArray = (const char**)malloc(stringList->count*sizeof(char*));
+  if (cStringArray != NULL)
+  {
+    stringNode = stringList->head;
+    z = 0;
+    while (stringNode != NULL)
+    {
+      cStringArray[z] = String_cString(stringNode->string);
+      stringNode = stringNode->next;
+      z++;
+    }
+  }
+
+  return cStringArray;
 }
 
 #ifdef __cplusplus
