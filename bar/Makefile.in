@@ -3,7 +3,7 @@
 # aicas GmbH, Karlsruhe
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -227,9 +227,9 @@ destroyer@EXEEXT@: $(DESTROYER_OBJECTS)
 	$(LD) $(LD_FLAGS) -o $@ $^ -lc -lpthread
 
 # create BAR frontend
-barcontrol.tcl: tcl/scanx.so
+barcontrol.tcl: tcl/libscanx.so
 
-tcl/scanx.so: tcl/scanx.c
+tcl/libscanx.so: tcl/scanx.c
 	$(MAKE) -C tcl $(@F)
 
 # install/uninstall
@@ -239,13 +239,14 @@ install:
 	if test ! -d "$(DESTDIR)$(INSTALL_BIN_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"; fi
 	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	if test ! -d "$(DESTDIR)$(CONFIG_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)"; fi
-	$(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(CONFIG_DIR)"
+	if test ! -f "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; then $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(CONFIG_DIR)"; else echo "$(DESTDIR)$(CONFIG_DIR)/bar.cfg NOT installed - file already exists!"; fi
 	if test ! -d "$(DESTDIR)$(TLS_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(TLS_DIR)"; fi
 	if test ! -d "$(DESTDIR)$(TLS_DIR)/certs"; then $(INSTALL) -d "$(DESTDIR)$(TLS_DIR)/certs"; fi
 	$(INSTALL) -m 644 bar-ca.pem "$(DESTDIR)$(TLS_DIR)/certs"
 	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(TLS_DIR)/certs"
 	if test ! -d "$(DESTDIR)$(TLS_DIR)/private"; then $(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"; fi
 	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(TLS_DIR)/private"
+	$(MAKE) -C tcl install
 
 uinstall:
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"
