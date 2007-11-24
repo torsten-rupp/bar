@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -198,7 +198,7 @@ void List_move(void *fromList,
   }
 }
 
-unsigned long List_empty(void *list)
+unsigned long List_empty(const void *list)
 {
   assert(list != NULL);
   assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
@@ -208,7 +208,7 @@ unsigned long List_empty(void *list)
   return (((List*)list)->count == 0);
 }
 
-unsigned long List_count(void *list)
+unsigned long List_count(const void *list)
 {
   assert(list != NULL);
   assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
@@ -324,10 +324,10 @@ Node *List_getLast(void *list)
   return node;
 }
 
-Node *List_findFirst(void                    *list,
-                     ListNodeCompareFunction listNodeCompareFunction,
-                     void                    *listNodeCompareUserData
-                    )
+const Node *List_findFirst(const void              *list,
+                           ListNodeCompareFunction listNodeCompareFunction,
+                           void                    *listNodeCompareUserData
+                          )
 {
   Node *node;
 
@@ -343,11 +343,11 @@ Node *List_findFirst(void                    *list,
   return node;
 }
 
-Node *List_findNext(void                    *list,
-                    void                    *node,
-                    ListNodeCompareFunction listNodeCompareFunction,
-                    void                    *listNodeCompareUserData
-                   )
+const Node *List_findNext(const void              *list,
+                          const void              *node,
+                          ListNodeCompareFunction listNodeCompareFunction,
+                          void                    *listNodeCompareUserData
+                         )
 {
   assert(list != NULL);
   assert(listNodeCompareFunction != NULL);

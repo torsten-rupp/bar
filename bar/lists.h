@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -49,7 +49,7 @@ typedef void(*ListNodeFreeFunction)(void *node, void *userData);
 typedef void*(*ListNodeCopyFunction)(const void *node, void *userData);
 
 /* compare list node function */
-typedef int(*ListNodeCompareFunction)(void *node, void *userData);
+typedef int(*ListNodeCompareFunction)(const void *node, void *userData);
 
 /***************************** Variables *******************************/
 
@@ -213,7 +213,7 @@ void List_move(void *fromList,
 * Notes  : -
 \***********************************************************************/
 
-unsigned long List_empty(void *list);
+unsigned long List_empty(const void *list);
 
 /***********************************************************************\
 * Name   : List_count
@@ -224,7 +224,7 @@ unsigned long List_empty(void *list);
 * Notes  : -
 \***********************************************************************/
 
-unsigned long List_count(void *list);
+unsigned long List_count(const void *list);
 
 /***********************************************************************\
 * Name   : List_ins
@@ -303,10 +303,10 @@ Node *List_getLast(void *list);
 * Notes  : -
 \***********************************************************************/
 
-Node *List_findFirst(void                    *list,
-                     ListNodeCompareFunction listNodeCompareFunction,
-                     void                    *listNodeCompareUserData
-                    );
+const Node *List_findFirst(const void              *list,
+                           ListNodeCompareFunction listNodeCompareFunction,
+                           void                    *listNodeCompareUserData
+                          );
 
 /***********************************************************************\
 * Name   : List_findNext
@@ -320,11 +320,11 @@ Node *List_findFirst(void                    *list,
 * Notes  : -
 \***********************************************************************/
 
-Node *List_findNext(void                    *list,
-                    void                    *node,
-                    ListNodeCompareFunction listNodeCompareFunction,
-                    void                    *listNodeCompareUserData
-                   );
+const Node *List_findNext(const void              *list,
+                          const void              *node,
+                          ListNodeCompareFunction listNodeCompareFunction,
+                          void                    *listNodeCompareUserData
+                         );
 
 #ifdef __cplusplus
   }

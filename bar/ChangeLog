@@ -1,0 +1,10 @@
+2007-11-25 0.02
+  * implemented DVD support
+  * fixed ssh connections
+  * implemented more functions in barcontrol.tcl
+  * added install for scanx
+  * added config parser
+  * added multiple server/device sections in config file
+
+2007-11-01 0.01
+  * initial release

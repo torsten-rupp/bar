@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/configvalues.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -334,6 +334,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
                  || (strcmp(value,"1") == 0)
                  || (strcmp(value,"true") == 0)
                  || (strcmp(value,"on") == 0)
+                 || (strcmp(value,"yes") == 0)
                 )
         {
           b = TRUE;
@@ -341,6 +342,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         else if (   (strcmp(value,"0") == 0)
                  || (strcmp(value,"false") == 0)
                  || (strcmp(value,"off") == 0)
+                 || (strcmp(value,"no") == 0)
                 )
         {
           b = FALSE;

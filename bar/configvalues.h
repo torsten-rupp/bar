@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/configvalues.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -126,44 +126,44 @@ CMD_OPTION_ENUM           (<long name>,<short name>,<level>,<priority>,<variable
 CMD_OPTION_STRING         (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,                    <help text>,<help argument>)
 CMD_OPTION_SPECIAL        (<long name>,<short name>,<level>,<priority>,<function>,<default value>,                    <help text>,<help argument>)
 
-const CommandLineUnit COMMAND_LINE_UNITS[] =
+const ConfigValueUnit COMMAND_LINE_UNITS[] =
 {
   {"k",1024},
   {"m",1024*1024},
   {"g",1024*1024*1024},
 };
 
-const CommandLineOptionSelect COMMAND_LINE_OPTIONS_SELECT_OUTPUTYPE[] =
+const ConfigValueSelect CONFIG_VALUE_SELECT_OUTPUTYPE[] =
 {
   {"c",   1,"type1"},
   {"h",   2,"type2"},
   {"both",3,"type3"},
 };
 
-const CommandLineOption COMMAND_LINE_OPTIONS[] =
+const ConfigValue CONFIG_VALUES[] =
 {
-  CMD_OPTION_INTEGER      ("integer", 'i',0,0,intValue,   0,0,123,NULL                                  "integer value"),
-  CMD_OPTION_INTEGER      ("unit",    'u',0,0,intValue,   0,0,123,COMMAND_LINE_UNITS                    "integer value with unit"),
-  CMD_OPTION_INTEGER_RANGE("range1",  'r',0,0,intValue,   0,0,123,COMMAND_LINE_UNITS                    "integer value with unit and range"),
+  CMD_OPTION_INTEGER      ("integer", 'i',0,0,intValue,   0,0,123,NULL                           value"),
+  CMD_OPTION_INTEGER      ("unit",    'u',0,0,intValue,   0,0,123,COMMAND_LINE_UNITS             value with unit"),
+  CMD_OPTION_INTEGER_RANGE("range1",  'r',0,0,intValue,   0,0,123,COMMAND_LINE_UNITS             value with unit and range"),
 
-  CMD_OPTION_DOUBLE       ("double",  'd',0,0,doubleValue,0.0,-2.0,4.0,                                 "double value"),
-  CMD_OPTION_DOUBLE_RANGE ("range2",   0,  0,0,doubleValue,0.0,-2.0,4.0,                                 "double value with range"),
+  CMD_OPTION_DOUBLE       ("double",  'd',0,0,doubleValue,0.0,-2.0,4.0,                         value"),
+  CMD_OPTION_DOUBLE_RANGE ("range2",   0,  0,0,doubleValue,0.0,-2.0,4.0,                         value with range"),
 
-  CMD_OPTION_BOOLEAN_YESNO("bool",    'b',0,0,boolValue,  FALSE,                                        "bool value 1"),
+  CMD_OPTION_BOOLEAN_YESNO("bool",    'b',0,0,boolValue,  FALSE,                                lue 1"),
 
-  CMD_OPTION_SELECT       ("type",    't',0,0,outputType, 1,      COMMAND_LINE_OPTIONS_SELECT_OUTPUTYPE,"select value",NULL),
+  CMD_OPTION_SELECT       ("type",    't',0,0,outputType, 1,      CONFIG_VALUE_SELECT_OUTPUTYPE,ULL),
 
-  CMD_OPTION_STRING       ("string",  0,  0,0,stringValue,"",                                           "string value"),
+  CMD_OPTION_STRING       ("string",  0,  0,0,stringValue,"",                                   value"),
 
-  CMD_OPTION_ENUM         ("e1",      '1',0,0,enumValue,  0,ENUM1,                                      "enum 1"), 
-  CMD_OPTION_ENUM         ("e2",      '2',0,0,enumValue,  0,ENUM2,                                      "enum 2"), 
-  CMD_OPTION_ENUM         ("e3",      '3',0,0,enumValue,  0,ENUM3,                                      "enum 3"), 
-  CMD_OPTION_ENUM         ("e4",      '4',0,0,enumValue,  0,ENUM4,                                      "enum 4"), 
+  CMD_OPTION_ENUM         ("e1",      '1',0,0,enumValue,  0,ENUM1,                              ), 
+  CMD_OPTION_ENUM         ("e2",      '2',0,0,enumValue,  0,ENUM2,                              ), 
+  CMD_OPTION_ENUM         ("e3",      '3',0,0,enumValue,  0,ENUM3,                              ), 
+  CMD_OPTION_ENUM         ("e4",      '4',0,0,enumValue,  0,ENUM4,                              ), 
 
-  CMD_OPTION_SPECIAL      ("special", 's',0,1,specialValue,parseSpecial,123,                            "special","abc"), 
-  CMD_OPTION_INTEGER      ("extended",'i',1,0,extendValue,0,0,123,NULL                                  "extended integer"),
+  CMD_OPTION_SPECIAL      ("special", 's',0,1,specialValue,parseSpecial,123,                    ), 
+  CMD_OPTION_INTEGER      ("extended",'i',1,0,extendValue,0,0,123,NULL                          ),
 
-  CMD_OPTION_BOOLEAN      ("help",    'h',0,0,helpFlag,   FALSE,                                        "output this help"),
+  CMD_OPTION_BOOLEAN      ("help",    'h',0,0,helpFlag,   FALSE,                                ),
 };
 
 */
@@ -177,7 +177,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CONFIG_VALUE_TYPE_INTEGER,\
     {&variable},\
     offset,\
-    {min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
     {},\
@@ -194,7 +194,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {&variable},\
     offset,\
     {0,0,NULL,0},\
-    {min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
     {0.0,0.0,NULL,0},\
     {},\
     {0},\
@@ -211,7 +211,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     offset,\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
-    {min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
     {},\
     {0},\
     {NULL,0},\
@@ -277,7 +277,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {0.0,0.0,NULL,0},\
     {},\
     {0},\
-    {selects,sizeof(selects)/sizeof(CommandLineOptionSelect)},\
+    {selects,sizeof(selects)/sizeof(ConfigValueSelect)},\
     {},\
     {NULL,NULL}\
   }
@@ -322,10 +322,9 @@ extern "C" {
 
 /***********************************************************************
 * Name   : ConfigFile_init
-* Purpose: init command line options with default values
-* Input  : commandLineOptions     - array with command line options
-*                                   spezification
-*          commandLineOptionCount - size of command line options array
+* Purpose: init config values
+* Input  : configValues     - array with config value specification
+*          configValueCount - size of config value specification array
 * Output : -
 * Return : TRUE if command line parsed, FALSE on error
 * Notes  :
@@ -336,11 +335,10 @@ bool ConfigValue_init(const ConfigValue configValues[],
                      );
 
 /***********************************************************************
-* Name   : ConfigFile_init
-* Purpose: deinit command line options
-* Input  : commandLineOptions     - array with command line options
-*                                   spezification
-*          commandLineOptionCount - size of command line options array
+* Name   : ConfigValue_done
+* Purpose: deinit config values
+* Input  : configValues     - array with config value specification
+*          configValueCount - size of config value specification array
 * Output : -
 * Return : -
 * Notes  :
@@ -352,16 +350,14 @@ void ConfigValue_done(const ConfigValue configValues[],
 /***********************************************************************
 * Name   : ConfigFile_parse
 * Purpose: parse config value
-* Input  : argv                   - command line arguments
-*          argc                   - number of command line arguments
-*          commandLineOptions     - array with command line options
-*                                   spezification
-*          commandLineOptionCount - size of command line options array
-*          errorOutputHandle      - error output handle or NULL
-*          errorPrefix            - error prefix or NULL
-* Output : arguments
-*          argumentsCount
-* Return : TRUE if command line parsed, FALSE on error
+* Input  : name              - config value name
+*          value             - config value
+*          configValues      - array with config value specification
+*          configValueCount  - size of config value specification array
+*          errorOutputHandle - error output handle or NULL
+*          errorPrefix       = error prefix or NULL
+* Output : -
+* Return : TRUE if config value parsed, FALSE on error
 * Notes  :
 ***********************************************************************/
 

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.38 $
+* $Revision: 1.39 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -186,9 +186,9 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SPECIAL      ("config",                   0,  1,0,NULL,                                                 NULL,cmdOptionParseConfigFile,NULL,                                "configuration file","file name"                                   ),
 
-  CMD_OPTION_INTEGER64    ("archive-part-size",        's',1,0,defaultOptions.archivePartSize,                       0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "approximated part size"                                           ),
+  CMD_OPTION_INTEGER64    ("archive-part-size",        's',1,0,defaultOptions.archivePartSize,                       0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "approximated part size"                                           ),
   CMD_OPTION_SPECIAL      ("tmp-directory",            0,  1,0,&defaultOptions.tmpDirectory,                         DEFAULT_TMP_DIRECTORY,cmdOptionParseString,NULL,                   "temporary directory","path"                                       ),
-  CMD_OPTION_INTEGER64    ("max-tmp-size",             0,  1,0,defaultOptions.maxTmpSize,                            0,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                             "max. size of temporary files"                                     ),
+  CMD_OPTION_INTEGER64    ("max-tmp-size",             0,  1,0,defaultOptions.maxTmpSize,                            0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "max. size of temporary files"                                     ),
   CMD_OPTION_INTEGER      ("directory-strip",          'p',1,0,defaultOptions.directoryStripCount,                   0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"                        ),
   CMD_OPTION_SPECIAL      ("directory",                0,  0,0,&defaultOptions.directory   ,                         NULL,cmdOptionParseString,NULL,                                    "directory to restore files","path"                                ),
 
@@ -226,7 +226,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("request-volume-command",   0,  1,0,&defaultOptions.defaultDevice.requestVolumeCommand,   NULL,cmdOptionParseString,NULL,                                    "request new volume command","command"                             ),
   CMD_OPTION_SPECIAL      ("unload-volume-command",    0,  1,0,&defaultOptions.defaultDevice.unloadVolumeCommand,    NULL,cmdOptionParseString,NULL,                                    "unload volume command","command"                                  ),
   CMD_OPTION_SPECIAL      ("load-volume-command",      0,  1,0,&defaultOptions.defaultDevice.loadVolumeCommand,      NULL,cmdOptionParseString,NULL,                                    "load volume command","command"                                    ),
-  CMD_OPTION_INTEGER64    ("volume-size",              0,  1,0,defaultOptions.defaultDevice.volumeSize,              0LL,0LL,LONG_MAX,COMMAND_LINE_BYTES_UNITS,                         "volume size"                                                      ),
+  CMD_OPTION_INTEGER64    ("volume-size",              0,  1,0,defaultOptions.defaultDevice.volumeSize,              0LL,0LL,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                    "volume size"                                                      ),
   CMD_OPTION_SPECIAL      ("device-image-pre-command", 0,  1,0,&defaultOptions.defaultDevice.imagePreProcessCommand, NULL,cmdOptionParseString,NULL,                                    "make image pre-process command","command"                         ),
   CMD_OPTION_SPECIAL      ("device-image-post-command",0,  1,0,&defaultOptions.defaultDevice.imagePostProcessCommand,NULL,cmdOptionParseString,NULL,                                    "make image post-process command","command"                        ),
   CMD_OPTION_SPECIAL      ("device-image-command",     0,  1,0,&defaultOptions.defaultDevice.imageCommand,           NULL,cmdOptionParseString,NULL,                                    "make image command","command"                                     ),
@@ -243,7 +243,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("skip-unreadable",          0,  0,0,defaultOptions.skipUnreadableFlag,                    TRUE,                                                              "skip unreadable files"                                            ),
   CMD_OPTION_BOOLEAN      ("overwrite-archives-files", 0,  0,0,defaultOptions.overwriteArchiveFilesFlag,             FALSE,                                                             "overwrite existing archive files"                                 ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",          0,  0,0,defaultOptions.overwriteFilesFlag,                    FALSE,                                                             "overwrite existing files"                                         ),
-  CMD_OPTION_BOOLEAN      ("no-default-config",        0,  1,0,defaultOptions.noDefaultConfigFlag,                   FALSE,                                                             "do not read personal config file ~/bar/" DEFAULT_CONFIG_FILE_NAME ),
+  CMD_OPTION_BOOLEAN      ("no-default-config",        0,  1,0,defaultOptions.noDefaultConfigFlag,                   FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_BOOLEAN      ("quiet",                    0,  1,0,defaultOptions.quietFlag,                             FALSE,                                                             "surpress any output"                                              ),
   CMD_OPTION_INTEGER_RANGE("verbose",                  'v',1,0,defaultOptions.verboseLevel,                          1,0,3,NULL,                                                        "verbosity level"                                                  ),
 
@@ -321,9 +321,9 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 {
   CONFIG_VALUE_SPECIAL  ("config",                   NULL,-1,                                                 configValueParseConfigFile,NULL),
 
-  CONFIG_VALUE_INTEGER64("archive-part-size",        defaultOptions.archivePartSize,-1,                       0,LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("archive-part-size",        defaultOptions.archivePartSize,-1,                       0,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_SPECIAL  ("tmp-directory",            &defaultOptions.tmpDirectory,-1,                         configValueParseString,NULL),
-  CONFIG_VALUE_INTEGER64("max-tmp-size",             defaultOptions.maxTmpSize,-1,                            0,LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("max-tmp-size",             defaultOptions.maxTmpSize,-1,                            0,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_INTEGER  ("directory-strip",          defaultOptions.directoryStripCount,-1,                   0,LONG_MAX,NULL),
   CONFIG_VALUE_SPECIAL  ("directory",                &defaultOptions.directory,-1,                            configValueParseString,NULL),
 
@@ -359,7 +359,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_SPECIAL  ("request-volume-command",   &defaultOptions.defaultDevice.requestVolumeCommand,-1,   configValueParseString,NULL),
   CONFIG_VALUE_SPECIAL  ("unload-volume-command",    &defaultOptions.defaultDevice.unloadVolumeCommand,-1,    configValueParseString,NULL),
   CONFIG_VALUE_SPECIAL  ("load-volume-command",      &defaultOptions.defaultDevice.loadVolumeCommand,-1,      configValueParseString,NULL),
-  CONFIG_VALUE_INTEGER64("volume-size",              defaultOptions.defaultDevice.volumeSize,-1,              0LL,LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("volume-size",              defaultOptions.defaultDevice.volumeSize,-1,              0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_SPECIAL  ("device-image-pre-command", &defaultOptions.defaultDevice.imagePreProcessCommand,-1, configValueParseString,NULL),
   CONFIG_VALUE_SPECIAL  ("device-image-post-command",&defaultOptions.defaultDevice.imagePostProcessCommand,-1,configValueParseString,NULL),
   CONFIG_VALUE_SPECIAL  ("device-image-command",     &defaultOptions.defaultDevice.imageCommand,-1,           configValueParseString,NULL),
@@ -410,7 +410,6 @@ LOCAL bool readConfigFile(String fileName, bool printErrorFlag)
 
   assert(fileName != NULL);
 
-#if 1
   /* open file */
   error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
   if (error != ERROR_NONE)
@@ -519,7 +518,7 @@ LOCAL bool readConfigFile(String fileName, bool printErrorFlag)
          )
       {
         info(2,"FAIL\n");
-        printError("Unknown config value '%s' in %s, line %ld\n",
+        printError("Unknown or invalid config value '%s' in %s, line %ld\n",
                    String_cString(name),
                    String_cString(fileName),
                    lineNb
@@ -550,9 +549,6 @@ LOCAL bool readConfigFile(String fileName, bool printErrorFlag)
 
   /* close file */
   File_close(&fileHandle);
-#else /* 0 */
-  ConfigParser_parseFile(fileName,FALSE);
-#endif /* 0 */
 
   /* free resources */
 
@@ -1172,13 +1168,31 @@ int main(int argc, const char *argv[])
     /* read default configuration from /CONFIG_DIR/bar.cfg (ignore errors) */
     File_setFileNameCString(fileName,CONFIG_DIR);
     File_appendFileNameCString(fileName,DEFAULT_CONFIG_FILE_NAME);
-    readConfigFile(fileName,FALSE);
+    if (File_isFileReadable(fileName))
+    {
+      if (!readConfigFile(fileName,TRUE))
+      {
+        String_delete(fileName);
+        List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
+        List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
+        Pattern_doneList(&excludePatternList);
+        Pattern_doneList(&includePatternList);
+        Password_delete(serverPassword);
+        freeOptions(&defaultOptions);
+        doneAll();
+        #ifndef NDEBUG
+          Array_debug();
+          String_debug();
+        #endif /* not NDEBUG */
+        return EXITCODE_CONFIG_ERROR;
+      }
+    }
 
     /* read default configuration from $HOME/.bar/bar.cfg (if exists) */
     File_setFileNameCString(fileName,getenv("HOME"));
     File_appendFileNameCString(fileName,".bar");
     File_appendFileNameCString(fileName,DEFAULT_CONFIG_FILE_NAME);
-    if (File_exists(fileName))
+    if (File_isFile(fileName))
     {
       if (!readConfigFile(fileName,TRUE))
       {

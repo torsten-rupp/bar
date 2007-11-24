@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -262,6 +262,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                || (strcmp(value,"1") == 0)
                || (strcmp(value,"true") == 0)
                || (strcmp(value,"on") == 0)
+               || (strcmp(value,"yes") == 0)
               )
       {
         (*commandLineOption->variable.b) = TRUE;
@@ -269,6 +270,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       else if (   (strcmp(value,"0") == 0)
                || (strcmp(value,"false") == 0)
                || (strcmp(value,"off") == 0)
+               || (strcmp(value,"no") == 0)
               )
       {
         (*commandLineOption->variable.b) = FALSE;
