@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -83,7 +83,7 @@ typedef void(*RestoreStatusInfoFunction)(Errors                  error,
 Errors Command_restore(StringList                *archiveFileNameList,
                        PatternList               *includePatternList,
                        PatternList               *excludePatternList,
-                       const Options             *options,
+                       Options                   *options,
                        RestoreStatusInfoFunction restoreStatusInfoFunction,
                        void                      *restoreStatusInfoUserData,
                        bool                      *abortRequestFlag

@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -63,7 +63,7 @@ typedef struct CommandLineOption
   union
   {
     void   *pointer;
-    int    *n;
+    int    *i;
     int64  *l;
     double *d;
     bool   *b;
@@ -74,7 +74,7 @@ typedef struct CommandLineOption
   } variable;
   struct
   {
-    int    n;
+    int    i;
     int64  l;
     double d;
     bool   b;

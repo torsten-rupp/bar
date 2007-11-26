@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -17,6 +17,8 @@
 #ifdef HAVE_GCRYPT
   #include <gcrypt.h>
 #endif /* HAVE_GCRYPT */
+#include <termios.h>
+#include <unistd.h>        
 #include <assert.h>
 
 #include "global.h"
@@ -110,6 +112,14 @@ void Password_delete(Password *password)
       free(password);
     #endif /* HAVE_GCRYPT */
   }
+}
+
+void Password_clear(Password *password)
+{
+  assert(password != NULL);
+
+  password->length = 0;
+  password->data[0] = '\0';
 }
 
 Password *Password_copy(const Password *sourcePassword)
@@ -229,6 +239,60 @@ char Password_getChar(const Password *password, uint index)
   }
 }
 
+double Password_getQualityLevel(const Password *password)
+{
+  #define CHECK(condition) \
+    do { \
+      if (condition) browniePoints++; \
+      maxBrowniePoints++; \
+    } while (0)
+
+  uint browniePoints,maxBrowniePoints;
+  bool flag0,flag1;
+  uint z;
+
+  assert(password != NULL);
+
+  browniePoints    = 0;
+  maxBrowniePoints = 0;
+
+  /* length >= 8 */
+  CHECK(password->length >= 8);
+
+  /* contain numbers */
+  flag0 = FALSE;
+  for (z = 0; z < password->length; z++)
+  {
+    flag0 |= isdigit(password->data[z]);
+  }
+  CHECK(flag0);
+
+  /* contain special characters */
+  flag0 = FALSE;
+  for (z = 0; z < password->length; z++)
+  {
+    flag0 |= (strchr(" !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",password->data[z]) != NULL);
+  }
+  CHECK(flag0);
+
+  /* capital/non-capital letters */
+  flag0 = FALSE;
+  flag1 = FALSE;
+  for (z = 0; z < password->length; z++)
+  {
+    flag0 |= (toupper(password->data[z]) != password->data[z]);
+    flag1 |= (tolower(password->data[z]) != password->data[z]);
+  }
+  CHECK(flag0 && flag1);
+
+  /* estimate entropie by compression */
+// ToDo
+
+  return (double)browniePoints/(double)maxBrowniePoints;
+
+  #undef CHECK
+}
+
 const char *Password_deploy(Password *password)
 {
   #ifdef HAVE_GCRYPT
@@ -267,6 +331,134 @@ void Password_undeploy(Password *password)
       memset(password->plain,0,MAX_PASSWORD_LENGTH);
     #endif /* HAVE_GCRYPT */
   }
+}
+
+bool Password_input(Password *password, const char *title)
+{
+  bool okFlag;
+
+  assert(password != NULL);
+
+  Password_clear(password);
+
+  okFlag = FALSE;
+
+  /* input via SSH_ASKPASS program */
+  if (!okFlag)
+  {
+    const char *sshAskPassword;
+    String     command;
+    FILE       *file;
+    bool       eolFlag;
+    int        ch;
+
+    sshAskPassword = getenv("SSH_ASKPASS");
+    if (sshAskPassword != NULL)
+    {
+      /* open pipe to external password program */
+      command = String_newCString(sshAskPassword);
+      if (title != NULL)
+      {
+        String_format(command," '%s:'",title);
+      }
+      file = popen(String_cString(command),"r");
+      if (file == NULL)
+      {
+        String_delete(command);
+        return FALSE;
+      }
+      String_delete(command);
+
+      /* read password, discard last LF */
+      info(1,"Wait for password...");
+      eolFlag = FALSE;
+      do
+      {
+        ch = getc(file);
+        if (ch != EOF)
+        {
+          switch ((char)ch)
+          {
+            case '\n':
+            case '\r':
+              eolFlag = TRUE;
+              break;
+            default:
+              Password_appendChar(password,(char)ch);
+              break;
+          }
+        }
+        else
+        {
+          eolFlag = TRUE;
+        }
+      }
+      while (!eolFlag);
+      info(1,"ok\n");
+
+      /* close pipe */
+      pclose(file);
+
+      okFlag = TRUE;
+    }
+  }
+
+  /* input via console */
+  if (!okFlag)
+  {
+    struct termios oldTermioSettings;
+    struct termios termioSettings;
+    bool           eolFlag;
+    char           ch;
+
+    /* save current console settings */
+    if (tcgetattr(STDIN_FILENO,&oldTermioSettings) != 0)
+    {
+      return FALSE;
+    }
+
+    /* disable echo */
+    memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
+    termioSettings.c_lflag &= ~ECHO;
+    if (tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings) != 0)
+    {
+      return FALSE;
+    }
+
+    /* input password */
+    if (title != NULL)
+    {
+      printf("%s: ",title);
+    }
+    eolFlag = FALSE;
+    do
+    {
+      read(STDIN_FILENO,&ch,1);
+      switch (ch)
+      {
+        case '\n':
+        case '\r':
+          eolFlag = TRUE;
+          break;
+        default:
+          Password_appendChar(password,ch);
+          break;
+      }
+    }
+    while (!eolFlag);
+    if (title != NULL)
+    {
+      printf("\n");
+    }
+
+    /* restore console settings */
+    tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
+
+    okFlag = TRUE;
+  }
+//fprintf(stderr,"%s,%d: #%s#\n",__FILE__,__LINE__,password->data);
+
+  return okFlag;
 }
 
 #ifdef __cplusplus

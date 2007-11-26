@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.36 $
+* $Revision: 1.37 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -69,10 +69,11 @@ typedef struct
   PatternList                 *includePatternList;
   PatternList                 *excludePatternList;
   const Options               *options;
+  bool                        *abortRequestFlag;                  // TRUE if abort requested
 
   StorageFileHandle           storageFileHandle;
-  String                      fileName;
-  time_t                      startTime;
+  String                      fileName;                           // archive file name
+  time_t                      startTime;                          // start time [ms] (unix time)
 
   MsgQueue                    fileMsgQueue;                       // queue with files to backup
 
@@ -307,6 +308,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
 
   includePatternNode = createInfo->includePatternList->head;
   while (   !createInfo->collectorThreadExitFlag
+         && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
          && (createInfo->failError == ERROR_NONE)
          && (includePatternNode != NULL)
         )
@@ -334,6 +336,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
     /* find files */
     StringList_append(&nameList,basePath);
     while (   !createInfo->collectorThreadExitFlag
+           && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
            && (createInfo->failError == ERROR_NONE)
            && !StringList_empty(&nameList)
           )
@@ -474,6 +477,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
 
   includePatternNode = createInfo->includePatternList->head;
   while (   !createInfo->collectorThreadExitFlag
+         && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
          && (createInfo->failError == ERROR_NONE)
          && (includePatternNode != NULL)
         )
@@ -502,6 +506,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
     /* find files */
     StringList_append(&nameList,basePath);
     while (   !createInfo->collectorThreadExitFlag
+           && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
            && (createInfo->failError == ERROR_NONE)
            && !StringList_empty(&nameList)
           )
@@ -877,17 +882,21 @@ LOCAL void storageThread(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  /* initial pre-process */
-  error = Storage_preProcess(&createInfo->storageFileHandle);
-  if (error != ERROR_NONE)
+  if (createInfo->failError == ERROR_NONE)
   {
-    printError("Cannot pre-process storage (error: %s)!\n",
-               getErrorText(error)
-              );
-    createInfo->failError = error;
+    /* initial pre-process */
+    error = Storage_preProcess(&createInfo->storageFileHandle);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot pre-process storage (error: %s)!\n",
+                 getErrorText(error)
+                );
+      createInfo->failError = error;
+    }
   }
 
   while (   !createInfo->storageThreadExitFlag
+         && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
          && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg))
         )
   {
@@ -970,7 +979,10 @@ LOCAL void storageThread(CreateInfo *createInfo)
         createInfo->statusInfo.storageDoneBytes += n;
         updateStatusInfo(createInfo);
       }
-      while (!createInfo->storageThreadExitFlag && !File_eof(&fileHandle));
+      while (   !createInfo->storageThreadExitFlag 
+             && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
+             && !File_eof(&fileHandle)
+            );
       File_close(&fileHandle);
 
       /* close storage file */
@@ -1046,7 +1058,7 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
 Errors Command_create(const char                   *archiveFileName,
                       PatternList                  *includePatternList,
                       PatternList                  *excludePatternList,
-                      const Options                *options,
+                      Options                      *options,
                       CreateStatusInfoFunction     createStatusInfoFunction,
                       void                         *createStatusInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,
@@ -1070,6 +1082,7 @@ Errors Command_create(const char                   *archiveFileName,
   createInfo.includePatternList           = includePatternList;
   createInfo.excludePatternList           = excludePatternList;
   createInfo.options                      = options;
+  createInfo.abortRequestFlag             = abortRequestFlag;
   createInfo.fileName                     = String_new();
   createInfo.startTime                    = time(NULL);
   createInfo.collectorThreadExitFlag      = FALSE;
@@ -1185,7 +1198,7 @@ Errors Command_create(const char                   *archiveFileName,
   }
 
   /* store files */
-  while (   ((abortRequestFlag == NULL) || !(*abortRequestFlag))
+  while (   ((createInfo.abortRequestFlag == NULL) || !(*createInfo.abortRequestFlag))
          && getNextFile(&createInfo.fileMsgQueue,fileName,&fileType)
         )
   {
@@ -1283,12 +1296,12 @@ Errors Command_create(const char                   *archiveFileName,
                 updateStatusInfo(&createInfo);
               }
             }
-            while (   ((abortRequestFlag == NULL) || !(*abortRequestFlag))
+            while (   ((createInfo.abortRequestFlag == NULL) || !(*createInfo.abortRequestFlag))
                    && (n > 0)
                    && (createInfo.failError == ERROR_NONE)
                    && (error == ERROR_NONE)
                   );
-            if ((abortRequestFlag != NULL) && (*abortRequestFlag))
+            if ((createInfo.abortRequestFlag != NULL) && (*createInfo.abortRequestFlag))
             {
               info(1,"ABORTED\n");
               File_close(&fileHandle);
@@ -1477,12 +1490,6 @@ Errors Command_create(const char                   *archiveFileName,
       }
     }
   }
-  if ((abortRequestFlag != NULL) && (*abortRequestFlag))
-  {
-    createInfo.failError = ERROR_ABORTED;
-    createInfo.collectorThreadExitFlag = TRUE;
-    createInfo.storageThreadExitFlag   = TRUE;
-  }
 
   /* close archive */
   Archive_close(&archiveInfo);
@@ -1491,6 +1498,11 @@ Errors Command_create(const char                   *archiveFileName,
   updateStatusInfo(&createInfo);
 
   /* wait for threads */
+  if ((createInfo.abortRequestFlag == NULL) || !(*createInfo.abortRequestFlag))
+  {
+    createInfo.collectorThreadExitFlag = TRUE;
+    createInfo.storageThreadExitFlag   = TRUE;
+  }
   pthread_join(createInfo.storageThreadId,NULL);
   pthread_join(createInfo.collectorThreadId,NULL);
   pthread_join(createInfo.collectorSumThreadId,NULL);
@@ -1511,7 +1523,14 @@ Errors Command_create(const char                   *archiveFileName,
   String_delete(createInfo.statusInfo.storageName);
   String_delete(createInfo.fileName);
 
-  return createInfo.failError;
+  if ((createInfo.abortRequestFlag == NULL) || !(*createInfo.abortRequestFlag))
+  {
+    return createInfo.failError;
+  }
+  else
+  {
+    return ERROR_ABORTED;
+  }
 }
 
 #ifdef __cplusplus

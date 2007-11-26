@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.39 $
+* $Revision: 1.40 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -107,10 +107,12 @@ LOCAL const char    *serverKeyFileName;
 LOCAL Password      *serverPassword;
 //LOCAL const char  *logFileName;
 
-LOCAL bool        batchFlag;
-LOCAL bool        versionFlag;
-LOCAL bool        helpFlag,xhelpFlag,helpInternalFlag;
+LOCAL bool          batchFlag;
+LOCAL bool          versionFlag;
+LOCAL bool          helpFlag,xhelpFlag,helpInternalFlag;
 
+LOCAL String        outputLine;
+LOCAL bool          outputNewLineFlag;
 
 LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
@@ -241,7 +243,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
 //  CMD_OPTION_BOOLEAN      ("incremental",              0,  0,0,defaultOptions.incrementalFlag,                     FALSE,                                                             "overwrite existing files"                                         ),
   CMD_OPTION_BOOLEAN      ("skip-unreadable",          0,  0,0,defaultOptions.skipUnreadableFlag,                    TRUE,                                                              "skip unreadable files"                                            ),
-  CMD_OPTION_BOOLEAN      ("overwrite-archives-files", 0,  0,0,defaultOptions.overwriteArchiveFilesFlag,             FALSE,                                                             "overwrite existing archive files"                                 ),
+  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",  0,  0,0,defaultOptions.overwriteArchiveFilesFlag,             FALSE,                                                             "overwrite existing archive files"                                 ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",          0,  0,0,defaultOptions.overwriteFilesFlag,                    FALSE,                                                             "overwrite existing files"                                         ),
   CMD_OPTION_BOOLEAN      ("no-default-config",        0,  1,0,defaultOptions.noDefaultConfigFlag,                   FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_BOOLEAN      ("quiet",                    0,  1,0,defaultOptions.quietFlag,                             FALSE,                                                             "surpress any output"                                              ),
@@ -373,7 +375,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_BOOLEAN  ("ecc",                      defaultOptions.errorCorrectionCodesFlag,-1               ),
 
   CONFIG_VALUE_BOOLEAN  ("skip-unreadable",          defaultOptions.skipUnreadableFlag,-1                     ),
-  CONFIG_VALUE_BOOLEAN  ("overwrite-archives-files", defaultOptions.overwriteArchiveFilesFlag,-1              ),
+  CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",  defaultOptions.overwriteArchiveFilesFlag,-1              ),
   CONFIG_VALUE_BOOLEAN  ("overwrite-files",          defaultOptions.overwriteFilesFlag,-1                     ),
   CONFIG_VALUE_BOOLEAN  ("no-default-config",        defaultOptions.noDefaultConfigFlag,-1                    ),
   CONFIG_VALUE_BOOLEAN  ("quiet",                    defaultOptions.quietFlag,-1                              ),
@@ -389,6 +391,63 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : outputConsole
+* Purpose: output string to console
+* Input  : file            - output stream (stdout, stderr)
+*          saveRestoreFlag - TRUE if current line should be saved and 
+*                            restored
+*          string          - string
+* Output : -
+* Return : -
+* Notes  :  if saveRestoreFlag is TRUE the current line is saved, the
+*           string is printed and the line is restored
+\***********************************************************************/
+
+LOCAL void outputConsole(FILE *file, bool saveRestoreFlag, const String string)
+{
+  uint z;
+
+  if (saveRestoreFlag)
+  {
+    /* wipe-out current line */
+    for (z = 0; z < String_length(outputLine); z++)
+    {
+      fwrite("\b",1,1,file);
+    }
+    for (z = 0; z < String_length(outputLine); z++)
+    {
+      fwrite(" ",1,1,file);
+    }
+    for (z = 0; z < String_length(outputLine); z++)
+    {
+      fwrite("\b",1,1,file);
+    }
+
+    /* output line */
+    fwrite(String_cString(string),1,String_length(string),file);
+    
+    /* restore line */
+    fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+  }
+  else
+  {
+    /* output string */
+    fwrite(String_cString(string),1,String_length(string),file);
+
+    /* store */
+    if (String_index(string,STRING_END) == '\n')
+    {
+      String_clear(outputLine);
+    }
+    else
+    {
+      String_append(outputLine,string);
+    }
+  }
+  fflush(stdout);
+}
 
 /***********************************************************************\
 * Name   : readConfigFile
@@ -901,11 +960,8 @@ LOCAL void initOptions(Options *options)
   assert(options != NULL);
 
   memset(options,0,sizeof(Options));
-//  options->cryptPassword             = Password_new();
-//  options->sshServer.password        = Password_new();
-  options->sshServerList             = &sshServerList;
-//  options->defaultSSHServer.password = Password_new();
-  options->deviceList                = &deviceList;
+  options->sshServerList = &sshServerList;
+  options->deviceList    = &deviceList;
 }
 
 LOCAL void freeSSHServerNode(SSHServerNode *sshServerNode, void *userData)
@@ -944,55 +1000,89 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
 
 /*---------------------------------------------------------------------*/
 
+void vinfo(uint verboseLevel, const char *format, va_list arguments)
+{
+  String line;
+
+  assert(format != NULL);
+
+  if (!defaultOptions.quietFlag && (defaultOptions.verboseLevel >= verboseLevel))
+  {
+    line = String_new();
+
+    /* format line */
+    String_vformat(line,format,arguments);
+
+    /* output */
+    outputConsole(stdout,FALSE,line);
+
+    String_delete(line);
+  }
+}
+
 void info(uint verboseLevel, const char *format, ...)
 {
+  String  line;
   va_list arguments;
 
   assert(format != NULL);
 
   if (!defaultOptions.quietFlag && (defaultOptions.verboseLevel >= verboseLevel))
   {
+    line = String_new();
+
+    /* format line */
     va_start(arguments,format);
-    vprintf(format,arguments);
+    String_vformat(line,format,arguments);
     va_end(arguments);
-    fflush(stdout);
-  }
-}
 
-void vinfo(uint verboseLevel, const char *format, va_list arguments)
-{
-  assert(format != NULL);
+    /* output */
+    outputConsole(stdout,FALSE,line);
 
-  if (!defaultOptions.quietFlag && (defaultOptions.verboseLevel >= verboseLevel))
-  {
-    vprintf(format,arguments);
-    fflush(stdout);
+    String_delete(line);
   }
 }
 
 void printWarning(const char *text, ...)
 {
+  String  line;
   va_list arguments;
 
   assert(text != NULL);
 
-  printf("Warning: ");
+  line = String_new();
+
+  /* format line */
   va_start(arguments,text);
-  vprintf(text,arguments);
+  String_appendCString(line,"Warning: ");
+  String_vformat(line,text,arguments);
   va_end(arguments);
-  fflush(stdout);
+
+  /* output */
+  outputConsole(stdout,TRUE,line);
+
+  String_delete(line);
 }
 
 void printError(const char *text, ...)
 {
+  String  line;
   va_list arguments;
 
   assert(text != NULL);
 
+  line = String_new();
+
+  /* format line */
   va_start(arguments,text);
-  fprintf(stderr,"ERROR: ");
-  vfprintf(stderr,text,arguments);
+  String_appendCString(line,"ERROR: ");
+  String_vformat(line,text,arguments);
   va_end(arguments);
+
+  /* output */
+  outputConsole(stderr,TRUE,line);
+
+  String_delete(line);
 }
 
 void copyOptions(const Options *sourceOptions, Options *destinationOptions)
@@ -1131,6 +1221,8 @@ int main(int argc, const char *argv[])
   }
 
   /* initialise variables */
+  outputLine = String_new();
+  outputNewLineFlag = TRUE;
   initOptions(&defaultOptions);
   serverPassword = Password_new();
   Pattern_initList(&includePatternList);
@@ -1153,6 +1245,7 @@ int main(int argc, const char *argv[])
     Pattern_doneList(&includePatternList);
     Password_delete(serverPassword);
     freeOptions(&defaultOptions);
+    String_delete(outputLine);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1179,6 +1272,7 @@ int main(int argc, const char *argv[])
         Pattern_doneList(&includePatternList);
         Password_delete(serverPassword);
         freeOptions(&defaultOptions);
+        String_delete(outputLine);
         doneAll();
         #ifndef NDEBUG
           Array_debug();
@@ -1203,6 +1297,7 @@ int main(int argc, const char *argv[])
         Pattern_doneList(&includePatternList);
         Password_delete(serverPassword);
         freeOptions(&defaultOptions);
+        String_delete(outputLine);
         doneAll();
         #ifndef NDEBUG
           Array_debug();
@@ -1229,6 +1324,7 @@ int main(int argc, const char *argv[])
     Pattern_doneList(&includePatternList);
     Password_delete(serverPassword);
     freeOptions(&defaultOptions);
+    String_delete(outputLine);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1246,6 +1342,7 @@ int main(int argc, const char *argv[])
     Pattern_doneList(&includePatternList);
     Password_delete(serverPassword);
     freeOptions(&defaultOptions);
+    String_delete(outputLine);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1265,6 +1362,7 @@ int main(int argc, const char *argv[])
     Pattern_doneList(&includePatternList);
     Password_delete(serverPassword);
     freeOptions(&defaultOptions);
+    String_delete(outputLine);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1408,6 +1506,7 @@ int main(int argc, const char *argv[])
   Pattern_doneList(&includePatternList);
   Password_delete(serverPassword);
   freeOptions(&defaultOptions);
+  String_delete(outputLine);
   doneAll();
 
   #ifndef NDEBUG

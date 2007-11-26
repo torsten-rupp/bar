@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -101,6 +101,17 @@ Password *Password_newCString(const char *s);
 void Password_delete(Password *password);
 
 /***********************************************************************\
+* Name   : Password_clear
+* Purpose: clear password
+* Input  : password - password handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Password_clear(Password *password);
+
+/***********************************************************************\
 * Name   : Password_copy
 * Purpose: copy a password
 * Input  : sourcePassword - source password
@@ -149,6 +160,17 @@ void Password_appendChar(Password *password, char ch);
 uint Password_length(const Password *password);
 
 /***********************************************************************\
+* Name   : Password_getQualityLevel
+* Purpose: get quality level of password
+* Input  : password - password handle
+* Output : -
+* Return : quality level (0=bad..1=good)
+* Notes  : -
+\***********************************************************************/
+
+double Password_getQualityLevel(const Password *password);
+
+/***********************************************************************\
 * Name   : Password_getChar
 * Purpose: get chararacter of password
 * Input  : password - password handle
@@ -183,6 +205,18 @@ const char *Password_deploy(Password *password);
 \***********************************************************************/
 
 void Password_undeploy(Password *password);
+
+/***********************************************************************\
+* Name   : Password_inputStdin
+* Purpose: input password from stdin (without echo characters)
+* Input  : password - password handle
+*          title    - dialog title text
+* Output : -
+* Return : TRUE if password read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Password_input(Password *password, const char *title);
 
 #ifdef __cplusplus
   }

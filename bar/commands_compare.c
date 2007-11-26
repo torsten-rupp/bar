@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_compare.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -87,10 +87,10 @@ LOCAL ulong compare(const void *p0, const void *p1, ulong length)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_compare(StringList    *archiveFileNameList,
-                       PatternList   *includePatternList,
-                       PatternList   *excludePatternList,
-                       const Options *options
+Errors Command_compare(StringList  *archiveFileNameList,
+                       PatternList *includePatternList,
+                       PatternList *excludePatternList,
+                       Options     *options
                       )
 {
   byte             *archiveBuffer,*fileBuffer;

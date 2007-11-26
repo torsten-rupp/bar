@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -257,6 +257,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   /* precision */
   if ((*format) == '.')
   {
+    ADD_CHAR(formatToken,(*format));
     format++;
     while (isdigit((int)(*format)))
     {
@@ -390,6 +391,8 @@ LOCAL void formatString(struct __String *string,
   unsigned long i;
   char          ch;
 
+  CHECK_VALID(string);
+
   while ((*format) != '\0')
   {
     if ((*format) == '%')
@@ -410,7 +413,9 @@ LOCAL void formatString(struct __String *string,
           else
           {
             ensureStringLength(string,string->length+length+1);
-            snprintf(&string->data[string->length],length,formatToken.token,data.i);
+            snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
+            string->length += length; 
+            UPDATE_VALID(string);
           }
           break;
         case 'i':
@@ -428,7 +433,9 @@ LOCAL void formatString(struct __String *string,
                 else
                 {
                   ensureStringLength(string,string->length+length+1);
-                  snprintf(&string->data[string->length],length,formatToken.token,data.i);
+                  snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
+                  string->length += length; 
+                  UPDATE_VALID(string);
                 }
               }
               break;
@@ -443,7 +450,9 @@ LOCAL void formatString(struct __String *string,
                 else
                 {
                   ensureStringLength(string,string->length+length+1);
-                  snprintf(&string->data[string->length],length,formatToken.token,data.l);
+                  snprintf(&string->data[string->length],length+1,formatToken.token,data.l);
+                  string->length += length; 
+                  UPDATE_VALID(string);
                 }
               }
               break;
@@ -459,7 +468,9 @@ LOCAL void formatString(struct __String *string,
                   else
                   {
                     ensureStringLength(string,string->length+length+1);
-                    snprintf(&string->data[string->length],length,formatToken.token,data.ll);
+                    snprintf(&string->data[string->length],length+1,formatToken.token,data.ll);
+                    string->length += length; 
+                    UPDATE_VALID(string);
                   }
                 #else /* not _LONG_LONG || HAVE_LONG_LONG */
                   HALT_INTERNAL_ERROR("long long not supported");
@@ -490,7 +501,9 @@ LOCAL void formatString(struct __String *string,
                 else
                 {
                   ensureStringLength(string,string->length+length+1);
-                  snprintf(&string->data[string->length],length,formatToken.token,data.ui);
+                  snprintf(&string->data[string->length],length+1,formatToken.token,data.ui);
+                  string->length += length; 
+                  UPDATE_VALID(string);
                 }
               }
               break;
@@ -505,7 +518,9 @@ LOCAL void formatString(struct __String *string,
                 else
                 {
                   ensureStringLength(string,string->length+length+1);
-                  snprintf(&string->data[string->length],length,formatToken.token,data.ul);
+                  snprintf(&string->data[string->length],length+1,formatToken.token,data.ul);
+                  string->length += length; 
+                  UPDATE_VALID(string);
                 }
               }
               break;
@@ -521,7 +536,9 @@ LOCAL void formatString(struct __String *string,
                   else
                   {
                     ensureStringLength(string,string->length+length+1);
-                    snprintf(&string->data[string->length],length,formatToken.token,data.ull);
+                    snprintf(&string->data[string->length],length+1,formatToken.token,data.ull);
+                    string->length += length; 
+                    UPDATE_VALID(string);
                   }
                 #else /* not _LONG_LONG || HAVE_LONG_LONG */
                   HALT_INTERNAL_ERROR("long long not supported");
@@ -552,7 +569,9 @@ LOCAL void formatString(struct __String *string,
           else
           {
             ensureStringLength(string,string->length+length+1);
-            snprintf(&string->data[string->length],length,formatToken.token,data.d);
+            snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
+            string->length += length; 
+            UPDATE_VALID(string);
           }
           break;
         case 's':
@@ -586,8 +605,10 @@ LOCAL void formatString(struct __String *string,
             else
             {
               ensureStringLength(string,string->length+length+1);
-              snprintf(&string->data[string->length],length,formatToken.token,data.d);
-            }
+              snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
+              string->length += length; 
+              UPDATE_VALID(string);
+           }
           }
           break;
         case 'p':
@@ -603,7 +624,9 @@ LOCAL void formatString(struct __String *string,
           else
           {
             ensureStringLength(string,string->length+length+1);
-            snprintf(&string->data[string->length],length,formatToken.token,data.p);
+            snprintf(&string->data[string->length],length+1,formatToken.token,data.p);
+            string->length += length; 
+            UPDATE_VALID(string);
           }
           break;
 
@@ -640,7 +663,9 @@ LOCAL void formatString(struct __String *string,
             else
             {
               ensureStringLength(string,string->length+length+1);
-              snprintf(&string->data[string->length],length,formatToken.token,String_cString(data.string));
+              snprintf(&string->data[string->length],length+1,formatToken.token,String_cString(data.string));
+              string->length += length; 
+              UPDATE_VALID(string);
             }
           }
           break;
@@ -730,7 +755,9 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           else
           {
             ensureStringLength(string,string->length+length+1);
-            snprintf(&string->data[string->length],length,formatToken.token);
+            snprintf(&string->data[string->length],length+1,formatToken.token);
+            string->length += length; 
+            UPDATE_VALID(string);
           }
           break;
       }
@@ -786,6 +813,8 @@ LOCAL bool parseString(const struct __String *string,
   ulong       z;
   const char  *stringQuote;
   bool        foundFlag;
+
+  CHECK_VALID(string);
 
   index = 0;
   while ((*format) != '\0')

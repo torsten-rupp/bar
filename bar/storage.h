@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -67,6 +67,13 @@ typedef enum
   STORAGE_TYPE_DEVICE
 } StorageTypes;
 
+typedef enum
+{
+  STORAGE_VOLUME_STATE_UNKNOWN,
+  STORAGE_VOLUME_STATE_UNLOADED,
+  STORAGE_VOLUME_STATE_LOADED,
+} StorageVolumeStates;
+
 typedef struct
 {
   ulong  max;
@@ -85,10 +92,12 @@ typedef struct
 
   StorageRequestVolumeFunction requestVolumeFunction;
   void                         *requestVolumeUserData;
-  StorageStatusInfoFunction    storageStatusInfoFunction;
-  void                         *storageStatusInfoUserData;
   uint                         volumeNumber;          
   uint                         requestedVolumeNumber; 
+  StorageVolumeStates          volumeState;
+
+  StorageStatusInfoFunction    storageStatusInfoFunction;
+  void                         *storageStatusInfoUserData;
 
   union
   {
@@ -106,9 +115,10 @@ typedef struct
       String           sshPublicKeyFileName;
       String           sshPrivatKeyFileName;
       Password         *sshPassword;
+
       SocketHandle     socketHandle;
-      LIBSSH2_CHANNEL  *channel;
-      StorageBandWidth bandWidth;
+      LIBSSH2_CHANNEL  *channel;                       // ssh channel
+      StorageBandWidth bandWidth;                      // band width data
     } ssh;
     // scp storage
     struct
@@ -119,9 +129,10 @@ typedef struct
       String           sshPublicKeyFileName;
       String           sshPrivatKeyFileName;
       Password         *sshPassword;
+
       SocketHandle     socketHandle;
-      LIBSSH2_CHANNEL  *channel;
-      StorageBandWidth bandWidth;
+      LIBSSH2_CHANNEL  *channel;                       // scp channel
+      StorageBandWidth bandWidth;                      // band width data
     } scp;
     // sftp storage
     struct
@@ -132,18 +143,19 @@ typedef struct
       String              sshPublicKeyFileName;
       String              sshPrivatKeyFileName;
       Password            *sshPassword;
+
       SocketHandle        socketHandle;
-      LIBSSH2_SFTP        *sftp;
-      LIBSSH2_SFTP_HANDLE *sftpHandle;
-      uint64              index;
-      uint64              size;
+      LIBSSH2_SFTP        *sftp;                       // sftp session
+      LIBSSH2_SFTP_HANDLE *sftpHandle;                 // sftp handle
+      uint64              index;                       // 
+      uint64              size;                        // size of file [bytes]
       struct
       {
         byte   *data;
         uint64 offset;
         ulong  length;
       } readAheadBuffer;
-      StorageBandWidth    bandWidth;
+      StorageBandWidth bandWidth;                      // band width data
     } sftp;
     // dvd storage
     struct
@@ -166,14 +178,16 @@ typedef struct
     // device storage
     struct
     {
-      Device     device;
+      Device     device;                               // device name
       String     name;
       String     directory;
-      uint       volumeNumber;
-      StringList fileNameList;
-      String     fileName;
+//      uint       volumeNumber;
+
+      StringList fileNameList;                         // list with file names
+
+      String     fileName;                             // current file name
       FileHandle fileHandle;
-      uint64     totalSize;
+      uint64     totalSize;                            // current size [bytes]
     } device;
   };
 
@@ -192,14 +206,15 @@ typedef struct
     struct
     {
       String              pathName;
+
       SocketHandle        socketHandle;
       LIBSSH2_SESSION     *session;
       LIBSSH2_CHANNEL     *channel;
       LIBSSH2_SFTP        *sftp;
       LIBSSH2_SFTP_HANDLE *sftpHandle;
-      char                *buffer;          // buffer for reading file names
+      char                *buffer;                     // buffer for reading file names
       ulong               bufferLength;
-      bool                entryReadFlag;    // TRUE if entry read
+      bool                entryReadFlag;               // TRUE if entry read
     } sftp;
     struct
     {

@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -66,7 +66,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
   switch (commandLineOption->type)
   {
     case CMD_OPTION_TYPE_INTEGER:
-      assert(commandLineOption->variable.n != NULL);
+      assert(commandLineOption->variable.i != NULL);
 
       /* split number, unit */
       i = strlen(value);
@@ -111,15 +111,15 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
 
       /* calculate value */
-      (*commandLineOption->variable.n) = strtoll(value,NULL,0)*factor;
+      (*commandLineOption->variable.i) = strtol(value,NULL,0)*factor;
 
       /* check range */
-      if (   ((*commandLineOption->variable.n) < commandLineOption->integerOption.min)
-          || ((*commandLineOption->variable.n) > commandLineOption->integerOption.max)
+      if (   ((*commandLineOption->variable.i) < commandLineOption->integerOption.min)
+          || ((*commandLineOption->variable.i) > commandLineOption->integerOption.max)
          )
       {
         if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                               "%sValue '%s' out range %d..%d for option '%s%s'!\n",
+                                               "%sValue '%s' out of range %d..%d for option '%s%s'!\n",
                                                (errorPrefix != NULL)?errorPrefix:"",
                                                value,
                                                commandLineOption->integerOption.min,
@@ -176,14 +176,14 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
 
       /* calculate value */
-      (*commandLineOption->variable.n) = strtoll(value,NULL,0)*factor;
+      (*commandLineOption->variable.l) = strtoll(value,NULL,0)*factor;
 
-      if (   ((*commandLineOption->variable.n) < commandLineOption->integer64Option.min)
-          || ((*commandLineOption->variable.n) > commandLineOption->integer64Option.max)
+      if (   ((*commandLineOption->variable.l) < commandLineOption->integer64Option.min)
+          || ((*commandLineOption->variable.l) > commandLineOption->integer64Option.max)
          )
       {
         if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                               "%sValue '%s' out range %lld..%lld for option '%s%s'!\n",
+                                               "%sValue '%s' out of range %lld..%lld for option '%s%s'!\n",
                                                (errorPrefix != NULL)?errorPrefix:"",
                                                value,
                                                commandLineOption->integer64Option.min,
@@ -245,7 +245,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
          )
       {
         if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                               "%sValue '%s' out range %lf..%lf for float option '%s%s'!\n",
+                                               "%sValue '%s' out of range %lf..%lf for float option '%s%s'!\n",
                                                (errorPrefix != NULL)?errorPrefix:"",
                                                value,
                                                commandLineOption->doubleOption.min,
@@ -372,8 +372,8 @@ bool CmdOption_init(const CommandLineOption commandLineOptions[],
     switch (commandLineOptions[i].type)
     {
       case CMD_OPTION_TYPE_INTEGER:
-        assert(commandLineOptions[i].variable.n != NULL);
-        (*commandLineOptions[i].variable.n) = commandLineOptions[i].defaultValue.n;
+        assert(commandLineOptions[i].variable.i != NULL);
+        (*commandLineOptions[i].variable.i) = commandLineOptions[i].defaultValue.i;
         break;
       case CMD_OPTION_TYPE_INTEGER64:
         assert(commandLineOptions[i].variable.l != NULL);
@@ -931,17 +931,17 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             {
               fprintf(outputHandle," (<= %d",commandLineOptions[i].integerOption.max);
             }
-            if (commandLineOptions[i].defaultValue.n != 0)
+            if (commandLineOptions[i].defaultValue.i != 0)
             {
-              fprintf(outputHandle,", default: %d",commandLineOptions[i].defaultValue.n);
+              fprintf(outputHandle,", default: %d",commandLineOptions[i].defaultValue.i);
             }
             fprintf(outputHandle,")");
           }
           else 
           {
-            if (commandLineOptions[i].defaultValue.n != 0)
+            if (commandLineOptions[i].defaultValue.i != 0)
             {
-              fprintf(outputHandle," (default: %d)",commandLineOptions[i].defaultValue.n);
+              fprintf(outputHandle," (default: %d)",commandLineOptions[i].defaultValue.i);
             }
           }
           break;

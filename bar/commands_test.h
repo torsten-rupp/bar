@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -54,10 +54,10 @@
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_test(StringList    *fileNameList,
-                    PatternList   *includeList,
-                    PatternList   *excludeList,
-                    const Options *options
+Errors Command_test(StringList  *fileNameList,
+                    PatternList *includeList,
+                    PatternList *excludeList,
+                    Options     *options
                    );
 
 #ifdef __cplusplus

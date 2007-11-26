@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -36,10 +36,10 @@ typedef enum
 typedef struct
 {
   ExecuteMacroTypes type;
-  const char *name;
-  int        i;
-  int64      l;
-  String     string;
+  const char        *name;
+  int               i;
+  int64             l;
+  String            string;
 } ExecuteMacro;
 
 typedef void(*ExecuteIOFunction)(void         *userData,
@@ -80,6 +80,8 @@ uint64 Misc_getTimestamp(void);
 
 void Misc_udelay(uint64 time);
 
+/*---------------------------------------------------------------------*/
+
 /***********************************************************************\
 * Name   : Misc_executeCommand
 * Purpose: execute external command
@@ -102,6 +104,19 @@ Errors Misc_executeCommand(const char         *commandTemplate,
                            const char         *infoText,
                            ...
                           );
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Misc_waitEnter
+* Purpose: wait until user press ENTER
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_waitEnter(void);
 
 #ifdef __cplusplus
   }

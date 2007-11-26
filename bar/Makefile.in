@@ -1,9 +1,7 @@
 # ----------------------------------------------------------------------------
 #
-# aicas GmbH, Karlsruhe
-#
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -50,7 +48,7 @@ TAR        = tar
 #------------------------ specific variables/settings ------------------------
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 01
+VERSION_MINOR = 02
 
 CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
@@ -58,7 +56,7 @@ COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bz
 CRYPT=none
 COMPRESS=none
 
-TEST_PASSWORD=franz_kafka
+TEST_PASSWORD=Franz_Kafka:Die_Verwandlung
 
 DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 
@@ -153,7 +151,7 @@ clean:
 	$(RMF) $(TLS_FILES)
 	$(RMRF) $(DISTRIBUTION_NAME)
 	$(RMF) $(DISTRIBUTION_NAME).tgz
-	$(MAKE) -C tcl clean
+	$(MAKE) -C tcl/scanx clean
 
 distclean: clean
 	$(RMF) Makefile Makefile.depend
@@ -229,8 +227,8 @@ destroyer@EXEEXT@: $(DESTROYER_OBJECTS)
 # create BAR frontend
 barcontrol.tcl: tcl/libscanx.so
 
-tcl/libscanx.so: tcl/scanx.c
-	$(MAKE) -C tcl $(@F)
+tcl/libscanx.so: tcl/scanx/scanx.c
+	$(MAKE) -C tcl/scanx $(@F)
 
 # install/uninstall
 .PHONY: install uninstall
@@ -246,7 +244,8 @@ install:
 	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(TLS_DIR)/certs"
 	if test ! -d "$(DESTDIR)$(TLS_DIR)/private"; then $(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"; fi
 	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(TLS_DIR)/private"
-	$(MAKE) -C tcl install
+	$(MAKE) -C tcl/scanx install
+	$(MAKE) -C tcl/mclistbox install
 
 uinstall:
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"
@@ -308,21 +307,21 @@ test_all: bar
 .PHONY: standard_test
 standard_test: bar
 	$(RMRF) test/test*.bar test/restore
-	./bar -c test/$(BAR_FILE) test/data $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -c test/$(BAR_FILE) test/data $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	./bar -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -c test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -x test/test*.bar $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
 
 .PHONY: standard_test_destroy
 standard_test_destroy: bar destroyer
 	$(RMRF) test/test*.bar test/restore
-	./bar -c test/$(BAR_FILE) test/data/zero1024.dat $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -c test/$(BAR_FILE) test/data/zero1024.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	./destroyer test/test.bar m:0 > test/test.bar_destroyed
 	./bar -l test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -t test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -c test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	./bar -d test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -x test/test.bar_destroyed $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
 
@@ -330,7 +329,7 @@ standard_test_destroy: bar destroyer
 dist: $(DISTRIBUTION_NAME).tgz
 
 $(DISTRIBUTION_NAME).tgz:
-	$(MKDIR) $(DISTRIBUTION_NAME)
+	$(INSTALL) -d $(DISTRIBUTION_NAME)
 	$(CP) \
           $(sort $(BAR_SOURCES) \
                  $(patsubst %.c,%.h,$(BAR_SOURCES)) \
@@ -344,130 +343,24 @@ $(DISTRIBUTION_NAME).tgz:
                  config.h.in \
                  ToDo \
                  README \
+                 ChangeLog \
           ) \
           $(DISTRIBUTION_NAME)
-	$(MKDIR) $(DISTRIBUTION_NAME)/bin
-	$(CP) bin/config.guess bin/config.sub bin/install-sh $(DISTRIBUTION_NAME)/bin
-	$(MKDIR) $(DISTRIBUTION_NAME)/bitmaps
-	$(CP) bitmaps/*.gif $(DISTRIBUTION_NAME)/bitmaps
-	$(MKDIR) $(DISTRIBUTION_NAME)/ssl
-	$(CP) ssl/*.tmpl $(DISTRIBUTION_NAME)/ssl
-	$(MKDIR) $(DISTRIBUTION_NAME)/tcl
-	$(CP) tcl/Makefile tcl/*.c tcl/*.tcl $(DISTRIBUTION_NAME)/tcl
-	$(MKDIR) $(DISTRIBUTION_NAME)/misc
-	$(CP) misc/*.patch $(DISTRIBUTION_NAME)/misc
+	$(INSTALL) -d $(DISTRIBUTION_NAME)/bin
+	$(INSTALL) bin/config.guess bin/config.sub bin/install-sh $(DISTRIBUTION_NAME)/bin
+	$(INSTALL) -d $(DISTRIBUTION_NAME)/bitmaps
+	$(INSTALL) bitmaps/*.gif $(DISTRIBUTION_NAME)/bitmaps
+	$(INSTALL) -d $(DISTRIBUTION_NAME)/ssl
+	$(INSTALL) ssl/*.tmpl $(DISTRIBUTION_NAME)/ssl
+	$(INSTALL) -d $(DISTRIBUTION_NAME)/tcl/scanx
+	$(INSTALL) tcl/scanx/Makefile tcl/scanx/*.c tcl/scanx/*.tcl $(DISTRIBUTION_NAME)/tcl/scanx
+	$(INSTALL) -d $(DISTRIBUTION_NAME)/tcl/mclistbox
+	$(INSTALL) tcl/mclistbox/mclistbox.tcl $(DISTRIBUTION_NAME)/tcl/mclistbox
+	$(INSTALL) -d $(DISTRIBUTION_NAME)/misc
+	$(INSTALL) misc/*.patch $(DISTRIBUTION_NAME)/misc
 	$(TAR) cjf $@ $(DISTRIBUTION_NAME)
 	$(RMRF) $(DISTRIBUTION_NAME)
 
 -include Makefile.depend
 
-# --------------------------------------------------
-
-.PHONY: p0 pack0 l0 list0 r0 restore0 t0 c0 compare0
-p0 pack0: bar
-	./bar -c data/data.bar demo/1.dat --compress-algorithm=$(COMPRESS) --crypt-algorithm=$(CRYPT) --crypt-password=test
-
-l0 list0: bar
-	./bar -l data/data.bar --crypt-password=test
-
-r0 restore0: bar
-	./bar --directory data/restore -x data/data.bar --crypt-password=test
-
-t0 c0 compare0: bar
-	./bar -t data/data.bar --crypt-password=test
-
-.PHONY: p1 pack1 l1 list1 r1 restore1 t1 c1 compare1
-p1 pack1: bar
-	./bar -c data/data.bar demo --compress-algorithm=$(COMPRESS) --crypt-algorithm=$(CRYPT) --crypt-password=test
-
-l1 list1: bar
-	./bar -l data/data.bar --crypt-password=test
-
-r1 restore1: bar
-	./bar  -x data/data.bar --directory data/restore --crypt-password=test
-
-t1 c1 compare1: bar
-	./bar -t data/data.bar --crypt-password=test
-
-.PHONY: p2 pack2 l2 list2 r2 restore2
-p2 pack2: bar
-	./bar -c -s 1000000 data/data.bar demo --compress-algorithm=$(COMPRESS) --crypt-algorithm=$(CRYPT) --crypt-password=test
-
-l2 list2: bar
-	./bar -l data/data.bar.* --crypt-password=test
-
-r2 restore2:
-	./bar --directory data/restore -x data/data.bar.* --crypt-password=test
-
-t2 c2 compare2: bar
-	./bar -t data/data.bar.* --crypt-password=test
-
-.PHONY: p3 pack3
-p3 pack3: bar
-	./bar -a data/data.bar -c "demo/abc*.dat"
-
-clean_data:
-	$(RMF) test/test.bar*
-	$(RMRF) test/restore
-
-.PHONY: backup-home
-backup-tooru: bar
-	./bar \
-          -c scp:torsten@tooru.dyndns.org:backup-torsten-###.bar \
-          --ssh-port=49856 \
-          --compress-algorithm=bzip9 \
-          --crypt-algorithm=AES256 \
-          --crypt-password=franz \
-          -s 128M \
-          --max-tmp-size=256M \
-          --skip-unreadable \
-          -! /home/torsten/tmp \
-          -! /home/torsten/aicas \
-          -! /home/torsten/public \
-          -! /home/torsten/trash \
-          -! /home/torsten/other \
-          -! /home/torsten/Mail/trash \
-          -! "*.mpeg" -! "*.mov" -! "*.avi" -! "*.iso" \
-          /home/torsten
-
-backup-itzo: bar
-	./bar \
-          -c scp:torsten@it-zo.de:backup/backup-torsten-###.bar \
-          --ssh-port=2222 \
-          --compress-algorithm=bzip9 \
-          --crypt-algorithm=AES256 \
-          --crypt-password=franz \
-          -s 128M \
-          --max-tmp-size=256M \
-          --skip-unreadable \
-          --verbose=1 \
-          -! /home/torsten/tmp \
-          -! /home/torsten/aicas \
-          -! /home/torsten/public \
-          -! /home/torsten/trash \
-          -! /home/torsten/other \
-          -! /home/torsten/Mail/trash \
-          -! "*.mpeg" -! "*.mov" -! "*.avi" -! "*.iso" \
-          /home/torsten
-
-backup-dvd:
-	./bar \
-          -c dvd:backup-torsten-###.bar \
-          --compress-algorithm=bzip9 \
-          --crypt-algorithm=AES256 \
-          --crypt-password=franz \
-          -s 128M \
-          --max-tmp-size=256M \
-          --skip-unreadable \
-          --verbose=1 \
-          -! /home/torsten/tmp \
-          -! /home/torsten/aicas \
-          -! /home/torsten/public \
-          -! /home/torsten/trash \
-          -! /home/torsten/other \
-          -! /home/torsten/Mail/trash \
-          -! "*.mpeg" -! "*.mov" -! "*.avi" -! "*.iso" \
-          /home/torsten
-
-upload: bar
-	scp bar torsten@it-zo.de:
+# end of file

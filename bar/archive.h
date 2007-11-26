@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -57,7 +57,7 @@ typedef struct
 {
   ArchiveNewFileFunction archiveNewFileFunction;     // new archive file call back function
   void                   *archiveNewFileUserData;    // user data for new archive file call back function
-  const Options          *options;
+  Options                *options;
 
   uint                   blockLength;                /* block length for file entry/file
                                                         data (depend on used crypt
@@ -83,7 +83,7 @@ typedef struct
     FILE_MODE_WRITE,
   } mode;
 
-  CryptAlgorithms    cryptAlgorithm;                 // crypt algorithm for file entry
+  CryptAlgorithms    cryptAlgorithm;                 // crypt algorithm for entry
   uint               blockLength;                    /* block length for file entry/file
                                                         data (depend on used crypt
                                                         algorithm)
@@ -180,12 +180,6 @@ void Archive_doneAll(void);
 *                                   file 
 *          archiveNewFileUserData - user data for call back
 *          options                - option settings
-*          partSize               - part size (in bytes)
-*          archiveFileName        - archive file name                    
-*          compressAlgorithm      - compression algorithm to use         
-*          compressMinFileSize    - min. size of file to use compression 
-*          cryptAlgorithm         - crypt algorithm to use               
-*          password               - crypt password                       
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -194,7 +188,7 @@ void Archive_doneAll(void);
 Errors Archive_create(ArchiveInfo            *archiveInfo,
                       ArchiveNewFileFunction archiveNewFileFunction,
                       void                   *archiveNewFileUserData,
-                      const Options          *options
+                      Options                *options
                      );
 
 /***********************************************************************\
@@ -208,9 +202,9 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_open(ArchiveInfo   *archiveInfo,
-                    const String  archiveFileName,
-                    const Options *options
+Errors Archive_open(ArchiveInfo  *archiveInfo,
+                    const String archiveFileName,
+                    Options      *options
                    );
 
 /***********************************************************************\

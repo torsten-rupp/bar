@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -57,10 +57,10 @@
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_test(StringList    *archiveFileNameList,
-                    PatternList   *includePatternList,
-                    PatternList   *excludePatternList,
-                    const Options *options
+Errors Command_test(StringList  *archiveFileNameList,
+                    PatternList *includePatternList,
+                    PatternList *excludePatternList,
+                    Options     *options
                    )
 {
   byte             *archiveBuffer,*fileBuffer;

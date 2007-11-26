@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -200,7 +200,7 @@ void info(uint verboseLevel, const char *format, ...);
 void vinfo(uint verboseLevel, const char *format, va_list arguments);
 
 /***********************************************************************\
-* Name   : warning
+* Name   : printWarning
 * Purpose: output warning
 * Input  : text - format string (like printf)
 *          ...  - optional arguments (like printf)

@@ -6,10 +6,8 @@
 
 # ----------------------------------------------------------------------------
 #
-# aicas GmbH, Karlsruhe
-#
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all

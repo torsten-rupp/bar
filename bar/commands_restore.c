@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -144,7 +144,7 @@ LOCAL void updateStatusInfo(const RestoreInfo *restoreInfo)
 Errors Command_restore(StringList                *archiveFileNameList,
                        PatternList               *includePatternList,
                        PatternList               *excludePatternList,
-                       const Options             *options,
+                       Options                   *options,
                        RestoreStatusInfoFunction restoreStatusInfoFunction,
                        void                      *restoreStatusInfoUserData,
                        bool                      *abortRequestFlag
@@ -670,6 +670,8 @@ Errors Command_restore(StringList                *archiveFileNameList,
   String_delete(archiveFileName);
   FileFragmentList_done(&fileFragmentList);
   free(buffer);
+  String_delete(restoreInfo.statusInfo.fileName);
+  String_delete(restoreInfo.statusInfo.storageName);
 
   return restoreInfo.error;
 }

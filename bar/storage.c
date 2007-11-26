@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -38,18 +38,18 @@
 #define MAX_BUFFER_SIZE     (4*1024)
 #define MAX_FILENAME_LENGTH (4*1024)
 
-#define UNLOAD_VOLUME_DELAY_TIME 10000000LL /* [us] */
-#define LOAD_VOLUME_DELAY_TIME   10000000LL /* [us] */
+#define UNLOAD_VOLUME_DELAY_TIME (10LL*1000LL*1000LL) /* [us] */
+#define LOAD_VOLUME_DELAY_TIME   (10LL*1000LL*1000LL) /* [us] */
 
 #define MAX_CD_SIZE  (700LL*1024LL*1024LL)
 #define MAX_DVD_SIZE (4613734LL*1024LL)
 
 #define DVD_VOLUME_SIZE            MAX_DVD_SIZE
 #define DVD_VOLUME_ECC_SIZE        (3600LL*1024LL*1024LL)
-#define DVD_UNLOAD_VOLUME_COMMAND  "sh -c \"echo eject -r %device\""
-#define DVD_LOAD_VOLUME_COMMAND    "sh -c \"echo eject -t %device\""
-#define DVD_WRITE_COMMAND          "sh -c \"echo growisofs -r -Z %device -A BAR -V Backup -volset %number -quiet %file\""
-#define DVD_IMAGE_COMMAND          "mkisofs -v -V Backup -volset %number -o %image %file"
+#define DVD_UNLOAD_VOLUME_COMMAND  "eject -r %device"
+#define DVD_LOAD_VOLUME_COMMAND    "eject -t %device"
+#define DVD_WRITE_COMMAND          "growisofs -Z %device -A BAR -V Backup -volset %number -r %file\""
+#define DVD_IMAGE_COMMAND          "mkisofs -V Backup -volset %number -r -o %image %file"
 #define DVD_ECC_COMMAND            "dvdisaster -mRS02 -n dvd -c -i %image -v"
 #define DVD_WRITE_IMAGE_COMMAND    "growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload"
 
@@ -69,6 +69,27 @@ LOCAL Password *defaultSSHPassword;
 #endif
 
 /***********************************************************************\
+* Name   : updateStatusInfo
+* Purpose: update status info
+* Input  : storageStatusInfo - storage status info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateStatusInfo(const StorageFileHandle *storageFileHandle)
+{
+  assert(storageFileHandle != NULL);
+
+  if (storageFileHandle->storageStatusInfoFunction != NULL)
+  {
+    storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,
+                                                 &storageFileHandle->runningInfo
+                                                );
+  }
+}
+
+/***********************************************************************\
 * Name   : initSSHPassword
 * Purpose: init ssh password
 * Input  : -
@@ -80,40 +101,11 @@ LOCAL Password *defaultSSHPassword;
 #ifdef HAVE_SSH2
 LOCAL bool initSSHPassword(const Options *options)
 {
-  const char *sshAskPassword;
-
   assert(options != NULL);
 
   if (options->defaultSSHServer.password == NULL)
   {
-    if ((sshAskPassword = getenv("SSH_ASKPASS")) != NULL)
-    {
-      /* call external password program */
-      FILE *inputHandle;
-      int  ch;
-
-      /* open pipe to external password program */
-      inputHandle = popen(sshAskPassword,"r");
-      if (inputHandle == NULL)
-      {
-        return FALSE;
-      }
-
-      /* read password, discard last LF */
-      while ((ch = getc(inputHandle) != EOF) && ((char)ch != '\n'))
-      {
-        Password_appendChar(defaultSSHPassword,(char)ch);
-      }
-
-      /* close pipe */
-      pclose(inputHandle);
-
-      return (Password_length(defaultSSHPassword) > 0);
-    }
-    else 
-    {
-      return FALSE;
-    }
+    return Password_input(defaultSSHPassword,"SSH login password");
   }
   else
   {
@@ -200,6 +192,219 @@ fprintf(stderr,"%s,%d: == averageBandWidth=%lu storageBandWidth->max=%lu deleta=
 }
 
 /***********************************************************************\
+* Name   : requestNewDVD
+* Purpose: request new dvd
+* Input  : storageFileHandle - storage file handle
+*          waitFlag          - TRUE to wait for new dvd
+* Output : -
+* Return : TRUE if new dvd loaded, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
+{
+  ExecuteMacro executeMacros[2];
+  const char   *command;
+  bool         dvdRequestedFlag,dvdLoadedFlag;
+
+  executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%device"; executeMacros[0].string = storageFileHandle->device.name;
+  executeMacros[1].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[1].name = "%number"; executeMacros[1].i      = storageFileHandle->requestedVolumeNumber;
+
+  if (storageFileHandle->volumeState != STORAGE_VOLUME_STATE_UNLOADED)
+  {
+    /* sleep a short time to give hardware time for finishing volume, then unload current volume */
+    Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
+    command = (storageFileHandle->dvd.device.unloadVolumeCommand != NULL)?String_cString(storageFileHandle->dvd.device.unloadVolumeCommand):DVD_UNLOAD_VOLUME_COMMAND;
+    Misc_executeCommand(command,
+                        executeMacros,SIZE_OF_ARRAY(executeMacros),
+                        NULL,
+                        NULL,
+                        NULL,
+                        "Unload DVD #%d",storageFileHandle->volumeNumber
+                       );
+
+    storageFileHandle->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
+  }
+
+  /* request new dvd */
+  dvdRequestedFlag = FALSE;
+  dvdLoadedFlag    = FALSE;
+  if      (storageFileHandle->requestVolumeFunction != NULL)
+  {
+    dvdRequestedFlag = TRUE;
+
+    /* request new volume via call back */
+    dvdLoadedFlag = storageFileHandle->requestVolumeFunction(storageFileHandle->requestVolumeUserData,
+                                                             storageFileHandle->requestedVolumeNumber
+                                                            );
+  }
+  else if (storageFileHandle->dvd.device.requestVolumeCommand != NULL)
+  {
+    dvdRequestedFlag = TRUE;
+
+    /* request new volume via external command */
+    dvdLoadedFlag = (Misc_executeCommand(String_cString(storageFileHandle->dvd.device.unloadVolumeCommand),
+                                          executeMacros,SIZE_OF_ARRAY(executeMacros),
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          "Request new DVD #%d",storageFileHandle->requestedVolumeNumber
+                                         ) == ERROR_NONE
+                     );
+  }
+  else
+  {
+    info(0,"Please insert DVD #%d\n",storageFileHandle->requestedVolumeNumber);
+    if (waitFlag)
+    {
+      dvdRequestedFlag = TRUE;
+
+      info(0,"<<press ENTER to continue>>\n");
+      Misc_waitEnter();
+
+      dvdLoadedFlag = TRUE;
+    }
+  }
+
+  if (dvdRequestedFlag)
+  {
+    if (dvdLoadedFlag)
+    {
+      /* load volume, then sleep a short time to give hardware time for reading volume information */
+      command = (storageFileHandle->dvd.device.loadVolumeCommand != NULL)?String_cString(storageFileHandle->dvd.device.loadVolumeCommand):DVD_LOAD_VOLUME_COMMAND;
+      Misc_executeCommand(command,
+                          executeMacros,SIZE_OF_ARRAY(executeMacros),
+                          NULL,
+                          NULL,
+                          NULL,
+                          "Load DVD #%d",storageFileHandle->requestedVolumeNumber
+                         );
+      Misc_udelay(LOAD_VOLUME_DELAY_TIME);
+
+      /* store new volume number */
+      storageFileHandle->volumeNumber = storageFileHandle->requestedVolumeNumber;
+
+      /* update status info */
+      storageFileHandle->runningInfo.volumeNumber = storageFileHandle->volumeNumber;
+      updateStatusInfo(storageFileHandle);
+
+      storageFileHandle->volumeState = STORAGE_VOLUME_STATE_LOADED;
+    }
+    else
+    {
+      return ERROR_LOAD_VOLUME_FAIL;
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : requestNewVolume
+* Purpose: request new volume
+* Input  : storageFileHandle - storage file handle
+*          waitFlag          - TRUE to wait for new volume
+* Output : -
+* Return : TRUE if new volume loaded, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFlag)
+{
+  ExecuteMacro executeMacros[2];
+  bool         volumeRequestedFlag,volumeLoadedFlag;
+
+  executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%device"; executeMacros[0].string = storageFileHandle->device.name;
+  executeMacros[1].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[1].name = "%number"; executeMacros[1].i      = storageFileHandle->requestedVolumeNumber;
+
+  if (storageFileHandle->volumeState != STORAGE_VOLUME_STATE_UNLOADED)
+  {
+    /* sleep a short time to give hardware time for finishing volume; unload current volume */
+    Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
+    Misc_executeCommand(String_cString(storageFileHandle->dvd.device.unloadVolumeCommand),
+                        executeMacros,SIZE_OF_ARRAY(executeMacros),
+                        NULL,
+                        NULL,
+                        NULL,
+                        "Unload volume #%d",storageFileHandle->volumeNumber
+                       );
+
+    storageFileHandle->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
+  }
+
+  /* request new volume */
+  volumeRequestedFlag = FALSE;
+  volumeLoadedFlag    = FALSE;
+  if      (storageFileHandle->requestVolumeFunction != NULL)
+  {
+    volumeRequestedFlag = TRUE;
+
+    /* request new volume via call back */
+    volumeLoadedFlag = storageFileHandle->requestVolumeFunction(storageFileHandle->requestVolumeUserData,
+                                                                storageFileHandle->requestedVolumeNumber
+                                                               );
+  }
+  else if (storageFileHandle->dvd.device.requestVolumeCommand != NULL)
+  {
+    volumeRequestedFlag = TRUE;
+
+    /* request new volume via external command */
+    volumeLoadedFlag = (Misc_executeCommand(String_cString(storageFileHandle->dvd.device.loadVolumeCommand),
+                                            executeMacros,SIZE_OF_ARRAY(executeMacros),
+                                            NULL,
+                                            NULL,
+                                            NULL,
+                                            "Request new volume #%d",storageFileHandle->requestedVolumeNumber
+                                           ) == ERROR_NONE
+                       );
+  }
+  else
+  {
+    info(0,"Please insert volume #%d\n",storageFileHandle->requestedVolumeNumber);
+    if (waitFlag)
+    {
+      volumeRequestedFlag = TRUE;
+
+      info(0,"<<press ENTER to continue>>\n");
+      Misc_waitEnter();
+
+      volumeLoadedFlag = TRUE;
+    }
+  }
+
+  if (volumeRequestedFlag)
+  {
+    if (volumeLoadedFlag)
+    {
+      /* load volume; sleep a short time to give hardware time for reading volume information */
+      Misc_executeCommand(String_cString(storageFileHandle->dvd.device.loadVolumeCommand),
+                          executeMacros,SIZE_OF_ARRAY(executeMacros),
+                          NULL,
+                          NULL,
+                          NULL,
+                          "Load volume #%d",storageFileHandle->requestedVolumeNumber
+                         );
+      Misc_udelay(LOAD_VOLUME_DELAY_TIME);
+
+      /* store new volume number */
+      storageFileHandle->volumeNumber = storageFileHandle->requestedVolumeNumber;
+
+      /* update status info */
+      storageFileHandle->runningInfo.volumeNumber = storageFileHandle->volumeNumber;
+      updateStatusInfo(storageFileHandle);
+
+      storageFileHandle->volumeState = STORAGE_VOLUME_STATE_LOADED;
+    }
+    else
+    {
+      return ERROR_LOAD_VOLUME_FAIL;
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : processIOmkisofs
 * Purpose: process mkisofs output
 * Input  : storageFileHandle - storage file handle variable
@@ -221,13 +426,8 @@ LOCAL void processIOmkisofs(StorageFileHandle *storageFileHandle,
   {
 //fprintf(stderr,"%s,%d: mkisofs: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
     storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->dvd.step*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
-
-    if (storageFileHandle->storageStatusInfoFunction != NULL)
-    {
-      storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
-    }
+    updateStatusInfo(storageFileHandle);
   }
   String_delete(s);
 }
@@ -254,25 +454,15 @@ LOCAL void processIOdvdisaster(StorageFileHandle *storageFileHandle,
   {
 //fprintf(stderr,"%s,%d: dvdisaster1: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
     storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->dvd.step+0)*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
-
-    if (storageFileHandle->storageStatusInfoFunction != NULL)
-    {
-      storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
-    }
+    updateStatusInfo(storageFileHandle);
   }
   if (String_match(line,".*generation: +([0-9\\.]+)%",NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: dvdisaster2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
     storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->dvd.step+1)*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
-
-    if (storageFileHandle->storageStatusInfoFunction != NULL)
-    {
-      storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
-    }
+    updateStatusInfo(storageFileHandle);
   }
 
   String_delete(s);
@@ -300,13 +490,8 @@ LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
   {
 //fprintf(stderr,"%s,%d: growisofs2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
     storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->dvd.step*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
-
-    if (storageFileHandle->storageStatusInfoFunction != NULL)
-    {
-      storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
-    }
+    updateStatusInfo(storageFileHandle);
   }
   String_delete(s);
 }
@@ -606,6 +791,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   storageFileHandle->storageStatusInfoUserData = storageStatusInfoUserData;
   storageFileHandle->volumeNumber              = 0;
   storageFileHandle->requestedVolumeNumber     = 0;
+  storageFileHandle->volumeState               = STORAGE_VOLUME_STATE_UNKNOWN;
 
   storageSpecifier = String_new();
   switch (Storage_getType(storageName,storageSpecifier))
@@ -772,7 +958,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
         /* init variables */
         storageFileHandle->type             = STORAGE_TYPE_DVD;
-        StringList_init(&storageFileHandle->device.fileNameList);
+        StringList_init(&storageFileHandle->dvd.fileNameList);
         storageFileHandle->dvd.name         = deviceName;
         storageFileHandle->dvd.steps        = options->errorCorrectionCodesFlag?4:1;
         storageFileHandle->dvd.directory    = String_new();
@@ -841,7 +1027,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         StringList_init(&storageFileHandle->device.fileNameList);
         storageFileHandle->device.name         = deviceName;
         storageFileHandle->device.directory    = String_new();
-        storageFileHandle->device.volumeNumber = 0;
         storageFileHandle->device.fileName     = String_new();
         storageFileHandle->device.totalSize    = 0LL;
 
@@ -969,6 +1154,8 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
 
 Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
 {
+  Errors error;
+
   assert(storageFileHandle != NULL);
 
   switch (storageFileHandle->type)
@@ -988,101 +1175,25 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
+      /* check if new dvd is required */
+      if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
       {
-        ExecuteMacro executeMacros[2];
-        const char   *command;
-        bool         volumeLoadedFlag;
-
-        /* check if new volume is required */
-        if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
+        /* request load new DVD */
+        error = requestNewDVD(storageFileHandle,FALSE);
+        if (error != ERROR_NONE)
         {
-          executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%device"; executeMacros[0].string = storageFileHandle->device.name;
-          executeMacros[1].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[1].name = "%number"; executeMacros[1].i      = storageFileHandle->requestedVolumeNumber;
-
-          /* sleep a short time to give hardware time for finishing volume, then unload current volume */
-          Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
-          command = (storageFileHandle->dvd.device.unloadVolumeCommand != NULL)?String_cString(storageFileHandle->dvd.device.unloadVolumeCommand):DVD_UNLOAD_VOLUME_COMMAND;
-          Misc_executeCommand(command,executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Unload DVD");
-
-          /* request new volume */
-          if      (storageFileHandle->requestVolumeFunction != NULL)
-          {
-            /* request new volume via call back */
-            volumeLoadedFlag = storageFileHandle->requestVolumeFunction(storageFileHandle->requestVolumeUserData,
-                                                                        storageFileHandle->requestedVolumeNumber
-                                                                       );
-          }
-          else if (storageFileHandle->dvd.device.requestVolumeCommand != NULL)
-          {
-            /* request new volume via external command */
-            volumeLoadedFlag = (Misc_executeCommand(String_cString(storageFileHandle->dvd.device.unloadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Request new DVD") == ERROR_NONE);
-          }
-          else
-          {
-            volumeLoadedFlag = FALSE;
-          }
-
-          /* load volume, then sleep a short time to give hardware time for reading volume information */
-          command = (storageFileHandle->dvd.device.loadVolumeCommand != NULL)?String_cString(storageFileHandle->dvd.device.unloadVolumeCommand):DVD_UNLOAD_VOLUME_COMMAND;
-          Misc_executeCommand(command,executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Load DVD");
-          Misc_udelay(LOAD_VOLUME_DELAY_TIME);
-
-          if (volumeLoadedFlag)
-          {
-            storageFileHandle->volumeNumber = storageFileHandle->requestedVolumeNumber;
-          }
-          else
-          {
-            return ERROR_LOAD_VOLUME_FAIL;
-          }
+          return error;
         }
       }
       break;
     case STORAGE_TYPE_DEVICE:
+      /* check if new volume is required */
+      if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
       {
-        ExecuteMacro executeMacros[2];
-        bool         volumeLoadedFlag;
-
-        /* check if new volume is required */
-        if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
+        error = requestNewVolume(storageFileHandle,FALSE);
+        if (error != ERROR_NONE)
         {
-          executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%device"; executeMacros[0].string = storageFileHandle->device.name;
-          executeMacros[1].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[1].name = "%number"; executeMacros[1].i      = storageFileHandle->requestedVolumeNumber;
-
-          /* sleep a short time to give hardware time for finishing volume; unload current volume */
-          Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
-          Misc_executeCommand(String_cString(storageFileHandle->dvd.device.unloadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Unload volume");
-
-          /* request new volume */
-          if      (storageFileHandle->requestVolumeFunction != NULL)
-          {
-            /* request new volume via call back */
-            volumeLoadedFlag = storageFileHandle->requestVolumeFunction(storageFileHandle->requestVolumeUserData,
-                                                                        storageFileHandle->requestedVolumeNumber
-                                                                       );
-          }
-          else if (storageFileHandle->dvd.device.requestVolumeCommand != NULL)
-          {
-            /* request new volume via external command */
-            volumeLoadedFlag = (Misc_executeCommand(String_cString(storageFileHandle->dvd.device.loadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Request new volume") == ERROR_NONE);
-          }
-          else
-          {
-            volumeLoadedFlag = FALSE;
-          }
-
-          /* load volume; sleep a short time to give hardware time for reading volume information */
-          Misc_executeCommand(String_cString(storageFileHandle->dvd.device.loadVolumeCommand),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Load volume");
-          Misc_udelay(LOAD_VOLUME_DELAY_TIME);
-
-          if (volumeLoadedFlag)
-          {
-            storageFileHandle->volumeNumber = storageFileHandle->requestedVolumeNumber;
-          }
-          else
-          {
-            return ERROR_LOAD_VOLUME_FAIL;
-          }
+          return ERROR_LOAD_VOLUME_FAIL;
         }
       }
       break;
@@ -1130,12 +1241,8 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
         if (finalFlag || (storageFileHandle->dvd.totalSize > storageFileHandle->dvd.volumeSize))
         {
           /* update info */
-          storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
           storageFileHandle->runningInfo.volumeProgress = 0.0;
-          if (storageFileHandle->storageStatusInfoFunction != NULL)
-          {
-            storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
-          }
+          updateStatusInfo(storageFileHandle);
 
           /* get temporary image file name */
           imageFileName = String_new();
@@ -1188,6 +1295,18 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               executeMacros[3].i = (ulong)(fileInfo.size/2048LL);
             }
 
+            /* check if new dvd is required */
+            if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
+            {
+              /* request load new DVD */
+              error = requestNewDVD(storageFileHandle,TRUE);
+              if (error != ERROR_NONE)
+              {
+                return error;
+              }
+              updateStatusInfo(storageFileHandle);
+            }
+
             /* write to DVD */
             if (error == ERROR_NONE)
             {
@@ -1204,6 +1323,18 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           }
           else
           {
+            /* check if new dvd is required */
+            if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
+            {
+              /* request load new DVD */
+              error = requestNewDVD(storageFileHandle,TRUE);
+              if (error != ERROR_NONE)
+              {
+                return error;
+              }
+              updateStatusInfo(storageFileHandle);
+            }
+
             /* write to DVD */
             if (error == ERROR_NONE)
             {
@@ -1230,12 +1361,8 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           String_delete(imageFileName);
 
           /* update info */
-          storageFileHandle->runningInfo.volumeNumber   = storageFileHandle->volumeNumber;
           storageFileHandle->runningInfo.volumeProgress = 1.0;
-          if (storageFileHandle->storageStatusInfoFunction != NULL)
-          {
-            storageFileHandle->storageStatusInfoFunction(storageFileHandle->storageStatusInfoUserData,&storageFileHandle->runningInfo);
-          }
+          updateStatusInfo(storageFileHandle);
 
           /* delete stored files */
           fileName = String_new();
@@ -1268,6 +1395,17 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
 
         if (finalFlag || (storageFileHandle->device.totalSize > storageFileHandle->device.device.volumeSize))
         {
+          /* check if new volume is required */
+          if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
+          {
+            error = requestNewVolume(storageFileHandle,TRUE);
+            if (error != ERROR_NONE)
+            {
+              return ERROR_LOAD_VOLUME_FAIL;
+            }
+            updateStatusInfo(storageFileHandle);
+          }
+
           /* get temporary image file name */
           imageFileName = String_new();
           error = File_getTmpFileName(storageFileHandle->options->tmpDirectory,imageFileName);
@@ -1280,7 +1418,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%device"; executeMacros[0].string = storageFileHandle->device.name;
           executeMacros[1].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[1].name = "%file";   executeMacros[1].string = storageFileHandle->device.directory;
           executeMacros[2].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[2].name = "%image";  executeMacros[2].string = imageFileName;
-          executeMacros[3].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[3].name = "%number"; executeMacros[3].i      = storageFileHandle->device.volumeNumber;
+          executeMacros[3].type = EXECUTE_MACRO_TYPE_INT;    executeMacros[3].name = "%number"; executeMacros[3].i      = storageFileHandle->volumeNumber;
 
           /* create image */
           if (error == ERROR_NONE) error = Misc_executeCommand(String_cString(storageFileHandle->device.device.imagePreProcessCommand ),executeMacros,SIZE_OF_ARRAY(executeMacros),NULL,NULL,NULL,"Make image pre-processing of volume #%d",storageFileHandle->volumeNumber);
@@ -1359,13 +1497,21 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
   assert(storageFileHandle != NULL);
   assert(fileName != NULL);
   assert(options != NULL);
-  
+
+  UNUSED_VARIABLE(options);
+
   /* init variables */
   storageFileHandle->mode = STORAGE_MODE_WRITE;
 
   switch (storageFileHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
+      /* check if archive file exists */
+      if (!options->overwriteArchiveFilesFlag && File_exists(fileName))
+      {
+        return ERROR_FILE_EXITS;
+      }
+
       /* open file */
       error = File_open(&storageFileHandle->fileSystem.fileHandle,
                         fileName,
@@ -1641,6 +1787,22 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
       #else /* not HAVE_SSH2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_DVD:
+      /* init variables */
+      /* open file */
+#if 0
+      error = File_open(&storageFileHandle->fileSystem.fileHandle,
+                        storageFileHandle->fileSystem.fileName,
+                        FILE_OPENMODE_READ
+                       );
+      if (error != ERROR_NONE)
+      {
+        String_delete(storageFileHandle->fileSystem.fileName);
+        String_delete(storageSpecifier);
+        return error;
+      }
+#endif /* 0 */
       break;
     case STORAGE_TYPE_DEVICE:
       /* init variables */

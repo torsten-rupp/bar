@@ -25,6 +25,8 @@ Requirements
 * gcrypt library
 * ssh2 library
 * long long datatype (because of large files)
+* external tools for DVD: mkisofs, dvdisaster, growisofs,
+  eject
 
 Installation
 

@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.16 $
+# $Revision: 1.17 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -83,6 +83,7 @@ set barConfig(sshPublicKeyFileName)            ""
 set barConfig(sshPrivatKeyFileName)            ""
 set barConfig(compressAlgorithm)               ""
 set barConfig(cryptAlgorithm)                  ""
+set barConfig(cryptPasswordMode)               "DEFAULT"
 set barConfig(cryptPassword)                   ""
 set barConfig(destinationDirectoryName)        ""
 set barConfig(destinationStripCount)           0
@@ -793,6 +794,45 @@ proc obfuscatePassword { password passwordObfuscator } \
       append password [format "%c" [expr {$n0^$n1}]]
     }
 #puts $password
+  }
+
+  return $password
+}
+
+#***********************************************************************
+# Name   : getPassword
+# Purpose: input password
+# Input  : title - title text
+# Output : -
+# Return : obfuscated password
+# Notes  : -
+#***********************************************************************
+
+proc getPassword { title obfuscateFlag } \
+{
+  global guiMode
+
+  if {!$guiMode} \
+  {
+    if {[info exists env(SSH_ASKPASS)]} \
+    {
+      set password [exec sh -c $env(SSH_ASKPASS)]
+    } \
+    else \
+    {
+      puts -nonewline stdout "$title: "; flush stdout
+      set password [exec sh -c "read -s password; echo \$password; unset password"]
+      puts ""
+    }
+  } \
+  else \
+  {
+    set password [Dialog:password "$title"]
+  }
+
+  if {$obfuscateFlag} \
+  {
+    set password [obfuscatePassword $password]
   }
 
   return $password
@@ -2631,7 +2671,7 @@ proc setConfigModify { args } \
 }
 
 #***********************************************************************
-# Name   : resetBarConfig
+# Name   : resetBARConfig
 # Purpose: reset bar config to default values
 # Input  : -
 # Output : -
@@ -2639,7 +2679,7 @@ proc setConfigModify { args } \
 # Notes  : -
 #***********************************************************************
 
-proc resetBarConfig {} \
+proc resetBARConfig {} \
 {
   global barConfig
 
@@ -2657,6 +2697,7 @@ proc resetBarConfig {} \
   set barConfig(sshPort)             0
   set barConfig(compressAlgorithm)   "bzip9"
   set barConfig(cryptAlgorithm)      "none"
+  set barConfig(cryptPasswordMode)   "NONE"
   set barConfig(cryptPassword)       ""
   clearConfigModify
 }
@@ -2779,7 +2820,7 @@ proc loadBARConfig { configFileName } \
   }
 
   # reset variables
-  resetBarConfig
+  resetBARConfig
   if {$guiMode} \
   {
     clearFileList $backupFilesTreeWidget
@@ -2911,6 +2952,22 @@ proc loadBARConfig { configFileName } \
     {
       # crypt-algorithm = <algorithm>
       set barConfig(cryptAlgorithm) $s
+      continue
+    }
+    if {[scanx $line "crypt-password-mode = %S" s] == 1} \
+    {
+      # crypt-password-mode = none|default|ask|config
+      if     {$s == "none"   } { set barConfig(cryptPasswordMode) "NONE"    } \
+      elseif {$s == "default"} { set barConfig(cryptPasswordMode) "DEFAULT" } \
+      elseif {$s == "ask"    } { set barConfig(cryptPasswordMode) "ASK"     } \
+      elseif {$s == "config" } { set barConfig(cryptPasswordMode) "CONFIG"  } \
+      else                     { set barConfig(cryptPasswordMode) "NONE"    }
+      continue
+    }
+    if {[scanx $line "crypt-password = %S" s] == 1} \
+    {
+      # crypt-password = <password>
+      set barConfig(cryptPassword) $s
       continue
     }
     if {[scanx $line "include = %S" s] == 1} \
@@ -3080,6 +3137,14 @@ proc saveBARConfig { configFileName } \
   puts $handle "ssh-privat-key = $barConfig(sshPrivatKeyFileName)"
   puts $handle "compress-algorithm = [escapeString $barConfig(compressAlgorithm)]"
   puts $handle "crypt-algorithm = [escapeString $barConfig(cryptAlgorithm)]"
+  switch $barConfig(cryptPasswordMode) \
+  {
+    "NONE"    { puts $handle "crypt-password-mode = none"    }
+    "DEFAULT" { puts $handle "crypt-password-mode = default" }
+    "ASK"     { puts $handle "crypt-password-mode = ask"     }
+    "CONFIG"  { puts $handle "crypt-password-mode = config"  }
+  }
+  puts $handle "crypt-password = [escapeString $barConfig(cryptPassword)]"
   puts $handle "volume-size = $barConfig(volumeSize)"
   foreach pattern [$backupIncludedListWidget get 0 end] \
   {
@@ -3375,6 +3440,22 @@ proc addBackupJob { jobListWidget } \
   BackupServer:executeCommand errorCode errorText "SET" "ssh-port"                $barConfig(sshPort)
   BackupServer:executeCommand errorCode errorText "SET" "compress-algorithm"      $barConfig(compressAlgorithm)
   BackupServer:executeCommand errorCode errorText "SET" "crypt-algorithm"         $barConfig(cryptAlgorithm)
+  switch $barConfig(cryptPasswordMode) \
+  {
+    "ASK" \
+    {
+      set password [getPassword "Crypt password" 0]
+      if {$password == ""} \
+      {
+        return
+      }
+      BackupServer:executeCommand errorCode errorText "SET" "crypt-password" $password
+    }
+    "CONFIG" \
+    {
+      BackupServer:executeCommand errorCode errorText "SET" "crypt-password" $barConfig(cryptPassword)
+    }
+  } 
   BackupServer:executeCommand errorCode errorText "SET" "volume-size"             $barConfig(volumeSize)
   BackupServer:executeCommand errorCode errorText "SET" "skip-unreadable"         $barConfig(skipUnreadableFlag)
   BackupServer:executeCommand errorCode errorText "SET" "overwrite-archive-files" $barConfig(overwriteArchiveFilesFlag)
@@ -3717,16 +3798,7 @@ if {![info exists tk_version] && !$guiMode} \
   # get password
   if {$barControlConfig(serverPassword) == ""} \
   {
-    if {[info exists env(SSH_ASKPASS)]} \
-    {
-      set barControlConfig(serverPassword) [obfuscatePassword [exec sh -c $env(SSH_ASKPASS)] $passwordObfuscator]
-    } \
-    else \
-    {
-      puts -nonewline stdout "Server password: "; flush stdout
-      set barControlConfig(serverPassword) [obfuscatePassword [exec sh -c "read -s password; echo \$password; unset password"] $passwordObfuscator]
-      puts ""
-    }
+    set barControlConfig(serverPassword) [getPassword "Server password" 1]
   }
 
   # connect to server
@@ -3917,7 +3989,7 @@ set images(linkExcluded) [image create photo -data \
 if {$barControlConfig(serverPassword) == ""} \
 {
   wm state . withdrawn
-  set barControlConfig(serverPassword) [obfuscatePassword [Dialog:password "Server password"] $passwordObfuscator]
+  set barControlConfig(serverPassword) [getPassword "Server password" 1]
 }
 
 # init main window
@@ -4420,8 +4492,19 @@ frame .backup
 
     label .backup.storage.cryptPasswordTitle -text "Password:"
     grid .backup.storage.cryptPasswordTitle -row 4 -column 0 -sticky "w" 
-    entry .backup.storage.cryptPassword -textvariable barConfig(cryptPassword) -bg white -show "*"
-    grid .backup.storage.cryptPassword -row 4 -column 1 -sticky "w" -padx 2p -pady 2p
+    frame .backup.storage.cryptPassword
+      radiobutton .backup.storage.cryptPassword.modeNone -text "none" -variable barConfig(cryptPasswordMode) -value "NONE"
+      pack .backup.storage.cryptPassword.modeNone -side left
+      radiobutton .backup.storage.cryptPassword.modeDefault -text "default" -variable barConfig(cryptPasswordMode) -value "DEFAULT"
+      pack .backup.storage.cryptPassword.modeDefault -side left
+      radiobutton .backup.storage.cryptPassword.modeAsk -text "ask" -variable barConfig(cryptPasswordMode) -value "ASK"
+      pack .backup.storage.cryptPassword.modeAsk -side left
+      radiobutton .backup.storage.cryptPassword.modeConfig -text "config" -variable barConfig(cryptPasswordMode) -value "CONFIG"
+      pack .backup.storage.cryptPassword.modeConfig -side left
+      entry .backup.storage.cryptPassword.data -textvariable barConfig(cryptPassword) -bg white -show "*"
+      pack .backup.storage.cryptPassword.data -side left -fill x -expand yes
+    grid .backup.storage.cryptPassword -row 4 -column 1 -sticky "we" -padx 2p -pady 2p
+    addEnableTrace ::barConfig(cryptPasswordMode) "CONFIG" .backup.storage.cryptPassword.data
 
     label .backup.storage.destinationTitle -text "Destination:"
     grid .backup.storage.destinationTitle -row 5 -column 0 -sticky "nw" 
@@ -5265,7 +5348,7 @@ bind . <<Event_new>> \
   if {[Dialog:confirm "New configuration?" "New" "Cancel"]} \
   {
     barConfigFileName
-    resetBarConfig
+    resetBARConfig
     clearConfigModify
   }
 }
@@ -5537,7 +5620,7 @@ updateCurrentJob
 addBackupDevice "/"
 
 # load config if given
-resetBarConfig
+resetBARConfig
 if {$configName != ""} { loadBARConfig $configName }
 
 #openCloseRestoreDirectory [fileNameToItemPath $restoreFilesTreeWidget "/home/torsten/projects/bar/test.bar" "/"]

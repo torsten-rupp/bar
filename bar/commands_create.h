@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -92,7 +92,7 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 Errors Command_create(const char                   *archiveFileName,
                       PatternList                  *includePatternList,
                       PatternList                  *excludePatternList,
-                      const Options                *options,
+                      Options                      *options,
                       CreateStatusInfoFunction     createStatusInfoFunction,
                       void                         *createStatusInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,

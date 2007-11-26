@@ -2,9 +2,14 @@
   * implemented DVD support
   * fixed ssh connections
   * implemented more functions in barcontrol.tcl
-  * added install for scanx
+  * added install for scanx, mclistbox.tcl (needed for barcontrol.tcl)
   * added config parser
   * added multiple server/device sections in config file
+  * WARNING: changed usage of crypt password: encryption
+    key is not filled with password anymore. Thus password
+    "foo" is now different from "foofoo".
+    Before upgrading BAR restore all archives!
+  * added input of ssh/crypt password if not specified in config
 
 2007-11-01 0.01
   * initial release

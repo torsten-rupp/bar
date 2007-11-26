@@ -3,10 +3,9 @@ ToDo
 - restore files with graphical frontend
 - check if file date/permission/owner/group is correct
 - internal pipeling of commands for e. g. repacking, remove/add encryption
-- passwort input for crypt password
 - support ssh-agent (extend libssh2?)
 - logfile
-- overwrite archive files check
 - incremental backups
-- dvd storage
 - ssl server: check common name? 
+- improve calculation for estimated rest time
+- improve password quality checker

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -354,9 +354,12 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
 
         /* set key */
         assert(sizeof(key) >= (keyLength+7)/8);
+        memset(key,0,sizeof(key));
         for (z = 0; z < (keyLength+7)/8; z++)
         {
-          key[z] = Password_getChar(password,z%passwordLength);
+// ??? alte version!
+//          key[z] = Password_getChar(password,z%passwordLength);
+          key[z] = Password_getChar(password,z);
         }
         gcryptError = gcry_cipher_setkey(cryptInfo->gcry_cipher_hd,
                                          key,

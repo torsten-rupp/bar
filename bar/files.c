@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -852,10 +852,10 @@ Errors File_delete(const String fileName, bool recursiveFlag)
     bool          emptyFlag;
     String        name;
 
+    error = ERROR_NONE;
     if (recursiveFlag)
     {
       /* delete entries in directory */
-      error = ERROR_NONE;
       StringList_init(&directoryList);
       StringList_append(&directoryList,fileName);
       directoryName = String_new();

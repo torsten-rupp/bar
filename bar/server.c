@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -403,7 +403,7 @@ LOCAL bool storageRequestVolume(JobNode *jobNode,
   jobNode->requestedVolumeNumber = volumeNumber;
 
   /* wait until volume is available or job is aborted */
-  assert(jobNode->state = JOB_STATE_RUNNING);
+  assert(jobNode->state == JOB_STATE_RUNNING);
   jobNode->state = JOB_STATE_REQUEST_VOLUME;
   do
   {
@@ -417,7 +417,7 @@ LOCAL bool storageRequestVolume(JobNode *jobNode,
   /* unlock */
   Semaphore_unlock(&jobList.lock);
 
-  return TRUE;
+  return (jobNode->volumeNumber == jobNode->requestedVolumeNumber);
 }
 
 /***********************************************************************\
@@ -750,6 +750,7 @@ LOCAL const char *getJobStateText(JobStates jobState)
 {
   const char *stateText;
 
+  stateText = "unknown";
   switch (jobState)
   {
     case JOB_STATE_WAITING:        stateText = "waiting";        break;
@@ -1261,7 +1262,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String argum
   {
     sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.skipUnreadableFlag?1:0);
   }
-  else if (String_equalsCString(arguments[0],"overwrite-archives"))
+  else if (String_equalsCString(arguments[0],"overwrite-archive-files"))
   {
     sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.overwriteArchiveFilesFlag?1:0);
   }
@@ -1527,10 +1528,9 @@ LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String ar
   }
   if (jobNode != NULL)
   {
-    /* remove job in list if waiting, completed or in error state */
-    if (   (jobNode->state == JOB_STATE_WAITING)
-        || (jobNode->state == JOB_STATE_COMPLETED)
-        || (jobNode->state == JOB_STATE_ERROR)
+    /* remove job in list if not running or requested volume */
+    if (   (jobNode->state != JOB_STATE_RUNNING)
+        && (jobNode->state != JOB_STATE_REQUEST_VOLUME)
        )
     {
       List_remove(&jobList,jobNode);
@@ -1542,7 +1542,7 @@ LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String ar
     sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
   }
 
-  /* unlock */
+ /* unlock */
   Semaphore_unlock(&jobList.lock);
 }
 
@@ -1576,7 +1576,9 @@ LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String 
   {
     /* check if job running, remove job in list */
     jobNode->requestedAbortFlag = TRUE;
-    while (jobNode->state == JOB_STATE_RUNNING)
+    while (   (jobNode->state == JOB_STATE_RUNNING)
+           || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
+          )
     {
       Semaphore_waitModified(&jobList.lock);
     }

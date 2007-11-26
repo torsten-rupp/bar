@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -20,6 +20,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <sys/ioctl.h>
+#include <termios.h>
 #include <assert.h>
 
 #include "global.h"
@@ -51,10 +52,13 @@
 #endif
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
+* Name   : expandMacros
+* Purpose: expand macros %... in string
+* Input  : s          - string variable
+*          t          - string with macros
+*          macros     - array with macro definitions
+*          macroCount - number of macro definitions
+* Output : s - string with expanded macros
 * Return : -
 * Notes  : -
 \***********************************************************************/
@@ -190,6 +194,8 @@ void Misc_udelay(uint64 time)
   }  
 }
 
+/*---------------------------------------------------------------------*/
+
 Errors Misc_executeCommand(const char         *commandTemplate,
                            const ExecuteMacro macros[],
                            uint               macroCount,
@@ -200,23 +206,21 @@ Errors Misc_executeCommand(const char         *commandTemplate,
                            ...
                           )
 {
-  Errors            error;
-  String            s;
-  String            command;
-  StringList        argumentList;
-  StringTokenizer   stringTokenizer;
-  String            token;
-  String            argument;
-  va_list           infoArguments;
-  char const **arguments;
-  int               exitCode;
-  int               pipeStdin[2],pipeStdout[2],pipeStderr[2];
-  int               pid;
-  StringNode        *stringNode;
-  uint              n,z;
-  int               status;
-  String            stdoutLine,stderrLine;
-  int               exitcode;
+  Errors          error;
+  String          command;
+  StringList      argumentList;
+  StringTokenizer stringTokenizer;
+  String          token;
+  String          argument;
+  va_list         infoArguments;
+  char const      **arguments;
+  int             pipeStdin[2],pipeStdout[2],pipeStderr[2];
+  int             pid;
+  StringNode      *stringNode;
+  uint            n,z;
+  int             status;
+  String          stdoutLine,stderrLine;
+  int             exitcode;
 
   error = ERROR_NONE;
   if (commandTemplate != NULL)
@@ -234,7 +238,6 @@ Errors Misc_executeCommand(const char         *commandTemplate,
 
     /* parse command */
     String_initTokenizerCString(&stringTokenizer,commandTemplate,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
-    s = String_new();
     if (!String_getNextToken(&stringTokenizer,&token,NULL))
     {
       String_doneTokenizer(&stringTokenizer);
@@ -413,6 +416,29 @@ error = ERROR_NONE;
   }
 
   return error;
+}
+
+/*---------------------------------------------------------------------*/
+
+void Misc_waitEnter(void)
+{
+  struct termios oldTermioSettings;
+  struct termios termioSettings;
+  char           s[2];
+
+  /* save current console settings */
+  tcgetattr(STDIN_FILENO,&oldTermioSettings);
+
+  /* disable echo */
+  memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
+  termioSettings.c_lflag &= ~ECHO;
+  tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings);
+
+  /* read line */
+  fgets(s,2,stdin);
+
+  /* restore console settings */
+  tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
 }
 
 #ifdef __cplusplus

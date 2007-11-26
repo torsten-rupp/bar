@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -202,10 +202,10 @@ LOCAL void printLinkInfo(const String    linkName,
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_list(StringList    *archiveFileNameList,
-                    PatternList   *includePatternList,
-                    PatternList   *excludePatternList,
-                    const Options *options
+Errors Command_list(StringList  *archiveFileNameList,
+                    PatternList *includePatternList,
+                    PatternList *excludePatternList,
+                    Options     *options
                    )
 {
   String       archiveFileName;

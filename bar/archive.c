@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.32 $
+* $Revision: 1.33 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -33,6 +33,8 @@
 
 /***************************** Constants *******************************/
 
+#define MIN_PASSWORD_QUALITY_LEVEL 0.6
+
 #define MAX_BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
@@ -54,6 +56,48 @@ typedef enum
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : initCryptPassword
+* Purpose: initialize crypt password if password not set
+* Input  : cryptAlgorithm - crypt algorithm to use
+*          cryptPassword  - crypt password variable
+* Output : cryptPassword  - crypt password
+* Return : TRUE if passwort initialized, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool initCryptPassword(CryptAlgorithms cryptAlgorithm,
+                             Password        **cryptPassword
+                            )
+{
+  Password *password;
+
+  assert(cryptPassword != NULL);
+
+  if ((cryptAlgorithm != CRYPT_ALGORITHM_NONE) && ((*cryptPassword) == NULL))
+  {
+    password = Password_new();
+    if (Password_input(password,"Crypt password") && (Password_length(password) > 0))
+    {
+      if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
+      {
+        printWarning("Low password quality!\n");
+      }
+      (*cryptPassword) = password;
+      return TRUE;
+    }
+    else
+    {
+      Password_delete(password);
+      return FALSE;
+    }
+  }
+  else
+  {
+    return TRUE;
+  }
+}
 
 /***********************************************************************\
 * Name   : getNextChunkHeader
@@ -635,7 +679,7 @@ void Archive_doneAll(void)
 Errors Archive_create(ArchiveInfo            *archiveInfo,
                       ArchiveNewFileFunction archiveNewFileFunction,
                       void                   *archiveNewFileUserData,
-                      const Options          *options
+                      Options                *options
                      )
 {
   Errors error;
@@ -669,9 +713,9 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_open(ArchiveInfo   *archiveInfo,
-                    const String  archiveFileName,
-                    const Options *options
+Errors Archive_open(ArchiveInfo  *archiveInfo,
+                    const String archiveFileName,
+                    Options      *options
                    )
 {
   Errors error;
@@ -767,6 +811,12 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveFileInfo != NULL);
   assert(fileInfo != NULL);
+
+  /* init crypt password (if needed) */
+  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  {
+    return ERROR_NO_PASSWORD;
+  }
 
   /* init archive file info */
   archiveFileInfo->archiveInfo                         = archiveInfo;
@@ -928,6 +978,12 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   assert(archiveFileInfo != NULL);
   assert(fileInfo != NULL);
 
+  /* init crypt password (if needed) */
+  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  {
+    return ERROR_NO_PASSWORD;
+  }
+
   /* init archive file info */
   archiveFileInfo->archiveInfo                                   = archiveInfo;
   archiveFileInfo->mode                                          = FILE_MODE_WRITE;
@@ -1070,6 +1126,12 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveFileInfo != NULL);
   assert(fileInfo != NULL);
+
+  /* init crypt password (if needed) */
+  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  {
+    return ERROR_NO_PASSWORD;
+  }
 
   /* init archive file info */
   archiveFileInfo->archiveInfo                         = archiveInfo;
@@ -1346,6 +1408,14 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   }
   archiveFileInfo->cryptAlgorithm         = archiveFileInfo->file.chunkFile.cryptAlgorithm;
   archiveFileInfo->file.compressAlgorithm = archiveFileInfo->file.chunkFile.compressAlgorithm;
+
+  /* init crypt password (if needed) */
+  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  {
+    Chunk_done(&archiveFileInfo->file.chunkInfoFile);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
+    return ERROR_NO_PASSWORD;
+  }
 
   /* detect block length of use crypt algorithm */
   error = Crypt_getBlockLength(archiveFileInfo->cryptAlgorithm,&archiveFileInfo->blockLength);
@@ -1626,6 +1696,14 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   }
   archiveFileInfo->cryptAlgorithm = archiveFileInfo->directory.chunkDirectory.cryptAlgorithm;
 
+  /* init crypt password (if needed) */
+  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  {
+    Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
+    return ERROR_NO_PASSWORD;
+  }
+
   /* detect block length of use crypt algorithm */
   error = Crypt_getBlockLength(archiveFileInfo->cryptAlgorithm,&archiveFileInfo->blockLength);
   if (error != ERROR_NONE)
@@ -1799,6 +1877,14 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
     return error;
   }
   archiveFileInfo->cryptAlgorithm = archiveFileInfo->link.chunkLink.cryptAlgorithm;
+
+  /* init crypt password (if needed) */
+  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  {
+    Chunk_done(&archiveFileInfo->link.chunkInfoLink);
+    Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
+    return ERROR_NO_PASSWORD;
+  }
 
   /* detect block length of use crypt algorithm */
   error = Crypt_getBlockLength(archiveFileInfo->cryptAlgorithm,&archiveFileInfo->blockLength);
