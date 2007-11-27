@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -158,6 +158,7 @@ distclean: clean
 	$(RMF) config.h
 	$(RMF) config.status
 	$(RMF) config.log
+	$(MAKE) -C tcl/scanx distclean
 
 depend: Makefile.depend
 

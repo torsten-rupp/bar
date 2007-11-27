@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -162,7 +162,7 @@ typedef struct
     {
       Device     device;                               // dvd device name
       String     name;                                 // 
-      uint       steps;                                // number of step to create dvd
+      uint       steps;                                // number of steps to create dvd
       String     directory;                            //
       uint64     volumeSize;                           // size of dvd [bytes]
 
@@ -181,7 +181,6 @@ typedef struct
       Device     device;                               // device name
       String     name;
       String     directory;
-//      uint       volumeNumber;
 
       StringList fileNameList;                         // list with file names
 

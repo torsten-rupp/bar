@@ -1,6 +1,6 @@
 BAR - BAckup Archiver
 
-Features
+--- Features
 
 * can split archive files into pieces
 * compress of data with zlib or bzip2 algorithms
@@ -16,7 +16,7 @@ Features
   connection
 * nice graphical frontend (written in TclTk)
 
-Requirements
+--- Requirements
 
 * Unix system
 * PTHREADs library
@@ -25,16 +25,19 @@ Requirements
 * gcrypt library
 * ssh2 library
 * long long datatype (because of large files)
+* perl (only for compiling)
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
   eject
+* TclTk and additional packages for graphical frontend
+  (see below)
 
-Installation
+--- Installation
 
 ./configure
 make
 make install
 
-Archive files and encryption
+--- Archive files and encryption
 
 For encryption the algorithms of the gcrypt library are
 used. The BAR archive files are not encrypted in a single
@@ -47,7 +50,7 @@ of the files nor the file meta data, e. g. file names (as
 long as the used encryption algorithm is not broken by
 someone).
 
-DVD
+--- DVD
 
 For storing archive files on DVD an external like "growisofs"
 is needed which is actually writing data to a DVD. BAR
@@ -58,9 +61,25 @@ ISO image can also be created first e. g. with mkisofs. BAR
 support external pre- and post-processing commands when
 creating an ISO-image and burning a DVD. With these commands
 e. g. dvdisaster can be integrated into BAR to create
-RS-protected backup DVDs!
+RS-protected backup DVDs
 
-Contact
+--- Graphical frontend
+
+barcontrol.tcl is a graphical user interface for BAR. It is
+written in TclTk, thus a TclTk-interpreter (wish) is needed.
+Additionally the following packages are required:
+
+* Tix (widget extension for Tk)
+* tls (SSL/TLS extension for Tcl)
+* scanx (provided with BAR)
+* mclistbox (a copy is provided with BAR; thanks to
+  Bryan Oakley for writing mclistbox)
+
+barcontrol.tcl connect to a running BAR-Server either via TLS
+or a plain socket connction. barcontrol.tcl can send jobs to
+server and display the current status of jobs.
+
+--- Contact
 
 Send an email to
 

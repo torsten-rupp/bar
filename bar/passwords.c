@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -25,6 +25,7 @@
 #include "strings.h"
 
 #include "errors.h"
+#include "bar.h"
 
 #include "passwords.h"
 

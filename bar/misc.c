@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -201,9 +201,7 @@ Errors Misc_executeCommand(const char         *commandTemplate,
                            uint               macroCount,
                            ExecuteIOFunction  stdoutExecuteIOFunction,
                            ExecuteIOFunction  stderrExecuteIOFunction,
-                           void               *executeIOUserData,
-                           const char         *infoText,
-                           ...
+                           void               *executeIOUserData
                           )
 {
   Errors          error;
@@ -212,7 +210,6 @@ Errors Misc_executeCommand(const char         *commandTemplate,
   StringTokenizer stringTokenizer;
   String          token;
   String          argument;
-  va_list         infoArguments;
   char const      **arguments;
   int             pipeStdin[2],pipeStdout[2],pipeStderr[2];
   int             pid;
@@ -225,14 +222,6 @@ Errors Misc_executeCommand(const char         *commandTemplate,
   error = ERROR_NONE;
   if (commandTemplate != NULL)
   {
-    if (infoText != NULL)
-    {
-      va_start(infoArguments,infoText);
-      vinfo(0,infoText,infoArguments);
-      va_end(infoArguments);
-      info(0,"...");
-    }
-
     command = String_new();
     StringList_init(&argumentList);
 
@@ -342,8 +331,6 @@ HALT_INTERNAL_ERROR("not reachable");
     }
     else if (pid < 0)
     {
-      if (infoText != NULL) info(0,"FAIL!\n");
-
       close(pipeStderr[0]);
       close(pipeStderr[1]);
       close(pipeStdout[0]);
@@ -404,13 +391,8 @@ error = ERROR_NONE;
     String_delete(command);
 
     exitcode = WEXITSTATUS(status);
-    if (exitcode == 0)
+    if (exitcode != 0)
     {
-      if (infoText != NULL) info(0,"ok\n");
-    }
-    else
-    {
-      if (infoText != NULL) info(0,"FAIL (exitcode %d)\n",exitcode);
       error = ERROR_EXEC_FAIL;
     }
   }

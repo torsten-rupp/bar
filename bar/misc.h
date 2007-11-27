@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -88,8 +88,6 @@ void Misc_udelay(uint64 time);
 * Input  : commandTemplate - command template string
 *          macros          - macros array
 *          macroCount      - number of macros in array
-*          infoText        - info text (can be NULL)
-*          ...             - optional arguments for info text
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -100,9 +98,7 @@ Errors Misc_executeCommand(const char         *commandTemplate,
                            uint               macroCount,
                            ExecuteIOFunction  stdoutExecuteIOFunction,
                            ExecuteIOFunction  stderrExecuteIOFunction,
-                           void               *executeIOUserData,
-                           const char         *infoText,
-                           ...
+                           void               *executeIOUserData
                           );
 
 /*---------------------------------------------------------------------*/

@@ -1,9 +1,9 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.4 $
+dnl $Revision: 1.5 $
 dnl $Author: torsten $
-dnl Contents: BAR auto-configure script (autoconf)
+dnl Contents: BAR auto-configure script
 dnl
 dnl --------------------------------------------------------------------
 
@@ -229,7 +229,7 @@ CC_INCLUDES="$CC_INCLUDES"
 LD_FLAGS=""
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
 
-dnl ------------------ functions/definitions/libraries -----------------
+dnl -------------- headers/functions/definitions/libraries -------------
 
 # set variables for tests
 CFLAGS="$CC_FLAGS"
@@ -338,23 +338,31 @@ fi
 
 AC_CONFIG_FILES(Makefile)
 
+AC_CONFIG_COMMANDS(TCL,
+                   [
+                    (cd tcl/scanx; ./configure)
+                   ]
+                  )
+
 AC_CONFIG_COMMANDS(BUILD_NOTE,
-        [echo "";
-         echo "Configuration:";
-         echo "  debug version    : `if test $ENABLE_DEBUG = "yes"; then echo yes; else echo no; fi`";
-         echo "  zip compression  : `if test $HAVE_Z; then echo yes; else echo no; fi`";
-         echo "  bzip2 compression: `if test $HAVE_BZ2; then echo yes; else echo no; fi`";
-         echo "  crypto support   : `if test $HAVE_GCRYPT; then echo yes; else echo no; fi`";
-         echo "  SCP/SFTP support : `if test $HAVE_SSH2; then echo yes; else echo no; fi`";
-         echo "  TLS/SSL server   : `if test $HAVE_GNU_TLS; then echo yes; else echo no; fi`";
-        ],
-        ENABLE_DEBUG=$ENABLE_DEBUG
-        HAVE_Z=$HAVE_Z
-        HAVE_BZ2=$HAVE_BZ2
-        HAVE_GCRYPT=$HAVE_GCRYPT
-        HAVE_SSH2=$HAVE_SSH2
-        HAVE_GNU_TLS=$HAVE_GNU_TLS
-       )
+                   [echo "";
+                    echo "Configuration:";
+                    echo "  debug version    : `if test $ENABLE_DEBUG = "yes"; then echo yes; else echo no; fi`";
+                    echo "  static version   : `if test $ENABLE_LINK_STATIC = "yes"; then echo yes; else echo no; fi`";
+                    echo "  zip compression  : `if test $HAVE_Z; then echo yes; else echo no; fi`";
+                    echo "  bzip2 compression: `if test $HAVE_BZ2; then echo yes; else echo no; fi`";
+                    echo "  crypto support   : `if test $HAVE_GCRYPT; then echo yes; else echo no; fi`";
+                    echo "  SCP/SFTP support : `if test $HAVE_SSH2; then echo yes; else echo no; fi`";
+                    echo "  TLS/SSL server   : `if test $HAVE_GNU_TLS; then echo yes; else echo no; fi`";
+                   ],
+                   ENABLE_DEBUG=$ENABLE_DEBUG
+                   ENABLE_LINK_STATIC=$ENABLE_LINK_STATIC
+                   HAVE_Z=$HAVE_Z
+                   HAVE_BZ2=$HAVE_BZ2
+                   HAVE_GCRYPT=$HAVE_GCRYPT
+                   HAVE_SSH2=$HAVE_SSH2
+                   HAVE_GNU_TLS=$HAVE_GNU_TLS
+                  )
 
 AC_OUTPUT
 

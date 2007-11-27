@@ -5252,6 +5252,9 @@ fi
           ac_config_files="$ac_config_files Makefile"
 
 
+          ac_config_commands="$ac_config_commands TCL"
+
+
           ac_config_commands="$ac_config_commands BUILD_NOTE"
 
 
@@ -5780,11 +5783,12 @@ cat >>$CONFIG_STATUS <<_ACEOF
 #
 
 ENABLE_DEBUG=$ENABLE_DEBUG
-        HAVE_Z=$HAVE_Z
-        HAVE_BZ2=$HAVE_BZ2
-        HAVE_GCRYPT=$HAVE_GCRYPT
-        HAVE_SSH2=$HAVE_SSH2
-        HAVE_GNU_TLS=$HAVE_GNU_TLS
+                   ENABLE_LINK_STATIC=$ENABLE_LINK_STATIC
+                   HAVE_Z=$HAVE_Z
+                   HAVE_BZ2=$HAVE_BZ2
+                   HAVE_GCRYPT=$HAVE_GCRYPT
+                   HAVE_SSH2=$HAVE_SSH2
+                   HAVE_GNU_TLS=$HAVE_GNU_TLS
 
 
 _ACEOF
@@ -5797,6 +5801,7 @@ do
   case "$ac_config_target" in
   # Handling of arguments.
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+  "TCL" ) CONFIG_COMMANDS="$CONFIG_COMMANDS TCL" ;;
   "BUILD_NOTE" ) CONFIG_COMMANDS="$CONFIG_COMMANDS BUILD_NOTE" ;;
   "config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
@@ -6495,15 +6500,20 @@ esac
   { echo "$as_me:$LINENO: executing $ac_dest commands" >&5
 echo "$as_me: executing $ac_dest commands" >&6;}
   case $ac_dest in
+    TCL )
+                    (cd tcl/scanx; ./configure)
+
+                   ;;
     BUILD_NOTE ) echo "";
-         echo "Configuration:";
-         echo "  debug version    : `if test $ENABLE_DEBUG = "yes"; then echo yes; else echo no; fi`";
-         echo "  zip compression  : `if test $HAVE_Z; then echo yes; else echo no; fi`";
-         echo "  bzip2 compression: `if test $HAVE_BZ2; then echo yes; else echo no; fi`";
-         echo "  crypto support   : `if test $HAVE_GCRYPT; then echo yes; else echo no; fi`";
-         echo "  SCP/SFTP support : `if test $HAVE_SSH2; then echo yes; else echo no; fi`";
-         echo "  TLS/SSL server   : `if test $HAVE_GNU_TLS; then echo yes; else echo no; fi`";
-         ;;
+                    echo "Configuration:";
+                    echo "  debug version    : `if test $ENABLE_DEBUG = "yes"; then echo yes; else echo no; fi`";
+                    echo "  static version   : `if test $ENABLE_LINK_STATIC = "yes"; then echo yes; else echo no; fi`";
+                    echo "  zip compression  : `if test $HAVE_Z; then echo yes; else echo no; fi`";
+                    echo "  bzip2 compression: `if test $HAVE_BZ2; then echo yes; else echo no; fi`";
+                    echo "  crypto support   : `if test $HAVE_GCRYPT; then echo yes; else echo no; fi`";
+                    echo "  SCP/SFTP support : `if test $HAVE_SSH2; then echo yes; else echo no; fi`";
+                    echo "  TLS/SSL server   : `if test $HAVE_GNU_TLS; then echo yes; else echo no; fi`";
+                    ;;
   esac
 done
 _ACEOF
