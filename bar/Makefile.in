@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -225,9 +225,11 @@ destroyer@EXEEXT@: $(DESTROYER_OBJECTS)
 	$(LD) $(LD_FLAGS) -o $@ $^ -lc -lpthread
 
 # create BAR frontend
-barcontrol.tcl: tcl/libscanx.so
+barcontrol.tcl: tcl/scanx/libscanx.so tcl/scanx/pkgIndex.tcl
 
-tcl/libscanx.so: tcl/scanx/scanx.c
+tcl/scanx/libscanx.so: tcl/scanx/scanx.c
+	$(MAKE) -C tcl/scanx $(@F)
+tcl/scanx/pkgIndex.tcl:
 	$(MAKE) -C tcl/scanx $(@F)
 
 # install/uninstall
@@ -325,10 +327,10 @@ standard_test_destroy: bar destroyer
 	./bar -x test/test.bar_destroyed $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
 
-.PHONY: dist $(DISTRIBUTION_NAME).tgz
-dist: $(DISTRIBUTION_NAME).tgz
+.PHONY: dist $(DISTRIBUTION_NAME).tar.bz2
+dist: $(DISTRIBUTION_NAME).tar.bz2
 
-$(DISTRIBUTION_NAME).tgz:
+$(DISTRIBUTION_NAME).tar.bz2:
 	$(INSTALL) -d $(DISTRIBUTION_NAME)
 	$(CP) \
           $(sort $(BAR_SOURCES) \
@@ -341,23 +343,35 @@ $(DISTRIBUTION_NAME).tgz:
                  configure.in \
                  Makefile.in \
                  config.h.in \
+                 bar.cfg \
+                 barcontrol.cfg \
                  ToDo \
                  README \
                  ChangeLog \
           ) \
           $(DISTRIBUTION_NAME)
+	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/bin
 	$(INSTALL) bin/config.guess bin/config.sub bin/install-sh $(DISTRIBUTION_NAME)/bin
+	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/bitmaps
 	$(INSTALL) bitmaps/*.gif $(DISTRIBUTION_NAME)/bitmaps
+	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/ssl
 	$(INSTALL) ssl/*.tmpl $(DISTRIBUTION_NAME)/ssl
+	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/tcl/scanx
-	$(INSTALL) tcl/scanx/Makefile tcl/scanx/*.c tcl/scanx/*.tcl $(DISTRIBUTION_NAME)/tcl/scanx
+	$(INSTALL) tcl/scanx/*.in tcl/scanx/*.m4 tcl/scanx/*.c tcl/scanx/*.tcl tcl/scanx/configure tcl/scanx/install-sh $(DISTRIBUTION_NAME)/tcl/scanx
+	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/tcl/mclistbox
-	$(INSTALL) tcl/mclistbox/mclistbox.tcl $(DISTRIBUTION_NAME)/tcl/mclistbox
+	$(INSTALL) tcl/mclistbox/*.tcl tcl/mclistbox/mclistbox-*.tar.gz tcl/mclistbox/Makefile $(DISTRIBUTION_NAME)/tcl/mclistbox
+	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/misc
 	$(INSTALL) misc/*.patch $(DISTRIBUTION_NAME)/misc
+	#
+	$(INSTALL) -d $(DISTRIBUTION_NAME)/doc
+	$(INSTALL) doc/*.txt $(DISTRIBUTION_NAME)/doc
+	#
 	$(TAR) cjf $@ $(DISTRIBUTION_NAME)
 	$(RMRF) $(DISTRIBUTION_NAME)
 
