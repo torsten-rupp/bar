@@ -12,6 +12,9 @@ LD_LIBRARY_PATHS    = /usr/local/lib /usr/lib
 LD_LIBRARIES        = 
 LD_STATIC_LIBRARIES = 
 
+RMF=rm -f
+RMRF=rm -rf
+
 %.o:%.c
 	$(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
@@ -19,8 +22,12 @@ LD_STATIC_LIBRARIES =
 all: libscanx.so pkgIndex.tcl
 
 clean:
-	rm -f scanx.o tclScanx.o libscanx.so
-	rm -f pkgIndex.tcl
+	$(RMF) scanx.o tclScanx.o libscanx.so
+	$(RMF) pkgIndex.tcl
+
+distclean: clean
+	$(RMF) config config.log config.status
+	$(RMF) Makefile config.h
 
 scanx.o: scanx.c
 
