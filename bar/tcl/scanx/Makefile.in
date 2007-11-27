@@ -12,6 +12,8 @@ LD_LIBRARY_PATHS    = /usr/local/lib /usr/lib
 LD_LIBRARIES        = 
 LD_STATIC_LIBRARIES = 
 
+INSTALL=@INSTALL@
+ECHO=echo
 RMF=rm -f
 RMRF=rm -rf
 
@@ -46,11 +48,11 @@ test: libscanx.so
 	tclsh scanx_test.tcl
 
 pkgIndex.tcl:
-	@echo >$@  '# pkgIndex.tcl - scanx'
-	@echo >>$@ ''
-	@echo >>$@ 'package ifneeded scanx $(VERSION) "[list load [file join $$dir .. libscanx$(VERSION).so]]"'
+	@$(ECHO) >$@  '# pkgIndex.tcl - scanx'
+	@$(ECHO) >>$@ ''
+	@$(ECHO) >>$@ 'package ifneeded scanx $(VERSION) "[list load [file join $$dir .. libscanx$(VERSION).so]]"'
 
 install: libscanx.so pkgIndex.tcl
-	install -d $(INSTALL_PATH)/lib/scanx$(VERSION)
-	install libscanx.so $(INSTALL_PATH)/lib/libscanx$(VERSION).so
-	install pkgIndex.tcl $(INSTALL_PATH)/lib/scanx$(VERSION)
+	$(INSTALL) -d $(INSTALL_PATH)/lib/scanx$(VERSION)
+	$(INSTALL) libscanx.so $(INSTALL_PATH)/lib/libscanx$(VERSION).so
+	$(INSTALL) pkgIndex.tcl $(INSTALL_PATH)/lib/scanx$(VERSION)
