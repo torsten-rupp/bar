@@ -11,4 +11,3 @@ ToDo
 - improve password quality checker
 - static binary for simple install on client (it is a "server", but
   we call it client :-))
-
