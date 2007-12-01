@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -36,6 +36,7 @@ typedef enum
   CMD_OPTION_TYPE_BOOLEAN,
   CMD_OPTION_TYPE_ENUM,
   CMD_OPTION_TYPE_SELECT,
+  CMD_OPTION_TYPE_SET,
   CMD_OPTION_TYPE_STRING,
   CMD_OPTION_TYPE_SPECIAL
 } CommandLineOptionTypes;
@@ -53,6 +54,13 @@ typedef struct
   const char *description;
 } CommandLineOptionSelect;
 
+typedef struct
+{
+  const char *name;
+  int        value;
+  const char *description;
+} CommandLineOptionSet;
+
 typedef struct CommandLineOption
 {
   const char             *name;
@@ -69,6 +77,7 @@ typedef struct CommandLineOption
     bool   *b;
     uint   *enumeration;
     uint   *select;
+    ulong  *set;
     char   **string;
     void   *special;
   } variable;
@@ -80,8 +89,9 @@ typedef struct CommandLineOption
     bool   b;
     union
     {
-      uint enumeration;
-      uint select;
+      uint  enumeration;
+      uint  select;
+      ulong set;
     };
     union
     {
@@ -123,6 +133,11 @@ typedef struct CommandLineOption
     const CommandLineOptionSelect *selects;             // list with select values
     uint                          selectCount;          // number of select values
   } selectOption;
+  struct
+  {
+    const CommandLineOptionSet    *set;                 // list with set values
+    uint                          setCount;             // number of set values
+  } setOption;
   struct
   {
     const char                    *helpArgument;        // text for help argument
@@ -169,11 +184,18 @@ const CommandLineUnit COMMAND_LINE_UNITS[] =
   {"g",1024*1024*1024},
 };
 
-const CommandLineOptionSelect COMMAND_LINE_OPTIONS_SELECT_OUTPUTYPE[] =
+const CommandLineOptionSelect COMMAND_LINE_OPTIONS_SELECT_TYPES[] =
 {
   {"c",   1,"type1"},
   {"h",   2,"type2"},
   {"both",3,"type3"},
+};
+
+const CommandLineOptionSelect COMMAND_LINE_OPTIONS_SET_TYPES[] =
+{
+  {"s",1,"type1"},
+  {"l",2,"type2"},
+  {"x",3,"type3"},
 };
 
 const CommandLineOption COMMAND_LINE_OPTIONS[] =
@@ -187,7 +209,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN_YESNO("bool",    'b',0,0,boolValue,  FALSE,                                        "bool value 1"),
 
-  CMD_OPTION_SELECT       ("type",    't',0,0,outputType, 1,      COMMAND_LINE_OPTIONS_SELECT_OUTPUTYPE,"select value",NULL),
+  CMD_OPTION_SELECT       ("type",    't',0,0,outputType, 1,      COMMAND_LINE_OPTIONS_SELECT_TYPES,    "select value",NULL),
+  CMD_OPTION_SET          ("set",     0,  0,0,setType,    0,      COMMAND_LINE_OPTIONS_SET_TYPES,       "set value",NULL),
 
   CMD_OPTION_STRING       ("string",  0,  0,0,stringValue,"",                                           "string value"),
 
@@ -222,6 +245,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE},\
     {0},\
     {NULL,0},\
+    {NULL,0},\
     {NULL},\
     {NULL,NULL,NULL},\
     description \
@@ -240,6 +264,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0.0,0.0,NULL,0},\
     {FALSE},\
     {0},\
+    {NULL,0},\
     {NULL,0},\
     {NULL},\
     {NULL,NULL,NULL},\
@@ -261,6 +286,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE},\
     {0},\
     {NULL,0},\
+    {NULL,0},\
     {NULL},\
     {NULL,NULL,NULL},\
     description \
@@ -279,6 +305,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0.0,0.0,NULL,0},\
     {FALSE},\
     {0},\
+    {NULL,0},\
     {NULL,0},\
     {NULL},\
     {NULL,NULL,NULL},\
@@ -300,6 +327,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE},\
     {0},\
     {NULL,0},\
+    {NULL,0},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -318,6 +346,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {TRUE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
     {FALSE},\
     {0},\
+    {NULL,0},\
     {NULL,0},\
     {NULL},\
     {NULL,NULL,NULL},\
@@ -339,6 +368,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE},\
     {0},\
     {NULL,0},\
+    {NULL,0},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -357,6 +387,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0.0,0.0,NULL,0},\
     {TRUE},\
     {0},\
+    {NULL,0},\
     {NULL,0},\
     {NULL},\
     {NULL,NULL,NULL},\
@@ -378,6 +409,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE},\
     {value},\
     {NULL,0},\
+    {NULL,0},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -398,6 +430,28 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE},\
     {0},\
     {selects,sizeof(selects)/sizeof(CommandLineOptionSelect)},\
+    {NULL,0},\
+    {NULL},\
+    {NULL,NULL,NULL},\
+    description\
+  }
+
+#define CMD_OPTION_SET(name,shortName,level,priority,variable,defaultValue,set,description) \
+  {\
+    name,\
+    shortName,\
+    level,\
+    priority,\
+    CMD_OPTION_TYPE_SET,\
+    {&variable},\
+    {0,0LL,0.0,FALSE,{defaultValue},{NULL}},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0,0,NULL,0},\
+    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE},\
+    {0},\
+    {NULL,0},\
+    {set,sizeof(set)/sizeof(CommandLineOptionSet)},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -418,6 +472,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE},\
     {0},\
     {NULL,0},\
+    {NULL,0},\
     {helpArgument},\
     {NULL,NULL,NULL},\
     description\
@@ -435,7 +490,10 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0,NULL,0},\
     {FALSE,0,0,NULL,0},\
     {FALSE,0.0,0.0,NULL,0},\
-    {FALSE},{0},{NULL,0},\
+    {FALSE},\
+    {0},\
+    {NULL,0},\
+    {NULL,0},\
     {NULL},\
     {parseSpecial,userData,helpArgument},\
     description\

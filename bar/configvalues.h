@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/configvalues.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -36,6 +36,7 @@ typedef enum
   CONFIG_VALUE_TYPE_BOOLEAN,
   CONFIG_VALUE_TYPE_ENUM,
   CONFIG_VALUE_TYPE_SELECT,
+  CONFIG_VALUE_TYPE_SET,
   CONFIG_VALUE_TYPE_STRING,
   CONFIG_VALUE_TYPE_SPECIAL
 } ConfigValueTypes;
@@ -52,6 +53,12 @@ typedef struct
   int        value;
 } ConfigValueSelect;
 
+typedef struct
+{
+  const char *name;
+  int        value;
+} ConfigValueSet;
+
 typedef union
 {
   void   *pointer;
@@ -62,6 +69,7 @@ typedef union
   bool   *b;
   uint   *enumeration;
   uint   *select;
+  ulong  *set;
   char   **string;
   void   *special;
 } ConfigVariable;
@@ -99,9 +107,14 @@ typedef struct
   } enumValue;
   struct
   {
-    const ConfigValueSelect *selects;             // list with select values
+    const ConfigValueSelect *selects;             // array with select values
     uint                    selectCount;          // number of select values
   } selectValue;
+  struct
+  {
+    const ConfigValueSet    *set;                 // array with set values
+    uint                    setCount;             // number of set values
+  } setValue;
   struct
   {
   } stringValue;
@@ -114,17 +127,19 @@ typedef struct
 
 /* example
 
-CMD_OPTION_INTEGER        (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>                )
-CMD_OPTION_INTEGER_RANGE  (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>                )
-CMD_OPTION_INTEGER64      (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>                )
-CMD_OPTION_INTEGER64_RANGE(<long name>,<short name>,<level>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>                )
-CMD_OPTION_DOUBLE         (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,                    <help text>                )
-CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,<min>,<max>,        <help text>                )
-CMD_OPTION_BOOLEAN        (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,                    <help text>                )
-CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,                    <help text>                )
-CMD_OPTION_ENUM           (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,<value>,            <help text>                )
-CMD_OPTION_STRING         (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,                    <help text>,<help argument>)
-CMD_OPTION_SPECIAL        (<long name>,<short name>,<level>,<priority>,<function>,<default value>,                    <help text>,<help argument>)
+CONFIG_VALUE_INTEGER        (<long name>,<variable>,<offset>|-1,<min>,<max>,<units>)
+CONFIG_VALUE_INTEGER_RANGE  (<long name>,<variable>,<offset>|-1,<min>,<max>,<units>)
+CONFIG_VALUE_INTEGER64      (<long name>,<variable>,<offset>|-1,<min>,<max>,<units>)
+CONFIG_VALUE_INTEGER64_RANGE(<long name>,<variable>,<offset>|-1,<min>,<max>,<units>)
+CONFIG_VALUE_DOUBLE         (<long name>,<variable>,<offset>|-1,                   )
+CONFIG_VALUE_DOUBLE_RANGE   (<long name>,<variable>,<offset>|-1,<min>,<max>,<units>)
+CONFIG_VALUE_BOOLEAN        (<long name>,<variable>,<offset>|-1,                   )
+CONFIG_VALUE_BOOLEAN_YESNO  (<long name>,<variable>,<offset>|-1,                   )
+CONFIG_VALUE_ENUM           (<long name>,<variable>,<offset>|-1,<value>            )
+CONFIG_VALUE_SELECT         (<long name>,<variable>,<offset>|-1,<select>           )
+CONFIG_VALUE_SET            (<long name>,<variable>,<offset>|-1,<set>              )
+CONFIG_VALUE_STRING         (<long name>,<variable>,<offset>|-1,                   )
+CONFIG_VALUE_SPECIAL        (<long name>,<function>,<offset>|-1,                   )
 
 const ConfigValueUnit COMMAND_LINE_UNITS[] =
 {
@@ -142,28 +157,28 @@ const ConfigValueSelect CONFIG_VALUE_SELECT_OUTPUTYPE[] =
 
 const ConfigValue CONFIG_VALUES[] =
 {
-  CMD_OPTION_INTEGER      ("integer", 'i',0,0,intValue,   0,0,123,NULL                           value"),
-  CMD_OPTION_INTEGER      ("unit",    'u',0,0,intValue,   0,0,123,COMMAND_LINE_UNITS             value with unit"),
-  CMD_OPTION_INTEGER_RANGE("range1",  'r',0,0,intValue,   0,0,123,COMMAND_LINE_UNITS             value with unit and range"),
+  CONFIG_VALUE_INTEGER      ("integer", 'i',0,0,intValue,   0,0,123,NULL                           value"),
+  CONFIG_VALUE_INTEGER      ("unit",    'u',0,0,intValue,   0,0,123,COMMAND_LINE_UNITS             value with unit"),
+  CONFIG_VALUE_INTEGER_RANGE("range1",  'r',0,0,intValue,   0,0,123,COMMAND_LINE_UNITS             value with unit and range"),
 
-  CMD_OPTION_DOUBLE       ("double",  'd',0,0,doubleValue,0.0,-2.0,4.0,                         value"),
-  CMD_OPTION_DOUBLE_RANGE ("range2",   0,  0,0,doubleValue,0.0,-2.0,4.0,                         value with range"),
+  CONFIG_VALUE_DOUBLE       ("double",  'd',0,0,doubleValue,0.0,-2.0,4.0,                         value"),
+  CONFIG_VALUE_DOUBLE_RANGE ("range2",   0,  0,0,doubleValue,0.0,-2.0,4.0,                         value with range"),
 
-  CMD_OPTION_BOOLEAN_YESNO("bool",    'b',0,0,boolValue,  FALSE,                                lue 1"),
+  CONFIG_VALUE_BOOLEAN_YESNO("bool",    'b',0,0,boolValue,  FALSE,                                lue 1"),
 
-  CMD_OPTION_SELECT       ("type",    't',0,0,outputType, 1,      CONFIG_VALUE_SELECT_OUTPUTYPE,ULL),
+  CONFIG_VALUE_SELECT       ("type",    't',0,0,outputType, 1,      CONFIG_VALUE_SELECT_OUTPUTYPE,ULL),
 
-  CMD_OPTION_STRING       ("string",  0,  0,0,stringValue,"",                                   value"),
+  CONFIG_VALUE_STRING       ("string",  0,  0,0,stringValue,"",                                   value"),
 
-  CMD_OPTION_ENUM         ("e1",      '1',0,0,enumValue,  0,ENUM1,                              ), 
-  CMD_OPTION_ENUM         ("e2",      '2',0,0,enumValue,  0,ENUM2,                              ), 
-  CMD_OPTION_ENUM         ("e3",      '3',0,0,enumValue,  0,ENUM3,                              ), 
-  CMD_OPTION_ENUM         ("e4",      '4',0,0,enumValue,  0,ENUM4,                              ), 
+  CONFIG_VALUE_ENUM         ("e1",      '1',0,0,enumValue,  0,ENUM1,                              ), 
+  CONFIG_VALUE_ENUM         ("e2",      '2',0,0,enumValue,  0,ENUM2,                              ), 
+  CONFIG_VALUE_ENUM         ("e3",      '3',0,0,enumValue,  0,ENUM3,                              ), 
+  CONFIG_VALUE_ENUM         ("e4",      '4',0,0,enumValue,  0,ENUM4,                              ), 
 
-  CMD_OPTION_SPECIAL      ("special", 's',0,1,specialValue,parseSpecial,123,                    ), 
-  CMD_OPTION_INTEGER      ("extended",'i',1,0,extendValue,0,0,123,NULL                          ),
+  CONFIG_VALUE_SPECIAL      ("special", 's',0,1,specialValue,parseSpecial,123,                    ), 
+  CONFIG_VALUE_INTEGER      ("extended",'i',1,0,extendValue,0,0,123,NULL                          ),
 
-  CMD_OPTION_BOOLEAN      ("help",    'h',0,0,helpFlag,   FALSE,                                ),
+  CONFIG_VALUE_BOOLEAN      ("help",    'h',0,0,helpFlag,   FALSE,                                ),
 };
 
 */
@@ -172,7 +187,7 @@ const ConfigValue CONFIG_VALUES[] =
 
 /******************************* Macros *******************************/
 #define CONFIG_VALUE_INTEGER(name,variable,offset,min,max,units) \
-  {\
+  { \
     name,\
     CONFIG_VALUE_TYPE_INTEGER,\
     {&variable},\
@@ -182,13 +197,14 @@ const ConfigValue CONFIG_VALUES[] =
     {0.0,0.0,NULL,0},\
     {},\
     {0},\
+    {NULL,0}, \
     {NULL,0},\
     {},\
     {NULL,NULL}\
   }
 
 #define CONFIG_VALUE_INTEGER64(name,variable,offset,min,max,units) \
-  {\
+  { \
     name,\
     CONFIG_VALUE_TYPE_INTEGER64,\
     {&variable},\
@@ -199,12 +215,13 @@ const ConfigValue CONFIG_VALUES[] =
     {},\
     {0},\
     {NULL,0},\
+    {NULL,0}, \
     {},\
     {NULL,NULL}\
   }
 
 #define CONFIG_VALUE_DOUBLE(name,variable,offset,min,max,units,description) \
-  {\
+  { \
     name,\
     CONFIG_VALUE_TYPE_DOUBLE,\
     {&variable},\
@@ -215,12 +232,13 @@ const ConfigValue CONFIG_VALUES[] =
     {},\
     {0},\
     {NULL,0},\
+    {NULL,0}, \
     {},\
     {NULL,NULL,NULL}\
   }
 
 #define CONFIG_VALUE_BOOLEAN(name,variable,offset) \
-  {\
+  { \
     name,\
     CONFIG_VALUE_TYPE_BOOLEAN,\
     {&variable},\
@@ -231,11 +249,12 @@ const ConfigValue CONFIG_VALUES[] =
     {},\
     {0},\
     {NULL,0},\
+    {NULL,0}, \
     {},\
     {NULL,NULL}\
   }
 #define CONFIG_VALUE_BOOLEAN_YESNO(name,variable,offset) \
-  {\
+  { \
     name,\
     CONFIG_VALUE_TYPE_BOOLEAN,\
     {&variable},\
@@ -246,12 +265,13 @@ const ConfigValue CONFIG_VALUES[] =
     {TRUE},\
     {0},\
     {NULL,0},\
+    {NULL,0}, \
     {},\
     {NULL,NULL}\
   }
 
 #define CONFIG_VALUE_ENUM(name,variable,offset,value) \
-  {\
+  { \
     name,\
     CONFIG_VALUE_TYPE_ENUM,\
     {&variable},\
@@ -262,12 +282,13 @@ const ConfigValue CONFIG_VALUES[] =
     {},\
     {value},\
     {NULL,0},\
+    {NULL,0}, \
     {},\
     {NULL,NULL}\
   }
 
 #define CONFIG_VALUE_SELECT(name,variable,offset,selects) \
-  {\
+  { \
     name,\
     CONFIG_VALUE_TYPE_SELECT,\
     {&variable},\
@@ -278,12 +299,30 @@ const ConfigValue CONFIG_VALUES[] =
     {},\
     {0},\
     {selects,sizeof(selects)/sizeof(ConfigValueSelect)},\
+    {NULL,0}, \
+    {},\
+    {NULL,NULL}\
+  }
+
+#define CONFIG_VALUE_SET(name,variable,offset,set) \
+  { \
+    name,\
+    CONFIG_VALUE_TYPE_SET,\
+    {&variable},\
+    offset,\
+    {0,0,NULL,0},\
+    {0,0,NULL,0},\
+    {0.0,0.0,NULL,0},\
+    {},\
+    {0},\
+    {NULL,0}, \
+    {set,sizeof(set)/sizeof(ConfigValueSet)},\
     {},\
     {NULL,NULL}\
   }
 
 #define CONFIG_VALUE_STRING(name,variable,offset) \
-  {\
+  { \
     name,\
     CONFIG_VALUE_TYPE_STRING,\
     {&variable},\
@@ -294,12 +333,13 @@ const ConfigValue CONFIG_VALUES[] =
     {},\
     {0},\
     {NULL,0},\
+    {NULL,0}, \
     {},\
     {NULL,NULL},\
   }
 
 #define CONFIG_VALUE_SPECIAL(name,variablePointer,offset,parseSpecial,userData) \
-  {\
+  { \
     name,\
     CONFIG_VALUE_TYPE_SPECIAL,\
     {variablePointer},\
@@ -310,6 +350,7 @@ const ConfigValue CONFIG_VALUES[] =
     {},\
     {0},\
     {NULL,0},\
+    {NULL,0}, \
     {},\
     {parseSpecial,userData}\
   }

@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -55,10 +55,6 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                          const char              *errorPrefix
                         )
 {
-  uint  i,n;
-  char  number[128],unit[32];
-  ulong factor;
-
   assert(commandLineOption != NULL);
   assert(prefix != NULL);
   assert(name != NULL);
@@ -66,194 +62,212 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
   switch (commandLineOption->type)
   {
     case CMD_OPTION_TYPE_INTEGER:
-      assert(commandLineOption->variable.i != NULL);
+      {
+        uint  i,n;
+        char  number[128],unit[32];
+        ulong factor;
 
-      /* split number, unit */
-      i = strlen(value);
-      if (i > 0)
-      {
-        while ((i > 1) && !isdigit(value[i-1])) { i--; }
-        n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
-        n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
-      }
-      else
-      {
-        number[0] = '\0';
-        unit[0]   = '\0';
-      }
+        assert(commandLineOption->variable.i != NULL);
 
-      /* find factor */
-      if (unit[0] != '\0')
-      {
-        if (commandLineOption->integerOption.units != NULL)
+        /* split number, unit */
+        i = strlen(value);
+        if (i > 0)
         {
-          i = 0;
-          while ((i < commandLineOption->integerOption.unitCount) && (strcmp(commandLineOption->integerOption.units[i].name,unit) != 0))
-          {
-            i++;
-          }
-          if (i >= commandLineOption->integerOption.unitCount)
-          {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
-            return FALSE;
-          }
-          factor = commandLineOption->integerOption.units[i].factor;
+          while ((i > 1) && !isdigit(value[i-1])) { i--; }
+          n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
+          n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
         }
         else
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+          number[0] = '\0';
+          unit[0]   = '\0';
+        }
+
+        /* find factor */
+        if (unit[0] != '\0')
+        {
+          if (commandLineOption->integerOption.units != NULL)
+          {
+            i = 0;
+            while ((i < commandLineOption->integerOption.unitCount) && (strcmp(commandLineOption->integerOption.units[i].name,unit) != 0))
+            {
+              i++;
+            }
+            if (i >= commandLineOption->integerOption.unitCount)
+            {
+              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+              return FALSE;
+            }
+            factor = commandLineOption->integerOption.units[i].factor;
+          }
+          else
+          {
+            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+            return FALSE;
+          }
+        }
+        else
+        {
+          factor = 1;
+        }
+
+        /* calculate value */
+        (*commandLineOption->variable.i) = strtol(value,NULL,0)*factor;
+
+        /* check range */
+        if (   ((*commandLineOption->variable.i) < commandLineOption->integerOption.min)
+            || ((*commandLineOption->variable.i) > commandLineOption->integerOption.max)
+           )
+        {
+          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
+                                                 "%sValue '%s' out of range %d..%d for option '%s%s'!\n",
+                                                 (errorPrefix != NULL)?errorPrefix:"",
+                                                 value,
+                                                 commandLineOption->integerOption.min,
+                                                 commandLineOption->integerOption.max,
+                                                 prefix,
+                                                 name
+                                                );
           return FALSE;
         }
-      }
-      else
-      {
-        factor = 1;
-      }
-
-      /* calculate value */
-      (*commandLineOption->variable.i) = strtol(value,NULL,0)*factor;
-
-      /* check range */
-      if (   ((*commandLineOption->variable.i) < commandLineOption->integerOption.min)
-          || ((*commandLineOption->variable.i) > commandLineOption->integerOption.max)
-         )
-      {
-        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                               "%sValue '%s' out of range %d..%d for option '%s%s'!\n",
-                                               (errorPrefix != NULL)?errorPrefix:"",
-                                               value,
-                                               commandLineOption->integerOption.min,
-                                               commandLineOption->integerOption.max,
-                                               prefix,
-                                               name
-                                              );
-        return FALSE;
       }
       break;
     case CMD_OPTION_TYPE_INTEGER64:
-      assert(commandLineOption->variable.l != NULL);
+      {
+        uint  i,n;
+        char  number[128],unit[32];
+        ulong factor;
 
-      /* split number, unit */
-      i = strlen(value);
-      if (i > 0)
-      {
-        while ((i > 1) && !isdigit(value[i-1])) { i--; }
-        n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
-        n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
-      }
-      else
-      {
-        number[0] = '\0';
-        unit[0]   = '\0';
-      }
+        assert(commandLineOption->variable.l != NULL);
 
-      /* find factor */
-      if (unit[0] != '\0')
-      {
-        if (commandLineOption->integer64Option.units != NULL)
+        /* split number, unit */
+        i = strlen(value);
+        if (i > 0)
         {
-          i = 0;
-          while ((i < commandLineOption->integer64Option.unitCount) && (strcmp(commandLineOption->integer64Option.units[i].name,unit) != 0))
-          {
-            i++;
-          }
-          if (i >= commandLineOption->integer64Option.unitCount)
-          {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
-            return FALSE;
-          }
-          factor = commandLineOption->integer64Option.units[i].factor;
+          while ((i > 1) && !isdigit(value[i-1])) { i--; }
+          n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
+          n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
         }
         else
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+          number[0] = '\0';
+          unit[0]   = '\0';
+        }
+
+        /* find factor */
+        if (unit[0] != '\0')
+        {
+          if (commandLineOption->integer64Option.units != NULL)
+          {
+            i = 0;
+            while ((i < commandLineOption->integer64Option.unitCount) && (strcmp(commandLineOption->integer64Option.units[i].name,unit) != 0))
+            {
+              i++;
+            }
+            if (i >= commandLineOption->integer64Option.unitCount)
+            {
+              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+              return FALSE;
+            }
+            factor = commandLineOption->integer64Option.units[i].factor;
+          }
+          else
+          {
+            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+            return FALSE;
+          }
+        }
+        else
+        {
+          factor = 1;
+        }
+
+        /* calculate value */
+        (*commandLineOption->variable.l) = strtoll(value,NULL,0)*factor;
+
+        if (   ((*commandLineOption->variable.l) < commandLineOption->integer64Option.min)
+            || ((*commandLineOption->variable.l) > commandLineOption->integer64Option.max)
+           )
+        {
+          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
+                                                 "%sValue '%s' out of range %lld..%lld for option '%s%s'!\n",
+                                                 (errorPrefix != NULL)?errorPrefix:"",
+                                                 value,
+                                                 commandLineOption->integer64Option.min,
+                                                 commandLineOption->integer64Option.max,
+                                                 prefix,
+                                                 name
+                                                );
           return FALSE;
         }
-      }
-      else
-      {
-        factor = 1;
-      }
-
-      /* calculate value */
-      (*commandLineOption->variable.l) = strtoll(value,NULL,0)*factor;
-
-      if (   ((*commandLineOption->variable.l) < commandLineOption->integer64Option.min)
-          || ((*commandLineOption->variable.l) > commandLineOption->integer64Option.max)
-         )
-      {
-        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                               "%sValue '%s' out of range %lld..%lld for option '%s%s'!\n",
-                                               (errorPrefix != NULL)?errorPrefix:"",
-                                               value,
-                                               commandLineOption->integer64Option.min,
-                                               commandLineOption->integer64Option.max,
-                                               prefix,
-                                               name
-                                              );
-        return FALSE;
       }
       break;
     case CMD_OPTION_TYPE_DOUBLE:
-      assert(commandLineOption->variable.d != NULL);
+      {
+        uint  i,n;
+        char  number[128],unit[32];
+        ulong factor;
 
-      /* split number, unit */
-      i = strlen(value);
-      if (i > 0)
-      {
-        while ((i > 1) && !isdigit(value[i-1])) { i--; }
-        n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
-        n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
-      }
-      else
-      {
-        number[0] = '\0';
-        unit[0]   = '\0';
-      }
+        assert(commandLineOption->variable.d != NULL);
 
-      /* find factor */
-      if (unit[0] != '\0')
-      {
-        if (commandLineOption->doubleOption.units != NULL)
+        /* split number, unit */
+        i = strlen(value);
+        if (i > 0)
         {
-          i = 0;
-          while ((i < commandLineOption->doubleOption.unitCount) && (strcmp(commandLineOption->doubleOption.units[i].name,unit) != 0))
-          {
-            i++;
-          }
-          if (i >= commandLineOption->doubleOption.unitCount)
-          {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
-            return FALSE;
-          }
-          factor = commandLineOption->doubleOption.units[i].factor;
+          while ((i > 1) && !isdigit(value[i-1])) { i--; }
+          n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
+          n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
         }
         else
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+          number[0] = '\0';
+          unit[0]   = '\0';
+        }
+
+        /* find factor */
+        if (unit[0] != '\0')
+        {
+          if (commandLineOption->doubleOption.units != NULL)
+          {
+            i = 0;
+            while ((i < commandLineOption->doubleOption.unitCount) && (strcmp(commandLineOption->doubleOption.units[i].name,unit) != 0))
+            {
+              i++;
+            }
+            if (i >= commandLineOption->doubleOption.unitCount)
+            {
+              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+              return FALSE;
+            }
+            factor = commandLineOption->doubleOption.units[i].factor;
+          }
+          else
+          {
+            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+            return FALSE;
+          }
+        }
+        else
+        {
+          factor = 1;
+        }
+
+        (*commandLineOption->variable.d) = strtod(value,0);
+        if (   ((*commandLineOption->variable.d) < commandLineOption->doubleOption.min)
+            || ((*commandLineOption->variable.d) > commandLineOption->doubleOption.max)
+           )
+        {
+          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
+                                                 "%sValue '%s' out of range %lf..%lf for float option '%s%s'!\n",
+                                                 (errorPrefix != NULL)?errorPrefix:"",
+                                                 value,
+                                                 commandLineOption->doubleOption.min,
+                                                 commandLineOption->doubleOption.max,
+                                                 prefix,
+                                                 name
+                                                );
           return FALSE;
         }
-      }
-      else
-      {
-        factor = 1;
-      }
-
-      (*commandLineOption->variable.d) = strtod(value,0);
-      if (   ((*commandLineOption->variable.d) < commandLineOption->doubleOption.min)
-          || ((*commandLineOption->variable.d) > commandLineOption->doubleOption.max)
-         )
-      {
-        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                               "%sValue '%s' out of range %lf..%lf for float option '%s%s'!\n",
-                                               (errorPrefix != NULL)?errorPrefix:"",
-                                               value,
-                                               commandLineOption->doubleOption.min,
-                                               commandLineOption->doubleOption.max,
-                                               prefix,
-                                               name
-                                              );
-        return FALSE;
       }
       break;
     case CMD_OPTION_TYPE_BOOLEAN:
@@ -286,18 +300,65 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       (*commandLineOption->variable.enumeration) = commandLineOption->enumOption.enumerationValue;
       break;
     case CMD_OPTION_TYPE_SELECT:
-      assert(commandLineOption->variable.select != NULL);
-      i = 0;
-      while ((i < commandLineOption->selectOption.selectCount) && (strcmp(commandLineOption->selectOption.selects[i].name,value) != 0))
       {
-        i++;
+        uint z;
+
+        assert(commandLineOption->variable.select != NULL);
+
+        z = 0;
+        while ((z < commandLineOption->selectOption.selectCount) && (strcmp(commandLineOption->selectOption.selects[z].name,value) != 0))
+        {
+          z++;
+        }
+        if (z >= commandLineOption->selectOption.selectCount)
+        {
+          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown value '%s' for option '%s%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value,prefix,name);
+          return FALSE;
+        }
+        (*commandLineOption->variable.select) = commandLineOption->selectOption.selects[z].value;
       }
-      if (i >= commandLineOption->selectOption.selectCount)
+      break;
+    case CMD_OPTION_TYPE_SET:
       {
-        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown value '%s' for option '%s%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value,prefix,name);
-        return FALSE;
+        uint  i,j,z;
+        char  setName[128];
+
+        assert(commandLineOption->variable.set != NULL);
+        i = 0;
+        while (value[i] != '\0')
+        {
+          /* skip spaces */
+          while ((value[i] != '\0') && isspace(value[i])) { i++; }
+
+          /* get name */
+          j = 0;
+          while ((value[i] != '\0') && (value[i] != ','))
+          {
+            if (j < sizeof(setName)-1) { setName[j] = value[i]; j++; }
+            i++;
+          }
+          setName[j] = '\0';
+          if (value[i] == ',') i++;
+
+          if (setName[0] != '\0')
+          {
+            /* find value */
+            z = 0;
+            while ((z < commandLineOption->setOption.setCount) && (strcmp(commandLineOption->setOption.set[z].name,setName) != 0))
+            {
+              z++;
+            }
+            if (z >= commandLineOption->setOption.setCount)
+            {
+              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown value '%s' for option '%s%s'!\n",(errorPrefix != NULL)?errorPrefix:"",setName,prefix,name);
+              return FALSE;
+            }
+
+            /* add to set */
+            (*commandLineOption->variable.set) |= commandLineOption->setOption.set[z].value;
+          }
+        }
       }
-      (*commandLineOption->variable.enumeration) = commandLineOption->selectOption.selects[i].value;
       break;
     case CMD_OPTION_TYPE_STRING:
       assert(commandLineOption->variable.string != NULL);
@@ -395,6 +456,10 @@ bool CmdOption_init(const CommandLineOption commandLineOptions[],
         assert(commandLineOptions[i].variable.select != NULL);
         (*commandLineOptions[i].variable.select) = commandLineOptions[i].defaultValue.select;
         break;
+      case CMD_OPTION_TYPE_SET:
+        assert(commandLineOptions[i].variable.set != NULL);
+        (*commandLineOptions[i].variable.set) = commandLineOptions[i].defaultValue.set;
+        break;
       case CMD_OPTION_TYPE_STRING:
         assert(commandLineOptions[i].variable.string != NULL);
         (*commandLineOptions[i].variable.string) = (char*)commandLineOptions[i].defaultValue.string;
@@ -443,6 +508,8 @@ void CmdOption_done(const CommandLineOption commandLineOptions[],
       case CMD_OPTION_TYPE_ENUM:
         break;
       case CMD_OPTION_TYPE_SELECT:
+        break;
+      case CMD_OPTION_TYPE_SET:
         break;
       case CMD_OPTION_TYPE_STRING:
         assert(commandLineOptions[i].variable.string != NULL);
@@ -541,6 +608,7 @@ bool CmdOption_parse(const char              *argv[],
                    || (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER64)
                    || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE   )
                    || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT   )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SET   )
                    || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING   )
                    || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL  )
                   )
@@ -610,6 +678,7 @@ bool CmdOption_parse(const char              *argv[],
                      || (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER64)
                      || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE   )
                      || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT   )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SET      )
                      || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING   )
                      || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL  )
                     )
@@ -783,6 +852,9 @@ void CmdOption_printHelp(FILE                    *outputHandle,
         case CMD_OPTION_TYPE_SELECT:
           n += 7; /* =<name> */
           break;
+        case CMD_OPTION_TYPE_SET:
+          n += 19; /* =<name>[,<name>...] */
+          break;
         case CMD_OPTION_TYPE_STRING:
           n += 2; /* =< */
           if (commandLineOptions[i].specialOption.helpArgument != NULL)
@@ -880,6 +952,9 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           break;
         case CMD_OPTION_TYPE_SELECT:
           strncat(name,"=<name>",sizeof(name)-strlen(name));
+          break;
+        case CMD_OPTION_TYPE_SET:
+          strncat(name,"=<name>[,<name>...]",sizeof(name)-strlen(name));
           break;
         case CMD_OPTION_TYPE_STRING:
           strncat(name,"=<",sizeof(name)-strlen(name));
@@ -1009,6 +1084,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           break;
         case CMD_OPTION_TYPE_SELECT:
           break;
+        case CMD_OPTION_TYPE_SET:
+          break;
         case CMD_OPTION_TYPE_STRING:
           if (commandLineOptions[i].defaultValue.string != NULL)
           {
@@ -1044,6 +1121,26 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].selectOption.selects[j].name));
             fprintf(outputHandle,": %s",commandLineOptions[i].selectOption.selects[j].description);
             if (commandLineOptions[i].selectOption.selects[j].value == commandLineOptions[i].defaultValue.select)
+            {
+              fprintf(outputHandle," (default)");
+            }
+            fprintf(outputHandle,"\n");
+          }
+          break;
+        case CMD_OPTION_TYPE_SET:
+          maxValueLength = 0;
+          for (j = 0; j < commandLineOptions[i].setOption.setCount; j++)
+          {
+            maxValueLength = MAX(strlen(commandLineOptions[i].setOption.set[j].name),maxValueLength);
+          }
+
+          for (j = 0; j < commandLineOptions[i].setOption.setCount; j++)
+          {
+            printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?3:0)+1);
+            fprintf(outputHandle,"%s",commandLineOptions[i].setOption.set[j].name);
+            printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].setOption.set[j].name));
+            fprintf(outputHandle,": %s",commandLineOptions[i].setOption.set[j].description);
+            if (commandLineOptions[i].setOption.set[j].value == commandLineOptions[i].defaultValue.set)
             {
               fprintf(outputHandle," (default)");
             }

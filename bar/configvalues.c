@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/configvalues.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -429,6 +429,48 @@ LOCAL bool processValue(const ConfigValue *configValue,
         }
       }
       break;
+    case CONFIG_VALUE_TYPE_SET:
+      {
+        uint  i,j,z;
+        char  setName[128];
+
+        assert(configValue->variable.set != NULL);
+        i = 0;
+        while (value[i] != '\0')
+        {
+          /* skip spaces */
+          while ((value[i] != '\0') && isspace(value[i])) { i++; }
+
+          /* get name */
+          j = 0;
+          while ((value[i] != '\0') && (value[i] != ','))
+          {
+            if (j < sizeof(setName)-1) { setName[j] = value[i]; j++; }
+            i++;
+          }
+          setName[j] = '\0';
+          if (value[i] == ',') i++;
+
+          if (setName[0] != '\0')
+          {
+            /* find value */
+            z = 0;
+            while ((z < configValue->setValue.setCount) && (strcmp(configValue->setValue.set[z].name,setName) != 0))
+            {
+              z++;
+            }
+            if (z >= configValue->setValue.setCount)
+            {
+              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown value '%s' for config value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",setName,name);
+              return FALSE;
+            }
+
+            /* add to set */
+            (*configValue->variable.set) |= configValue->setValue.set[z].value;
+          }
+        }
+      }
+      break;
     case CONFIG_VALUE_TYPE_STRING:
       {
         assert(configValue->variable.string != NULL);
@@ -521,6 +563,9 @@ bool ConfigValue_init(const ConfigValue configValues[],
       case CONFIG_VALUE_TYPE_SELECT:
         assert(configValues[i].variable.select != NULL);
         break;
+      case CONFIG_VALUE_TYPE_SET:
+        assert(configValues[i].variable.set != NULL);
+        break;
       case CONFIG_VALUE_TYPE_STRING:
         assert(configValues[i].variable.string != NULL);
         break;
@@ -555,6 +600,8 @@ void ConfigValue_done(const ConfigValue configValues[],
       case CONFIG_VALUE_TYPE_ENUM:
         break;
       case CONFIG_VALUE_TYPE_SELECT:
+        break;
+      case CONFIG_VALUE_TYPE_SET:
         break;
       case CONFIG_VALUE_TYPE_STRING:
         assert(configValues[i].variable.string != NULL);
