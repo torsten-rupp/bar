@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -215,7 +215,7 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const n
 
 /*---------------------------------------------------------------------*/
 
-Errors File_getTmpFileName(const String directory, String fileName)
+Errors File_getTmpFileName(String fileName, const String directory)
 {
   char *s;
   int  handle;
@@ -225,11 +225,11 @@ Errors File_getTmpFileName(const String directory, String fileName)
   if (directory != NULL)
   {
     String_set(fileName,directory);
-    File_appendFileNameCString(fileName,"bar-XXXXXXX");
+    File_appendFileNameCString(fileName,"bar-XXXXXX");
   }
   else
   {
-    String_setCString(fileName,"bar-XXXXXXX");
+    String_setCString(fileName,"bar-XXXXXX");
   }
   s = String_toCString(fileName);
   if (s == NULL)
@@ -252,7 +252,7 @@ Errors File_getTmpFileName(const String directory, String fileName)
   return ERROR_NONE;
 }
 
-Errors File_getTmpDirectoryName(const String directory, String directoryName)
+Errors File_getTmpDirectoryName(String directoryName, const String directory)
 {
   char *s;
 
@@ -261,11 +261,11 @@ Errors File_getTmpDirectoryName(const String directory, String directoryName)
   if (directory != NULL)
   {
     String_set(directoryName,directory);
-    File_appendFileNameCString(directoryName,"bar-XXXXXXX");
+    File_appendFileNameCString(directoryName,"bar-XXXXXX");
   }
   else
   {
-    String_setCString(directoryName,"bar-XXXXXXX");
+    String_setCString(directoryName,"bar-XXXXXX");
   }
   s = String_toCString(directoryName);
   if (s == NULL)

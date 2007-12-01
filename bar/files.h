@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -207,26 +207,27 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const n
 /***********************************************************************\
 * Name   : File_getTmpFileName
 * Purpose: create and get a temporary file name
-* Input  : directory - directory to create temporary file
-*          fileName  - variable for temporary file name
+* Input  : fileName  - variable for temporary file name
+*          directory - directory to create temporary file (can be NULL)
 * Output : -
 * Return : TRUE iff temporary file created, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-Errors File_getTmpFileName(const String directory, String fileName);
+Errors File_getTmpFileName(String fileName, const String directory);
 
 /***********************************************************************\
 * Name   : File_getTmpDirectoryName
 * Purpose: create and get a temporary directory name
-* Input  : directory     - directory to create temporary file
-*          directoryName - variable for temporary directory name
+* Input  : directoryName - variable for temporary directory name
+*          directory     - directory to create temporary file (can be
+*                          NULL)
 * Output : -
 * Return : TRUE iff temporary directory created, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-Errors File_getTmpDirectoryName(const String directory, String directoryName);
+Errors File_getTmpDirectoryName(String directoryName, const String directory);
 
 /*---------------------------------------------------------------------*/
 
