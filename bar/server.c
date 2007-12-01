@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -22,6 +22,7 @@
 #include "lists.h"
 #include "strings.h"
 #include "arrays.h"
+#include "threads.h"
 #include "semaphores.h"
 #include "msgqueues.h"
 #include "stringlists.h"
@@ -170,7 +171,7 @@ typedef struct
       SocketHandle socketHandle;
 
       /* thread */
-      pthread_t    threadId;
+      Thread       thread;
       MsgQueue     commandMsgQueue;
       bool         exitFlag;
     } network;
@@ -212,7 +213,7 @@ typedef struct
 /***************************** Variables *******************************/
 LOCAL Password   *password;
 LOCAL JobList    jobList;
-LOCAL pthread_t  jobThreadId;
+LOCAL Thread     jobThread;
 LOCAL ClientList clientList;
 LOCAL bool       quitFlag;
 
@@ -421,15 +422,15 @@ LOCAL bool storageRequestVolume(JobNode *jobNode,
 }
 
 /***********************************************************************\
-* Name   : jobThread
-* Purpose: job thread
+* Name   : jobThreadEntry
+* Purpose: job thread entry
 * Input  : jobList - job list
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void jobThread(JobList *jobList)
+LOCAL void jobThreadEntry(JobList *jobList)
 {
   JobNode *jobNode;
 //  Options options;
@@ -1274,6 +1275,10 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String argum
   {
     sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.errorCorrectionCodesFlag?1:0);
   }
+  else if (String_equalsCString(arguments[0],"wait-first-volume"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.waitFirstVolumeFlag?1:0);
+  }
   else
   {
     sendResult(clientInfo,id,TRUE,1,"unknown config value");
@@ -1409,6 +1414,12 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
   {
     // overwrite-archive-files 1|0
     clientInfo->options.errorCorrectionCodesFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"wait-first-volume"))
+  {
+    // overwrite-archive-files 1|0
+    clientInfo->options.waitFirstVolumeFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else
@@ -2140,7 +2151,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   {
     HALT_FATAL_ERROR("Cannot initialise client command message queue!");
   }
-  if (pthread_create(&clientInfo->network.threadId,NULL,(void*(*)(void*))networkClientThread,clientInfo) != 0)
+  if (!Thread_init(&clientInfo->network.thread,0,networkClientThread,clientInfo))
   {
     HALT_FATAL_ERROR("Cannot initialise client thread!");
   }
@@ -2171,7 +2182,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       /* stop client thread */
       clientInfo->network.exitFlag = TRUE;
       MsgQueue_setEndOfMsg(&clientInfo->network.commandMsgQueue);
-      pthread_join(clientInfo->network.threadId,NULL);
+      Thread_join(&clientInfo->network.thread);
 
       /* free resources */
       MsgQueue_done(&clientInfo->network.commandMsgQueue,(MsgQueueMsgFreeFunction)freeCommandMsg,NULL);
@@ -2410,7 +2421,7 @@ Errors Server_run(uint       serverPort,
   }
 
   /* start job-thread */
-  if (pthread_create(&jobThreadId,NULL,(void*(*)(void*))jobThread,&jobList) != 0)
+  if (Thread_init(&jobThread,0,jobThreadEntry,&jobList))
   {
     HALT_FATAL_ERROR("Cannot initialise job thread!");
   }
@@ -2446,7 +2457,7 @@ Errors Server_run(uint       serverPort,
         initNetworkClient(&clientNode->clientInfo,name,port,socketHandle);
         List_append(&clientList,clientNode);
 
-        info(1,"Connected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+        printInfo(1,"Connected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
       }
       else
       {
@@ -2469,7 +2480,7 @@ Errors Server_run(uint       serverPort,
         initNetworkClient(&clientNode->clientInfo,name,port,socketHandle);
         List_append(&clientList,clientNode);
 
-        info(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+        printInfo(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
       }
       else
       {
@@ -2512,7 +2523,7 @@ Errors Server_run(uint       serverPort,
         else
         {
           /* disconnect */
-          info(1,"Disconnected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+          printInfo(1,"Disconnected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
 
           deleteClientNode = clientNode;
           clientNode = clientNode->next;
@@ -2534,7 +2545,7 @@ Errors Server_run(uint       serverPort,
       if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
       {
         /* authorizaton error -> disconnect  client */
-        info(1,"Disconnected client '%s:%u': authorization failure\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+        printInfo(1,"Disconnected client '%s:%u': authorization failure\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
 
         deleteClientNode = clientNode;
         clientNode = clientNode->next;

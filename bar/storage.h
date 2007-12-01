@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -71,6 +71,7 @@ typedef enum
 {
   STORAGE_VOLUME_STATE_UNKNOWN,
   STORAGE_VOLUME_STATE_UNLOADED,
+  STORAGE_VOLUME_STATE_WAIT,
   STORAGE_VOLUME_STATE_LOADED,
 } StorageVolumeStates;
 
@@ -92,9 +93,9 @@ typedef struct
 
   StorageRequestVolumeFunction requestVolumeFunction;
   void                         *requestVolumeUserData;
-  uint                         volumeNumber;          
-  uint                         requestedVolumeNumber; 
-  StorageVolumeStates          volumeState;
+  uint                         volumeNumber;           // current loaded volume number
+  uint                         requestedVolumeNumber;  // requested volume number
+  StorageVolumeStates          volumeState;            // volume state
 
   StorageStatusInfoFunction    storageStatusInfoFunction;
   void                         *storageStatusInfoUserData;
@@ -160,17 +161,18 @@ typedef struct
     // dvd storage
     struct
     {
-      Device     device;                               // dvd device name
-      String     name;                                 // 
-      uint       steps;                                // number of steps to create dvd
-      String     directory;                            //
+      Device     device;                               // device
+      String     name;                                 // device name
+      uint       steps;                                // total number of steps to create dvd
+      String     directory;                            // temporary directory for dvd files
       uint64     volumeSize;                           // size of dvd [bytes]
 
       uint       step;                                 // current step number
       double     progress;                             // progress of current step
 
+      uint       number;                               // current dvd number
+      bool       newFlag;                              // TRUE iff new dvd needed
       StringList fileNameList;                         // list with file names
- 
       String     fileName;                             // current file name
       FileHandle fileHandle;
       uint64     totalSize;                            // current size of dvd [bytes]
@@ -178,12 +180,13 @@ typedef struct
     // device storage
     struct
     {
-      Device     device;                               // device name
-      String     name;
-      String     directory;
+      Device     device;                               // device
+      String     name;                                 // device name
+      String     directory;                            // temporary directory for files
 
+      uint       number;                               // volume number
+      bool       newFlag;                              // TRUE iff new volume needed
       StringList fileNameList;                         // list with file names
-
       String     fileName;                             // current file name
       FileHandle fileHandle;
       uint64     totalSize;                            // current size [bytes]

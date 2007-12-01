@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.37 $
+* $Revision: 1.38 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -26,6 +26,7 @@
 #include "strings.h"
 #include "lists.h"
 #include "stringlists.h"
+#include "threads.h"
 #include "msgqueues.h"
 #include "semaphores.h"
 
@@ -77,15 +78,15 @@ typedef struct
 
   MsgQueue                    fileMsgQueue;                       // queue with files to backup
 
-  pthread_t                   collectorSumThreadId;               // files collector sum thread id
-  pthread_t                   collectorThreadId;                  // files collector thread id
+  Thread                      collectorSumThread;                 // files collector sum thread id
+  Thread                      collectorThread;                    // files collector thread id
   bool                        collectorThreadExitFlag;
 
   MsgQueue                    storageMsgQueue;                    // queue with storage files
   Semaphore                   storageSemaphore;
   uint                        storageCount;                       // number of current storage files
   uint64                      storageBytes;                       // number of bytes in current storage files
-  pthread_t                   storageThreadId;                    // storage thread id
+  Thread                      storageThread;                      // storage thread id
   bool                        storageThreadExitFlag;
 
   Errors                      failError;
@@ -528,6 +529,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
             }
             else
             {
+              logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
+              printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),getErrorText(error));
               createInfo->statusInfo.errorFiles++;
               updateStatusInfo(createInfo);
             }
@@ -551,10 +554,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                 error = File_readDirectory(&directoryHandle,fileName);
                 if (error != ERROR_NONE)
                 {
-                  printError("Cannot read directory '%s' (error: %s)\n",
-                             String_cString(name),
-                             getErrorText(error)
-                            );
+                  logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
+                  printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),getErrorText(error));
                   createInfo->statusInfo.errorFiles++;
                   createInfo->statusInfo.errorBytes += fileInfo.size;
                   updateStatusInfo(createInfo);
@@ -577,6 +578,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                       }
                       else
                       {
+                        logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
+                        printInfo(2,"Cannot access file '%s' (error: %s) - skipped\n",String_cString(fileName),getErrorText(error));
                         createInfo->statusInfo.errorFiles++;
                         updateStatusInfo(createInfo);
                       }
@@ -590,7 +593,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                       appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_LINK);
                       break;
                     default:
-                      info(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
+                      logMessage(LOG_TYPE_FILE_TYPE_UNKNOWN,"unknown type '%s'",String_cString(fileName));
+                      printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
                       createInfo->statusInfo.errorFiles++;
                       createInfo->statusInfo.errorBytes += fileInfo.size;
                       updateStatusInfo(createInfo);
@@ -611,10 +615,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
             }
             else
             {
-              printError("Cannot open directory '%s' (error: %s)\n",
-                         String_cString(name),
-                         getErrorText(error)
-                        );
+              logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
+              printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),getErrorText(error));
               createInfo->statusInfo.errorFiles++;
               updateStatusInfo(createInfo);
             }
@@ -624,7 +626,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
             appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_LINK);
             break;
           default:
-            info(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
+            logMessage(LOG_TYPE_FILE_TYPE_UNKNOWN,"unknown type '%s'",String_cString(name));
+            printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
             createInfo->statusInfo.errorFiles++;
             createInfo->statusInfo.errorBytes += fileInfo.size;
             updateStatusInfo(createInfo);
@@ -633,6 +636,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
       }
       else
       {
+        logMessage(LOG_TYPE_FILE_EXCLUDED,"excluded '%s'",String_cString(name));
         createInfo->statusInfo.skippedFiles++;
         createInfo->statusInfo.skippedBytes += fileInfo.size;
         updateStatusInfo(createInfo);
@@ -660,7 +664,7 @@ sleep(1);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : appendFileNameToList
+* Name   : appendToStorageList
 * Purpose: append a filename to a filename list
 * Input  : storageMsgQueue     - storage message queue
 *          fileName            - file name (will be copied!)
@@ -914,7 +918,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
         continue;
       }
 
-      info(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageMsg.destinationFileName));
+      printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageMsg.destinationFileName));
 
       /* create storage file */
       error = Storage_create(&createInfo->storageFileHandle,
@@ -924,7 +928,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
                             );
       if (error != ERROR_NONE)
       {
-        info(0,"FAIL!\n");
+        printInfo(0,"FAIL!\n");
         printError("Cannot store file '%s' (error: %s)\n",
                    String_cString(storageMsg.destinationFileName),
                    getErrorText(error)
@@ -941,7 +945,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
       error = File_open(&fileHandle,storageMsg.fileName,FILE_OPENMODE_READ);
       if (error != ERROR_NONE)
       {
-        info(0,"FAIL!\n");
+        printInfo(0,"FAIL!\n");
         printError("Cannot open file '%s' (error: %s)!\n",
                    String_cString(storageMsg.fileName),
                    getErrorText(error)
@@ -957,7 +961,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
         error = File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
         if (error != ERROR_NONE)
         {
-          info(0,"FAIL!\n");
+          printInfo(0,"FAIL!\n");
           printError("Cannot read file '%s' (error: %s)!\n",
                      String_cString(storageMsg.fileName),
                      getErrorText(error)
@@ -968,7 +972,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
         error = Storage_write(&createInfo->storageFileHandle,buffer,n);
         if (error != ERROR_NONE)
         {
-          info(0,"FAIL!\n");
+          printInfo(0,"FAIL!\n");
           printError("Cannot write file '%s' (error: %s)!\n",
                      String_cString(storageMsg.destinationFileName),
                      getErrorText(error)
@@ -990,7 +994,8 @@ LOCAL void storageThread(CreateInfo *createInfo)
 
       if (error == ERROR_NONE)
       {
-        info(0,"ok\n");
+        logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageMsg.destinationFileName));
+        printInfo(0,"ok\n");
       }
 
       /* post-process */
@@ -1184,15 +1189,15 @@ Errors Command_create(const char                   *archiveFileName,
   }
 
   /* start threads */
-  if (pthread_create(&createInfo.collectorSumThreadId,NULL,(void*(*)(void*))collectorSumThread,&createInfo) != 0)
+  if (!Thread_init(&createInfo.collectorSumThread,0,collectorSumThread,&createInfo))
   {
     HALT_FATAL_ERROR("Cannot initialise collector sum thread!");
   }
-  if (pthread_create(&createInfo.collectorThreadId,NULL,(void*(*)(void*))collectorThread,&createInfo) != 0)
+  if (!Thread_init(&createInfo.collectorThread,0,collectorThread,&createInfo))
   {
     HALT_FATAL_ERROR("Cannot initialise collector thread!");
   }
-  if (pthread_create(&createInfo.storageThreadId,NULL,(void*(*)(void*))storageThread,&createInfo) != 0)
+  if (!Thread_init(&createInfo.storageThread,0,storageThread,&createInfo))
   {
     HALT_FATAL_ERROR("Cannot initialise storage thread!");
   }
@@ -1204,7 +1209,7 @@ Errors Command_create(const char                   *archiveFileName,
   {
     if (createInfo.failError == ERROR_NONE)
     {
-      info(1,"Add '%s'...",String_cString(fileName));
+      printInfo(1,"Add '%s'...",String_cString(fileName));
 
       switch (fileType)
       {
@@ -1221,13 +1226,12 @@ Errors Command_create(const char                   *archiveFileName,
             {
               if (options->skipUnreadableFlag)
               {
-                info(1,"skipped (reason: %s)\n",
-                     getErrorText(error)
-                    );
+                printInfo(1,"skipped (reason: %s)\n",getErrorText(error));
+                logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
               }
               else
               {
-                info(1,"FAIL\n");
+                printInfo(1,"FAIL\n");
                 printError("Cannot get info for file '%s' (error: %s)\n",
                            String_cString(fileName),
                            getErrorText(error)
@@ -1243,13 +1247,12 @@ Errors Command_create(const char                   *archiveFileName,
             {
               if (options->skipUnreadableFlag)
               {
-                info(1,"skipped (reason: %s)\n",
-                     getErrorText(error)
-                    );
+                printInfo(1,"skipped (reason: %s)\n",getErrorText(error));
+                logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
               }
               else
               {
-                info(1,"FAIL\n");
+                printInfo(1,"FAIL\n");
                 printError("Cannot open file '%s' (error: %s)\n",
                            String_cString(fileName),
                            getErrorText(error)
@@ -1267,8 +1270,8 @@ Errors Command_create(const char                   *archiveFileName,
                                         );
             if (error != ERROR_NONE)
             {
-              info(1,"FAIL\n");
-              printError("Cannot create new archive entry '%s' (error: %s)\n",
+              printInfo(1,"FAIL\n");
+              printError("Cannot create new archive file entry '%s' (error: %s)\n",
                          String_cString(fileName),
                          getErrorText(error)
                         );
@@ -1303,15 +1306,15 @@ Errors Command_create(const char                   *archiveFileName,
                   );
             if ((createInfo.abortRequestFlag != NULL) && (*createInfo.abortRequestFlag))
             {
-              info(1,"ABORTED\n");
+              printInfo(1,"ABORTED\n");
               File_close(&fileHandle);
               Archive_closeEntry(&archiveFileInfo);
               break;
             }
             if (error != ERROR_NONE)
             {
-              info(1,"FAIL\n");
-              printError("Cannot create archive file (error: %s)!\n",
+              printInfo(1,"FAIL\n");
+              printError("Cannot store archive file (error: %s)!\n",
                          getErrorText(error)
                         );
               File_close(&fileHandle);
@@ -1322,15 +1325,13 @@ Errors Command_create(const char                   *archiveFileName,
 
             /* close file */
             File_close(&fileHandle);
-            createInfo.statusInfo.doneFiles++;
-            updateStatusInfo(&createInfo);
 
             /* close archive entry */
             error = Archive_closeEntry(&archiveFileInfo);
             if (error != ERROR_NONE)
             {
-              info(1,"FAIL\n");
-              printError("Cannot close archive file (error: %s)!\n",
+              printInfo(1,"FAIL\n");
+              printError("Cannot close archive file entry (error: %s)!\n",
                          getErrorText(error)
                         );
               createInfo.failError = error;
@@ -1345,7 +1346,11 @@ Errors Command_create(const char                   *archiveFileName,
             {
               ratio = 0;
             }
-            info(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
+            printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
+
+            logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
+            createInfo.statusInfo.doneFiles++;
+            updateStatusInfo(&createInfo);
           }
           break;
         case FILE_TYPE_DIRECTORY:
@@ -1358,13 +1363,12 @@ Errors Command_create(const char                   *archiveFileName,
             {
               if (options->skipUnreadableFlag)
               {
-                info(1,"skipped (reason: %s)\n",
-                     getErrorText(error)
-                    );
+                printInfo(1,"skipped (reason: %s)\n",getErrorText(error));
+                logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
               }
               else
               {
-                info(1,"FAIL\n");
+                printInfo(1,"FAIL\n");
                 printError("Cannot get info for directory '%s' (error: %s)\n",
                            String_cString(fileName),
                            getErrorText(error)
@@ -1382,23 +1386,33 @@ Errors Command_create(const char                   *archiveFileName,
                                              );
             if (error != ERROR_NONE)
             {
-              info(1,"FAIL\n");
-              printError("Cannot create new archive entry '%s' (error: %s)\n",
+              printInfo(1,"FAIL\n");
+              printError("Cannot create new archive directory entry '%s' (error: %s)\n",
                          String_cString(fileName),
+                         getErrorText(error)
+                        );
+              logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
+              createInfo.failError = error;
+              break;
+            }
+
+            /* close archive entry */
+            error = Archive_closeEntry(&archiveFileInfo);
+            if (error != ERROR_NONE)
+            {
+              printInfo(1,"FAIL\n");
+              printError("Cannot close archive directory entry (error: %s)!\n",
                          getErrorText(error)
                         );
               createInfo.failError = error;
               break;
             }
 
-            /* close archive entry */
-            Archive_closeEntry(&archiveFileInfo);
+            printInfo(1,"ok\n");
+
+            logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
             createInfo.statusInfo.doneFiles++;
             updateStatusInfo(&createInfo);
-
-            /* free resources */
-
-            info(1,"ok\n");
           }
           break;
         case FILE_TYPE_LINK:
@@ -1412,14 +1426,13 @@ Errors Command_create(const char                   *archiveFileName,
             {
               if (options->skipUnreadableFlag)
               {
-                info(1,"skipped (reason: %s)\n",
-                     getErrorText(error)
-                    );
+                printInfo(1,"skipped (reason: %s)\n",getErrorText(error));
+                logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
               }
               else
               {
-                info(1,"FAIL\n");
-                printError("Cannot get info for file '%s' (error: %s)\n",
+                printInfo(1,"FAIL\n");
+                printError("Cannot get info for link '%s' (error: %s)\n",
                            String_cString(fileName),
                            getErrorText(error)
                           );
@@ -1435,13 +1448,12 @@ Errors Command_create(const char                   *archiveFileName,
             {
               if (options->skipUnreadableFlag)
               {
-                info(1,"skipped (reason: %s)\n",
-                     getErrorText(error)
-                    );
+                printInfo(1,"skipped (reason: %s)\n",getErrorText(error));
+                logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
               }
               else
               {
-                info(1,"FAIL\n");
+                printInfo(1,"FAIL\n");
                 printError("Cannot read link '%s' (error: %s)\n",
                            String_cString(fileName),
                            getErrorText(error)
@@ -1461,8 +1473,8 @@ Errors Command_create(const char                   *archiveFileName,
                                         );
             if (error != ERROR_NONE)
             {
-              info(1,"FAIL\n");
-              printError("Cannot create new archive entry '%s' (error: %s)\n",
+              printInfo(1,"FAIL\n");
+              printError("Cannot create new archive link entry '%s' (error: %s)\n",
                          String_cString(fileName),
                          getErrorText(error)
                         );
@@ -1472,14 +1484,25 @@ Errors Command_create(const char                   *archiveFileName,
             }
 
             /* close archive entry */
-            Archive_closeEntry(&archiveFileInfo);
-            createInfo.statusInfo.doneFiles++;
-            updateStatusInfo(&createInfo);
+            error = Archive_closeEntry(&archiveFileInfo);
+            if (error != ERROR_NONE)
+            {
+              printInfo(1,"FAIL\n");
+              printError("Cannot close archive link entry (error: %s)!\n",
+                         getErrorText(error)
+                        );
+              createInfo.failError = error;
+              break;
+            }
 
             /* free resources */
             String_delete(name);
 
-            info(1,"ok\n");
+            printInfo(1,"ok\n");
+
+            logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
+            createInfo.statusInfo.doneFiles++;
+            updateStatusInfo(&createInfo);
           }
           break;
         default:
@@ -1503,14 +1526,14 @@ Errors Command_create(const char                   *archiveFileName,
     createInfo.collectorThreadExitFlag = TRUE;
     createInfo.storageThreadExitFlag   = TRUE;
   }
-  pthread_join(createInfo.storageThreadId,NULL);
-  pthread_join(createInfo.collectorThreadId,NULL);
-  pthread_join(createInfo.collectorSumThreadId,NULL);
+  Thread_join(&createInfo.storageThread);
+  Thread_join(&createInfo.collectorThread);
+  Thread_join(&createInfo.collectorSumThread);
 
   /* output statics */
-  info(0,"%lu file(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneFiles,createInfo.statusInfo.doneBytes);
-  info(2,"%lu file(s) skipped\n",createInfo.statusInfo.skippedFiles);
-  info(2,"%lu file(s) with errors\n",createInfo.statusInfo.errorFiles);
+  printInfo(0,"%lu file(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneFiles,createInfo.statusInfo.doneBytes);
+  printInfo(2,"%lu file(s) skipped\n",createInfo.statusInfo.skippedFiles);
+  printInfo(2,"%lu file(s) with errors\n",createInfo.statusInfo.errorFiles);
 
   /* free resources */
   Storage_done(&createInfo.storageFileHandle);

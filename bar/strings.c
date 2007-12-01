@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1009,27 +1009,54 @@ LOCAL bool parseString(const struct __String *string,
 
           z = 0;
           while (   (index < string->length)
-                 && !isspace(string->data[index])
+                 && (((*format) == '\0') || !isspace(string->data[index]))
                  && (string->data[index] != (*format))
                 )
           {
-            stringQuote = NULL;
-            if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-            if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
-
-            if (stringQuote != NULL)
+            if (string->data[index] == '\\')
             {
-              do
+              index++;
+              if (index < string->length)
               {
-                /* skip quote-char */
-                index++;
-
-                /* get string */
-                while ((index < string->length) && (string->data[index] != (*stringQuote)))
+                if (z < formatToken.width-1)
                 {
-                  if (string->data[index] == '\\')
+                  value.s[z] = string->data[index];
+                  z++;
+                }
+                index++;
+              }
+            }
+            else
+            {
+              /* check for string quote */
+              stringQuote = NULL;
+              if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+              if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
+
+              if (stringQuote != NULL)
+              {
+                do
+                {
+                  /* skip quote-char */
+                  index++;
+
+                  /* get string */
+                  while ((index < string->length) && (string->data[index] != (*stringQuote)))
                   {
-                    if (index < string->length)
+                    if (string->data[index] == '\\')
+                    {
+                      index++;
+                      if (index < string->length)
+                      {
+                        if (z < (formatToken.width-1))
+                        {
+                          value.s[z] = string->data[index];
+                          z++;
+                        }
+                        index++;
+                      }
+                    }
+                    else
                     {
                       if (z < (formatToken.width-1))
                       {
@@ -1039,34 +1066,25 @@ LOCAL bool parseString(const struct __String *string,
                       index++;
                     }
                   }
-                  else
-                  {
-                    if (z < (formatToken.width-1))
-                    {
-                      value.s[z] = string->data[index];
-                      z++;
-                    }
-                    index++;
-                  }
+
+                  /* skip quote-char */
+                  index++;
+
+                  stringQuote = NULL;
+                  if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+                  if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
                 }
-
-                /* skip quote-char */
-                index++;
-
-                stringQuote = NULL;
-                if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-                if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
+                while (stringQuote != NULL);
               }
-              while (stringQuote != NULL);
-            }
-            else
-            {
-              if (z < (formatToken.width-1))
+              else
               {
-                value.s[z] = string->data[index];
-                z++;
+                if (z < (formatToken.width-1))
+                {
+                  value.s[z] = string->data[index];
+                  z++;
+                }
+                index++;
               }
-              index++;
             }
           }
           value.s[z] = '\0';
@@ -1084,27 +1102,54 @@ LOCAL bool parseString(const struct __String *string,
           String_clear(value.string);
           z = 0;
           while (   (index < string->length)
-                 && !isspace(string->data[index])
+                 && (((*format) == '\0') || !isspace(string->data[index]))
                  && (string->data[index] != (*format))
                 )
           {
-            stringQuote = NULL;
-            if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-            if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
-
-            if (stringQuote != NULL)
+            if (string->data[index] == '\\')
             {
-              do
+              index++;
+              if (index < string->length)
               {
-                /* skip quote-char */
-                index++;
-
-                /* get string */
-                while ((index < string->length) && (string->data[index] != (*stringQuote)))
+                if ((formatToken.width == 0) || (z < formatToken.width-1))
                 {
-                  if (string->data[index] == '\\')
+                  String_appendChar(value.string,string->data[index]);
+                  z++;
+                }
+                index++;
+              }
+            }
+            else
+            {
+              /* check for string quote */
+              stringQuote = NULL;
+              if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+              if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
+
+              if (stringQuote != NULL)
+              {
+                do
+                {
+                  /* skip quote-char */
+                  index++;
+
+                  /* get string */
+                  while ((index < string->length) && (string->data[index] != (*stringQuote)))
                   {
-                    if (index < string->length)
+                    if (string->data[index] == '\\')
+                    {
+                      index++;
+                      if (index < string->length)
+                      {
+                        if ((formatToken.width == 0) || (z < formatToken.width-1))
+                        {
+                          String_appendChar(value.string,string->data[index]);
+                          z++;
+                        }
+                        index++;
+                      }
+                    }
+                    else
                     {
                       if ((formatToken.width == 0) || (z < formatToken.width-1))
                       {
@@ -1114,34 +1159,25 @@ LOCAL bool parseString(const struct __String *string,
                       index++;
                     }
                   }
-                  else
-                  {
-                    if ((formatToken.width == 0) || (z < formatToken.width-1))
-                    {
-                      String_appendChar(value.string,string->data[index]);
-                      z++;
-                    }
-                    index++;
-                  }
+
+                  /* skip quote-char */
+                  index++;
+
+                  stringQuote = NULL;
+                  if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+                  if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
                 }
-
-                /* skip quote-char */
-                index++;
-
-                stringQuote = NULL;
-                if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-                if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
+                while (stringQuote != NULL);
               }
-              while (stringQuote != NULL);
-            }
-            else
-            {
-              if ((formatToken.width == 0) || (z < formatToken.width-1))
+              else
               {
-                String_appendChar(value.string,string->data[index]);
-                z++;
+                if ((formatToken.width == 0) || (z < formatToken.width-1))
+                {
+                  String_appendChar(value.string,string->data[index]);
+                  z++;
+                }
+                index++;
               }
-              index++;
             }
           }
           break;

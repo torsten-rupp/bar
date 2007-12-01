@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.40 $
+* $Revision: 1.41 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -98,6 +100,7 @@ LOCAL SSHServerList sshServerList;
 LOCAL DeviceList    deviceList;
 LOCAL SSHServer     *sshServer = &defaultOptions.defaultSSHServer;
 LOCAL Device        *device = &defaultOptions.defaultDevice;
+LOCAL int           priority;
 LOCAL bool          daemonFlag;
 LOCAL uint          serverPort;
 LOCAL bool          serverTLSPort;
@@ -105,14 +108,25 @@ LOCAL const char    *serverCAFileName;
 LOCAL const char    *serverCertFileName;
 LOCAL const char    *serverKeyFileName;
 LOCAL Password      *serverPassword;
-//LOCAL const char  *logFileName;
+
+LOCAL ulong         logTypes;
+LOCAL const char    *logFileName;
+LOCAL const char    *logPostCommand;
 
 LOCAL bool          batchFlag;
 LOCAL bool          versionFlag;
 LOCAL bool          helpFlag,xhelpFlag,helpInternalFlag;
 
+/*---------------------------------------------------------------------*/
+
+LOCAL String        tmpLogFileName;
+LOCAL FILE          *logFile;
+LOCAL FILE          *tmpLogFile;
+
 LOCAL String        outputLine;
 LOCAL bool          outputNewLineFlag;
+
+/*---------------------------------------------------------------------*/
 
 LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
@@ -178,6 +192,24 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
   {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256,"Twofish cipher 256bit"},
 };
 
+const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
+{
+  {"none",      LOG_TYPE_NONE,              "no logging"               },
+  {"errors",    LOG_TYPE_ERROR,             "log errors"               },
+  {"warnings",  LOG_TYPE_WARNING,           "log warningss"            },
+
+  {"ok",        LOG_TYPE_FILE_OK,           "log stored/restored files"},
+  {"unknown",   LOG_TYPE_FILE_TYPE_UNKNOWN, "log unknown files"        },
+  {"skipped",   LOG_TYPE_FILE_ACCESS_DENIED,"log skipped files"        },
+  {"missing",   LOG_TYPE_FILE_MISSING,      "log missing files"        },
+  {"incomplete",LOG_TYPE_FILE_INCOMPLETE,   "log incomplete files"     },
+  {"excluded",  LOG_TYPE_FILE_EXCLUDED,     "log excluded files"       },
+
+  {"storage",   LOG_TYPE_STORAGE,           "log storage"              },
+
+  {"all",       LOG_TYPE_ALL,               "log everything"           },
+};
+
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
   CMD_OPTION_ENUM         ("create",                   'c',0,0,command,                                              COMMAND_NONE,COMMAND_CREATE,                                       "create new archive"                                               ),
@@ -193,6 +225,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER64    ("max-tmp-size",             0,  1,0,defaultOptions.maxTmpSize,                            0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "max. size of temporary files"                                     ),
   CMD_OPTION_INTEGER      ("directory-strip",          'p',1,0,defaultOptions.directoryStripCount,                   0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"                        ),
   CMD_OPTION_SPECIAL      ("directory",                0,  0,0,&defaultOptions.directory   ,                         NULL,cmdOptionParseString,NULL,                                    "directory to restore files","path"                                ),
+  CMD_OPTION_INTEGER      ("priority",                 0,  1,0,priority,                                             0,0,19,NULL,                                                       "priority of processes/threads"                                    ),
 
   CMD_OPTION_INTEGER      ("max-band-width",           0,  1,0,defaultOptions.maxBandWidth,                          0,0,LONG_MAX,COMMAND_LINE_BITS_UNITS,                              "max. network band width to use"                                   ),
 
@@ -241,11 +274,16 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN      ("ecc",                      0,  1,0,defaultOptions.errorCorrectionCodesFlag,              FALSE,                                                             "add error-correction codes with 'dvdisaster' tool"                ),
 
+  CMD_OPTION_SET          ("log",                      0,  1,0,logTypes,                                             0,COMMAND_LINE_OPTIONS_LOG_TYPES,                                  "log types"                                                        ),
+  CMD_OPTION_STRING       ("log-file",                 0,  1,0,logFileName       ,                                   NULL,                                                              "log file name","file name"                                        ),
+  CMD_OPTION_STRING       ("log-post-command",         0,  1,0,logPostCommand,                                       NULL,                                                              "log file post-process command","command"                          ),
+
 //  CMD_OPTION_BOOLEAN      ("incremental",              0,  0,0,defaultOptions.incrementalFlag,                     FALSE,                                                             "overwrite existing files"                                         ),
   CMD_OPTION_BOOLEAN      ("skip-unreadable",          0,  0,0,defaultOptions.skipUnreadableFlag,                    TRUE,                                                              "skip unreadable files"                                            ),
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",  0,  0,0,defaultOptions.overwriteArchiveFilesFlag,             FALSE,                                                             "overwrite existing archive files"                                 ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",          0,  0,0,defaultOptions.overwriteFilesFlag,                    FALSE,                                                             "overwrite existing files"                                         ),
   CMD_OPTION_BOOLEAN      ("no-default-config",        0,  1,0,defaultOptions.noDefaultConfigFlag,                   FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
+  CMD_OPTION_BOOLEAN      ("wait-first-volume",        0,  1,0,defaultOptions.waitFirstVolumeFlag,                   FALSE,                                                             "wait for first volume"                                            ),
   CMD_OPTION_BOOLEAN      ("quiet",                    0,  1,0,defaultOptions.quietFlag,                             FALSE,                                                             "surpress any output"                                              ),
   CMD_OPTION_INTEGER_RANGE("verbose",                  'v',1,0,defaultOptions.verboseLevel,                          1,0,3,NULL,                                                        "verbosity level"                                                  ),
 
@@ -254,6 +292,8 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("xhelp",                    'h',0,0,xhelpFlag,                                            FALSE,                                                             "output help to extended options"                                  ),
   CMD_OPTION_BOOLEAN      ("help-internal",            'h',1,0,helpInternalFlag,                                     FALSE,                                                             "output help to internal options"                                  ),
 };
+
+/*---------------------------------------------------------------------*/
 
 LOCAL bool configValueParseString(void *userData, void *variable, const char *name, const char *value);
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value);
@@ -319,6 +359,24 @@ const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
   {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256},
 };
 
+const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
+{
+  {"none",      LOG_TYPE_NONE              },
+  {"errors",    LOG_TYPE_ERROR             },
+  {"warnings",  LOG_TYPE_WARNING           },
+
+  {"ok",        LOG_TYPE_FILE_OK           },
+  {"unknown",   LOG_TYPE_FILE_TYPE_UNKNOWN },
+  {"skipped",   LOG_TYPE_FILE_ACCESS_DENIED},
+  {"missing",   LOG_TYPE_FILE_MISSING      },
+  {"incomplete",LOG_TYPE_FILE_INCOMPLETE   },
+  {"excluded",  LOG_TYPE_FILE_EXCLUDED     },
+
+  {"storage",   LOG_TYPE_STORAGE           },
+
+  {"all",       LOG_TYPE_ALL               },
+};
+
 LOCAL const ConfigValue CONFIG_VALUES[] =
 {
   CONFIG_VALUE_SPECIAL  ("config",                   NULL,-1,                                                 configValueParseConfigFile,NULL),
@@ -328,6 +386,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER64("max-tmp-size",             defaultOptions.maxTmpSize,-1,                            0,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_INTEGER  ("directory-strip",          defaultOptions.directoryStripCount,-1,                   0,LONG_MAX,NULL),
   CONFIG_VALUE_SPECIAL  ("directory",                &defaultOptions.directory,-1,                            configValueParseString,NULL),
+  CONFIG_VALUE_INTEGER  ("priority",                 priority,-1,                                             0,19,NULL),
 
   CONFIG_VALUE_INTEGER  ("max-band-width",           defaultOptions.maxBandWidth,-1,                          0,LONG_MAX,CONFIG_VALUE_BITS_UNITS),
 
@@ -374,10 +433,14 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_BOOLEAN  ("ecc",                      defaultOptions.errorCorrectionCodesFlag,-1               ),
 
+  CONFIG_VALUE_SET      ("log",                      logTypes,-1,                                             CONFIG_VALUE_LOG_TYPES),
+  CONFIG_VALUE_STRING   ("log-file",                 logFileName,-1                                           ),
+  CONFIG_VALUE_STRING   ("log-post-command",         logPostCommand,-1                                        ),
+
   CONFIG_VALUE_BOOLEAN  ("skip-unreadable",          defaultOptions.skipUnreadableFlag,-1                     ),
   CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",  defaultOptions.overwriteArchiveFilesFlag,-1              ),
   CONFIG_VALUE_BOOLEAN  ("overwrite-files",          defaultOptions.overwriteFilesFlag,-1                     ),
-  CONFIG_VALUE_BOOLEAN  ("no-default-config",        defaultOptions.noDefaultConfigFlag,-1                    ),
+  CONFIG_VALUE_BOOLEAN  ("wait-first-volume",        defaultOptions.waitFirstVolumeFlag,-1                    ),
   CONFIG_VALUE_BOOLEAN  ("quiet",                    defaultOptions.quietFlag,-1                              ),
   CONFIG_VALUE_INTEGER  ("verbose",                  defaultOptions.verboseLevel,-1,                          0,3,NULL),
 };
@@ -393,7 +456,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 #endif
 
 /***********************************************************************\
-* Name   : outputConsole
+* Name   : output
 * Purpose: output string to console
 * Input  : file            - output stream (stdout, stderr)
 *          saveRestoreFlag - TRUE if current line should be saved and 
@@ -405,7 +468,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 *           string is printed and the line is restored
 \***********************************************************************/
 
-LOCAL void outputConsole(FILE *file, bool saveRestoreFlag, const String string)
+LOCAL void output(FILE *file, bool saveRestoreFlag, const String string)
 {
   uint z;
 
@@ -484,7 +547,7 @@ LOCAL bool readConfigFile(String fileName, bool printErrorFlag)
   }
 
   /* parse file */
-  info(2,"Reading config file '%s'...",String_cString(fileName));
+  printInfo(2,"Reading config file '%s'...",String_cString(fileName));
   failFlag   = FALSE;
   lineNb     = 0;
   line       = String_new();
@@ -496,7 +559,7 @@ LOCAL bool readConfigFile(String fileName, bool printErrorFlag)
     error = File_readLine(&fileHandle,line);
     if (error != ERROR_NONE)
     {
-      info(2,"FAIL\n");
+      printInfo(2,"FAIL\n");
       printError("Cannot read file '%s' (error: %s)!\n",
                  String_cString(fileName),
                  getErrorText(error)
@@ -576,7 +639,7 @@ LOCAL bool readConfigFile(String fileName, bool printErrorFlag)
                             )
          )
       {
-        info(2,"FAIL\n");
+        printInfo(2,"FAIL\n");
         printError("Unknown or invalid config value '%s' in %s, line %ld\n",
                    String_cString(name),
                    String_cString(fileName),
@@ -588,7 +651,7 @@ LOCAL bool readConfigFile(String fileName, bool printErrorFlag)
     }
     else
     {
-      info(2,"FAIL\n");
+      printInfo(2,"FAIL\n");
       printError("Error in %s, line %ld: %s\n",
                  String_cString(fileName),
                  lineNb,
@@ -600,7 +663,7 @@ LOCAL bool readConfigFile(String fileName, bool printErrorFlag)
   }
   if (!failFlag)
   {
-    info(2,"ok\n");
+    printInfo(2,"ok\n");
   }
   String_delete(value);
   String_delete(name);
@@ -863,7 +926,7 @@ LOCAL void printUsage(const char *programName, uint level)
 }
 
 /***********************************************************************\
-* Name   : init
+* Name   : initAll
 * Purpose: initialize
 * Input  : -
 * Output : -
@@ -936,7 +999,7 @@ LOCAL bool initAll(void)
 }
 
 /***********************************************************************\
-* Name   : done
+* Name   : doneAll
 * Purpose: deinitialize
 * Input  : -
 * Output : -
@@ -1000,7 +1063,7 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
 
 /*---------------------------------------------------------------------*/
 
-void vinfo(uint verboseLevel, const char *format, va_list arguments)
+void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
 {
   String line;
 
@@ -1011,36 +1074,77 @@ void vinfo(uint verboseLevel, const char *format, va_list arguments)
     line = String_new();
 
     /* format line */
+    if (prefix != NULL) String_appendCString(line,prefix);
     String_vformat(line,format,arguments);
 
     /* output */
-    outputConsole(stdout,FALSE,line);
+    output(stdout,FALSE,line);
 
     String_delete(line);
   }
 }
 
-void info(uint verboseLevel, const char *format, ...)
+void printInfo(uint verboseLevel, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  vprintInfo(verboseLevel,NULL,format,arguments);
+  va_end(arguments);
+}
+
+void vlogMessage(ulong logType, const char *prefix, const char *text, va_list arguments)
+{
+  assert(text != NULL);
+
+  if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
+  {
+    /* append to temporary log file */
+    if (prefix != NULL) fprintf(tmpLogFile,prefix);
+    vfprintf(tmpLogFile,text,arguments);
+    fprintf(tmpLogFile,"\n");
+
+    if (logFile != NULL)
+    {
+      /* append to log file */
+      if (prefix != NULL) fprintf(logFile,prefix);
+      vfprintf(logFile,text,arguments);
+      fprintf(logFile,"\n");
+    }
+  }
+}
+
+void logMessage(ulong logType, const char *text, ...)
+{
+  va_list arguments;
+
+  assert(text != NULL);
+
+  va_start(arguments,text);
+  vlogMessage(logType,NULL,text,arguments);
+  va_end(arguments);
+}
+
+void printConsole(const char *format, ...)
 {
   String  line;
   va_list arguments;
 
   assert(format != NULL);
 
-  if (!defaultOptions.quietFlag && (defaultOptions.verboseLevel >= verboseLevel))
-  {
-    line = String_new();
+  line = String_new();
 
-    /* format line */
-    va_start(arguments,format);
-    String_vformat(line,format,arguments);
-    va_end(arguments);
+  /* format line */
+  va_start(arguments,format);
+  String_vformat(line,format,arguments);
+  va_end(arguments);
 
-    /* output */
-    outputConsole(stdout,FALSE,line);
+  /* output */
+  output(stdout,FALSE,line);
 
-    String_delete(line);
-  }
+  String_delete(line);
 }
 
 void printWarning(const char *text, ...)
@@ -1054,12 +1158,13 @@ void printWarning(const char *text, ...)
 
   /* format line */
   va_start(arguments,text);
+  vlogMessage(LOG_TYPE_WARNING,"Warning: ",text,arguments);
   String_appendCString(line,"Warning: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
 
   /* output */
-  outputConsole(stdout,TRUE,line);
+  output(stdout,TRUE,line);
 
   String_delete(line);
 }
@@ -1075,12 +1180,13 @@ void printError(const char *text, ...)
 
   /* format line */
   va_start(arguments,text);
+  vlogMessage(LOG_TYPE_ERROR,"ERROR: ",text,arguments);
   String_appendCString(line,"ERROR: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
 
   /* output */
-  outputConsole(stderr,TRUE,line);
+  output(stderr,TRUE,line);
 
   String_delete(line);
 }
@@ -1207,8 +1313,9 @@ void getDevice(const String  name,
 
 int main(int argc, const char *argv[])
 {
-  String fileName;
-  Errors error;
+  String       fileName;
+  Errors       error;
+  ExecuteMacro executeMacros[1];
 
   /* init */
   if (!initAll())
@@ -1221,6 +1328,8 @@ int main(int argc, const char *argv[])
   }
 
   /* initialise variables */
+  tmpLogFileName = String_new();
+  File_getTmpFileName(tmpLogFileName,NULL);
   outputLine = String_new();
   outputNewLineFlag = TRUE;
   initOptions(&defaultOptions);
@@ -1246,6 +1355,7 @@ int main(int argc, const char *argv[])
     Password_delete(serverPassword);
     freeOptions(&defaultOptions);
     String_delete(outputLine);
+    String_delete(tmpLogFileName);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1273,6 +1383,7 @@ int main(int argc, const char *argv[])
         Password_delete(serverPassword);
         freeOptions(&defaultOptions);
         String_delete(outputLine);
+        String_delete(tmpLogFileName);
         doneAll();
         #ifndef NDEBUG
           Array_debug();
@@ -1298,6 +1409,7 @@ int main(int argc, const char *argv[])
         Password_delete(serverPassword);
         freeOptions(&defaultOptions);
         String_delete(outputLine);
+        String_delete(tmpLogFileName);
         doneAll();
         #ifndef NDEBUG
           Array_debug();
@@ -1325,6 +1437,7 @@ int main(int argc, const char *argv[])
     Password_delete(serverPassword);
     freeOptions(&defaultOptions);
     String_delete(outputLine);
+    String_delete(tmpLogFileName);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1343,6 +1456,7 @@ int main(int argc, const char *argv[])
     Password_delete(serverPassword);
     freeOptions(&defaultOptions);
     String_delete(outputLine);
+    String_delete(tmpLogFileName);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1363,6 +1477,7 @@ int main(int argc, const char *argv[])
     Password_delete(serverPassword);
     freeOptions(&defaultOptions);
     String_delete(outputLine);
+    String_delete(tmpLogFileName);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1370,6 +1485,21 @@ int main(int argc, const char *argv[])
     #endif /* not NDEBUG */
     return EXITCODE_OK;
   }
+
+  /* open log files */
+  if (logFileName != NULL)
+  {
+    logFile = fopen(logFileName,"a");
+    if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
+  }
+  else
+  {
+    logFile = NULL;
+  }
+  tmpLogFile = fopen(String_cString(tmpLogFileName),"a");
+
+  /* set priority */
+  setpriority(PRIO_PROCESS,0,priority);
 
   error = ERROR_NONE;
   if      (daemonFlag)
@@ -1498,6 +1628,26 @@ int main(int argc, const char *argv[])
     }
   }
 
+  /* log post command */
+  if (logPostCommand != NULL)
+  {
+    executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%file"; executeMacros[0].string = tmpLogFileName;
+    error = Misc_executeCommand(logPostCommand,
+                                executeMacros,SIZE_OF_ARRAY(executeMacros),
+                                NULL,
+                                NULL,
+                                NULL
+                               );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot post-process log file (error: %s)\n",getErrorText(error));
+    }
+  }
+
+  /* close log files */
+  fclose(tmpLogFile);
+  if (logFile != NULL) fclose(logFile);
+
   /* free resources */
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
@@ -1507,6 +1657,8 @@ int main(int argc, const char *argv[])
   Password_delete(serverPassword);
   freeOptions(&defaultOptions);
   String_delete(outputLine);
+  File_delete(tmpLogFileName,FALSE);
+  String_delete(tmpLogFileName);
   doneAll();
 
   #ifndef NDEBUG

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -371,7 +371,7 @@ bool Password_input(Password *password, const char *title)
       String_delete(command);
 
       /* read password, discard last LF */
-      info(1,"Wait for password...");
+      printInfo(2,"Wait for password...");
       eolFlag = FALSE;
       do
       {
@@ -395,7 +395,7 @@ bool Password_input(Password *password, const char *title)
         }
       }
       while (!eolFlag);
-      info(1,"ok\n");
+      printInfo(2,"ok\n");
 
       /* close pipe */
       pclose(file);

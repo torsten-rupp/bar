@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -83,19 +83,19 @@ typedef struct
 
 LOCAL void printHeader(const String archiveFileName)
 {
-  info(0,"%s:\n",String_cString(archiveFileName));
-  info(0,"\n");
-  info(0,
-       "%4s %-10s %-22s %-10s %-7s %-10s %s\n",
-       "Type",
-       "Size",
-       "Part",
-       "Compress",
-       "Ratio %",
-       "Crypt",
-       "Name"
-      );
-  info(0,"--------------------------------------------------------------------------------------------------------------\n");
+  printInfo(0,"%s:\n",String_cString(archiveFileName));
+  printInfo(0,"\n");
+  printInfo(0,
+            "%4s %-10s %-22s %-10s %-7s %-10s %s\n",
+            "Type",
+            "Size",
+            "Part",
+            "Compress",
+            "Ratio %",
+            "Crypt",
+            "Name"
+           );
+  printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
 }
 
 /***********************************************************************\
@@ -109,8 +109,8 @@ LOCAL void printHeader(const String archiveFileName)
 
 LOCAL void printFooter(ulong fileCount)
 {
-  info(0,"--------------------------------------------------------------------------------------------------------------\n");
-  info(0,"%lu file(s)\n",fileCount);
+  printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
+  printInfo(0,"%lu file(s)\n",fileCount);
 }
 
 /***********************************************************************\

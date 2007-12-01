@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_compare.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
-* Contents: Backup ARchiver archive test function
+* Contents: Backup ARchiver archive compare function
 * Systems : all
 *
 \***********************************************************************/
@@ -203,14 +203,12 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              info(0,"Test file '%s'...",String_cString(fileName));
+              printInfo(0,"Compare file '%s'...",String_cString(fileName));
 
               /* check file */
               if (!File_exists(fileName))
               {
-                info(0,"File '%s' does not exists!\n",
-                     String_cString(fileName)
-                    );
+                printInfo(0,"File '%s' does not exists!\n",String_cString(fileName));
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
@@ -218,9 +216,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
               }
               if (File_getType(fileName) != FILE_TYPE_FILE)
               {
-                info(0,"Not a file '%s'!\n",
-                     String_cString(fileName)
-                    );
+                printInfo(0,"Not a file '%s'!\n",String_cString(fileName));
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 if (failError == ERROR_NONE) failError = ERROR_WRONG_FILE_TYPE;
@@ -239,7 +235,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
               error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
               if (error != ERROR_NONE)
               {
-                info(0,"fail\n");
+                printInfo(0,"FAIL\n");
                 printError("Cannot open file '%s' (error: %s)\n",
                            String_cString(fileName),
                            getErrorText(error)
@@ -253,10 +249,10 @@ Errors Command_compare(StringList  *archiveFileNameList,
               /* check file size */
               if (fileInfo.size != File_getSize(&fileHandle))
               {
-                info(0,"differ in size: expected %lld bytes, found %lld bytes\n",
-                     fileInfo.size,
-                     File_getSize(&fileHandle)
-                    );
+                printInfo(0,"differ in size: expected %lld bytes, found %lld bytes\n",
+                          fileInfo.size,
+                          File_getSize(&fileHandle)
+                         );
                 File_close(&fileHandle);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
@@ -268,7 +264,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
               error = File_seek(&fileHandle,fragmentOffset);
               if (error != ERROR_NONE)
               {
-                info(0,"fail\n");
+                printInfo(0,"FAIL\n");
                 printError("Cannot read file '%s' (error: %s)\n",
                            String_cString(fileName),
                            getErrorText(error)
@@ -290,7 +286,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 error = Archive_readFileData(&archiveFileInfo,archiveBuffer,n);
                 if (error != ERROR_NONE)
                 {
-                  info(0,"fail\n");
+                  printInfo(0,"FAIL\n");
                   printError("Cannot not read content of archive '%s' (error: %s)!\n",
                              String_cString(archiveFileName),
                              getErrorText(error)
@@ -301,7 +297,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 error = File_read(&fileHandle,fileBuffer,n,&bytesRead);
                 if (error != ERROR_NONE)
                 {
-                  info(0,"fail\n");
+                  printInfo(0,"FAIL\n");
                   printError("Cannot read file '%s' (error: %s)\n",
                              String_cString(fileName),
                              getErrorText(error)
@@ -339,13 +335,11 @@ Errors Command_compare(StringList  *archiveFileNameList,
 #endif /* 0 */
               if (equalFlag)
               {
-                info(0,"ok\n");
+                printInfo(0,"ok\n");
               }
               else
               {
-                info(0,"differ at offset %llu\n",
-                     fragmentOffset+length+diffIndex
-                    );
+                printInfo(0,"differ at offset %llu\n",fragmentOffset+length+diffIndex);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 if (failError == ERROR_NONE) failError = ERROR_FILES_DIFFER;
@@ -366,7 +360,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
             else
             {
               /* skip */
-              info(1,"Test '%s'...skipped\n",String_cString(fileName));
+              printInfo(1,"Compare '%s'...skipped\n",String_cString(fileName));
             }
 
             /* close archive file, free resources */
@@ -404,14 +398,12 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              info(0,"Test directory '%s'...",String_cString(directoryName));
+              printInfo(0,"Compare directory '%s'...",String_cString(directoryName));
 
               /* check directory */
               if (!File_exists(directoryName))
               {
-                info(0,"Directory '%s' does not exists!\n",
-                     String_cString(directoryName)
-                    );
+                printInfo(0,"Directory '%s' does not exists!\n",String_cString(directoryName));
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
                 if (failError == ERROR_NONE) failError = ERROR_FILE_NOT_FOUND;
@@ -419,9 +411,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
               }
               if (File_getType(directoryName) != FILE_TYPE_DIRECTORY)
               {
-                info(0,"Not a directory '%s'!\n",
-                     String_cString(directoryName)
-                    );
+                printInfo(0,"Not a directory '%s'!\n",String_cString(directoryName));
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
                 if (failError == ERROR_NONE) failError = ERROR_WRONG_FILE_TYPE;
@@ -445,14 +435,14 @@ Errors Command_compare(StringList  *archiveFileNameList,
 
               /* check file time, permissions, file owner/group */
 #endif /* 0 */
-              info(0,"ok\n");
+              printInfo(0,"ok\n");
 
               /* free resources */
             }
             else
             {
               /* skip */
-              info(1,"Restore '%s'...skipped\n",String_cString(directoryName));
+              printInfo(1,"Compare '%s'...skipped\n",String_cString(directoryName));
             }
 
             /* close archive file */
@@ -494,14 +484,12 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              info(0,"Test link '%s'...",String_cString(linkName));
+              printInfo(0,"Compare link '%s'...",String_cString(linkName));
 
               /* check link */
               if (!File_exists(linkName))
               {
-                info(0,"Link '%s' does not exists!\n",
-                     String_cString(linkName)
-                    );
+                printInfo(0,"Link '%s' does not exists!\n",String_cString(linkName));
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
@@ -510,9 +498,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
               }
               if (File_getType(linkName) != FILE_TYPE_LINK)
               {
-                info(0,"Not a link '%s'!\n",
-                     String_cString(linkName)
-                    );
+                printInfo(0,"Not a link '%s'!\n",String_cString(linkName));
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
@@ -538,10 +524,10 @@ Errors Command_compare(StringList  *archiveFileNameList,
               }
               if (!String_equals(fileName,localFileName))
               {
-                info(0,"Link '%s' does not contain file '%s'!\n",
-                     String_cString(linkName),
-                     String_cString(fileName)
-                    );
+                printInfo(0,"Link '%s' does not contain file '%s'!\n",
+                          String_cString(linkName),
+                          String_cString(fileName)
+                         );
                 String_delete(localFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
@@ -569,14 +555,14 @@ Errors Command_compare(StringList  *archiveFileNameList,
 
               /* check file time, permissions, file owner/group */
 #endif /* 0 */
-              info(0,"ok\n");
+              printInfo(0,"ok\n");
 
               /* free resources */
             }
             else
             {
               /* skip */
-              info(1,"Restore '%s'...skipped\n",String_cString(linkName));
+              printInfo(1,"Compare '%s'...skipped\n",String_cString(linkName));
             }
 
             /* close archive file */
@@ -602,7 +588,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
   {
     if (!FileFragmentList_checkComplete(fileFragmentNode))
     {
-      info(0,"Warning: incomplete file '%s'\n",String_cString(fileFragmentNode->fileName));
+      printInfo(0,"Warning: incomplete file '%s'\n",String_cString(fileFragmentNode->fileName));
       if (failError == ERROR_NONE) failError = ERROR_FILE_INCOMPLETE;
     }
   }

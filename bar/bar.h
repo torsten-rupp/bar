@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems :
@@ -51,13 +51,20 @@ typedef enum
 
 typedef enum
 {
-  LOG_GROUP_IO_ERROR,
-  LOG_GROUP_FILE_ACCESS_DENIED,
-  LOG_GROUP_FILE_MISSING,
+  LOG_TYPE_ALWAYS             = 0,
+  LOG_TYPE_ERROR              = (1 <<  0),
+  LOG_TYPE_WARNING            = (1 <<  1),
+  LOG_TYPE_FILE_OK            = (1 <<  2),
+  LOG_TYPE_FILE_TYPE_UNKNOWN  = (1 <<  3),
+  LOG_TYPE_FILE_ACCESS_DENIED = (1 <<  4),
+  LOG_TYPE_FILE_MISSING       = (1 <<  5),
+  LOG_TYPE_FILE_INCOMPLETE    = (1 <<  6),
+  LOG_TYPE_FILE_EXCLUDED      = (1 <<  7),
+  LOG_TYPE_STORAGE            = (1 <<  8),
+} LogTypes;
 
-  LOG_GROUP_FILE_OK,
-  LOG_GROUP_FILE_SKIPPED,
-} LogGroups;
+#define LOG_TYPE_NONE 0x00000000
+#define LOG_TYPE_ALL  0xFFFFffff
 
 typedef struct
 {
@@ -117,6 +124,7 @@ typedef struct
   uint64             archivePartSize;
   String             tmpDirectory;
   uint64             maxTmpSize;
+
   uint               directoryStripCount;
   String             directory;
 
@@ -145,6 +153,7 @@ typedef struct
   bool               overwriteFilesFlag;
   bool               noDefaultConfigFlag;
   bool               errorCorrectionCodesFlag;
+  bool               waitFirstVolumeFlag;
   bool               quietFlag;
   long               verboseLevel;
 } Options;
@@ -185,10 +194,41 @@ extern Options defaultOptions;
 const char *getErrorText(Errors error);
 
 /***********************************************************************\
-* Name   : info, vinfo
+* Name   : vprintInfo, printInfo
 * Purpose: output info
 * Input  : verboseLevel - verbosity level
+*          prefix    - prefix text
 *          format       - format string (like printf)
+*          arguments    - arguments
+*          ...          - optional arguments (like printf)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments);
+void printInfo(uint verboseLevel, const char *format, ...);
+
+/***********************************************************************\
+* Name   : vlogMessage, logMessage
+* Purpose: log message
+*          logType   - log type; see LOG_TYPES_*
+*          prefix    - prefix text
+*          text      - format string (like printf)
+*          arguments - arguments
+*          ...       - optional arguments (like printf)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void vlogMessage(ulong logType, const char *prefix, const char *text, va_list arguments);
+void logMessage(ulong logType, const char *text, ...);
+
+/***********************************************************************\
+* Name   : outputConsole
+* Purpose: output to console
+* Input  : format       - format string (like printf)
 *          ...          - optional arguments (like printf)
 *          arguments    - arguments
 * Output : -
@@ -196,8 +236,7 @@ const char *getErrorText(Errors error);
 * Notes  : -
 \***********************************************************************/
 
-void info(uint verboseLevel, const char *format, ...);
-void vinfo(uint verboseLevel, const char *format, va_list arguments);
+void printConsole(const char *format, ...);
 
 /***********************************************************************\
 * Name   : printWarning
