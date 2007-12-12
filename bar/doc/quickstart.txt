@@ -1,0 +1,99 @@
+Quick start
+~~~~~~~~~~~
+
+1) --- Installation ----------------------------------------
+
+Execute the following commands:
+
+  ./configure
+  make
+  make install
+
+2) --- Typical usage of BAR --------------------------------
+
+Create an archive:
+
+  bar -c home.bar /home
+
+List contents of an archive:
+
+  bar -l home*.bar
+
+Check archive:
+
+  bar -t home*.bar
+
+Compare contents of an archive with files:
+
+  bar -d home*.bar
+
+Restore contents of an archive:
+
+  bar -x home*.bar
+ 
+3) --- Extended usage of BAR -------------------------------
+
+Note: The example commands are formated with "\" to avoid
+      to long lines.
+
+Create an archive with compression, encryption:
+
+  bar \
+    -c \
+    --compress-algorithm=bzip9 --crypt-algorithm=AES256 \
+    home.bar \
+    /home
+
+Create an archive with compression, encryption, splitted in 128MBytes parts:
+
+  bar \
+    -c \
+    --compress-algorithm=bzip9 --crypt-algorithm=AES256 \
+    --archive-part-size=128M \
+    home.bar \
+    /home
+
+Create an archive with compression, encryption, splitted in 128MBytes parts, store
+it on server via ssh (scp):
+
+  bar \
+    -c \
+    --compress-algorithm=bzip9 --crypt-algorithm=AES256 \
+    --archive-part-size=128M \
+    scp:myname@myserver.org/home.bar \
+    /home
+
+Create an archive with compression, encryption, splitted in 128MBytes parts, store
+it on DVD:
+
+  bar \
+    -c \
+    --compress-algorithm=bzip9 --crypt-algorithm=AES256 \
+    --archive-part-size=128M \
+    dvd:/home.bar \
+    /home
+
+Create an archive with compression, encryption, splitted in 128MBytes parts, store
+it on DVD and add error-correction codes to DVD image:
+
+  bar \
+    -c \
+    --compress-algorithm=bzip9 --crypt-algorithm=AES256 \
+    --archive-part-size=128M \
+    --error-correction-codes \
+    dvd:/home.bar \
+    /home
+
+Create an archive with compression, encryption, splitted in 128MBytes parts, store
+it on DVD, add error-correction codes to DVD image, send me an email each time a
+new DVD have to be inserted, and wait via Xdialog for user interaction:
+
+  bar \
+    -c \
+    --compress-algorithm=bzip9 --crypt-algorithm=AES256 \
+    --archive-part-size=128M \
+    --error-correction-codes \
+    --wait-first-volume \
+    --request-volume-command="sh -c \"mail -s 'Insert DVD #%number' root </dev/null; Xdialog --yesno 'Please insert DVD #%number' 5 50\"" \
+    dvd:/home.bar \
+    /home

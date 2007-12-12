@@ -1,0 +1,17 @@
+Frequently asked questions (FAQ)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Q: Can I build a static linked version of BAR?
+A: Yes. Use --enable-link-static when calling configure. The
+   resulting binary is linked static with all needed
+   libraries except libc, libm and libpthread.
+
+Q: Can I create incremental archives even the file system does
+   not have an "archive" bit?
+A: Yes. BAR create his own incremental list files (.bid files).
+   These list files contain information which are used to check
+   which files changed.
+
+Q: Can I just create the incremental list file?
+A: Yes. Use option --no-storage. The incremental list file is
+   created, but no archive files are neither created nor stored.
