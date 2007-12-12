@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems : all
@@ -213,7 +213,7 @@ String StringList_getLast(StringList *stringList, String string);
 * Input  : stringList - string list
 * Output : -
 * Return : C string array or NULL if insufficient memory
-* Notes  : -
+* Notes  : free memory after usage!
 \***********************************************************************/
 
 const char* const *StringList_toCStringArray(const StringList *stringList);

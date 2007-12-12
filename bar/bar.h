@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
-* Systems :
+* Systems: all
 *
 \***********************************************************************/
 
@@ -32,8 +32,7 @@
 
 /***************************** Constants *******************************/
 
-/***************************** Datatypes *******************************/
-
+/* program exit codes */
 typedef enum
 {
   EXITCODE_OK=0,
@@ -49,6 +48,7 @@ typedef enum
   EXITCODE_UNKNOWN=128
 } ExitCodes;
 
+/* log types */
 typedef enum
 {
   LOG_TYPE_ALWAYS             = 0,
@@ -66,6 +66,16 @@ typedef enum
 #define LOG_TYPE_NONE 0x00000000
 #define LOG_TYPE_ALL  0xFFFFffff
 
+/* archive types */
+typedef enum
+{
+  ARCHIVE_TYPE_FULL,
+  ARCHIVE_TYPE_INCREMENTAL,
+} ArchiveTypes;
+
+/***************************** Datatypes *******************************/
+
+/* ssh server */
 typedef struct
 {
   uint     port;
@@ -88,6 +98,7 @@ typedef struct
   LIST_HEADER(SSHServerNode);
 } SSHServerList;
 
+/* device */
 typedef struct
 {
   String requestVolumeCommand;
@@ -119,11 +130,16 @@ typedef struct
   LIST_HEADER(DeviceNode);
 } DeviceList;
 
+/* global options */
 typedef struct
 {
+  ArchiveTypes       archiveType;
+
   uint64             archivePartSize;
   String             tmpDirectory;
   uint64             maxTmpSize;
+
+  String             incrementalListFileName;
 
   uint               directoryStripCount;
   String             directory;
@@ -154,6 +170,7 @@ typedef struct
   bool               noDefaultConfigFlag;
   bool               errorCorrectionCodesFlag;
   bool               waitFirstVolumeFlag;
+  bool               noStorageFlag;
   bool               quietFlag;
   long               verboseLevel;
 } Options;
@@ -163,11 +180,13 @@ extern Options defaultOptions;
 
 /****************************** Macros *********************************/
 
+/* return short number of bytes */
 #define BYTES_SHORT(n) (((n)>(1024LL*1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL): \
                         ((n)>       (1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL): \
                         ((n)>                1024LL)?(double)(n)/(double)(1024LL*1024LL*1024LL): \
                         (double)(n) \
                        )
+/* return unit for short number of bytes */
 #define BYTES_UNIT(n) (((n)>(1024LL*1024LL*1024LL))?"GB": \
                        ((n)>       (1024LL*1024LL))?"MB": \
                        ((n)>                1024LL)?"KB": \
@@ -261,6 +280,17 @@ void printWarning(const char *text, ...);
 \***********************************************************************/
 
 void printError(const char *text, ...);
+
+/***********************************************************************\
+* Name   : logPostProcess
+* Purpose: log post processing
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void logPostProcess(void);
 
 /***********************************************************************\
 * Name   : copyOptions

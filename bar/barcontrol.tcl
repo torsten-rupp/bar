@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -85,6 +85,7 @@ set barConfig(compressAlgorithm)               ""
 set barConfig(cryptAlgorithm)                  ""
 set barConfig(cryptPasswordMode)               "DEFAULT"
 set barConfig(cryptPassword)                   ""
+set barConfig(cryptPasswordVerify)             ""
 set barConfig(destinationDirectoryName)        ""
 set barConfig(destinationStripCount)           0
 set barConfig(volumeSize)                      0
@@ -387,22 +388,63 @@ proc Dialog:confirm { message yesText noText } \
 # Notes  : -
 #***********************************************************************
 
-proc Dialog:password { text } \
+proc Dialog:password { text verifyFlag } \
 {
   set handle [Dialog:new "Enter password"]
   Dialog:addVariable $handle result   -1
   Dialog:addVariable $handle password ""
 
   frame $handle.password
-    label $handle.password.title -text $text
-    pack $handle.password.title -side left
-    entry $handle.password.data -textvariable [Dialog:variable $handle password] -bg white -show "*"
-    pack $handle.password.data -side right -fill x -expand yes -padx 2p -pady 2p
-    bind $handle.password.data <Return> "focus $handle.buttons.ok"
+    label $handle.password.title -text "$text:"
+    grid $handle.password.title -row 0 -column 0 -sticky "w"
+    if {$verifyFlag} \
+    {
+      entry $handle.password.data -textvariable [Dialog:variable $handle password] -bg white -show "*" -validate key -validatecommand \
+        "
+         if {\$[Dialog:variable $handle passwordVerify] == \"%P\"} \
+         {
+           $handle.buttons.ok configure -state normal
+         } \
+         else \
+         {
+           $handle.buttons.ok configure -state disabled
+         }
+         return 1
+        "
+      bind $handle.password.data <Return> "focus $handle.password.dataVerify"
+    } \
+    else \
+    {
+      entry $handle.password.data -textvariable [Dialog:variable $handle password] -bg white -show "*"
+      bind $handle.password.data <Return> "focus $handle.buttons.ok"
+    }
+    grid $handle.password.data  -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
+
+    if {$verifyFlag} \
+    {
+      label $handle.password.titleVerify -text "Verify:"
+      grid $handle.password.titleVerify -row 1 -column 0 -sticky "w"
+      entry $handle.password.dataVerify -textvariable [Dialog:variable $handle passwordVerify] -bg white -show "*" -validate key -validatecommand \
+       "
+        if {\$[Dialog:variable $handle password] == \"%P\"} \
+        {
+          $handle.buttons.ok configure -state normal
+        } \
+        else \
+        {
+          $handle.buttons.ok configure -state disabled
+        }
+        return 1
+       "
+      grid $handle.password.dataVerify -row 1 -column 1 -sticky "we" -padx 2p -pady 2p
+      bind $handle.password.dataVerify <Return> "focus $handle.buttons.ok"
+    }
+
+    grid columnconfigure $handle.password { 1 }
   pack $handle.password -padx 2p -pady 2p
 
   frame $handle.buttons
-    button $handle.buttons.ok -text "OK" -command "Dialog:set $handle result 1; Dialog:close $handle"
+    button $handle.buttons.ok -text "OK" -state disabled -command "Dialog:set $handle result 1; Dialog:close $handle"
     pack $handle.buttons.ok -side left -padx 2p
     bind $handle.buttons.ok <Return> "$handle.buttons.ok invoke"
     button $handle.buttons.cancel -text "Cancel" -command "Dialog:set $handle result 0; Dialog:close $handle"
@@ -804,7 +846,7 @@ proc obfuscatePassword { password passwordObfuscator } \
 # Purpose: input password
 # Input  : title - title text
 # Output : -
-# Return : obfuscated password
+# Return : obfuscated password or ""
 # Notes  : -
 #***********************************************************************
 
@@ -823,11 +865,15 @@ proc getPassword { title obfuscateFlag } \
       puts -nonewline stdout "$title: "; flush stdout
       set password [exec sh -c "read -s password; echo \$password; unset password"]
       puts ""
+      puts -nonewline stdout "Verify password: "; flush stdout
+      set passwordVerify [exec sh -c "read -s password; echo \$password; unset password"]
+      puts ""
     }
+    if {$password != $passwordVerify} { set password "" }
   } \
   else \
   {
-    set password [Dialog:password "$title"]
+    set password [Dialog:password "$title" 1]
   }
 
   if {$obfuscateFlag} \
@@ -2699,6 +2745,7 @@ proc resetBARConfig {} \
   set barConfig(cryptAlgorithm)      "none"
   set barConfig(cryptPasswordMode)   "NONE"
   set barConfig(cryptPassword)       ""
+  set barConfig(cryptPasswordVerify) ""
   clearConfigModify
 }
 
@@ -2967,7 +3014,8 @@ proc loadBARConfig { configFileName } \
     if {[scanx $line "crypt-password = %S" s] == 1} \
     {
       # crypt-password = <password>
-      set barConfig(cryptPassword) $s
+      set barConfig(cryptPassword)       $s
+      set barConfig(cryptPasswordVerify) $s
       continue
     }
     if {[scanx $line "include = %S" s] == 1} \
@@ -3017,7 +3065,7 @@ proc loadBARConfig { configFileName } \
     if {[scanx $line "overwrite-archive-files = %s" s] == 1} \
     {
       # overwrite-archive-files = [yes|no]
-      set barConfig(overWriteArchiveFilesFlag) [stringToBoolean $s]
+      set barConfig(overwriteArchiveFilesFlag) [stringToBoolean $s]
       continue
     }
     if {[scanx $line "overwrite-files = %s" s] == 1} \
@@ -3453,6 +3501,30 @@ proc addBackupJob { jobListWidget } \
     }
     "CONFIG" \
     {
+      if {$barConfig(cryptPassword) != $barConfig(cryptPasswordVerify)} \
+      {
+        if {$guiMode} \
+        {
+          Dialog:error "Crypt passwords are not equal!"
+        } \
+        else \
+        {
+          puts stderr "Crypt passwords are not equal!"
+        }
+        return
+      }
+      if {$barConfig(cryptPassword) == ""} \
+      {
+        if {$guiMode} \
+        {
+          Dialog:error "No crypt passwords given!"
+        } \
+        else \
+        {
+          puts stderr "No crypt passwords given!"
+        }
+        return
+      }
       BackupServer:executeCommand errorCode errorText "SET" "crypt-password" $barConfig(cryptPassword)
     }
   } 
@@ -3499,6 +3571,7 @@ proc addBackupJob { jobListWidget } \
       {
         puts stderr "Error adding new job: $errorText"
       }
+      return
     }
   } \
   else \
@@ -3511,6 +3584,7 @@ proc addBackupJob { jobListWidget } \
     {
       puts stderr "Error adding new job: $errorText"
     }
+    return
   }
 
   if {$guiMode} \
@@ -3642,12 +3716,12 @@ proc abortJob { jobListWidget id } \
 loadBARControlConfig "$env(HOME)/.bar/barcontrol.cfg"
 
 # parse command line arguments
-set configName ""
-set listFlag   0
-set startFlag  0
-set abortId    0
-set quitFlag   0
-set guiMode    1
+set configFileName ""
+set listFlag       0
+set startFlag      0
+set abortId        0
+set quitFlag       0
+set guiMode        1
 set z 0
 while {$z<[llength $argv]} \
 {
@@ -3782,14 +3856,14 @@ while {$z<[llength $argv]} \
     }
     default \
     {
-      set configName [lindex $argv $z]
+      set configFileName [lindex $argv $z]
     }
   }
   incr z
 }
 while {$z<[llength $argv]} \
 {
-  set configName [lindex $argv $z]
+  set configFileName [lindex $argv $z]
   incr z
 }
 
@@ -3871,9 +3945,9 @@ if {![info exists tk_version] && !$guiMode} \
   }
   if {$startFlag} \
   {
-    if {$configName != ""} \
+    if {$configFileName != ""} \
     {
-      loadBARConfig $configName
+      loadBARConfig $configFileName
       addBackupJob ""
     }
   }
@@ -4491,20 +4565,25 @@ frame .backup
     grid .backup.storage.cryptAlgorithm -row 3 -column 1 -sticky "w" -padx 2p -pady 2p
 
     label .backup.storage.cryptPasswordTitle -text "Password:"
-    grid .backup.storage.cryptPasswordTitle -row 4 -column 0 -sticky "w" 
+    grid .backup.storage.cryptPasswordTitle -row 4 -column 0 -sticky "nw" 
     frame .backup.storage.cryptPassword
       radiobutton .backup.storage.cryptPassword.modeNone -text "none" -variable barConfig(cryptPasswordMode) -value "NONE"
-      pack .backup.storage.cryptPassword.modeNone -side left
+      grid .backup.storage.cryptPassword.modeNone -row 0 -column 0 -sticky "w"
       radiobutton .backup.storage.cryptPassword.modeDefault -text "default" -variable barConfig(cryptPasswordMode) -value "DEFAULT"
-      pack .backup.storage.cryptPassword.modeDefault -side left
+      grid .backup.storage.cryptPassword.modeDefault -row 0 -column 1 -sticky "w"
       radiobutton .backup.storage.cryptPassword.modeAsk -text "ask" -variable barConfig(cryptPasswordMode) -value "ASK"
-      pack .backup.storage.cryptPassword.modeAsk -side left
-      radiobutton .backup.storage.cryptPassword.modeConfig -text "config" -variable barConfig(cryptPasswordMode) -value "CONFIG"
-      pack .backup.storage.cryptPassword.modeConfig -side left
-      entry .backup.storage.cryptPassword.data -textvariable barConfig(cryptPassword) -bg white -show "*"
-      pack .backup.storage.cryptPassword.data -side left -fill x -expand yes
+      grid .backup.storage.cryptPassword.modeAsk -row 0 -column 2 -sticky "w"
+      radiobutton .backup.storage.cryptPassword.modeConfig -text "this" -variable barConfig(cryptPasswordMode) -value "CONFIG"
+      grid .backup.storage.cryptPassword.modeConfig -row 0 -column 3 -sticky "w"
+      entry .backup.storage.cryptPassword.data1 -textvariable barConfig(cryptPassword) -bg white -show "*"
+      grid .backup.storage.cryptPassword.data1 -row 0 -column 4 -sticky "we"
+      entry .backup.storage.cryptPassword.data2 -textvariable barConfig(cryptPasswordVerify) -bg white -show "*"
+      grid .backup.storage.cryptPassword.data2 -row 1 -column 4 -sticky "we"
+
+      grid columnconfigure .backup.storage.cryptPassword { 4 } -weight 1
     grid .backup.storage.cryptPassword -row 4 -column 1 -sticky "we" -padx 2p -pady 2p
-    addEnableTrace ::barConfig(cryptPasswordMode) "CONFIG" .backup.storage.cryptPassword.data
+    addEnableTrace ::barConfig(cryptPasswordMode) "CONFIG" .backup.storage.cryptPassword.data1
+    addEnableTrace ::barConfig(cryptPasswordMode) "CONFIG" .backup.storage.cryptPassword.data2
 
     label .backup.storage.destinationTitle -text "Destination:"
     grid .backup.storage.destinationTitle -row 5 -column 0 -sticky "nw" 
@@ -4783,7 +4862,7 @@ frame .restore
 
   frame .restore.storage
     label .restore.storage.cryptPasswordTitle -text "Password:"
-    grid .restore.storage.cryptPasswordTitle -row 0 -column 0 -sticky "w" 
+    grid .restore.storage.cryptPasswordTitle -row 0 -column 0 -sticky "nw" 
     entry .restore.storage.cryptPassword -textvariable barConfig(cryptPassword) -bg white -show "*"
     grid .restore.storage.cryptPassword -row 0 -column 1 -sticky "w" -padx 2p -pady 2p
 
@@ -5621,8 +5700,20 @@ addBackupDevice "/"
 
 # load config if given
 resetBARConfig
-if {$configName != ""} { loadBARConfig $configName }
-
-#openCloseRestoreDirectory [fileNameToItemPath $restoreFilesTreeWidget "/home/torsten/projects/bar/test.bar" "/"]
+if {$configFileName != ""} \
+{
+  if {[file exists $configFileName]} \
+  {
+    loadBARConfig $configFileName
+  } \
+  else \
+  {
+    if {[Dialog:query "Confirmation" "Configuration file '$configFileName' does not exists - create it?" "Create" "Cancel"]} \
+    {
+      set barConfigFileName $configFileName
+      set barConfig(name) [file tail $configFileName]
+    }
+  }
+}
 
 # end of file

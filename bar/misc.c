@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -36,6 +36,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define DATE_TIME_FORMAT "%Y-%m-%d %H:%M:%S %Z"
 
 /***************************** Datatypes *******************************/
 
@@ -158,6 +159,7 @@ LOCAL bool readProcessIO(int fd, String line)
           String_appendChar(line,ch);
           break;
       }
+      n--;
     }
   }
   while (n > 0);
@@ -180,6 +182,21 @@ uint64 Misc_getTimestamp(void)
   {
     return 0LL;
   }
+}
+
+const char *Misc_getDateTime(char *buffer, uint bufferSize)
+{
+  time_t    dateTime;
+  struct tm tmStruct;
+
+  assert(buffer != NULL);
+
+  time(&dateTime);
+  localtime_r(&dateTime,&tmStruct);
+  strftime(buffer,bufferSize-1,DATE_TIME_FORMAT,&tmStruct);
+  buffer[bufferSize-1] = '\0';
+
+  return buffer;
 }
 
 void Misc_udelay(uint64 time)
@@ -211,6 +228,8 @@ Errors Misc_executeCommand(const char         *commandTemplate,
   String          token;
   String          argument;
   char const      **arguments;
+  String          s;
+  StringNode      *argumentNode;
   int             pipeStdin[2],pipeStdout[2],pipeStderr[2];
   int             pid;
   StringNode      *stringNode;
@@ -247,6 +266,17 @@ Errors Misc_executeCommand(const char         *commandTemplate,
     String_delete(argument);
 
     /* execute command */
+    s = String_new();
+    String_append(s,command);
+    argumentNode = argumentList.head;
+    while (argumentNode != NULL)
+    {
+      String_appendChar(s,' ');
+      String_append(s,argumentNode->string);
+      argumentNode = argumentNode->next;
+    }
+    printInfo(3,"Execute command '%s'...",String_cString(s));
+    String_delete(s);
 #if 0
 fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(command));
 stringNode = argumentList.head;
@@ -331,6 +361,8 @@ HALT_INTERNAL_ERROR("not reachable");
     }
     else if (pid < 0)
     {
+      printInfo(3,"FAIL!\n");
+
       close(pipeStderr[0]);
       close(pipeStderr[1]);
       close(pipeStdout[0]);
@@ -367,7 +399,7 @@ error = ERROR_NONE;
       }
       else
       {
-        Misc_udelay(100LL*1000LL);
+        Misc_udelay(500LL*1000LL);
       }
     }
     while (readProcessIO(pipeStdout[0],stdoutLine))
@@ -383,18 +415,20 @@ error = ERROR_NONE;
     String_delete(stderrLine);
     String_delete(stdoutLine);
 
+    exitcode = WEXITSTATUS(status);
+    if (exitcode != 0)
+    {
+      error = ERROR_EXEC_FAIL;
+    }
+
+    printInfo(3,"ok (exitcode %d)\n",exitcode);
+
     /* free resources */
     close(pipeStderr[0]);
     close(pipeStdout[0]);
     close(pipeStdin[1]);
     StringList_done(&argumentList);
     String_delete(command);
-
-    exitcode = WEXITSTATUS(status);
-    if (exitcode != 0)
-    {
-      error = ERROR_EXEC_FAIL;
-    }
   }
 
   return error;

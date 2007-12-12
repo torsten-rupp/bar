@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/errors.def,v $
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
@@ -73,6 +73,10 @@ ERROR CRC_ERROR                "CRC error"
 ERROR FILE_INCOMPLETE          "file is incomplete"            
 ERROR WRONG_FILE_TYPE          "wrong file type"               
 ERROR FILES_DIFFER             "files differ"
+
+# incremental files
+ERROR INVALID_INCREMENTAL_FILE "invalid incremental file"
+ERROR END_OF_INCREMENTAL_FILE  "end of incremental file"
 
 # network
 ERROR HOST_NOT_FOUND           "host not found"                

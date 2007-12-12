@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -34,6 +34,8 @@
 #define FILES_PATHNAME_SEPARATOR_CHAR '/'
 #define FILES_PATHNAME_SEPARATOR_CHARS "/"
 
+#define FILE_CAST_SIZE (sizeof(time_t)+sizeof(time_t))
+
 typedef enum
 {
   FILE_TYPE_NONE,
@@ -52,6 +54,7 @@ typedef enum
   FILE_OPENMODE_CREATE,
   FILE_OPENMODE_READ,
   FILE_OPENMODE_WRITE,
+  FILE_OPENMODE_APPEND,
 } FileOpenModes;
 
 /***************************** Datatypes *******************************/
@@ -80,22 +83,27 @@ typedef struct
   bool bufferFilledFlag;
 } DeviceHandle;
 
+/* file cast: change if file is modified in some way */
+typedef byte FileCast[FILE_CAST_SIZE];
+
 /* file info data */
 typedef struct
 {
-  uint64 size;
-  uint64 timeLastAccess;
-  uint64 timeModified;
-  uint64 timeLastChanged;
-  uint32 userId;
-  uint32 groupId;
-  uint32 permission;
+  FileTypes type;
+  uint64    size;
+  uint64    timeLastAccess;
+  uint64    timeModified;
+  uint64    timeLastChanged;
+  uint32    userId;
+  uint32    groupId;
+  uint32    permission;
+  FileCast  cast;
 } FileInfo;
 
 /* file system info data */
 typedef struct
 {
-  ulong  blockSize;            // size of block [bytes]
+  ulong  blockSize;                          // size of block [bytes]
   uint64 freeBytes;
   uint64 totalBytes;
   uint   maxFileNameLength;

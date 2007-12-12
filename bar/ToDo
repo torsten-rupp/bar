@@ -9,5 +9,10 @@ ToDo
 - ssl server: check common name? 
 - improve calculation for estimated rest time
 - improve password quality checker
-- static binary for simple install on client (it is a "server", but
-  we call it client :-))
+- balloon help in barcontrol.tcl
+- novice/expert mode i barcontrol.tcl
+- barconfig.tcl for creating/edit bar.cfg
+- Windows port
+- create RPMs
+- native graphical frontend?
+- problem if DISPLAY is not set

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -250,7 +250,7 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
 
     /* request new volume via external command */
     printInfo(0,"Request new DVD #%d...",storageFileHandle->requestedVolumeNumber);
-    if (Misc_executeCommand(String_cString(storageFileHandle->dvd.device.unloadVolumeCommand),
+    if (Misc_executeCommand(String_cString(storageFileHandle->dvd.device.requestVolumeCommand),
                             executeMacros,SIZE_OF_ARRAY(executeMacros),
                             NULL,
                             NULL,

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -494,6 +494,7 @@ LOCAL void jobThreadEntry(JobList *jobList)
     {
       case JOB_TYPE_BACKUP:
         /* create archive */
+        logMessage(LOG_TYPE_ALWAYS,"start create");
         jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveName),
                                                     &jobNode->includePatternList,
                                                     &jobNode->excludePatternList,
@@ -504,11 +505,13 @@ LOCAL void jobThreadEntry(JobList *jobList)
                                                     jobNode,
                                                     &jobNode->requestedAbortFlag
                                                    );
+        logMessage(LOG_TYPE_ALWAYS,"done create (error: %s)",getErrorText(jobNode->runningInfo.error));
         break;
       case JOB_TYPE_RESTORE:
         {
           StringList archiveFileNameList;
 
+          logMessage(LOG_TYPE_ALWAYS,"start restore");
           StringList_init(&archiveFileNameList);
           StringList_append(&archiveFileNameList,jobNode->archiveName);
           jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
@@ -520,9 +523,11 @@ LOCAL void jobThreadEntry(JobList *jobList)
                                                        &jobNode->requestedAbortFlag
                                                       );
           StringList_done(&archiveFileNameList);
+          logMessage(LOG_TYPE_ALWAYS,"done restore (error: %s)",getErrorText(jobNode->runningInfo.error));
         }
         break;
     }
+    logPostProcess();
 
 #endif /* SIMULATOR */
 
@@ -2421,7 +2426,7 @@ Errors Server_run(uint       serverPort,
   }
 
   /* start job-thread */
-  if (Thread_init(&jobThread,0,jobThreadEntry,&jobList))
+  if (!Thread_init(&jobThread,0,jobThreadEntry,&jobList))
   {
     HALT_FATAL_ERROR("Cannot initialise job thread!");
   }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -374,6 +374,35 @@ Errors File_open(FileHandle    *fileHandle,
 
       fileHandle->size  = 0;
       break;
+    case FILE_OPENMODE_APPEND:
+      /* create directory if needed */
+      pathName = File_getFilePathName(fileName,String_new());
+      if (!File_exists(pathName))
+      {
+        error = File_makeDirectory(pathName);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+      String_delete(pathName);
+
+      /* open existing file for writing */
+      fileHandle->file = fopen(String_cString(fileName),"ab");
+      if (fileHandle->file == NULL)
+      {
+        return ERROR_OPEN_FILE;
+      }
+
+      /* get file size */
+      n = ftello(fileHandle->file);
+      if (n == (off_t)-1)
+      {
+        fclose(fileHandle->file);
+        return ERROR_IO_ERROR;
+      }
+      fileHandle->size = (uint64)n;
+      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -389,6 +418,8 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
                            FileOpenModes fileOpenMode
                           )
 {
+  off_t n;
+
   assert(fileHandle != NULL);
   assert(fileDescriptor >= 0);
 
@@ -424,6 +455,23 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
       }
 
       fileHandle->size  = 0;
+      break;
+    case FILE_OPENMODE_APPEND:
+      /* open file for writing */
+      fileHandle->file = fdopen(fileDescriptor,"ab");
+      if (fileHandle->file == NULL)
+      {
+        return ERROR_OPEN_FILE;
+      }
+
+      /* get file size */
+      n = ftello(fileHandle->file);
+      if (n == (off_t)-1)
+      {
+        fclose(fileHandle->file);
+        return ERROR_IO_ERROR;
+      }
+      fileHandle->size = (uint64)n;
       break;
     #ifndef NDEBUG
       default:
@@ -1138,6 +1186,11 @@ Errors File_getFileInfo(const String fileName,
                        )
 {
   struct stat64 fileStat;
+  struct
+  {
+    time_t d0;
+    time_t d1;
+  } cast;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
@@ -1147,6 +1200,13 @@ Errors File_getFileInfo(const String fileName,
     return ERROR_IO_ERROR;
   }
 
+  if      (S_ISREG(fileStat.st_mode))  fileInfo->type = FILE_TYPE_FILE;
+  else if (S_ISDIR(fileStat.st_mode))  fileInfo->type = FILE_TYPE_DIRECTORY;
+  else if (S_ISLNK(fileStat.st_mode))  fileInfo->type = FILE_TYPE_LINK;
+  else if (S_ISCHR(fileStat.st_mode))  fileInfo->type = FILE_TYPE_DEVICE;
+  else if (S_ISBLK(fileStat.st_mode))  fileInfo->type = FILE_TYPE_DEVICE;
+  else if (S_ISSOCK(fileStat.st_mode)) fileInfo->type = FILE_TYPE_SOCKET;
+  else                                 fileInfo->type = FILE_TYPE_UNKNOWN;
   fileInfo->size            = fileStat.st_size;
   fileInfo->timeLastAccess  = fileStat.st_atime;
   fileInfo->timeModified    = fileStat.st_mtime;
@@ -1154,6 +1214,9 @@ Errors File_getFileInfo(const String fileName,
   fileInfo->userId          = fileStat.st_uid;
   fileInfo->groupId         = fileStat.st_gid;
   fileInfo->permission      = fileStat.st_mode;
+  cast.d0 = fileStat.st_mtime;
+  cast.d1 = fileStat.st_ctime;
+  memcpy(fileInfo->cast,&cast,sizeof(FileCast));
 
   return ERROR_NONE;
 }

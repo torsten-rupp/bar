@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.41 $
+* $Revision: 1.42 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -220,9 +220,14 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SPECIAL      ("config",                   0,  1,0,NULL,                                                 NULL,cmdOptionParseConfigFile,NULL,                                "configuration file","file name"                                   ),
 
-  CMD_OPTION_INTEGER64    ("archive-part-size",        's',1,0,defaultOptions.archivePartSize,                       0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "approximated part size"                                           ),
+  CMD_OPTION_INTEGER64    ("archive-part-size",        's',1,0,defaultOptions.archivePartSize,                       0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "approximated archive part size"                                   ),
   CMD_OPTION_SPECIAL      ("tmp-directory",            0,  1,0,&defaultOptions.tmpDirectory,                         DEFAULT_TMP_DIRECTORY,cmdOptionParseString,NULL,                   "temporary directory","path"                                       ),
   CMD_OPTION_INTEGER64    ("max-tmp-size",             0,  1,0,defaultOptions.maxTmpSize,                            0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "max. size of temporary files"                                     ),
+
+  CMD_OPTION_ENUM         ("full",                     'f',0,0,defaultOptions.archiveType,                           ARCHIVE_TYPE_FULL,ARCHIVE_TYPE_FULL,                               "create full archive"                                              ),
+  CMD_OPTION_ENUM         ("incremental",              'i',0,0,defaultOptions.archiveType,                           ARCHIVE_TYPE_FULL,ARCHIVE_TYPE_INCREMENTAL,                        "create incremental archive"                                       ),
+  CMD_OPTION_SPECIAL      ("incremental-list-file",    0,  1,0,&defaultOptions.incrementalListFileName,              NULL,cmdOptionParseString,NULL,                                    "incremental list file name","file name"                           ),
+
   CMD_OPTION_INTEGER      ("directory-strip",          'p',1,0,defaultOptions.directoryStripCount,                   0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"                        ),
   CMD_OPTION_SPECIAL      ("directory",                0,  0,0,&defaultOptions.directory   ,                         NULL,cmdOptionParseString,NULL,                                    "directory to restore files","path"                                ),
   CMD_OPTION_INTEGER      ("priority",                 0,  1,0,priority,                                             0,0,19,NULL,                                                       "priority of processes/threads"                                    ),
@@ -231,7 +236,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SELECT       ("pattern-type",             0,  1,0,defaultOptions.patternType,                           PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPES,              "select pattern type"                                              ),
 
-  CMD_OPTION_SPECIAL      ("include",                  'i',0,1,&includePatternList,                                  NULL,cmdOptionParseIncludeExclude,NULL,                            "include pattern","pattern"                                        ),
+  CMD_OPTION_SPECIAL      ("include",                  '#',0,1,&includePatternList,                                  NULL,cmdOptionParseIncludeExclude,NULL,                            "include pattern","pattern"                                        ),
   CMD_OPTION_SPECIAL      ("exclude",                  '!',0,1,&excludePatternList,                                  NULL,cmdOptionParseIncludeExclude,NULL,                            "exclude pattern","pattern"                                        ),
  
   CMD_OPTION_SELECT       ("compress-algorithm",       'z',0,0,defaultOptions.compressAlgorithm,                     COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,  "select compress algorithm to use"                                 ),
@@ -278,12 +283,12 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("log-file",                 0,  1,0,logFileName       ,                                   NULL,                                                              "log file name","file name"                                        ),
   CMD_OPTION_STRING       ("log-post-command",         0,  1,0,logPostCommand,                                       NULL,                                                              "log file post-process command","command"                          ),
 
-//  CMD_OPTION_BOOLEAN      ("incremental",              0,  0,0,defaultOptions.incrementalFlag,                     FALSE,                                                             "overwrite existing files"                                         ),
   CMD_OPTION_BOOLEAN      ("skip-unreadable",          0,  0,0,defaultOptions.skipUnreadableFlag,                    TRUE,                                                              "skip unreadable files"                                            ),
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",  0,  0,0,defaultOptions.overwriteArchiveFilesFlag,             FALSE,                                                             "overwrite existing archive files"                                 ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",          0,  0,0,defaultOptions.overwriteFilesFlag,                    FALSE,                                                             "overwrite existing files"                                         ),
   CMD_OPTION_BOOLEAN      ("no-default-config",        0,  1,0,defaultOptions.noDefaultConfigFlag,                   FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",        0,  1,0,defaultOptions.waitFirstVolumeFlag,                   FALSE,                                                             "wait for first volume"                                            ),
+  CMD_OPTION_BOOLEAN      ("no-storage",               0,  1,0,defaultOptions.noStorageFlag,                         FALSE,                                                             "do not store archives (skip storage)"                             ),
   CMD_OPTION_BOOLEAN      ("quiet",                    0,  1,0,defaultOptions.quietFlag,                             FALSE,                                                             "surpress any output"                                              ),
   CMD_OPTION_INTEGER_RANGE("verbose",                  'v',1,0,defaultOptions.verboseLevel,                          1,0,3,NULL,                                                        "verbosity level"                                                  ),
 
@@ -384,6 +389,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER64("archive-part-size",        defaultOptions.archivePartSize,-1,                       0,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_SPECIAL  ("tmp-directory",            &defaultOptions.tmpDirectory,-1,                         configValueParseString,NULL),
   CONFIG_VALUE_INTEGER64("max-tmp-size",             defaultOptions.maxTmpSize,-1,                            0,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+
   CONFIG_VALUE_INTEGER  ("directory-strip",          defaultOptions.directoryStripCount,-1,                   0,LONG_MAX,NULL),
   CONFIG_VALUE_SPECIAL  ("directory",                &defaultOptions.directory,-1,                            configValueParseString,NULL),
   CONFIG_VALUE_INTEGER  ("priority",                 priority,-1,                                             0,19,NULL),
@@ -1025,6 +1031,7 @@ LOCAL void initOptions(Options *options)
   memset(options,0,sizeof(Options));
   options->sshServerList = &sshServerList;
   options->deviceList    = &deviceList;
+  options->cryptPassword = Password_new();
 }
 
 LOCAL void freeSSHServerNode(SSHServerNode *sshServerNode, void *userData)
@@ -1097,11 +1104,16 @@ void printInfo(uint verboseLevel, const char *format, ...)
 
 void vlogMessage(ulong logType, const char *prefix, const char *text, va_list arguments)
 {
+  char dateTime[32];
+
   assert(text != NULL);
 
   if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
   {
+    Misc_getDateTime(dateTime,sizeof(dateTime));
+
     /* append to temporary log file */
+    fprintf(tmpLogFile,"%s> ",dateTime);
     if (prefix != NULL) fprintf(tmpLogFile,prefix);
     vfprintf(tmpLogFile,text,arguments);
     fprintf(tmpLogFile,"\n");
@@ -1109,6 +1121,7 @@ void vlogMessage(ulong logType, const char *prefix, const char *text, va_list ar
     if (logFile != NULL)
     {
       /* append to log file */
+      fprintf(logFile,"%s> ",dateTime);
       if (prefix != NULL) fprintf(logFile,prefix);
       vfprintf(logFile,text,arguments);
       fprintf(logFile,"\n");
@@ -1191,6 +1204,42 @@ void printError(const char *text, ...)
   String_delete(line);
 }
 
+void logPostProcess(void)
+{
+  ExecuteMacro executeMacros[1];
+  Errors       error;
+
+  /* flush logs */
+  if (logFile != NULL) fflush(logFile);
+  fflush(tmpLogFile);
+
+  /* log post command */
+  if (logPostCommand != NULL)
+  {
+    printInfo(2,"Log post process...");
+    executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%file"; executeMacros[0].string = tmpLogFileName;
+    error = Misc_executeCommand(logPostCommand,
+                                executeMacros,SIZE_OF_ARRAY(executeMacros),
+                                NULL,
+                                NULL,
+                                NULL
+                               );
+    if (error == ERROR_NONE)
+    {
+      printInfo(2,"ok\n");
+    }
+    else
+    {
+      printInfo(2,"FAIL\n");
+      printError("Cannot post-process log file (error: %s)\n",getErrorText(error));
+    }
+  }
+
+  /* reset temporary log file */
+  fclose(tmpLogFile);
+  tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
+}
+
 void copyOptions(const Options *sourceOptions, Options *destinationOptions)
 {
   assert(sourceOptions != NULL);
@@ -1231,6 +1280,7 @@ void freeOptions(Options *options)
   String_delete(options->tmpDirectory);
   String_delete(options->directory);
   Password_delete(options->cryptPassword);
+  String_delete(options->incrementalListFileName);
   String_delete(options->sshServer.loginName);
   String_delete(options->sshServer.privatKeyFileName);
   String_delete(options->sshServer.publicKeyFileName);
@@ -1313,9 +1363,8 @@ void getDevice(const String  name,
 
 int main(int argc, const char *argv[])
 {
-  String       fileName;
-  Errors       error;
-  ExecuteMacro executeMacros[1];
+  String fileName;
+  Errors error;
 
   /* init */
   if (!initAll())
@@ -1329,7 +1378,6 @@ int main(int argc, const char *argv[])
 
   /* initialise variables */
   tmpLogFileName = String_new();
-  File_getTmpFileName(tmpLogFileName,NULL);
   outputLine = String_new();
   outputNewLineFlag = TRUE;
   initOptions(&defaultOptions);
@@ -1496,7 +1544,8 @@ int main(int argc, const char *argv[])
   {
     logFile = NULL;
   }
-  tmpLogFile = fopen(String_cString(tmpLogFileName),"a");
+  File_getTmpFileName(tmpLogFileName,defaultOptions.tmpDirectory);
+  tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
 
   /* set priority */
   setpriority(PRIO_PROCESS,0,priority);
@@ -1619,6 +1668,9 @@ int main(int argc, const char *argv[])
 
           /* free resources */
           StringList_done(&fileNameList);
+
+          /* log post command */
+          logPostProcess();
         }
         break;
       default:
@@ -1628,24 +1680,8 @@ int main(int argc, const char *argv[])
     }
   }
 
-  /* log post command */
-  if (logPostCommand != NULL)
-  {
-    executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%file"; executeMacros[0].string = tmpLogFileName;
-    error = Misc_executeCommand(logPostCommand,
-                                executeMacros,SIZE_OF_ARRAY(executeMacros),
-                                NULL,
-                                NULL,
-                                NULL
-                               );
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot post-process log file (error: %s)\n",getErrorText(error));
-    }
-  }
-
   /* close log files */
-  fclose(tmpLogFile);
+  fclose(tmpLogFile);unlink(String_cString(tmpLogFileName));
   if (logFile != NULL) fclose(logFile);
 
   /* free resources */

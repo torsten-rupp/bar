@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -68,6 +68,18 @@ typedef void(*ExecuteIOFunction)(void         *userData,
 \***********************************************************************/
 
 uint64 Misc_getTimestamp(void);
+
+/***********************************************************************\
+* Name   : Misc_getDateTime
+* Purpose: get current date/time
+* Input  : buffer     - buffer for date/time stirng
+*          bufferSize - buffer size
+* Output : -
+* Return : date/time string
+* Notes  : -
+\***********************************************************************/
+
+const char *Misc_getDateTime(char *buffer, uint bufferSize);
 
 /***********************************************************************\
 * Name   : udelay

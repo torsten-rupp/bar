@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/threads.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: thread functions
 * Systems: all
@@ -71,6 +71,8 @@ bool Thread_init(Thread     *thread,
 void Thread_done(Thread *thread)
 {
   assert(thread != NULL);
+
+  UNUSED_VARIABLE(thread);
 }
 
 void Thread_join(Thread *thread)
