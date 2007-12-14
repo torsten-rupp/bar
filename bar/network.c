@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -196,7 +196,6 @@ Errors Network_connect(SocketHandle *socketHandle,
 #if 1
         password = Password_deploy(sshPassword);
         if (libssh2_userauth_publickey_fromfile(socketHandle->ssh2.session,
-      // NYI
                                                 String_cString(sshLoginName),
                                                 String_cString((sshPublicKeyFileName != NULL)?sshPublicKeyFileName:defaultSSHPublicKeyFileName),
                                                 String_cString((sshPrivatKeyFileName != NULL)?sshPrivatKeyFileName:defaultSSHPrivatKeyFileName),
