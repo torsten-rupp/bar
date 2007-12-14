@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -299,9 +299,10 @@ bool File_eof(FileHandle *fileHandle);
 * Input  : fileHandle   - file handle
 *          buffer       - buffer for data to read
 *          bufferLength - length of data to read
-* Output : bytesRead - bytes read
+* Output : bytesRead - bytes read (can be NULL)
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : if bytesRead is not given (NULL) reading less than
+*          bufferLength bytes result in an i/o error
 \***********************************************************************/
 
 Errors File_read(FileHandle *fileHandle,

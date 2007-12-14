@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -524,16 +524,17 @@ Errors File_read(FileHandle *fileHandle,
   ssize_t n;
 
   assert(fileHandle != NULL);
-  assert(bytesRead != NULL);
 
   n = fread(buffer,1,bufferLength,fileHandle->file);
-  if ((n <= 0) && ferror(fileHandle->file))
+  if (   ((n <= 0) && ferror(fileHandle->file))
+      || ((n < bufferLength) && (bytesRead == NULL))
+     )
   {
     return ERROR_IO_ERROR;
   }
   fileHandle->index += n;
 
-  (*bytesRead) = n;
+  if (bytesRead != NULL) (*bytesRead) = n;
 
   return ERROR_NONE;
 }
@@ -931,13 +932,11 @@ Errors File_delete(const String fileName, bool recursiveFlag)
                          || S_ISLNK(fileStat.st_mode)
                         )
                 {
-/*
                   if (unlink(String_cString(name)) != 0)
                   {
                     error = ERROR_IO_ERROR;
                   }
-*/
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+//HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 }
                 else if (S_ISDIR(fileStat.st_mode))
                 {
@@ -952,13 +951,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
           if (emptyFlag)
           {
-/*
             if (rmdir(String_cString(directoryName)) != 0)
             {
               error = ERROR_IO_ERROR;
             }
-*/
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+//HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           }
         }
       }
@@ -1230,19 +1227,40 @@ Errors File_setFileInfo(const String fileName,
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
-  utimeBuffer.actime  = fileInfo->timeLastAccess;
-  utimeBuffer.modtime = fileInfo->timeModified;
-  if (utime(String_cString(fileName),&utimeBuffer) != 0)
+  switch (fileInfo->type)
   {
-    return ERROR_IO_ERROR;
-  }
-  if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
-  {
-    return ERROR_IO_ERROR;
-  }
-  if (chmod(String_cString(fileName),fileInfo->permission) != 0)
-  {
-    return ERROR_IO_ERROR;
+    case FILE_TYPE_FILE:
+    case FILE_TYPE_DIRECTORY:
+      utimeBuffer.actime  = fileInfo->timeLastAccess;
+      utimeBuffer.modtime = fileInfo->timeModified;
+      if (utime(String_cString(fileName),&utimeBuffer) != 0)
+      {
+        return ERROR_IO_ERROR;
+      }
+      if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+      {
+        return ERROR_IO_ERROR;
+      }
+      if (chmod(String_cString(fileName),fileInfo->permission) != 0)
+      {
+        return ERROR_IO_ERROR;
+      }
+      break;
+    case FILE_TYPE_LINK:
+      if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+      {
+        return ERROR_IO_ERROR;
+      }
+      break;
+    case FILE_TYPE_DEVICE:
+      break;
+    case FILE_TYPE_SOCKET:
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
   }
 
   return ERROR_NONE;
