@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems : all
@@ -187,10 +187,11 @@ void StringList_remove(StringList *stringList, StringNode *stringNode);
 * Name   : StringList_getFirst
 * Purpose: remove first string from list
 * Input  : stringList - string list
-*          string     - string variable
+*          string     - string variable (can be NULL)
 * Output : -
-* Return : removed string
-* Notes  : -
+* Return : string or NULL if no more strings
+* Notes  : if no string variable is supplied, the string from the list
+*          is returned directly and have to be freed
 \***********************************************************************/
 
 String StringList_getFirst(StringList *stringList, String string);
@@ -199,10 +200,11 @@ String StringList_getFirst(StringList *stringList, String string);
 * Name   : StringList_getLast
 * Purpose: remove last string from list
 * Input  : stringList - string list
-*          string     - string variable
+*          string     - string variable (can be NULL)
 * Output : -
-* Return : removed string
-* Notes  : -
+* Return : string or NULL if no more strings
+* Notes  : if no string variable is supplied, the string from the list
+*          is returned directly and have to be freed
 \***********************************************************************/
 
 String StringList_getLast(StringList *stringList, String string);

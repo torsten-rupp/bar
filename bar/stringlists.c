@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -207,6 +207,8 @@ String StringList_getFirst(StringList *stringList, String string)
       string = stringNode->string;
     }
     free(stringNode);
+
+    return string;
   }
   else
   {
@@ -214,9 +216,9 @@ String StringList_getFirst(StringList *stringList, String string)
     {
       String_clear(string);
     }
-  }
 
-  return string;
+    return NULL;
+  }
 }
 
 String StringList_getLast(StringList *stringList, String string)
@@ -238,6 +240,8 @@ String StringList_getLast(StringList *stringList, String string)
       string = stringNode->string;
     }
     free(stringNode);
+
+    return string;
   }
   else
   {
@@ -245,9 +249,9 @@ String StringList_getLast(StringList *stringList, String string)
     {
       String_clear(string);
     }
-  }
 
-  return string;
+    return NULL;
+  }
 }
 
 const char* const *StringList_toCStringArray(const StringList *stringList)
