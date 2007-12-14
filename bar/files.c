@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -1086,7 +1086,7 @@ bool File_exists(const String fileName)
 
   assert(fileName != NULL);
 
-  return (stat(String_cString(fileName),&fileStat) == 0);
+  return (lstat(String_cString(fileName),&fileStat) == 0);
 }
 
 bool File_existsCString(const char *fileName)
@@ -1095,7 +1095,7 @@ bool File_existsCString(const char *fileName)
 
   assert(fileName != NULL);
 
-  return (stat(fileName,&fileStat) == 0);
+  return (lstat(fileName,&fileStat) == 0);
 }
 
 bool File_isFile(const String fileName)
@@ -1247,7 +1247,7 @@ Errors File_setFileInfo(const String fileName,
       }
       break;
     case FILE_TYPE_LINK:
-      if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+      if (lchown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
       {
         return ERROR_IO_ERROR;
       }
