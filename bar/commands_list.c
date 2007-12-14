@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -83,7 +83,7 @@ typedef struct
 
 LOCAL void printHeader(const String archiveFileName)
 {
-  printInfo(0,"%s:\n",String_cString(archiveFileName));
+  printInfo(0,"List archive '%s':\n",String_cString(archiveFileName));
   printInfo(0,"\n");
   printInfo(0,
             "%4s %-10s %-22s %-10s %-7s %-10s %s\n",
@@ -111,6 +111,7 @@ LOCAL void printFooter(ulong fileCount)
 {
   printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
   printInfo(0,"%lu file(s)\n",fileCount);
+  printInfo(0,"\n");
 }
 
 /***********************************************************************\
@@ -209,6 +210,8 @@ Errors Command_list(StringList  *archiveFileNameList,
                    )
 {
   String       archiveFileName;
+  bool         printedInfoFlag;
+  ulong        fileCount;
   String       storageSpecifier;
   Errors       failError;
 bool         remoteBarFlag;
@@ -229,6 +232,8 @@ remoteBarFlag=FALSE;
   while (!StringList_empty(archiveFileNameList))
   {
     StringList_getFirst(archiveFileNameList,archiveFileName);
+    printedInfoFlag = FALSE;
+    fileCount       = 0;
 
     switch (Storage_getType(archiveFileName,storageSpecifier))
     {
@@ -236,7 +241,6 @@ remoteBarFlag=FALSE;
       case STORAGE_TYPE_SCP:
       case STORAGE_TYPE_SFTP:
         {
-          ulong           fileCount;
           Errors          error;
           ArchiveInfo     archiveInfo;
           ArchiveFileInfo archiveFileInfo;
@@ -258,8 +262,6 @@ remoteBarFlag=FALSE;
           }
 
           /* list contents */
-          fileCount = 0;
-          printHeader(archiveFileName);
           while (!Archive_eof(&archiveInfo))
           {
             /* get next file type */
@@ -314,6 +316,12 @@ remoteBarFlag=FALSE;
                       && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(archiveFileName);
+                      printedInfoFlag = TRUE;
+                    }
+
                     /* output file info */
                     printFileInfo(fileName,
                                   fileInfo.size,
@@ -360,6 +368,12 @@ remoteBarFlag=FALSE;
                       && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(archiveFileName);
+                      printedInfoFlag = TRUE;
+                    }
+
                     /* output file info */
                     printDirectoryInfo(directoryName,
                                        cryptAlgorithm
@@ -405,6 +419,12 @@ remoteBarFlag=FALSE;
                       && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(archiveFileName);
+                      printedInfoFlag = TRUE;
+                    }
+
                     /* output file info */
                     printLinkInfo(linkName,
                                   fileName,
@@ -426,7 +446,6 @@ remoteBarFlag=FALSE;
                 break; /* not reached */
             }
           }
-          printFooter(fileCount);
 
           /* close archive */
           Archive_close(&archiveInfo);
@@ -438,7 +457,6 @@ remoteBarFlag=FALSE;
           SSHServer            sshServer;
           NetworkExecuteHandle networkExecuteHandle;
           String               line;
-          ulong                fileCount;
           Errors               error;
           int                  id,errorCode;
           bool                 completedFlag;
@@ -528,8 +546,6 @@ remoteBarFlag=FALSE;
           Network_executeSendEOF(&networkExecuteHandle);
 
           /* list contents */
-          fileCount = 0;
-          printHeader(archiveFileName);
           while (!Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,60*1000))
           {
             /* read line */
@@ -557,6 +573,12 @@ remoteBarFlag=FALSE;
                   && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                  )
               {
+                if (!printedInfoFlag)
+                {
+                  printHeader(archiveFileName);
+                  printedInfoFlag = TRUE;
+                }
+
                 /* output file info */
                 printFileInfo(fileName,
                               fileSize,
@@ -584,6 +606,12 @@ remoteBarFlag=FALSE;
                   && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                  )
               {
+                if (!printedInfoFlag)
+                {
+                  printHeader(archiveFileName);
+                  printedInfoFlag = TRUE;
+                }
+
                 /* output file info */
                 printDirectoryInfo(directoryName,
                                    cryptAlgorithm
@@ -607,6 +635,12 @@ remoteBarFlag=FALSE;
                   && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                  )
               {
+                if (!printedInfoFlag)
+                {
+                  printHeader(archiveFileName);
+                  printedInfoFlag = TRUE;
+                }
+
                 /* output file info */
                 printLinkInfo(linkName,
                               fileName,
@@ -632,7 +666,6 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
             printError("Remote BAR program return exitcode %d!\n",exitCode);
             if (failError == ERROR_NONE) failError = ERROR_NETWORK_EXECUTE_FAIL;
           }
-          printFooter(fileCount);
 
           /* free resources */
           String_delete(linkName);
@@ -649,6 +682,10 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
         #endif /* NDEBUG */
         break; /* not reached */
+    }
+    if (printedInfoFlag)
+    {
+      printFooter(fileCount);
     }
   }
   String_delete(storageSpecifier);
