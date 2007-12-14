@@ -3,6 +3,12 @@
   * added incremental backup
   * fixed bug in --request-volume-command (wrong command string)
   * fixed bug when executing external command (reading i/o)
+  * fixed messages printed on console
+  * replaced --enable-static-link by --enable-dynamic-link in
+    configure and made static linkage to the default
+  * by the way: by accident BAR got his crucial test! I crashed
+    my system partition and I could restore it with BAR!
+    Nevertheless there is still a lot of work to do...
 
 2007-12-01 0.03a
   * fixed thread termination for "create" command

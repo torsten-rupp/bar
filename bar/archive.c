@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.34 $
+* $Revision: 1.35 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -1558,6 +1558,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
         }
 
         String_set(name,archiveFileInfo->file.chunkFileEntry.name);
+        fileInfo->type            = FILE_TYPE_FILE;
         fileInfo->size            = archiveFileInfo->file.chunkFileEntry.size;
         fileInfo->timeLastAccess  = archiveFileInfo->file.chunkFileEntry.timeLastAccess;
         fileInfo->timeModified    = archiveFileInfo->file.chunkFileEntry.timeModified;
@@ -1771,6 +1772,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
         }
 
         String_set(name,archiveFileInfo->directory.chunkDirectoryEntry.name);
+        fileInfo->type            = FILE_TYPE_DIRECTORY;
         fileInfo->timeLastAccess  = archiveFileInfo->directory.chunkDirectoryEntry.timeLastAccess;
         fileInfo->timeModified    = archiveFileInfo->directory.chunkDirectoryEntry.timeModified;
         fileInfo->timeLastChanged = archiveFileInfo->directory.chunkDirectoryEntry.timeLastChanged;
@@ -1954,6 +1956,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
 
         String_set(name,archiveFileInfo->link.chunkLinkEntry.name);
         String_set(fileName,archiveFileInfo->link.chunkLinkEntry.fileName);
+        fileInfo->type            = FILE_TYPE_LINK;
         fileInfo->timeLastAccess  = archiveFileInfo->link.chunkLinkEntry.timeLastAccess;
         fileInfo->timeModified    = archiveFileInfo->link.chunkLinkEntry.timeModified;
         fileInfo->timeLastChanged = archiveFileInfo->link.chunkLinkEntry.timeLastChanged;

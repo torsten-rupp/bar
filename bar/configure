@@ -805,7 +805,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          enable debug version
-  --enable-link-static    enable static linkage
+  --enable-link-dynamic   enable dynamic linkage
   --disable-zip           disable zip support
   --disable-bzip2         disable bzip2 support
   --disable-gcrypt        disable gcrypt support
@@ -1382,7 +1382,7 @@ LIBRARIES=""
 STATIC_LIBRARIES=""
 
 ENABLE_DEBUG="no"
-ENABLE_LINK_STATIC="no"
+ENABLE_LINK_DYNAMIC="no"
 ENABLE_ZIP="yes"
 ENABLE_BZIP2="yes"
 ENABLE_GCRYPT="yes"
@@ -1417,10 +1417,10 @@ if test "${enable_debug+set}" = set; then
   ENABLE_DEBUG=$enableval
 
 fi;
-# Check whether --enable-link-static or --disable-link-static was given.
-if test "${enable_link_static+set}" = set; then
-  enableval="$enable_link_static"
-  ENABLE_LINK_STATIC=$enableval
+# Check whether --enable-link-dynamic or --disable-link-dynamic was given.
+if test "${enable_link_dynamic+set}" = set; then
+  enableval="$enable_link_dynamic"
+  ENABLE_LINK_DYNAMIC=$enableval
 
 fi;
 # Check whether --enable-zip or --disable-zip was given.
@@ -3622,138 +3622,7 @@ echo "$as_me: error: pthread library not found" >&2;}
 fi
 
 if test $ENABLE_ZIP = "yes"; then
-  if test $ENABLE_LINK_STATIC = "yes"; then
-    echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
-echo $ECHO_N "checking for library containing zlibVersion... $ECHO_C" >&6
-if test "${ac_cv_search_zlibVersion+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-ac_cv_search_zlibVersion=no
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char zlibVersion ();
-int
-main ()
-{
-zlibVersion ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_search_zlibVersion="none required"
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-fi
-rm -f conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-if test "$ac_cv_search_zlibVersion" = no; then
-  for ac_lib in z; do
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-    cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char zlibVersion ();
-int
-main ()
-{
-zlibVersion ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_search_zlibVersion="-l$ac_lib"
-break
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-fi
-rm -f conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-  done
-fi
-LIBS=$ac_func_search_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_search_zlibVersion" >&5
-echo "${ECHO_T}$ac_cv_search_zlibVersion" >&6
-if test "$ac_cv_search_zlibVersion" != no; then
-  test "$ac_cv_search_zlibVersion" = "none required" || LIBS="$ac_cv_search_zlibVersion $LIBS"
-  HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_Z 1
-_ACEOF
-
-fi
-
-  else
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
     echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
 echo $ECHO_N "checking for library containing zlibVersion... $ECHO_C" >&6
 if test "${ac_cv_search_zlibVersion+set}" = set; then
@@ -3884,17 +3753,14 @@ _ACEOF
 
 fi
 
-  fi
-fi
-if test $ENABLE_BZIP2 = "yes"; then
-  if test $ENABLE_LINK_STATIC = "yes"; then
-    echo "$as_me:$LINENO: checking for library containing BZ2_bzCompressInit" >&5
-echo $ECHO_N "checking for library containing BZ2_bzCompressInit... $ECHO_C" >&6
-if test "${ac_cv_search_BZ2_bzCompressInit+set}" = set; then
+  else
+    echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
+echo $ECHO_N "checking for library containing zlibVersion... $ECHO_C" >&6
+if test "${ac_cv_search_zlibVersion+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_func_search_save_LIBS=$LIBS
-ac_cv_search_BZ2_bzCompressInit=no
+ac_cv_search_zlibVersion=no
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -3908,11 +3774,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char BZ2_bzCompressInit ();
+char zlibVersion ();
 int
 main ()
 {
-BZ2_bzCompressInit ();
+zlibVersion ();
   ;
   return 0;
 }
@@ -3939,7 +3805,7 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_search_BZ2_bzCompressInit="none required"
+  ac_cv_search_zlibVersion="none required"
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
@@ -3947,8 +3813,8 @@ sed 's/^/| /' conftest.$ac_ext >&5
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
-if test "$ac_cv_search_BZ2_bzCompressInit" = no; then
-  for ac_lib in bz2; do
+if test "$ac_cv_search_zlibVersion" = no; then
+  for ac_lib in z; do
     LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
     cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
@@ -3963,11 +3829,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char BZ2_bzCompressInit ();
+char zlibVersion ();
 int
 main ()
 {
-BZ2_bzCompressInit ();
+zlibVersion ();
   ;
   return 0;
 }
@@ -3994,7 +3860,7 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_search_BZ2_bzCompressInit="-l$ac_lib"
+  ac_cv_search_zlibVersion="-l$ac_lib"
 break
 else
   echo "$as_me: failed program was:" >&5
@@ -4007,18 +3873,21 @@ rm -f conftest.err conftest.$ac_objext \
 fi
 LIBS=$ac_func_search_save_LIBS
 fi
-echo "$as_me:$LINENO: result: $ac_cv_search_BZ2_bzCompressInit" >&5
-echo "${ECHO_T}$ac_cv_search_BZ2_bzCompressInit" >&6
-if test "$ac_cv_search_BZ2_bzCompressInit" != no; then
-  test "$ac_cv_search_BZ2_bzCompressInit" = "none required" || LIBS="$ac_cv_search_BZ2_bzCompressInit $LIBS"
-  HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";
+echo "$as_me:$LINENO: result: $ac_cv_search_zlibVersion" >&5
+echo "${ECHO_T}$ac_cv_search_zlibVersion" >&6
+if test "$ac_cv_search_zlibVersion" != no; then
+  test "$ac_cv_search_zlibVersion" = "none required" || LIBS="$ac_cv_search_zlibVersion $LIBS"
+  HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";
 cat >>confdefs.h <<\_ACEOF
-#define HAVE_BZ2 1
+#define HAVE_Z 1
 _ACEOF
 
 fi
 
-  else
+  fi
+fi
+if test $ENABLE_BZIP2 = "yes"; then
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
     echo "$as_me:$LINENO: checking for library containing BZ2_bzCompressInit" >&5
 echo $ECHO_N "checking for library containing BZ2_bzCompressInit... $ECHO_C" >&6
 if test "${ac_cv_search_BZ2_bzCompressInit+set}" = set; then
@@ -4149,17 +4018,14 @@ _ACEOF
 
 fi
 
-  fi
-fi
-if test $ENABLE_GCRYPT = "yes"; then
-  if test $ENABLE_LINK_STATIC = "yes"; then
-    echo "$as_me:$LINENO: checking for library containing gcry_check_version" >&5
-echo $ECHO_N "checking for library containing gcry_check_version... $ECHO_C" >&6
-if test "${ac_cv_search_gcry_check_version+set}" = set; then
+  else
+    echo "$as_me:$LINENO: checking for library containing BZ2_bzCompressInit" >&5
+echo $ECHO_N "checking for library containing BZ2_bzCompressInit... $ECHO_C" >&6
+if test "${ac_cv_search_BZ2_bzCompressInit+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_func_search_save_LIBS=$LIBS
-ac_cv_search_gcry_check_version=no
+ac_cv_search_BZ2_bzCompressInit=no
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -4173,11 +4039,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char gcry_check_version ();
+char BZ2_bzCompressInit ();
 int
 main ()
 {
-gcry_check_version ();
+BZ2_bzCompressInit ();
   ;
   return 0;
 }
@@ -4204,7 +4070,7 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_search_gcry_check_version="none required"
+  ac_cv_search_BZ2_bzCompressInit="none required"
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
@@ -4212,8 +4078,8 @@ sed 's/^/| /' conftest.$ac_ext >&5
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
-if test "$ac_cv_search_gcry_check_version" = no; then
-  for ac_lib in gcrypt; do
+if test "$ac_cv_search_BZ2_bzCompressInit" = no; then
+  for ac_lib in bz2; do
     LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
     cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
@@ -4228,11 +4094,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char gcry_check_version ();
+char BZ2_bzCompressInit ();
 int
 main ()
 {
-gcry_check_version ();
+BZ2_bzCompressInit ();
   ;
   return 0;
 }
@@ -4259,7 +4125,7 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_search_gcry_check_version="-l$ac_lib"
+  ac_cv_search_BZ2_bzCompressInit="-l$ac_lib"
 break
 else
   echo "$as_me: failed program was:" >&5
@@ -4272,18 +4138,21 @@ rm -f conftest.err conftest.$ac_objext \
 fi
 LIBS=$ac_func_search_save_LIBS
 fi
-echo "$as_me:$LINENO: result: $ac_cv_search_gcry_check_version" >&5
-echo "${ECHO_T}$ac_cv_search_gcry_check_version" >&6
-if test "$ac_cv_search_gcry_check_version" != no; then
-  test "$ac_cv_search_gcry_check_version" = "none required" || LIBS="$ac_cv_search_gcry_check_version $LIBS"
-  HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt crypto";
+echo "$as_me:$LINENO: result: $ac_cv_search_BZ2_bzCompressInit" >&5
+echo "${ECHO_T}$ac_cv_search_BZ2_bzCompressInit" >&6
+if test "$ac_cv_search_BZ2_bzCompressInit" != no; then
+  test "$ac_cv_search_BZ2_bzCompressInit" = "none required" || LIBS="$ac_cv_search_BZ2_bzCompressInit $LIBS"
+  HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";
 cat >>confdefs.h <<\_ACEOF
-#define HAVE_GCRYPT 1
+#define HAVE_BZ2 1
 _ACEOF
 
 fi
 
-  else
+  fi
+fi
+if test $ENABLE_GCRYPT = "yes"; then
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
     echo "$as_me:$LINENO: checking for library containing gcry_check_version" >&5
 echo $ECHO_N "checking for library containing gcry_check_version... $ECHO_C" >&6
 if test "${ac_cv_search_gcry_check_version+set}" = set; then
@@ -4414,16 +4283,14 @@ _ACEOF
 
 fi
 
-  fi
-fi
-if test $ENABLE_LINK_STATIC = "yes"; then
-  echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
-echo $ECHO_N "checking for library containing gpg_strerror... $ECHO_C" >&6
-if test "${ac_cv_search_gpg_strerror+set}" = set; then
+  else
+    echo "$as_me:$LINENO: checking for library containing gcry_check_version" >&5
+echo $ECHO_N "checking for library containing gcry_check_version... $ECHO_C" >&6
+if test "${ac_cv_search_gcry_check_version+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_func_search_save_LIBS=$LIBS
-ac_cv_search_gpg_strerror=no
+ac_cv_search_gcry_check_version=no
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -4437,11 +4304,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char gpg_strerror ();
+char gcry_check_version ();
 int
 main ()
 {
-gpg_strerror ();
+gcry_check_version ();
   ;
   return 0;
 }
@@ -4468,7 +4335,7 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_search_gpg_strerror="none required"
+  ac_cv_search_gcry_check_version="none required"
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
@@ -4476,8 +4343,8 @@ sed 's/^/| /' conftest.$ac_ext >&5
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
-if test "$ac_cv_search_gpg_strerror" = no; then
-  for ac_lib in gpg-error; do
+if test "$ac_cv_search_gcry_check_version" = no; then
+  for ac_lib in gcrypt; do
     LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
     cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
@@ -4492,11 +4359,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char gpg_strerror ();
+char gcry_check_version ();
 int
 main ()
 {
-gpg_strerror ();
+gcry_check_version ();
   ;
   return 0;
 }
@@ -4523,7 +4390,7 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_search_gpg_strerror="-l$ac_lib"
+  ac_cv_search_gcry_check_version="-l$ac_lib"
 break
 else
   echo "$as_me: failed program was:" >&5
@@ -4536,18 +4403,20 @@ rm -f conftest.err conftest.$ac_objext \
 fi
 LIBS=$ac_func_search_save_LIBS
 fi
-echo "$as_me:$LINENO: result: $ac_cv_search_gpg_strerror" >&5
-echo "${ECHO_T}$ac_cv_search_gpg_strerror" >&6
-if test "$ac_cv_search_gpg_strerror" != no; then
-  test "$ac_cv_search_gpg_strerror" = "none required" || LIBS="$ac_cv_search_gpg_strerror $LIBS"
-  HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";
+echo "$as_me:$LINENO: result: $ac_cv_search_gcry_check_version" >&5
+echo "${ECHO_T}$ac_cv_search_gcry_check_version" >&6
+if test "$ac_cv_search_gcry_check_version" != no; then
+  test "$ac_cv_search_gcry_check_version" = "none required" || LIBS="$ac_cv_search_gcry_check_version $LIBS"
+  HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt crypto";
 cat >>confdefs.h <<\_ACEOF
-#define HAVE_GPG_ERROR 1
+#define HAVE_GCRYPT 1
 _ACEOF
 
 fi
 
-else
+  fi
+fi
+if test $ENABLE_LINK_DYNAMIC = "yes"; then
   echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
 echo $ECHO_N "checking for library containing gpg_strerror... $ECHO_C" >&6
 if test "${ac_cv_search_gpg_strerror+set}" = set; then
@@ -4678,15 +4547,14 @@ _ACEOF
 
 fi
 
-fi
-if test $ENABLE_LINK_STATIC = "yes"; then
-  echo "$as_me:$LINENO: checking for library containing libssh2_session_init_ex" >&5
-echo $ECHO_N "checking for library containing libssh2_session_init_ex... $ECHO_C" >&6
-if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then
+else
+  echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
+echo $ECHO_N "checking for library containing gpg_strerror... $ECHO_C" >&6
+if test "${ac_cv_search_gpg_strerror+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_func_search_save_LIBS=$LIBS
-ac_cv_search_libssh2_session_init_ex=no
+ac_cv_search_gpg_strerror=no
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -4700,11 +4568,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char libssh2_session_init_ex ();
+char gpg_strerror ();
 int
 main ()
 {
-libssh2_session_init_ex ();
+gpg_strerror ();
   ;
   return 0;
 }
@@ -4731,7 +4599,7 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_search_libssh2_session_init_ex="none required"
+  ac_cv_search_gpg_strerror="none required"
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
@@ -4739,8 +4607,8 @@ sed 's/^/| /' conftest.$ac_ext >&5
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
-if test "$ac_cv_search_libssh2_session_init_ex" = no; then
-  for ac_lib in ssh2; do
+if test "$ac_cv_search_gpg_strerror" = no; then
+  for ac_lib in gpg-error; do
     LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
     cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
@@ -4755,11 +4623,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char libssh2_session_init_ex ();
+char gpg_strerror ();
 int
 main ()
 {
-libssh2_session_init_ex ();
+gpg_strerror ();
   ;
   return 0;
 }
@@ -4786,7 +4654,7 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_search_libssh2_session_init_ex="-l$ac_lib"
+  ac_cv_search_gpg_strerror="-l$ac_lib"
 break
 else
   echo "$as_me: failed program was:" >&5
@@ -4799,18 +4667,19 @@ rm -f conftest.err conftest.$ac_objext \
 fi
 LIBS=$ac_func_search_save_LIBS
 fi
-echo "$as_me:$LINENO: result: $ac_cv_search_libssh2_session_init_ex" >&5
-echo "${ECHO_T}$ac_cv_search_libssh2_session_init_ex" >&6
-if test "$ac_cv_search_libssh2_session_init_ex" != no; then
-  test "$ac_cv_search_libssh2_session_init_ex" = "none required" || LIBS="$ac_cv_search_libssh2_session_init_ex $LIBS"
-  HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";
+echo "$as_me:$LINENO: result: $ac_cv_search_gpg_strerror" >&5
+echo "${ECHO_T}$ac_cv_search_gpg_strerror" >&6
+if test "$ac_cv_search_gpg_strerror" != no; then
+  test "$ac_cv_search_gpg_strerror" = "none required" || LIBS="$ac_cv_search_gpg_strerror $LIBS"
+  HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";
 cat >>confdefs.h <<\_ACEOF
-#define HAVE_SSH2 1
+#define HAVE_GPG_ERROR 1
 _ACEOF
 
 fi
 
-else
+fi
+if test $ENABLE_LINK_DYNAMIC = "yes"; then
   echo "$as_me:$LINENO: checking for library containing libssh2_session_init_ex" >&5
 echo $ECHO_N "checking for library containing libssh2_session_init_ex... $ECHO_C" >&6
 if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then
@@ -4941,9 +4810,140 @@ _ACEOF
 
 fi
 
+else
+  echo "$as_me:$LINENO: checking for library containing libssh2_session_init_ex" >&5
+echo $ECHO_N "checking for library containing libssh2_session_init_ex... $ECHO_C" >&6
+if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+ac_cv_search_libssh2_session_init_ex=no
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char libssh2_session_init_ex ();
+int
+main ()
+{
+libssh2_session_init_ex ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_libssh2_session_init_ex="none required"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+if test "$ac_cv_search_libssh2_session_init_ex" = no; then
+  for ac_lib in ssh2; do
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char libssh2_session_init_ex ();
+int
+main ()
+{
+libssh2_session_init_ex ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_libssh2_session_init_ex="-l$ac_lib"
+break
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+  done
+fi
+LIBS=$ac_func_search_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_search_libssh2_session_init_ex" >&5
+echo "${ECHO_T}$ac_cv_search_libssh2_session_init_ex" >&6
+if test "$ac_cv_search_libssh2_session_init_ex" != no; then
+  test "$ac_cv_search_libssh2_session_init_ex" = "none required" || LIBS="$ac_cv_search_libssh2_session_init_ex $LIBS"
+  HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_SSH2 1
+_ACEOF
+
+fi
+
 fi
 if test $ENABLE_TLS = "yes"; then
-  if test $ENABLE_LINK_STATIC = "yes"; then
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
     echo "$as_me:$LINENO: checking for library containing gnutls_global_init" >&5
 echo $ECHO_N "checking for library containing gnutls_global_init... $ECHO_C" >&6
 if test "${ac_cv_search_gnutls_global_init+set}" = set; then
@@ -5067,7 +5067,7 @@ echo "$as_me:$LINENO: result: $ac_cv_search_gnutls_global_init" >&5
 echo "${ECHO_T}$ac_cv_search_gnutls_global_init" >&6
 if test "$ac_cv_search_gnutls_global_init" != no; then
   test "$ac_cv_search_gnutls_global_init" = "none required" || LIBS="$ac_cv_search_gnutls_global_init $LIBS"
-  HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";
+  HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_GNU_TLS 1
 _ACEOF
@@ -5198,7 +5198,7 @@ echo "$as_me:$LINENO: result: $ac_cv_search_gnutls_global_init" >&5
 echo "${ECHO_T}$ac_cv_search_gnutls_global_init" >&6
 if test "$ac_cv_search_gnutls_global_init" != no; then
   test "$ac_cv_search_gnutls_global_init" = "none required" || LIBS="$ac_cv_search_gnutls_global_init $LIBS"
-  HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";
+  HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_GNU_TLS 1
 _ACEOF
@@ -5783,7 +5783,7 @@ cat >>$CONFIG_STATUS <<_ACEOF
 #
 
 ENABLE_DEBUG=$ENABLE_DEBUG
-                   ENABLE_LINK_STATIC=$ENABLE_LINK_STATIC
+                   ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
                    HAVE_Z=$HAVE_Z
                    HAVE_BZ2=$HAVE_BZ2
                    HAVE_GCRYPT=$HAVE_GCRYPT
@@ -6507,7 +6507,7 @@ echo "$as_me: executing $ac_dest commands" >&6;}
     BUILD_NOTE ) echo "";
                     echo "Configuration:";
                     echo "  debug version    : `if test $ENABLE_DEBUG = "yes"; then echo yes; else echo no; fi`";
-                    echo "  static version   : `if test $ENABLE_LINK_STATIC = "yes"; then echo yes; else echo no; fi`";
+                    echo "  dynamic linked   : `if test $ENABLE_LINK_DYNAMIC = "yes"; then echo yes; else echo no; fi`";
                     echo "  zip compression  : `if test $HAVE_Z; then echo yes; else echo no; fi`";
                     echo "  bzip2 compression: `if test $HAVE_BZ2; then echo yes; else echo no; fi`";
                     echo "  crypto support   : `if test $HAVE_GCRYPT; then echo yes; else echo no; fi`";
