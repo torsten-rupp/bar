@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -97,6 +97,7 @@ Errors Command_test(StringList  *archiveFileNameList,
   while (!StringList_empty(archiveFileNameList))
   {
     StringList_getFirst(archiveFileNameList,archiveFileName);
+    printInfo(0,"Testing archive '%s':\n",String_cString(archiveFileName));
 
     /* open archive */
     error = Archive_open(&archiveInfo,
@@ -168,7 +169,7 @@ Errors Command_test(StringList  *archiveFileNameList,
                 && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(0,"Test file '%s'...",String_cString(fileName));
+              printInfo(2,"  Test file '%s'...",String_cString(fileName));
 
               /* get file fragment list */
               fileFragmentNode = FileFragmentList_findFile(&fileFragmentList,fileName);
@@ -188,7 +189,7 @@ Errors Command_test(StringList  *archiveFileNameList,
                 error = Archive_readFileData(&archiveFileInfo,archiveBuffer,n);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(0,"FAIL\n");
+                  printInfo(2,"FAIL!\n");
                   printError("Cannot not read content of archive '%s' (error: %s)!\n",
                              String_cString(archiveFileName),
                              getErrorText(error)
@@ -206,7 +207,7 @@ Errors Command_test(StringList  *archiveFileNameList,
                 continue;
               }
 
-              printInfo(0,"ok\n");
+              printInfo(2,"ok\n");
 
               /* add fragment to file fragment list */
               FileFragmentList_add(fileFragmentNode,fragmentOffset,fragmentSize);
@@ -222,7 +223,7 @@ Errors Command_test(StringList  *archiveFileNameList,
             else
             {
               /* skip */
-              printInfo(1,"Test '%s'...skipped\n",String_cString(fileName));
+              printInfo(3,"  Test '%s'...skipped\n",String_cString(fileName));
             }
 
             /* close archive file, free resources */
@@ -258,16 +259,16 @@ Errors Command_test(StringList  *archiveFileNameList,
                 && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(0,"Test directory '%s'...",String_cString(directoryName));
+              printInfo(2,"  Test directory '%s'...",String_cString(directoryName));
 
-              printInfo(0,"ok\n");
+              printInfo(2,"ok\n");
 
               /* free resources */
             }
             else
             {
               /* skip */
-              printInfo(1,"Test '%s'...skipped\n",String_cString(directoryName));
+              printInfo(3,"Test '%s'...skipped\n",String_cString(directoryName));
             }
 
             /* close archive file */
@@ -307,16 +308,16 @@ Errors Command_test(StringList  *archiveFileNameList,
                 && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(0,"Test link '%s'...",String_cString(linkName));
+              printInfo(2,"  Test link '%s'...",String_cString(linkName));
 
-              printInfo(0,"ok\n");
+              printInfo(2,"ok\n");
 
               /* free resources */
             }
             else
             {
               /* skip */
-              printInfo(1,"Test '%s'...skipped\n",String_cString(linkName));
+              printInfo(3,"  Test '%s'...skipped\n",String_cString(linkName));
             }
 
             /* close archive file */

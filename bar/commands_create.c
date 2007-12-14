@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.39 $
+* $Revision: 1.40 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -50,6 +50,9 @@
 
 #define BUFFER_SIZE                   (64*1024)
 
+#define INCREMENTAL_LIST_FILE_ID      "BAR incremental list"
+#define INCREMENTAL_LIST_FILE_VERSION 1
+
 typedef enum
 {
   INCREMENTAL_FILE_STATE_UNKNOWN,
@@ -63,7 +66,7 @@ typedef struct
 {
   IncrementalFileStates state;
   FileCast              cast;
-} IncrementalFileInfo;
+} IncrementalListInfo;
 
 typedef struct
 {
@@ -80,6 +83,7 @@ typedef struct
   MsgQueue                    fileMsgQueue;                       // queue with files to backup
 
   Thread                      collectorSumThread;                 // files collector sum thread id
+  bool                        collectorSumThreadExitFlag;
   Thread                      collectorThread;                    // files collector thread id
   bool                        collectorThreadExitFlag;
 
@@ -123,6 +127,17 @@ typedef struct
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : readIncrementalList
+* Purpose: read incremental list file
+* Input  : fileName        - file name
+*          filesDictionary - files dictionary
+* Output : -
+* Return : ERROR_NONE if incremental list read in files dictionary,
+*          error code otherwise
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors readIncrementalList(const String fileName,
                                  Dictionary   *filesDictionary
                                 )
@@ -130,9 +145,10 @@ LOCAL Errors readIncrementalList(const String fileName,
   void                *keyData;
   Errors              error;
   FileHandle          fileHandle;
-  IncrementalFileInfo incrementalFileInfo;
+  char                id[32];
+  uint16              version;
+  IncrementalListInfo incrementalListInfo;
   uint16              keyLength;
-  ulong               bytesRead;
 
   assert(fileName != NULL);
   assert(filesDictionary != NULL);
@@ -154,38 +170,52 @@ LOCAL Errors readIncrementalList(const String fileName,
     return error;
   }
 
+  /* read and check header */
+  error = File_read(&fileHandle,id,sizeof(id),NULL);
+  if (error != ERROR_NONE)
+  {
+    File_close(&fileHandle);
+    free(keyData);
+    return error;
+  }
+  if (strcmp(id,INCREMENTAL_LIST_FILE_ID) != 0)
+  {
+    File_close(&fileHandle);
+    free(keyData);
+    return ERROR_NOT_AN_INCREMENTAL_FILE;
+  }
+  error = File_read(&fileHandle,&version,sizeof(version),NULL);
+  if (error != ERROR_NONE)
+  {
+    File_close(&fileHandle);
+    free(keyData);
+    return error;
+  }
+  if (version != INCREMENTAL_LIST_FILE_VERSION)
+  {
+    File_close(&fileHandle);
+    free(keyData);
+    return ERROR_WRONG_INCREMENTAL_FILE_VERSION;
+  }
+
+  /* read entries */
   while (!File_eof(&fileHandle))
   {
     /* read entry */
-    incrementalFileInfo.state = INCREMENTAL_FILE_STATE_UNKNOWN;
-    error = File_read(&fileHandle,&incrementalFileInfo.cast,sizeof(incrementalFileInfo.cast),&bytesRead);
+    incrementalListInfo.state = INCREMENTAL_FILE_STATE_UNKNOWN;
+    error = File_read(&fileHandle,&incrementalListInfo.cast,sizeof(incrementalListInfo.cast),NULL);
     if (error != ERROR_NONE) break;
-    if (bytesRead != sizeof(incrementalFileInfo.cast))
-    {
-      error = ERROR_END_OF_INCREMENTAL_FILE;
-      break;
-    }
-    error = File_read(&fileHandle,&keyLength,sizeof(uint16),&bytesRead);
+    error = File_read(&fileHandle,&keyLength,sizeof(keyLength),NULL);
     if (error != ERROR_NONE) break;
-    if (bytesRead != sizeof(uint16))
-    {
-      error = ERROR_END_OF_INCREMENTAL_FILE;
-      break;
-    }
-    error = File_read(&fileHandle,keyData,keyLength,&bytesRead);
+    error = File_read(&fileHandle,keyData,keyLength,NULL);
     if (error != ERROR_NONE) break;
-    if (bytesRead != keyLength)
-    {
-      error = ERROR_END_OF_INCREMENTAL_FILE;
-      break;
-    }
 
     /* store in dictionary */
     Dictionary_add(filesDictionary,
                    keyData,
                    keyLength,
-                   &incrementalFileInfo,
-                   sizeof(incrementalFileInfo)
+                   &incrementalListInfo,
+                   sizeof(incrementalListInfo)
                   );
   }
 
@@ -198,23 +228,36 @@ LOCAL Errors readIncrementalList(const String fileName,
   return error;
 }
 
-LOCAL Errors writeIncrementalList(const String fileName,
-                                  Dictionary   *filesDictionary
+/***********************************************************************\
+* Name   : writeIncrementalList
+* Purpose: write incremental list file
+* Input  : fileName        - file name
+*          filesDictionary - files dictionary
+* Output : -
+* Return : ERROR_NONE if incremental list file written, error code
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors writeIncrementalList(const String     fileName,
+                                  const Dictionary *filesDictionary
                                  )
 {
   assert(fileName != NULL);
   assert(filesDictionary != NULL);
 
-  String              tmpFileName;
-  Errors              error;
-  FileHandle          fileHandle;
-  DictionaryIterator  dictionaryIterator;
-  const void          *keyData;
-  ulong               keyLength;
-  const void          *data;
-  ulong               length;
-  uint16              n;
-  IncrementalFileInfo *incrementalFileInfo;
+  String                    tmpFileName;
+  Errors                    error;
+  FileHandle                fileHandle;
+  char                      id[32];
+  uint16                    version;
+  DictionaryIterator        dictionaryIterator;
+  const void                *keyData;
+  ulong                     keyLength;
+  const void                *data;
+  ulong                     length;
+  uint16                    n;
+  const IncrementalListInfo *incrementalListInfo;
 
   assert(fileName != NULL);
   assert(filesDictionary != NULL);
@@ -231,6 +274,26 @@ LOCAL Errors writeIncrementalList(const String fileName,
     return error;
   }
 
+  /* write header */
+  memset(id,0,sizeof(id));
+  strncpy(id,INCREMENTAL_LIST_FILE_ID,sizeof(id)-1);
+  error = File_write(&fileHandle,id,sizeof(id));
+  if (error != ERROR_NONE)
+  {
+    File_close(&fileHandle);
+    String_delete(tmpFileName);
+    return error;
+  }
+  version = INCREMENTAL_LIST_FILE_VERSION;
+  error = File_write(&fileHandle,&version,sizeof(version));
+  if (error != ERROR_NONE)
+  {
+    File_close(&fileHandle);
+    String_delete(tmpFileName);
+    return error;
+  }
+
+  /* write entries */
   Dictionary_initIterator(&dictionaryIterator,filesDictionary);
   while (Dictionary_getNext(&dictionaryIterator,
                             &keyData,
@@ -242,9 +305,9 @@ LOCAL Errors writeIncrementalList(const String fileName,
   {
     assert(keyData != NULL);
     assert(data != NULL);
-    assert(length == sizeof(IncrementalFileInfo));
+    assert(length == sizeof(IncrementalListInfo));
 
-    incrementalFileInfo = (IncrementalFileInfo*)data;
+    incrementalListInfo = (IncrementalListInfo*)data;
 #if 0
 {
 char s[1024];
@@ -254,10 +317,10 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
 }
 #endif /* 0 */
 
-    error = File_write(&fileHandle,incrementalFileInfo->cast,sizeof(incrementalFileInfo->cast));
+    error = File_write(&fileHandle,incrementalListInfo->cast,sizeof(incrementalListInfo->cast));
     if (error != ERROR_NONE) break;
     n = (uint16)keyLength;
-    error = File_write(&fileHandle,&n,sizeof(uint16));
+    error = File_write(&fileHandle,&n,sizeof(n));
     if (error != ERROR_NONE) break;
     error = File_write(&fileHandle,keyData,keyLength);
     if (error != ERROR_NONE) break;
@@ -301,12 +364,13 @@ LOCAL bool checkFileChanged(Dictionary     *filesDictionary,
 {
   void                *data;
   ulong               length;
-  IncrementalFileInfo *incrementalFileInfo;
+  IncrementalListInfo *incrementalListInfo;
 
   assert(filesDictionary != NULL);
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
+  /* check if exists */
   if (!Dictionary_find(filesDictionary,
                        String_cString(fileName),
                        String_length(fileName),
@@ -317,10 +381,11 @@ LOCAL bool checkFileChanged(Dictionary     *filesDictionary,
   {
     return TRUE;
   }
-  assert(length == sizeof(IncrementalFileInfo));
+  assert(length == sizeof(IncrementalListInfo));
 
-  incrementalFileInfo = (IncrementalFileInfo*)data;
-  if (memcmp(incrementalFileInfo->cast,&fileInfo->cast,sizeof(FileCast)) != 0)
+  /* check if modified */
+  incrementalListInfo = (IncrementalListInfo*)data;
+  if (memcmp(incrementalListInfo->cast,&fileInfo->cast,sizeof(FileCast)) != 0)
   {
     return TRUE;
   }
@@ -328,25 +393,36 @@ LOCAL bool checkFileChanged(Dictionary     *filesDictionary,
   return FALSE;
 }
 
-LOCAL void addIncrementalFile(Dictionary     *filesDictionary,
+/***********************************************************************\
+* Name   : addIncrementalList
+* Purpose: add file to incremental list
+* Input  : filesDictionary - files dictionary
+*          fileName        - file name
+*          fileInfo        - file info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void addIncrementalList(Dictionary     *filesDictionary,
                               const String   fileName,
                               const FileInfo *fileInfo
                              )
 {
-  IncrementalFileInfo incrementalFileInfo;
+  IncrementalListInfo incrementalListInfo;
 
   assert(filesDictionary != NULL);
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
-  incrementalFileInfo.state = INCREMENTAL_FILE_STATE_ADDED;
-  memcpy(incrementalFileInfo.cast,fileInfo->cast,sizeof(FileCast));
+  incrementalListInfo.state = INCREMENTAL_FILE_STATE_ADDED;
+  memcpy(incrementalListInfo.cast,fileInfo->cast,sizeof(FileCast));
 
   Dictionary_add(filesDictionary,
                  String_cString(fileName),
                  String_length(fileName),
-                 &incrementalFileInfo,
-                 sizeof(incrementalFileInfo)
+                 &incrementalListInfo,
+                 sizeof(incrementalListInfo)
                 );
 }
 
@@ -664,7 +740,8 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
   name = String_new();
 
   includePatternNode = createInfo->includePatternList->head;
-  while (   (createInfo->failError == ERROR_NONE)
+  while (   !createInfo->collectorSumThreadExitFlag
+         && (createInfo->failError == ERROR_NONE)
          && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
          && (includePatternNode != NULL)
         )
@@ -691,7 +768,8 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
 
     /* find files */
     StringList_append(&nameList,basePath);
-    while (   (createInfo->failError == ERROR_NONE)
+    while (   !createInfo->collectorSumThreadExitFlag
+           && (createInfo->failError == ERROR_NONE)
            && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
            && !StringList_empty(&nameList)
           )
@@ -732,7 +810,8 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
             {
               /* read directory contents */
               fileName = String_new();
-              while (   (createInfo->failError == ERROR_NONE)
+              while (   !createInfo->collectorSumThreadExitFlag
+                     && (createInfo->failError == ERROR_NONE)
                      && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
                      && !File_endOfDirectory(&directoryHandle)
                     )
@@ -1400,6 +1479,7 @@ Errors Command_create(const char                   *archiveFileName,
   createInfo.abortRequestFlag             = abortRequestFlag;
   createInfo.archiveFileName              = String_newCString(archiveFileName);
   createInfo.startTime                    = time(NULL);
+  createInfo.collectorSumThreadExitFlag   = FALSE;
   createInfo.collectorThreadExitFlag      = FALSE;
   createInfo.storageCount                 = 0;
   createInfo.storageBytes                 = 0LL;
@@ -1472,7 +1552,6 @@ Errors Command_create(const char                   *archiveFileName,
     MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
     String_delete(fileName);
     free(buffer);
-    Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
     String_delete(createInfo.statusInfo.storageName);
     String_delete(createInfo.statusInfo.fileName);
     String_delete(createInfo.archiveFileName);
@@ -1480,7 +1559,10 @@ Errors Command_create(const char                   *archiveFileName,
     return error;
   }
 
-  if ((options->archiveType == ARCHIVE_TYPE_INCREMENTAL) || (options->incrementalListFileName != NULL))
+  if (   (options->archiveType == ARCHIVE_TYPE_INCREMENTAL)
+      || options->createIncrementalListFlag
+      || (options->incrementalListFileName != NULL)
+     )
   {
     /* get increment list file name */
     incrementalListFileName = String_new();
@@ -1492,7 +1574,7 @@ Errors Command_create(const char                   *archiveFileName,
     {
       formatArchiveFileName(incrementalListFileName,
                             createInfo.archiveFileName,
-                            (options->archivePartSize > 0)?0:-1,
+                            -1,
                             createInfo.startTime
                            );
       String_appendCString(incrementalListFileName,".bid");
@@ -1527,7 +1609,10 @@ Errors Command_create(const char                   *archiveFileName,
 
         return error;
       }
-      printInfo(1,"ok\n");
+      printInfo(1,
+                "ok (%lu entries)\n",
+                Dictionary_count(&createInfo.filesDictionary)
+               );
     }
   }
 
@@ -1734,7 +1819,7 @@ Errors Command_create(const char                   *archiveFileName,
             /* add to incremental list */
             if (storeIncrementalFileInfoFlag)
             {
-              addIncrementalFile(&createInfo.filesDictionary,fileName,&fileInfo);
+              addIncrementalList(&createInfo.filesDictionary,fileName,&fileInfo);
             }
           }
           break;
@@ -1809,7 +1894,7 @@ Errors Command_create(const char                   *archiveFileName,
             /* add to incremental list */
             if (storeIncrementalFileInfoFlag)
             {
-              addIncrementalFile(&createInfo.filesDictionary,fileName,&fileInfo);
+              addIncrementalList(&createInfo.filesDictionary,fileName,&fileInfo);
             }
           }
           break;
@@ -1912,7 +1997,7 @@ Errors Command_create(const char                   *archiveFileName,
             /* add to incremental list */
             if (storeIncrementalFileInfoFlag)
             {
-              addIncrementalFile(&createInfo.filesDictionary,fileName,&fileInfo);
+              addIncrementalList(&createInfo.filesDictionary,fileName,&fileInfo);
             }
           }
           break;
@@ -1927,6 +2012,7 @@ Errors Command_create(const char                   *archiveFileName,
 
   /* close archive */
   Archive_close(&archiveInfo);
+  createInfo.collectorSumThreadExitFlag = TRUE;
   MsgQueue_setEndOfMsg(&createInfo.fileMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
   updateStatusInfo(&createInfo);

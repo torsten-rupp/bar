@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -200,6 +200,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
         )
   {
     StringList_getFirst(archiveFileNameList,archiveFileName);
+    printInfo(0,"Restore archive '%s':\n",String_cString(archiveFileName));
 
     /* open archive */
     error = Archive_open(&archiveInfo,
@@ -246,6 +247,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
             uint64           fragmentOffset,fragmentSize;
             FileFragmentNode *fileFragmentNode;
             String           destinationFileName;
+            String           directoryName;
 //            FileInfo         localFileInfo;
             FileHandle       fileHandle;
             uint64           length;
@@ -289,7 +291,6 @@ Errors Command_restore(StringList                *archiveFileNameList,
                                                            options->directoryStripCount
                                                           );
 
-              printInfo(0,"Restore file '%s'...",String_cString(destinationFileName));
 
               /* check if file fragment exists */
               fileFragmentNode = FileFragmentList_findFile(&fileFragmentList,fileName);
@@ -297,14 +298,15 @@ Errors Command_restore(StringList                *archiveFileNameList,
               {
                 if (!options->overwriteFilesFlag && FileFragmentList_checkExists(fileFragmentNode,fragmentOffset,fragmentSize))
                 {
-                  printInfo(0,"skipped (file part %ll..%ll exists)\n",
+                  printInfo(1,"  Restore file '%s'...skipped (file part %ll..%ll exists)\n",
+                            String_cString(destinationFileName),
                             fragmentOffset,
                             (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset
                            );
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveFileInfo);
                   String_delete(fileName);
-                  if (restoreInfo.error == ERROR_NONE) restoreInfo.error = ERROR_FILE_EXITS;
+//                  if (restoreInfo.error == ERROR_NONE) restoreInfo.error = ERROR_FILE_EXITS;
                   continue;
                 }
               }
@@ -312,21 +314,46 @@ Errors Command_restore(StringList                *archiveFileNameList,
               {
                 if (!options->overwriteFilesFlag && File_exists(destinationFileName))
                 {
-                  printInfo(0,"skipped (file exists)\n");
+                  printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveFileInfo);
                   String_delete(fileName);
-                  if (restoreInfo.error == ERROR_NONE) restoreInfo.error = ERROR_FILE_EXITS;
+//                  if (restoreInfo.error == ERROR_NONE) restoreInfo.error = ERROR_FILE_EXITS;
                   continue;
                 }
                 fileFragmentNode = FileFragmentList_addFile(&fileFragmentList,fileName,fileInfo.size);
               }
 
+              printInfo(2,"  Restore file '%s'...",String_cString(destinationFileName));
+
+              /* create directory if not existing */
+              directoryName = File_getFilePathName(destinationFileName,String_new());
+              if (!File_exists(directoryName))
+              {
+                error = File_makeDirectory(directoryName);
+                if (error != ERROR_NONE)
+                {
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot create directory '%s' (error: %s)\n",
+                             String_cString(directoryName),
+                             getErrorText(error)
+                            );
+                  String_delete(directoryName);
+                  String_delete(destinationFileName);
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(fileName);
+                  if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+                  continue;
+                }
+              }
+              String_delete(directoryName);
+
               /* write file data */
-              error = File_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
+//if (fileFragmentNode == NULL) File_delete(destinationFileName,TRUE);
+              error = File_open(&fileHandle,destinationFileName,FILE_OPENMODE_CREATE);
               if (error != ERROR_NONE)
               {
-                printInfo(0,"fail\n");
+                printInfo(2,"FAIL!\n");
                 printError("Cannot open file '%s' (error: %s)\n",
                            String_cString(destinationFileName),
                            getErrorText(error)
@@ -340,7 +367,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
               error = File_seek(&fileHandle,fragmentOffset);
               if (error != ERROR_NONE)
               {
-                printInfo(0,"FAIL\n");
+                printInfo(2,"FAIL!\n");
                 printError("Cannot write file '%s' (error: %s)\n",
                            String_cString(destinationFileName),
                            getErrorText(error)
@@ -363,7 +390,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 error = Archive_readFileData(&archiveFileInfo,buffer,n);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(0,"FAIL\n");
+                  printInfo(2,"FAIL!\n");
                   printError("Cannot not read content of archive '%s' (error: %s)!\n",
                              String_cString(archiveFileName),
                              getErrorText(error)
@@ -374,7 +401,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 error = File_write(&fileHandle,buffer,n);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(0,"FAIL\n");
+                  printInfo(2,"FAIL!\n");
                   printError("Cannot write file '%s' (error: %s)\n",
                              String_cString(destinationFileName),
                              getErrorText(error)
@@ -390,12 +417,13 @@ Errors Command_restore(StringList                *archiveFileNameList,
               File_close(&fileHandle);
               if ((abortRequestFlag != NULL) && (*abortRequestFlag))
               {
-                printInfo(1,"ABORTED\n");
+                printInfo(2,"ABORTED\n");
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 continue;
               }
+#if 0
               if (restoreInfo.error != ERROR_NONE)
               {
                 String_delete(destinationFileName);
@@ -403,6 +431,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 String_delete(fileName);
                 continue;
               }
+#endif /* 0 */
 
               /* add fragment to file fragment list */
               FileFragmentList_add(fileFragmentNode,fragmentOffset,fragmentSize);
@@ -412,7 +441,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
               {
-                printInfo(0,"FAIL\n");
+                printInfo(2,"FAIL!\n");
                 printError("Cannot set file info of '%s' (error: %s)\n",
                            String_cString(destinationFileName),
                            getErrorText(error)
@@ -433,12 +462,12 @@ Errors Command_restore(StringList                *archiveFileNameList,
               /* free resources */
               String_delete(destinationFileName);
 
-              printInfo(0,"ok\n");
+              printInfo(2,"ok\n");
             }
             else
             {
               /* skip */
-              printInfo(1,"Restore '%s'...skipped\n",String_cString(fileName));
+              printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
             }
 
             /* close archive file, free resources */
@@ -488,13 +517,28 @@ Errors Command_restore(StringList                *archiveFileNameList,
                                                            options->directoryStripCount
                                                           );
 
-              printInfo(0,"Restore directory '%s'...",String_cString(destinationFileName));
 
               /* create directory */
+//File_delete(destinationFileName,TRUE);
+              if (!options->overwriteFilesFlag && File_exists(destinationFileName))
+              {
+                printInfo(1,
+                          "  Restore directory '%s'...skipped (file exists)\n",
+                          String_cString(destinationFileName)
+                         );
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(directoryName);
+//                if (restoreInfo.error == ERROR_NONE) restoreInfo.error = ERROR_FILE_EXITS;
+                continue;
+              }
+
+              printInfo(2,"  Restore directory '%s'...",String_cString(destinationFileName));
+
               error = File_makeDirectory(destinationFileName);
               if (error != ERROR_NONE)
               {
-                printInfo(0,"FAIL\n");
+                printInfo(2,"FAIL!\n");
                 printError("Cannot create directory '%s' (error: %s)\n",
                            String_cString(destinationFileName),
                            getErrorText(error)
@@ -510,7 +554,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
               {
-                printInfo(0,"FAIL\n");
+                printInfo(2,"FAIL!\n");
                 printError("Cannot set directory info of '%s' (error: %s)\n",
                            String_cString(destinationFileName),
                            getErrorText(error)
@@ -525,12 +569,12 @@ Errors Command_restore(StringList                *archiveFileNameList,
               /* free resources */
               String_delete(destinationFileName);
 
-              printInfo(0,"ok\n");
+              printInfo(2,"ok\n");
             }
             else
             {
               /* skip */
-              printInfo(1,"Restore '%s'...skipped\n",String_cString(directoryName));
+              printInfo(3,"  Restore '%s'...skipped\n",String_cString(directoryName));
             }
 
             /* close archive file */
@@ -584,13 +628,29 @@ Errors Command_restore(StringList                *archiveFileNameList,
                                                            options->directoryStripCount
                                                           );
 
-              printInfo(0,"Restore link '%s'...",String_cString(destinationFileName));
 
               /* create link */
+//File_delete(destinationFileName,TRUE);
+              if (!options->overwriteFilesFlag && File_exists(destinationFileName))
+              {
+                printInfo(1,
+                          "  Restore link '%s'...skipped (file exists)\n",
+                          String_cString(destinationFileName)
+                         );
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                String_delete(linkName);
+//                if (restoreInfo.error == ERROR_NONE) restoreInfo.error = ERROR_FILE_EXITS;
+                continue;
+              }
+
+              printInfo(2,"  Restore link '%s'...",String_cString(destinationFileName));
+
               error = File_link(destinationFileName,fileName);
               if (error != ERROR_NONE)
               {
-                printInfo(0,"FAIL\n");
+                printInfo(2,"FAIL!\n");
                 printError("Cannot create link '%s' -> '%s' (error: %s)\n",
                            String_cString(destinationFileName),
                            String_cString(fileName),
@@ -608,7 +668,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
               {
-                printInfo(0,"FAIL\n");
+                printInfo(2,"FAIL!\n");
                 printError("Cannot set file info of '%s' (error: %s)\n",
                            String_cString(destinationFileName),
                            getErrorText(error)
@@ -624,12 +684,12 @@ Errors Command_restore(StringList                *archiveFileNameList,
               /* free resources */
               String_delete(destinationFileName);
 
-              printInfo(0,"ok\n");
+              printInfo(2,"ok\n");
             }
             else
             {
               /* skip */
-              printInfo(1,"Restore '%s'...skipped\n",String_cString(linkName));
+              printInfo(3,"  Restore '%s'...skipped\n",String_cString(linkName));
             }
 
             /* close archive file */

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -2399,6 +2399,7 @@ Errors Server_run(uint       serverPort,
                 );
       return FALSE;
     }
+    printInfo(1,"Started server on port %d\n",serverPort);
   }
   if (serverTLSPort != 0)
   {
@@ -2418,6 +2419,7 @@ Errors Server_run(uint       serverPort,
         Network_doneServer(&serverSocketHandle);
         return FALSE;
       }
+      printInfo(1,"Started TLS/SSL server on port %d\n",serverTLSPort);
   #else /* not HAVE_GNU_TLS */
     printError("TLS/SSL server is not supported!\n");
     Network_doneServer(&serverSocketHandle);
