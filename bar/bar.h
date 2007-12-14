@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -139,6 +139,7 @@ typedef struct
   String             tmpDirectory;
   uint64             maxTmpSize;
 
+  bool               createIncrementalListFlag;
   String             incrementalListFileName;
 
   uint               directoryStripCount;
@@ -171,6 +172,7 @@ typedef struct
   bool               errorCorrectionCodesFlag;
   bool               waitFirstVolumeFlag;
   bool               noStorageFlag;
+  bool               stopOnErrorFlag;
   bool               quietFlag;
   long               verboseLevel;
 } Options;
