@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/dictionaries.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: hash table functions
 * Systems: all
@@ -53,8 +53,8 @@ typedef struct
 
 typedef struct
 {
-  Dictionary *dictionary;
-  uint       i,j;
+  const Dictionary *dictionary;
+  uint             i,j;
 } DictionaryIterator;
 
 /* delete dictionary entry function */
@@ -126,6 +126,17 @@ void Dictionary_clear(Dictionary             *dictionary,
                       DictionaryFreeFunction dictionaryFreeFunction,
                       void                   *dictionaryFreeUserData
                      );
+
+/***********************************************************************\
+* Name   : Dictionary_count
+* Purpose: get number of entries in dictionary
+* Input  : dictionary - dictionary
+* Output : -
+* Return : number of entries in dictionary
+* Notes  : -
+\***********************************************************************/
+
+ulong Dictionary_count(const Dictionary *dictionary);
 
 /***********************************************************************\
 * Name   : Dictionary_add
@@ -215,7 +226,7 @@ bool Dictionary_contain(Dictionary *dictionary,
 \***********************************************************************/
 
 void Dictionary_initIterator(DictionaryIterator *dictionaryIterator,
-                             Dictionary         *dictionary
+                             const Dictionary   *dictionary
                             );
 
 /***********************************************************************\

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/dictionaries.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: hash table functions
 * Systems: all
@@ -601,6 +601,23 @@ void Dictionary_clear(Dictionary             *dictionary,
   }
 }
 
+ulong Dictionary_count(const Dictionary *dictionary)
+{
+  ulong count;
+  uint  z;
+
+  assert(dictionary != NULL);
+  assert(dictionary->entryTables != NULL);
+
+  count = 0;
+  for (z = 0; z < dictionary->entryTableCount; z++)
+  {
+    count += dictionary->entryTables[z].entryCount;
+  }
+
+  return count;
+}
+
 bool Dictionary_add(Dictionary *dictionary,
                     const void *keyData,
                     ulong      keyLength,
@@ -857,7 +874,7 @@ bool Dictionary_contain(Dictionary *dictionary,
 }
 
 void Dictionary_initIterator(DictionaryIterator *dictionaryIterator,
-                             Dictionary         *dictionary
+                             const Dictionary   *dictionary
                             )
 {
   assert(dictionaryIterator != NULL);
@@ -892,36 +909,39 @@ bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
   if (data      != NULL) (*data)      = NULL;
   if (length    != NULL) (*length)    = 0;
 
-  do
+  foundFlag = FALSE;
+  if (dictionaryIterator->i < dictionaryIterator->dictionary->entryTableCount)
   {
-    /* get entry */
-    dictionaryEntry = &dictionaryIterator->dictionary->entryTables[dictionaryIterator->i].entries[dictionaryIterator->j];
+    do
+    {
+      /* get entry */
+      dictionaryEntry = &dictionaryIterator->dictionary->entryTables[dictionaryIterator->i].entries[dictionaryIterator->j];
 
-    /* check if used/empty */
-    foundFlag = (dictionaryEntry->data != NULL);
-    if (foundFlag)
-    {
-      if (keyData   != NULL) (*keyData)   = dictionaryEntry->keyData;
-      if (keyLength != NULL) (*keyLength) = dictionaryEntry->keyLength;
-      if (data      != NULL) (*data)      = dictionaryEntry->data;
-      if (length    != NULL) (*length)    = dictionaryEntry->length;
-    }
+      /* check if used/empty */
+      if (dictionaryEntry->data != NULL)
+      {
+        if (keyData   != NULL) (*keyData)   = dictionaryEntry->keyData;
+        if (keyLength != NULL) (*keyLength) = dictionaryEntry->keyLength;
+        if (data      != NULL) (*data)      = dictionaryEntry->data;
+        if (length    != NULL) (*length)    = dictionaryEntry->length;
+        foundFlag = TRUE;
+      }
 
-    /* next entry */    
-    if      (dictionaryIterator->j < TABLE_SIZES[dictionaryIterator->dictionary->entryTables[dictionaryIterator->i].sizeIndex])
-    {
-      dictionaryIterator->j++;
+      /* next entry */    
+      if (dictionaryIterator->j < TABLE_SIZES[dictionaryIterator->dictionary->entryTables[dictionaryIterator->i].sizeIndex]-1)
+      {
+        dictionaryIterator->j++;
+      }
+      else
+      {
+        dictionaryIterator->i++;
+        dictionaryIterator->j = 0;
+      }
     }
-    else if (dictionaryIterator->i < dictionaryIterator->dictionary->entryTableCount)
-    {
-      dictionaryIterator->i++;
-      dictionaryIterator->j = 0;
-    }
+    while (!foundFlag
+           && (dictionaryIterator->i < dictionaryIterator->dictionary->entryTableCount)
+          );
   }
-  while (!foundFlag
-         && (dictionaryIterator->i < dictionaryIterator->dictionary->entryTableCount)
-         && (dictionaryIterator->j < TABLE_SIZES[dictionaryIterator->dictionary->entryTables[dictionaryIterator->i].sizeIndex])
-        );
 
   return foundFlag;
 }
