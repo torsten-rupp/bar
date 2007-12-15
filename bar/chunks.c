@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -66,6 +66,7 @@ LOCAL struct
   Errors(*write)(void *userData, const void *buffer, ulong length);
   Errors(*tell)(void *userData, uint64 *offset);
   Errors(*seek)(void *userData, uint64 offset);
+  uint64(*getSize)(void *userData);
 } IO;
 
 /****************************** Macros *********************************/
@@ -437,7 +438,8 @@ Errors Chunk_initAll(bool(*eof)(void *userData),
                       Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
                       Errors(*write)(void *userData, const void *buffer, ulong length),
                       Errors(*tell)(void *userData, uint64 *offset),
-                      Errors(*seek)(void *userData, uint64 offset)
+                      Errors(*seek)(void *userData, uint64 offset),
+                      uint64(*getSize)(void *userData)
                      )
 {
   assert(eof != NULL);
@@ -445,12 +447,14 @@ Errors Chunk_initAll(bool(*eof)(void *userData),
   assert(write != NULL);
   assert(tell != NULL);
   assert(seek != NULL);
+  assert(getSize != NULL);
 
-  IO.eof   = eof;
-  IO.read  = read;
-  IO.write = write;
-  IO.tell  = tell;
-  IO.seek  = seek;
+  IO.eof     = eof;
+  IO.read    = read;
+  IO.write   = write;
+  IO.tell    = tell;
+  IO.seek    = seek;
+  IO.getSize = getSize;
 
   return ERROR_NONE;
 }
@@ -615,11 +619,18 @@ Errors Chunk_skip(void        *userData,
                   ChunkHeader *chunkHeader
                  )
 {
+  uint64 size;
+  uint64 offset;
   Errors error;
 
   assert(chunkHeader != NULL);
 
-  error = IO.seek(userData,chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size);
+  /* fseeko in File_seek() cause an SigSegV if "offset" is completely wrong;
+     thus use a valid offset only
+  */
+  size = IO.getSize(userData);
+  offset = (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size < size)?chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size:size;
+  error = IO.seek(userData,offset);
   if (error != ERROR_NONE)
   {
     return error;

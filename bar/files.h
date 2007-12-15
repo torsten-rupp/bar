@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -43,8 +43,7 @@ typedef enum
   FILE_TYPE_FILE,
   FILE_TYPE_DIRECTORY,
   FILE_TYPE_LINK,
-  FILE_TYPE_DEVICE,
-  FILE_TYPE_SOCKET,
+  FILE_TYPE_SPECIAL,
 
   FILE_TYPE_UNKNOWN
 } FileTypes;
@@ -56,6 +55,14 @@ typedef enum
   FILE_OPENMODE_WRITE,
   FILE_OPENMODE_APPEND,
 } FileOpenModes;
+
+typedef enum
+{
+  FILE_SPECIAL_TYPE_CHARACTER_DEVICE,
+  FILE_SPECIAL_TYPE_BLOCK_DEVICE,
+  FILE_SPECIAL_TYPE_FIFO,
+  FILE_SPECIAL_TYPE_SOCKET,
+} FileSpecialTypes;
 
 /***************************** Datatypes *******************************/
 
@@ -89,15 +96,18 @@ typedef byte FileCast[FILE_CAST_SIZE];
 /* file info data */
 typedef struct
 {
-  FileTypes type;
-  uint64    size;
-  uint64    timeLastAccess;
-  uint64    timeModified;
-  uint64    timeLastChanged;
-  uint32    userId;
-  uint32    groupId;
-  uint32    permission;
-  FileCast  cast;
+  FileTypes        type;
+  uint64           size;
+  uint64           timeLastAccess;
+  uint64           timeModified;
+  uint64           timeLastChanged;
+  uint32           userId;
+  uint32           groupId;
+  uint32           permission;
+  FileSpecialTypes specialType;
+  uint32           major,minor;
+
+  FileCast         cast;
 } FileInfo;
 
 /* file system info data */
@@ -393,6 +403,20 @@ Errors File_seek(FileHandle *fileHandle,
                  uint64     offset
                 );
 
+/***********************************************************************\
+* Name   : File_truncate
+* Purpose: truncate a file
+* Input  : fileHandle - file handle
+*          size       - size
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_truncate(FileHandle *fileHandle,
+                     uint64     size
+                    );
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
@@ -611,7 +635,7 @@ bool File_isFileReadableCString(const char *fileName);
 * Purpose: get file info
 * Input  : fileName - file name
 * Output : fileInfo - file info
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -625,7 +649,7 @@ Errors File_getFileInfo(const String fileName,
 * Input  : fileName - file name
 *          fileInfo - file info
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -638,7 +662,7 @@ Errors File_setFileInfo(const String fileName,
 * Purpose: read link
 * Input  : linkName - link name
 * Output : fileName - file name link references
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -652,21 +676,38 @@ Errors File_readLink(const String linkName,
 * Input  : linkName - link name
 *          fileName - file name
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors File_link(const String linkName,
-                 const String fileName
-                );
+Errors File_makeLink(const String linkName,
+                     const String fileName
+                    );
 
+/***********************************************************************\
+* Name   : File_makeSpecial
+* Purpose: make special node
+* Input  : name  - name
+*          type  - special type
+*          major - major device number
+*          minor - minor device number
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_makeSpecial(const String     name,
+                        FileSpecialTypes type,
+                        ulong            major,
+                        ulong            minor
+                       );
 
 /***********************************************************************\
 * Name   : File_getFileSystemInfo
 * Purpose: get file system info
 * Input  : pathName - path name
 * Output : fileSystemInfo - file system info
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 

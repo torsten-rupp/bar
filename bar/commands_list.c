@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -117,7 +117,13 @@ LOCAL void printFooter(ulong fileCount)
 /***********************************************************************\
 * Name   : printFileInfo
 * Purpose: print file information
-* Input  : 
+* Input  : fileName          - file name
+*          fileSize          - file size [bytes]
+*          archiveFileSize   - archive size [bytes]
+*          compressAlgorithm - used compress algorithm
+*          cryptAlgorithm    - used crypt algorithm
+*          fragmentOffset    - fragment offset (0..n-1)
+*          fragmentSize      - fragment length
 * Output : -
 * Return : -
 * Notes  : -
@@ -157,9 +163,10 @@ LOCAL void printFileInfo(const String       fileName,
 }
 
 /***********************************************************************\
-* Name   : printLinkInfo
+* Name   : printDirectoryInfo
 * Purpose: print link information
-* Input  : 
+* Input  : directoryName  - directory name
+*          cryptAlgorithm - used crypt algorithm
 * Output : -
 * Return : -
 * Notes  : -
@@ -180,25 +187,87 @@ LOCAL void printDirectoryInfo(const String    directoryName,
 /***********************************************************************\
 * Name   : printLinkInfo
 * Purpose: print link information
-* Input  : 
+* Input  : linkName        - link name
+*          destinationName - name of referenced file
+*          cryptAlgorithm  - used crypt algorithm
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 LOCAL void printLinkInfo(const String    linkName,
-                         const String    fileName,
+                         const String    destinationName,
                          CryptAlgorithms cryptAlgorithm
                         )
 {
   assert(linkName != NULL);
-  assert(fileName != NULL);
+  assert(destinationName != NULL);
 
   printf("LINK                                                      %-10s %s -> %s\n",
          Crypt_getAlgorithmName(cryptAlgorithm),
          String_cString(linkName),
-         String_cString(fileName)
+         String_cString(destinationName)
         );
+}
+
+/***********************************************************************\
+* Name   : printSpecialInfo
+* Purpose: print special information
+* Input  : fileName        - file name
+*          cryptAlgorithm  - used crypt algorithm
+*          fileSpecialType - special file type
+*          major           - device major number
+*          minor           - device minor number
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printSpecialInfo(const String     fileName,
+                            CryptAlgorithms  cryptAlgorithm,
+                            FileSpecialTypes fileSpecialType,
+                            ulong            major,
+                            ulong            minor
+                           )
+{
+  assert(fileName != NULL);
+
+  switch (fileSpecialType)
+  {
+    case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
+      printf("CHAR                                                      %-10s %s, %lu %lu\n",
+             Crypt_getAlgorithmName(cryptAlgorithm),
+             String_cString(fileName),
+             major,
+             minor
+            );
+      break;
+    case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
+      printf("BLOCK                                                     %-10s %s, %lu %lu\n",
+             Crypt_getAlgorithmName(cryptAlgorithm),
+             String_cString(fileName),
+             major,
+             minor
+            );
+      break;
+    case FILE_SPECIAL_TYPE_FIFO:
+      printf("FIFO                                                      %-10s %s\n",
+             Crypt_getAlgorithmName(cryptAlgorithm),
+             String_cString(fileName)
+            );
+      break;
+    case FILE_SPECIAL_TYPE_SOCKET:
+      printf("SOCKET                                                    %-10s %s\n",
+             Crypt_getAlgorithmName(cryptAlgorithm),
+             String_cString(fileName)
+            );
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
 }
 
 /*---------------------------------------------------------------------*/
@@ -437,6 +506,56 @@ remoteBarFlag=FALSE;
                   Archive_closeEntry(&archiveFileInfo);
                   String_delete(fileName);
                   String_delete(linkName);
+                }
+                break;
+              case FILE_TYPE_SPECIAL:
+                {
+                  CryptAlgorithms cryptAlgorithm;
+                  String          fileName;
+                  FileInfo        fileInfo;
+
+                  /* open archive lin */
+                  fileName = String_new();
+                  error = Archive_readSpecialEntry(&archiveInfo,
+                                                   &archiveFileInfo,
+                                                   &cryptAlgorithm,
+                                                   fileName,
+                                                   &fileInfo
+                                                  );
+                  if (error != ERROR_NONE)
+                  {
+                    printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                               String_cString(archiveFileName),
+                               getErrorText(error)
+                              );
+                    String_delete(fileName);
+                    if (failError == ERROR_NONE) failError = error;
+                    break;
+                  }
+
+                  if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                      && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                     )
+                  {
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(archiveFileName);
+                      printedInfoFlag = TRUE;
+                    }
+
+                    /* output file info */
+                    printSpecialInfo(fileName,
+                                     cryptAlgorithm,
+                                     fileInfo.specialType,
+                                     fileInfo.major,
+                                     fileInfo.minor
+                                    );
+                    fileCount++;
+                  }
+
+                  /* close archive file, free resources */
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(fileName);
                 }
                 break;
               default:

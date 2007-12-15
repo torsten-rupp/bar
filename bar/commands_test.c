@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -324,6 +324,51 @@ Errors Command_test(StringList  *archiveFileNameList,
             Archive_closeEntry(&archiveFileInfo);
             String_delete(fileName);
             String_delete(linkName);
+          }
+          break;
+        case FILE_TYPE_SPECIAL:
+          {
+            String   fileName;
+            FileInfo fileInfo;
+
+            /* read special */
+            fileName = String_new();
+            error = Archive_readSpecialEntry(&archiveInfo,
+                                             &archiveFileInfo,
+                                             NULL,
+                                             fileName,
+                                             &fileInfo
+                                            );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         getErrorText(error)
+                        );
+              String_delete(fileName);
+              if (failError == ERROR_NONE) failError = error;
+              break;
+            }
+
+            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              printInfo(2,"  Test special device '%s'...",String_cString(fileName));
+
+              printInfo(2,"ok\n");
+
+              /* free resources */
+            }
+            else
+            {
+              /* skip */
+              printInfo(3,"  Test '%s'...skipped\n",String_cString(fileName));
+            }
+
+            /* close archive file */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(fileName);
           }
           break;
         default:

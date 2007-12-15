@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -317,7 +317,7 @@ standard_test: bar
 	./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -x test/test*.bar $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r -x unreadable.txt -x circular-link.dat test/data test/restore/test/data
+	$(DIFF) -r -x unreadable.txt -x circular-link.dat -x fifo test/data test/restore/test/data
 	#
 	$(RMRF) test/*.bar test/*.bid test/new test/restore
 	./bar -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)

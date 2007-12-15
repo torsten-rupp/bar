@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.43 $
+* $Revision: 1.44 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1241,6 +1241,7 @@ void copyOptions(const Options *sourceOptions, Options *destinationOptions)
 
   memcpy(destinationOptions,sourceOptions,sizeof(Options));
   destinationOptions->tmpDirectory                          = String_copy(sourceOptions->tmpDirectory);
+  destinationOptions->incrementalListFileName               = String_copy(sourceOptions->incrementalListFileName);
   destinationOptions->directory                             = String_copy(sourceOptions->directory);
   destinationOptions->cryptPassword                         = Password_copy(sourceOptions->cryptPassword);
   destinationOptions->sshServer.loginName                   = String_copy(sourceOptions->sshServer.loginName);
@@ -1273,6 +1274,7 @@ void freeOptions(Options *options)
 
   String_delete(options->tmpDirectory);
   String_delete(options->directory);
+  String_delete(options->incrementalListFileName);
   Password_delete(options->cryptPassword);
   String_delete(options->incrementalListFileName);
   String_delete(options->sshServer.loginName);

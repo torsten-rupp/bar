@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -643,6 +643,22 @@ Errors File_seek(FileHandle *fileHandle,
   return ERROR_NONE;
 }
 
+Errors File_truncate(FileHandle *fileHandle,
+                     uint64     size
+                    )
+{
+  if (size < fileHandle->size)
+  {
+    if (ftruncate(fileno(fileHandle->file),(off_t)size) != 0)
+    {
+      return ERROR_IO_ERROR;
+    }
+    fileHandle->size = size;
+  }
+
+  return ERROR_NONE;
+}
+
 /*---------------------------------------------------------------------*/
 
 Errors File_makeDirectory(const String pathName)
@@ -860,9 +876,10 @@ FileTypes File_getType(const String fileName)
     if      (S_ISREG(fileStat.st_mode))  return FILE_TYPE_FILE;
     else if (S_ISDIR(fileStat.st_mode))  return FILE_TYPE_DIRECTORY;
     else if (S_ISLNK(fileStat.st_mode))  return FILE_TYPE_LINK;
-    else if (S_ISCHR(fileStat.st_mode))  return FILE_TYPE_DEVICE;
-    else if (S_ISBLK(fileStat.st_mode))  return FILE_TYPE_DEVICE;
-    else if (S_ISSOCK(fileStat.st_mode)) return FILE_TYPE_SOCKET;
+    else if (S_ISCHR(fileStat.st_mode))  return FILE_TYPE_SPECIAL;
+    else if (S_ISBLK(fileStat.st_mode))  return FILE_TYPE_SPECIAL;
+    else if (S_ISFIFO(fileStat.st_mode)) return FILE_TYPE_SPECIAL;
+    else if (S_ISSOCK(fileStat.st_mode)) return FILE_TYPE_SPECIAL;
     else                                 return FILE_TYPE_UNKNOWN;
   }
   else
@@ -1200,9 +1217,26 @@ Errors File_getFileInfo(const String fileName,
   if      (S_ISREG(fileStat.st_mode))  fileInfo->type = FILE_TYPE_FILE;
   else if (S_ISDIR(fileStat.st_mode))  fileInfo->type = FILE_TYPE_DIRECTORY;
   else if (S_ISLNK(fileStat.st_mode))  fileInfo->type = FILE_TYPE_LINK;
-  else if (S_ISCHR(fileStat.st_mode))  fileInfo->type = FILE_TYPE_DEVICE;
-  else if (S_ISBLK(fileStat.st_mode))  fileInfo->type = FILE_TYPE_DEVICE;
-  else if (S_ISSOCK(fileStat.st_mode)) fileInfo->type = FILE_TYPE_SOCKET;
+  else if (S_ISCHR(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_CHARACTER_DEVICE;
+  }
+  else if (S_ISBLK(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
+  }
+  else if (S_ISFIFO(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
+  }
+  else if (S_ISSOCK(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
+  }
   else                                 fileInfo->type = FILE_TYPE_UNKNOWN;
   fileInfo->size            = fileStat.st_size;
   fileInfo->timeLastAccess  = fileStat.st_atime;
@@ -1211,6 +1245,8 @@ Errors File_getFileInfo(const String fileName,
   fileInfo->userId          = fileStat.st_uid;
   fileInfo->groupId         = fileStat.st_gid;
   fileInfo->permission      = fileStat.st_mode;
+  fileInfo->major           = major(fileStat.st_rdev);
+  fileInfo->minor           = minor(fileStat.st_rdev);
   cast.d0 = fileStat.st_mtime;
   cast.d1 = fileStat.st_ctime;
   memcpy(fileInfo->cast,&cast,sizeof(FileCast));
@@ -1231,6 +1267,7 @@ Errors File_setFileInfo(const String fileName,
   {
     case FILE_TYPE_FILE:
     case FILE_TYPE_DIRECTORY:
+    case FILE_TYPE_SPECIAL:
       utimeBuffer.actime  = fileInfo->timeLastAccess;
       utimeBuffer.modtime = fileInfo->timeModified;
       if (utime(String_cString(fileName),&utimeBuffer) != 0)
@@ -1251,10 +1288,6 @@ Errors File_setFileInfo(const String fileName,
       {
         return ERROR_IO_ERROR;
       }
-      break;
-    case FILE_TYPE_DEVICE:
-      break;
-    case FILE_TYPE_SOCKET:
       break;
     #ifndef NDEBUG
       default:
@@ -1312,9 +1345,9 @@ Errors File_readLink(const String linkName,
   }
 }
 
-Errors File_link(const String linkName,
-                 const String fileName
-                )
+Errors File_makeLink(const String linkName,
+                     const String fileName
+                    )
 {
   assert(linkName != NULL);
   assert(fileName != NULL);
@@ -1323,6 +1356,53 @@ Errors File_link(const String linkName,
   if (symlink(String_cString(fileName),String_cString(linkName)) != 0)
   {
     return ERROR_IO_ERROR;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors File_makeSpecial(const String     name,
+                        FileSpecialTypes type,
+                        ulong            major,
+                        ulong            minor
+                       )
+{
+  mode_t mode;
+
+  assert(name != NULL);
+
+  unlink(String_cString(name));
+  switch (type)
+  {
+    case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
+      if (mknod(String_cString(name),S_IFCHR|0600,makedev(major,minor)) != 0)
+      {
+        return ERROR_IO_ERROR;
+      }
+      break;
+    case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
+      if (mknod(String_cString(name),S_IFBLK|0600,makedev(major,minor)) != 0)
+      {
+        return ERROR_IO_ERROR;
+      }
+      break;
+    case FILE_SPECIAL_TYPE_FIFO:
+      if (mknod(String_cString(name),S_IFIFO|0666,0) != 0)
+      {
+        return ERROR_IO_ERROR;
+      }
+      break;
+    case FILE_SPECIAL_TYPE_SOCKET:
+      if (mknod(String_cString(name),S_IFSOCK|0600,0) != 0)
+      {
+        return ERROR_IO_ERROR;
+      }
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
   }
 
   return ERROR_NONE;

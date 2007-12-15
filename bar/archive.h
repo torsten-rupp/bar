@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -135,6 +135,15 @@ typedef struct
       ChunkLinkEntry      chunkLinkEntry;            // link entry
       CryptInfo           cryptInfoLinkEntry;        // link entry cryption info
     } link;
+    struct
+    {
+      ChunkInfo           chunkInfoSpecial;          // chunk info block for special
+      ChunkSpecial        chunkSpecial;              // special
+
+      ChunkInfo           chunkInfoSpecialEntry;     // chunk info block for special entry
+      ChunkSpecialEntry   chunkSpecialEntry;         // special entry
+      CryptInfo           cryptInfoSpecialEntry;     // special entry cryption info
+    } special;
   };
 } ArchiveFileInfo;
 
@@ -261,7 +270,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
 
 Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
                                  ArchiveFileInfo *archiveFileInfo,
-                                 const String    name,
+                                 const String    directoryName,
                                  FileInfo        *fileInfo
                                 );
 
@@ -270,8 +279,8 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
 * Purpose: add new link to archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
-*          name            - link name
-*          fileName        - link reference name
+*          fileName        - link name
+*          destinationName - name of referenced file
 *          fileInfo        - file info
 * Output : -
 * Return : ERROR_NONE or errorcode
@@ -280,10 +289,28 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
 
 Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
                             ArchiveFileInfo *archiveFileInfo,
-                            const String    name,
-                            const String    fileName,
+                            const String    linkName,
+                            const String    destinationName,
                             FileInfo        *fileInfo
                            );
+
+/***********************************************************************\
+* Name   : Archive_newSpecialEntry
+* Purpose: add new special device to archive
+* Input  : archiveInfo     - archive info block
+*          archiveFileInfo - archive file info block
+*          name            - special device name
+*          fileInfo        - file info
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_newSpecialEntry(ArchiveInfo     *archiveInfo,
+                               ArchiveFileInfo *archiveFileInfo,
+                               const String    specialName,
+                               FileInfo        *fileInfo
+                              );
 
 /***********************************************************************\
 * Name   : Archive_getNextFileType
@@ -306,7 +333,7 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
 * Output : compressAlgorithm - used compression algorithm (can be NULL)
-*          name              - file name
+*          fileName          - file name
 *          fileInfo          - file info
 *          cryptAlgorithm    - use crypt algorithm (can be NULL)
 *          fragmentOffset    - fragment offset (can be NULL)
@@ -319,7 +346,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                              ArchiveFileInfo    *archiveFileInfo,
                              CompressAlgorithms *compressAlgorithm,
                              CryptAlgorithms    *cryptAlgorithm,
-                             String             name,
+                             String             fileName,
                              FileInfo           *fileInfo,
                              uint64             *fragmentOffset,
                              uint64             *fragmentSize
@@ -331,7 +358,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
 * Output : cryptAlgorithm - use crypt algorithm (can be NULL)
-*          name           - directory name
+*          directoryName  - directory name
 *          fileInfo       - file info
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -340,19 +367,19 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
                                   ArchiveFileInfo *archiveFileInfo,
                                   CryptAlgorithms *cryptAlgorithm,
-                                  String          name,
+                                  String          directoryName,
                                   FileInfo        *fileInfo
                                  );
 
 /***********************************************************************\
-* Name   : Archive_readFile
-* Purpose: read file info from archive
+* Name   : Archive_readLinkEntry
+* Purpose: read link info from archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
-* Output : cryptAlgorithm - use crypt algorithm (can be NULL)
-*          name           - link name
-*          fileName       - link reference name
-*          fileInfo       - file info
+* Output : cryptAlgorithm  - use crypt algorithm (can be NULL)
+*          linkName        - link name
+*          destinationName - name of referenced file
+*          fileInfo        - file info
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
@@ -360,10 +387,29 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
 Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
                              ArchiveFileInfo *archiveFileInfo,
                              CryptAlgorithms *cryptAlgorithm,
-                             String          name,
-                             String          fileName,
+                             String          linkName,
+                             String          destinationName,
                              FileInfo        *fileInfo
                             );
+
+/***********************************************************************\
+* Name   : Archive_readSpecialEntry
+* Purpose: read special device info from archive
+* Input  : archiveInfo     - archive info block
+*          archiveFileInfo - archive file info block
+* Output : cryptAlgorithm - use crypt algorithm (can be NULL)
+*          name           - link name
+*          fileInfo       - file info
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
+                                ArchiveFileInfo *archiveFileInfo,
+                                CryptAlgorithms *cryptAlgorithm,
+                                String          specialName,
+                                FileInfo        *fileInfo
+                               );
 
 /***********************************************************************\
 * Name   : Archive_closeEntry

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.40 $
+* $Revision: 1.41 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -854,10 +854,16 @@ fprintf(stderr,"%s,%d: %lu xx=%lu\n",__FILE__,__LINE__,StringList_count(&nameLis
                       break;
                     case FILE_TYPE_DIRECTORY:
                       /* add to name list */
-//fprintf(stderr,"%s,%d: fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
                       StringList_append(&nameList,fileName);
                       break;
                     case FILE_TYPE_LINK:
+                      if ((createInfo->options->archiveType == ARCHIVE_TYPE_FULL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      {
+                        createInfo->statusInfo.totalFiles++;
+                        updateStatusInfo(createInfo);
+                      }
+                      break;
+                    case FILE_TYPE_SPECIAL:
                       if ((createInfo->options->archiveType == ARCHIVE_TYPE_FULL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                       {
                         createInfo->statusInfo.totalFiles++;
@@ -876,6 +882,13 @@ fprintf(stderr,"%s,%d: %lu xx=%lu\n",__FILE__,__LINE__,StringList_count(&nameLis
             }
             break;
           case FILE_TYPE_LINK:
+            if ((createInfo->options->archiveType == ARCHIVE_TYPE_FULL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            {
+              createInfo->statusInfo.totalFiles++;
+              updateStatusInfo(createInfo);
+            }
+            break;
+          case FILE_TYPE_SPECIAL:
             if ((createInfo->options->archiveType == ARCHIVE_TYPE_FULL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
             {
               createInfo->statusInfo.totalFiles++;
@@ -1055,6 +1068,13 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                         appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_LINK);
                       }
                       break;
+                    case FILE_TYPE_SPECIAL:
+                      if ((createInfo->options->archiveType == ARCHIVE_TYPE_FULL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      {
+                        /* add to file list */
+                        appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_SPECIAL);
+                      }
+                      break;
                     default:
                       logMessage(LOG_TYPE_FILE_TYPE_UNKNOWN,"unknown type '%s'",String_cString(fileName));
                       printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
@@ -1089,6 +1109,13 @@ LOCAL void collectorThread(CreateInfo *createInfo)
             {
               /* add to file list */
               appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_LINK);
+            }
+            break;
+          case FILE_TYPE_SPECIAL:
+            if ((createInfo->options->archiveType == ARCHIVE_TYPE_FULL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            {
+              /* add to file list */
+              appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_SPECIAL);
             }
             break;
           default:
@@ -1988,6 +2015,82 @@ Errors Command_create(const char                   *archiveFileName,
 
               /* free resources */
               String_delete(name);
+            }
+            else
+            {
+              printInfo(1,"ok (not stored)\n");
+            }
+
+            /* add to incremental list */
+            if (storeIncrementalFileInfoFlag)
+            {
+              addIncrementalList(&createInfo.filesDictionary,fileName,&fileInfo);
+            }
+          }
+          break;
+        case FILE_TYPE_SPECIAL:
+          {
+            FileInfo fileInfo;
+
+            /* get file info */
+            error = File_getFileInfo(fileName,&fileInfo);
+            if (error != ERROR_NONE)
+            {
+              if (options->skipUnreadableFlag)
+              {
+                printInfo(1,"skipped (reason: %s)\n",getErrorText(error));
+                logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
+              }
+              else
+              {
+                printInfo(1,"FAIL\n");
+                printError("Cannot get info for link '%s' (error: %s)\n",
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                createInfo.failError = error;
+              }
+              continue;
+            }
+
+            if (!options->noStorageFlag)
+            {
+              /* new special */
+              error = Archive_newSpecialEntry(&archiveInfo,
+                                              &archiveFileInfo,
+                                              fileName,
+                                              &fileInfo
+                                             );
+              if (error != ERROR_NONE)
+              {
+                printInfo(1,"FAIL\n");
+                printError("Cannot create new archive special entry '%s' (error: %s)\n",
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                createInfo.failError = error;
+                break;
+              }
+
+              /* close archive entry */
+              error = Archive_closeEntry(&archiveFileInfo);
+              if (error != ERROR_NONE)
+              {
+                printInfo(1,"FAIL\n");
+                printError("Cannot close archive special entry (error: %s)!\n",
+                           getErrorText(error)
+                          );
+                createInfo.failError = error;
+                break;
+              }
+
+              printInfo(1,"ok\n");
+
+              logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
+              createInfo.statusInfo.doneFiles++;
+              updateStatusInfo(&createInfo);
+
+              /* free resources */
             }
             else
             {

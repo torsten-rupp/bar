@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_compare.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive compare function
 * Systems : all
@@ -618,6 +618,148 @@ Errors Command_compare(StringList  *archiveFileNameList,
             Archive_closeEntry(&archiveFileInfo);
             String_delete(fileName);
             String_delete(linkName);
+          }
+          break;
+        case FILE_TYPE_SPECIAL:
+          {
+            String   fileName;
+            FileInfo fileInfo;
+            FileInfo localFileInfo;
+
+            /* read special */
+            fileName = String_new();
+            error = Archive_readSpecialEntry(&archiveInfo,
+                                             &archiveFileInfo,
+                                             NULL,
+                                             fileName,
+                                             &fileInfo
+                                            );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         getErrorText(error)
+                        );
+              String_delete(fileName);
+              if (failError == ERROR_NONE) failError = error;
+              break;
+            }
+
+            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              printInfo(2,"  Compare special device '%s'...",String_cString(fileName));
+
+              /* check special device */
+              if (!File_exists(fileName))
+              {
+                printInfo(2,"FAIL!\n");
+                printError("Special device '%s' does not exists!\n",
+                           String_cString(fileName)
+                          );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                if (options->stopOnErrorFlag)
+                {
+                  failError = ERROR_FILE_NOT_FOUND;
+                }
+                break;
+              }
+              if (File_getType(fileName) != FILE_TYPE_SPECIAL)
+              {
+                printInfo(2,"FAIL!\n");
+                printError("'%s' is not a special device!\n",
+                           String_cString(fileName)
+                          );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                if (options->stopOnErrorFlag)
+                {
+                  failError = ERROR_WRONG_FILE_TYPE;
+                }
+                break;
+              }
+
+              /* check special settings */
+              error = File_getFileInfo(fileName,&localFileInfo);
+              if (error != ERROR_NONE)
+              {
+                printError("Cannot not read local file '%s' (error: %s)!\n",
+                           String_cString(fileName),
+                           getErrorText(error)
+                          );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                if (options->stopOnErrorFlag)
+                {
+                  failError = error;
+                }
+                break;
+              }
+              if (fileInfo.specialType != localFileInfo.specialType)
+              {
+                printError("Different types of special device '%s'!\n",
+                           String_cString(fileName)
+                          );
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(fileName);
+                if (options->stopOnErrorFlag)
+                {
+                  failError = error;
+                }
+                break;
+              }
+              if (   (fileInfo.specialType == FILE_SPECIAL_TYPE_CHARACTER_DEVICE)
+                  || (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                 )
+              {
+                if (fileInfo.major != localFileInfo.major)
+                {
+                  printError("Different major numbers of special device '%s'!\n",
+                             String_cString(fileName)
+                            );
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(fileName);
+                  if (options->stopOnErrorFlag)
+                  {
+                    failError = error;
+                  }
+                  break;
+                }
+                if (fileInfo.minor != localFileInfo.minor)
+                {
+                  printError("Different minor numbers of special device '%s'!\n",
+                             String_cString(fileName)
+                            );
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(fileName);
+                  if (options->stopOnErrorFlag)
+                  {
+                    failError = error;
+                  }
+                  break;
+                }
+              }
+
+#if 0
+
+              /* check file time, permissions, file owner/group */
+#endif /* 0 */
+
+              printInfo(2,"ok\n");
+
+              /* free resources */
+            }
+            else
+            {
+              /* skip */
+              printInfo(3,"  Compare '%s'...skipped\n",String_cString(fileName));
+            }
+
+            /* close archive file */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(fileName);
           }
           break;
         default:

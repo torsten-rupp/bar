@@ -1,4 +1,4 @@
-2007-12-?? 0.04
+2007-12-15 0.04
   * added create-dialog to barcontrol.tcl
   * added incremental backup
   * fixed bug in --request-volume-command (wrong command string)
@@ -6,6 +6,8 @@
   * fixed messages printed on console
   * replaced --enable-static-link by --enable-dynamic-link in
     configure and made static linkage to the default
+  * added store/restore of special devices (character, block, fifo, socket)
+  * fixed some small problems in restore
   * by the way: by accident BAR got his crucial test! I crashed
     my system partition and I could restore it with BAR!
     Nevertheless there is still a lot of work to do...

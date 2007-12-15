@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/archive_format.def,v $
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems : all
@@ -56,9 +56,24 @@ CHUNK LINK_ENTRY "LENT" LinkEntry
   uint32 groupId
   uint32 permission
   string name
-  string fileName
+  string destinationName
   crc32  crc
 
-#CHUNK PERMISSION "PER0" Permission
+CHUNK SPECIAL "SPE0" Special
+  uint16 cryptAlgorithm;
+  crc32  crc
+
+CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
+  uint16 specialType
+  uint64 timeLastAccess
+  uint64 timeModified
+  uint64 timeLastChanged
+  uint32 userId
+  uint32 groupId
+  uint32 permission
+  uint32 major
+  uint32 minor
+  string name
+  crc32  crc
 
 # end of file

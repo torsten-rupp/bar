@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.18 $
+# $Revision: 1.19 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -76,6 +76,9 @@ set barConfig(archivePartSizeFlag)             0
 set barConfig(archivePartSize)                 0
 set barConfig(maxTmpSizeFlag)                  0
 set barConfig(maxTmpSize)                      0
+set barConfig(storageMode)                     "FULL"
+set barConfig(createIncrementalListFlag)       0
+set barConfig(incrementalListFileName)         ""
 set barConfig(maxBandWidthFlag)                0
 set barConfig(maxBandWidth)                    0
 set barConfig(sshPort)                         0
@@ -382,7 +385,8 @@ proc Dialog:confirm { message yesText noText } \
 #***********************************************************************
 # Name   : Dialog:password
 # Purpose: password dialog
-# Input  : text - text to display
+# Input  : text       - text to display
+#          verifyFlag - 1 for verify password input, 0 otherwise
 # Output : -
 # Return : password or ""
 # Notes  : -
@@ -415,7 +419,18 @@ proc Dialog:password { text verifyFlag } \
     } \
     else \
     {
-      entry $handle.password.data -textvariable [Dialog:variable $handle password] -bg white -show "*"
+      entry $handle.password.data -textvariable [Dialog:variable $handle password] -bg white -show "*" -validate key -validatecommand \
+        "
+         if {\[string length %P\] > 0} \
+         {
+           $handle.buttons.ok configure -state normal
+         } \
+         else \
+         {
+           $handle.buttons.ok configure -state disabled
+         }
+         return 1
+        "
       bind $handle.password.data <Return> "focus $handle.buttons.ok"
     }
     grid $handle.password.data  -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
@@ -844,13 +859,15 @@ proc obfuscatePassword { password passwordObfuscator } \
 #***********************************************************************
 # Name   : getPassword
 # Purpose: input password
-# Input  : title - title text
+# Input  : title         - title text
+#          verifyFlag    - 1 for verify password input, 0 otherwise
+#          obfuscateFlag - 1 for obfuscate password, 0 otherwise
 # Output : -
 # Return : obfuscated password or ""
 # Notes  : -
 #***********************************************************************
 
-proc getPassword { title obfuscateFlag } \
+proc getPassword { title verifyFlag obfuscateFlag } \
 {
   global guiMode
 
@@ -865,16 +882,20 @@ proc getPassword { title obfuscateFlag } \
       puts -nonewline stdout "$title: "; flush stdout
       set password [exec sh -c "read -s password; echo \$password; unset password"]
       puts ""
-      puts -nonewline stdout "Verify password: "; flush stdout
-      set passwordVerify [exec sh -c "read -s password; echo \$password; unset password"]
-      puts ""
+      if {$verifyFlag} \
+      {
+        puts -nonewline stdout "Verify password: "; flush stdout
+        set passwordVerify [exec sh -c "read -s password; echo \$password; unset password"]
+        puts ""
+      }
     }
     if {$password != $passwordVerify} { set password "" }
   } \
   else \
   {
-    set password [Dialog:password "$title" 1]
+    set password [Dialog:password "$title" $verifyFlag]
   }
+  if {$password == ""} { return "" }
 
   if {$obfuscateFlag} \
   {
@@ -2729,23 +2750,26 @@ proc resetBARConfig {} \
 {
   global barConfig
 
-  set barConfig(storageType)         "FILESYSTEM"
-  set barConfig(storageHostName)     ""
-  set barConfig(storageLoginName)    ""
-  set barConfig(storageFileName)     ""
-  set barConfig(archivePartSizeFlag) 0
-  set barConfig(archivePartSize)     0
-  set barConfig(maxTmpSizeFlag)      0
-  set barConfig(maxTmpSize)          0
-  set barConfig(maxBandWidthFlag)    0
-  set barConfig(maxBandWidth)        0
-  set barConfig(sshPassword)         ""
-  set barConfig(sshPort)             0
-  set barConfig(compressAlgorithm)   "bzip9"
-  set barConfig(cryptAlgorithm)      "none"
-  set barConfig(cryptPasswordMode)   "NONE"
-  set barConfig(cryptPassword)       ""
-  set barConfig(cryptPasswordVerify) ""
+  set barConfig(storageType)               "FILESYSTEM"
+  set barConfig(storageHostName)           ""
+  set barConfig(storageLoginName)          ""
+  set barConfig(storageFileName)           ""
+  set barConfig(archivePartSizeFlag)       0
+  set barConfig(archivePartSize)           0
+  set barConfig(maxTmpSizeFlag)            0
+  set barConfig(maxTmpSize)                0
+  set barConfig(createIncrementalListFlag) 0
+  set barConfig(incrementalFlag)           0
+  set barConfig(incrementalListFileName)   ""
+  set barConfig(maxBandWidthFlag)          0
+  set barConfig(maxBandWidth)              0
+  set barConfig(sshPassword)               ""
+  set barConfig(sshPort)                   0
+  set barConfig(compressAlgorithm)         "bzip9"
+  set barConfig(cryptAlgorithm)            "none"
+  set barConfig(cryptPasswordMode)         "NONE"
+  set barConfig(cryptPassword)             ""
+  set barConfig(cryptPasswordVerify)       ""
   clearConfigModify
 }
 
@@ -2964,6 +2988,24 @@ proc loadBARConfig { configFileName } \
       set barConfig(maxTmpSize)     $s
       continue
     }
+    if {[scanx $line "create-incremental-list = %s" s] == 1} \
+    {
+      # create-incremental-list = [yes|no]
+      set barConfig(createIncrementalListFlag) [stringToBoolean $s]
+      continue
+    }
+    if {[scanx $line "incremental = %S" s] == 1} \
+    {
+      # incremental = [yes|no]
+      set barConfig(incrementalFlag) [stringToBoolean $s]
+      continue
+    }
+    if {[scanx $line "incremental-list-file = %S" s] == 1} \
+    {
+      # incremental-list-file = <file name>
+      set barConfig(incrementalListFileName) $s
+      continue
+    }
     if {[scanx $line "max-band-width = %s" s] == 1} \
     {
       # max-band-width = <bits/s>
@@ -3175,6 +3217,18 @@ proc saveBARConfig { configFileName } \
   if {$barConfig(maxTmpSizeFlag)} \
   {
     puts $handle "max-tmp-size = $barConfig(maxTmpSize)"
+  }
+  if {$barConfig(createIncrementalListFlag)} \
+  {
+    puts $handle "create-incremental-list = yes"
+  }
+  if {$barConfig(incrementalFlag)} \
+  {
+    puts $handle "incremental = yes"
+  }
+  if {$barConfig(createIncrementalListFlag) || $barConfig(incrementalFlag)} \
+  {
+    puts $handle "incremental-list-file = $barConfig(incrementalListFileName)"
   }
   if {$barConfig(maxBandWidthFlag)} \
   {
@@ -3483,6 +3537,15 @@ proc addBackupJob { jobListWidget } \
 
   # set other parameters
   BackupServer:executeCommand errorCode errorText "SET" "archive-part-size"       $barConfig(archivePartSize)
+  if {$barConfig(storageMode) == "INCREMENTAL"} \
+  {
+    BackupServer:executeCommand errorCode errorText "SET" "incremental" 1
+  }
+  BackupServer:executeCommand errorCode errorText "SET" "create-incremental-list" $barConfig(createIncrementalListFlag)
+  if {($barConfig(storageMode) == "INCREMENTAL") || $barConfig(createIncrementalListFlag)} \
+  {
+    BackupServer:executeCommand errorCode errorText "SET" "incremental-list-file" $barConfig(incrementalListFileName)
+  }
   BackupServer:executeCommand errorCode errorText "SET" "max-tmp-size"            $barConfig(maxTmpSize)
   BackupServer:executeCommand errorCode errorText "SET" "max-band-width"          $barConfig(maxBandWidth)
   BackupServer:executeCommand errorCode errorText "SET" "ssh-port"                $barConfig(sshPort)
@@ -3492,7 +3555,7 @@ proc addBackupJob { jobListWidget } \
   {
     "ASK" \
     {
-      set password [getPassword "Crypt password" 0]
+      set password [getPassword "Crypt password" 1 0]
       if {$password == ""} \
       {
         return
@@ -3872,7 +3935,12 @@ if {![info exists tk_version] && !$guiMode} \
   # get password
   if {$barControlConfig(serverPassword) == ""} \
   {
-    set barControlConfig(serverPassword) [getPassword "Server password" 1]
+    set barControlConfig(serverPassword) [getPassword "Server password" 0 1]
+    if {$barControlConfig(serverPassword) == ""} \
+    {
+      printError "No password given"
+      exit 1
+    }
   }
 
   # connect to server
@@ -4063,7 +4131,12 @@ set images(linkExcluded) [image create photo -data \
 if {$barControlConfig(serverPassword) == ""} \
 {
   wm state . withdrawn
-  set barControlConfig(serverPassword) [getPassword "Server password" 1]
+  set barControlConfig(serverPassword) [getPassword "Server password" 0 1]
+  if {$barControlConfig(serverPassword) == ""} \
+  {
+    printError "No password given"
+    exit 1
+  }
 }
 
 # init main window
@@ -4585,8 +4658,36 @@ frame .backup
     addEnableTrace ::barConfig(cryptPasswordMode) "CONFIG" .backup.storage.cryptPassword.data1
     addEnableTrace ::barConfig(cryptPasswordMode) "CONFIG" .backup.storage.cryptPassword.data2
 
+    label .backup.storage.modeTitle -text "Mode:"
+    grid .backup.storage.modeTitle -row 5 -column 0 -sticky "nw" 
+    frame .backup.storage.mode
+      radiobutton .backup.storage.mode.full -text "full" -variable barConfig(storageMode) -value FULL
+      grid .backup.storage.mode.full -row 0 -column 0 -sticky "w"
+      radiobutton .backup.storage.mode.incremental -text "incremental" -variable barConfig(storageMode) -value INCREMENTAL
+      grid .backup.storage.mode.incremental -row 0 -column 1 -sticky "w"
+      checkbutton .backup.storage.mode.createIncrementalList -text "create list" -variable barConfig(createIncrementalListFlag)
+      grid .backup.storage.mode.createIncrementalList -row 0 -column 2 -sticky "w"
+      entry .backup.storage.mode.incrementalListFileName -textvariable barConfig(incrementalListFileName) -bg white
+      grid .backup.storage.mode.incrementalListFileName -row 0 -column 3 -sticky "we"
+      button .backup.storage.mode.select -image $images(folder) -command \
+      "
+        set old_tk_strictMotif \$tk_strictMotif
+        set tk_strictMotif 0
+        set fileName \[tk_getSaveFile -title \"Incremental list file\" -initialfile \"\" -filetypes {{\"incremental list\" \".bid\"} {\"all\" \"*\"}} -parent . -defaultextension \".bid\"\]
+        set tk_strictMotif \$old_tk_strictMotif
+        if {\$fileName != \"\"} \
+        {
+          set barConfig(incrementalListFileName) \$fileName
+        }
+      "
+      grid .backup.storage.mode.select -row 0 -column 4 -sticky "we"
+
+      grid columnconfigure .backup.storage.mode { 3 } -weight 1
+    grid .backup.storage.mode -row 5 -column 1 -sticky "we" -padx 2p -pady 2p
+    addEnableTrace ::barConfig(storageMode) "FULL" .backup.storage.mode.createIncrementalList
+
     label .backup.storage.destinationTitle -text "Destination:"
-    grid .backup.storage.destinationTitle -row 5 -column 0 -sticky "nw" 
+    grid .backup.storage.destinationTitle -row 6 -column 0 -sticky "nw" 
     frame .backup.storage.destination
       frame .backup.storage.destination.type
         radiobutton .backup.storage.destination.type.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
@@ -4828,9 +4929,9 @@ frame .backup
 
       grid rowconfigure    .backup.storage.destination { 0 } -weight 1
       grid columnconfigure .backup.storage.destination { 0 } -weight 1
-    grid .backup.storage.destination -row 5 -column 1 -sticky "we"
+    grid .backup.storage.destination -row 6 -column 1 -sticky "we"
 
-    grid rowconfigure    .backup.storage { 6 } -weight 1
+    grid rowconfigure    .backup.storage { 7 } -weight 1
     grid columnconfigure .backup.storage { 1 } -weight 1
   pack .backup.storage -side top -fill both -expand yes -in [.backup.tabs subwidget storage]
 

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems : all
@@ -41,7 +41,7 @@
 #define CHUNK_DATATYPE_INT16    6
 #define CHUNK_DATATYPE_INT32    7
 #define CHUNK_DATATYPE_INT64    8
-#define CHUNK_DATATYPE_STRING    9
+#define CHUNK_DATATYPE_STRING   9
 #define CHUNK_DATATYPE_DATA    10
 #define CHUNK_DATATYPE_CRC32   11
 
@@ -95,11 +95,12 @@ typedef struct ChunkInfo
 /***********************************************************************\
 * Name   : Chunk_initAll
 * Purpose: init chunks
-* Input  : eof   - call back check end of data
-*          read  - call back read data
-*          write - call back write data
-*          tell  - call back tell position
-*          seek  - call back seek to position
+* Input  : eof     - call back check end of data
+*          read    - call back read data
+*          write   - call back write data
+*          tell    - call back tell position
+*          seek    - call back seek to position
+*          getSize - call back get size
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -109,7 +110,8 @@ Errors Chunk_initAll(bool(*eof)(void *userData),
                      Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
                      Errors(*write)(void *userData, const void *buffer, ulong length),
                      Errors(*tell)(void *userData, uint64 *offset),
-                     Errors(*seek)(void *userData, uint64 offset)
+                     Errors(*seek)(void *userData, uint64 offset),
+                     uint64(*getSize)(void *userData)
                     );
 
 /***********************************************************************\

@@ -16,3 +16,5 @@ ToDo
 - create RPMs
 - native graphical frontend?
 - problem if DISPLAY is not set
+- backup /dev
+- 

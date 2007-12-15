@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -999,15 +999,9 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
                        fileName
                       );
             break;
-          case FILE_TYPE_DEVICE:
+          case FILE_TYPE_SPECIAL:
             sendResult(clientInfo,id,FALSE,0,
-                       "DEVICE %'S",
-                       fileName
-                      );
-            break;
-          case FILE_TYPE_SOCKET:
-            sendResult(clientInfo,id,FALSE,0,
-                       "SOCKET %'S",
+                       "SPECIAL %'S",
                        fileName
                       );
             break;
@@ -1244,6 +1238,14 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String argum
   {
     sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->options.maxTmpSize);
   }
+  else if (String_equalsCString(arguments[0],"create-incremental-list"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->options.createIncrementalListFlag);
+  }
+  else if (String_equalsCString(arguments[0],"incremental-list-file"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->options.incrementalListFileName);
+  }
   else if (String_equalsCString(arguments[0],"max-band-width"))
   {
     sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->options.maxBandWidth);
@@ -1321,6 +1323,25 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
     const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
     clientInfo->options.maxTmpSize = (uint64)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"create-incremental-list"))
+  {
+    // create-incremental-list 0|1
+    clientInfo->options.createIncrementalListFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(arguments[0],"incremental-list-file"))
+  {
+    // incremental-list-file <file name>
+    if (clientInfo->options.incrementalListFileName != NULL)
+    {
+      String_set(clientInfo->options.incrementalListFileName,arguments[1]);
+    }
+    else
+    {
+      clientInfo->options.incrementalListFileName = String_copy(arguments[1]);
+    }
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"max-band-width"))

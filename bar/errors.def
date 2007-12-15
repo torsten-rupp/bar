@@ -1,56 +1,56 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/errors.def,v $
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
 #
 #***********************************************************************
 
-NONE    "none"                          
+NONE    "none"
 DEFAULT "unknown"
 
 # general
-ERROR INSUFFICIENT_MEMORY            "insufficient memory"           
-ERROR INIT                           "init"                          
-ERROR INVALID_ARGUMENT               "invalid argument"              
-ERROR CONFIG                         "config error"                  
-ERROR ABORTED                        "aborted"                       
-ERROR FUNCTION_NOT_SUPPORTED         "function not supported"        
-ERROR STILL_NOT_IMPLEMENTED          "function still not implemented"        
+ERROR INSUFFICIENT_MEMORY            "insufficient memory"
+ERROR INIT                           "init"
+ERROR INVALID_ARGUMENT               "invalid argument"
+ERROR CONFIG                         "config error"
+ERROR ABORTED                        "aborted"
+ERROR FUNCTION_NOT_SUPPORTED         "function not supported"
+ERROR STILL_NOT_IMPLEMENTED          "function still not implemented"
 
 # patterns
-ERROR INVALID_PATTERN                "init pattern matching"         
+ERROR INVALID_PATTERN                "init pattern matching"
 
 # TLS/SSL
-ERROR INIT_TLS                       "init TLS (SSL)"               
+ERROR INIT_TLS                       "init TLS (SSL)"
 ERROR NO_TLS_CA                      "no TLS (SSL) certificate authority file (bar-ca.pem)"
 ERROR NO_TLS_CERTIFICATE             "no TLS (SSL) certificate file (bar-server-cert.pem)"
 ERROR NO_TLS_KEY                     "no or unreable TLS (SSL) key file (bar-server-key.pem)"
 ERROR INVALID_TLS_CA                 "invalid TLS (SSL) certificate authority"
 ERROR INVALID_TLS_CERTIFICATE        "invalid TLS (SSL) certificate"
-ERROR TLS_HANDSHAKE                  "TLS (SSL) handshake failure"  
+ERROR TLS_HANDSHAKE                  "TLS (SSL) handshake failure"
 ERROR INVALID_SSH_SPEFICIER          "invalid SSH specifier"
-ERROR NO_SSH_LOGIN_NAME              "no ssh login name given"         
-ERROR NO_SSH_PASSWORD                "no ssh password given"         
-ERROR SSH_SESSION_FAIL               "initialize ssh session fail"   
-ERROR SSH_AUTHENTIFICATION           "invalid ssh password"          
+ERROR NO_SSH_LOGIN_NAME              "no ssh login name given"
+ERROR NO_SSH_PASSWORD                "no ssh password given"
+ERROR SSH_SESSION_FAIL               "initialize ssh session fail"
+ERROR SSH_AUTHENTIFICATION           "invalid ssh password"
 
 # compress
-ERROR INIT_COMPRESS                  "init compress"                 
-ERROR COMPRESS_ERROR                 "compress"                      
-ERROR DEFLATE_ERROR                  "deflate"                       
-ERROR INFLATE_ERROR                  "inflate"                       
+ERROR INIT_COMPRESS                  "init compress"
+ERROR COMPRESS_ERROR                 "compress"
+ERROR DEFLATE_ERROR                  "deflate"
+ERROR INFLATE_ERROR                  "inflate"
 
 # crypt
-ERROR UNSUPPORTED_BLOCK_SIZE         "unsupported block size"        
-ERROR INIT_CRYPT                     "init crypt"                    
-ERROR NO_PASSWORD                    "no password given for cipher"  
-ERROR INVALID_PASSWORD               "invalid password"              
-ERROR INIT_CIPHER                    "init cipher"                   
-ERROR ENCRYPT_FAIL                   "encrypt"                       
-ERROR DECRYPT_FAIL                   "decrypt"                       
+ERROR UNSUPPORTED_BLOCK_SIZE         "unsupported block size"
+ERROR INIT_CRYPT                     "init crypt"
+ERROR NO_PASSWORD                    "no password given for cipher"
+ERROR INVALID_PASSWORD               "invalid password"
+ERROR INIT_CIPHER                    "init cipher"
+ERROR ENCRYPT_FAIL                   "encrypt"
+ERROR DECRYPT_FAIL                   "decrypt"
 
 # file i/o
 ERROR CREATE_FILE
@@ -59,19 +59,20 @@ ERROR OPEN_DIRECTORY
 ERROR IO_ERROR
   strncpy(errorText,strerror(errno),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
 
-ERROR FILE_EXITS                     "file already exists"           
-ERROR FILE_NOT_FOUND                 "file not found"                
+ERROR FILE_EXITS                     "file already exists"
+ERROR FILE_NOT_FOUND                 "file not found"
 
 # archive
-ERROR END_OF_ARCHIVE                 "end of archive"                
-ERROR NO_FILE_ENTRY                  "no file entry"                 
-ERROR NO_FILE_DATA                   "no data entry"                 
-ERROR NO_DIRECTORY_ENTRY             "no directory entry"                 
-ERROR NO_LINK_ENTRY                  "no link entry"                 
-ERROR END_OF_DATA                    "end of data"                   
-ERROR CRC_ERROR                      "CRC error"                     
-ERROR FILE_INCOMPLETE                "file is incomplete"            
-ERROR WRONG_FILE_TYPE                "wrong file type"               
+ERROR END_OF_ARCHIVE                 "end of archive"
+ERROR NO_FILE_ENTRY                  "no file entry"
+ERROR NO_FILE_DATA                   "no data entry"
+ERROR NO_DIRECTORY_ENTRY             "no directory entry"
+ERROR NO_LINK_ENTRY                  "no link entry"
+ERROR NO_SPECIAL_ENTRY               "no special entry"
+ERROR END_OF_DATA                    "end of data"
+ERROR CRC_ERROR                      "CRC error"
+ERROR FILE_INCOMPLETE                "file is incomplete"
+ERROR WRONG_FILE_TYPE                "wrong file type"
 ERROR FILES_DIFFER                   "files differ"
 
 # incremental files
@@ -80,12 +81,12 @@ ERROR WRONG_INCREMENTAL_FILE_VERSION "wrong incremental file version"
 ERROR CORRUPT_INCREMENTAL_FILE       "corrupt incremental file"
 
 # network
-ERROR HOST_NOT_FOUND                 "host not found"                
+ERROR HOST_NOT_FOUND                 "host not found"
 ERROR CONNECT_FAIL
   strncpy(errorText,strerror(errno),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
 
-ERROR NETWORK_SEND                   "sending data fail"             
-ERROR NETWORK_RECEIVE                "receiving data fail"           
+ERROR NETWORK_SEND                   "sending data fail"
+ERROR NETWORK_RECEIVE                "receiving data fail"
 ERROR NETWORK_EXECUTE_FAIL           "execute command fail"
 
 # device
