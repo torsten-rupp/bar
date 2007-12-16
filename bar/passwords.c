@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -78,11 +78,13 @@ Password *Password_new(void)
 {
   Password *password;
 
-  #ifdef HAVE_GCRYPT
+//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+  #ifdef xHAVE_GCRYPT
     password = (Password*)gcry_malloc_secure(sizeof(Password));
   #else /* not HAVE_GCRYPT */
     password = (Password*)malloc(sizeof(Password));
   #endif /* HAVE_GCRYPT */
+//fprintf(stderr,"%s,%d: %p\n",__FILE__,__LINE__,password);
   if (password == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -106,7 +108,8 @@ void Password_delete(Password *password)
 {
   if (password != NULL)
   {
-    #ifdef HAVE_GCRYPT
+//fprintf(stderr,"%s,%d: %p\n",__FILE__,__LINE__,password);
+    #ifdef xHAVE_GCRYPT
       gcry_free(password);
     #else /* not HAVE_GCRYPT */
       memset(password,0,sizeof(Password));
@@ -123,7 +126,7 @@ void Password_clear(Password *password)
   password->data[0] = '\0';
 }
 
-Password *Password_copy(const Password *sourcePassword)
+Password *Password_duplicate(const Password *sourcePassword)
 {
   Password *destinationPassword;
 

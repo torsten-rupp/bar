@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.36 $
+* $Revision: 1.37 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -731,7 +731,7 @@ Errors Archive_open(ArchiveInfo  *archiveInfo,
 
   archiveInfo->partNumber              = 0;
   archiveInfo->fileOpenFlag            = TRUE;
-  archiveInfo->fileName                = String_copy(archiveFileName);
+  archiveInfo->fileName                = String_duplicate(archiveFileName);
 
   archiveInfo->nextChunkHeaderReadFlag = FALSE;
 
@@ -841,7 +841,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->file.chunkFileEntry.userId          = fileInfo->userId;
   archiveFileInfo->file.chunkFileEntry.groupId         = fileInfo->groupId;
   archiveFileInfo->file.chunkFileEntry.permission      = fileInfo->permission;
-  archiveFileInfo->file.chunkFileEntry.name            = String_copy(name);
+  archiveFileInfo->file.chunkFileEntry.name            = String_duplicate(name);
 
   archiveFileInfo->file.chunkFileData.fragmentOffset   = 0;
   archiveFileInfo->file.chunkFileData.fragmentSize     = 0;
@@ -1003,7 +1003,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->directory.chunkDirectoryEntry.userId          = fileInfo->userId;
   archiveFileInfo->directory.chunkDirectoryEntry.groupId         = fileInfo->groupId;
   archiveFileInfo->directory.chunkDirectoryEntry.permission      = fileInfo->permission;
-  archiveFileInfo->directory.chunkDirectoryEntry.name            = String_copy(directoryName);
+  archiveFileInfo->directory.chunkDirectoryEntry.name            = String_duplicate(directoryName);
 
   /* init directory chunk */
   error = Chunk_init(&archiveFileInfo->directory.chunkInfoDirectory,
@@ -1152,8 +1152,8 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->link.chunkLinkEntry.userId          = fileInfo->userId;
   archiveFileInfo->link.chunkLinkEntry.groupId         = fileInfo->groupId;
   archiveFileInfo->link.chunkLinkEntry.permission      = fileInfo->permission;
-  archiveFileInfo->link.chunkLinkEntry.name            = String_copy(linkName);
-  archiveFileInfo->link.chunkLinkEntry.destinationName = String_copy(destinationName);
+  archiveFileInfo->link.chunkLinkEntry.name            = String_duplicate(linkName);
+  archiveFileInfo->link.chunkLinkEntry.destinationName = String_duplicate(destinationName);
 
   /* init link-chunk */
   error = Chunk_init(&archiveFileInfo->link.chunkInfoLink,
@@ -1312,7 +1312,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->special.chunkSpecialEntry.permission      = fileInfo->permission;
   archiveFileInfo->special.chunkSpecialEntry.major           = fileInfo->major;
   archiveFileInfo->special.chunkSpecialEntry.minor           = fileInfo->minor;
-  archiveFileInfo->special.chunkSpecialEntry.name            = String_copy(specialName);
+  archiveFileInfo->special.chunkSpecialEntry.name            = String_duplicate(specialName);
 
   /* init special-chunk */
   error = Chunk_init(&archiveFileInfo->special.chunkInfoSpecial,

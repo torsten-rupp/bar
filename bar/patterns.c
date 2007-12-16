@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -177,7 +177,7 @@ LOCAL PatternNode *copyPatternNode(PatternNode *patternNode,
     HALT_INSUFFICIENT_MEMORY();
   }
   newPatternNode->type    = patternNode->type;
-  newPatternNode->pattern = String_copy(patternNode->pattern);
+  newPatternNode->pattern = String_duplicate(patternNode->pattern);
 
   /* compile pattern */
   error = compilePattern(String_cString(patternNode->pattern),

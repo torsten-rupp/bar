@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -63,7 +63,8 @@ typedef struct
   #define String_newCString(s)                  __String_newCString(__FILE__,__LINE__,s)
   #define String_newChar(ch)                    __String_newChar(__FILE__,__LINE__,ch)
   #define String_newBuffer(buffer,bufferLength) __String_newBuffer(__FILE__,__LINE__,buffer,bufferLength)
-  #define String_copy(fromString)               __String_copy(__FILE__,__LINE__,fromString)
+  #define String_duplicate(fromString)          __String_duplicate(__FILE__,__LINE__,fromString)
+  #define String_copy(string,fromString)        __String_copy(__FILE__,__LINE__,string,fromString)
   #define String_delete(string)                 __String_delete(__FILE__,__LINE__,string)
 #endif /* not NDEBUG */
 
@@ -147,18 +148,35 @@ String String_setChar(String string, char ch);
 String String_setBuffer(String string, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
-* Name   : String_copy
+* Name   : String_duplicate
 * Purpose: duplicate string
-* Input  : string - string to copy
+* Input  : fromString - string to duplicate
 * Output : -
 * Return : new string (copy)
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-String String_copy(String fromString);
+String String_duplicate(const String fromString);
 #else /* not NDEBUG */
-String __String_copy(const char *fileName, ulong lineNb, String fromString);
+String __String_duplicate(const char *fileName, ulong lineNb, const String fromString);
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : String_copy
+* Purpose: copy string
+* Input  : string     - reference to string variable (if referenced
+*                       string is NULL, a new string is allocated)
+*          fromString - string to copy
+* Output : -
+* Return : new string (copy)
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+String String_copy(String *string, const String fromString);
+#else /* not NDEBUG */
+String __String_copy(const char *fileName, ulong lineNb, String *string, const String fromString);
 #endif /* NDEBUG */
 
 /***********************************************************************\

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -112,7 +112,7 @@ void Password_delete(Password *password);
 void Password_clear(Password *password);
 
 /***********************************************************************\
-* Name   : Password_copy
+* Name   : Password_duplicate
 * Purpose: copy a password
 * Input  : sourcePassword - source password
 * Output : -
@@ -120,7 +120,7 @@ void Password_clear(Password *password);
 * Notes  : -
 \***********************************************************************/
 
-Password *Password_copy(const Password *sourcePassword);
+Password *Password_duplicate(const Password *sourcePassword);
 
 /***********************************************************************\
 * Name   : Passwort_set, Password_setCString

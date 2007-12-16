@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/filefragmentlists.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver file fragment list functions
 * Systems: all
@@ -89,7 +89,7 @@ FileFragmentNode *FileFragmentList_addFile(FileFragmentList *fileFragmentList, c
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  fileFragmentNode->fileName = String_copy(fileName);
+  fileFragmentNode->fileName = String_duplicate(fileName);
   fileFragmentNode->size     = size;
   List_init(&fileFragmentNode->fragmentList);
 

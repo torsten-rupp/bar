@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -297,14 +297,14 @@ void logPostProcess(void);
 /***********************************************************************\
 * Name   : copyOptions
 * Purpose: copy options structure
-* Input  : sourceOptions      - source options
-*          destinationOptions - destination options variable
+* Input  : destinationOptions - destination options variable
+*          sourceOptions      - source options
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void copyOptions(const Options *sourceOptions, Options *destinationOptions);
+void copyOptions(Options *destinationOptions, const Options *sourceOptions);
 
 /***********************************************************************\
 * Name   : freeOptions

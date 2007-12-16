@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -612,7 +612,7 @@ LOCAL JobNode *newJob(JobTypes jobType)
   jobNode->archiveName           = String_new();
   Pattern_initList(&jobNode->includePatternList);
   Pattern_initList(&jobNode->excludePatternList);
-  copyOptions(&defaultOptions,&jobNode->options);
+  copyOptions(&jobNode->options,&defaultOptions);
   jobNode->id                    = 0;
   jobNode->state                 = JOB_STATE_WAITING;
   jobNode->requestedVolumeNumber = 0;
@@ -797,7 +797,7 @@ LOCAL uint64 getTotalSubDirectorySize(const String subDirectory)
   totalSize = 0;
 
   StringList_init(&pathNameList);
-  StringList_append(&pathNameList,String_copy(subDirectory));
+  StringList_append(&pathNameList,String_duplicate(subDirectory));
   pathName = String_new();
   fileName = String_new();
   while (!StringList_empty(&pathNameList))
@@ -830,7 +830,7 @@ LOCAL uint64 getTotalSubDirectorySize(const String subDirectory)
           totalSize += fileInfo.size;
           break;
         case FILE_TYPE_DIRECTORY:
-          StringList_append(&pathNameList,String_copy(fileName));
+          StringList_append(&pathNameList,String_duplicate(fileName));
           break;
         case FILE_TYPE_LINK:
           break;
@@ -1142,7 +1142,7 @@ LOCAL void serverCommand_clear(ClientInfo *clientInfo, uint id, const String arg
   Pattern_clearList(&clientInfo->includePatternList);
   Pattern_clearList(&clientInfo->excludePatternList);
   freeOptions(&clientInfo->options);
-  copyOptions(&defaultOptions,&clientInfo->options);
+  copyOptions(&clientInfo->options,&defaultOptions);
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
@@ -1334,14 +1334,7 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
   else if (String_equalsCString(arguments[0],"incremental-list-file"))
   {
     // incremental-list-file <file name>
-    if (clientInfo->options.incrementalListFileName != NULL)
-    {
-      String_set(clientInfo->options.incrementalListFileName,arguments[1]);
-    }
-    else
-    {
-      clientInfo->options.incrementalListFileName = String_copy(arguments[1]);
-    }
+    String_copy(&clientInfo->options.incrementalListFileName,arguments[1]);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"max-band-width"))
@@ -1361,13 +1354,13 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
   else if (String_equalsCString(arguments[0],"ssh-public-key"))
   {
     // ssh-public-key <file name>
-    String_set(clientInfo->options.sshServer.publicKeyFileName,arguments[1]);
+    String_copy(&clientInfo->options.sshServer.publicKeyFileName,arguments[1]);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"ssh-prvat-key"))
   {
     // ssh-privat-key <file name>
-    String_set(clientInfo->options.sshServer.privatKeyFileName,arguments[1]);
+    String_copy(&clientInfo->options.sshServer.privatKeyFileName,arguments[1]);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"volume-size"))
@@ -1381,7 +1374,7 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
   else if (String_equalsCString(arguments[0],"load-volume-command"))
   {
     // load-volume-command <s>
-    String_set(clientInfo->options.device.loadVolumeCommand,arguments[1]);
+    String_copy(&clientInfo->options.device.loadVolumeCommand,arguments[1]);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"compress-algorithm"))
@@ -1506,7 +1499,7 @@ LOCAL void serverCommand_addJob(ClientInfo *clientInfo, uint id, const String ar
   String_set(jobNode->archiveName,arguments[2]);
   Pattern_copyList(&clientInfo->includePatternList,&jobNode->includePatternList);
   Pattern_copyList(&clientInfo->excludePatternList,&jobNode->excludePatternList);
-  freeOptions(&jobNode->options); copyOptions(&clientInfo->options,&jobNode->options);
+  freeOptions(&jobNode->options); copyOptions(&jobNode->options,&clientInfo->options);
 
   /* lock */
   Semaphore_lock(&jobList.lock);
@@ -1991,7 +1984,7 @@ fprintf(stderr,"%s,%d: unknown %s\n",__FILE__,__LINE__,String_cString(token));
   commandMsg->arguments = Array_new(sizeof(String),0);
   while (String_getNextToken(&stringTokenizer,&token,NULL))
   {
-    argument = String_copy(token);
+    argument = String_duplicate(token);
     Array_append(commandMsg->arguments,&argument);
   }
 
@@ -2133,7 +2126,7 @@ clientInfo->authorizationState   = AUTHORIZATION_STATE_OK;
 
   Pattern_initList(&clientInfo->includePatternList);
   Pattern_initList(&clientInfo->excludePatternList);
-  copyOptions(&defaultOptions,&clientInfo->options);
+  copyOptions(&clientInfo->options,&defaultOptions);
 
   /* create and send session id */
 // authorization?
@@ -2164,14 +2157,14 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   /* initialize */
   clientInfo->type                 = CLIENT_TYPE_NETWORK;
   clientInfo->authorizationState   = AUTHORIZATION_STATE_WAITING;
-  clientInfo->network.name         = String_copy(name);
+  clientInfo->network.name         = String_duplicate(name);
   clientInfo->network.port         = port;
   clientInfo->network.socketHandle = socketHandle;
   clientInfo->network.exitFlag     = FALSE;
 
   Pattern_initList(&clientInfo->includePatternList);
   Pattern_initList(&clientInfo->excludePatternList);
-  copyOptions(&defaultOptions,&clientInfo->options);
+  copyOptions(&clientInfo->options,&defaultOptions);
 
   if (!MsgQueue_init(&clientInfo->network.commandMsgQueue,0))
   {
@@ -2415,7 +2408,8 @@ Errors Server_run(uint       serverPort,
                               );
     if (error != ERROR_NONE)
     {
-      printError("Cannot initialize server (error: %s)!\n",
+      printError("Cannot initialize server at port %d (error: %s)!\n",
+                 serverPort,
                  getErrorText(error)
                 );
       return FALSE;
@@ -2434,10 +2428,11 @@ Errors Server_run(uint       serverPort,
                                 );
       if (error != ERROR_NONE)
       {
-        printError("Cannot initialize TLS/SSL server (error: %s)!\n",
+        printError("Cannot initialize TLS/SSL server at port %d (error: %s)!\n",
+                   serverTLSPort,
                    getErrorText(error)
                   );
-        Network_doneServer(&serverSocketHandle);
+        if (serverPort != 0) Network_doneServer(&serverSocketHandle);
         return FALSE;
       }
       printInfo(1,"Started TLS/SSL server on port %d\n",serverTLSPort);

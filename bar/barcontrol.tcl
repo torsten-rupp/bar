@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -1083,6 +1083,10 @@ proc BackupServer:readResult { commandId _completeFlag _errorCode _result } \
   set id -1
   while {($id != $commandId) && ($id != 0)} \
   {
+     if {$server(socketHandle) == -1} \
+     {
+       return 0
+     }
      if {[eof $server(socketHandle)]} \
      {
        catch {close $server(socketHandle)}
@@ -2758,8 +2762,8 @@ proc resetBARConfig {} \
   set barConfig(archivePartSize)           0
   set barConfig(maxTmpSizeFlag)            0
   set barConfig(maxTmpSize)                0
+  set barConfig(storageMode)               "FULL"
   set barConfig(createIncrementalListFlag) 0
-  set barConfig(incrementalFlag)           0
   set barConfig(incrementalListFileName)   ""
   set barConfig(maxBandWidthFlag)          0
   set barConfig(maxBandWidth)              0
@@ -2988,16 +2992,19 @@ proc loadBARConfig { configFileName } \
       set barConfig(maxTmpSize)     $s
       continue
     }
+    if {[scanx $line "incremental = %S" s] == 1} \
+    {
+      # incremental = [yes|no]
+      if {[stringToBoolean $s]} \
+      {
+        set barConfig(storageMode) "INCREMENTAL"
+      }
+      continue
+    }
     if {[scanx $line "create-incremental-list = %s" s] == 1} \
     {
       # create-incremental-list = [yes|no]
       set barConfig(createIncrementalListFlag) [stringToBoolean $s]
-      continue
-    }
-    if {[scanx $line "incremental = %S" s] == 1} \
-    {
-      # incremental = [yes|no]
-      set barConfig(incrementalFlag) [stringToBoolean $s]
       continue
     }
     if {[scanx $line "incremental-list-file = %S" s] == 1} \
@@ -3218,15 +3225,15 @@ proc saveBARConfig { configFileName } \
   {
     puts $handle "max-tmp-size = $barConfig(maxTmpSize)"
   }
+  if {$barConfig(storageMode) == "INCREMENTAL"} \
+  {
+    puts $handle "incremental = yes"
+  }
   if {$barConfig(createIncrementalListFlag)} \
   {
     puts $handle "create-incremental-list = yes"
   }
-  if {$barConfig(incrementalFlag)} \
-  {
-    puts $handle "incremental = yes"
-  }
-  if {$barConfig(createIncrementalListFlag) || $barConfig(incrementalFlag)} \
+  if {($barConfig(storageMode) == "INCREMENTAL") || $barConfig(createIncrementalListFlag)} \
   {
     puts $handle "incremental-list-file = $barConfig(incrementalListFileName)"
   }

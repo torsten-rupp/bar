@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -91,6 +91,8 @@ struct __String
 
     const char      *fileName;
     ulong           lineNb;
+    const char      *prevFileName;
+    ulong           prevLineNb;
     struct __String *string;
   } DebugStringNode;
 
@@ -104,7 +106,8 @@ struct __String
 #ifndef NDEBUG
   pthread_once_t  debugStringInitFlag = PTHREAD_ONCE_INIT;
   pthread_mutex_t debugStringLock;
-  DebugStringList debugStringList;
+  DebugStringList debugAllocStringList;
+  DebugStringList debugFreeStringList;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -148,7 +151,8 @@ struct __String
 LOCAL void debugStringInit(void)
 {
   pthread_mutex_init(&debugStringLock,NULL);
-  List_init(&debugStringList);
+  List_init(&debugAllocStringList);
+  List_init(&debugFreeStringList);
 }
 #endif /* not NDEBUG */
 
@@ -1415,16 +1419,30 @@ String __String_new(const char *fileName, ulong lineNb)
   #ifndef NDEBUG
     pthread_once(&debugStringInitFlag,debugStringInit);
 
-    debugStringNode = LIST_NEW_NODE(DebugStringNode);
-    if (debugStringNode == NULL)
+    debugStringNode = debugFreeStringList.head;
+    while ((debugStringNode != NULL) && (debugStringNode->string != string))
     {
-      HALT_INSUFFICIENT_MEMORY();
+      debugStringNode = debugStringNode->next;
     }
-    debugStringNode->fileName = fileName;
-    debugStringNode->lineNb   = lineNb;
+    if (debugStringNode != NULL)
+    {
+      List_remove(&debugFreeStringList,debugStringNode);
+    }
+    else
+    {
+      debugStringNode = LIST_NEW_NODE(DebugStringNode);
+      if (debugStringNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+    }
+    debugStringNode->fileName     = fileName;
+    debugStringNode->lineNb       = lineNb;
+    debugStringNode->prevFileName = NULL;
+    debugStringNode->prevLineNb   = 0;
     debugStringNode->string   = string;
     pthread_mutex_lock(&debugStringLock);
-    List_append(&debugStringList,debugStringNode);
+    List_append(&debugAllocStringList,debugStringNode);
     pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
 
@@ -1503,6 +1521,27 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
     DebugStringNode *debugStringNode;;
   #endif /* not NDEBUG */
 
+  #ifndef NDEBUG
+    debugStringNode = debugFreeStringList.head;
+    while ((debugStringNode != NULL) && (debugStringNode->string != string))
+    {
+      debugStringNode = debugStringNode->next;
+    }
+    if (debugStringNode != NULL)
+    {
+      fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %ld and previoulsy at %s, %ld which allocated at %s, %ld!\n",
+              string,
+              fileName,
+              lineNb,
+              debugStringNode->prevFileName,
+              debugStringNode->prevLineNb,
+              debugStringNode->fileName,
+              debugStringNode->lineNb
+             );
+      HALT_INTERNAL_ERROR("");
+    }
+  #endif /* not NDEBUG */
+
   CHECK_VALID(string);
 
   if (string != NULL)
@@ -1513,14 +1552,17 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
       pthread_once(&debugStringInitFlag,debugStringInit);
 
       pthread_mutex_lock(&debugStringLock);
-      debugStringNode = debugStringList.head;
+      debugStringNode = debugAllocStringList.head;
       while ((debugStringNode != NULL) && (debugStringNode->string != string))
       {
         debugStringNode = debugStringNode->next;
       }
       if (debugStringNode != NULL)
       {
-        List_remove(&debugStringList,debugStringNode);
+        List_remove(&debugAllocStringList,debugStringNode);
+        debugStringNode->prevFileName = fileName;
+        debugStringNode->prevLineNb   = lineNb;
+        List_append(&debugFreeStringList,debugStringNode);
       }
       else
       {
@@ -1529,7 +1571,7 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
                 fileName,
                 lineNb
                );
-HALT_INTERNAL_ERROR("");
+        HALT_INTERNAL_ERROR("");
       }
       pthread_mutex_unlock(&debugStringLock);
     #endif /* not NDEBUG */
@@ -1650,9 +1692,9 @@ String String_setBuffer(String string, const char *buffer, ulong bufferLength)
 }
 
 #ifdef NDEBUG
-String String_copy(const String fromString)
+String String_duplicate(const String fromString)
 #else /* not NDEBUG */
-String __String_copy(const char *fileName, ulong lineNb, String fromString)
+String __String_duplicate(const char *fileName, ulong lineNb, const String fromString)
 #endif /* NDEBUG */
 {
   struct __String *string;
@@ -1686,6 +1728,50 @@ String __String_copy(const char *fileName, ulong lineNb, String fromString)
   }
 
   return string;
+}
+
+#ifdef NDEBUG
+String String_copy(String *string, const String fromString)
+#else /* not NDEBUG */
+String __String_copy(const char *fileName, ulong lineNb, String *string, const String fromString)
+#endif /* NDEBUG */
+{
+  CHECK_VALID(fromString);
+
+  if (fromString != NULL)
+  {
+    assert(fromString->data != NULL);
+
+    if ((*string) == NULL)
+    {
+      #ifdef NDEBUG
+        (*string) = String_new();
+      #else /* not DEBUG */
+        (*string) = __String_new(fileName,lineNb);
+      #endif /* NDEBUG */
+      if ((*string) == NULL)
+      {
+        return NULL;
+      }
+    }
+
+    ensureStringLength((*string),fromString->length+1);
+    memcpy(&(*string)->data[0],&fromString->data[0],fromString->length);
+    (*string)->data[fromString->length] ='\0';
+    (*string)->length = fromString->length;
+
+    UPDATE_VALID(*string);
+  }
+  else
+  {
+    if ((*string) != NULL)
+    {
+      (*string)->data[0] ='\0';
+      (*string)->length = 0;
+    }
+  }
+
+  return (*string);
 }
 
 String String_sub(String string, const String fromString, ulong fromIndex, long fromLength)
@@ -3183,7 +3269,7 @@ void String_debug(void)
     pthread_once(&debugStringInitFlag,debugStringInit);
 
     pthread_mutex_lock(&debugStringLock);
-    for (debugStringNode = debugStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
+    for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
     {
       fprintf(stderr,"DEBUG WARNING: string '%s' allocated at %s, %ld!\n",
               debugStringNode->string->data,

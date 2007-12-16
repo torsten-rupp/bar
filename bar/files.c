@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -718,7 +718,7 @@ Errors File_openDirectory(DirectoryHandle *directoryHandle,
     return ERROR_OPEN_DIRECTORY;
   }
 
-  directoryHandle->name  = String_copy(pathName);
+  directoryHandle->name  = String_duplicate(pathName);
   directoryHandle->entry = NULL;
 
   return ERROR_NONE;
@@ -1289,11 +1289,11 @@ Errors File_setFileInfo(const String fileName,
         return ERROR_IO_ERROR;
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; /* not reached */
   }
 
   return ERROR_NONE;

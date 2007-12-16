@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.41 $
+* $Revision: 1.42 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -533,7 +533,7 @@ LOCAL void appendToFileList(MsgQueue  *fileMsgQueue,
   assert(fileName != NULL);
 
   /* init */
-  fileMsg.fileName = String_copy(fileName);
+  fileMsg.fileName = String_duplicate(fileName);
   fileMsg.fileType = fileType;
 
   /* put into message queue */
@@ -1181,9 +1181,9 @@ LOCAL void appendToStorageList(MsgQueue  *storageMsgQueue,
   assert(destinationFileName != NULL);
 
   /* init */
-  storageMsg.fileName            = String_copy(fileName);
+  storageMsg.fileName            = String_duplicate(fileName);
   storageMsg.fileSize            = fileSize;
-  storageMsg.destinationFileName = String_copy(destinationFileName);
+  storageMsg.destinationFileName = String_duplicate(destinationFileName);
   storageMsg.completeFlag        = TRUE;
 
   /* put into message queue */
@@ -1588,12 +1588,12 @@ Errors Command_create(const char                   *archiveFileName,
 
   if (   (options->archiveType == ARCHIVE_TYPE_INCREMENTAL)
       || options->createIncrementalListFlag
-      || (options->incrementalListFileName != NULL)
+      || !String_empty(options->incrementalListFileName)
      )
   {
     /* get increment list file name */
     incrementalListFileName = String_new();
-    if (options->incrementalListFileName != NULL)
+    if (!String_empty(options->incrementalListFileName))
     {
       String_set(incrementalListFileName,options->incrementalListFileName);
     }
