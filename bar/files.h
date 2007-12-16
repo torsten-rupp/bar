@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -170,7 +170,7 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 * Notes  : -
 \***********************************************************************/
 
-String File_getFilePathName(const String fileName, String path);
+String File_getFilePathName(String path, const String fileName);
 
 /***********************************************************************\
 * Name   : File_getFileBaseName
@@ -182,7 +182,7 @@ String File_getFilePathName(const String fileName, String path);
 * Notes  : -
 \***********************************************************************/
 
-String File_getFileBaseName(const String fileName, String baseName);
+String File_getFileBaseName(String baseName, const String fileName);
 
 /***********************************************************************\
 * Name   : File_splitFileName

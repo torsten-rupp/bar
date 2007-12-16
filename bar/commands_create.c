@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.42 $
+* $Revision: 1.43 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1599,8 +1599,9 @@ Errors Command_create(const char                   *archiveFileName,
     }
     else
     {
+      File_getFileBaseName(fileName,createInfo.archiveFileName);
       formatArchiveFileName(incrementalListFileName,
-                            createInfo.archiveFileName,
+                            fileName,
                             -1,
                             createInfo.startTime
                            );

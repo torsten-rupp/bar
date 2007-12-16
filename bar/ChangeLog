@@ -1,3 +1,9 @@
+2007-12-16 0.04a
+  * fixed double free of a string
+  * added check in string library for duplicate free
+  * fixed abort
+  * use base name of archive file name for incremental list file
+
 2007-12-15 0.04
   * added create-dialog to barcontrol.tcl
   * added incremental backup

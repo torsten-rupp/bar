@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.30 $
+* $Revision: 1.31 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -134,7 +134,7 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
   return fileName;
 }
 
-String File_getFilePathName(const String fileName, String pathName)
+String File_getFilePathName(String pathName, const String fileName)
 {
   long lastPathSeparatorIndex;
 
@@ -157,7 +157,7 @@ String File_getFilePathName(const String fileName, String pathName)
   return pathName;
 }
 
-String File_getFileBaseName(const String fileName, String baseName)
+String File_getFileBaseName(String baseName, const String fileName)
 {
   long lastPathSeparatorIndex;
 
@@ -1367,8 +1367,6 @@ Errors File_makeSpecial(const String     name,
                         ulong            minor
                        )
 {
-  mode_t mode;
-
   assert(name != NULL);
 
   unlink(String_cString(name));
