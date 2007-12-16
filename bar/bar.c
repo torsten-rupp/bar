@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.44 $
+* $Revision: 1.45 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -592,7 +592,7 @@ LOCAL bool readConfigFile(String fileName, bool printInfoFlag)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      sshServerNode->name                        = String_copy(name);
+      sshServerNode->name                        = String_duplicate(name);
       sshServerNode->sshServer.port              = 0;
       sshServerNode->sshServer.loginName         = NULL;
       sshServerNode->sshServer.publicKeyFileName = NULL;
@@ -612,7 +612,7 @@ LOCAL bool readConfigFile(String fileName, bool printInfoFlag)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      deviceNode->name                           = String_copy(name);
+      deviceNode->name                           = String_duplicate(name);
       deviceNode->device.requestVolumeCommand    = NULL;
       deviceNode->device.unloadVolumeCommand     = NULL;
       deviceNode->device.loadVolumeCommand       = NULL;
@@ -1020,9 +1020,13 @@ LOCAL void initOptions(Options *options)
   assert(options != NULL);
 
   memset(options,0,sizeof(Options));
-  options->sshServerList = &sshServerList;
-  options->deviceList    = &deviceList;
-  options->cryptPassword = Password_new();
+  options->sshServerList               = &sshServerList;
+  options->deviceList                  = &deviceList;
+//  options->incrementalListFileName     = String_new();
+//  options->cryptPassword               = Password_new();
+//  options->sshServer.publicKeyFileName = String_new();
+//  options->sshServer.privatKeyFileName = String_new();
+//  options->device.loadVolumeCommand    = String_new();
 }
 
 LOCAL void freeSSHServerNode(SSHServerNode *sshServerNode, void *userData)
@@ -1234,71 +1238,71 @@ void logPostProcess(void)
   tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
 }
 
-void copyOptions(const Options *sourceOptions, Options *destinationOptions)
+void copyOptions(Options *destinationOptions, const Options *sourceOptions)
 {
   assert(sourceOptions != NULL);
   assert(destinationOptions != NULL);
 
   memcpy(destinationOptions,sourceOptions,sizeof(Options));
-  destinationOptions->tmpDirectory                          = String_copy(sourceOptions->tmpDirectory);
-  destinationOptions->incrementalListFileName               = String_copy(sourceOptions->incrementalListFileName);
-  destinationOptions->directory                             = String_copy(sourceOptions->directory);
-  destinationOptions->cryptPassword                         = Password_copy(sourceOptions->cryptPassword);
-  destinationOptions->sshServer.loginName                   = String_copy(sourceOptions->sshServer.loginName);
-  destinationOptions->sshServer.publicKeyFileName           = String_copy(sourceOptions->sshServer.publicKeyFileName);
-  destinationOptions->sshServer.privatKeyFileName           = String_copy(sourceOptions->sshServer.privatKeyFileName);
-  destinationOptions->sshServer.password                    = Password_copy(sourceOptions->sshServer.password);
-  destinationOptions->defaultSSHServer.loginName            = String_copy(sourceOptions->defaultSSHServer.loginName);
-  destinationOptions->defaultSSHServer.publicKeyFileName    = String_copy(sourceOptions->defaultSSHServer.publicKeyFileName);
-  destinationOptions->defaultSSHServer.privatKeyFileName    = String_copy(sourceOptions->defaultSSHServer.privatKeyFileName);
-  destinationOptions->defaultSSHServer.password             = Password_copy(sourceOptions->defaultSSHServer.password);
-  destinationOptions->remoteBARExecutable                   = String_copy(sourceOptions->remoteBARExecutable);
-  destinationOptions->deviceName                            = String_copy(sourceOptions->deviceName);
-  destinationOptions->defaultDevice.requestVolumeCommand    = String_copy(sourceOptions->defaultDevice.requestVolumeCommand);
-  destinationOptions->defaultDevice.unloadVolumeCommand     = String_copy(sourceOptions->defaultDevice.unloadVolumeCommand);
-  destinationOptions->defaultDevice.loadVolumeCommand       = String_copy(sourceOptions->defaultDevice.loadVolumeCommand);
-  destinationOptions->defaultDevice.imagePreProcessCommand  = String_copy(sourceOptions->defaultDevice.imagePreProcessCommand);
-  destinationOptions->defaultDevice.imagePostProcessCommand = String_copy(sourceOptions->defaultDevice.imagePostProcessCommand);
-  destinationOptions->defaultDevice.imageCommand            = String_copy(sourceOptions->defaultDevice.imageCommand);
-  destinationOptions->defaultDevice.eccPreProcessCommand    = String_copy(sourceOptions->defaultDevice.eccPreProcessCommand);
-  destinationOptions->defaultDevice.eccPostProcessCommand   = String_copy(sourceOptions->defaultDevice.eccPostProcessCommand);
-  destinationOptions->defaultDevice.eccCommand              = String_copy(sourceOptions->defaultDevice.eccCommand);
-  destinationOptions->defaultDevice.writePreProcessCommand  = String_copy(sourceOptions->defaultDevice.writePreProcessCommand);
-  destinationOptions->defaultDevice.writePostProcessCommand = String_copy(sourceOptions->defaultDevice.writePostProcessCommand);
-  destinationOptions->defaultDevice.writeCommand            = String_copy(sourceOptions->defaultDevice.writeCommand);
+  destinationOptions->tmpDirectory                          = String_duplicate(sourceOptions->tmpDirectory);
+  destinationOptions->incrementalListFileName               = String_duplicate(sourceOptions->incrementalListFileName);
+  destinationOptions->directory                             = String_duplicate(sourceOptions->directory);
+  destinationOptions->cryptPassword                         = Password_duplicate(sourceOptions->cryptPassword);
+  destinationOptions->sshServer.loginName                   = String_duplicate(sourceOptions->sshServer.loginName);
+  destinationOptions->sshServer.publicKeyFileName           = String_duplicate(sourceOptions->sshServer.publicKeyFileName);
+  destinationOptions->sshServer.privatKeyFileName           = String_duplicate(sourceOptions->sshServer.privatKeyFileName);
+  destinationOptions->sshServer.password                    = Password_duplicate(sourceOptions->sshServer.password);
+  destinationOptions->defaultSSHServer.loginName            = String_duplicate(sourceOptions->defaultSSHServer.loginName);
+  destinationOptions->defaultSSHServer.publicKeyFileName    = String_duplicate(sourceOptions->defaultSSHServer.publicKeyFileName);
+  destinationOptions->defaultSSHServer.privatKeyFileName    = String_duplicate(sourceOptions->defaultSSHServer.privatKeyFileName);
+  destinationOptions->defaultSSHServer.password             = Password_duplicate(sourceOptions->defaultSSHServer.password);
+  destinationOptions->remoteBARExecutable                   = String_duplicate(sourceOptions->remoteBARExecutable);
+  destinationOptions->deviceName                            = String_duplicate(sourceOptions->deviceName);
+  destinationOptions->defaultDevice.requestVolumeCommand    = String_duplicate(sourceOptions->defaultDevice.requestVolumeCommand);
+  destinationOptions->defaultDevice.unloadVolumeCommand     = String_duplicate(sourceOptions->defaultDevice.unloadVolumeCommand);
+  destinationOptions->defaultDevice.loadVolumeCommand       = String_duplicate(sourceOptions->defaultDevice.loadVolumeCommand);
+  destinationOptions->defaultDevice.imagePreProcessCommand  = String_duplicate(sourceOptions->defaultDevice.imagePreProcessCommand);
+  destinationOptions->defaultDevice.imagePostProcessCommand = String_duplicate(sourceOptions->defaultDevice.imagePostProcessCommand);
+  destinationOptions->defaultDevice.imageCommand            = String_duplicate(sourceOptions->defaultDevice.imageCommand);
+  destinationOptions->defaultDevice.eccPreProcessCommand    = String_duplicate(sourceOptions->defaultDevice.eccPreProcessCommand);
+  destinationOptions->defaultDevice.eccPostProcessCommand   = String_duplicate(sourceOptions->defaultDevice.eccPostProcessCommand);
+  destinationOptions->defaultDevice.eccCommand              = String_duplicate(sourceOptions->defaultDevice.eccCommand);
+  destinationOptions->defaultDevice.writePreProcessCommand  = String_duplicate(sourceOptions->defaultDevice.writePreProcessCommand);
+  destinationOptions->defaultDevice.writePostProcessCommand = String_duplicate(sourceOptions->defaultDevice.writePostProcessCommand);
+  destinationOptions->defaultDevice.writeCommand            = String_duplicate(sourceOptions->defaultDevice.writeCommand);
 }
 
 void freeOptions(Options *options)
 {
   assert(options != NULL);
 
-  String_delete(options->tmpDirectory);
-  String_delete(options->directory);
-  String_delete(options->incrementalListFileName);
-  Password_delete(options->cryptPassword);
-  String_delete(options->incrementalListFileName);
-  String_delete(options->sshServer.loginName);
-  String_delete(options->sshServer.privatKeyFileName);
-  String_delete(options->sshServer.publicKeyFileName);
-  Password_delete(options->sshServer.password);
-  String_delete(options->defaultSSHServer.loginName);
-  String_delete(options->defaultSSHServer.privatKeyFileName);
-  String_delete(options->defaultSSHServer.publicKeyFileName);
-  Password_delete(options->defaultSSHServer.password);
-  String_delete(options->remoteBARExecutable);
-  String_delete(options->deviceName);
+  String_delete(options->defaultDevice.writeCommand);
+  String_delete(options->defaultDevice.writePostProcessCommand);
+  String_delete(options->defaultDevice.writePreProcessCommand);
+  String_delete(options->defaultDevice.eccCommand);
+  String_delete(options->defaultDevice.eccPostProcessCommand);
+  String_delete(options->defaultDevice.eccPreProcessCommand);
+  String_delete(options->defaultDevice.imageCommand);
+  String_delete(options->defaultDevice.imagePostProcessCommand);
+  String_delete(options->defaultDevice.imagePreProcessCommand);
   String_delete(options->defaultDevice.loadVolumeCommand);
   String_delete(options->defaultDevice.unloadVolumeCommand);
   String_delete(options->defaultDevice.requestVolumeCommand);
-  String_delete(options->defaultDevice.imagePreProcessCommand);
-  String_delete(options->defaultDevice.imagePostProcessCommand);
-  String_delete(options->defaultDevice.imageCommand);
-  String_delete(options->defaultDevice.eccPreProcessCommand);
-  String_delete(options->defaultDevice.eccPostProcessCommand);
-  String_delete(options->defaultDevice.eccCommand);
-  String_delete(options->defaultDevice.writePreProcessCommand);
-  String_delete(options->defaultDevice.writePostProcessCommand);
-  String_delete(options->defaultDevice.writeCommand);
+  String_delete(options->deviceName);
+  String_delete(options->remoteBARExecutable);
+  Password_delete(options->defaultSSHServer.password);
+  String_delete(options->defaultSSHServer.privatKeyFileName);
+  String_delete(options->defaultSSHServer.publicKeyFileName);
+  String_delete(options->defaultSSHServer.loginName);
+  Password_delete(options->sshServer.password);
+  String_delete(options->sshServer.privatKeyFileName);
+  String_delete(options->sshServer.publicKeyFileName);
+  String_delete(options->sshServer.loginName);
+  Password_delete(options->cryptPassword);
+  String_delete(options->directory);
+  String_delete(options->incrementalListFileName);
+  String_delete(options->tmpDirectory);
+  memset(options,0,sizeof(Options));
 }
 
 void getSSHServer(const String  name,
