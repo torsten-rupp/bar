@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -161,7 +161,7 @@ typedef struct
     // dvd storage
     struct
     {
-      Device     device;                               // device
+//      DVD        dvd;                                  // device
       String     name;                                 // device name
       uint       steps;                                // total number of steps to create dvd
       String     directory;                            // temporary directory for dvd files

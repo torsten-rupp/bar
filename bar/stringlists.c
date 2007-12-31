@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -50,7 +50,7 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void insertString(StringList *stringList, String string, StringNode *nextStringNode)
+LOCAL void insertString(StringList *stringList, const String string, StringNode *nextStringNode)
 {
   StringNode *stringNode;
 
@@ -140,7 +140,7 @@ unsigned long StringList_count(const StringList *stringList)
   return List_count(stringList);
 }
 
-void StringList_insert(StringList *stringList, String string, StringNode *nextStringNode)
+void StringList_insert(StringList *stringList, const String string, StringNode *nextStringNode)
 {
   insertString(stringList,String_duplicate(string),nextStringNode);
 }
@@ -160,7 +160,7 @@ void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferL
   insertString(stringList,String_newBuffer(buffer,bufferLength),nextStringNode);
 }
 
-void StringList_append(StringList *stringList, String string)
+void StringList_append(StringList *stringList, const String string)
 {
   insertString(stringList,String_duplicate(string),NULL);
 }

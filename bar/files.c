@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.31 $
+* $Revision: 1.32 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -186,8 +186,8 @@ void File_splitFileName(const String fileName, String *pathName, String *baseNam
   assert(pathName != NULL);
   assert(baseName != NULL);
 
-  (*pathName) = File_getFilePathName(fileName,String_new());
-  (*baseName) = File_getFileBaseName(fileName,String_new());
+  (*pathName) = File_getFilePathName(String_new(),fileName);
+  (*baseName) = File_getFileBaseName(String_new(),fileName);
 }
 
 void File_initSplitFileName(StringTokenizer *stringTokenizer, String fileName)
@@ -217,8 +217,9 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const n
 
 Errors File_getTmpFileName(String fileName, const String directory)
 {
-  char *s;
-  int  handle;
+  char   *s;
+  int    handle;
+  Errors error;
 
   assert(fileName != NULL);
 
@@ -240,8 +241,9 @@ Errors File_getTmpFileName(String fileName, const String directory)
   handle = mkstemp(s);
   if (handle == -1)
   {
+    error = ERROR(IO_ERROR,errno); 
     free(s);
-    return ERROR_IO_ERROR;
+    return error;
   }
   close(handle);
 
@@ -254,7 +256,8 @@ Errors File_getTmpFileName(String fileName, const String directory)
 
 Errors File_getTmpDirectoryName(String directoryName, const String directory)
 {
-  char *s;
+  char   *s;
+  Errors error;
 
   assert(directoryName != NULL);
 
@@ -275,8 +278,9 @@ Errors File_getTmpDirectoryName(String directoryName, const String directory)
 
   if (mkdtemp(s) == NULL)
   {
+    error = ERROR(IO_ERROR,errno);
     free(s);
-    return ERROR_IO_ERROR;
+    return error;
   }
 
   String_setBuffer(directoryName,s,strlen(s));
@@ -309,7 +313,7 @@ Errors File_open(FileHandle    *fileHandle,
       fileHandle->file = fopen(String_cString(fileName),"wb");
       if (fileHandle->file == NULL)
       {
-        return ERROR_CREATE_FILE;
+        return ERROR(CREATE_FILE,errno);
       }
 
       fileHandle->size  = 0;
@@ -319,31 +323,34 @@ Errors File_open(FileHandle    *fileHandle,
       fileHandle->file = fopen(String_cString(fileName),"rb");
       if (fileHandle->file == NULL)
       {
-        return ERROR_OPEN_FILE;
+        return ERROR(OPEN_FILE,errno);
       }
 
       /* get file size */
       if (fseeko(fileHandle->file,(off_t)0,SEEK_END) == -1)
       {
+        error = ERROR(IO_ERROR,errno);
         fclose(fileHandle->file);
-        return ERROR_IO_ERROR;
+        return error;
       }
       n = ftello(fileHandle->file);
       if (n == (off_t)-1)
       {
+        error = ERROR(IO_ERROR,errno);
         fclose(fileHandle->file);
-        return ERROR_IO_ERROR;
+        return error;
       }
       fileHandle->size = (uint64)n;
       if (fseeko(fileHandle->file,(off_t)0,SEEK_SET) == -1)
       {
+        error = ERROR(IO_ERROR,errno);
         fclose(fileHandle->file);
-        return ERROR_IO_ERROR;
+        return error;
       }
       break;
     case FILE_OPENMODE_WRITE:
       /* create directory if needed */
-      pathName = File_getFilePathName(fileName,String_new());
+      pathName = File_getFilePathName(String_new(),fileName);
       if (!File_exists(pathName))
       {
         error = File_makeDirectory(pathName);
@@ -363,12 +370,12 @@ Errors File_open(FileHandle    *fileHandle,
           fileHandle->file = fopen(String_cString(fileName),"wb");
           if (fileHandle->file == NULL)
           {
-            return ERROR_OPEN_FILE;
+            return ERROR(OPEN_FILE,errno);
           }
         }
         else
         {
-          return ERROR_OPEN_FILE;
+          return ERROR(OPEN_FILE,errno);
         }
       }
 
@@ -376,7 +383,7 @@ Errors File_open(FileHandle    *fileHandle,
       break;
     case FILE_OPENMODE_APPEND:
       /* create directory if needed */
-      pathName = File_getFilePathName(fileName,String_new());
+      pathName = File_getFilePathName(String_new(),fileName);
       if (!File_exists(pathName))
       {
         error = File_makeDirectory(pathName);
@@ -391,15 +398,16 @@ Errors File_open(FileHandle    *fileHandle,
       fileHandle->file = fopen(String_cString(fileName),"ab");
       if (fileHandle->file == NULL)
       {
-        return ERROR_OPEN_FILE;
+        return ERROR(OPEN_FILE,errno);
       }
 
       /* get file size */
       n = ftello(fileHandle->file);
       if (n == (off_t)-1)
       {
+        error = ERROR(IO_ERROR,errno);
         fclose(fileHandle->file);
-        return ERROR_IO_ERROR;
+        return error;
       }
       fileHandle->size = (uint64)n;
       break;
@@ -418,7 +426,8 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
                            FileOpenModes fileOpenMode
                           )
 {
-  off_t n;
+  off_t  n;
+  Errors error;
 
   assert(fileHandle != NULL);
   assert(fileDescriptor >= 0);
@@ -433,7 +442,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
       fileHandle->file = fdopen(fileDescriptor,"wb");
       if (fileHandle->file == NULL)
       {
-        return ERROR_CREATE_FILE;
+        return ERROR(CREATE_FILE,errno);
       }
 
       fileHandle->size  = 0;
@@ -443,7 +452,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
       fileHandle->file = fdopen(fileDescriptor,"rb");
       if (fileHandle->file == NULL)
       {
-        return ERROR_OPEN_FILE;
+        return ERROR(OPEN_FILE,errno);
       }
       break;
     case FILE_OPENMODE_WRITE:
@@ -451,7 +460,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
       fileHandle->file = fdopen(fileDescriptor,"r+b");
       if (fileHandle->file == NULL)
       {
-        return ERROR_OPEN_FILE;
+        return ERROR(OPEN_FILE,errno);
       }
 
       fileHandle->size  = 0;
@@ -461,15 +470,16 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
       fileHandle->file = fdopen(fileDescriptor,"ab");
       if (fileHandle->file == NULL)
       {
-        return ERROR_OPEN_FILE;
+        return ERROR(OPEN_FILE,errno);
       }
 
       /* get file size */
       n = ftello(fileHandle->file);
       if (n == (off_t)-1)
       {
+        error = ERROR(IO_ERROR,errno);
         fclose(fileHandle->file);
-        return ERROR_IO_ERROR;
+        return error;
       }
       fileHandle->size = (uint64)n;
       break;
@@ -530,7 +540,7 @@ Errors File_read(FileHandle *fileHandle,
       || ((n < bufferLength) && (bytesRead == NULL))
      )
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
   fileHandle->index += n;
 
@@ -553,7 +563,7 @@ Errors File_write(FileHandle *fileHandle,
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != bufferLength)
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
 
   return ERROR_NONE;
@@ -574,7 +584,7 @@ Errors File_readLine(FileHandle *fileHandle,
     if (ch >= 0) fileHandle->index += 1;
     if (ch < 0)
     {
-      return ERROR_IO_ERROR;
+      return ERROR(IO_ERROR,errno);
     }
     if (((char)ch != '\n') && ((char)ch != '\r'))
     {
@@ -617,7 +627,7 @@ Errors File_tell(FileHandle *fileHandle, uint64 *offset)
   n = ftello(fileHandle->file);
   if (n == (off_t)-1)
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
 // NYI
 assert(sizeof(off_t)==8);
@@ -636,7 +646,7 @@ Errors File_seek(FileHandle *fileHandle,
 
   if (fseeko(fileHandle->file,(off_t)offset,SEEK_SET) == -1)
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
   fileHandle->index = offset;
 
@@ -651,7 +661,7 @@ Errors File_truncate(FileHandle *fileHandle,
   {
     if (ftruncate(fileno(fileHandle->file),(off_t)size) != 0)
     {
-      return ERROR_IO_ERROR;
+      return ERROR(IO_ERROR,errno);
     }
     fileHandle->size = size;
   }
@@ -665,6 +675,7 @@ Errors File_makeDirectory(const String pathName)
 {
   StringTokenizer pathNameTokenizer;
   String          directoryName;
+  Errors          error;
   String          name;
 
   assert(pathName != NULL);
@@ -682,6 +693,16 @@ Errors File_makeDirectory(const String pathName)
       File_setFileNameChar(directoryName,FILES_PATHNAME_SEPARATOR_CHAR);
     }
   }
+  if (!File_exists(directoryName))
+  {
+    if (mkdir(String_cString(directoryName),0700) != 0)
+    {
+      error = ERROR(IO_ERROR,errno);
+      File_doneSplitFileName(&pathNameTokenizer);
+      String_delete(directoryName);
+      return error;
+    }
+  }
   while (File_getNextSplitFileName(&pathNameTokenizer,&name))
   {
     if (String_length(name) > 0)
@@ -692,9 +713,10 @@ Errors File_makeDirectory(const String pathName)
       {
         if (mkdir(String_cString(directoryName),0700) != 0)
         {
+          error = ERROR(IO_ERROR,errno);
           File_doneSplitFileName(&pathNameTokenizer);
           String_delete(directoryName);
-          return ERROR_IO_ERROR;
+          return error;
         }
       }
     }
@@ -715,7 +737,7 @@ Errors File_openDirectory(DirectoryHandle *directoryHandle,
   directoryHandle->dir = opendir(String_cString(pathName));
   if (directoryHandle->dir == NULL)
   {
-    return ERROR_OPEN_DIRECTORY;
+    return ERROR(OPEN_DIRECTORY,errno);
   }
 
   directoryHandle->name  = String_duplicate(pathName);
@@ -779,7 +801,7 @@ Errors File_readDirectory(DirectoryHandle *directoryHandle,
   }
   if (directoryHandle->entry == NULL)
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
 
   String_set(fileName,directoryHandle->name);
@@ -797,7 +819,7 @@ Errors File_openDevices(DeviceHandle *deviceHandle)
   deviceHandle->file = fopen("/etc/mtab","r");
   if (deviceHandle->file == NULL)
   {
-    return ERROR_OPEN_FILE;
+    return ERROR(OPEN_FILE,errno);
   }
   deviceHandle->bufferFilledFlag = FALSE;
 
@@ -841,7 +863,7 @@ Errors File_readDevice(DeviceHandle *deviceHandle,
     /* read line */
     if (fgets(deviceHandle->buffer,sizeof(deviceHandle->buffer),deviceHandle->file) == NULL)
     {
-      return ERROR_IO_ERROR;
+      return ERROR(IO_ERROR,errno);
     }
     deviceHandle->bufferFilledFlag = TRUE;
   }
@@ -850,12 +872,12 @@ Errors File_readDevice(DeviceHandle *deviceHandle,
   s0 = strchr(&deviceHandle->buffer[0],' ');
   if (s0 == NULL)
   {
-    return ERROR_IO_ERROR;
+    return ERROR_PARSE_DEVICE_LIST;
   }
   s1 = strchr(s0+1,' ');
   if (s1 == NULL)
   {
-    return ERROR_IO_ERROR;
+    return ERROR_PARSE_DEVICE_LIST;
   }
   assert(s1 > s0);
   String_setBuffer(deviceName,s0+1,s1-s0-1);
@@ -896,7 +918,7 @@ Errors File_delete(const String fileName, bool recursiveFlag)
 
   if (lstat64(String_cString(fileName),&fileStat) != 0)
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
 
   if      (   S_ISREG(fileStat.st_mode)
@@ -905,7 +927,7 @@ Errors File_delete(const String fileName, bool recursiveFlag)
   {
     if (unlink(String_cString(fileName)) != 0)
     {
-      return ERROR_IO_ERROR;
+      return ERROR(IO_ERROR,errno);
     }
   }
   else if (S_ISDIR(fileStat.st_mode))
@@ -951,7 +973,7 @@ Errors File_delete(const String fileName, bool recursiveFlag)
                 {
                   if (unlink(String_cString(name)) != 0)
                   {
-                    error = ERROR_IO_ERROR;
+                    error = ERROR(IO_ERROR,errno);
                   }
 //HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 }
@@ -970,7 +992,7 @@ Errors File_delete(const String fileName, bool recursiveFlag)
           {
             if (rmdir(String_cString(directoryName)) != 0)
             {
-              error = ERROR_IO_ERROR;
+              error = ERROR(IO_ERROR,errno);
             }
 //HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           }
@@ -984,7 +1006,7 @@ Errors File_delete(const String fileName, bool recursiveFlag)
     {
       if (rmdir(String_cString(fileName)) != 0)
       {
-        error = ERROR_IO_ERROR;
+        error = ERROR(IO_ERROR,errno);
       }
     }
 
@@ -1016,7 +1038,7 @@ Errors File_rename(const String oldFileName,
     /* delete old file */
     if (unlink(String_cString(oldFileName)) != 0)
     {
-      return ERROR_IO_ERROR;
+      return ERROR(IO_ERROR,errno);
     }
   }
 
@@ -1030,6 +1052,7 @@ Errors File_copy(const String sourceFileName,
   #define BUFFER_SIZE (1024*1024)
 
   byte   *buffer;
+  Errors error;
   FILE   *sourceFile,*destinationFile;
   size_t n;
 
@@ -1047,15 +1070,17 @@ Errors File_copy(const String sourceFileName,
   sourceFile = fopen(String_cString(sourceFileName),"r");
   if (sourceFile == NULL)
   {
+    error = ERROR(OPEN_FILE,errno);
     free(buffer);
-    return ERROR_OPEN_FILE;
+    return error;
   }
   destinationFile = fopen(String_cString(destinationFileName),"w");
   if (destinationFile == NULL)
   {
+    error = ERROR(OPEN_FILE,errno);
     fclose(sourceFile);
     free(buffer);
-    return ERROR_OPEN_FILE;
+    return error;
   }
 
   /* copy data */
@@ -1066,20 +1091,22 @@ Errors File_copy(const String sourceFileName,
     {
       if (fwrite(buffer,1,n,destinationFile) != n)
       {
+        error = ERROR(IO_ERROR,errno);
         fclose(destinationFile);
         fclose(sourceFile);
         free(buffer);
-        return ERROR_IO_ERROR;
+        return error;
       }
     }
     else
     {
       if (ferror(sourceFile))
       {
+        error = ERROR(IO_ERROR,errno);
         fclose(destinationFile);
         fclose(sourceFile);
         free(buffer);
-        return ERROR_IO_ERROR;
+        return error;
       }
     }
   }
@@ -1211,7 +1238,7 @@ Errors File_getFileInfo(const String fileName,
 
   if (lstat64(String_cString(fileName),&fileStat) != 0)
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
 
   if      (S_ISREG(fileStat.st_mode))  fileInfo->type = FILE_TYPE_FILE;
@@ -1272,21 +1299,21 @@ Errors File_setFileInfo(const String fileName,
       utimeBuffer.modtime = fileInfo->timeModified;
       if (utime(String_cString(fileName),&utimeBuffer) != 0)
       {
-        return ERROR_IO_ERROR;
+        return ERROR(IO_ERROR,errno);
       }
       if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
       {
-        return ERROR_IO_ERROR;
+        return ERROR(IO_ERROR,errno);
       }
       if (chmod(String_cString(fileName),fileInfo->permission) != 0)
       {
-        return ERROR_IO_ERROR;
+        return ERROR(IO_ERROR,errno);
       }
       break;
     case FILE_TYPE_LINK:
       if (lchown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
       {
-        return ERROR_IO_ERROR;
+        return ERROR(IO_ERROR,errno);
       }
       break;
     default:
@@ -1306,9 +1333,10 @@ Errors File_readLink(const String linkName,
   #define BUFFER_SIZE  256
   #define BUFFER_DELTA 128
 
-  char *buffer;
-  uint bufferSize;
-  int  result;
+  char   *buffer;
+  uint   bufferSize;
+  int    result;
+  Errors error;
 
   assert(linkName != NULL);
   assert(fileName != NULL);
@@ -1340,8 +1368,9 @@ Errors File_readLink(const String linkName,
   }
   else
   {
+    error = ERROR(IO_ERROR,errno);
     free(buffer);
-    return ERROR_IO_ERROR;
+    return error;
   }
 }
 
@@ -1355,7 +1384,7 @@ Errors File_makeLink(const String linkName,
   unlink(String_cString(linkName));
   if (symlink(String_cString(fileName),String_cString(linkName)) != 0)
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
 
   return ERROR_NONE;
@@ -1375,25 +1404,25 @@ Errors File_makeSpecial(const String     name,
     case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
       if (mknod(String_cString(name),S_IFCHR|0600,makedev(major,minor)) != 0)
       {
-        return ERROR_IO_ERROR;
+        return ERROR(IO_ERROR,errno);
       }
       break;
     case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
       if (mknod(String_cString(name),S_IFBLK|0600,makedev(major,minor)) != 0)
       {
-        return ERROR_IO_ERROR;
+        return ERROR(IO_ERROR,errno);
       }
       break;
     case FILE_SPECIAL_TYPE_FIFO:
       if (mknod(String_cString(name),S_IFIFO|0666,0) != 0)
       {
-        return ERROR_IO_ERROR;
+        return ERROR(IO_ERROR,errno);
       }
       break;
     case FILE_SPECIAL_TYPE_SOCKET:
       if (mknod(String_cString(name),S_IFSOCK|0600,0) != 0)
       {
-        return ERROR_IO_ERROR;
+        return ERROR(IO_ERROR,errno);
       }
       break;
     #ifndef NDEBUG
@@ -1417,7 +1446,7 @@ Errors File_getFileSystemInfo(const          String pathName,
 
   if (statvfs(String_cString(pathName),&fileSystemStat) != 0)
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
 
   fileSystemInfo->blockSize         = fileSystemStat.f_bsize;

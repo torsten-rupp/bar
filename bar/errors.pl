@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all
@@ -73,13 +73,17 @@ if ($cFileName ne "")
   print CFILE_HANDLE "\n";
   print CFILE_HANDLE "#include \"errors.h\"\n";
   print CFILE_HANDLE "\n";
-
+  print CFILE_HANDLE "#define GET_ERROR_CODE(error) (((error) & 0x0000FFFF) >>  0)\n";
+  print CFILE_HANDLE "#define GET_ERRNO(error) (((error) & 0xFFFF0000) >> 16)\n";
+  print CFILE_HANDLE "\n";
+  print CFILE_HANDLE "#define ERRNO GET_ERRNO(error)\n";
+  print CFILE_HANDLE "\n";
   print CFILE_HANDLE "const char *$FUNCTION_NAME(Errors error)\n";
   print CFILE_HANDLE "{\n";
   print CFILE_HANDLE "  static char errorText[256];\n";
   print CFILE_HANDLE "\n";
   print CFILE_HANDLE "  strcpy(errorText,\"unknown\");\n";
-  print CFILE_HANDLE "  switch (error)\n";
+  print CFILE_HANDLE "  switch (GET_ERROR_CODE(error))\n";
   print CFILE_HANDLE "  {\n";
 }
 if ($hFileName ne "")
@@ -87,6 +91,8 @@ if ($hFileName ne "")
   open(HFILE_HANDLE,"> $hFileName");
   print HFILE_HANDLE "#ifndef __ERRORS__\n";
   print HFILE_HANDLE "#define __ERRORS__\n";
+  print HFILE_HANDLE "\n";
+  print HFILE_HANDLE "#define ERROR(code,errno) (((errno) << 16) | ERROR_ ## code)\n";
   print HFILE_HANDLE "\n";
   print HFILE_HANDLE "typedef enum\n";
   print HFILE_HANDLE "{\n";

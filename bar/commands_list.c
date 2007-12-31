@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -283,6 +283,8 @@ Errors Command_list(StringList  *archiveFileNameList,
   ulong        fileCount;
   String       storageSpecifier;
   Errors       failError;
+  bool         inputPasswordFlag;
+  bool         retryFlag;
 bool         remoteBarFlag;
 //  SSHSocketList sshSocketList;
 //  SSHSocketNode *sshSocketNode;
@@ -296,8 +298,9 @@ bool         remoteBarFlag;
   archiveFileName = String_new();
 remoteBarFlag=FALSE;
 
-  storageSpecifier = String_new();
-  failError = ERROR_NONE;
+  storageSpecifier  = String_new();
+  failError         = ERROR_NONE;
+  inputPasswordFlag = FALSE;
   while (!StringList_empty(archiveFileNameList))
   {
     StringList_getFirst(archiveFileNameList,archiveFileName);
@@ -331,7 +334,9 @@ remoteBarFlag=FALSE;
           }
 
           /* list contents */
-          while (!Archive_eof(&archiveInfo))
+          while (   !Archive_eof(&archiveInfo)
+                 && (failError == ERROR_NONE)
+                )
           {
             /* get next file type */
             error = Archive_getNextFileType(&archiveInfo,
@@ -340,7 +345,7 @@ remoteBarFlag=FALSE;
                                            );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+              printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          getErrorText(error)
                         );
@@ -361,18 +366,29 @@ remoteBarFlag=FALSE;
 
                   /* open archive file */
                   fileName = String_new();
-                  error = Archive_readFileEntry(&archiveInfo,
-                                                &archiveFileInfo,
-                                                &compressAlgorithm,
-                                                &cryptAlgorithm,
-                                                fileName,
-                                                &fileInfo,
-                                                &fragmentOffset,
-                                                &fragmentSize
-                                               );
+                  do
+                  {
+                    error = Archive_readFileEntry(&archiveInfo,
+                                                  &archiveFileInfo,
+                                                  &compressAlgorithm,
+                                                  &cryptAlgorithm,
+                                                  fileName,
+                                                  &fileInfo,
+                                                  &fragmentOffset,
+                                                  &fragmentSize
+                                                 );
+                    retryFlag = FALSE;
+                    if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
+                    {
+                      inputCryptPassword(&options->cryptPassword);
+                      retryFlag         = TRUE;
+                      inputPasswordFlag = TRUE;
+                    }
+                  }
+                  while ((error != ERROR_NONE) && retryFlag);
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                    printError("Cannot not read 'file' content of archive '%s' (error: %s)!\n",
                                String_cString(archiveFileName),
                                getErrorText(error)
                               );
@@ -416,15 +432,26 @@ remoteBarFlag=FALSE;
 
                   /* open archive lin */
                   directoryName = String_new();
-                  error = Archive_readDirectoryEntry(&archiveInfo,
-                                                     &archiveFileInfo,
-                                                     &cryptAlgorithm,
-                                                     directoryName,
-                                                     &fileInfo
-                                                    );
+                  do
+                  {
+                    error = Archive_readDirectoryEntry(&archiveInfo,
+                                                       &archiveFileInfo,
+                                                       &cryptAlgorithm,
+                                                       directoryName,
+                                                       &fileInfo
+                                                      );
+                    retryFlag = FALSE;
+                    if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
+                    {
+                      inputCryptPassword(&options->cryptPassword);
+                      retryFlag         = TRUE;
+                      inputPasswordFlag = TRUE;
+                    }
+                  }
+                  while ((error != ERROR_NONE) && retryFlag);
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                    printError("Cannot not read 'directory' content of archive '%s' (error: %s)!\n",
                                String_cString(archiveFileName),
                                getErrorText(error)
                               );
@@ -465,16 +492,27 @@ remoteBarFlag=FALSE;
                   /* open archive lin */
                   linkName = String_new();
                   fileName = String_new();
-                  error = Archive_readLinkEntry(&archiveInfo,
-                                                &archiveFileInfo,
-                                                &cryptAlgorithm,
-                                                linkName,
-                                                fileName,
-                                                &fileInfo
-                                               );
+                  do
+                  {
+                    error = Archive_readLinkEntry(&archiveInfo,
+                                                  &archiveFileInfo,
+                                                  &cryptAlgorithm,
+                                                  linkName,
+                                                  fileName,
+                                                  &fileInfo
+                                                 );
+                    retryFlag = FALSE;
+                    if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
+                    {
+                      inputCryptPassword(&options->cryptPassword);
+                      retryFlag         = TRUE;
+                      inputPasswordFlag = TRUE;
+                    }
+                  }
+                  while ((error != ERROR_NONE) && retryFlag);
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                    printError("Cannot not read 'link' content of archive '%s' (error: %s)!\n",
                                String_cString(archiveFileName),
                                getErrorText(error)
                               );
@@ -516,15 +554,26 @@ remoteBarFlag=FALSE;
 
                   /* open archive lin */
                   fileName = String_new();
-                  error = Archive_readSpecialEntry(&archiveInfo,
-                                                   &archiveFileInfo,
-                                                   &cryptAlgorithm,
-                                                   fileName,
-                                                   &fileInfo
-                                                  );
+                  do
+                  {
+                    error = Archive_readSpecialEntry(&archiveInfo,
+                                                     &archiveFileInfo,
+                                                     &cryptAlgorithm,
+                                                     fileName,
+                                                     &fileInfo
+                                                    );
+                    retryFlag = FALSE;
+                    if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
+                    {
+                      inputCryptPassword(&options->cryptPassword);
+                      retryFlag         = TRUE;
+                      inputPasswordFlag = TRUE;
+                    }
+                  }
+                  while ((error != ERROR_NONE) && retryFlag);
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                    printError("Cannot not read 'special' content of archive '%s' (error: %s)!\n",
                                String_cString(archiveFileName),
                                getErrorText(error)
                               );
@@ -657,127 +706,139 @@ remoteBarFlag=FALSE;
             break;
           }
 
-          /* send list archive command */
-          String_format(String_clear(line),"1 SET crypt-password %'s",options->cryptPassword);
-          Network_executeWriteLine(&networkExecuteHandle,line);
-          String_format(String_clear(line),"2 ARCHIVE_LIST %S",hostFileName);
-          Network_executeWriteLine(&networkExecuteHandle,line);
-          Network_executeSendEOF(&networkExecuteHandle);
-
-          /* list contents */
-          while (!Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,60*1000))
+          do
           {
-            /* read line */
-            Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,line,60*1000);
-//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(line));
+            /* send list archive command */
+            String_format(String_clear(line),"1 SET crypt-password %'s",options->cryptPassword);
+            Network_executeWriteLine(&networkExecuteHandle,line);
+            String_format(String_clear(line),"2 ARCHIVE_LIST %S",hostFileName);
+            Network_executeWriteLine(&networkExecuteHandle,line);
+            Network_executeSendEOF(&networkExecuteHandle);
 
-            /* parse and output list */
-            if      (String_parse(line,
-                                  "%d %d %y FILE %llu %llu %llu %llu %d %d %S",
-                                  NULL,
-                                  &id,
-                                  &errorCode,
-                                  &completedFlag,
-                                  &fileSize,
-                                  &archiveFileSize,
-                                  &fragmentOffset,
-                                  &fragmentLength,
-                                  &compressAlgorithm,
-                                  &cryptAlgorithm,
-                                  fileName
-                                 )
-                    )
+            /* list contents */
+            while (!Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,60*1000))
             {
-              if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-                  && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-                 )
+              /* read line */
+              Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,line,60*1000);
+  //fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(line));
+
+              /* parse and output list */
+              if      (String_parse(line,
+                                    "%d %d %y FILE %llu %llu %llu %llu %d %d %S",
+                                    NULL,
+                                    &id,
+                                    &errorCode,
+                                    &completedFlag,
+                                    &fileSize,
+                                    &archiveFileSize,
+                                    &fragmentOffset,
+                                    &fragmentLength,
+                                    &compressAlgorithm,
+                                    &cryptAlgorithm,
+                                    fileName
+                                   )
+                      )
               {
-                if (!printedInfoFlag)
+                if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                    && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                   )
                 {
-                  printHeader(archiveFileName);
-                  printedInfoFlag = TRUE;
-                }
+                  if (!printedInfoFlag)
+                  {
+                    printHeader(archiveFileName);
+                    printedInfoFlag = TRUE;
+                  }
 
-                /* output file info */
-                printFileInfo(fileName,
-                              fileSize,
-                              archiveFileSize,
-                              compressAlgorithm,
-                              cryptAlgorithm,
-                              fragmentOffset,
-                              fragmentLength
-                             );
-                fileCount++;
+                  /* output file info */
+                  printFileInfo(fileName,
+                                fileSize,
+                                archiveFileSize,
+                                compressAlgorithm,
+                                cryptAlgorithm,
+                                fragmentOffset,
+                                fragmentLength
+                               );
+                  fileCount++;
+                }
               }
-            }
-            else if (String_parse(line,
-                                  "%d %d %d DIRECTORY %d %S",
-                                  NULL,
-                                  &id,
-                                  &errorCode,
-                                  &completedFlag,
-                                  &cryptAlgorithm,
-                                  directoryName
-                                 )
-                    )
-            {
-              if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
-                  && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
-                 )
+              else if (String_parse(line,
+                                    "%d %d %d DIRECTORY %d %S",
+                                    NULL,
+                                    &id,
+                                    &errorCode,
+                                    &completedFlag,
+                                    &cryptAlgorithm,
+                                    directoryName
+                                   )
+                      )
               {
-                if (!printedInfoFlag)
+                if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                    && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+                   )
                 {
-                  printHeader(archiveFileName);
-                  printedInfoFlag = TRUE;
-                }
+                  if (!printedInfoFlag)
+                  {
+                    printHeader(archiveFileName);
+                    printedInfoFlag = TRUE;
+                  }
 
-                /* output file info */
-                printDirectoryInfo(directoryName,
-                                   cryptAlgorithm
-                                  );
-                fileCount++;
+                  /* output file info */
+                  printDirectoryInfo(directoryName,
+                                     cryptAlgorithm
+                                    );
+                  fileCount++;
+                }
               }
-            }
-            else if (String_parse(line,
-                                  "%d %d %d LINK %d %S %S",
-                                  NULL,
-                                  &id,
-                                  &errorCode,
-                                  &completedFlag,
-                                  &cryptAlgorithm,
-                                  linkName,
-                                  fileName
-                                 )
-                    )
-            {
-              if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
-                  && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
-                 )
+              else if (String_parse(line,
+                                    "%d %d %d LINK %d %S %S",
+                                    NULL,
+                                    &id,
+                                    &errorCode,
+                                    &completedFlag,
+                                    &cryptAlgorithm,
+                                    linkName,
+                                    fileName
+                                   )
+                      )
               {
-                if (!printedInfoFlag)
+                if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                    && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+                   )
                 {
-                  printHeader(archiveFileName);
-                  printedInfoFlag = TRUE;
-                }
+                  if (!printedInfoFlag)
+                  {
+                    printHeader(archiveFileName);
+                    printedInfoFlag = TRUE;
+                  }
 
-                /* output file info */
-                printLinkInfo(linkName,
-                              fileName,
-                              cryptAlgorithm
-                             );
-                fileCount++;
+                  /* output file info */
+                  printLinkInfo(linkName,
+                                fileName,
+                                cryptAlgorithm
+                               );
+                  fileCount++;
+                }
               }
-            }
-            else
-            {
+              else
+              {
 fprintf(stderr,"%s,%d: ERROR %s\n",__FILE__,__LINE__,String_cString(line));
+              }
             }
-          }
-          while (!Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,60*1000))
-          {
+            while (!Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,60*1000))
+            {
 Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
 if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,String_cString(line));
+            }
+
+            retryFlag = FALSE;
+            if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
+            {
+              inputCryptPassword(&options->cryptPassword);
+              retryFlag         = TRUE;
+              inputPasswordFlag = TRUE;
+            }
           }
+          while ((error != ERROR_NONE) && retryFlag);
 
           exitCode = Network_terminate(&networkExecuteHandle);
           if (exitCode != 0)

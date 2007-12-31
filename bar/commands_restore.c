@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -233,7 +233,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                                      );
       if (error != ERROR_NONE)
       {
-        printError("Cannot not read content of archive '%s' (error: %s)!\n",
+        printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
                    String_cString(archiveFileName),
                    getErrorText(error)
                   );
@@ -269,7 +269,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                                          );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+              printError("Cannot not read 'file' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          getErrorText(error)
                         );
@@ -328,7 +328,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
               printInfo(2,"  Restore file '%s'...",String_cString(destinationFileName));
 
               /* create directory if not existing */
-              directoryName = File_getFilePathName(destinationFileName,String_new());
+              directoryName = File_getFilePathName(String_new(),destinationFileName);
               if (!File_exists(directoryName))
               {
                 error = File_makeDirectory(directoryName);
@@ -509,7 +509,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                                               );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+              printError("Cannot not read 'directory' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          getErrorText(error)
                         );
@@ -624,7 +624,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                                          );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+              printError("Cannot not read 'link' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          getErrorText(error)
                         );
@@ -745,7 +745,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                                             );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read content of archive '%s' (error: %s)!\n",
+              printError("Cannot not read 'special' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          getErrorText(error)
                         );

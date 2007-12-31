@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.30 $
+* $Revision: 1.31 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -69,8 +69,9 @@ typedef enum
 /* archive types */
 typedef enum
 {
-  ARCHIVE_TYPE_FULL,
-  ARCHIVE_TYPE_INCREMENTAL,
+  ARCHIVE_TYPE_NORMAL,                  // normal archives; no incremental list file
+  ARCHIVE_TYPE_FULL,                    // full archives, create incremental list file
+  ARCHIVE_TYPE_INCREMENTAL,             // incremental achives
 } ArchiveTypes;
 
 /***************************** Datatypes *******************************/
@@ -97,6 +98,26 @@ typedef struct
 {
   LIST_HEADER(SSHServerNode);
 } SSHServerList;
+
+/* dvd */
+typedef struct
+{
+  String requestVolumeCommand;
+  String unloadVolumeCommand;
+  String loadVolumeCommand;
+  uint64 volumeSize;
+
+  String imagePreProcessCommand;
+  String imagePostProcessCommand;
+  String imageCommand;
+  String eccPreProcessCommand;
+  String eccPostProcessCommand;
+  String eccCommand;
+  String writePreProcessCommand;
+  String writePostProcessCommand;
+  String writeCommand;
+  String writeImageCommand;
+} DVD;
 
 /* device */
 typedef struct
@@ -133,48 +154,51 @@ typedef struct
 /* global options */
 typedef struct
 {
-  ArchiveTypes       archiveType;
+  uint                niceLevel;
+  
+  ArchiveTypes        archiveType;
 
-  uint64             archivePartSize;
-  String             tmpDirectory;
-  uint64             maxTmpSize;
+  uint64              archivePartSize;
+  String              tmpDirectory;
+  uint64              maxTmpSize;
 
-  bool               createIncrementalListFlag;
-  String             incrementalListFileName;
+  String              incrementalListFileName;
 
-  uint               directoryStripCount;
-  String             directory;
+  uint                directoryStripCount;
+  String              directory;
 
-  ulong              maxBandWidth;
+  ulong               maxBandWidth;
 
-  PatternTypes       patternType;
+  PatternTypes        patternType;
 
-  CompressAlgorithms compressAlgorithm;
-  CryptAlgorithms    cryptAlgorithm;
-  ulong              compressMinFileSize;
-  Password           *cryptPassword;
+  CompressAlgorithms  compressAlgorithm;
+  CryptAlgorithms     cryptAlgorithm;
+  ulong               compressMinFileSize;
+  Password            *cryptPassword;
 
-  SSHServer          sshServer;
-  SSHServerList      *sshServerList;
-  SSHServer          defaultSSHServer;
+  SSHServer           *sshServer;                      // SSH server
+  const SSHServerList *sshServerList;                  // list with SSH servers
+  SSHServer           defaultSSHServer;                // default SSH server
 
-  String             remoteBARExecutable;
+  String              remoteBARExecutable;
 
-  String             deviceName;
-  Device             device;
-  DeviceList         *deviceList;
-  Device             defaultDevice;
+  DVD                 dvd;
 
-  bool               skipUnreadableFlag;
-  bool               overwriteArchiveFilesFlag;
-  bool               overwriteFilesFlag;
-  bool               noDefaultConfigFlag;
-  bool               errorCorrectionCodesFlag;
-  bool               waitFirstVolumeFlag;
-  bool               noStorageFlag;
-  bool               stopOnErrorFlag;
-  bool               quietFlag;
-  long               verboseLevel;
+  String              defaultDeviceName;
+  Device              *device;                         // device
+  const DeviceList    *deviceList;                     // list with devices
+  Device              defaultDevice;                   // default device
+
+  bool                skipUnreadableFlag;
+  bool                overwriteArchiveFilesFlag;
+  bool                overwriteFilesFlag;
+  bool                noDefaultConfigFlag;
+  bool                errorCorrectionCodesFlag;
+  bool                waitFirstVolumeFlag;
+  bool                noStorageFlag;
+  bool                stopOnErrorFlag;
+  bool                quietFlag;
+  long                verboseLevel;
 } Options;
 
 /***************************** Variables *******************************/
@@ -348,6 +372,18 @@ void getDevice(const String  name,
                const Options *options,
                Device        *device
               );
+
+/***********************************************************************\
+* Name   : inputCryptPassword
+* Purpose: input crypt password
+* Input  : cryptPassword - variable for crypt password (will be
+*                          initialized if needed)
+* Output : -
+* Return : TRUE if passwort input ok, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool inputCryptPassword(Password **cryptPassword);
 
 #ifdef __cplusplus
   }

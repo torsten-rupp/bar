@@ -4,8 +4,7 @@ ToDo
 - check if file date/permission/owner/group is correct
 - internal pipeling of commands for e. g. repacking, remove/add encryption
 - support ssh-agent (extend libssh2?)
-- logfile
-- incremental backups
+- improve logfile
 - ssl server: check common name? 
 - improve calculation for estimated rest time
 - improve password quality checker
@@ -15,6 +14,8 @@ ToDo
 - Windows port
 - create RPMs
 - native graphical frontend?
-- problem if DISPLAY is not set
-- backup /dev
-- 
+- internal scheduler for jobs
+- store executable bar on DVD
+- re-read configuration when modified
+- pause of upload
+- configure band-width on run-time

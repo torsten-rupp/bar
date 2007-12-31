@@ -1,3 +1,30 @@
+2007-12-31 0.05 (New Years Eve edition)
+  * added macros %type, %last to archive file name
+  * fixed path in bid-file name
+  * removed option create-list-file; option --full create a list
+    file, --incremental use the list and no option generate a
+    standard archive (without an incremental list)
+  * added options --full and --incremental to barcontrol.tcl.
+    With these options the settings in a configuration can be
+    overwritten, e. g. usefull to make incremental backups
+    (define full-backup in configuration file; use --incremental
+    to create a incremental backup on-the-fly)
+  * do not write bid-file if archive cannot be stored
+  * added file name editor in barcontrol (check the "folder"-image
+    right to the file name!)
+  * fixed missing lock in debug-code of strings.c
+  * renamed option --priority -> --nice-level; set nice level
+    not thread priority
+  * added password input dialog in case password does not match
+    or no password is defined in the configuration files
+
+2007-12-18 0.04c
+  * fixed creating of directories on restore of single files
+  * fixed DVD burn commands (removed option "-dry-run" - sorry)
+
+2007-12-16 0.04b
+  * fixed typing error in secure password memory
+
 2007-12-16 0.04a
   * fixed double free of a string
   * added check in string library for duplicate free

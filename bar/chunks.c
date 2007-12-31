@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <zlib.h>
+#include <errno.h>
 #include <assert.h>
 
 #include "global.h"
@@ -128,7 +129,6 @@ LOCAL Errors readDefinition(void      *userData,
   }
 
   /* decrypt */
-//cryptInfo=NULL;
   if (cryptInfo != NULL)
   {
 // NYI ???: seed value?
@@ -154,7 +154,7 @@ LOCAL Errors readDefinition(void      *userData,
           {
             uint8 n;
 
-            assert(p+1 <= buffer+bufferLength);
+            if (p+1 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
             crc = crc32(crc,p,1);
             n = (*((uint8*)p));
             p += 1;
@@ -167,7 +167,7 @@ LOCAL Errors readDefinition(void      *userData,
           {
             uint16 n;
 
-            assert(p+2 <= buffer+bufferLength);
+            if (p+2 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
             crc = crc32(crc,p,2);
             n = ntohs(*((uint16*)p));
             p += 2;
@@ -180,7 +180,7 @@ LOCAL Errors readDefinition(void      *userData,
           {
             uint32 n;
 
-            assert(p+4 <= buffer+bufferLength);
+            if (p+4 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
             crc = crc32(crc,p,4);
             n = ntohl(*((uint32*)p));
             p += 4;
@@ -194,7 +194,7 @@ LOCAL Errors readDefinition(void      *userData,
             uint64 n;
             uint32 h,l;
 
-            assert(p+8 <= buffer+bufferLength);
+            if (p+8 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
             crc = crc32(crc,p,4);
             h = ntohl(*((uint32*)p));
             p += 4;
@@ -211,11 +211,11 @@ LOCAL Errors readDefinition(void      *userData,
             uint16 length;
             String s;
 
-            assert(p+2 <= buffer+bufferLength);
+            if (p+2 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
             crc = crc32(crc,p,2);
             length = ntohs(*((uint16*)p));
             p += 2;
-            assert(p+length <= buffer+bufferLength);
+            if (p+length > buffer+bufferLength) return ERROR_CORRUPT_DATA;
             crc = crc32(crc,p,length);
             s = String_newBuffer(p,length); p += length;
 
@@ -230,7 +230,7 @@ LOCAL Errors readDefinition(void      *userData,
           {
             uint32 n;
 
-            assert(p+4 <= buffer+bufferLength);
+            if (p+4 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
             n = ntohl(*(uint32*)p);
             p += 4;
 
@@ -976,7 +976,7 @@ Errors Chunk_readData(ChunkInfo *chunkInfo,
   }
   if (size != bytesRead)
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
   chunkInfo->index += size;
   if (chunkInfo->parentChunkInfo != NULL)
@@ -999,7 +999,7 @@ Errors Chunk_writeData(ChunkInfo  *chunkInfo,
   error = IO.write(chunkInfo->userData,data,size);
   if (error != ERROR_NONE)
   {
-    return ERROR_IO_ERROR;
+    return ERROR(IO_ERROR,errno);
   }
   chunkInfo->size  += size;
   chunkInfo->index += size;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/msgqueues.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
@@ -225,6 +225,9 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize)
   /* get message */
   msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
 
+  /* signal modify */
+  msgQueue->modifiedFlag = TRUE;
+
   /* unlock */
   unlock(msgQueue);
 
@@ -237,9 +240,6 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize)
   memcpy(msg,msgNode->data,n);
   if (size != NULL) (*size) = n;
   free(msgNode);
-
-  /* signal modify */
-  pthread_cond_broadcast(&msgQueue->modified);
 
   return TRUE;
 }
@@ -340,11 +340,11 @@ void MsgQueue_setEndOfMsg(MsgQueue *msgQueue)
 
   msgQueue->endOfMsgFlag = TRUE;
 
+  /* signal modify */
+  msgQueue->modifiedFlag = TRUE;
+
   /* unlock */
   unlock(msgQueue);
-
-  /* signal modify */
-  pthread_cond_broadcast(&msgQueue->modified);
 }
 
 #ifdef __cplusplus

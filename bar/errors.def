@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/errors.def,v $
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
@@ -57,8 +57,9 @@ ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
 ERROR IO_ERROR
-  strncpy(errorText,strerror(errno),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
 
+ERROR PARSE_DEVICE_LIST              "error parsing device list"
 ERROR FILE_EXITS                     "file already exists"
 ERROR FILE_NOT_FOUND                 "file not found"
 
@@ -74,6 +75,7 @@ ERROR CRC_ERROR                      "CRC error"
 ERROR FILE_INCOMPLETE                "file is incomplete"
 ERROR WRONG_FILE_TYPE                "wrong file type"
 ERROR FILES_DIFFER                   "files differ"
+ERROR CORRUPT_DATA                   "corrupt data or invalid password"
 
 # incremental files
 ERROR NOT_AN_INCREMENTAL_FILE        "invalid incremental file"
@@ -83,7 +85,7 @@ ERROR CORRUPT_INCREMENTAL_FILE       "corrupt incremental file"
 # network
 ERROR HOST_NOT_FOUND                 "host not found"
 ERROR CONNECT_FAIL
-  strncpy(errorText,strerror(errno),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
 
 ERROR NETWORK_SEND                   "sending data fail"
 ERROR NETWORK_RECEIVE                "receiving data fail"

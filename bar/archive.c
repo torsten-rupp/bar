@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.37 $
+* $Revision: 1.38 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -33,8 +33,6 @@
 
 /***************************** Constants *******************************/
 
-#define MIN_PASSWORD_QUALITY_LEVEL 0.6
-
 #define MAX_BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
@@ -60,9 +58,8 @@ typedef enum
 /***********************************************************************\
 * Name   : initCryptPassword
 * Purpose: initialize crypt password if password not set
-* Input  : cryptAlgorithm - crypt algorithm to use
-*          cryptPassword  - crypt password variable
-* Output : cryptPassword  - crypt password
+* Input  : cryptAlgorithm   - crypt algorithm to use
+* Output : cryptPassword - crypt password
 * Return : TRUE if passwort initialized, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -71,27 +68,11 @@ LOCAL bool initCryptPassword(CryptAlgorithms cryptAlgorithm,
                              Password        **cryptPassword
                             )
 {
-  Password *password;
-
   assert(cryptPassword != NULL);
 
   if ((cryptAlgorithm != CRYPT_ALGORITHM_NONE) && ((*cryptPassword) == NULL))
   {
-    password = Password_new();
-    if (Password_input(password,"Crypt password") && (Password_length(password) > 0))
-    {
-      if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
-      {
-        printWarning("Low password quality!\n");
-      }
-      (*cryptPassword) = password;
-      return TRUE;
-    }
-    else
-    {
-      Password_delete(password);
-      return FALSE;
-    }
+    return inputCryptPassword(cryptPassword);
   }
   else
   {
@@ -243,13 +224,16 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
 /***********************************************************************\
 * Name   : closeArchiveFile
 * Purpose: close archive file
-* Input  : archiveInfo - archive info block
+* Input  : archiveInfo  - archive info block
+*          lastPartFlag - TRUE iff last archive part, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo)
+LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
+                              bool        lastPartFlag
+                             )
 {
   uint64 size;
   Errors error;
@@ -266,8 +250,8 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo)
     /* call back */
     error = archiveInfo->archiveNewFileFunction(archiveInfo->fileName,
                                                 size,
-                                                TRUE,
                                                 (archiveInfo->options->archivePartSize > 0)?archiveInfo->partNumber:-1,
+                                                lastPartFlag,
                                                 archiveInfo->archiveNewFileUserData
                                                );
     if (error != ERROR_NONE)
@@ -315,7 +299,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
      )
   {
     /* split needed -> close file */
-    closeArchiveFile(archiveInfo);
+    closeArchiveFile(archiveInfo,FALSE);
   }
 
   /* open file if needed */
@@ -491,7 +475,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMo
     archiveFileInfo->file.headerWrittenFlag = FALSE;
 
     /* close file */
-    closeArchiveFile(archiveFileInfo->archiveInfo);
+    closeArchiveFile(archiveFileInfo->archiveInfo,FALSE);
 
     /* reset compress (do it here because data if buffered and can be processed before a new file is opened) */
     Compress_reset(&archiveFileInfo->file.compressInfoData);
@@ -796,7 +780,7 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
 
   if (archiveInfo->fileOpenFlag)
   {
-    closeArchiveFile(archiveInfo);
+    closeArchiveFile(archiveInfo,TRUE);
   }
 
   return ERROR_NONE;
@@ -815,7 +799,10 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   assert(fileInfo != NULL);
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,
+                         &archiveInfo->options->cryptPassword
+                        )
+     )
   {
     return ERROR_NO_PASSWORD;
   }
@@ -981,7 +968,10 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   assert(fileInfo != NULL);
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,
+                         &archiveInfo->options->cryptPassword
+                        )
+     )
   {
     return ERROR_NO_PASSWORD;
   }
@@ -1130,7 +1120,10 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   assert(fileInfo != NULL);
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,
+                         &archiveInfo->options->cryptPassword
+                        )
+     )
   {
     return ERROR_NO_PASSWORD;
   }
@@ -1287,7 +1280,10 @@ Errors Archive_newSpecialEntry(ArchiveInfo     *archiveInfo,
   assert(fileInfo != NULL);
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  if (!initCryptPassword(archiveInfo->options->cryptAlgorithm,
+                         &archiveInfo->options->cryptPassword
+                        )
+     )
   {
     return ERROR_NO_PASSWORD;
   }
@@ -1566,7 +1562,10 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   archiveFileInfo->file.compressAlgorithm = archiveFileInfo->file.chunkFile.compressAlgorithm;
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,
+                         &archiveInfo->options->cryptPassword
+                        )
+     )
   {
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
@@ -1854,7 +1853,10 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->cryptAlgorithm = archiveFileInfo->directory.chunkDirectory.cryptAlgorithm;
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,
+                         &archiveInfo->options->cryptPassword
+                        )
+     )
   {
     Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
@@ -2037,7 +2039,10 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->cryptAlgorithm = archiveFileInfo->link.chunkLink.cryptAlgorithm;
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,
+                         &archiveInfo->options->cryptPassword
+                        )
+     )
   {
     Chunk_done(&archiveFileInfo->link.chunkInfoLink);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
@@ -2220,7 +2225,10 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->cryptAlgorithm = archiveFileInfo->special.chunkSpecial.cryptAlgorithm;
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,&archiveInfo->options->cryptPassword))
+  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,
+                         &archiveInfo->options->cryptPassword
+                        )
+     )
   {
     Chunk_done(&archiveFileInfo->special.chunkInfoSpecial);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);

@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.20 $
+# $Revision: 1.21 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -31,6 +31,39 @@ lappend auto_path $env(HOME)/sources/tcltk-lib
 # load packages
 package require tls
 package require scanx
+if {[info exists tk_version]} \
+{
+  if {[catch {package require Tix}]} \
+  {
+    # check if 'tix' is in any sub-directory of package path
+    set l ""
+    foreach z "$auto_oldpath $tcl_pkgPath" \
+    {
+      set l [lindex [glob -path $z/ -type f -nocomplain -- libTix*] 0]
+      if {$l!=""} { break }
+      set l [lindex [glob -path $z/ -type f -nocomplain -- libtix*] 0]
+      if {$l!=""} { break }
+    }
+    # output error info
+    if {$l!=""} \
+    {
+      puts "ERROR: Found '$l' (permission: [file attribute $l -permission]), but it seems not"
+      puts "to be usable or accessable. Please check if"
+      puts "  - version is correct,"
+      puts "  - file is accessable (permission 755 or more),"
+      puts "  - directory of file is included in search path of system linker."
+    } \
+    else \
+    {
+      puts "Package 'Tix' cannot be found (library libtix*, libTix* not found). Please check if"
+      puts "  - 'Tix*' package is installed in '$tcl_pkgPath',"
+      puts "  - '$tcl_pkgPath/Tix*' is accessable,"
+      puts "  - library libtix* or libTix* exists somewhere in '$tcl_pkgPath'."
+    }
+    exit 104
+  }
+  package require mclistbox
+}
 
 # ---------------------------- constants/variables ---------------------------
 
@@ -50,7 +83,16 @@ set barControlConfig(serverCAFileName)     "$env(HOME)/.bar/bar-ca.pem"
 set barControlConfig(jobListUpdateTime)    5000
 set barControlConfig(currentJobUpdateTime) 1000
 
-set guiMode 0
+# global settings
+set configFileName  ""
+set listFlag        0
+set startFlag       0
+set fullFlag        0
+set incrementalFlag 0
+set abortId         0
+set quitFlag        0
+set guiMode         0
+
 set passwordObfuscator [format "%c%c%c%c%c%c%c%c" [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}] [expr {int(rand()*256)}]]
 
 # command id counter
@@ -76,8 +118,7 @@ set barConfig(archivePartSizeFlag)             0
 set barConfig(archivePartSize)                 0
 set barConfig(maxTmpSizeFlag)                  0
 set barConfig(maxTmpSize)                      0
-set barConfig(storageMode)                     "FULL"
-set barConfig(createIncrementalListFlag)       0
+set barConfig(storageMode)                     "NORMAL"
 set barConfig(incrementalListFileName)         ""
 set barConfig(maxBandWidthFlag)                0
 set barConfig(maxBandWidth)                    0
@@ -156,6 +197,66 @@ set restoreExcludedListWidget ""
 # format of data in file list
 #  {<type> [NONE|INCLUDED|EXCLUDED] <directory open flag>}
 
+if {[info exists tk_version]} \
+{
+  # images
+  set images(folder) [image create photo -data \
+  {
+    R0lGODlhEAAMAKEDAAD//wAAAPD/gP///yH5BAEAAAMALAAAAAAQAAwAAAIgnINhyycvVFsB
+    QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==
+  }]
+  set images(folderOpen) [image create photo -data \
+  {
+    R0lGODlhEAAMAMIEAAD//wAAAP//AFtXRv///////////////yH5BAEAAAAALAAAAAAQAAwA
+    AAMtCBoc+nCJKVx8gVIbm/9cMAhjSZLhCa5jpr1VNrjw5Ih0XQFZXt++F2Ox+jwSADs=
+  }]
+  set images(folderIncluded) [image create photo -data \
+  {
+    R0lGODlhEAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAQAAwAAAIgnINhyycvVFsB
+    QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==
+  }]
+  set images(folderIncludedOpen) [image create photo -data \
+  {
+    R0lGODlhEAAMAMIEAAD//wAAAADNAFtXRv///////////////yH5BAEKAAAALAAAAAAQAAwA
+    AAMtCBoc+nCJKVx8gVIbm/9cMAhjSZLhCa5jpr1VNrjw5Ih0XQFZXt++F2Ox+jwSADs=
+  }]
+  set images(folderExcluded) [image create photo -data \
+  {
+    R0lGODlhEAAMAMIEAP8AAAD//wAAAPD/gP///////////////yH5BAEKAAEALAAAAAAQAAwA
+    AAMzCBDSEjCoqMC448lJFc5VxAiVU2rMVQ1rFglY5V0orMpYfVut3rKe2m+HGsY4G4eygUwA
+  }]
+  set images(file) [image create photo -data \
+  {
+    R0lGODlhDAAMAKEDAAD//wAAAP//8////yH5BAEAAAMALAAAAAAMAAwAAAIdXI43a+IfWHsO
+    rUBpnFls3HlXKHLZR6Kh2n3JOxQAOw==
+  }]
+  set images(fileIncluded) [image create photo -data \
+  {
+    R0lGODlhDAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAMAAwAAAIdXI43a+IfWHsO
+    rUBpnFls3HlXKHLZR6Kh2n3JOxQAOw==
+  }]
+  set images(fileExcluded) [image create photo -data \
+  {
+    R0lGODlhDAAMAMIEAP8AAAAAAAD/////8////////////////yH5BAEKAAIALAAAAAAMAAwA
+    AAMqCBDcISqOOUOEio4rbN7K04ERMIjBVFbCSJpnm5YZKpHirSoYrNEOhyIBADs=
+  }]
+  set images(link) [image create photo -data \
+  {
+    R0lGODlhDAAMAMIDAAD//wAAAP//8////////////////////yH5BAEKAAAALAAAAAAMAAwA
+    AAMmCLG88ErIGWAcS7IXBM4a5zXh1XSVSabdtwwCO75lS9dTHnNnAyQAOw==
+  }]
+  set images(linkIncluded) [image create photo -data \
+  {
+    R0lGODlhDAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAMAAwAAAIjXI43a+IfWBPH
+    oRVstVjvOCUZmFEJ1ZlfikBsyU2Pa4jJUAAAOw==
+  }]
+  set images(linkExcluded) [image create photo -data \
+  {
+    R0lGODlhDAAMAMIEAP8AAAAAAAD/////8////////////////yH5BAEKAAcALAAAAAAMAAwA
+    AAMuCBDccSqOOUOEis17bPbL0Q2R9IxEGQznmkZrS5YAK4IMLMIBMQOYGmWjcjQUCQA7
+  }]
+}
+
 # -------------------------------- functions ---------------------------------
 
 #***********************************************************************
@@ -181,15 +282,21 @@ proc internalError { args } \
 # Notes  : -
 #***********************************************************************
 
-proc Dialog:new { title } \
+proc Dialog:new { } \
 {
   set id "[info cmdcount]"
-  namespace eval "::dialog$id" \
-  {
-  }
+  namespace eval "::dialog$id" {}
 
   set handle ".dialog$id"
   catch {destroy $handle }
+
+  return $handle
+}
+
+proc Dialog:window { title } \
+{
+  set handle [Dialog:new]
+
   toplevel $handle
   wm title $handle $title
 
@@ -232,7 +339,7 @@ proc Dialog:addVariable { handle name value } \
   set id [string range $handle 7 end]
   namespace eval "::dialog$id" \
   "
-    variable $name \"$value\"
+    variable $name \"[string map {\" \\\"} $value]\"
   "
 }
 
@@ -245,7 +352,7 @@ proc Dialog:variable { handle name } \
 proc Dialog:set { handle name value } \
 {
   set id [string range $handle 7 end]
-  eval "set ::dialog$id\:\:$name \"$value\""
+  eval "set ::dialog$id\:\:$name \"[string map {\" \\\"} $value]\""
 }
 
 proc Dialog:get { handle name } \
@@ -271,7 +378,7 @@ proc Dialog:get { handle name } \
 
 proc Dialog:select { title message image buttonList {default 0} } \
 {
-  set handle [Dialog:new $title]
+  set handle [Dialog:window $title]
   Dialog:addVariable $handle result -1
 
   frame $handle.message
@@ -394,7 +501,7 @@ proc Dialog:confirm { message yesText noText } \
 
 proc Dialog:password { text verifyFlag } \
 {
-  set handle [Dialog:new "Enter password"]
+  set handle [Dialog:window "Enter password"]
   Dialog:addVariable $handle result   -1
   Dialog:addVariable $handle password ""
 
@@ -455,8 +562,8 @@ proc Dialog:password { text verifyFlag } \
       bind $handle.password.dataVerify <Return> "focus $handle.buttons.ok"
     }
 
-    grid columnconfigure $handle.password { 1 }
-  pack $handle.password -padx 2p -pady 2p
+    grid columnconfigure $handle.password { 1 } -weight 1
+  pack $handle.password -padx 2p -pady 2p -fill x
 
   frame $handle.buttons
     button $handle.buttons.ok -text "OK" -state disabled -command "Dialog:set $handle result 1; Dialog:close $handle"
@@ -518,6 +625,57 @@ proc Dialog:progressbar { path args } \
       update
     }
   } 
+}
+
+#***********************************************************************
+# Name   : Dialog:fileSelector
+# Purpose: file selector
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc Dialog:fileSelector { title fileName fileTypesList } \
+{
+  proc Dialog:fileSelector:selectFile { handle fileName } \
+  {
+    Dialog:set $handle result   1
+    Dialog:set $handle fileName $fileName
+    Dialog:close $handle
+  }
+
+  set handle [Dialog:new]
+  Dialog:addVariable $handle result   -1
+  Dialog:addVariable $handle fileName ""
+
+  tixExFileSelectDialog $handle -title "xx"
+  $handle configure -title $title -command "Dialog:fileSelector:selectFile $handle"
+  $handle subwidget fsbox configure -filetypes $fileTypesList -pattern [file tail $fileName]
+  if {[file dirname $fileName]!=""} { $handle subwidget fsbox configure -dir [file dirname $fileName] }
+  $handle popup
+
+  # fix missing scroll-wheel in directory list widget
+  bind $handle <Escape> "destroy $handle"
+  bind [[[$handle subwidget fsbox].lf.pane subwidget 1].dirlist subwidget hlist] <Button-4> \
+    "
+      set n \[expr {\[string is integer \"%D\"\]?\"%D\":5}\]
+      [[$handle subwidget fsbox].lf.pane subwidget 1].dirlist subwidget hlist yview scroll -\$n units
+    "
+  bind [[[$handle subwidget fsbox].lf.pane subwidget 1].dirlist subwidget hlist] <Button-5> \
+    "
+       set n \[expr {\[string is integer \"%D\"\]?\"%D\":5}\]
+       [[$handle subwidget fsbox].lf.pane subwidget 1].dirlist subwidget hlist yview scroll +\$n units
+    "
+
+  Dialog:show $handle
+
+  set result   [Dialog:get $handle result  ]
+  set fileName [Dialog:get $handle fileName]
+  Dialog:delete $handle
+  if {$result != 1} { return "" }
+
+  return $fileName
 }
 
 #***********************************************************************
@@ -685,6 +843,8 @@ proc printUsage { } \
   puts "         -p|--tls-port=<server port>  - server TLS (SSL) port number"
   puts "         --list                       - list jobs and quit"
   puts "         --start                      - add new job"
+  puts "         --full                       - create full archive (overwrite settings in config)"
+  puts "         --incremental                - create incremental archives (overwrite settings in config)"
   puts "         --abort=<id>                 - abort running job"
   puts "         --quit                       - quit"
   puts "         --password=<password>        - server password (use with care!)"
@@ -939,7 +1099,6 @@ proc memorySizeToBytes { s } \
 
   return $n
 }
-
 
 #***********************************************************************
 # Name   : BackupServer:connect
@@ -1243,6 +1402,7 @@ proc updateJobList { jobListWidget } \
     set n [lindex [$jobListWidget curselection] 0]
     set selectedId [lindex [lindex [$jobListWidget get $n $n] 0] 0]
   }
+  set yview [lindex [$jobListWidget yview] 0]
 
   # update list
   $jobListWidget delete 0 end
@@ -1251,10 +1411,11 @@ proc updateJobList { jobListWidget } \
   while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
   {
 #puts "1: $result"
-    scanx $result "%d %S %S %d %S %S %d %d" \
+    scanx $result "%d %S %S %s %d %S %S %d %d" \
       id \
       name \
       state \
+      type \
       archivePartSize \
       compressAlgorithm \
       cryptAlgorithm \
@@ -1271,6 +1432,7 @@ proc updateJobList { jobListWidget } \
       $id \
       $name \
       $state \
+      $type \
       [expr {($archivePartSize > 0)?[formatByteSize $archivePartSize]:"-"}] \
       $compressAlgorithm \
       $cryptAlgorithm \
@@ -1302,6 +1464,7 @@ proc updateJobList { jobListWidget } \
       $jobListWidget selection set 0 0 
     }
   }
+  $jobListWidget yview moveto $yview
 
   set jobListTimerId [after $barControlConfig(jobListUpdateTime) "updateJobList $jobListWidget"]
 }
@@ -1328,8 +1491,9 @@ proc updateCurrentJob { } \
     if {[BackupServer:readResult $commandId completeFlag errorCode result] && ($errorCode == 0)} \
     {
 #puts "2: $result"
-      scanx $result "%S %lu %lu %lu %lu %lu %lu %lu %lu %f %f %f %lu %f %S %lu %lu %S %lu %lu %d %f %d" \
+      scanx $result "%S %S %lu %lu %lu %lu %lu %lu %lu %lu %f %f %f %lu %f %S %lu %lu %S %lu %lu %d %f %d" \
         state \
+        currentJob(error) \
         currentJob(doneFiles) \
         currentJob(doneBytes) \
         currentJob(totalFiles) \
@@ -1353,6 +1517,7 @@ proc updateCurrentJob { } \
         currentJob(volumeProgress) \
         currentJob(requestedVolumeNumber)
 #puts "2: ok"
+      if {$currentJob(error) != ""} { set currentJob(message) $currentJob(error) }
 
       if     {$currentJob(doneBytes)            > 1024*1024*1024} { set currentJob(doneBytesShort)             [format "%.1f" [expr {double($currentJob(doneBytes)            )/(1024*1024*1024)}]]; set currentJob(doneBytesShortUnit)             "GBytes"   } \
       elseif {$currentJob(doneBytes)            >      1024*1024} { set currentJob(doneBytesShort)             [format "%.1f" [expr {double($currentJob(doneBytes)            )/(     1024*1024)}]]; set currentJob(doneBytesShortUnit)             "MBytes"   } \
@@ -2762,8 +2927,7 @@ proc resetBARConfig {} \
   set barConfig(archivePartSize)           0
   set barConfig(maxTmpSizeFlag)            0
   set barConfig(maxTmpSize)                0
-  set barConfig(storageMode)               "FULL"
-  set barConfig(createIncrementalListFlag) 0
+  set barConfig(storageMode)               "NORMAL"
   set barConfig(incrementalListFileName)   ""
   set barConfig(maxBandWidthFlag)          0
   set barConfig(maxBandWidth)              0
@@ -2771,7 +2935,7 @@ proc resetBARConfig {} \
   set barConfig(sshPort)                   0
   set barConfig(compressAlgorithm)         "bzip9"
   set barConfig(cryptAlgorithm)            "none"
-  set barConfig(cryptPasswordMode)         "NONE"
+  set barConfig(cryptPasswordMode)         "DEFAULT"
   set barConfig(cryptPassword)             ""
   set barConfig(cryptPasswordVerify)       ""
   clearConfigModify
@@ -2880,10 +3044,7 @@ proc loadBARConfig { configFileName } \
   # get file name
   if {$configFileName == ""} \
   {
-    set old_tk_strictMotif $tk_strictMotif
-    set tk_strictMotif 0
-    set configFileName [tk_getOpenFile -title "Load configuration" -initialdir "" -filetypes {{"BAR config" "*.cfg"} {"all" "*"}} -parent . -defaultextension ".cfg"]
-    set tk_strictMotif $old_tk_strictMotif
+    set configFileName [Dialog:fileSelector "Load configuration" "" {{"*.cfg" "BAR config"} {"*" "all"}}]
     if {$configFileName == ""} { return }
   }
 
@@ -2965,7 +3126,7 @@ proc loadBARConfig { configFileName } \
       } \
       else \
       {
-        set barConfig(storageType) "FILESYSTEM"
+        set barConfig(storageType)      "FILESYSTEM"
         set barConfig(storageLoginName) ""
         set barConfig(storageHostName)  ""
         set barConfig(storageFileName)  $s
@@ -2992,6 +3153,15 @@ proc loadBARConfig { configFileName } \
       set barConfig(maxTmpSize)     $s
       continue
     }
+    if {[scanx $line "full = %S" s] == 1} \
+    {
+      # incremental = [yes|no]
+      if {[stringToBoolean $s]} \
+      {
+        set barConfig(storageMode) "FULL"
+      }
+      continue
+    }
     if {[scanx $line "incremental = %S" s] == 1} \
     {
       # incremental = [yes|no]
@@ -2999,12 +3169,6 @@ proc loadBARConfig { configFileName } \
       {
         set barConfig(storageMode) "INCREMENTAL"
       }
-      continue
-    }
-    if {[scanx $line "create-incremental-list = %s" s] == 1} \
-    {
-      # create-incremental-list = [yes|no]
-      set barConfig(createIncrementalListFlag) [stringToBoolean $s]
       continue
     }
     if {[scanx $line "incremental-list-file = %S" s] == 1} \
@@ -3053,8 +3217,7 @@ proc loadBARConfig { configFileName } \
     if {[scanx $line "crypt-password-mode = %S" s] == 1} \
     {
       # crypt-password-mode = none|default|ask|config
-      if     {$s == "none"   } { set barConfig(cryptPasswordMode) "NONE"    } \
-      elseif {$s == "default"} { set barConfig(cryptPasswordMode) "DEFAULT" } \
+      if     {$s == "default"} { set barConfig(cryptPasswordMode) "DEFAULT" } \
       elseif {$s == "ask"    } { set barConfig(cryptPasswordMode) "ASK"     } \
       elseif {$s == "config" } { set barConfig(cryptPasswordMode) "CONFIG"  } \
       else                     { set barConfig(cryptPasswordMode) "NONE"    }
@@ -3085,7 +3248,7 @@ proc loadBARConfig { configFileName } \
         {
           set directoryName [file dirname $fileName]
           set directoryItemPath [fileNameToItemPath $backupFilesTreeWidget "" $directoryName]
-          openCloseBackupDirectory $directoryItemPath
+          catch {openCloseBackupDirectory $directoryItemPath}
         }
 
         # set state of entry to "included"
@@ -3129,7 +3292,7 @@ proc loadBARConfig { configFileName } \
       set barConfig(errorCorrectionCodesFlag) [stringToBoolean $s]
       continue
     }
-puts "unknown $line"
+puts "Config $configFileName: unknown '$line'"
   }
 
   # close file
@@ -3137,7 +3300,6 @@ puts "unknown $line"
 
   if {$guiMode} \
   {
-#    backupUpdateFileTreeStates
     updateFileTreeStates $backupFilesTreeWidget 0
     updateFileTreeStates $restoreFilesTreeWidget 1
   }
@@ -3166,10 +3328,7 @@ proc saveBARConfig { configFileName } \
   }
   if {$configFileName == ""} \
   {
-    set old_tk_strictMotif $tk_strictMotif
-    set tk_strictMotif 0
-    set configFileName [tk_getSaveFile -title "Save configuration" -initialfile "" -filetypes {{"BAR config" "*.cfg"} {"all" "*"}} -parent . -defaultextension ".cfg"]
-    set tk_strictMotif $old_tk_strictMotif
+    set configFileName [Dialog:fileSelector "Save configuration" "" {{"*.cfg" "BAR config"} {"*" "all"}}]
     if {$configFileName == ""} { return }
   }
 
@@ -3225,18 +3384,12 @@ proc saveBARConfig { configFileName } \
   {
     puts $handle "max-tmp-size = $barConfig(maxTmpSize)"
   }
-  if {$barConfig(storageMode) == "INCREMENTAL"} \
+  switch $barConfig(storageMode) \
   {
-    puts $handle "incremental = yes"
+    "FULL"        { puts $handle "full = yes" }
+    "INCREMENTAL" { puts $handle "incremental = yes" }
   }
-  if {$barConfig(createIncrementalListFlag)} \
-  {
-    puts $handle "create-incremental-list = yes"
-  }
-  if {($barConfig(storageMode) == "INCREMENTAL") || $barConfig(createIncrementalListFlag)} \
-  {
-    puts $handle "incremental-list-file = $barConfig(incrementalListFileName)"
-  }
+  puts $handle "incremental-list-file = $barConfig(incrementalListFileName)"
   if {$barConfig(maxBandWidthFlag)} \
   {
     puts $handle "max-band-width = $barConfig(maxBandWidth)"
@@ -3248,7 +3401,6 @@ proc saveBARConfig { configFileName } \
   puts $handle "crypt-algorithm = [escapeString $barConfig(cryptAlgorithm)]"
   switch $barConfig(cryptPasswordMode) \
   {
-    "NONE"    { puts $handle "crypt-password-mode = none"    }
     "DEFAULT" { puts $handle "crypt-password-mode = default" }
     "ASK"     { puts $handle "crypt-password-mode = ask"     }
     "CONFIG"  { puts $handle "crypt-password-mode = config"  }
@@ -3331,7 +3483,7 @@ proc addIncludedPattern { pattern } \
   if {$pattern == ""} \
   {
     # dialog
-    set handle [Dialog:new "Add included pattern"]
+    set handle [Dialog:window "Add included pattern"]
     Dialog:addVariable $handle result  -1
     Dialog:addVariable $handle pattern ""
 
@@ -3355,8 +3507,8 @@ proc addIncludedPattern { pattern } \
       bind $handle.buttons.cancel <Return> "$handle.buttons.cancel invoke"
     grid $handle.buttons -row 1 -column 0 -sticky "we"
 
-    grid rowconfigure $handle    0 -weight 1
-    grid columnconfigure $handle 0 -weight 1
+    grid rowconfigure $handle    { 0 } -weight 1
+    grid columnconfigure $handle { 0 } -weight 1
 
     # bindings
     bind $handle <KeyPress-Escape> "$handle.buttons.cancel invoke"
@@ -3429,7 +3581,7 @@ proc addExcludedPattern { pattern } \
   if {$pattern == ""} \
   {
     # dialog
-    set handle [Dialog:new "Add excluded pattern"]
+    set handle [Dialog:window "Add excluded pattern"]
     Dialog:addVariable $handle result  -1
     Dialog:addVariable $handle pattern ""
 
@@ -3453,8 +3605,8 @@ proc addExcludedPattern { pattern } \
       bind $handle.buttons.cancel <Return> "$handle.buttons.cancel invoke"
     grid $handle.buttons -row 1 -column 0 -sticky "we"
 
-    grid rowconfigure $handle    0 -weight 1
-    grid columnconfigure $handle 0 -weight 1
+    grid rowconfigure $handle    { 0 } -weight 1
+    grid columnconfigure $handle { 0 } -weight 1
 
     # bindings
     bind $handle <KeyPress-Escape> "$handle.buttons.cancel invoke"
@@ -3511,6 +3663,305 @@ proc remExcludedPattern { pattern } \
   }
 }
 
+# ----------------------------------------------------------------------
+
+#***********************************************************************
+# Name   : editStorageFileName
+# Purpose: edit storage file name
+# Input  : fileName - file name
+# Output : -
+# Return : file name or ""
+# Notes  : -
+#***********************************************************************
+
+proc editStorageFileName { fileName } \
+{
+  set font "-*-helvetica-*-r-*-*-18-*-*-*-*-*-*-*"
+
+  set partList \
+  {
+    {0  1 "#"     "part number 1 digit"            "1"}
+    {0  2 "##"    "part number 2 digit"            "12"}
+    {0  3 "###"   "part number 3 digit"            "123"}
+    {0  4 "####"  "part number 4 digit"            "1234"}
+
+    {0  6 "%type" "archive type: full,incremental" "full"}
+    {0  7 "%last" "'-last' if last archive part"   "-last"}
+
+    {1  1 "%d"    "day 01..31"                     "24"}
+    {1  2 "%j"    "day of year 001..366"           "354"}
+    {1  3 "%m"    "month 01..12"                   "12"}
+    {1  4 "%b"    "month name"                     "Dec"}
+    {1  5 "%B"    "full month name"                "December"}
+    {1  6 "%H"    "hour 00..23"                    "11"}
+    {1  7 "%I"    "hour 00..12"                    "23"}
+    {1  8 "%M"    "minute 00..59"                  "55"}
+    {1  9 "%p"    "'AM' or 'PM'"                   "PM"}
+    {1 10 "%P"    "'am' or 'pm'"                   "pm"}
+    {1 11 "%a"    "week day name"                  "Mon"}
+    {1 12 "%A"    "full week day name"             "Monday"}
+    {1 13 "%u"    "day of week 1..7"               "1"}
+    {1 14 "%w"    "day of week 0..6"               "1"}
+    {1 15 "%U"    "week number 1..52"              "51"}
+    {1 16 "%C"    "century two digit"              "07"}
+    {1 17 "%Y"    "year four digit"                "2007"}
+    {1 18 "%S"    "seconds since 1.1.1970 00:00"   "1198508100"}
+    {1 19 "%Z"    "time-zone abbreviation"         "JSP"}
+
+    {2  1 "%%"    "%"                              "%"}
+  }
+
+  # add part to part list
+  proc addPart { handle widget column row part description } \
+  {
+    label $handle.parts.p$row$column -text $part -borderwidth 1 -background grey -relief raised
+    grid $handle.parts.p$row$column -row $row -column [expr {$column*2+0}] -sticky "w"
+    label $handle.parts.d$row$column -text $description
+    grid $handle.parts.d$row$column -row $row -column [expr {$column*2+1}] -sticky "w"
+    bind $handle.parts.p$row$column <Button-1> \
+    "
+      $handle.parts.p$row$column configure -background green
+      set selectedId \[Dialog:get $handle selectedId\]
+      if {\$selectedId != \"\"} { $widget itemconfigure \$selectedId -outline \"\" }
+      Dialog:set $handle selectedIndex \"\"
+      Dialog:set $handle selectedId    \"\"
+      Dialog:set $handle newPart       [string map {% %%} $part]
+      Dialog:set $handle newPartWidget $handle.parts.p$row$column
+    "
+  }
+
+  # update file name part list
+  proc updateList { handle widget fileNamePartList } \
+  {
+    set partList [Dialog:get $handle partList]
+    set font     [Dialog:get $handle font]
+
+    proc expandPart { partList part } \
+    {
+      foreach z $partList \
+      {
+        if {[lindex $z 2]==$part} { return [lindex $z 4] }
+      }
+      return $part
+    }
+
+    $widget delete all
+    Dialog:set $handle example ""
+    set i 0
+    set x 1
+    foreach part $fileNamePartList \
+    {
+      if {$x>1} \
+      {
+        set separatorId [$widget create rectangle $x 2 [expr {$x+6}] 20 -fill lightblue -outline black -tags [list -$i]]
+        incr x 8
+      }
+      set textId [$widget create text $x 10 -text $part -anchor w -fill black -font $font]
+      set textWidth [font measure [$widget itemcget $textId -font] $part]
+      set rectangleId [$widget create rectangle $x 1 [expr {$x+$textWidth-1}] 19 -fill "" -outline "" -tags [list $i]]
+      $widget raise $textId
+
+      $widget bind $textId <Button-1> \
+      "
+        set selectedId \[Dialog:get $handle selectedId\]
+        if {\$selectedId != \"\"} { $widget itemconfigure \$selectedId -outline \"\" }
+        $widget itemconfigure $rectangleId -outline red
+        Dialog:set $handle selectedIndex $i
+        Dialog:set $handle selectedId    $rectangleId
+      "
+
+      incr x [expr {$textWidth+1}]
+      incr i
+
+      set example [Dialog:get $handle example]
+      append example [expandPart $partList $part]
+      Dialog:set $handle example $example
+    }
+    set separatorId [$widget create rectangle $x 2 [expr {$x+6}] 20 -fill lightblue -outline black -tags [list -$i]]
+
+    Dialog:set $handle selectedIndex ""
+    Dialog:set $handle selectedId    ""
+  }
+
+  set handle [Dialog:window "Edit storage file name"]
+  Dialog:addVariable $handle result           -1
+  Dialog:addVariable $handle partList         $partList
+  Dialog:addVariable $handle font             $font
+  Dialog:addVariable $handle fileNamePartList {}
+  Dialog:addVariable $handle newPart          ""
+  Dialog:addVariable $handle newPartWidget    ""
+  Dialog:addVariable $handle selectedIndex    ""
+  Dialog:addVariable $handle selectedId       ""
+
+  frame $handle.edit
+    label $handle.edit.dataTitle -text "File name:"
+    grid $handle.edit.dataTitle -row 0 -column 0 -sticky "w"
+    canvas $handle.edit.data -width 400 -height 20
+    grid $handle.edit.data -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
+
+    label $handle.edit.exampleTitle -text "Example:"
+    grid $handle.edit.exampleTitle -row 1 -column 0 -sticky "w"
+    entry $handle.edit.example -textvariable [Dialog:variable $handle example] -state readonly
+    grid $handle.edit.example -row 1 -column 1 -sticky "we"
+
+    grid columnconfigure $handle.edit { 1 } -weight 1
+  pack $handle.edit -fill x -padx 2p -pady 2p
+
+  frame $handle.parts
+    label $handle.parts.textTitle -text "Text" -borderwidth 1 -background grey -relief raised
+    grid $handle.parts.textTitle -row 0 -column 0 -sticky "w"
+    entry $handle.parts.text -background white
+    grid $handle.parts.text -row 0 -column 1 -columnspan 5 -sticky "we"
+    bind $handle.parts.textTitle <Button-1> \
+    "
+      $handle.parts.textTitle configure -background green
+      Dialog:set $handle newPart       \[string map {%% %%%%} \[$handle.parts.text get\]\]
+      Dialog:set $handle newPartWidget $handle.parts.textTitle
+    "
+
+    foreach part $partList \
+    {
+      addPart \
+        $handle \
+        $handle.edit.data \
+        [lindex $part 0] \
+        [lindex $part 1] \
+        [lindex $part 2] \
+        [lindex $part 3]
+    }
+    grid columnconfigure $handle.parts { 6 } -weight 1
+  pack $handle.parts -fill both -expand yes -padx 2p -pady 2p
+
+  frame $handle.buttons
+    button $handle.buttons.ok -text "OK" -command "Dialog:set $handle result 1; Dialog:close $handle"
+    pack $handle.buttons.ok -side left -padx 2p
+    bind $handle.buttons.ok <Return> "$handle.buttons.ok invoke"
+    button $handle.buttons.cancel -text "Cancel" -command "Dialog:set $handle result 0; Dialog:close $handle"
+    pack $handle.buttons.cancel -side right -padx 2p
+    bind $handle.buttons.cancel <Return> "$handle.buttons.cancel invoke"
+  pack $handle.buttons -side bottom -fill x -padx 2p -pady 2p
+
+  bind $handle <Escape> "$handle.buttons.cancel invoke"
+  bind $handle <BackSpace> "event generate $handle <<Event_delete>>"
+  bind $handle <Delete> "event generate $handle <<Event_delete>>"
+
+  proc editStorageFileName:motion { handle widget x y } \
+  {
+    set newPart [Dialog:get $handle newPart]
+    if {$newPart != ""} \
+    {
+      if {[winfo containing $x $y]==$widget} \
+      {
+        set wx [expr {[$widget canvasx $x]-[winfo rootx $widget]}]
+        set wy [expr {[$widget canvasx $y]-[winfo rooty $widget]}]
+        set selectedId [Dialog:get $handle selectedId]
+        set ids [$widget find overlapping $wx $wy $wx $wy]
+        foreach id $ids \
+        {
+          if {[$widget type $id]=="rectangle"} \
+          {
+            if {($selectedId!="") && ("$id"!="$selectedId")} \
+            {
+              $widget itemconfigure $selectedId -fill ""
+            }
+            $widget itemconfigure $id -fill green
+            Dialog:set $handle selectedId $id
+          }
+        }
+      } \
+      else \
+      {
+        set selectedId [Dialog:get $handle selectedId]
+        if {$selectedId!=""} \
+        {
+          $widget itemconfigure $selectedId -fill ""
+        }
+        Dialog:set $handle selectedId ""
+      }
+    }
+  }
+  proc editStorageFileName:drop { handle widget x y } \
+  {
+    set newPart       [Dialog:get $handle newPart]
+    set newPartWidget [Dialog:get $handle newPartWidget]
+    set selectedId    [Dialog:get $handle selectedId]
+    if {$newPart != ""} \
+    {
+      if {$selectedId != ""} \
+      {
+        set fileNamePartList [Dialog:get $handle fileNamePartList]
+#puts "fileNamePartList1=$fileNamePartList"
+
+        set index [$widget gettags $selectedId]
+        if {$index >= 0} \
+        {
+          set fileNamePartList [lreplace $fileNamePartList $index $index $newPart]
+        } \
+        else \
+        {
+          set fileNamePartList [linsert $fileNamePartList [expr {abs($index)}] $newPart]
+        }
+        Dialog:set $handle fileNamePartList $fileNamePartList
+        updateList $handle $handle.edit.data $fileNamePartList
+
+        Dialog:set $handle selectedIndex ""
+        Dialog:set $handle selectedId    ""
+      }
+      Dialog:set $handle newPart    ""
+    }
+    if {$newPartWidget!=""} \
+    {
+      $newPartWidget configure -background grey
+      Dialog:set $handle newPartWidget ""
+    }
+  }
+  proc editStorageFileName:delete { handle widget } \
+  {
+    set selectedIndex [Dialog:get $handle selectedIndex]
+    if {$selectedIndex!=""} \
+    {
+puts "selectedIndex=$selectedIndex v=[Dialog:get $handle fileNamePartList]"
+      set fileNamePartList [lreplace [Dialog:get $handle fileNamePartList] $selectedIndex $selectedIndex]
+puts "n=$fileNamePartList"
+      Dialog:set $handle fileNamePartList $fileNamePartList
+      updateList $handle $handle.edit.data $fileNamePartList
+    }
+    Dialog:set $handle newPart       ""
+    Dialog:set $handle newPartWidget ""
+    Dialog:set $handle selectedIndex ""
+    Dialog:set $handle selectedId    ""
+  }
+  bind $handle <B1-Motion>       "catch {editStorageFileName:motion $handle $handle.edit.data %X %Y}"
+  bind $handle <ButtonRelease-1> "catch {editStorageFileName:drop   $handle $handle.edit.data %X %Y}"
+  bind $handle <<Event_delete>>  "puts 1; catch {editStorageFileName:delete $handle $handle.edit.data}"
+
+  focus $handle.parts.text
+
+  # parse file name
+  set fileNamePartList {}
+  set s $fileName
+  while {[regexp {([^%#]*)(%\w+|#+)(.*)} $s * prefix part postfix]} \
+  {
+    if {$prefix != ""} { lappend fileNamePartList $prefix }
+    lappend fileNamePartList $part
+    set s $postfix
+  }
+  if {$s != ""} { lappend fileNamePartList $s }
+  Dialog:set $handle fileNamePartList $fileNamePartList
+  updateList $handle $handle.edit.data $fileNamePartList
+
+  Dialog:show $handle
+
+  set result           [Dialog:get $handle result          ]
+  set fileNamePartList [Dialog:get $handle fileNamePartList]
+  Dialog:delete $handle
+  if {$result != 1} { return "" }
+
+  return [join $fileNamePartList ""]
+}
+
+# ----------------------------------------------------------------------
+
 #***********************************************************************
 # Name   : addBackupJob
 # Purpose: add new backup job
@@ -3522,7 +3973,7 @@ proc remExcludedPattern { pattern } \
 
 proc addBackupJob { jobListWidget } \
 {
-  global backupIncludedListWidget backupExcludedListWidget barConfig currentJob guiMode
+  global backupIncludedListWidget backupExcludedListWidget barConfig currentJob fullFlag incrementalFlag guiMode
 
   set errorCode 0
   set errorText ""
@@ -3544,12 +3995,22 @@ proc addBackupJob { jobListWidget } \
 
   # set other parameters
   BackupServer:executeCommand errorCode errorText "SET" "archive-part-size"       $barConfig(archivePartSize)
-  if {$barConfig(storageMode) == "INCREMENTAL"} \
+  if       {$fullFlag} \
   {
-    BackupServer:executeCommand errorCode errorText "SET" "incremental" 1
+     BackupServer:executeCommand errorCode errorText "SET" "archive-type" "full"
+  } elseif {$incrementalFlag} \
+  {
+     BackupServer:executeCommand errorCode errorText "SET" "archive-type" "incremental"
+  } \
+  else \
+  {
+    switch $barConfig(storageMode) \
+    {
+      "FULL"        { BackupServer:executeCommand errorCode errorText "SET" "archive-type" "full"        }
+      "INCREMENTAL" { BackupServer:executeCommand errorCode errorText "SET" "archive-type" "incremental" }
+    }
   }
-  BackupServer:executeCommand errorCode errorText "SET" "create-incremental-list" $barConfig(createIncrementalListFlag)
-  if {($barConfig(storageMode) == "INCREMENTAL") || $barConfig(createIncrementalListFlag)} \
+  if {$barConfig(incrementalListFileName) != ""} \
   {
     BackupServer:executeCommand errorCode errorText "SET" "incremental-list-file" $barConfig(incrementalListFileName)
   }
@@ -3560,6 +4021,9 @@ proc addBackupJob { jobListWidget } \
   BackupServer:executeCommand errorCode errorText "SET" "crypt-algorithm"         $barConfig(cryptAlgorithm)
   switch $barConfig(cryptPasswordMode) \
   {
+    "DEFAULT" \
+    {
+    }
     "ASK" \
     {
       set password [getPassword "Crypt password" 1 0]
@@ -3786,12 +4250,7 @@ proc abortJob { jobListWidget id } \
 loadBARControlConfig "$env(HOME)/.bar/barcontrol.cfg"
 
 # parse command line arguments
-set configFileName ""
-set listFlag       0
-set startFlag      0
-set abortId        0
-set quitFlag       0
-set guiMode        1
+set guiMode 1
 set z 0
 while {$z<[llength $argv]} \
 {
@@ -3882,7 +4341,14 @@ while {$z<[llength $argv]} \
     "^--start$" \
     {
       set startFlag 1
-      set guiMode 0
+    }
+    "^--full$" \
+    {
+      set fullFlag 1
+    }
+    "^--incremental$" \
+    {
+      set incrementalFlag 1
     }
     "^--abort$" \
     {
@@ -4041,98 +4507,22 @@ if {![info exists tk_version] && !$guiMode} \
 # run in GUI mode
 if {![info exists tk_version]} \
 {
-  catch {[eval "exec wish $argv0 -- [join $argv] >@stdout 2>@stderr"]}
-  exit 0
-}
-
-# load GUI packages
-if {[catch {package require Tix}]} \
-{
-  # check if 'tix' is in any sub-directory of package path
-  set l ""
-  foreach z "$auto_oldpath $tcl_pkgPath" \
+  if {[info exists env(DISPLAY)] && ($env(DISPLAY) != "")} \
   {
-    set l [lindex [glob -path $z/ -type f -nocomplain -- libTix*] 0]
-    if {$l!=""} { break }
-    set l [lindex [glob -path $z/ -type f -nocomplain -- libtix*] 0]
-    if {$l!=""} { break }
-  }
-  # output error info
-  if {$l!=""} \
-  {
-    puts "ERROR: Found '$l' (permission: [file attribute $l -permission]), but it seems not"
-    puts "to be usable or accessable. Please check if"
-    puts "  - version is correct,"
-    puts "  - file is accessable (permission 755 or more),"
-    puts "  - directory of file is included in search path of system linker."
+    if {[catch {[eval "exec wish $argv0 -- [join $argv] >@stdout 2>@stderr"]}]} \
+    {
+      exit 1
+    }
   } \
   else \
   {
-    puts "Package 'Tix' cannot be found (library libtix*, libTix* not found). Please check if"
-    puts "  - 'Tix*' package is installed in '$tcl_pkgPath',"
-    puts "  - '$tcl_pkgPath/Tix*' is accessable,"
-    puts "  - library libtix* or libTix* exists somewhere in '$tcl_pkgPath'."
+    if {[catch {[eval "exec wish $argv0 -display :0.0 -- [join $argv] >@stdout 2>@stderr"]}]} \
+    {
+      exit 1
+    }
   }
-  exit 104
+  exit 0
 }
-package require mclistbox
-
-# images
-set images(folder) [image create photo -data \
-{
-  R0lGODlhEAAMAKEDAAD//wAAAPD/gP///yH5BAEAAAMALAAAAAAQAAwAAAIgnINhyycvVFsB
-  QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==
-}]
-set images(folderOpen) [image create photo -data \
-{
-  R0lGODlhEAAMAMIEAAD//wAAAP//AFtXRv///////////////yH5BAEAAAAALAAAAAAQAAwA
-  AAMtCBoc+nCJKVx8gVIbm/9cMAhjSZLhCa5jpr1VNrjw5Ih0XQFZXt++F2Ox+jwSADs=
-}]
-set images(folderIncluded) [image create photo -data \
-{
-  R0lGODlhEAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAQAAwAAAIgnINhyycvVFsB
-  QtmS3rjaH1Hg141WaT5ouprt2HHcUgAAOw==
-}]
-set images(folderIncludedOpen) [image create photo -data \
-{
-  R0lGODlhEAAMAMIEAAD//wAAAADNAFtXRv///////////////yH5BAEKAAAALAAAAAAQAAwA
-  AAMtCBoc+nCJKVx8gVIbm/9cMAhjSZLhCa5jpr1VNrjw5Ih0XQFZXt++F2Ox+jwSADs=
-}]
-set images(folderExcluded) [image create photo -data \
-{
-  R0lGODlhEAAMAMIEAP8AAAD//wAAAPD/gP///////////////yH5BAEKAAEALAAAAAAQAAwA
-  AAMzCBDSEjCoqMC448lJFc5VxAiVU2rMVQ1rFglY5V0orMpYfVut3rKe2m+HGsY4G4eygUwA
-}]
-set images(file) [image create photo -data \
-{
-  R0lGODlhDAAMAKEDAAD//wAAAP//8////yH5BAEAAAMALAAAAAAMAAwAAAIdXI43a+IfWHsO
-  rUBpnFls3HlXKHLZR6Kh2n3JOxQAOw==
-}]
-set images(fileIncluded) [image create photo -data \
-{
-  R0lGODlhDAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAMAAwAAAIdXI43a+IfWHsO
-  rUBpnFls3HlXKHLZR6Kh2n3JOxQAOw==
-}]
-set images(fileExcluded) [image create photo -data \
-{
-  R0lGODlhDAAMAMIEAP8AAAAAAAD/////8////////////////yH5BAEKAAIALAAAAAAMAAwA
-  AAMqCBDcISqOOUOEio4rbN7K04ERMIjBVFbCSJpnm5YZKpHirSoYrNEOhyIBADs=
-}]
-set images(link) [image create photo -data \
-{
-  R0lGODlhDAAMAMIDAAD//wAAAP//8////////////////////yH5BAEKAAAALAAAAAAMAAwA
-  AAMmCLG88ErIGWAcS7IXBM4a5zXh1XSVSabdtwwCO75lS9dTHnNnAyQAOw==
-}]
-set images(linkIncluded) [image create photo -data \
-{
-  R0lGODlhDAAMAKEDAAD//wAAAADNAP///yH5BAEKAAMALAAAAAAMAAwAAAIjXI43a+IfWBPH
-  oRVstVjvOCUZmFEJ1ZlfikBsyU2Pa4jJUAAAOw==
-}]
-set images(linkExcluded) [image create photo -data \
-{
-  R0lGODlhDAAMAMIEAP8AAAAAAAD/////8////////////////yH5BAEKAAcALAAAAAAMAAwA
-  AAMuCBDccSqOOUOEis17bPbL0Q2R9IxEGQznmkZrS5YAK4IMLMIBMQOYGmWjcjQUCQA7
-}]
 
 # get password
 if {$barControlConfig(serverPassword) == ""} \
@@ -4380,9 +4770,10 @@ frame .jobs
 
   frame .jobs.list
     mclistbox::mclistbox .jobs.list.data -height 1 -bg white -labelanchor w -selectmode single -xscrollcommand ".jobs.list.xscroll set" -yscrollcommand ".jobs.list.yscroll set"
-    .jobs.list.data column add id                -label "Id"             -width 5
+    .jobs.list.data column add id                -label "Nb."            -width 5
     .jobs.list.data column add name              -label "Name"           -width 12
     .jobs.list.data column add state             -label "State"          -width 16
+    .jobs.list.data column add type              -label "Type"           -width 10
     .jobs.list.data column add archivePartSize   -label "Part size"      -width 8
     .jobs.list.data column add compressAlgortihm -label "Compress"       -width 10
     .jobs.list.data column add cryptAlgorithm    -label "Crypt"          -width 10
@@ -4647,8 +5038,6 @@ frame .backup
     label .backup.storage.cryptPasswordTitle -text "Password:"
     grid .backup.storage.cryptPasswordTitle -row 4 -column 0 -sticky "nw" 
     frame .backup.storage.cryptPassword
-      radiobutton .backup.storage.cryptPassword.modeNone -text "none" -variable barConfig(cryptPasswordMode) -value "NONE"
-      grid .backup.storage.cryptPassword.modeNone -row 0 -column 0 -sticky "w"
       radiobutton .backup.storage.cryptPassword.modeDefault -text "default" -variable barConfig(cryptPasswordMode) -value "DEFAULT"
       grid .backup.storage.cryptPassword.modeDefault -row 0 -column 1 -sticky "w"
       radiobutton .backup.storage.cryptPassword.modeAsk -text "ask" -variable barConfig(cryptPasswordMode) -value "ASK"
@@ -4668,33 +5057,61 @@ frame .backup
     label .backup.storage.modeTitle -text "Mode:"
     grid .backup.storage.modeTitle -row 5 -column 0 -sticky "nw" 
     frame .backup.storage.mode
-      radiobutton .backup.storage.mode.full -text "full" -variable barConfig(storageMode) -value FULL
-      grid .backup.storage.mode.full -row 0 -column 0 -sticky "w"
-      radiobutton .backup.storage.mode.incremental -text "incremental" -variable barConfig(storageMode) -value INCREMENTAL
-      grid .backup.storage.mode.incremental -row 0 -column 1 -sticky "w"
-      checkbutton .backup.storage.mode.createIncrementalList -text "create list" -variable barConfig(createIncrementalListFlag)
-      grid .backup.storage.mode.createIncrementalList -row 0 -column 2 -sticky "w"
+      radiobutton .backup.storage.mode.normal -text "normal" -variable barConfig(storageMode) -value "NORMAL"
+      grid .backup.storage.mode.normal -row 0 -column 0 -sticky "w"
+      radiobutton .backup.storage.mode.full -text "full" -variable barConfig(storageMode) -value "FULL"
+      grid .backup.storage.mode.full -row 0 -column 1 -sticky "w"
+      radiobutton .backup.storage.mode.incremental -text "incremental" -variable barConfig(storageMode) -value "INCREMENTAL"
+      grid .backup.storage.mode.incremental -row 0 -column 3 -sticky "w"
       entry .backup.storage.mode.incrementalListFileName -textvariable barConfig(incrementalListFileName) -bg white
-      grid .backup.storage.mode.incrementalListFileName -row 0 -column 3 -sticky "we"
+      grid .backup.storage.mode.incrementalListFileName -row 0 -column 4 -sticky "we"
       button .backup.storage.mode.select -image $images(folder) -command \
       "
-        set old_tk_strictMotif \$tk_strictMotif
-        set tk_strictMotif 0
-        set fileName \[tk_getSaveFile -title \"Incremental list file\" -initialfile \"\" -filetypes {{\"incremental list\" \".bid\"} {\"all\" \"*\"}} -parent . -defaultextension \".bid\"\]
-        set tk_strictMotif \$old_tk_strictMotif
+        set fileName \[Dialog:fileSelector \"Incremental list file\" \$barConfig(incrementalListFileName) {{\"*.bid\" \"incremental list\"} {\"*\" \"all\"}}\]
         if {\$fileName != \"\"} \
         {
           set barConfig(incrementalListFileName) \$fileName
         }
       "
-      grid .backup.storage.mode.select -row 0 -column 4 -sticky "we"
+      grid .backup.storage.mode.select -row 0 -column 5 -sticky "we"
 
-      grid columnconfigure .backup.storage.mode { 3 } -weight 1
+      grid columnconfigure .backup.storage.mode { 4 } -weight 1
     grid .backup.storage.mode -row 5 -column 1 -sticky "we" -padx 2p -pady 2p
-    addEnableTrace ::barConfig(storageMode) "FULL" .backup.storage.mode.createIncrementalList
+    addModifyTrace {::barConfig(storageMode)} \
+    {
+      if {   ($::barConfig(storageMode) == "FULL")
+          || ($::barConfig(storageMode) == "INCREMENTAL")
+         } \
+      {
+        .backup.storage.mode.incrementalListFileName configure -state normal
+      } \
+      else \
+      {
+        .backup.storage.mode.incrementalListFileName configure -state disabled
+      }
+    }
+
+    label .backup.storage.fileNameTitle -text "File name:"
+    grid .backup.storage.fileNameTitle -row 6 -column 0 -sticky "w" 
+    frame .backup.storage.fileName
+      entry .backup.storage.fileName.data -textvariable barConfig(storageFileName) -bg white
+      grid .backup.storage.fileName.data -row 0 -column 0 -sticky "we" 
+
+      button .backup.storage.fileName.edit -image $images(folder) -command \
+      "
+        set fileName \[editStorageFileName \$barConfig(storageFileName)\]
+        if {\$fileName != \"\"} \
+        {
+          set barConfig(storageFileName) \$fileName
+        }
+      "
+      grid .backup.storage.fileName.edit -row 0 -column 1 -sticky "we" 
+
+      grid columnconfigure .backup.storage.fileName { 0 } -weight 1
+    grid .backup.storage.fileName -row 6 -column 1 -sticky "we" -padx 2p -pady 2p
 
     label .backup.storage.destinationTitle -text "Destination:"
-    grid .backup.storage.destinationTitle -row 6 -column 0 -sticky "nw" 
+    grid .backup.storage.destinationTitle -row 7 -column 0 -sticky "nw" 
     frame .backup.storage.destination
       frame .backup.storage.destination.type
         radiobutton .backup.storage.destination.type.fileSystem -text "File system" -variable barConfig(storageType) -value "FILESYSTEM"
@@ -4717,21 +5134,15 @@ frame .backup
       grid .backup.storage.destination.type -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
 
       labelframe .backup.storage.destination.fileSystem
-        label .backup.storage.destination.fileSystem.fileNameTitle -text "File name:"
-        grid .backup.storage.destination.fileSystem.fileNameTitle -row 0 -column 0 -sticky "w" 
-        entry .backup.storage.destination.fileSystem.fileName -textvariable barConfig(storageFileName) -bg white
-        grid .backup.storage.destination.fileSystem.fileName -row 0 -column 1 -sticky "we" 
-
         label .backup.storage.destination.fileSystem.optionsTitle -text "Options:"
-        grid .backup.storage.destination.fileSystem.optionsTitle -row 1 -column 0 -sticky "w" 
+        grid .backup.storage.destination.fileSystem.optionsTitle -row 0 -column 0 -sticky "w" 
         frame .backup.storage.destination.fileSystem.options
           checkbutton .backup.storage.destination.fileSystem.options.overwriteArchiveFiles -text "overwrite archive files" -variable barConfig(overwriteArchiveFilesFlag)
           grid .backup.storage.destination.fileSystem.options.overwriteArchiveFiles -row 0 -column 0 -sticky "w" 
 
           grid columnconfigure .backup.storage.destination.fileSystem.options { 0 } -weight 1
-        grid .backup.storage.destination.fileSystem.options -row 1 -column 1 -sticky "we"
+        grid .backup.storage.destination.fileSystem.options -row 0 -column 1 -sticky "we"
 
-#        grid rowconfigure    .backup.storage.destination.fileSystem { 2 } -weight 1
         grid columnconfigure .backup.storage.destination.fileSystem { 1 } -weight 1
       addModifyTrace {::barConfig(storageType)} \
       {
@@ -4746,13 +5157,8 @@ frame .backup
       }
 
       labelframe .backup.storage.destination.ssh
-        label .backup.storage.destination.ssh.fileNameTitle -text "File name:"
-        grid .backup.storage.destination.ssh.fileNameTitle -row 0 -column 0 -sticky "w" 
-        entry .backup.storage.destination.ssh.fileName -textvariable barConfig(storageFileName) -bg white
-        grid .backup.storage.destination.ssh.fileName -row 0 -column 1 -sticky "we" 
-
         label .backup.storage.destination.ssh.loginTitle -text "Login:"
-        grid .backup.storage.destination.ssh.loginTitle -row 1 -column 0 -sticky "w" 
+        grid .backup.storage.destination.ssh.loginTitle -row 0 -column 0 -sticky "w" 
         frame .backup.storage.destination.ssh.login
           entry .backup.storage.destination.ssh.login.name -textvariable barConfig(storageLoginName) -bg white
           pack .backup.storage.destination.ssh.login.name -side left -fill x -expand yes
@@ -4771,48 +5177,42 @@ frame .backup
           pack .backup.storage.destination.ssh.login.sshPortTitle -side left
           tixControl .backup.storage.destination.ssh.login.sshPort -variable barConfig(sshPort) -label "" -labelside right -integer true -min 0 -max 65535 -options { entry.background white }
           pack .backup.storage.destination.ssh.login.sshPort -side left -fill x -expand yes
-        grid .backup.storage.destination.ssh.login -row 1 -column 1 -sticky "we"
+        grid .backup.storage.destination.ssh.login -row 0 -column 1 -sticky "we"
 
         label .backup.storage.destination.ssh.sshPublicKeyFileNameTitle -text "SSH public key:"
-        grid .backup.storage.destination.ssh.sshPublicKeyFileNameTitle -row 2 -column 0 -sticky "w" 
+        grid .backup.storage.destination.ssh.sshPublicKeyFileNameTitle -row 1 -column 0 -sticky "w" 
         frame .backup.storage.destination.ssh.sshPublicKeyFileName
           entry .backup.storage.destination.ssh.sshPublicKeyFileName.data -textvariable barConfig(sshPublicKeyFileName) -bg white
           pack .backup.storage.destination.ssh.sshPublicKeyFileName.data -side left -fill x -expand yes
           button .backup.storage.destination.ssh.sshPublicKeyFileName.select -image $images(folder) -command \
           "
-            set old_tk_strictMotif \$tk_strictMotif
-            set tk_strictMotif 0
-            set fileName \[tk_getOpenFile -title \"Select SSH public key file\" -initialfile \"\" -filetypes {{\"Public key\" \"*.pub\"} {\"all\" \"*\"}} -parent . -defaultextension \".pub\"\]
-            set tk_strictMotif \$old_tk_strictMotif
+            set fileName \[Dialog:fileSelector \"Select SSH public key file\" \$barConfig(sshPublicKeyFileName) {{\"*.pub\" \"Public key\"} {\"*\" \"all\"}}\]
             if {\$fileName != \"\"} \
             {
               set barConfig(sshPublicKeyFileName) \$fileName
             }
           "
           pack .backup.storage.destination.ssh.sshPublicKeyFileName.select -side left
-        grid .backup.storage.destination.ssh.sshPublicKeyFileName -row 2 -column 1 -sticky "we"
+        grid .backup.storage.destination.ssh.sshPublicKeyFileName -row 1 -column 1 -sticky "we"
 
         label .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle -text "SSH privat key:"
-        grid .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle -row 3 -column 0 -sticky "w" 
+        grid .backup.storage.destination.ssh.sshPrivatKeyFileNameTitle -row 2 -column 0 -sticky "w" 
         frame .backup.storage.destination.ssh.sshPrivatKeyFileName
           entry .backup.storage.destination.ssh.sshPrivatKeyFileName.data -textvariable barConfig(sshPrivatKeyFileName) -bg white
           pack .backup.storage.destination.ssh.sshPrivatKeyFileName.data -side left -fill x -expand yes
           button .backup.storage.destination.ssh.sshPrivatKeyFileName.select -image $images(folder) -command \
           "
-            set old_tk_strictMotif \$tk_strictMotif
-            set tk_strictMotif 0
-            set fileName \[tk_getOpenFile -title \"Select SSH privat key file\" -initialfile \"\" -filetypes {{\"all\" \"*\"}} -parent . -defaultextension \"\"\]
-            set tk_strictMotif \$old_tk_strictMotif
+            set fileName \[Dialog:fileSelector \"Select SSH privat key file\" \$barConfig(sshPrivatKeyFileName) {{\"*\" \"all\"}}\]
             if {\$fileName != \"\"} \
             {
               set barConfig(sshPrivatKeyFileName) \$fileName
             }
           "
           pack .backup.storage.destination.ssh.sshPrivatKeyFileName.select -side left
-        grid .backup.storage.destination.ssh.sshPrivatKeyFileName -row 3 -column 1 -sticky "we"
+        grid .backup.storage.destination.ssh.sshPrivatKeyFileName -row 2 -column 1 -sticky "we"
 
         label .backup.storage.destination.ssh.maxBandWidthTitle -text "Max. band width:"
-        grid .backup.storage.destination.ssh.maxBandWidthTitle -row 4 -column 0 -sticky "w" 
+        grid .backup.storage.destination.ssh.maxBandWidthTitle -row 3 -column 0 -sticky "w" 
         frame .backup.storage.destination.ssh.maxBandWidth
           radiobutton .backup.storage.destination.ssh.maxBandWidth.unlimited -text "unlimited" -anchor w -variable barConfig(maxBandWidthFlag) -value 0
           grid .backup.storage.destination.ssh.maxBandWidth.unlimited -row 0 -column 1 -sticky "w" 
@@ -4830,7 +5230,7 @@ frame .backup
 
           grid rowconfigure    .backup.storage.destination.ssh.maxBandWidth { 0 } -weight 1
           grid columnconfigure .backup.storage.destination.ssh.maxBandWidth { 1 } -weight 1
-        grid .backup.storage.destination.ssh.maxBandWidth -row 4 -column 1 -sticky "w" -padx 2p -pady 2p
+        grid .backup.storage.destination.ssh.maxBandWidth -row 3 -column 1 -sticky "w" -padx 2p -pady 2p
         addEnableTrace ::barConfig(maxBandWidthFlag) 1 .backup.storage.destination.ssh.maxBandWidth.size
 
   #      grid rowconfigure    .backup.storage.destination.ssh { } -weight 1
@@ -4853,28 +5253,23 @@ frame .backup
         entry .backup.storage.destination.dvd.deviceName -textvariable barConfig(storageDeviceName) -bg white
         grid .backup.storage.destination.dvd.deviceName -row 0 -column 1 -sticky "we" 
 
-        label .backup.storage.destination.dvd.fileNameTitle -text "File name:"
-        grid .backup.storage.destination.dvd.fileNameTitle -row 1 -column 0 -sticky "w" 
-        entry .backup.storage.destination.dvd.fileName -textvariable barConfig(storageFileName) -bg white
-        grid .backup.storage.destination.dvd.fileName -row 1 -column 1 -columnspan 5 -sticky "we" 
-
         label .backup.storage.destination.dvd.volumeSizeTitle -text "Size:"
-        grid .backup.storage.destination.dvd.volumeSizeTitle -row 2 -column 0 -sticky "w"
+        grid .backup.storage.destination.dvd.volumeSizeTitle -row 1 -column 0 -sticky "w"
         frame .backup.storage.destination.dvd.volumeSize
           tixComboBox .backup.storage.destination.dvd.volumeSize.size -variable barConfig(volumeSize) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
           pack .backup.storage.destination.dvd.volumeSize.size -side left
           label .backup.storage.destination.dvd.volumeSize.unit -text "bytes"
           pack .backup.storage.destination.dvd.volumeSize.unit -side left
-        grid .backup.storage.destination.dvd.volumeSize -row 2 -column 1 -sticky "w"
+        grid .backup.storage.destination.dvd.volumeSize -row 1 -column 1 -sticky "w"
 
         label .backup.storage.destination.dvd.optionsTitle -text "Options:"
-        grid .backup.storage.destination.dvd.optionsTitle -row 3 -column 0 -sticky "w"
+        grid .backup.storage.destination.dvd.optionsTitle -row 2 -column 0 -sticky "w"
         frame .backup.storage.destination.dvd.options
           checkbutton .backup.storage.destination.dvd.options.ecc -text "add error-correction codes" -variable barConfig(errorCorrectionCodesFlag)
           grid .backup.storage.destination.dvd.options.ecc -row 0 -column 0 -sticky "w" 
 
           grid columnconfigure .backup.storage.destination.dvd.options { 0 } -weight 1
-        grid .backup.storage.destination.dvd.options -row 3 -column 1 -sticky "we"
+        grid .backup.storage.destination.dvd.options -row 2 -column 1 -sticky "we"
 
        .backup.storage.destination.dvd.volumeSize.size insert end 2G
        .backup.storage.destination.dvd.volumeSize.size insert end 3G
@@ -4901,19 +5296,14 @@ frame .backup
         entry .backup.storage.destination.device.name -textvariable barConfig(storageDeviceName) -bg white
         grid .backup.storage.destination.device.name -row 0 -column 1 -sticky "we" 
 
-        label .backup.storage.destination.device.fileNameTitle -text "File name:"
-        grid .backup.storage.destination.device.fileNameTitle -row 1 -column 0 -sticky "w" 
-        entry .backup.storage.destination.device.fileName -textvariable barConfig(storageFileName) -bg white
-        grid .backup.storage.destination.device.fileName -row 1 -column 1 -columnspan 5 -sticky "we" 
-
         label .backup.storage.destination.device.volumeSizeTitle -text "Size:"
-        grid .backup.storage.destination.device.volumeSizeTitle -row 2 -column 0 -sticky "w"
+        grid .backup.storage.destination.device.volumeSizeTitle -row 1 -column 0 -sticky "w"
         frame .backup.storage.destination.device.volumeSize
           tixComboBox .backup.storage.destination.device.volumeSize.size -variable barConfig(volumeSize) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
           pack .backup.storage.destination.device.volumeSize.size -side left
           label .backup.storage.destination.device.volumeSize.unit -text "bytes"
           pack .backup.storage.destination.device.volumeSize.unit -side left
-        grid .backup.storage.destination.device.volumeSize -row 2 -column 1 -sticky "w"
+        grid .backup.storage.destination.device.volumeSize -row 1 -column 1 -sticky "w"
 
        .backup.storage.destination.device.volumeSize.size insert end 2G
        .backup.storage.destination.device.volumeSize.size insert end 3G
@@ -4936,9 +5326,9 @@ frame .backup
 
       grid rowconfigure    .backup.storage.destination { 0 } -weight 1
       grid columnconfigure .backup.storage.destination { 0 } -weight 1
-    grid .backup.storage.destination -row 6 -column 1 -sticky "we"
+    grid .backup.storage.destination -row 7 -column 1 -sticky "we"
 
-    grid rowconfigure    .backup.storage { 7 } -weight 1
+    grid rowconfigure    .backup.storage { 8 } -weight 1
     grid columnconfigure .backup.storage { 1 } -weight 1
   pack .backup.storage -side top -fill both -expand yes -in [.backup.tabs subwidget storage]
 
@@ -5005,10 +5395,7 @@ frame .restore
         grid .restore.storage.source.fileSystem.fileName -row 0 -column 1 -sticky "we"
         button .restore.storage.source.fileSystem.selectDirectory -image $images(folder) -command \
         "
-          set old_tk_strictMotif \$tk_strictMotif
-          set tk_strictMotif 0
-          set fileName \[tk_getOpenFile -title \"Select archive\" -initialfile \"\" -filetypes {{\"BAR archive\" \"*.bar\"} {\"all\" \"*\"}} -parent . -defaultextension \".bar\"\]
-          set tk_strictMotif \$old_tk_strictMotif
+          set fileName \[Dialog:fileSelector \"Select archive\" \$barConfig(storageFileName) {{\"*.bar\" \"BAR archive\"} {\"*\" \"all\"}}\]
           if {\$fileName != \"\"} \
           {
             set barConfig(storageFileName) \$fileName
@@ -5081,10 +5468,7 @@ if {0} {
           pack .restore.storage.source.ssh.sshPublicKeyFileName.data -side left -fill x -expand yes
           button .restore.storage.source.ssh.sshPublicKeyFileName.select -image $images(folder) -command \
           "
-            set old_tk_strictMotif \$tk_strictMotif
-            set tk_strictMotif 0
-            set fileName \[tk_getOpenFile -title \"Select SSH public key file\" -initialfile \"\" -filetypes {{\"Public key\" \"*.pub\"} {\"all\" \"*\"}} -parent . -defaultextension \".pub\"\]
-            set tk_strictMotif \$old_tk_strictMotif
+            set fileName \[Dialog:fileSelector \"Select SSH public key file\" \$barConfig(sshPublicKeyFileName) {{\"*.pub\" \"Public key\"} {\"*\" \"all\"}}\]
             if {\$fileName != \"\"} \
             {
               set barConfig(sshPublicKeyFileName) \$fileName
@@ -5100,10 +5484,7 @@ if {0} {
           pack .restore.storage.source.ssh.sshPrivatKeyFileName.data -side left -fill x -expand yes
           button .restore.storage.source.ssh.sshPrivatKeyFileName.select -image $images(folder) -command \
           "
-            set old_tk_strictMotif \$tk_strictMotif
-            set tk_strictMotif 0
-            set fileName \[tk_getOpenFile -title \"Select SSH privat key file\" -initialfile \"\" -filetypes {{\"all\" \"*\"}} -parent . -defaultextension \"\"\]
-            set tk_strictMotif \$old_tk_strictMotif
+            set fileName \[Dialog:fileSelector \"Select SSH privat key file\" \$barConfig(sshPrivatKeyFileName) {{\"*\" \"all\"}}\]
             if {\$fileName != \"\"} \
             {
               set barConfig(sshPrivatKeyFileName) \$fileName
@@ -5138,10 +5519,7 @@ if {0} {
         grid .restore.storage.source.device.fileName -row 1 -column 1 -sticky "we" 
         button .restore.storage.source.device.selectDirectory -image $images(folder) -command \
         "
-          set old_tk_strictMotif \$tk_strictMotif
-          set tk_strictMotif 0
-          set fileName \[tk_getOpenFile -title \"Select archive\" -initialfile \"\" -filetypes {{\"BAR archive\" \"*.bar\"} {\"all\" \"*\"}} -parent . -defaultextension \".bar\"\]
-          set tk_strictMotif \$old_tk_strictMotif
+          set fileName \[Dialog:fileSelector \"Select archive\" \$barConfig(storagefileName) {{\"*.bar\" \"BAR archive\"} {\"*\" \"all\"}}\]
           if {\$fileName != \"\"} \
           {
             set barConfig(storagefileName) \$fileName
@@ -5356,6 +5734,8 @@ if {0} {
   grid rowconfigure    .restore { 1 } -weight 1
   grid columnconfigure .restore { 1 } -weight 1
 pack .restore -side top -fill both -expand yes -in [$mainWindow.tabs subwidget restore]
+
+update
 
 # ----------------------------------------------------------------------
 
@@ -5761,39 +6141,37 @@ bind . <<Event_volume>> \
   BackupServer:executeCommand errorCode errorText "VOLUME" $::currentJob(id) $::currentJob(requestedVolumeNumber)
 }
 
-update
-
 # config modify trace
 trace add variable barConfig write "setConfigModify"
 
-  # connect to server
-  if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]} \
+# connect to server
+if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]} \
+{
+  if {[catch {tls::init -cafile $barControlConfig(serverCAFileName)}]} \
   {
-    if {[catch {tls::init -cafile $barControlConfig(serverCAFileName)}]} \
-    {
-      printError "Cannot initialise TLS/SSL system"
-      exit 1
-    }
-    if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverTLSPort) $barControlConfig(serverPassword) 1]} \
-    {
-      printError "Cannot connect to TLS/SSL server '$barControlConfig(serverHostName):$barControlConfig(serverTLSPort)'!"
-      exit 1
-    }
-  } \
-  elseif {$barControlConfig(serverPort) != 0} \
-  {
-    if {$port == 0} { set port $DEFAULT_PORT }
-    if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverPort) $barControlConfig(serverPassword) 0]} \
-    {
-      printError "Cannot connect to server '$barControlConfig(serverHostName):$barControlConfig(serverPort)'!"
-      exit 1
-    }
-  } \
-  else  \
-  {
-    printError "Cannot connect to server '$barControlConfig(serverHostName)'!"
+    printError "Cannot initialise TLS/SSL system"
     exit 1
   }
+  if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverTLSPort) $barControlConfig(serverPassword) 1]} \
+  {
+    printError "Cannot connect to TLS/SSL server '$barControlConfig(serverHostName):$barControlConfig(serverTLSPort)'!"
+    exit 1
+  }
+} \
+elseif {$barControlConfig(serverPort) != 0} \
+{
+  if {$port == 0} { set port $DEFAULT_PORT }
+  if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverPort) $barControlConfig(serverPassword) 0]} \
+  {
+    printError "Cannot connect to server '$barControlConfig(serverHostName):$barControlConfig(serverPort)'!"
+    exit 1
+  }
+} \
+else  \
+{
+  printError "Cannot connect to server '$barControlConfig(serverHostName)'!"
+  exit 1
+}
 
 updateJobList .jobs.list.data
 updateCurrentJob
@@ -5813,6 +6191,10 @@ if {$configFileName != ""} \
   if {[file exists $configFileName]} \
   {
     loadBARConfig $configFileName
+    if {$startFlag} \
+    {
+      addBackupJob .jobs.list.data
+    }
   } \
   else \
   {
@@ -5823,5 +6205,9 @@ if {$configFileName != ""} \
     }
   }
 }
+
+#Dialog:password "xxx" 0
+#editStorageFileName "test-%type-%a-###.bar"
+#Dialog:fileSelector "x" "/tmp/test.bnid" {}
 
 # end of file

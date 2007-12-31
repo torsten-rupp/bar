@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -51,78 +51,6 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-/***********************************************************************\
-* Name   : expandMacros
-* Purpose: expand macros %... in string
-* Input  : s          - string variable
-*          t          - string with macros
-*          macros     - array with macro definitions
-*          macroCount - number of macro definitions
-* Output : s - string with expanded macros
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void expandMacros(String             s,
-                        const String       t,
-                        const ExecuteMacro macros[],
-                        uint               macroCount
-                       )
-{
-  long i0,i1;
-  long i;
-  int  iz,z;
-  char buffer[128];
-
-  assert((macroCount == 0) || (macros != NULL));
-
-  String_clear(s);
-  i0 = 0;
-  do
-  {
-    /* find next macro */
-    iz = -1;
-    i1 = -1;
-    for (z = 0; z < macroCount; z++)
-    {
-      i = String_findCString(t,i0,macros[z].name);
-      if ((i >= 0) && ((i1 < 0) || (i < i1)))
-      {
-        iz = z;
-        i1 = i;
-      }
-    }
-
-    /* expand macro */
-    if (iz >= 0)
-    {
-      String_appendSub(s,t,i0,i1-i0);
-      switch (macros[iz].type)
-      {
-        case EXECUTE_MACRO_TYPE_INT:
-          snprintf(buffer,sizeof(buffer)-1,"%d",macros[iz].i); buffer[sizeof(buffer)-1] = '\0';
-          String_appendCString(s,buffer);
-          break;
-        case EXECUTE_MACRO_TYPE_INT64:
-          snprintf(buffer,sizeof(buffer)-1,"%lld",macros[iz].l); buffer[sizeof(buffer)-1] = '\0';
-          String_appendCString(s,buffer);
-          break;
-        case EXECUTE_MACRO_TYPE_STRING:
-          String_append(s,macros[iz].string);
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
-      }
-      i0 = i1+strlen(macros[iz].name);
-    }
-  }
-  while (iz >= 0);
-  String_appendSub(s,t,i0,STRING_END);
-}
 
 /***********************************************************************\
 * Name   : readProcessIO
@@ -213,12 +141,77 @@ void Misc_udelay(uint64 time)
 
 /*---------------------------------------------------------------------*/
 
-Errors Misc_executeCommand(const char         *commandTemplate,
-                           const ExecuteMacro macros[],
-                           uint               macroCount,
-                           ExecuteIOFunction  stdoutExecuteIOFunction,
-                           ExecuteIOFunction  stderrExecuteIOFunction,
-                           void               *executeIOUserData
+void Misc_expandMacros(String          string,
+                       const String    template,
+                       const TextMacro macros[],
+                       uint            macroCount
+                      )
+{
+  long i0,i1;
+  long i;
+  int  iz,z;
+  char buffer[128];
+
+  assert((macroCount == 0) || (macros != NULL));
+
+  String_clear(string);
+  i0 = 0;
+  do
+  {
+    /* find next macro */
+    iz = -1;
+    i1 = -1;
+    for (z = 0; z < macroCount; z++)
+    {
+      i = String_findCString(template,i0,macros[z].name);
+      if ((i >= 0) && ((i1 < 0) || (i < i1)))
+      {
+        iz = z;
+        i1 = i;
+      }
+    }
+
+    /* expand macro */
+    if (iz >= 0)
+    {
+      String_appendSub(string,template,i0,i1-i0);
+      switch (macros[iz].type)
+      {
+        case TEXT_MACRO_TYPE_INT:
+          snprintf(buffer,sizeof(buffer)-1,"%d",macros[iz].i); buffer[sizeof(buffer)-1] = '\0';
+          String_appendCString(string,buffer);
+          break;
+        case TEXT_MACRO_TYPE_INT64:
+          snprintf(buffer,sizeof(buffer)-1,"%lld",macros[iz].l); buffer[sizeof(buffer)-1] = '\0';
+          String_appendCString(string,buffer);
+          break;
+        case TEXT_MACRO_TYPE_CSTRING:
+          String_appendCString(string,macros[iz].s);
+          break;
+        case TEXT_MACRO_TYPE_STRING:
+          String_append(string,macros[iz].string);
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
+      }
+      i0 = i1+strlen(macros[iz].name);
+    }
+  }
+  while (iz >= 0);
+  String_appendSub(string,template,i0,STRING_END);
+}
+
+/*---------------------------------------------------------------------*/
+
+Errors Misc_executeCommand(const char        *commandTemplate,
+                           const TextMacro   macros[],
+                           uint              macroCount,
+                           ExecuteIOFunction stdoutExecuteIOFunction,
+                           ExecuteIOFunction stderrExecuteIOFunction,
+                           void              *executeIOUserData
                           )
 {
   Errors          error;
@@ -253,13 +246,13 @@ Errors Misc_executeCommand(const char         *commandTemplate,
       String_delete(command);
       return ERROR_EXEC_FAIL;
     }
-    expandMacros(command,token,macros,macroCount);
+    Misc_expandMacros(command,token,macros,macroCount);
 
     /* parse arguments */
     argument = String_new();
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
-      expandMacros(argument,token,macros,macroCount);
+      Misc_expandMacros(argument,token,macros,macroCount);
       StringList_append(&argumentList,argument);
     }
     String_doneTokenizer(&stringTokenizer);

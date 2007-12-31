@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -490,6 +490,7 @@ LOCAL void jobThreadEntry(JobList *jobList)
   }
 }
 #else
+    logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------");
     switch (jobNode->type)
     {
       case JOB_TYPE_BACKUP:
@@ -526,6 +527,11 @@ LOCAL void jobThreadEntry(JobList *jobList)
           logMessage(LOG_TYPE_ALWAYS,"done restore (error: %s)",getErrorText(jobNode->runningInfo.error));
         }
         break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
     }
     logPostProcess();
 
@@ -894,6 +900,28 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
   sendResult(clientInfo,id,TRUE,0,"");
 }
 
+LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  Errors error;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected error code");
+    return;
+  }
+  error = (Errors)String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* format result */
+  sendResult(clientInfo,id,TRUE,0,
+             "%s",
+             getErrorText(error)
+            );
+}
+
 LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   Errors       error;
@@ -1034,7 +1062,8 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  JobNode *jobNode;
+  JobNode    *jobNode;
+  const char *type;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -1046,11 +1075,24 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   jobNode = jobList.head;
   while (jobNode != NULL)
   {
+    type = NULL;
+    switch (jobNode->options.archiveType)
+    {
+      case ARCHIVE_TYPE_NORMAL:      type = "normal";      break;
+      case ARCHIVE_TYPE_FULL:        type = "full";        break;
+      case ARCHIVE_TYPE_INCREMENTAL: type = "incremental"; break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
     sendResult(clientInfo,id,FALSE,0,
-               "%u %'S %'s %llu %'s %'s %lu %lu",
+               "%u %'S %'s %s %llu %'s %'s %lu %lu",
                jobNode->id,
                jobNode->name,
                getJobStateText(jobNode->state),
+               type,
                jobNode->options.archivePartSize,
                Compress_getAlgorithmName(jobNode->options.compressAlgorithm),
                Crypt_getAlgorithmName(jobNode->options.cryptAlgorithm),
@@ -1069,7 +1111,6 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
 {
   uint    jobId;
   JobNode *jobNode;
-//  int        errorCode;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -1096,8 +1137,9 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   if (jobNode != NULL)
   {
     sendResult(clientInfo,id,TRUE,0,
-               "%'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %f %d",
+               "%'s %'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %f %d",
                getJobStateText(jobNode->state),
+               (jobNode->runningInfo.error != ERROR_NONE)?getErrorText(jobNode->runningInfo.error):"",
                jobNode->runningInfo.doneFiles,
                jobNode->runningInfo.doneBytes,
                jobNode->runningInfo.totalFiles,
@@ -1238,9 +1280,23 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String argum
   {
     sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->options.maxTmpSize);
   }
-  else if (String_equalsCString(arguments[0],"create-incremental-list"))
+  else if (String_equalsCString(arguments[0],"archive-type"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->options.createIncrementalListFlag);
+    const char *type;
+
+    type = NULL;
+    switch (clientInfo->options.archiveType)
+    {
+      case ARCHIVE_TYPE_NORMAL:      type = "normal";      break;
+      case ARCHIVE_TYPE_FULL:        type = "full";        break;
+      case ARCHIVE_TYPE_INCREMENTAL: type = "incremental"; break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+    sendResult(clientInfo,id,TRUE,0,"%s",type);
   }
   else if (String_equalsCString(arguments[0],"incremental-list-file"))
   {
@@ -1260,11 +1316,11 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String argum
   }
   else if (String_equalsCString(arguments[0],"load-volume-command"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%S",clientInfo->options.device.loadVolumeCommand);
+    sendResult(clientInfo,id,TRUE,0,"%S",clientInfo->options.device->loadVolumeCommand);
   }
   else if (String_equalsCString(arguments[0],"volume-size"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->options.device.volumeSize);
+    sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->options.device->volumeSize);
   }
   else if (String_equalsCString(arguments[0],"skip-unreadable"))
   {
@@ -1305,7 +1361,7 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
   }
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,1,"expected config value");
+    sendResult(clientInfo,id,TRUE,1,"expected config value for '%S'",arguments[0]);
     return;
   }
 
@@ -1325,11 +1381,28 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
     clientInfo->options.maxTmpSize = (uint64)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"create-incremental-list"))
+  else if (String_equalsCString(arguments[0],"archive-type"))
   {
-    // create-incremental-list 0|1
-    clientInfo->options.createIncrementalListFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
-    sendResult(clientInfo,id,TRUE,0,"");
+    // archive-type normal|full|incremental
+    if      (String_equalsCString(arguments[1],"normal"))
+    {
+      clientInfo->options.archiveType = ARCHIVE_TYPE_NORMAL;
+      sendResult(clientInfo,id,TRUE,0,"");
+    }
+    else if (String_equalsCString(arguments[1],"full"))
+    {
+      clientInfo->options.archiveType = ARCHIVE_TYPE_FULL;
+      sendResult(clientInfo,id,TRUE,0,"");
+    }
+    else if (String_equalsCString(arguments[1],"incremental"))
+    {
+      clientInfo->options.archiveType = ARCHIVE_TYPE_INCREMENTAL;
+      sendResult(clientInfo,id,TRUE,0,"");
+    }
+    else
+    {
+      sendResult(clientInfo,id,FALSE,0,"unknown type '%S'",arguments[1]);
+    }
   }
   else if (String_equalsCString(arguments[0],"incremental-list-file"))
   {
@@ -1348,19 +1421,19 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
   else if (String_equalsCString(arguments[0],"ssh-port"))
   {
     // ssh-port <n>
-    clientInfo->options.sshServer.port = String_toInteger(arguments[1],0,NULL,NULL,0);
+    clientInfo->options.sshServer->port = String_toInteger(arguments[1],0,NULL,NULL,0);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"ssh-public-key"))
   {
     // ssh-public-key <file name>
-    String_copy(&clientInfo->options.sshServer.publicKeyFileName,arguments[1]);
+    String_copy(&clientInfo->options.sshServer->publicKeyFileName,arguments[1]);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"ssh-prvat-key"))
   {
     // ssh-privat-key <file name>
-    String_copy(&clientInfo->options.sshServer.privatKeyFileName,arguments[1]);
+    String_copy(&clientInfo->options.sshServer->privatKeyFileName,arguments[1]);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"volume-size"))
@@ -1368,13 +1441,13 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
     // volume-size <n>
     const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-    clientInfo->options.device.volumeSize = (uint64)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    clientInfo->options.device->volumeSize = (uint64)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"load-volume-command"))
   {
     // load-volume-command <s>
-    String_copy(&clientInfo->options.device.loadVolumeCommand,arguments[1]);
+    String_copy(&clientInfo->options.device->loadVolumeCommand,arguments[1]);
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else if (String_equalsCString(arguments[0],"compress-algorithm"))
@@ -1870,6 +1943,7 @@ const struct
 SERVER_COMMANDS[] =
 {
   { "AUTHORIZE",           "S",   serverCommand_authorize,         AUTHORIZATION_STATE_WAITING },
+  { "ERROR_INFO",          "i",   serverCommand_errorInfo,         AUTHORIZATION_STATE_OK      },
   { "DEVICE_LIST",         "",    serverCommand_deviceList,        AUTHORIZATION_STATE_OK      },
   { "FILE_LIST",           "S",   serverCommand_fileList,          AUTHORIZATION_STATE_OK      },
   { "JOB_LIST",            "",    serverCommand_jobList,           AUTHORIZATION_STATE_OK      },
@@ -2645,7 +2719,7 @@ Errors Server_batch(int inputDescriptor,
   }
 #else /* 0 */
 fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-String_setCString(commandString,"1 SET crypt-password 'xaver !45'");processCommand(&clientInfo,commandString);
+String_setCString(commandString,"1 SET crypt-password 'muster'");processCommand(&clientInfo,commandString);
 String_setCString(commandString,"2 ADD_INCLUDE_PATTERN REGEX test/[^/]*");processCommand(&clientInfo,commandString);
 String_setCString(commandString,"3 ARCHIVE_LIST test.bar");processCommand(&clientInfo,commandString);
 //String_setCString(commandString,"3 ARCHIVE_LIST backup/backup-torsten-bar-000.bar");processCommand(&clientInfo,commandString);

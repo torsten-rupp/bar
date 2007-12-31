@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -38,9 +38,10 @@
 /***********************************************************************\
 * Name   : ArchiveNewFileFunction
 * Purpose: call back when archive file is created/written
-* Input  : fileName   - archive file name
-*          partNumber - part number or -1 if no parts
-*          userData   - user data
+* Input  : fileName     - archive file name
+*          partNumber   - part number or -1 if no parts
+*          lastPartFlag - TRUE iff last archive part, FALSE otherwise
+*          userData     - user data
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -48,8 +49,8 @@
 
 typedef Errors(*ArchiveNewFileFunction)(String fileName,
                                         uint64 length,
-                                        bool   completeFlag,
                                         int    partNumber,
+                                        bool   lastPartFlag,
                                         void   *userData
                                        );
 

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1419,6 +1419,7 @@ String __String_new(const char *fileName, ulong lineNb)
   #ifndef NDEBUG
     pthread_once(&debugStringInitFlag,debugStringInit);
 
+    pthread_mutex_lock(&debugStringLock);
     debugStringNode = debugFreeStringList.head;
     while ((debugStringNode != NULL) && (debugStringNode->string != string))
     {
@@ -1441,7 +1442,6 @@ String __String_new(const char *fileName, ulong lineNb)
     debugStringNode->prevFileName = NULL;
     debugStringNode->prevLineNb   = 0;
     debugStringNode->string   = string;
-    pthread_mutex_lock(&debugStringLock);
     List_append(&debugAllocStringList,debugStringNode);
     pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
@@ -1522,6 +1522,7 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
   #endif /* not NDEBUG */
 
   #ifndef NDEBUG
+    pthread_mutex_lock(&debugStringLock);
     debugStringNode = debugFreeStringList.head;
     while ((debugStringNode != NULL) && (debugStringNode->string != string))
     {
@@ -1529,7 +1530,7 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
     }
     if (debugStringNode != NULL)
     {
-      fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %ld and previoulsy at %s, %ld which allocated at %s, %ld!\n",
+      fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %ld and previoulsy at %s, %ld which was allocated at %s, %ld!\n",
               string,
               fileName,
               lineNb,
@@ -1540,6 +1541,7 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
              );
       HALT_INTERNAL_ERROR("");
     }
+    pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
 
   CHECK_VALID(string);

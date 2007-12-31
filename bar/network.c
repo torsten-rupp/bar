@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -27,6 +27,7 @@
 #ifdef HAVE_GNU_TLS
   #include <gnutls/gnutls.h>
 #endif /* HAVE_GNU_TLS */
+#include <errno.h>
 #include <assert.h>
 
 #include <linux/tcp.h>
@@ -111,6 +112,7 @@ Errors Network_connect(SocketHandle *socketHandle,
   struct hostent     *hostAddressEntry;
   in_addr_t          ipAddress;
   struct sockaddr_in socketAddress;
+  Errors             error;
 
   assert(socketHandle != NULL);
 
@@ -140,7 +142,7 @@ Errors Network_connect(SocketHandle *socketHandle,
   socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
   if (socketHandle->handle == -1)
   {
-    return ERROR_CONNECT_FAIL;
+    return ERROR(CONNECT_FAIL,errno);
   }
   socketAddress.sin_family      = AF_INET;
   socketAddress.sin_addr.s_addr = ipAddress;
@@ -151,8 +153,9 @@ Errors Network_connect(SocketHandle *socketHandle,
              ) != 0
      )
   {
+    error = ERROR(CONNECT_FAIL,errno);
     close(socketHandle->handle);
-    return ERROR_CONNECT_FAIL;
+    return error;
   }
 
   switch (socketType)
@@ -565,6 +568,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   #endif /* HAVE_GNU_TLS */
   struct sockaddr_in socketAddress;
   int                n;
+  Errors             error;
 
   assert(serverSocketHandle != NULL);
 
@@ -573,14 +577,15 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   serverSocketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
   if (serverSocketHandle->handle == -1)
   {
-    return ERROR_CONNECT_FAIL;
+    return ERROR(CONNECT_FAIL,errno);
   }
 
   n = 1;
   if (setsockopt(serverSocketHandle->handle,SOL_SOCKET,SO_REUSEADDR,&n,sizeof(int)) != 0)
   {
+    error = ERROR(CONNECT_FAIL,errno);
     close(serverSocketHandle->handle);
-    return ERROR_CONNECT_FAIL;
+    return error;
   }
 
   socketAddress.sin_family      = AF_INET;
@@ -592,8 +597,9 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           ) != 0
      )
   {
+    error = ERROR(CONNECT_FAIL,errno);
     close(serverSocketHandle->handle);
-    return ERROR_CONNECT_FAIL;
+    return error;
   }
   listen(serverSocketHandle->handle,5);
 
@@ -710,6 +716,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
 {
   struct sockaddr_in socketAddress;
   socklen_t          socketAddressLength;
+  Errors             error;
   int                result;
 
   assert(socketHandle != NULL);
@@ -723,8 +730,9 @@ Errors Network_accept(SocketHandle             *socketHandle,
                                );
   if (socketHandle->handle == -1)
   {
+    error = ERROR(CONNECT_FAIL,errno);
     close(socketHandle->handle);
-    return ERROR_CONNECT_FAIL;
+    return error;
   }
 
   /* initialise TLS session */

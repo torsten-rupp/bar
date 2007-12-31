@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.45 $
+* $Revision: 1.46 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -72,7 +72,16 @@
 #endif /* HAVE_GNU_TLS */
 #define DEFAULT_DEVICE_NAME            "/dev/dvd"
 
-#define DEFAULT_REMOTE_BAR_EXECUTABLE "/home/torsten/bar"
+#define DEFAULT_REMOTE_BAR_EXECUTABLE "/usr/local/bin/bar"
+
+#define DVD_UNLOAD_VOLUME_COMMAND  "eject -r %device"
+#define DVD_LOAD_VOLUME_COMMAND    "eject -t %device"
+#define DVD_WRITE_COMMAND          "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file"
+#define DVD_IMAGE_COMMAND          "nice mkisofs -V Backup -volset %number -r -o %image %file"
+#define DVD_ECC_COMMAND            "nice dvdisaster -mRS02 -n dvd -c -i %image -v"
+#define DVD_WRITE_IMAGE_COMMAND    "nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload"
+
+#define MIN_PASSWORD_QUALITY_LEVEL 0.6
 
 /***************************** Datatypes *******************************/
 
@@ -96,11 +105,12 @@ LOCAL Commands      command;
 LOCAL const char    *archiveFileName;
 LOCAL PatternList   includePatternList;
 LOCAL PatternList   excludePatternList;
+LOCAL SSHServer     sshServer;
 LOCAL SSHServerList sshServerList;
+LOCAL Device        device;
 LOCAL DeviceList    deviceList;
-LOCAL SSHServer     *sshServer = &defaultOptions.defaultSSHServer;
-LOCAL Device        *device = &defaultOptions.defaultDevice;
-LOCAL int           priority;
+LOCAL SSHServer     *currentSSHServer = &sshServer;
+LOCAL Device        *currentDevice = &device;
 LOCAL bool          daemonFlag;
 LOCAL uint          serverPort;
 LOCAL bool          serverTLSPort;
@@ -214,92 +224,106 @@ const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM         ("create",                   'c',0,0,command,                                              COMMAND_NONE,COMMAND_CREATE,                                       "create new archive"                                                       ),
-  CMD_OPTION_ENUM         ("list",                     'l',0,0,command,                                              COMMAND_NONE,COMMAND_LIST,                                         "list contents of archive"                                                 ),
-  CMD_OPTION_ENUM         ("test",                     't',0,0,command,                                              COMMAND_NONE,COMMAND_TEST,                                         "test contents of archive"                                                 ),
-  CMD_OPTION_ENUM         ("compare",                  'd',0,0,command,                                              COMMAND_NONE,COMMAND_COMPARE,                                      "compare contents of archive with files"                                   ),
-  CMD_OPTION_ENUM         ("extract",                  'x',0,0,command,                                              COMMAND_NONE,COMMAND_RESTORE,                                      "restore archive"                                                          ),
+  CMD_OPTION_ENUM         ("create",                       'c',0,0,command,                                              COMMAND_NONE,COMMAND_CREATE,                                       "create new archive"                                                       ),
+  CMD_OPTION_ENUM         ("list",                         'l',0,0,command,                                              COMMAND_NONE,COMMAND_LIST,                                         "list contents of archive"                                                 ),
+  CMD_OPTION_ENUM         ("test",                         't',0,0,command,                                              COMMAND_NONE,COMMAND_TEST,                                         "test contents of archive"                                                 ),
+  CMD_OPTION_ENUM         ("compare",                      'd',0,0,command,                                              COMMAND_NONE,COMMAND_COMPARE,                                      "compare contents of archive with files"                                   ),
+  CMD_OPTION_ENUM         ("extract",                      'x',0,0,command,                                              COMMAND_NONE,COMMAND_RESTORE,                                      "restore archive"                                                          ),
 
-  CMD_OPTION_SPECIAL      ("config",                   0,  1,0,NULL,                                                 NULL,cmdOptionParseConfigFile,NULL,                                "configuration file","file name"                                           ),
+  CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                                 NULL,cmdOptionParseConfigFile,NULL,                                "configuration file","file name"                                           ),
 
-  CMD_OPTION_INTEGER64    ("archive-part-size",        's',1,0,defaultOptions.archivePartSize,                       0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "approximated archive part size"                                           ),
-  CMD_OPTION_SPECIAL      ("tmp-directory",            0,  1,0,&defaultOptions.tmpDirectory,                         DEFAULT_TMP_DIRECTORY,cmdOptionParseString,NULL,                   "temporary directory","path"                                               ),
-  CMD_OPTION_INTEGER64    ("max-tmp-size",             0,  1,0,defaultOptions.maxTmpSize,                            0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "max. size of temporary files"                                             ),
+  CMD_OPTION_INTEGER64    ("archive-part-size",            's',1,0,defaultOptions.archivePartSize,                       0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "approximated archive part size"                                           ),
+  CMD_OPTION_SPECIAL      ("tmp-directory",                0,  1,0,&defaultOptions.tmpDirectory,                         DEFAULT_TMP_DIRECTORY,cmdOptionParseString,NULL,                   "temporary directory","path"                                               ),
+  CMD_OPTION_INTEGER64    ("max-tmp-size",                 0,  1,0,defaultOptions.maxTmpSize,                            0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "max. size of temporary files"                                             ),
 
-  CMD_OPTION_ENUM         ("full",                     'f',0,0,defaultOptions.archiveType,                           ARCHIVE_TYPE_FULL,ARCHIVE_TYPE_FULL,                               "create full archive"                                                      ),
-  CMD_OPTION_ENUM         ("incremental",              'i',0,0,defaultOptions.archiveType,                           ARCHIVE_TYPE_FULL,ARCHIVE_TYPE_INCREMENTAL,                        "create incremental archive"                                               ),
-  CMD_OPTION_BOOLEAN      ("create-incremental-list",  0,  1,0,defaultOptions.createIncrementalListFlag,             FALSE,                                                             "create incremental list file"                                             ),
-  CMD_OPTION_SPECIAL      ("incremental-list-file",    0,  1,0,&defaultOptions.incrementalListFileName,              NULL,cmdOptionParseString,NULL,                                    "incremental list file name (implies --create-incremental-list","file name"),
+  CMD_OPTION_ENUM         ("full",                         'f',0,0,defaultOptions.archiveType,                           ARCHIVE_TYPE_NORMAL,ARCHIVE_TYPE_FULL,                             "create full archive and incremental list file"                            ),
+  CMD_OPTION_ENUM         ("incremental",                  'i',0,0,defaultOptions.archiveType,                           ARCHIVE_TYPE_NORMAL,ARCHIVE_TYPE_INCREMENTAL,                      "create incremental archive"                                               ),
+  CMD_OPTION_SPECIAL      ("incremental-list-file",        0,  1,0,&defaultOptions.incrementalListFileName,              NULL,cmdOptionParseString,NULL,                                    "incremental list file name (implies --create-incremental-list","file name"),
 
-  CMD_OPTION_INTEGER      ("directory-strip",          'p',1,0,defaultOptions.directoryStripCount,                   0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"                                ),
-  CMD_OPTION_SPECIAL      ("directory",                0,  0,0,&defaultOptions.directory   ,                         NULL,cmdOptionParseString,NULL,                                    "directory to restore files","path"                                        ),
-  CMD_OPTION_INTEGER      ("priority",                 0,  1,0,priority,                                             0,0,19,NULL,                                                       "priority of processes/threads"                                            ),
+  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,0,defaultOptions.directoryStripCount,                   0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"                                ),
+  CMD_OPTION_SPECIAL      ("directory",                    0,  0,0,&defaultOptions.directory   ,                         NULL,cmdOptionParseString,NULL,                                    "directory to restore files","path"                                        ),
+  CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,defaultOptions.niceLevel,                             0,0,19,NULL,                                                       "general nice level of processes/threads"                                  ),
 
-  CMD_OPTION_INTEGER      ("max-band-width",           0,  1,0,defaultOptions.maxBandWidth,                          0,0,LONG_MAX,COMMAND_LINE_BITS_UNITS,                              "max. network band width to use"                                           ),
+  CMD_OPTION_INTEGER      ("max-band-width",               0,  1,0,defaultOptions.maxBandWidth,                          0,0,LONG_MAX,COMMAND_LINE_BITS_UNITS,                              "max. network band width to use"                                           ),
 
-  CMD_OPTION_SELECT       ("pattern-type",             0,  1,0,defaultOptions.patternType,                           PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPES,              "select pattern type"                                                      ),
+  CMD_OPTION_SELECT       ("pattern-type",                 0,  1,0,defaultOptions.patternType,                           PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPES,              "select pattern type"                                                      ),
 
-  CMD_OPTION_SPECIAL      ("include",                  '#',0,1,&includePatternList,                                  NULL,cmdOptionParseIncludeExclude,NULL,                            "include pattern","pattern"                                                ),
-  CMD_OPTION_SPECIAL      ("exclude",                  '!',0,1,&excludePatternList,                                  NULL,cmdOptionParseIncludeExclude,NULL,                            "exclude pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("include",                      '#',0,1,&includePatternList,                                  NULL,cmdOptionParseIncludeExclude,NULL,                            "include pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,1,&excludePatternList,                                  NULL,cmdOptionParseIncludeExclude,NULL,                            "exclude pattern","pattern"                                                ),
 
-  CMD_OPTION_SELECT       ("compress-algorithm",       'z',0,0,defaultOptions.compressAlgorithm,                     COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,  "select compress algorithm to use"                                         ),
-  CMD_OPTION_INTEGER      ("compress-min-size",        0,  1,0,defaultOptions.compressMinFileSize,                   DEFAULT_COMPRESS_MIN_FILE_SIZE,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,"minimal size of file for compression"                                     ),
+  CMD_OPTION_SELECT       ("compress-algorithm",           'z',0,0,defaultOptions.compressAlgorithm,                     COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,  "select compress algorithm to use"                                         ),
+  CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,0,defaultOptions.compressMinFileSize,                   DEFAULT_COMPRESS_MIN_FILE_SIZE,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,"minimal size of file for compression"                                     ),
 
-  CMD_OPTION_SELECT       ("crypt-algorithm",          'y',0,0,defaultOptions.cryptAlgorithm,                        CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
-  CMD_OPTION_SPECIAL      ("crypt-password",           0,  0,0,&defaultOptions.cryptPassword,                        NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
+  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,0,defaultOptions.cryptAlgorithm,                        CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
+  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&defaultOptions.cryptPassword,                        NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
 
-  CMD_OPTION_INTEGER      ("ssh-port",                 0,  0,0,defaultOptions.defaultSSHServer.port,                 0,0,65535,NULL,                                                    "ssh port"                                                                 ),
-  CMD_OPTION_SPECIAL      ("ssh-login-name",           0,  0,0,&defaultOptions.defaultSSHServer.loginName,           NULL,cmdOptionParseString,NULL,                                    "ssh login name","name"                                                    ),
-  CMD_OPTION_SPECIAL      ("ssh-public-key",           0,  1,0,&defaultOptions.defaultSSHServer.publicKeyFileName,   NULL,cmdOptionParseString,NULL,                                    "ssh public key file name","file name"                                     ),
-  CMD_OPTION_SPECIAL      ("ssh-privat-key",           0,  1,0,&defaultOptions.defaultSSHServer.privatKeyFileName,   NULL,cmdOptionParseString,NULL,                                    "ssh privat key file name","file name"                                     ),
-  CMD_OPTION_SPECIAL      ("ssh-password",             0,  0,0,&defaultOptions.defaultSSHServer.password,            NULL,cmdOptionParsePassword,NULL,                                  "ssh password (use with care!)","password"                                 ),
+  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,0,sshServer.port,                                       0,0,65535,NULL,                                                    "ssh port"                                                                 ),
+  CMD_OPTION_SPECIAL      ("ssh-login-name",               0,  0,0,&sshServer.loginName,                                 NULL,cmdOptionParseString,NULL,                                    "ssh login name","name"                                                    ),
+  CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,0,&sshServer.publicKeyFileName,                         NULL,cmdOptionParseString,NULL,                                    "ssh public key file name","file name"                                     ),
+  CMD_OPTION_SPECIAL      ("ssh-privat-key",               0,  1,0,&sshServer.privatKeyFileName,                         NULL,cmdOptionParseString,NULL,                                    "ssh privat key file name","file name"                                     ),
+  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,0,&sshServer.password,                                  NULL,cmdOptionParsePassword,NULL,                                  "ssh password (use with care!)","password"                                 ),
 
-  CMD_OPTION_BOOLEAN      ("daemon",                   0,  1,0,daemonFlag,                                           FALSE,                                                             "run in daemon mode"                                                       ),
-  CMD_OPTION_INTEGER      ("port",                     0,  1,0,serverPort,                                           DEFAULT_SERVER_PORT,0,65535,NULL,                                  "server port"                                                              ),
-  CMD_OPTION_INTEGER      ("tls-port",                 0,  1,0,serverTLSPort,                                        DEFAULT_TLS_SERVER_PORT,0,65535,NULL,                              "TLS (SSL) server port"                                                    ),
-  CMD_OPTION_STRING       ("server-ca-file",           0,  1,0,serverCAFileName,                                     DEFAULT_TLS_SERVER_CA_FILE,                                        "TLS (SSL) server certificate authority file (CA file)","file name"        ),
-  CMD_OPTION_STRING       ("server-cert-file",         0,  1,0,serverCertFileName,                                   DEFAULT_TLS_SERVER_CERTIFICATE_FILE,                               "TLS (SSL) server certificate file","file name"                            ),
-  CMD_OPTION_STRING       ("server-key-file",          0,  1,0,serverKeyFileName,                                    DEFAULT_TLS_SERVER_KEY_FILE,                                       "TLS (SSL) server key file","file name"                                    ),
-  CMD_OPTION_SPECIAL      ("server-password",          0,  1,0,&serverPassword,                                      NULL,cmdOptionParsePassword,NULL,                                  "server password (use with care!)","password"                              ),
+  CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                           FALSE,                                                             "run in daemon mode"                                                       ),
+  CMD_OPTION_INTEGER      ("port",                         0,  1,0,serverPort,                                           DEFAULT_SERVER_PORT,0,65535,NULL,                                  "server port"                                                              ),
+  CMD_OPTION_INTEGER      ("tls-port",                     0,  1,0,serverTLSPort,                                        DEFAULT_TLS_SERVER_PORT,0,65535,NULL,                              "TLS (SSL) server port"                                                    ),
+  CMD_OPTION_STRING       ("server-ca-file",               0,  1,0,serverCAFileName,                                     DEFAULT_TLS_SERVER_CA_FILE,                                        "TLS (SSL) server certificate authority file (CA file)","file name"        ),
+  CMD_OPTION_STRING       ("server-cert-file",             0,  1,0,serverCertFileName,                                   DEFAULT_TLS_SERVER_CERTIFICATE_FILE,                               "TLS (SSL) server certificate file","file name"                            ),
+  CMD_OPTION_STRING       ("server-key-file",              0,  1,0,serverKeyFileName,                                    DEFAULT_TLS_SERVER_KEY_FILE,                                       "TLS (SSL) server key file","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("server-password",              0,  1,0,&serverPassword,                                      NULL,cmdOptionParsePassword,NULL,                                  "server password (use with care!)","password"                              ),
 
-  CMD_OPTION_BOOLEAN      ("batch",                    0,  2,0,batchFlag,                                            FALSE,                                                             "run in batch mode"                                                        ),
-  CMD_OPTION_SPECIAL      ("remote-bar-executable",    0,  1,0,&defaultOptions.remoteBARExecutable,                  DEFAULT_REMOTE_BAR_EXECUTABLE,cmdOptionParseString,NULL,           "remote BAR executable","file name"                                        ),
+  CMD_OPTION_BOOLEAN      ("batch",                        0,  2,0,batchFlag,                                            FALSE,                                                             "run in batch mode"                                                        ),
+  CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,0,&defaultOptions.remoteBARExecutable,                  DEFAULT_REMOTE_BAR_EXECUTABLE,cmdOptionParseString,NULL,           "remote BAR executable","file name"                                        ),
 
-  CMD_OPTION_SPECIAL      ("device",                   0,  1,0,&defaultOptions.deviceName,                           DEFAULT_DEVICE_NAME,cmdOptionParseString,NULL,                     "default device","device name"                                             ),
-  CMD_OPTION_SPECIAL      ("request-volume-command",   0,  1,0,&defaultOptions.defaultDevice.requestVolumeCommand,   NULL,cmdOptionParseString,NULL,                                    "request new volume command","command"                                     ),
-  CMD_OPTION_SPECIAL      ("unload-volume-command",    0,  1,0,&defaultOptions.defaultDevice.unloadVolumeCommand,    NULL,cmdOptionParseString,NULL,                                    "unload volume command","command"                                          ),
-  CMD_OPTION_SPECIAL      ("load-volume-command",      0,  1,0,&defaultOptions.defaultDevice.loadVolumeCommand,      NULL,cmdOptionParseString,NULL,                                    "load volume command","command"                                            ),
-  CMD_OPTION_INTEGER64    ("volume-size",              0,  1,0,defaultOptions.defaultDevice.volumeSize,              0LL,0LL,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                    "volume size"                                                              ),
-  CMD_OPTION_SPECIAL      ("device-image-pre-command", 0,  1,0,&defaultOptions.defaultDevice.imagePreProcessCommand, NULL,cmdOptionParseString,NULL,                                    "make image pre-process command","command"                                 ),
-  CMD_OPTION_SPECIAL      ("device-image-post-command",0,  1,0,&defaultOptions.defaultDevice.imagePostProcessCommand,NULL,cmdOptionParseString,NULL,                                    "make image post-process command","command"                                ),
-  CMD_OPTION_SPECIAL      ("device-image-command",     0,  1,0,&defaultOptions.defaultDevice.imageCommand,           NULL,cmdOptionParseString,NULL,                                    "make image command","command"                                             ),
-  CMD_OPTION_SPECIAL      ("device-ecc-pre-command",   0,  1,0,&defaultOptions.defaultDevice.eccPreProcessCommand,   NULL,cmdOptionParseString,NULL,                                    "make error-correction codes pre-process command","command"                ),
-  CMD_OPTION_SPECIAL      ("device-ecc-post-command",  0,  1,0,&defaultOptions.defaultDevice.eccPostProcessCommand,  NULL,cmdOptionParseString,NULL,                                    "make error-correction codes post-process command","command"               ),
-  CMD_OPTION_SPECIAL      ("device-ecc-command",       0,  1,0,&defaultOptions.defaultDevice.eccCommand,             NULL,cmdOptionParseString,NULL,                                    "make error-correction codes command","command"                            ),
-  CMD_OPTION_SPECIAL      ("device-write-pre-command", 0,  1,0,&defaultOptions.defaultDevice.writePreProcessCommand, NULL,cmdOptionParseString,NULL,                                    "write device pre-process command","command"                               ),
-  CMD_OPTION_SPECIAL      ("device-write-post-command",0,  1,0,&defaultOptions.defaultDevice.writePostProcessCommand,NULL,cmdOptionParseString,NULL,                                    "write device post-process command","command"                              ),
-  CMD_OPTION_SPECIAL      ("device-write-command",     0,  1,0,&defaultOptions.defaultDevice.writeCommand,           NULL,cmdOptionParseString,NULL,                                    "write device command","command"                                           ),
+  CMD_OPTION_SPECIAL      ("dvd-request-volume-command",   0,  1,0,&defaultOptions.dvd.requestVolumeCommand,             NULL,cmdOptionParseString,NULL,                                    "request new DVD volume command","command"                                 ),
+  CMD_OPTION_SPECIAL      ("dvd-unload-volume-command",    0,  1,0,&defaultOptions.dvd.unloadVolumeCommand,              DVD_UNLOAD_VOLUME_COMMAND,cmdOptionParseString,NULL,               "unload DVD volume command","command"                                      ),
+  CMD_OPTION_SPECIAL      ("dvd-load-volume-command",      0,  1,0,&defaultOptions.dvd.loadVolumeCommand,                DVD_LOAD_VOLUME_COMMAND,cmdOptionParseString,NULL,                 "load DVD volume command","command"                                        ),
+  CMD_OPTION_INTEGER64    ("dvd-volume-size",              0,  1,0,defaultOptions.dvd.volumeSize,                        0LL,0LL,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                    "DVD volume size"                                                          ),
+  CMD_OPTION_SPECIAL      ("dvd-image-pre-command",        0,  1,0,&defaultOptions.dvd.imagePreProcessCommand,           NULL,cmdOptionParseString,NULL,                                    "make DVD image pre-process command","command"                             ),
+  CMD_OPTION_SPECIAL      ("dvd-image-post-command",       0,  1,0,&defaultOptions.dvd.imagePostProcessCommand,          NULL,cmdOptionParseString,NULL,                                    "make DVD image post-process command","command"                            ),
+  CMD_OPTION_SPECIAL      ("dvd-image-command",            0,  1,0,&defaultOptions.dvd.imageCommand,                     DVD_IMAGE_COMMAND,cmdOptionParseString,NULL,                       "make DVD image command","command"                                         ),
+  CMD_OPTION_SPECIAL      ("dvd-ecc-pre-command",          0,  1,0,&defaultOptions.dvd.eccPreProcessCommand,             NULL,cmdOptionParseString,NULL,                                    "make DVD error-correction codes pre-process command","command"            ),
+  CMD_OPTION_SPECIAL      ("dvd-ecc-post-command",         0,  1,0,&defaultOptions.dvd.eccPostProcessCommand,            NULL,cmdOptionParseString,NULL,                                    "make DVD error-correction codes post-process command","command"           ),
+  CMD_OPTION_SPECIAL      ("dvd-ecc-command",              0,  1,0,&defaultOptions.dvd.eccCommand,                       DVD_ECC_COMMAND,cmdOptionParseString,NULL,                         "make DVD error-correction codes command","command"                        ),
+  CMD_OPTION_SPECIAL      ("dvd-write-pre-command",        0,  1,0,&defaultOptions.dvd.writePreProcessCommand,           NULL,cmdOptionParseString,NULL,                                    "write DVD pre-process command","command"                                  ),
+  CMD_OPTION_SPECIAL      ("dvd-write-post-command",       0,  1,0,&defaultOptions.dvd.writePostProcessCommand,          NULL,cmdOptionParseString,NULL,                                    "write DVD post-process command","command"                                 ),
+  CMD_OPTION_SPECIAL      ("dvd-write-command",            0,  1,0,&defaultOptions.dvd.writeCommand,                     DVD_WRITE_COMMAND,cmdOptionParseString,NULL,                       "write DVD command","command"                                              ),
+  CMD_OPTION_SPECIAL      ("dvd-write-command",            0,  1,0,&defaultOptions.dvd.writeImageCommand,                DVD_WRITE_IMAGE_COMMAND,cmdOptionParseString,NULL,                 "write DVD image command","command"                                        ),
 
-  CMD_OPTION_BOOLEAN      ("ecc",                      0,  1,0,defaultOptions.errorCorrectionCodesFlag,              FALSE,                                                             "add error-correction codes with 'dvdisaster' tool"                        ),
+  CMD_OPTION_SPECIAL      ("device",                       0,  1,0,&defaultOptions.defaultDeviceName,                    DEFAULT_DEVICE_NAME,cmdOptionParseString,NULL,                     "default device","device name"                                             ),
+  CMD_OPTION_SPECIAL      ("device-request-volume-command",0,  1,0,&device.requestVolumeCommand,                         NULL,cmdOptionParseString,NULL,                                    "request new volume command","command"                                     ),
+  CMD_OPTION_SPECIAL      ("device-unload-volume-command", 0,  1,0,&device.unloadVolumeCommand,                          NULL,cmdOptionParseString,NULL,                                    "unload volume command","command"                                          ),
+  CMD_OPTION_SPECIAL      ("device-load-volume-command",   0,  1,0,&device.loadVolumeCommand,                            NULL,cmdOptionParseString,NULL,                                    "load volume command","command"                                            ),
+  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,0,device.volumeSize,                                    0LL,0LL,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                    "volume size"                                                              ),
+  CMD_OPTION_SPECIAL      ("device-image-pre-command",     0,  1,0,&device.imagePreProcessCommand,                       NULL,cmdOptionParseString,NULL,                                    "make image pre-process command","command"                                 ),
+  CMD_OPTION_SPECIAL      ("device-image-post-command",    0,  1,0,&device.imagePostProcessCommand,                      NULL,cmdOptionParseString,NULL,                                    "make image post-process command","command"                                ),
+  CMD_OPTION_SPECIAL      ("device-image-command",         0,  1,0,&device.imageCommand,                                 NULL,cmdOptionParseString,NULL,                                    "make image command","command"                                             ),
+  CMD_OPTION_SPECIAL      ("device-ecc-pre-command",       0,  1,0,&device.eccPreProcessCommand,                         NULL,cmdOptionParseString,NULL,                                    "make error-correction codes pre-process command","command"                ),
+  CMD_OPTION_SPECIAL      ("device-ecc-post-command",      0,  1,0,&device.eccPostProcessCommand,                        NULL,cmdOptionParseString,NULL,                                    "make error-correction codes post-process command","command"               ),
+  CMD_OPTION_SPECIAL      ("device-ecc-command",           0,  1,0,&device.eccCommand,                                   NULL,cmdOptionParseString,NULL,                                    "make error-correction codes command","command"                            ),
+  CMD_OPTION_SPECIAL      ("device-write-pre-command",     0,  1,0,&device.writePreProcessCommand,                       NULL,cmdOptionParseString,NULL,                                    "write device pre-process command","command"                               ),
+  CMD_OPTION_SPECIAL      ("device-write-post-command",    0,  1,0,&device.writePostProcessCommand,                      NULL,cmdOptionParseString,NULL,                                    "write device post-process command","command"                              ),
+  CMD_OPTION_SPECIAL      ("device-write-command",         0,  1,0,&device.writeCommand,                                 NULL,cmdOptionParseString,NULL,                                    "write device command","command"                                           ),
 
-  CMD_OPTION_SET          ("log",                      0,  1,0,logTypes,                                             0,COMMAND_LINE_OPTIONS_LOG_TYPES,                                  "log types"                                                                ),
-  CMD_OPTION_STRING       ("log-file",                 0,  1,0,logFileName       ,                                   NULL,                                                              "log file name","file name"                                                ),
-  CMD_OPTION_STRING       ("log-post-command",         0,  1,0,logPostCommand,                                       NULL,                                                              "log file post-process command","command"                                  ),
+  CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,0,defaultOptions.errorCorrectionCodesFlag,              FALSE,                                                             "add error-correction codes with 'dvdisaster' tool"                        ),
 
-  CMD_OPTION_BOOLEAN      ("skip-unreadable",          0,  0,0,defaultOptions.skipUnreadableFlag,                    TRUE,                                                              "skip unreadable files"                                                    ),
-  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",  0,  0,0,defaultOptions.overwriteArchiveFilesFlag,             FALSE,                                                             "overwrite existing archive files"                                         ),
-  CMD_OPTION_BOOLEAN      ("overwrite-files",          0,  0,0,defaultOptions.overwriteFilesFlag,                    FALSE,                                                             "overwrite existing files"                                                 ),
-  CMD_OPTION_BOOLEAN      ("no-default-config",        0,  1,0,defaultOptions.noDefaultConfigFlag,                   FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
-  CMD_OPTION_BOOLEAN      ("wait-first-volume",        0,  1,0,defaultOptions.waitFirstVolumeFlag,                   FALSE,                                                             "wait for first volume"                                                    ),
-  CMD_OPTION_BOOLEAN      ("no-storage",               0,  1,0,defaultOptions.noStorageFlag,                         FALSE,                                                             "do not store archives (skip storage)"                                     ),
-  CMD_OPTION_BOOLEAN      ("stop-on-error",            0,  1,0,defaultOptions.stopOnErrorFlag,                       FALSE,                                                             "immediately stop on error"                                                ),
-  CMD_OPTION_BOOLEAN      ("quiet",                    0,  1,0,defaultOptions.quietFlag,                             FALSE,                                                             "surpress any output"                                                      ),
-  CMD_OPTION_INTEGER_RANGE("verbose",                  'v',1,0,defaultOptions.verboseLevel,                          1,0,3,NULL,                                                        "verbosity level"                                                          ),
+  CMD_OPTION_SET          ("log",                          0,  1,0,logTypes,                                             0,COMMAND_LINE_OPTIONS_LOG_TYPES,                                  "log types"                                                                ),
+  CMD_OPTION_STRING       ("log-file",                     0,  1,0,logFileName       ,                                   NULL,                                                              "log file name","file name"                                                ),
+  CMD_OPTION_STRING       ("log-post-command",             0,  1,0,logPostCommand,                                       NULL,                                                              "log file post-process command","command"                                  ),
 
-  CMD_OPTION_BOOLEAN      ("version",                  0  ,0,0,versionFlag,                                          FALSE,                                                             "output version"                                                           ),
-  CMD_OPTION_BOOLEAN      ("help",                     'h',0,0,helpFlag,                                             FALSE,                                                             "output this help"                                                         ),
-  CMD_OPTION_BOOLEAN      ("xhelp",                    'h',0,0,xhelpFlag,                                            FALSE,                                                             "output help to extended options"                                          ),
-  CMD_OPTION_BOOLEAN      ("help-internal",            'h',1,0,helpInternalFlag,                                     FALSE,                                                             "output help to internal options"                                          ),
+  CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,0,defaultOptions.skipUnreadableFlag,                    TRUE,                                                              "skip unreadable files"                                                    ),
+  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      0,  0,0,defaultOptions.overwriteArchiveFilesFlag,             FALSE,                                                             "overwrite existing archive files"                                         ),
+  CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,0,defaultOptions.overwriteFilesFlag,                    FALSE,                                                             "overwrite existing files"                                                 ),
+  CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,defaultOptions.noDefaultConfigFlag,                   FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
+  CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,0,defaultOptions.waitFirstVolumeFlag,                   FALSE,                                                             "wait for first volume"                                                    ),
+  CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,0,defaultOptions.noStorageFlag,                         FALSE,                                                             "do not store archives (skip storage)"                                     ),
+  CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,0,defaultOptions.stopOnErrorFlag,                       FALSE,                                                             "immediately stop on error"                                                ),
+  CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,defaultOptions.quietFlag,                             FALSE,                                                             "surpress any output"                                                      ),
+  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,defaultOptions.verboseLevel,                          1,0,3,NULL,                                                        "verbosity level"                                                          ),
+
+  CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                          FALSE,                                                             "output version"                                                           ),
+  CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                             FALSE,                                                             "output this help"                                                         ),
+  CMD_OPTION_BOOLEAN      ("xhelp",                        'h',0,0,xhelpFlag,                                            FALSE,                                                             "output help to extended options"                                          ),
+  CMD_OPTION_BOOLEAN      ("help-internal",                'h',1,0,helpInternalFlag,                                     FALSE,                                                             "output help to internal options"                                          ),
 };
 
 /*---------------------------------------------------------------------*/
@@ -388,71 +412,86 @@ const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
 
 LOCAL const ConfigValue CONFIG_VALUES[] =
 {
-  CONFIG_VALUE_SPECIAL  ("config",                   NULL,-1,                                                 configValueParseConfigFile,NULL),
+  CONFIG_VALUE_SPECIAL  ("config",                       NULL,-1,                                                 configValueParseConfigFile,NULL),
 
-  CONFIG_VALUE_INTEGER64("archive-part-size",        defaultOptions.archivePartSize,-1,                       0,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_SPECIAL  ("tmp-directory",            &defaultOptions.tmpDirectory,-1,                         configValueParseString,NULL),
-  CONFIG_VALUE_INTEGER64("max-tmp-size",             defaultOptions.maxTmpSize,-1,                            0,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("archive-part-size",            defaultOptions.archivePartSize,-1,                       0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_SPECIAL  ("tmp-directory",                &defaultOptions.tmpDirectory,-1,                         configValueParseString,NULL),
+  CONFIG_VALUE_INTEGER64("max-tmp-size",                 defaultOptions.maxTmpSize,-1,                            0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_VALUE_INTEGER  ("directory-strip",          defaultOptions.directoryStripCount,-1,                   0,LONG_MAX,NULL),
-  CONFIG_VALUE_SPECIAL  ("directory",                &defaultOptions.directory,-1,                            configValueParseString,NULL),
-  CONFIG_VALUE_INTEGER  ("priority",                 priority,-1,                                             0,19,NULL),
+  CONFIG_VALUE_INTEGER  ("directory-strip",              defaultOptions.directoryStripCount,-1,                   0,LONG_MAX,NULL),
+  CONFIG_VALUE_SPECIAL  ("directory",                    &defaultOptions.directory,-1,                            configValueParseString,NULL),
+  CONFIG_VALUE_INTEGER  ("nice-level",                   defaultOptions.niceLevel,-1,                             0,19,NULL),
 
-  CONFIG_VALUE_INTEGER  ("max-band-width",           defaultOptions.maxBandWidth,-1,                          0,LONG_MAX,CONFIG_VALUE_BITS_UNITS),
+  CONFIG_VALUE_INTEGER  ("max-band-width",               defaultOptions.maxBandWidth,-1,                          0,LONG_MAX,CONFIG_VALUE_BITS_UNITS),
 
-  CONFIG_VALUE_SELECT   ("pattern-type",             defaultOptions.patternType,-1,                           CONFIG_VALUE_PATTERN_TYPES),
+  CONFIG_VALUE_SELECT   ("pattern-type",                 defaultOptions.patternType,-1,                           CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_VALUE_SPECIAL  ("include",                  &includePatternList,-1,                                  configValueParseIncludeExclude,NULL),
-  CONFIG_VALUE_SPECIAL  ("exclude",                  &excludePatternList,-1,                                  configValueParseIncludeExclude,NULL),
+  CONFIG_VALUE_SPECIAL  ("include",                      &includePatternList,-1,                                  configValueParseIncludeExclude,NULL),
+  CONFIG_VALUE_SPECIAL  ("exclude",                      &excludePatternList,-1,                                  configValueParseIncludeExclude,NULL),
 
-  CONFIG_VALUE_SELECT   ("compress-algorithm",       defaultOptions.compressAlgorithm,-1,                     CONFIG_VALUE_COMPRESS_ALGORITHMS),
-  CONFIG_VALUE_INTEGER  ("compress-min-size",        defaultOptions.compressMinFileSize,-1,                   0,LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_SELECT   ("compress-algorithm",           defaultOptions.compressAlgorithm,-1,                     CONFIG_VALUE_COMPRESS_ALGORITHMS),
+  CONFIG_VALUE_INTEGER  ("compress-min-size",            defaultOptions.compressMinFileSize,-1,                   0,LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_VALUE_SELECT   ("crypt-algorithm",          defaultOptions.cryptAlgorithm,-1,                        CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_VALUE_SPECIAL  ("crypt-password",           &defaultOptions.cryptPassword,-1,                        configValueParsePassword,NULL),
+  CONFIG_VALUE_SELECT   ("crypt-algorithm",              defaultOptions.cryptAlgorithm,-1,                        CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_VALUE_SPECIAL  ("crypt-password",               &defaultOptions.cryptPassword,-1,                        configValueParsePassword,NULL),
 
-  CONFIG_VALUE_INTEGER  ("ssh-port",                 sshServer,offsetof(SSHServer,port),                      0,65535,NULL),
-  CONFIG_VALUE_SPECIAL  ("ssh-login-name",           &sshServer,offsetof(SSHServer,loginName),                configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("ssh-public-key",           &sshServer,offsetof(SSHServer,publicKeyFileName),        configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("ssh-privat-key",           &sshServer,offsetof(SSHServer,privatKeyFileName),        configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("ssh-password",             &sshServer,offsetof(SSHServer,password),                 configValueParsePassword,NULL),
+  CONFIG_VALUE_INTEGER  ("ssh-port",                     currentSSHServer,offsetof(SSHServer,port),               0,65535,NULL),
+  CONFIG_VALUE_SPECIAL  ("ssh-login-name",               &currentSSHServer,offsetof(SSHServer,loginName),         configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("ssh-public-key",               &currentSSHServer,offsetof(SSHServer,publicKeyFileName), configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("ssh-privat-key",               &currentSSHServer,offsetof(SSHServer,privatKeyFileName), configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(SSHServer,password),          configValueParsePassword,NULL),
 
-  CONFIG_VALUE_INTEGER  ("port",                     serverPort,-1,                                           0,65535,NULL),
-  CONFIG_VALUE_INTEGER  ("tls-port",                 serverTLSPort,-1,                                        0,65535,NULL),
-  CONFIG_VALUE_STRING   ("server-ca-file",           serverCAFileName,-1                                      ),
-  CONFIG_VALUE_STRING   ("server-cert-file",         serverCertFileName,-1                                    ),
-  CONFIG_VALUE_STRING   ("server-key-file",          serverKeyFileName,-1                                     ),
-  CONFIG_VALUE_SPECIAL  ("server-password",          &serverPassword,-1,                                      configValueParsePassword,NULL),
+  CONFIG_VALUE_INTEGER  ("port",                         serverPort,-1,                                           0,65535,NULL),
+  CONFIG_VALUE_INTEGER  ("tls-port",                     serverTLSPort,-1,                                        0,65535,NULL),
+  CONFIG_VALUE_STRING   ("server-ca-file",               serverCAFileName,-1                                      ),
+  CONFIG_VALUE_STRING   ("server-cert-file",             serverCertFileName,-1                                    ),
+  CONFIG_VALUE_STRING   ("server-key-file",              serverKeyFileName,-1                                     ),
+  CONFIG_VALUE_SPECIAL  ("server-password",              &serverPassword,-1,                                      configValueParsePassword,NULL),
 
-  CONFIG_VALUE_SPECIAL  ("remote-bar-executable",    &defaultOptions.remoteBARExecutable,-1,                  configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("remote-bar-executable",        &defaultOptions.remoteBARExecutable,-1,                  configValueParseString,NULL),
 
-  CONFIG_VALUE_SPECIAL  ("device",                   &defaultOptions.deviceName,-1,                           configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("request-volume-command",   &defaultOptions.defaultDevice.requestVolumeCommand,-1,   configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("unload-volume-command",    &defaultOptions.defaultDevice.unloadVolumeCommand,-1,    configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("load-volume-command",      &defaultOptions.defaultDevice.loadVolumeCommand,-1,      configValueParseString,NULL),
-  CONFIG_VALUE_INTEGER64("volume-size",              defaultOptions.defaultDevice.volumeSize,-1,              0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_SPECIAL  ("device-image-pre-command", &defaultOptions.defaultDevice.imagePreProcessCommand,-1, configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("device-image-post-command",&defaultOptions.defaultDevice.imagePostProcessCommand,-1,configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("device-image-command",     &defaultOptions.defaultDevice.imageCommand,-1,           configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("device-ecc-pre-command",   &defaultOptions.defaultDevice.eccPreProcessCommand,-1,   configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("device-ecc-post-command",  &defaultOptions.defaultDevice.eccPostProcessCommand,-1,  configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("device-ecc-command",       &defaultOptions.defaultDevice.eccCommand,-1,             configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("device-write-pre-command", &defaultOptions.defaultDevice.writePreProcessCommand,-1, configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("device-write-post-command",&defaultOptions.defaultDevice.writePostProcessCommand,-1,configValueParseString,NULL),
-  CONFIG_VALUE_SPECIAL  ("device-write-command",     &defaultOptions.defaultDevice.writeCommand,-1,           configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-request-volume-command",   &defaultOptions.dvd.requestVolumeCommand,-1,             configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-unload-volume-command",    &defaultOptions.dvd.unloadVolumeCommand,-1,              configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-load-volume-command",      &defaultOptions.dvd.loadVolumeCommand,-1,                configValueParseString,NULL),
+  CONFIG_VALUE_INTEGER64("dvd-volume-size",              defaultOptions.dvd.volumeSize,-1,                        0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_SPECIAL  ("dvd-image-pre-command",        &defaultOptions.dvd.imagePreProcessCommand,-1,           configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-image-post-command",       &defaultOptions.dvd.imagePostProcessCommand,-1,          configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-image-command",            &defaultOptions.dvd.imageCommand,-1,                     configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-ecc-pre-command",          &defaultOptions.dvd.eccPreProcessCommand,-1,             configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-ecc-post-command",         &defaultOptions.dvd.eccPostProcessCommand,-1,            configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-ecc-command",              &defaultOptions.dvd.eccCommand,-1,                       configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-write-pre-command",        &defaultOptions.dvd.writePreProcessCommand,-1,           configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-write-post-command",       &defaultOptions.dvd.writePostProcessCommand,-1,          configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-write-command",            &defaultOptions.dvd.writeCommand,-1,                     configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("dvd-write-command",            &defaultOptions.dvd.writeImageCommand,-1,                configValueParseString,NULL),
 
-  CONFIG_VALUE_BOOLEAN  ("ecc",                      defaultOptions.errorCorrectionCodesFlag,-1               ),
+  CONFIG_VALUE_SPECIAL  ("device",                       &defaultOptions.defaultDeviceName,-1,                    configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-request-volume-command",&currentDevice,offsetof(Device,requestVolumeCommand),    configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-unload-volume-command", &currentDevice,offsetof(Device,unloadVolumeCommand),     configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-load-volume-command",   &currentDevice,offsetof(Device,loadVolumeCommand),       configValueParseString,NULL),
+  CONFIG_VALUE_INTEGER64("device-volume-size",           currentDevice,offsetof(Device,volumeSize),               0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_SPECIAL  ("device-image-pre-command",     &currentDevice,offsetof(Device,imagePreProcessCommand),  configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-image-post-command",    &currentDevice,offsetof(Device,imagePostProcessCommand), configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-image-command",         &currentDevice,offsetof(Device,imageCommand),            configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-ecc-pre-command",       &currentDevice,offsetof(Device,eccPreProcessCommand),    configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-ecc-post-command",      &currentDevice,offsetof(Device,eccPostProcessCommand),   configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-ecc-command",           &currentDevice,offsetof(Device,eccCommand),              configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-write-pre-command",     &currentDevice,offsetof(Device,writePreProcessCommand),  configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-write-post-command",    &currentDevice,offsetof(Device,writePostProcessCommand), configValueParseString,NULL),
+  CONFIG_VALUE_SPECIAL  ("device-write-command",         &currentDevice,offsetof(Device,writeCommand),            configValueParseString,NULL),
 
-  CONFIG_VALUE_SET      ("log",                      logTypes,-1,                                             CONFIG_VALUE_LOG_TYPES),
-  CONFIG_VALUE_STRING   ("log-file",                 logFileName,-1                                           ),
-  CONFIG_VALUE_STRING   ("log-post-command",         logPostCommand,-1                                        ),
+  CONFIG_VALUE_BOOLEAN  ("ecc",                          defaultOptions.errorCorrectionCodesFlag,-1               ),
 
-  CONFIG_VALUE_BOOLEAN  ("skip-unreadable",          defaultOptions.skipUnreadableFlag,-1                     ),
-  CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",  defaultOptions.overwriteArchiveFilesFlag,-1              ),
-  CONFIG_VALUE_BOOLEAN  ("overwrite-files",          defaultOptions.overwriteFilesFlag,-1                     ),
-  CONFIG_VALUE_BOOLEAN  ("wait-first-volume",        defaultOptions.waitFirstVolumeFlag,-1                    ),
-  CONFIG_VALUE_BOOLEAN  ("quiet",                    defaultOptions.quietFlag,-1                              ),
-  CONFIG_VALUE_INTEGER  ("verbose",                  defaultOptions.verboseLevel,-1,                          0,3,NULL),
+  CONFIG_VALUE_SET      ("log",                          logTypes,-1,                                             CONFIG_VALUE_LOG_TYPES),
+  CONFIG_VALUE_STRING   ("log-file",                     logFileName,-1                                           ),
+  CONFIG_VALUE_STRING   ("log-post-command",             logPostCommand,-1                                        ),
+
+  CONFIG_VALUE_BOOLEAN  ("skip-unreadable",              defaultOptions.skipUnreadableFlag,-1                     ),
+  CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",      defaultOptions.overwriteArchiveFilesFlag,-1              ),
+  CONFIG_VALUE_BOOLEAN  ("overwrite-files",              defaultOptions.overwriteFilesFlag,-1                     ),
+  CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            defaultOptions.waitFirstVolumeFlag,-1                    ),
+  CONFIG_VALUE_BOOLEAN  ("quiet",                        defaultOptions.quietFlag,-1                              ),
+  CONFIG_VALUE_INTEGER  ("verbose",                      defaultOptions.verboseLevel,-1,                          0,3,NULL),
 };
 
 /****************************** Macros *********************************/
@@ -599,9 +638,9 @@ LOCAL bool readConfigFile(String fileName, bool printInfoFlag)
       sshServerNode->sshServer.privatKeyFileName = NULL;
       sshServerNode->sshServer.password          = NULL;
 
-      List_append(defaultOptions.sshServerList,sshServerNode);
+      List_append(&sshServerList,sshServerNode);
 
-      sshServer = &sshServerNode->sshServer;
+      currentSSHServer = &sshServerNode->sshServer;
     }
     else if (String_parse(line,"[device %S]",NULL,name))
     {
@@ -627,14 +666,14 @@ LOCAL bool readConfigFile(String fileName, bool printInfoFlag)
       deviceNode->device.writePostProcessCommand = NULL;
       deviceNode->device.writeCommand            = NULL;
 
-      List_append(defaultOptions.deviceList,deviceNode);
+      List_append(&deviceList,deviceNode);
 
-      device = &deviceNode->device;
+      currentDevice = &deviceNode->device;
     }
     else if (String_parse(line,"[global]",NULL))
     {
-      sshServer = &defaultOptions.defaultSSHServer;
-      device    = &defaultOptions.device;
+      currentSSHServer = &sshServer;
+      currentDevice    = &device;
     }
     else if (String_parse(line,"%S=%S",NULL,name,value))
     {
@@ -922,6 +961,51 @@ LOCAL void printUsage(const char *programName, uint level)
                      );
 }
 
+LOCAL void initOptions(Options *options)
+{
+  assert(options != NULL);
+
+  memset(options,0,sizeof(Options));
+  options->sshServerList = &sshServerList;
+  options->sshServer     = &options->defaultSSHServer;
+  options->deviceList    = &deviceList;
+  options->device        = &options->defaultDevice;
+}
+
+LOCAL void freeSSHServerNode(SSHServerNode *sshServerNode, void *userData)
+{
+  assert(sshServerNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  Password_delete(sshServerNode->sshServer.password);
+  String_delete(sshServerNode->sshServer.privatKeyFileName);
+  String_delete(sshServerNode->sshServer.publicKeyFileName);
+  String_delete(sshServerNode->sshServer.loginName        );
+  String_delete(sshServerNode->name);
+}
+
+LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
+{
+  assert(deviceNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(deviceNode->device.writeCommand           );
+  String_delete(deviceNode->device.writePostProcessCommand);
+  String_delete(deviceNode->device.writePreProcessCommand );
+  String_delete(deviceNode->device.eccCommand             );
+  String_delete(deviceNode->device.eccPostProcessCommand  );
+  String_delete(deviceNode->device.eccPreProcessCommand   );
+  String_delete(deviceNode->device.imageCommand           );
+  String_delete(deviceNode->device.imagePostProcessCommand);
+  String_delete(deviceNode->device.imagePreProcessCommand );
+  String_delete(deviceNode->device.loadVolumeCommand      );
+  String_delete(deviceNode->device.unloadVolumeCommand    );
+  String_delete(deviceNode->device.requestVolumeCommand   );
+  String_delete(deviceNode->name);
+}
+
 /***********************************************************************\
 * Name   : initAll
 * Purpose: initialize
@@ -935,6 +1019,7 @@ LOCAL bool initAll(void)
 {
   Errors error;
 
+  /* initialise modules */
   error = Password_initAll();
   if (error != ERROR_NONE)
   {
@@ -992,6 +1077,18 @@ LOCAL bool initAll(void)
     return FALSE;
   }
 
+  /* initialise variables */
+  StringList_init(&configFileNameList);
+  tmpLogFileName = String_new();
+  outputLine = String_new();
+  outputNewLineFlag = TRUE;
+  initOptions(&defaultOptions);
+  serverPassword = Password_new();
+  Pattern_initList(&includePatternList);
+  Pattern_initList(&excludePatternList);
+  List_init(&sshServerList);
+  List_init(&deviceList);
+
   return TRUE;
 }
 
@@ -1006,6 +1103,18 @@ LOCAL bool initAll(void)
 
 LOCAL void doneAll(void)
 {
+  /* deinitialise variables */
+  List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
+  List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
+  Pattern_doneList(&excludePatternList);
+  Pattern_doneList(&includePatternList);
+  Password_delete(serverPassword);
+  freeOptions(&defaultOptions);
+  String_delete(outputLine);
+  String_delete(tmpLogFileName);
+  StringList_done(&configFileNameList);
+
+  /* deinitialise modules */
   Server_doneAll();
   Network_doneAll();
   Storage_doneAll();
@@ -1013,54 +1122,6 @@ LOCAL void doneAll(void)
   Pattern_doneAll();
   Crypt_doneAll();
   Password_doneAll();
-}
-
-LOCAL void initOptions(Options *options)
-{
-  assert(options != NULL);
-
-  memset(options,0,sizeof(Options));
-  options->sshServerList               = &sshServerList;
-  options->deviceList                  = &deviceList;
-//  options->incrementalListFileName     = String_new();
-//  options->cryptPassword               = Password_new();
-//  options->sshServer.publicKeyFileName = String_new();
-//  options->sshServer.privatKeyFileName = String_new();
-//  options->device.loadVolumeCommand    = String_new();
-}
-
-LOCAL void freeSSHServerNode(SSHServerNode *sshServerNode, void *userData)
-{
-  assert(sshServerNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  Password_delete(sshServerNode->sshServer.password);
-  String_delete(sshServerNode->sshServer.privatKeyFileName);
-  String_delete(sshServerNode->sshServer.publicKeyFileName);
-  String_delete(sshServerNode->sshServer.loginName        );
-  String_delete(sshServerNode->name);
-}
-
-LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
-{
-  assert(deviceNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(deviceNode->device.writeCommand           );
-  String_delete(deviceNode->device.writePostProcessCommand);
-  String_delete(deviceNode->device.writePreProcessCommand );
-  String_delete(deviceNode->device.eccCommand             );
-  String_delete(deviceNode->device.eccPostProcessCommand  );
-  String_delete(deviceNode->device.eccPreProcessCommand   );
-  String_delete(deviceNode->device.imageCommand           );
-  String_delete(deviceNode->device.imagePostProcessCommand);
-  String_delete(deviceNode->device.imagePreProcessCommand );
-  String_delete(deviceNode->device.loadVolumeCommand      );
-  String_delete(deviceNode->device.unloadVolumeCommand    );
-  String_delete(deviceNode->device.requestVolumeCommand   );
-  String_delete(deviceNode->name);
 }
 
 /*---------------------------------------------------------------------*/
@@ -1204,8 +1265,8 @@ void printError(const char *text, ...)
 
 void logPostProcess(void)
 {
-  ExecuteMacro executeMacros[1];
-  Errors       error;
+  TextMacro textMacros[1];
+  Errors    error;
 
   /* flush logs */
   if (logFile != NULL) fflush(logFile);
@@ -1215,9 +1276,9 @@ void logPostProcess(void)
   if (logPostCommand != NULL)
   {
     printInfo(2,"Log post process...");
-    executeMacros[0].type = EXECUTE_MACRO_TYPE_STRING; executeMacros[0].name = "%file"; executeMacros[0].string = tmpLogFileName;
+    TEXT_MACRO_STRING(textMacros[0],"%file",tmpLogFileName);
     error = Misc_executeCommand(logPostCommand,
-                                executeMacros,SIZE_OF_ARRAY(executeMacros),
+                                textMacros,SIZE_OF_ARRAY(textMacros),
                                 NULL,
                                 NULL,
                                 NULL
@@ -1248,16 +1309,26 @@ void copyOptions(Options *destinationOptions, const Options *sourceOptions)
   destinationOptions->incrementalListFileName               = String_duplicate(sourceOptions->incrementalListFileName);
   destinationOptions->directory                             = String_duplicate(sourceOptions->directory);
   destinationOptions->cryptPassword                         = Password_duplicate(sourceOptions->cryptPassword);
-  destinationOptions->sshServer.loginName                   = String_duplicate(sourceOptions->sshServer.loginName);
-  destinationOptions->sshServer.publicKeyFileName           = String_duplicate(sourceOptions->sshServer.publicKeyFileName);
-  destinationOptions->sshServer.privatKeyFileName           = String_duplicate(sourceOptions->sshServer.privatKeyFileName);
-  destinationOptions->sshServer.password                    = Password_duplicate(sourceOptions->sshServer.password);
+  destinationOptions->sshServer                             = &destinationOptions->defaultSSHServer;
   destinationOptions->defaultSSHServer.loginName            = String_duplicate(sourceOptions->defaultSSHServer.loginName);
   destinationOptions->defaultSSHServer.publicKeyFileName    = String_duplicate(sourceOptions->defaultSSHServer.publicKeyFileName);
   destinationOptions->defaultSSHServer.privatKeyFileName    = String_duplicate(sourceOptions->defaultSSHServer.privatKeyFileName);
   destinationOptions->defaultSSHServer.password             = Password_duplicate(sourceOptions->defaultSSHServer.password);
-  destinationOptions->remoteBARExecutable                   = String_duplicate(sourceOptions->remoteBARExecutable);
-  destinationOptions->deviceName                            = String_duplicate(sourceOptions->deviceName);
+  destinationOptions->defaultDeviceName                     = String_duplicate(sourceOptions->defaultDeviceName);
+  destinationOptions->dvd.requestVolumeCommand              = String_duplicate(sourceOptions->dvd.requestVolumeCommand);
+  destinationOptions->dvd.unloadVolumeCommand               = String_duplicate(sourceOptions->dvd.unloadVolumeCommand);
+  destinationOptions->dvd.loadVolumeCommand                 = String_duplicate(sourceOptions->dvd.loadVolumeCommand);
+  destinationOptions->dvd.imagePreProcessCommand            = String_duplicate(sourceOptions->dvd.imagePreProcessCommand);
+  destinationOptions->dvd.imagePostProcessCommand           = String_duplicate(sourceOptions->dvd.imagePostProcessCommand);
+  destinationOptions->dvd.imageCommand                      = String_duplicate(sourceOptions->dvd.imageCommand);
+  destinationOptions->dvd.eccPreProcessCommand              = String_duplicate(sourceOptions->dvd.eccPreProcessCommand);
+  destinationOptions->dvd.eccPostProcessCommand             = String_duplicate(sourceOptions->dvd.eccPostProcessCommand);
+  destinationOptions->dvd.eccCommand                        = String_duplicate(sourceOptions->dvd.eccCommand);
+  destinationOptions->dvd.writePreProcessCommand            = String_duplicate(sourceOptions->dvd.writePreProcessCommand);
+  destinationOptions->dvd.writePostProcessCommand           = String_duplicate(sourceOptions->dvd.writePostProcessCommand);
+  destinationOptions->dvd.writeCommand                      = String_duplicate(sourceOptions->dvd.writeCommand);
+  destinationOptions->dvd.writeImageCommand                 = String_duplicate(sourceOptions->dvd.writeImageCommand);
+  destinationOptions->device                                = &destinationOptions->defaultDevice;
   destinationOptions->defaultDevice.requestVolumeCommand    = String_duplicate(sourceOptions->defaultDevice.requestVolumeCommand);
   destinationOptions->defaultDevice.unloadVolumeCommand     = String_duplicate(sourceOptions->defaultDevice.unloadVolumeCommand);
   destinationOptions->defaultDevice.loadVolumeCommand       = String_duplicate(sourceOptions->defaultDevice.loadVolumeCommand);
@@ -1270,12 +1341,14 @@ void copyOptions(Options *destinationOptions, const Options *sourceOptions)
   destinationOptions->defaultDevice.writePreProcessCommand  = String_duplicate(sourceOptions->defaultDevice.writePreProcessCommand);
   destinationOptions->defaultDevice.writePostProcessCommand = String_duplicate(sourceOptions->defaultDevice.writePostProcessCommand);
   destinationOptions->defaultDevice.writeCommand            = String_duplicate(sourceOptions->defaultDevice.writeCommand);
+  destinationOptions->remoteBARExecutable                   = String_duplicate(sourceOptions->remoteBARExecutable);
 }
 
 void freeOptions(Options *options)
 {
   assert(options != NULL);
 
+  String_delete(options->remoteBARExecutable);
   String_delete(options->defaultDevice.writeCommand);
   String_delete(options->defaultDevice.writePostProcessCommand);
   String_delete(options->defaultDevice.writePreProcessCommand);
@@ -1288,16 +1361,24 @@ void freeOptions(Options *options)
   String_delete(options->defaultDevice.loadVolumeCommand);
   String_delete(options->defaultDevice.unloadVolumeCommand);
   String_delete(options->defaultDevice.requestVolumeCommand);
-  String_delete(options->deviceName);
-  String_delete(options->remoteBARExecutable);
+  String_delete(options->defaultDeviceName);
+  String_delete(options->dvd.writeImageCommand);
+  String_delete(options->dvd.writeCommand);
+  String_delete(options->dvd.writePostProcessCommand);
+  String_delete(options->dvd.writePreProcessCommand);
+  String_delete(options->dvd.eccCommand);
+  String_delete(options->dvd.eccPostProcessCommand);
+  String_delete(options->dvd.eccPreProcessCommand);
+  String_delete(options->dvd.imageCommand);
+  String_delete(options->dvd.imagePostProcessCommand);
+  String_delete(options->dvd.imagePreProcessCommand);
+  String_delete(options->dvd.loadVolumeCommand);
+  String_delete(options->dvd.unloadVolumeCommand);
+  String_delete(options->dvd.requestVolumeCommand);
   Password_delete(options->defaultSSHServer.password);
   String_delete(options->defaultSSHServer.privatKeyFileName);
   String_delete(options->defaultSSHServer.publicKeyFileName);
   String_delete(options->defaultSSHServer.loginName);
-  Password_delete(options->sshServer.password);
-  String_delete(options->sshServer.privatKeyFileName);
-  String_delete(options->sshServer.publicKeyFileName);
-  String_delete(options->sshServer.loginName);
   Password_delete(options->cryptPassword);
   String_delete(options->directory);
   String_delete(options->incrementalListFileName);
@@ -1321,11 +1402,11 @@ void getSSHServer(const String  name,
   {
     sshServerNode = sshServerNode->next;
   }
-  sshServer->port              = (options->sshServer.port              != 0)?options->sshServer.port             :((sshServerNode != NULL)?sshServerNode->sshServer.port             :options->defaultSSHServer.port             );
-  sshServer->loginName         = (options->sshServer.loginName         != 0)?options->sshServer.loginName        :((sshServerNode != NULL)?sshServerNode->sshServer.loginName        :options->defaultSSHServer.loginName        );
-  sshServer->publicKeyFileName = (options->sshServer.publicKeyFileName != 0)?options->sshServer.publicKeyFileName:((sshServerNode != NULL)?sshServerNode->sshServer.publicKeyFileName:options->defaultSSHServer.publicKeyFileName);
-  sshServer->privatKeyFileName = (options->sshServer.privatKeyFileName != 0)?options->sshServer.privatKeyFileName:((sshServerNode != NULL)?sshServerNode->sshServer.privatKeyFileName:options->defaultSSHServer.privatKeyFileName);
-  sshServer->password          = (options->sshServer.password          != 0)?options->sshServer.password         :((sshServerNode != NULL)?sshServerNode->sshServer.password         :options->defaultSSHServer.password         );
+  sshServer->port              = (options->sshServer->port              != 0)?options->sshServer->port             :((sshServerNode != NULL)?sshServerNode->sshServer.port             :options->defaultSSHServer.port             );
+  sshServer->loginName         = (options->sshServer->loginName         != 0)?options->sshServer->loginName        :((sshServerNode != NULL)?sshServerNode->sshServer.loginName        :options->defaultSSHServer.loginName        );
+  sshServer->publicKeyFileName = (options->sshServer->publicKeyFileName != 0)?options->sshServer->publicKeyFileName:((sshServerNode != NULL)?sshServerNode->sshServer.publicKeyFileName:options->defaultSSHServer.publicKeyFileName);
+  sshServer->privatKeyFileName = (options->sshServer->privatKeyFileName != 0)?options->sshServer->privatKeyFileName:((sshServerNode != NULL)?sshServerNode->sshServer.privatKeyFileName:options->defaultSSHServer.privatKeyFileName);
+  sshServer->password          = (options->sshServer->password          != 0)?options->sshServer->password         :((sshServerNode != NULL)?sshServerNode->sshServer.password         :options->defaultSSHServer.password         );
 }
 
 void getDevice(const String  name,
@@ -1344,19 +1425,52 @@ void getDevice(const String  name,
   {
     deviceNode = deviceNode->next;
   }
-  device->requestVolumeCommand    = (options->device.requestVolumeCommand    != 0)?options->device.requestVolumeCommand   :((deviceNode != NULL)?deviceNode->device.requestVolumeCommand   :options->defaultDevice.requestVolumeCommand   );
-  device->unloadVolumeCommand     = (options->device.unloadVolumeCommand     != 0)?options->device.unloadVolumeCommand    :((deviceNode != NULL)?deviceNode->device.unloadVolumeCommand    :options->defaultDevice.unloadVolumeCommand    );
-  device->loadVolumeCommand       = (options->device.loadVolumeCommand       != 0)?options->device.loadVolumeCommand      :((deviceNode != NULL)?deviceNode->device.loadVolumeCommand      :options->defaultDevice.loadVolumeCommand      );
-  device->volumeSize              = (options->device.volumeSize              != 0)?options->device.volumeSize             :((deviceNode != NULL)?deviceNode->device.volumeSize             :options->defaultDevice.volumeSize             );
-  device->imagePreProcessCommand  = (options->device.imagePreProcessCommand  != 0)?options->device.imagePreProcessCommand :((deviceNode != NULL)?deviceNode->device.imagePreProcessCommand :options->defaultDevice.imagePreProcessCommand );
-  device->imagePostProcessCommand = (options->device.imagePostProcessCommand != 0)?options->device.imagePostProcessCommand:((deviceNode != NULL)?deviceNode->device.imagePostProcessCommand:options->defaultDevice.imagePostProcessCommand);
-  device->imageCommand            = (options->device.imageCommand            != 0)?options->device.imageCommand           :((deviceNode != NULL)?deviceNode->device.imageCommand           :options->defaultDevice.imageCommand           );
-  device->eccPreProcessCommand    = (options->device.eccPreProcessCommand    != 0)?options->device.eccPreProcessCommand   :((deviceNode != NULL)?deviceNode->device.eccPreProcessCommand   :options->defaultDevice.eccPreProcessCommand   );
-  device->eccPostProcessCommand   = (options->device.eccPostProcessCommand   != 0)?options->device.eccPostProcessCommand  :((deviceNode != NULL)?deviceNode->device.eccPostProcessCommand  :options->defaultDevice.eccPostProcessCommand  );
-  device->eccCommand              = (options->device.eccCommand              != 0)?options->device.eccCommand             :((deviceNode != NULL)?deviceNode->device.eccCommand             :options->defaultDevice.eccCommand             );
-  device->writePreProcessCommand  = (options->device.writePreProcessCommand  != 0)?options->device.writePreProcessCommand :((deviceNode != NULL)?deviceNode->device.writePreProcessCommand :options->defaultDevice.writePreProcessCommand );
-  device->writePostProcessCommand = (options->device.writePostProcessCommand != 0)?options->device.writePostProcessCommand:((deviceNode != NULL)?deviceNode->device.writePostProcessCommand:options->defaultDevice.writePostProcessCommand);
-  device->writeCommand            = (options->device.writeCommand            != 0)?options->device.writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :options->defaultDevice.writeCommand           );
+  device->requestVolumeCommand    = (options->device->requestVolumeCommand    != 0)?options->device->requestVolumeCommand   :((deviceNode != NULL)?deviceNode->device.requestVolumeCommand   :options->defaultDevice.requestVolumeCommand   );
+  device->unloadVolumeCommand     = (options->device->unloadVolumeCommand     != 0)?options->device->unloadVolumeCommand    :((deviceNode != NULL)?deviceNode->device.unloadVolumeCommand    :options->defaultDevice.unloadVolumeCommand    );
+  device->loadVolumeCommand       = (options->device->loadVolumeCommand       != 0)?options->device->loadVolumeCommand      :((deviceNode != NULL)?deviceNode->device.loadVolumeCommand      :options->defaultDevice.loadVolumeCommand      );
+  device->volumeSize              = (options->device->volumeSize              != 0)?options->device->volumeSize             :((deviceNode != NULL)?deviceNode->device.volumeSize             :options->defaultDevice.volumeSize             );
+  device->imagePreProcessCommand  = (options->device->imagePreProcessCommand  != 0)?options->device->imagePreProcessCommand :((deviceNode != NULL)?deviceNode->device.imagePreProcessCommand :options->defaultDevice.imagePreProcessCommand );
+  device->imagePostProcessCommand = (options->device->imagePostProcessCommand != 0)?options->device->imagePostProcessCommand:((deviceNode != NULL)?deviceNode->device.imagePostProcessCommand:options->defaultDevice.imagePostProcessCommand);
+  device->imageCommand            = (options->device->imageCommand            != 0)?options->device->imageCommand           :((deviceNode != NULL)?deviceNode->device.imageCommand           :options->defaultDevice.imageCommand           );
+  device->eccPreProcessCommand    = (options->device->eccPreProcessCommand    != 0)?options->device->eccPreProcessCommand   :((deviceNode != NULL)?deviceNode->device.eccPreProcessCommand   :options->defaultDevice.eccPreProcessCommand   );
+  device->eccPostProcessCommand   = (options->device->eccPostProcessCommand   != 0)?options->device->eccPostProcessCommand  :((deviceNode != NULL)?deviceNode->device.eccPostProcessCommand  :options->defaultDevice.eccPostProcessCommand  );
+  device->eccCommand              = (options->device->eccCommand              != 0)?options->device->eccCommand             :((deviceNode != NULL)?deviceNode->device.eccCommand             :options->defaultDevice.eccCommand             );
+  device->writePreProcessCommand  = (options->device->writePreProcessCommand  != 0)?options->device->writePreProcessCommand :((deviceNode != NULL)?deviceNode->device.writePreProcessCommand :options->defaultDevice.writePreProcessCommand );
+  device->writePostProcessCommand = (options->device->writePostProcessCommand != 0)?options->device->writePostProcessCommand:((deviceNode != NULL)?deviceNode->device.writePostProcessCommand:options->defaultDevice.writePostProcessCommand);
+  device->writeCommand            = (options->device->writeCommand            != 0)?options->device->writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :options->defaultDevice.writeCommand           );
+}
+
+bool inputCryptPassword(Password **cryptPassword)
+{
+  Password *password;
+
+  password = (*cryptPassword);
+  if (password == NULL)
+  {
+    /* allocate password */
+    password = Password_new();
+    if (password == NULL)
+    {
+      return FALSE;
+    }
+  }
+
+  /* input password */
+  if (!Password_input(password,"Crypt password") || (Password_length(password) <= 0))
+  {
+    if ((*cryptPassword) == NULL) Password_delete(password);
+    return FALSE;
+  }
+
+  /* check password quality */
+  if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
+  {
+    printWarning("Low password quality!\n");
+  }
+
+  (*cryptPassword) = password;
+
+  return TRUE;
 }
 
 /*---------------------------------------------------------------------*/
@@ -1376,18 +1490,6 @@ int main(int argc, const char *argv[])
     #endif /* not NDEBUG */
     return EXITCODE_INIT_FAIL;
   }
-
-  /* initialise variables */
-  StringList_init(&configFileNameList);
-  tmpLogFileName = String_new();
-  outputLine = String_new();
-  outputNewLineFlag = TRUE;
-  initOptions(&defaultOptions);
-  serverPassword = Password_new();
-  Pattern_initList(&includePatternList);
-  Pattern_initList(&excludePatternList);
-  List_init(&sshServerList);
-  List_init(&deviceList);
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
   /* parse command line: pre-options */
@@ -1398,15 +1500,6 @@ int main(int argc, const char *argv[])
                       )
      )
   {
-    List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
-    List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
-    Pattern_doneList(&excludePatternList);
-    Pattern_doneList(&includePatternList);
-    Password_delete(serverPassword);
-    freeOptions(&defaultOptions);
-    String_delete(outputLine);
-    String_delete(tmpLogFileName);
-    StringList_done(&configFileNameList);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1447,17 +1540,6 @@ int main(int argc, const char *argv[])
     if (!readConfigFile(fileName,printInfoFlag))
     {
       String_delete(fileName);
-      if (tmpLogFile != NULL) fclose(tmpLogFile);
-      File_delete(tmpLogFileName,FALSE);
-      List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
-      List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
-      Pattern_doneList(&excludePatternList);
-      Pattern_doneList(&includePatternList);
-      Password_delete(serverPassword);
-      freeOptions(&defaultOptions);
-      String_delete(outputLine);
-      String_delete(tmpLogFileName);
-      StringList_done(&configFileNameList);
       doneAll();
       #ifndef NDEBUG
         Array_debug();
@@ -1474,17 +1556,8 @@ int main(int argc, const char *argv[])
                        CMD_PRIORITY_ANY,
                        stderr,NULL
                       )
-     ) 
+     )
   {
-    List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
-    List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
-    Pattern_doneList(&excludePatternList);
-    Pattern_doneList(&includePatternList);
-    Password_delete(serverPassword);
-    freeOptions(&defaultOptions);
-    String_delete(outputLine);
-    String_delete(tmpLogFileName);
-    StringList_done(&configFileNameList);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1494,17 +1567,12 @@ int main(int argc, const char *argv[])
   }
   if (versionFlag)
   {
-    printf("BAR version %s\n",VERSION);
+    #ifndef NDEBUG
+      printf("BAR version %s (debug)\n",VERSION);
+    #else /* NDEBUG */
+      printf("BAR version %s\n",VERSION);
+    #endif /* not NDEBUG */
 
-    List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
-    List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
-    Pattern_doneList(&excludePatternList);
-    Pattern_doneList(&includePatternList);
-    Password_delete(serverPassword);
-    freeOptions(&defaultOptions);
-    String_delete(outputLine);
-    String_delete(tmpLogFileName);
-    StringList_done(&configFileNameList);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1518,15 +1586,6 @@ int main(int argc, const char *argv[])
     else if (xhelpFlag       ) printUsage(argv[0],1);
     else                       printUsage(argv[0],0);
 
-    List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
-    List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
-    Pattern_doneList(&excludePatternList);
-    Pattern_doneList(&includePatternList);
-    Password_delete(serverPassword);
-    freeOptions(&defaultOptions);
-    String_delete(outputLine);
-    String_delete(tmpLogFileName);
-    StringList_done(&configFileNameList);
     doneAll();
     #ifndef NDEBUG
       Array_debug();
@@ -1545,9 +1604,6 @@ int main(int argc, const char *argv[])
     logFile = fopen(logFileName,"a");
     if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
   }
-
-  /* set priority */
-  setpriority(PRIO_PROCESS,0,priority);
 
   error = ERROR_NONE;
   if      (daemonFlag)
@@ -1686,15 +1742,6 @@ int main(int argc, const char *argv[])
 
   /* free resources */
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
-  List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
-  List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
-  Pattern_doneList(&excludePatternList);
-  Pattern_doneList(&includePatternList);
-  Password_delete(serverPassword);
-  freeOptions(&defaultOptions);
-  String_delete(outputLine);
-  String_delete(tmpLogFileName);
-  StringList_done(&configFileNameList);
   doneAll();
 
   #ifndef NDEBUG
