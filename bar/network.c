@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -118,9 +118,6 @@ Errors Network_connect(SocketHandle *socketHandle,
 
   /* initialize variables */
   socketHandle->type = socketType;
-
-  /* allocate buffer */
-//  socketHandle->buffer = socketType;
 
   /* get host IP address */
   hostAddressEntry = gethostbyname(String_cString(hostName));
