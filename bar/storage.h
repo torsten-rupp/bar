@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -107,57 +107,59 @@ typedef struct
     {
       FileHandle fileHandle;
     } fileSystem;
-    // ssh storage (remote BAR)
-    struct
-    {
-      String           hostName;
-      uint             hostPort;
-      String           sshLoginName;
-      String           sshPublicKeyFileName;
-      String           sshPrivatKeyFileName;
-      Password         *sshPassword;
-
-      SocketHandle     socketHandle;
-      LIBSSH2_CHANNEL  *channel;                       // ssh channel
-      StorageBandWidth bandWidth;                      // band width data
-    } ssh;
-    // scp storage
-    struct
-    {
-      String           hostName;
-      uint             hostPort;
-      String           sshLoginName;
-      String           sshPublicKeyFileName;
-      String           sshPrivatKeyFileName;
-      Password         *sshPassword;
-
-      SocketHandle     socketHandle;
-      LIBSSH2_CHANNEL  *channel;                       // scp channel
-      StorageBandWidth bandWidth;                      // band width data
-    } scp;
-    // sftp storage
-    struct
-    {
-      String              hostName;
-      uint                hostPort;
-      String              sshLoginName;
-      String              sshPublicKeyFileName;
-      String              sshPrivatKeyFileName;
-      Password            *sshPassword;
-
-      SocketHandle        socketHandle;
-      LIBSSH2_SFTP        *sftp;                       // sftp session
-      LIBSSH2_SFTP_HANDLE *sftpHandle;                 // sftp handle
-      uint64              index;                       // 
-      uint64              size;                        // size of file [bytes]
+    #ifdef HAVE_SSH2
+      // ssh storage (remote BAR)
       struct
       {
-        byte   *data;
-        uint64 offset;
-        ulong  length;
-      } readAheadBuffer;
-      StorageBandWidth bandWidth;                      // band width data
-    } sftp;
+        String           hostName;
+        uint             hostPort;
+        String           sshLoginName;
+        String           sshPublicKeyFileName;
+        String           sshPrivatKeyFileName;
+        Password         *sshPassword;
+
+        SocketHandle     socketHandle;
+        LIBSSH2_CHANNEL  *channel;                       // ssh channel
+        StorageBandWidth bandWidth;                      // band width data
+      } ssh;
+      // scp storage
+      struct
+      {
+        String           hostName;
+        uint             hostPort;
+        String           sshLoginName;
+        String           sshPublicKeyFileName;
+        String           sshPrivatKeyFileName;
+        Password         *sshPassword;
+
+        SocketHandle     socketHandle;
+        LIBSSH2_CHANNEL  *channel;                       // scp channel
+        StorageBandWidth bandWidth;                      // band width data
+      } scp;
+      // sftp storage
+      struct
+      {
+        String              hostName;
+        uint                hostPort;
+        String              sshLoginName;
+        String              sshPublicKeyFileName;
+        String              sshPrivatKeyFileName;
+        Password            *sshPassword;
+
+        SocketHandle        socketHandle;
+        LIBSSH2_SFTP        *sftp;                       // sftp session
+        LIBSSH2_SFTP_HANDLE *sftpHandle;                 // sftp handle
+        uint64              index;                       // 
+        uint64              size;                        // size of file [bytes]
+        struct
+        {
+          byte   *data;
+          uint64 offset;
+          ulong  length;
+        } readAheadBuffer;
+        StorageBandWidth bandWidth;                      // band width data
+      } sftp;
+    #endif /* HAVE_SSH2 */
     // dvd storage
     struct
     {
@@ -205,19 +207,21 @@ typedef struct
     {
       DirectoryHandle directoryHandle;
     } fileSystem;
-    struct
-    {
-      String              pathName;
+    #ifdef HAVE_SSH2
+      struct
+      {
+        String              pathName;
 
-      SocketHandle        socketHandle;
-      LIBSSH2_SESSION     *session;
-      LIBSSH2_CHANNEL     *channel;
-      LIBSSH2_SFTP        *sftp;
-      LIBSSH2_SFTP_HANDLE *sftpHandle;
-      char                *buffer;                     // buffer for reading file names
-      ulong               bufferLength;
-      bool                entryReadFlag;               // TRUE if entry read
-    } sftp;
+        SocketHandle        socketHandle;
+        LIBSSH2_SESSION     *session;
+        LIBSSH2_CHANNEL     *channel;
+        LIBSSH2_SFTP        *sftp;
+        LIBSSH2_SFTP_HANDLE *sftpHandle;
+        char                *buffer;                     // buffer for reading file names
+        ulong               bufferLength;
+        bool                entryReadFlag;               // TRUE if entry read
+      } sftp;
+    #endif /* HAVE_SSH2 */
     struct
     {
       DirectoryHandle directoryHandle;

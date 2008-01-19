@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -60,7 +60,9 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL Password *defaultSSHPassword;
+#ifdef HAVE_SSH2
+  LOCAL Password *defaultSSHPassword;
+#endif /* HAVE_SSH2 */
 
 /****************************** Macros *********************************/
 
@@ -129,6 +131,7 @@ LOCAL bool initSSHPassword(const Options *options)
 * Notes  : -
 \***********************************************************************/
 
+#ifdef HAVE_SSH2
 LOCAL void limitBandWidth(StorageBandWidth *storageBandWidth,
                           ulong            transmittedBytes,
                           uint64           transmissionTime
@@ -194,6 +197,7 @@ fprintf(stderr,"%s,%d: == averageBandWidth=%lu storageBandWidth->max=%lu deleta=
     }
   }
 }
+#endif /* HAVE_SSH2 */
 
 /***********************************************************************\
 * Name   : requestNewDVD
@@ -545,14 +549,18 @@ LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
 
 Errors Storage_initAll(void)
 {
-  defaultSSHPassword = Password_new();
+  #ifdef HAVE_SSH2
+    defaultSSHPassword = Password_new();
+  #endif /* HAVE_SSH2 */
 
   return ERROR_NONE;
 }
 
 void Storage_doneAll(void)
 {
-  Password_delete(defaultSSHPassword);
+  #ifdef HAVE_SSH2
+    Password_delete(defaultSSHPassword);
+  #endif /* HAVE_SSH2 */
 }
 
 StorageTypes Storage_getType(const String storageName,
@@ -682,7 +690,9 @@ Errors Storage_prepare(const String  storageName,
                       )
 {
   String    storageSpecifier;
-  SSHServer sshServer;
+  #ifdef HAVE_SSH2
+    SSHServer sshServer;
+  #endif /* HAVE_SSH2 */
 
   assert(storageName != NULL);
   assert(options != NULL);
@@ -768,6 +778,7 @@ Errors Storage_prepare(const String  storageName,
           String_delete(loginName);
         }
       #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(options);
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
@@ -822,7 +833,9 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                    )
 {
   String    storageSpecifier;
-  SSHServer sshServer;
+  #ifdef HAVE_SSH2
+    SSHServer sshServer;
+  #endif /* HAVE_SSH2 */
 
   assert(storageFileHandle != NULL);
   assert(storageName != NULL);
@@ -1707,6 +1720,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           }
         }
       #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(fileSize);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -1754,6 +1768,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           }
         }
       #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(fileSize);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -1877,7 +1892,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           }
         }
       #else /* not HAVE_SSH2 */
-        String_delete(storageSpecifier);
+        UNUSED_VARIABLE(options);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -1946,6 +1961,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           storageFileHandle->sftp.size = sftpAttributes.filesize;
         }
       #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(options);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -2068,10 +2084,18 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SFTP:
-      return storageFileHandle->sftp.index >= storageFileHandle->sftp.size;
+      #ifdef HAVE_SSH2
+        return storageFileHandle->sftp.index >= storageFileHandle->sftp.size;
+      #else /* not HAVE_SSH2 */
+        return TRUE;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
-      return File_eof(&storageFileHandle->dvd.fileHandle);
+      #ifdef HAVE_SSH2
+        return File_eof(&storageFileHandle->dvd.fileHandle);
+      #else /* not HAVE_SSH2 */
+        return TRUE;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DEVICE:
       return File_eof(&storageFileHandle->device.fileHandle);
@@ -2119,7 +2143,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                                             size
                                            );
       #else /* not HAVE_SSH2 */
-        return ERROR_FUNTION_NOT_SUPPORTED;
+        return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
@@ -2186,7 +2210,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
           }
         }
       #else /* not HAVE_SSH2 */
-        return ERROR_FUNTION_NOT_SUPPORTED;
+        return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
@@ -2279,7 +2303,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
           };
         }
       #else /* not HAVE_SSH2 */
-        return ERROR_FUNTION_NOT_SUPPORTED;
+        return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
@@ -2324,7 +2348,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
           };
         }
       #else /* not HAVE_SSH2 */
-        return ERROR_FUNTION_NOT_SUPPORTED;
+        return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
@@ -2367,10 +2391,18 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SFTP:
-      return storageFileHandle->sftp.size;
+      #ifdef HAVE_SSH2
+        return storageFileHandle->sftp.size;
+      #else /* not HAVE_SSH2 */
+        return 0LL;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
-      return File_getSize(&storageFileHandle->dvd.fileHandle);
+      #ifdef HAVE_SSH2
+        return File_getSize(&storageFileHandle->dvd.fileHandle);
+      #else /* not HAVE_SSH2 */
+        return 0LL;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DEVICE:
       return File_getSize(&storageFileHandle->device.fileHandle);
@@ -2404,11 +2436,19 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SFTP:
-      (*offset) = storageFileHandle->sftp.index;
-      return ERROR_NONE;
+      #ifdef HAVE_SSH2
+        (*offset) = storageFileHandle->sftp.index;
+        return ERROR_NONE;
+      #else /* not HAVE_SSH2 */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
-      return File_tell(&storageFileHandle->dvd.fileHandle,offset);
+      #ifdef HAVE_SSH2
+        return File_tell(&storageFileHandle->dvd.fileHandle,offset);
+      #else /* not HAVE_SSH2 */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DEVICE:
       return File_tell(&storageFileHandle->device.fileHandle,offset);
@@ -2441,15 +2481,23 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SFTP:
+      #ifdef HAVE_SSH2
 //??? large file?
 //fprintf(stderr,"%s,%d: seek %llu\n",__FILE__,__LINE__,offset);
-      libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,
-                        offset
-                       );
-      storageFileHandle->sftp.index = offset;
+        libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,
+                          offset
+                         );
+        storageFileHandle->sftp.index = offset;
+      #else /* not HAVE_SSH2 */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
-      return File_seek(&storageFileHandle->dvd.fileHandle,offset);
+      #ifdef HAVE_SSH2
+        return File_seek(&storageFileHandle->dvd.fileHandle,offset);
+      #else /* not HAVE_SSH2 */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DEVICE:
       return File_seek(&storageFileHandle->device.fileHandle,offset);
@@ -2472,7 +2520,9 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
                             )
 {
   String    storageSpecifier;
-  SSHServer sshServer;
+  #ifdef HAVE_SSH2
+    SSHServer sshServer;
+  #endif /* HAVE_SSH2 */
   Errors    error;
 
   assert(storageDirectoryHandle != NULL);
@@ -2583,6 +2633,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           }
         }
       #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(options);
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
