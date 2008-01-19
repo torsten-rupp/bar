@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.21 $
+# $Revision: 1.22 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -29,7 +29,7 @@ lappend auto_path $env(HOME)/sources/tcl-lib
 lappend auto_path $env(HOME)/sources/tcltk-lib
 
 # load packages
-package require tls
+catch {package require tls}
 package require scanx
 if {[info exists tk_version]} \
 {
@@ -4277,7 +4277,7 @@ while {$z<[llength $argv]} \
         printError "No argument given for '[llength $argv]'. Expected host name."
         exit 1
       }
-      set hostName [lindex $argv $z]
+      set barControlConfig(serverHostName) [lindex $argv $z]
     }
     "^-p=" - \
     "^--port=" \
@@ -4288,7 +4288,7 @@ while {$z<[llength $argv]} \
         printError "No a port number!"
         exit 1
       }
-      set port $s
+      set barControlConfig(serverPort) $s
     }
     "^-p$" - \
     "^--port$" \
@@ -4304,7 +4304,7 @@ while {$z<[llength $argv]} \
         printError "No a port number!"
         exit 1
       }
-      set port [lindex $argv $z]
+      set barControlConfig(serverPort) $s
     }
     "^--tls-port=" - \
     "^--ssl-port=" \
@@ -4432,7 +4432,6 @@ if {![info exists tk_version] && !$guiMode} \
   } \
   elseif {$barControlConfig(serverPort) != 0} \
   {
-    if {$port == 0} { set port $DEFAULT_PORT }
     if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverPort) $barControlConfig(serverPassword) 0]} \
     {
       printError "Cannot connect to server '$barControlConfig(serverHostName):$barControlConfig(serverPort)'!"
@@ -6160,7 +6159,6 @@ if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]
 } \
 elseif {$barControlConfig(serverPort) != 0} \
 {
-  if {$port == 0} { set port $DEFAULT_PORT }
   if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverPort) $barControlConfig(serverPassword) 0]} \
   {
     printError "Cannot connect to server '$barControlConfig(serverHostName):$barControlConfig(serverPort)'!"
