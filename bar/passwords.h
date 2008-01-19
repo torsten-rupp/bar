@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -34,7 +34,7 @@ typedef struct
 {
   char data[MAX_PASSWORD_LENGTH+1];
   uint length;
-  #ifdef HAVE_GCRYPT
+  #ifndef HAVE_GCRYPT
     char plain[MAX_PASSWORD_LENGTH+1];     /* needed for temporary storage
                                               of plain password if secure
                                               memory from gcrypt is not

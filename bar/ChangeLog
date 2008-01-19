@@ -1,3 +1,14 @@
+2008-01-19 0.05b
+  * fixed static linkage
+  * support none bz2
+  * TclTk TLS package is now optional
+  * import suport for non-ssh, non-crypt, non-bz2
+
+2008-01-18 0.05a
+  * improved checks in configure
+  * added configure option --disable-ssh
+  * fixed static linkage
+
 2007-12-31 0.05 (New Years Eve edition)
   * added macros %type, %last to archive file name
   * fixed path in bid-file name

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -146,11 +146,6 @@ Password *Password_duplicate(const Password *sourcePassword)
 
 void Password_set(Password *password, const Password *fromPassword)
 {
-  #ifdef HAVE_GCRYPT
-  #else /* not HAVE_GCRYPT */
-    uint z;
-  #endif /* HAVE_GCRYPT */
-
   assert(password != NULL);
 
   if (fromPassword != NULL)
