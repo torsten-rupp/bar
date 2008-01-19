@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1492,9 +1492,9 @@ String __String_newChar(const char *fileName, ulong lineNb, char ch)
 }
 
 #ifdef NDEBUG
-String String_newBuffer(const char *buffer, ulong bufferLength)
+String String_newBuffer(const void *buffer, ulong bufferLength)
 #else /* not NDEBUG */
-String __String_newBuffer(const char *fileName, ulong lineNb, const char *buffer, ulong bufferLength)
+String __String_newBuffer(const char *fileName, ulong lineNb, const void *buffer, ulong bufferLength)
 #endif /* NDEBUG */
 {
   String string;
@@ -1664,7 +1664,7 @@ String String_setChar(String string, char ch)
   return string;
 }
 
-String String_setBuffer(String string, const char *buffer, ulong bufferLength)
+String String_setBuffer(String string, const void *buffer, ulong bufferLength)
 {
   CHECK_VALID(string);
 

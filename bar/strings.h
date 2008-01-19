@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -93,12 +93,12 @@ typedef struct
 String String_new(void);
 String String_newCString(const char *s);
 String String_newChar(char ch);
-String String_newBuffer(const char *buffer, ulong bufferLength);
+String String_newBuffer(const void *buffer, ulong bufferLength);
 #else /* not NDEBUG */
 String __String_new(const char *fileName, ulong lineNb);
 String __String_newCString(const char *fileName, ulong lineNb, const char *s);
 String __String_newChar(const char *fileName, ulong lineNb, char ch);
-String __String_newBuffer(const char *fileName, ulong lineNb, const char *buffer, ulong bufferLength);
+String __String_newBuffer(const char *fileName, ulong lineNb, const void *buffer, ulong bufferLength);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -145,7 +145,7 @@ String String_clear(String string);
 String String_set(String string, const String sourceString);
 String String_setCString(String string, const char *s);
 String String_setChar(String string, char ch);
-String String_setBuffer(String string, const char *buffer, ulong bufferLength);
+String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : String_duplicate
