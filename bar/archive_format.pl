@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/archive_format.pl,v $
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # $Author: torsten $
 # Contents: create header/c file definition from format definition
 # Systems : all
@@ -164,7 +164,8 @@ while ($line=<STDIN>)
 
       $n++;
     }
-    writeHFile("} $PREFIX_NAME$structName __attribute__ ((packed));\n");
+#    writeHFile("} $PREFIX_NAME$structName __attribute__ ((packed));\n");
+    writeHFile("} $PREFIX_NAME$structName;\n");
     push(@parseDefinitions,"0");
     writeHFile("extern int $PREFIX_DEFINITION$idName\[\];\n");
     writeCFile("int $PREFIX_DEFINITION$idName\[\] = {".join(",",@parseDefinitions)."};\n");
