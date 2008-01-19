@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -225,9 +225,9 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               /* compress */
               maxDataBytes     = compressInfo->dataBufferLength;
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
-              compressInfo->bzlib.stream.next_in   = compressInfo->dataBuffer+compressInfo->dataBufferIndex;
+              compressInfo->bzlib.stream.next_in   = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferIndex);
               compressInfo->bzlib.stream.avail_in  = maxDataBytes;
-              compressInfo->bzlib.stream.next_out  = compressInfo->compressBuffer+compressInfo->compressBufferLength;
+              compressInfo->bzlib.stream.next_out  = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
               compressInfo->bzlib.stream.avail_out = maxCompressBytes;
               bzlibError = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_RUN);
               if (bzlibError != BZ_RUN_OK)
@@ -256,7 +256,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
               compressInfo->bzlib.stream.next_in   = NULL;
               compressInfo->bzlib.stream.avail_in  = 0;
-              compressInfo->bzlib.stream.next_out  = compressInfo->compressBuffer+compressInfo->compressBufferLength;
+              compressInfo->bzlib.stream.next_out  = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
               compressInfo->bzlib.stream.avail_out = maxCompressBytes;
               bzlibError = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_FINISH);
               if      (bzlibError == BZ_STREAM_END)
@@ -448,9 +448,9 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 /* decompress */
                 maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
                 maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
-                compressInfo->bzlib.stream.next_in   = compressInfo->compressBuffer+compressInfo->compressBufferIndex;
+                compressInfo->bzlib.stream.next_in   = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferIndex);
                 compressInfo->bzlib.stream.avail_in  = maxCompressBytes;
-                compressInfo->bzlib.stream.next_out  = compressInfo->dataBuffer+compressInfo->dataBufferLength;
+                compressInfo->bzlib.stream.next_out  = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferLength);
                 compressInfo->bzlib.stream.avail_out = maxDataBytes;
                 bzlibError = BZ2_bzDecompress(&compressInfo->bzlib.stream);
                 if      (bzlibError == BZ_STREAM_END)
@@ -484,7 +484,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
                 compressInfo->bzlib.stream.next_in   = NULL;
                 compressInfo->bzlib.stream.avail_in  = 0;
-                compressInfo->bzlib.stream.next_out  = compressInfo->dataBuffer+compressInfo->dataBufferLength;
+                compressInfo->bzlib.stream.next_out  = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferLength);
                 compressInfo->bzlib.stream.avail_out = maxDataBytes;
                 bzlibError = BZ2_bzDecompress(&compressInfo->bzlib.stream);
                 if      (bzlibError == BZ_STREAM_END)

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems: all
@@ -16,7 +16,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <gcrypt.h>
+#ifdef HAVE_GCRYPT
+  #include <gcrypt.h>
+#endif /* HAVE_GCRYPT */
 #include <assert.h>
 
 #include "global.h"
@@ -53,7 +55,9 @@ typedef struct
 {
   CryptAlgorithms  cryptAlgorithm;
   uint             blockLength;
-  gcry_cipher_hd_t gcry_cipher_hd;
+  #ifdef HAVE_GCRYPT
+    gcry_cipher_hd_t gcry_cipher_hd;
+  #endif /* HAVE_GCRYPT */
 } CryptInfo;
 
 /***************************** Variables *******************************/

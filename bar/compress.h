@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -17,7 +17,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <zlib.h>
-#include <bzlib.h>
+#ifdef HAVE_BZ2
+  #include <bzlib.h>
+#endif /* HAVE_BZ2 */
 #include <assert.h>
 
 #include "global.h"
@@ -93,11 +95,13 @@ typedef struct
     {
       z_stream stream;
     } zlib;
-    struct
-    {
-      uint      compressionLevel;
-      bz_stream stream;
-    } bzlib;
+    #ifdef HAVE_BZ2
+      struct
+      {
+        uint      compressionLevel;
+        bz_stream stream;
+      } bzlib;
+    #endif /* HAVE_BZ2 */
   };
 
   byte               *dataBuffer;               // buffer for uncompressed data
