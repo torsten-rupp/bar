@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.46 $
+* $Revision: 1.47 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -240,11 +240,11 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("incremental",                  'i',0,0,defaultOptions.archiveType,                           ARCHIVE_TYPE_NORMAL,ARCHIVE_TYPE_INCREMENTAL,                      "create incremental archive"                                               ),
   CMD_OPTION_SPECIAL      ("incremental-list-file",        0,  1,0,&defaultOptions.incrementalListFileName,              NULL,cmdOptionParseString,NULL,                                    "incremental list file name (implies --create-incremental-list","file name"),
 
-  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,0,defaultOptions.directoryStripCount,                   0,0,LONG_MAX,NULL,                                                 "number of directories to strip on extract"                                ),
+  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,0,defaultOptions.directoryStripCount,                   0,0,INT_MAX,NULL,                                                  "number of directories to strip on extract"                                ),
   CMD_OPTION_SPECIAL      ("directory",                    0,  0,0,&defaultOptions.directory   ,                         NULL,cmdOptionParseString,NULL,                                    "directory to restore files","path"                                        ),
   CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,defaultOptions.niceLevel,                             0,0,19,NULL,                                                       "general nice level of processes/threads"                                  ),
 
-  CMD_OPTION_INTEGER      ("max-band-width",               0,  1,0,defaultOptions.maxBandWidth,                          0,0,LONG_MAX,COMMAND_LINE_BITS_UNITS,                              "max. network band width to use"                                           ),
+  CMD_OPTION_INTEGER      ("max-band-width",               0,  1,0,defaultOptions.maxBandWidth,                          0,0,INT_MAX,COMMAND_LINE_BITS_UNITS,                               "max. network band width to use"                                           ),
 
   CMD_OPTION_SELECT       ("pattern-type",                 0,  1,0,defaultOptions.patternType,                           PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPES,              "select pattern type"                                                      ),
 
@@ -252,7 +252,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,1,&excludePatternList,                                  NULL,cmdOptionParseIncludeExclude,NULL,                            "exclude pattern","pattern"                                                ),
 
   CMD_OPTION_SELECT       ("compress-algorithm",           'z',0,0,defaultOptions.compressAlgorithm,                     COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,  "select compress algorithm to use"                                         ),
-  CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,0,defaultOptions.compressMinFileSize,                   DEFAULT_COMPRESS_MIN_FILE_SIZE,0,LONG_MAX,COMMAND_LINE_BYTES_UNITS,"minimal size of file for compression"                                     ),
+  CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,0,defaultOptions.compressMinFileSize,                   DEFAULT_COMPRESS_MIN_FILE_SIZE,0,INT_MAX,COMMAND_LINE_BYTES_UNITS, "minimal size of file for compression"                                     ),
 
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,0,defaultOptions.cryptAlgorithm,                        CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&defaultOptions.cryptPassword,                        NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
@@ -418,11 +418,11 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_SPECIAL  ("tmp-directory",                &defaultOptions.tmpDirectory,-1,                         configValueParseString,NULL),
   CONFIG_VALUE_INTEGER64("max-tmp-size",                 defaultOptions.maxTmpSize,-1,                            0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_VALUE_INTEGER  ("directory-strip",              defaultOptions.directoryStripCount,-1,                   0,LONG_MAX,NULL),
+  CONFIG_VALUE_INTEGER  ("directory-strip",              defaultOptions.directoryStripCount,-1,                   0,INT_MAX,NULL),
   CONFIG_VALUE_SPECIAL  ("directory",                    &defaultOptions.directory,-1,                            configValueParseString,NULL),
   CONFIG_VALUE_INTEGER  ("nice-level",                   defaultOptions.niceLevel,-1,                             0,19,NULL),
 
-  CONFIG_VALUE_INTEGER  ("max-band-width",               defaultOptions.maxBandWidth,-1,                          0,LONG_MAX,CONFIG_VALUE_BITS_UNITS),
+  CONFIG_VALUE_INTEGER  ("max-band-width",               defaultOptions.maxBandWidth,-1,                          0,INT_MAX,CONFIG_VALUE_BITS_UNITS),
 
   CONFIG_VALUE_SELECT   ("pattern-type",                 defaultOptions.patternType,-1,                           CONFIG_VALUE_PATTERN_TYPES),
 
@@ -430,7 +430,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_SPECIAL  ("exclude",                      &excludePatternList,-1,                                  configValueParseIncludeExclude,NULL),
 
   CONFIG_VALUE_SELECT   ("compress-algorithm",           defaultOptions.compressAlgorithm,-1,                     CONFIG_VALUE_COMPRESS_ALGORITHMS),
-  CONFIG_VALUE_INTEGER  ("compress-min-size",            defaultOptions.compressMinFileSize,-1,                   0,LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER  ("compress-min-size",            defaultOptions.compressMinFileSize,-1,                   0,INT_MAX,CONFIG_VALUE_BYTES_UNITS),
 
   CONFIG_VALUE_SELECT   ("crypt-algorithm",              defaultOptions.cryptAlgorithm,-1,                        CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SPECIAL  ("crypt-password",               &defaultOptions.cryptPassword,-1,                        configValueParsePassword,NULL),
