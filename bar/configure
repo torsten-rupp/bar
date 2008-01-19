@@ -809,6 +809,7 @@ Optional Features:
   --disable-zip           disable zip support
   --disable-bzip2         disable bzip2 support
   --disable-gcrypt        disable gcrypt support
+  --disable-ssh           disable SSH support
   --disable-tls           disable TLS support
   --disable-largefile     omit support for large files
 
@@ -1386,6 +1387,7 @@ ENABLE_LINK_DYNAMIC="no"
 ENABLE_ZIP="yes"
 ENABLE_BZIP2="yes"
 ENABLE_GCRYPT="yes"
+ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 
 
@@ -1441,12 +1443,24 @@ if test "${enable_gcrypt+set}" = set; then
   ENABLE_GCRYPT=$enableval
 
 fi;
+# Check whether --enable-ssh or --disable-ssh was given.
+if test "${enable_ssh+set}" = set; then
+  enableval="$enable_ssh"
+  ENABLE_SSH=$enableval
+
+fi;
 # Check whether --enable-tls or --disable-tls was given.
 if test "${enable_tls+set}" = set; then
   enableval="$enable_tls"
   ENABLE_TLS=$enableval
 
 fi;
+
+if test $ENABLE_TLS = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
+  { echo "$as_me:$LINENO: WARNING: gcrypt no enabled, disabled TLS support." >&5
+echo "$as_me: WARNING: gcrypt no enabled, disabled TLS support." >&2;}
+  ENABLE_TLS=no
+fi
 
 
 for ac_prog in gcc cc
@@ -1726,6 +1740,9 @@ fi
 CC_INCLUDES="$CC_INCLUDES"
 
 LD_FLAGS=""
+if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
+  LD_FLAGS="-static-libgcc"
+fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
 
 
@@ -4152,6 +4169,72 @@ fi
   fi
 fi
 if test $ENABLE_GCRYPT = "yes"; then
+  echo "$as_me:$LINENO: checking for gcry_cipher_hd_t" >&5
+echo $ECHO_N "checking for gcry_cipher_hd_t... $ECHO_C" >&6
+if test "${ac_cv_type_gcry_cipher_hd_t+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <gcrypt.h>
+
+int
+main ()
+{
+if ((gcry_cipher_hd_t *) 0)
+  return 0;
+if (sizeof (gcry_cipher_hd_t))
+  return 0;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_type_gcry_cipher_hd_t=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_type_gcry_cipher_hd_t=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_type_gcry_cipher_hd_t" >&5
+echo "${ECHO_T}$ac_cv_type_gcry_cipher_hd_t" >&6
+if test $ac_cv_type_gcry_cipher_hd_t = yes; then
+  :
+else
+  { echo "$as_me:$LINENO: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support." >&5
+echo "$as_me: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support." >&2;}; ENABLE_GCRYPT=no
+fi
+
+fi
+if test $ENABLE_GCRYPT = "yes"; then
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     echo "$as_me:$LINENO: checking for library containing gcry_check_version" >&5
 echo $ECHO_N "checking for library containing gcry_check_version... $ECHO_C" >&6
@@ -4415,9 +4498,8 @@ _ACEOF
 fi
 
   fi
-fi
-if test $ENABLE_LINK_DYNAMIC = "yes"; then
-  echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
 echo $ECHO_N "checking for library containing gpg_strerror... $ECHO_C" >&6
 if test "${ac_cv_search_gpg_strerror+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -4547,8 +4629,8 @@ _ACEOF
 
 fi
 
-else
-  echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
+  else
+    echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
 echo $ECHO_N "checking for library containing gpg_strerror... $ECHO_C" >&6
 if test "${ac_cv_search_gpg_strerror+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -4678,9 +4760,11 @@ _ACEOF
 
 fi
 
+  fi
 fi
-if test $ENABLE_LINK_DYNAMIC = "yes"; then
-  echo "$as_me:$LINENO: checking for library containing libssh2_session_init_ex" >&5
+if test $ENABLE_SSH = "yes"; then
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    echo "$as_me:$LINENO: checking for library containing libssh2_session_init_ex" >&5
 echo $ECHO_N "checking for library containing libssh2_session_init_ex... $ECHO_C" >&6
 if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -4803,15 +4887,15 @@ echo "$as_me:$LINENO: result: $ac_cv_search_libssh2_session_init_ex" >&5
 echo "${ECHO_T}$ac_cv_search_libssh2_session_init_ex" >&6
 if test "$ac_cv_search_libssh2_session_init_ex" != no; then
   test "$ac_cv_search_libssh2_session_init_ex" = "none required" || LIBS="$ac_cv_search_libssh2_session_init_ex $LIBS"
-  HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";
+  HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2 crypto";
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SSH2 1
 _ACEOF
 
 fi
 
-else
-  echo "$as_me:$LINENO: checking for library containing libssh2_session_init_ex" >&5
+  else
+    echo "$as_me:$LINENO: checking for library containing libssh2_session_init_ex" >&5
 echo $ECHO_N "checking for library containing libssh2_session_init_ex... $ECHO_C" >&6
 if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -4934,11 +5018,78 @@ echo "$as_me:$LINENO: result: $ac_cv_search_libssh2_session_init_ex" >&5
 echo "${ECHO_T}$ac_cv_search_libssh2_session_init_ex" >&6
 if test "$ac_cv_search_libssh2_session_init_ex" != no; then
   test "$ac_cv_search_libssh2_session_init_ex" = "none required" || LIBS="$ac_cv_search_libssh2_session_init_ex $LIBS"
-  HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";
+  HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2 crypto";
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SSH2 1
 _ACEOF
 
+fi
+
+  fi
+fi
+if test $ENABLE_TLS = "yes"; then
+  echo "$as_me:$LINENO: checking for gnutls_session_t" >&5
+echo $ECHO_N "checking for gnutls_session_t... $ECHO_C" >&6
+if test "${ac_cv_type_gnutls_session_t+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <gnutls/gnutls.h>
+
+int
+main ()
+{
+if ((gnutls_session_t *) 0)
+  return 0;
+if (sizeof (gnutls_session_t))
+  return 0;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_type_gnutls_session_t=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_type_gnutls_session_t=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_type_gnutls_session_t" >&5
+echo "${ECHO_T}$ac_cv_type_gnutls_session_t" >&6
+if test $ac_cv_type_gnutls_session_t = yes; then
+  :
+else
+  { echo "$as_me:$LINENO: WARNING: no or wrong version of gnutls. gnutls version >=2.0.1 needed. Disabled TLS support." >&5
+echo "$as_me: WARNING: no or wrong version of gnutls. gnutls version >=2.0.1 needed. Disabled TLS support." >&2;}; ENABLE_TLS=no
 fi
 
 fi
