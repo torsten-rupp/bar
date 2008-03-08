@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/arrays.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -365,7 +365,7 @@ void Array_debug(void)
   #ifndef NDEBUG
     for (debugArrayNode = debugArrayList.head; debugArrayNode != NULL; debugArrayNode = debugArrayNode->next)
     {
-      fprintf(stderr,"DEBUG WARNING: array %p[%ld] allocated at %s, %ld!\n",
+      fprintf(stderr,"DEBUG WARNING: array %p[%ld] allocated at %s, line %ld\n",
               debugArrayNode->array->data,
               debugArrayNode->array->maxLength,
               debugArrayNode->fileName,
