@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -258,7 +258,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
     String_doneTokenizer(&stringTokenizer);
     String_delete(argument);
 
-    /* execute command */
+    /* get command */
     s = String_new();
     String_append(s,command);
     argumentNode = argumentList.head;
@@ -284,12 +284,18 @@ stringNode = stringNode->next;
     /* create i/o pipes */
     if (pipe(pipeStdin) != 0)
     {
+      printError("Execute extern command '%s' fail!\n",
+                 String_cString(command)
+                );
       StringList_done(&argumentList);
       String_delete(command);
       return ERROR_EXEC_FAIL;
     }
     if (pipe(pipeStdout) != 0)
     {
+      printError("Execute extern command '%s' fail!\n",
+                 String_cString(command)
+                );
       close(pipeStdin[0]);
       close(pipeStdin[1]);
       StringList_done(&argumentList);
@@ -298,6 +304,9 @@ stringNode = stringNode->next;
     }
     if (pipe(pipeStderr) != 0)
     {
+      printError("Execute extern command '%s' fail!\n",
+                 String_cString(command)
+                );
       close(pipeStdout[0]);
       close(pipeStdout[1]);
       close(pipeStdin[0]);
@@ -355,6 +364,9 @@ HALT_INTERNAL_ERROR("not reachable");
     else if (pid < 0)
     {
       printInfo(3,"FAIL!\n");
+      printError("Execute extern command '%s' fail!\n",
+                 String_cString(command)
+                );
 
       close(pipeStderr[0]);
       close(pipeStderr[1]);
@@ -411,7 +423,11 @@ error = ERROR_NONE;
     exitcode = WEXITSTATUS(status);
     if (exitcode != 0)
     {
-      error = ERROR_EXEC_FAIL;
+      printError("Execute extern command '%s' fail (exitcode: %d)!\n",
+                 String_cString(command),
+                 exitcode
+                );
+      return ERROR(EXEC_FAIL,exitcode);
     }
 
     printInfo(3,"ok (exitcode %d)\n",exitcode);

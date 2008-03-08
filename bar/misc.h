@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -54,13 +54,13 @@ typedef void(*ExecuteIOFunction)(void         *userData,
 
 #define TEXT_MACRO_INT(macro,_name,value) \
   do { \
-    macro.type   = TEXT_MACRO_TYPE_STRING; \
+    macro.type   = TEXT_MACRO_TYPE_INT; \
     macro.name   = _name; \
     macro.i      = value; \
   } while (0)
 #define TEXT_MACRO_INT64(macro,_name,value) \
   do { \
-    macro.type   = TEXT_MACRO_TYPE_STRING; \
+    macro.type   = TEXT_MACRO_TYPE_INT64; \
     macro.name   = _name; \
     macro.l      = value; \
   } while (0)

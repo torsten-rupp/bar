@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/configvalues.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -95,11 +95,19 @@ LOCAL bool processValue(const ConfigValue *configValue,
             }
             if (i >= configValue->integerValue.unitCount)
             {
-              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                                     "%sInvalid unit in integer value '%s'!\n",
-                                                     (errorPrefix != NULL)?errorPrefix:"",
-                                                     value
-                                                    );
+              if (errorOutputHandle != NULL)
+              {
+                fprintf(errorOutputHandle,
+                        "%sInvalid unit in integer value '%s'! Valid units:",
+                        (errorPrefix != NULL)?errorPrefix:"",
+                        value
+                       );
+                for (i = 0; i < configValue->integerValue.unitCount; i++)
+                {
+                  fprintf(errorOutputHandle," %s",configValue->integerValue.units[i].name);
+                }
+                fprintf(errorOutputHandle,".\n");
+              }
               return FALSE;
             }
             factor = configValue->integerValue.units[i].factor;
@@ -181,11 +189,19 @@ LOCAL bool processValue(const ConfigValue *configValue,
             }
             if (i >= configValue->integer64Value.unitCount)
             {
-              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                                     "%sInvalid unit in integer value '%s'!\n",
-                                                     (errorPrefix != NULL)?errorPrefix:"",
-                                                     value
-                                                    );
+              if (errorOutputHandle != NULL)
+              {
+                fprintf(errorOutputHandle,
+                        "%sInvalid unit in integer value '%s'! Valid units:",
+                        (errorPrefix != NULL)?errorPrefix:"",
+                        value
+                       );
+                for (i = 0; i < configValue->integer64Value.unitCount; i++)
+                {
+                  fprintf(errorOutputHandle," %s",configValue->integer64Value.units[i].name);
+                }
+                fprintf(errorOutputHandle,".\n");
+              }
               return FALSE;
             }
             factor = configValue->integer64Value.units[i].factor;
@@ -269,11 +285,19 @@ LOCAL bool processValue(const ConfigValue *configValue,
             }
             if (i >= configValue->doubleValue.unitCount)
             {
-              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                                     "%sInvalid unit in integer value '%s'!\n",
-                                                     (errorPrefix != NULL)?errorPrefix:"",
-                                                     value
-                                                    );
+              if (errorOutputHandle != NULL)
+              {
+                fprintf(errorOutputHandle,
+                        "%sInvalid unit in float value '%s'! Valid units:",
+                        (errorPrefix != NULL)?errorPrefix:"",
+                        value
+                       );
+                for (i = 0; i < configValue->integerValue.unitCount; i++)
+                {
+                  fprintf(errorOutputHandle," %s",configValue->integerValue.units[i].name);
+                }
+                fprintf(errorOutputHandle,".\n");
+              }
               return FALSE;
             }
             factor = configValue->doubleValue.units[i].factor;

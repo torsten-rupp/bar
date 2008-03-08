@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1568,7 +1568,7 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
       }
       else
       {
-        fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list at %s, %ld!\n",
+        fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list at %s, line %ld\n",
                 string->data,
                 fileName,
                 lineNb
@@ -3273,7 +3273,8 @@ void String_debug(void)
     pthread_mutex_lock(&debugStringLock);
     for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
     {
-      fprintf(stderr,"DEBUG WARNING: string '%s' allocated at %s, %ld!\n",
+      fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %ld\n",
+              debugStringNode->string,
               debugStringNode->string->data,
               debugStringNode->fileName,
               debugStringNode->lineNb
