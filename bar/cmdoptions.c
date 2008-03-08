@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -95,7 +95,19 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
             }
             if (i >= commandLineOption->integerOption.unitCount)
             {
-              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+              if (errorOutputHandle != NULL)
+              {
+                fprintf(errorOutputHandle,
+                        "%sInvalid unit in integer value '%s'! Valid units:",
+                        (errorPrefix != NULL)?errorPrefix:"",
+                        value
+                       );
+                for (i = 0; i < commandLineOption->integerOption.unitCount; i++)
+                {
+                  fprintf(errorOutputHandle," %s",commandLineOption->integerOption.units[i].name);
+                }
+                fprintf(errorOutputHandle,".\n");
+              }
               return FALSE;
             }
             factor = commandLineOption->integerOption.units[i].factor;
@@ -166,7 +178,19 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
             }
             if (i >= commandLineOption->integer64Option.unitCount)
             {
-              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+              if (errorOutputHandle != NULL)
+              {
+                fprintf(errorOutputHandle,
+                        "%sInvalid unit in integer value '%s'! Valid units:",
+                        (errorPrefix != NULL)?errorPrefix:"",
+                        value
+                       );
+                for (i = 0; i < commandLineOption->integer64Option.unitCount; i++)
+                {
+                  fprintf(errorOutputHandle," %s",commandLineOption->integer64Option.units[i].name);
+                }
+                fprintf(errorOutputHandle,".\n");
+              }
               return FALSE;
             }
             factor = commandLineOption->integer64Option.units[i].factor;
@@ -236,7 +260,19 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
             }
             if (i >= commandLineOption->doubleOption.unitCount)
             {
-              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid unit in integer value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+              if (errorOutputHandle != NULL)
+              {
+                fprintf(errorOutputHandle,
+                        "%sInvalid unit in float value '%s'! Valid units:",
+                        (errorPrefix != NULL)?errorPrefix:"",
+                        value
+                       );
+                for (i = 0; i < commandLineOption->integerOption.unitCount; i++)
+                {
+                  fprintf(errorOutputHandle," %s",commandLineOption->integerOption.units[i].name);
+                }
+                fprintf(errorOutputHandle,".\n");
+              }
               return FALSE;
             }
             factor = commandLineOption->doubleOption.units[i].factor;
