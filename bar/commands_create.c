@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.44 $
+* $Revision: 1.45 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1324,10 +1324,13 @@ LOCAL Errors storeArchiveFile(String fileName,
 
 LOCAL void storageThread(CreateInfo *createInfo)
 {
+  #define MAX_RETRIES 3
+
   byte       *buffer;
   StorageMsg storageMsg;
   Errors     error;
   FileHandle fileHandle;
+  uint       retryCount;
   ulong      n;
 
   assert(createInfo != NULL);
@@ -1375,28 +1378,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
 
       printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageMsg.destinationFileName));
 
-      /* create storage file */
-      error = Storage_create(&createInfo->storageFileHandle,
-                             storageMsg.destinationFileName,
-                             storageMsg.fileSize,
-                             createInfo->options
-                            );
-      if (error != ERROR_NONE)
-      {
-        printInfo(0,"FAIL!\n");
-        printError("Cannot store file '%s' (error: %s)\n",
-                   String_cString(storageMsg.destinationFileName),
-                   getErrorText(error)
-                  );
-        File_delete(storageMsg.fileName,FALSE);
-        String_delete(storageMsg.fileName);
-        String_delete(storageMsg.destinationFileName);
-        createInfo->failError = error;
-        continue;
-      }
-      String_set(createInfo->statusInfo.storageName,storageMsg.destinationFileName);
-
-      /* store data */
+      /* open file to store */
       error = File_open(&fileHandle,storageMsg.fileName,FILE_OPENMODE_READ);
       if (error != ERROR_NONE)
       {
@@ -1411,50 +1393,104 @@ LOCAL void storageThread(CreateInfo *createInfo)
         createInfo->failError = error;
         continue;
       }
+
+      retryCount = 0;
       do
       {
-        error = File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+        /* next try */
+        retryCount++;
+        if (retryCount > MAX_RETRIES) break;
+
+        /* create storage file */
+        error = Storage_create(&createInfo->storageFileHandle,
+                               storageMsg.destinationFileName,
+                               storageMsg.fileSize,
+                               createInfo->options
+                              );
         if (error != ERROR_NONE)
         {
-          printInfo(0,"FAIL!\n");
-          printError("Cannot read file '%s' (error: %s)!\n",
-                     String_cString(storageMsg.fileName),
-                     getErrorText(error)
-                    );
-          createInfo->failError = error;
-          break;
+          if (retryCount >= MAX_RETRIES)
+          {
+            printInfo(0,"FAIL!\n");
+            printError("Cannot store file '%s' (error: %s)\n",
+                       String_cString(storageMsg.destinationFileName),
+                       getErrorText(error)
+                      );
+            createInfo->failError = error;
+          }
+          continue;
         }
-        error = Storage_write(&createInfo->storageFileHandle,buffer,n);
-        if (error != ERROR_NONE)
+        String_set(createInfo->statusInfo.storageName,storageMsg.destinationFileName);
+
+        /* store data */
+        File_seek(&fileHandle,0);
+        do
         {
-          printInfo(0,"FAIL!\n");
-          printError("Cannot write file '%s' (error: %s)!\n",
-                     String_cString(storageMsg.destinationFileName),
-                     getErrorText(error)
-                    );
-          createInfo->failError = error;
-          break;
+          error = File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+          if (error != ERROR_NONE)
+          {
+            printInfo(0,"FAIL!\n");
+            printError("Cannot read file '%s' (error: %s)!\n",
+                       String_cString(storageMsg.fileName),
+                       getErrorText(error)
+                      );
+            createInfo->failError = error;
+            break;
+          }
+          error = Storage_write(&createInfo->storageFileHandle,buffer,n);
+          if (error != ERROR_NONE)
+          {
+            if (retryCount >= MAX_RETRIES)
+            {
+              printInfo(0,"FAIL!\n");
+              printError("Cannot write file '%s' (error: %s)!\n",
+                         String_cString(storageMsg.destinationFileName),
+                         getErrorText(error)
+                        );
+              createInfo->failError = error;
+            }
+            break;
+          }
+          createInfo->statusInfo.storageDoneBytes += n;
+          updateStatusInfo(createInfo);
         }
-        createInfo->statusInfo.storageDoneBytes += n;
-        updateStatusInfo(createInfo);
+        while (   (createInfo->failError == ERROR_NONE)
+               && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
+               && !File_eof(&fileHandle)
+              );
+
+        /* close storage file */
+        Storage_close(&createInfo->storageFileHandle);
+
+        if (error == ERROR_NONE)
+        {
+          logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageMsg.destinationFileName));
+          printInfo(0,"ok\n");
+        }
       }
-      while (   (createInfo->failError == ERROR_NONE)
+      while (   (error != ERROR_NONE)
+             && (createInfo->failError == ERROR_NONE)
              && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
-             && !File_eof(&fileHandle)
             );
+
+      /* close file to store */
       File_close(&fileHandle);
 
-      /* close storage file */
-      Storage_close(&createInfo->storageFileHandle);
-
-      if (error == ERROR_NONE)
+      /* check for error */
+      if (   (error != ERROR_NONE)
+          && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
+         )
       {
-        logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageMsg.destinationFileName));
-        printInfo(0,"ok\n");
+        File_delete(storageMsg.fileName,FALSE);
+        String_delete(storageMsg.fileName);
+        String_delete(storageMsg.destinationFileName);
+        continue;
       }
 
       /* post-process */
-      if (createInfo->failError == ERROR_NONE)
+      if (   (createInfo->failError == ERROR_NONE)
+          && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
+         )
       {
         error = Storage_postProcess(&createInfo->storageFileHandle,FALSE);
         if (error != ERROR_NONE)
