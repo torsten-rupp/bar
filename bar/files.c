@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.32 $
+* $Revision: 1.33 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -1051,10 +1051,11 @@ Errors File_copy(const String sourceFileName,
 {
   #define BUFFER_SIZE (1024*1024)
 
-  byte   *buffer;
-  Errors error;
-  FILE   *sourceFile,*destinationFile;
-  size_t n;
+  byte          *buffer;
+  Errors        error;
+  FILE          *sourceFile,*destinationFile;
+  size_t        n;
+  struct stat64 fileStat;
 
   assert(sourceFileName != NULL);
   assert(destinationFileName != NULL);
@@ -1118,6 +1119,20 @@ Errors File_copy(const String sourceFileName,
 
   /* free resources */
   free(buffer);
+
+  /* copy permissions */
+  if (lstat64(String_cString(sourceFileName),&fileStat) != 0)
+  {
+    return ERROR(IO_ERROR,errno);
+  }
+  if (chown(String_cString(destinationFileName),fileStat.st_uid,fileStat.st_gid) != 0)
+  {
+    return ERROR(IO_ERROR,errno);
+  }
+  if (chmod(String_cString(destinationFileName),fileStat.st_mode) != 0)
+  {
+    return ERROR(IO_ERROR,errno);
+  }
 
   return ERROR_NONE;
 
