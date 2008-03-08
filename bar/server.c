@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -78,14 +78,14 @@ typedef struct JobNode
 {
   NODE_HEADER(struct JobNode);
 
-  JobTypes    type;
-  String      name;
-  String      archiveName;
-  PatternList includePatternList;
-  PatternList excludePatternList;
+  JobTypes    type;                            // job type: backup, restore
+  String      name;                            // name of job
+  String      archiveName;                     // archive name
+  PatternList includePatternList;              // included files
+  PatternList excludePatternList;              // excluded files
   Options     options;
-  uint        id;
-  JobStates   state;
+  uint        id;                              // uniq job id
+  JobStates   state;                           // current state of job
   uint        requestedVolumeNumber;           // requested volume number
   uint        volumeNumber;                    // loaded volume number
   bool        requestedAbortFlag;              // TRUE for abort operation
@@ -120,6 +120,7 @@ typedef struct JobNode
   } runningInfo;
 } JobNode;
 
+// list with enqueued jobs
 typedef struct
 {
   LIST_HEADER(JobNode);
@@ -156,7 +157,7 @@ typedef struct
 
   union
   {
-    /* i/o via vile */
+    /* i/o via file */
     struct
     {
       FileHandle   fileHandle;
@@ -1629,24 +1630,32 @@ LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String ar
   {
     jobNode = jobNode->next;
   }
-  if (jobNode != NULL)
-  {
-    /* remove job in list if not running or requested volume */
-    if (   (jobNode->state != JOB_STATE_RUNNING)
-        && (jobNode->state != JOB_STATE_REQUEST_VOLUME)
-       )
-    {
-      List_remove(&jobList,jobNode);
-    }
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else
+  if (jobNode == NULL)
   {
     sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
   }
 
- /* unlock */
+  /* remove job in list if not running or requested volume */
+  if (   (jobNode->state == JOB_STATE_RUNNING)
+      || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
+     )
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d running",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+  List_remove(&jobList,jobNode);
+
+  /* unlock */
   Semaphore_unlock(&jobList.lock);
+
+  /* free job */
+  freeJobNode(jobNode);
+  LIST_DELETE_NODE(jobNode);
+
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
 LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -1674,26 +1683,26 @@ LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String 
   {
     jobNode = jobNode->next;
   }
-
-  if (jobNode != NULL)
-  {
-    /* check if job running, remove job in list */
-    jobNode->requestedAbortFlag = TRUE;
-    while (   (jobNode->state == JOB_STATE_RUNNING)
-           || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
-          )
-    {
-      Semaphore_waitModified(&jobList.lock);
-    }
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else
+  if (jobNode == NULL)
   {
     sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* abort job */
+  jobNode->requestedAbortFlag = TRUE;
+  while (   (jobNode->state == JOB_STATE_RUNNING)
+         || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
+        )
+  {
+    Semaphore_waitModified(&jobList.lock);
   }
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
 LOCAL void serverCommand_volume(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -1933,6 +1942,22 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   sendResult(clientInfo,id,TRUE,0,"");
 }
 
+#ifndef NDEBUG
+LOCAL void serverCommand_debugMemoryInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  assert(clientInfo != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
+  Array_debug();
+  String_debug();
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+#endif /* NDEBUG */
+
+// server commands 
 const struct
 {
   const char            *name;
@@ -1958,6 +1983,9 @@ SERVER_COMMANDS[] =
   { "ABORT_JOB",           "i",   serverCommand_abortJob,          AUTHORIZATION_STATE_OK      },
   { "VOLUME",              "S i", serverCommand_volume,            AUTHORIZATION_STATE_OK      },
   { "ARCHIVE_LIST",        "S",   serverCommand_archiveList,       AUTHORIZATION_STATE_OK      },
+  #ifndef NDEBUG
+  { "DEBUG_MEMORY_INFO",   "",    serverCommand_debugMemoryInfo,   AUTHORIZATION_STATE_OK      },
+  #endif /* NDEBUG */
 };
 
 /***********************************************************************\
@@ -2047,7 +2075,6 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
   }
   if (z >= SIZE_OF_ARRAY(SERVER_COMMANDS))
   {
-fprintf(stderr,"%s,%d: unknown %s\n",__FILE__,__LINE__,String_cString(token));
     String_doneTokenizer(&stringTokenizer);
     return FALSE;
   }
