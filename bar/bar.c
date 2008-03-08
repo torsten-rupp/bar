@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.47 $
+* $Revision: 1.48 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -316,6 +316,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,defaultOptions.noDefaultConfigFlag,                   FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,0,defaultOptions.waitFirstVolumeFlag,                   FALSE,                                                             "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,0,defaultOptions.noStorageFlag,                         FALSE,                                                             "do not store archives (skip storage)"                                     ),
+  CMD_OPTION_BOOLEAN      ("no-bar-on-dvd",                0,  1,0,defaultOptions.noBAROnDVDFlag,                        FALSE,                                                             "do not store a copy of BAR on DVDs"                                       ),
   CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,0,defaultOptions.stopOnErrorFlag,                       FALSE,                                                             "immediately stop on error"                                                ),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,defaultOptions.quietFlag,                             FALSE,                                                             "surpress any output"                                                      ),
   CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,defaultOptions.verboseLevel,                          1,0,3,NULL,                                                        "verbosity level"                                                          ),
@@ -490,6 +491,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",      defaultOptions.overwriteArchiveFilesFlag,-1              ),
   CONFIG_VALUE_BOOLEAN  ("overwrite-files",              defaultOptions.overwriteFilesFlag,-1                     ),
   CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            defaultOptions.waitFirstVolumeFlag,-1                    ),
+  CONFIG_VALUE_BOOLEAN  ("no-bar-on-dvd",                defaultOptions.noBAROnDVDFlag,-1                         ),
   CONFIG_VALUE_BOOLEAN  ("quiet",                        defaultOptions.quietFlag,-1                              ),
   CONFIG_VALUE_INTEGER  ("verbose",                      defaultOptions.verboseLevel,-1,                          0,3,NULL),
 };
@@ -1491,6 +1493,7 @@ int main(int argc, const char *argv[])
     return EXITCODE_INIT_FAIL;
   }
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
+  defaultOptions.barExecutable = argv[0];
 
   /* parse command line: pre-options */
   if (!CmdOption_parse(argv,&argc,

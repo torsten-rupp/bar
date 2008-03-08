@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.31 $
+* $Revision: 1.32 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -154,6 +154,8 @@ typedef struct
 /* global options */
 typedef struct
 {
+  const char          *barExecutable;                  // name of BAR executable
+
   uint                niceLevel;
   
   ArchiveTypes        archiveType;
@@ -196,6 +198,7 @@ typedef struct
   bool                errorCorrectionCodesFlag;
   bool                waitFirstVolumeFlag;
   bool                noStorageFlag;
+  bool                noBAROnDVDFlag;                  // TRUE for not storing BAR on DVDs
   bool                stopOnErrorFlag;
   bool                quietFlag;
   long                verboseLevel;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -988,6 +988,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         FileSystemInfo fileSystemInfo;
         String         deviceName;
         Errors         error;
+        String         sourceFileName,fileBaseName,destinationFileName;
 
         /* parse storage string */
         deviceName = String_new();
@@ -1051,6 +1052,19 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           String_delete(deviceName);
           String_delete(storageSpecifier);
           return error;
+        }
+
+        if (!options->noBAROnDVDFlag)
+        {
+          /* store a copy of BAR executable on DVD (ignore errors) */
+          sourceFileName = String_newCString(options->barExecutable);
+          fileBaseName = File_getFileBaseName(String_new(),sourceFileName);
+          destinationFileName = File_appendFileName(String_duplicate(storageFileHandle->dvd.directory),fileBaseName);
+          File_copy(sourceFileName,destinationFileName);
+          StringList_append(&storageFileHandle->dvd.fileNameList,destinationFileName);
+          String_delete(destinationFileName);
+          String_delete(fileBaseName);
+          String_delete(sourceFileName);
         }
 
         /* request first DVD */
@@ -1365,48 +1379,42 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           if (storageFileHandle->options->errorCorrectionCodesFlag)
           {
             /* create DVD image */
-            if (error == ERROR_NONE)
+            printInfo(0,"Make DVD image #%d with %d file(s)...",storageFileHandle->dvd.number,StringList_count(&storageFileHandle->dvd.fileNameList));
+            storageFileHandle->dvd.step = 0;
+            error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.imageCommand),
+                                        textMacros,SIZE_OF_ARRAY(textMacros),
+                                        (ExecuteIOFunction)processIOmkisofs,
+                                        (ExecuteIOFunction)processIOmkisofs,
+                                        storageFileHandle
+                                       );
+            if (error != ERROR_NONE)
             {
-              printInfo(0,"Make DVD image #%d with %d file(s)...",storageFileHandle->dvd.number,StringList_count(&storageFileHandle->dvd.fileNameList));
-              storageFileHandle->dvd.step = 0;
-              error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.imageCommand),
-                                          textMacros,SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)processIOmkisofs,
-                                          (ExecuteIOFunction)processIOmkisofs,
-                                          storageFileHandle
-                                         );
-              if (error == ERROR_NONE)
-              {
-                File_getFileInfo(imageFileName,&fileInfo);
-                printInfo(0,"ok (%llu bytes)\n",fileInfo.size);
-              }
-              else
-              {
-                printInfo(0,"FAIL\n");
-              }
+              printInfo(0,"FAIL\n");
+              File_delete(imageFileName,FALSE);
+              String_delete(imageFileName);
+              return error;
             }
+            File_getFileInfo(imageFileName,&fileInfo);
+            printInfo(0,"ok (%llu bytes)\n",fileInfo.size);
 
             /* add error-correction codes to DVD image */
-            if (error == ERROR_NONE)
+            printInfo(0,"Add ECC to image #%d...",storageFileHandle->dvd.number);
+            storageFileHandle->dvd.step = 1;
+            error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.eccCommand),
+                                        textMacros,SIZE_OF_ARRAY(textMacros),
+                                        (ExecuteIOFunction)processIOdvdisaster,
+                                        (ExecuteIOFunction)processIOdvdisaster,
+                                        storageFileHandle
+                                       );
+            if (error != ERROR_NONE)
             {
-              printInfo(0,"Add ECC to image #%d...",storageFileHandle->dvd.number);
-              storageFileHandle->dvd.step = 1;
-              error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.eccCommand),
-                                          textMacros,SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)processIOdvdisaster,
-                                          (ExecuteIOFunction)processIOdvdisaster,
-                                          storageFileHandle
-                                         );
-              if (error == ERROR_NONE)
-              {
-                File_getFileInfo(imageFileName,&fileInfo);
-                printInfo(0,"ok (%llu bytes)\n",fileInfo.size);
-              }
-              else
-              {
-                printInfo(0,"FAIL\n");
-              }
+              printInfo(0,"FAIL\n");
+              File_delete(imageFileName,FALSE);
+              String_delete(imageFileName);
+              return error;
             }
+            File_getFileInfo(imageFileName,&fileInfo);
+            printInfo(0,"ok (%llu bytes)\n",fileInfo.size);
 
             /* get number of image sectors */
             if (File_getFileInfo(imageFileName,&fileInfo) == ERROR_NONE)
@@ -1421,31 +1429,30 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               error = requestNewDVD(storageFileHandle,TRUE);
               if (error != ERROR_NONE)
               {
+                File_delete(imageFileName,FALSE);
+                String_delete(imageFileName);
                 return error;
               }
               updateStatusInfo(storageFileHandle);
             }
 
             /* write to DVD */
-            if (error == ERROR_NONE)
+            printInfo(0,"Write DVD #%d...",storageFileHandle->dvd.number);
+            storageFileHandle->dvd.step = 3;
+            error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.writeCommand),
+                                        textMacros,SIZE_OF_ARRAY(textMacros),
+                                        (ExecuteIOFunction)processIOgrowisofs,
+                                        (ExecuteIOFunction)processIOgrowisofs,
+                                        storageFileHandle
+                                       );
+            if (error != ERROR_NONE)
             {
-              printInfo(0,"Write DVD #%d...",storageFileHandle->dvd.number);
-              storageFileHandle->dvd.step = 3;
-              error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.writeCommand),
-                                          textMacros,SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)processIOgrowisofs,
-                                          (ExecuteIOFunction)processIOgrowisofs,
-                                          storageFileHandle
-                                         );
-              if (error == ERROR_NONE)
-              {
-                printInfo(0,"ok\n");
-              }
-              else
-              {
-                printInfo(0,"FAIL\n");
-              }
+              printInfo(0,"FAIL\n");
+              File_delete(imageFileName,FALSE);
+              String_delete(imageFileName);
+              return error;
             }
+            printInfo(0,"ok\n");
           }
           else
           {
@@ -1456,40 +1463,33 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               error = requestNewDVD(storageFileHandle,TRUE);
               if (error != ERROR_NONE)
               {
+                File_delete(imageFileName,FALSE);
+                String_delete(imageFileName);
                 return error;
               }
               updateStatusInfo(storageFileHandle);
             }
 
             /* write to DVD */
-            if (error == ERROR_NONE)
+            printInfo(0,"Write DVD #%d with %d file(s)...",storageFileHandle->dvd.number,StringList_count(&storageFileHandle->dvd.fileNameList));
+            storageFileHandle->dvd.step = 0;
+            error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.writeCommand),
+                                        textMacros,SIZE_OF_ARRAY(textMacros),
+                                        (ExecuteIOFunction)processIOgrowisofs,
+                                        NULL,
+                                        storageFileHandle
+                                       );
+            if (error != ERROR_NONE)
             {
-              printInfo(0,"Write DVD #%d with %d file(s)...",storageFileHandle->dvd.number,StringList_count(&storageFileHandle->dvd.fileNameList));
-              storageFileHandle->dvd.step = 0;
-              error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.writeCommand),
-                                          textMacros,SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)processIOgrowisofs,
-                                          NULL,
-                                          storageFileHandle
-                                         );
-              if (error == ERROR_NONE)
-              {
-                printInfo(0,"ok\n");
-              }
-              else
-              {
-                printInfo(0,"FAIL\n");
-              }
+              printInfo(0,"FAIL\n");
+              File_delete(imageFileName,FALSE);
+              String_delete(imageFileName);
+              return error;
             }
+            printInfo(0,"ok\n");
           }
 
           /* delete image */
-          if (error != ERROR_NONE)
-          {
-            File_delete(imageFileName,FALSE);
-            String_delete(imageFileName);
-            return error;
-          }
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
 
