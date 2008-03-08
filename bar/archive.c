@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.38 $
+* $Revision: 1.39 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -756,7 +756,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo)
 
     if (!chunkHeaderFoundFlag)
     {
-      error = Chunk_skip(archiveInfo,&chunkHeader);
+      error = Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
       if (error != ERROR_NONE)
       {
         return error;
