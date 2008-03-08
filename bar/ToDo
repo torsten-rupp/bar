@@ -19,3 +19,6 @@ ToDo
 - re-read configuration when modified
 - pause of upload
 - configure band-width on run-time
+- internal cron scheduler
+- list of configurations
+- view needed archives for restore

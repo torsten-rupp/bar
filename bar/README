@@ -79,7 +79,7 @@ barcontrol.tcl connect to a running BAR-Server either via TLS
 or a plain socket connction. barcontrol.tcl can send jobs to
 server and display the current status of jobs.
 
-Install TclTk TSL package:
+Install TclTk TLS package:
 
 * Download http://downloads.sourceforge.net/tls/tls1.5.0-src.tar.gz
 * If not alread installed, install OpenSSL package

@@ -1,8 +1,21 @@
+2008-03-08 0.6
+  * added option --debug to barcontrol.tcl; output debug info
+    in server
+  * fixed memory leak in server
+  * improved several error messages
+
+2008-01-21 0.05c
+  * fixed SigSegV when reading broken/wrong archive
+  * added retry (3) in storage via SSH
+
 2008-01-19 0.05b
   * fixed static linkage
   * support none bz2
   * TclTk TLS package is now optional
   * import suport for non-ssh, non-crypt, non-bz2
+  * added option --no-bar-on-dvd; store by default a copy of BAR
+    executable on created DVDs
+  * fixed wrong string when creating DVD
 
 2008-01-18 0.05a
   * improved checks in configure
