@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.31 $
+* $Revision: 1.32 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -75,53 +75,55 @@ typedef struct JobNode
 {
   NODE_HEADER(struct JobNode);
 
-  String      fileName;                        // file name
-  uint64      timeModified;
-  uint64      lastExecutedTime;
+  String       fileName;                       // file name
+  uint64       timeModified;
+  uint64       lastExecutionTime;              // last execution time (timestamp)
 
   /* job config */
-  JobTypes    type;                            // job type: backup, restore
-  String      name;                            // name of job
-  String      archiveName;                     // archive name
-  PatternList includePatternList;              // included files
-  PatternList excludePatternList;              // excluded files
-  JobOptions  jobOptions;                      // options for job
-  bool        modifiedFlag;                    // TRUE iff job config modified
+  JobTypes     type;                           // job type: backup, restore
+  String       name;                           // name of job
+  String       archiveName;                    // archive name
+  JobOptions   jobOptions;                     // options for job
+  PatternList  includePatternList;             // included files
+  PatternList  excludePatternList;             // excluded files
+  ScheduleList scheduleList;                   // schedule list
+  bool         modifiedFlag;                   // TRUE iff job config modified
 
   /* job info */
-  uint        id;                              // uniq job id
-  JobStates   state;                           // current state of job
-  uint        requestedVolumeNumber;           // requested volume number
-  uint        volumeNumber;                    // loaded volume number
-  bool        requestedAbortFlag;              // TRUE for abort operation
+  uint         id;                             // uniq job id
+  JobStates    state;                          // current state of job
+  uint64       nextExecutionTime;              // next execution time (timestamp)
+  uint         requestedVolumeNumber;          // requested volume number
+  uint         volumeNumber;                   // loaded volume number
+  bool         requestedAbortFlag;             // TRUE for abort operation
 
   /* running info */
   struct
   {
-    Errors    error;
-    time_t    startTime;                       // start time [s]
-    ulong     estimatedRestTime;               // estimated rest running time [s]
-    ulong     doneFiles;                       // number of processed files
-    uint64    doneBytes;                       // sum of processed bytes
-    ulong     totalFiles;                      // number of total files
-    uint64    totalBytes;                      // sum of total bytes
-    ulong     skippedFiles;                    // number of skipped files
-    uint64    skippedBytes;                    // sum of skippped bytes
-    ulong     errorFiles;                      // number of files with errors
-    uint64    errorBytes;                      // sum of bytes of files with errors
-    double    filesPerSecond;                  // average processed files per second
-    double    bytesPerSecond;                  // average processed bytes per second
-    double    storageBytesPerSecond;           // average processed storage bytes per second
-    uint64    archiveBytes;                    // number of bytes stored in archive
-    double    compressionRatio;
-    String    fileName;                        // current file
-    uint64    fileDoneBytes;                   // current file bytes done
-    uint64    fileTotalBytes;                  // current file bytes total
-    String    storageName;                     // current storage file
-    uint64    storageDoneBytes;                // current storage file bytes done
-    uint64    storageTotalBytes;               // current storage file bytes total
-    uint      volumeNumber;                    // current volume number
-    double    volumeProgress;                  // current volume progress
+    Errors     error;
+    time_t     startTime;                      // start time [s]
+    ulong      estimatedRestTime;              // estimated rest running time [s]
+    ulong      doneFiles;                      // number of processed files
+    uint64     doneBytes;                      // sum of processed bytes
+    ulong      totalFiles;                     // number of total files
+    uint64     totalBytes;                     // sum of total bytes
+    ulong      skippedFiles;                   // number of skipped files
+    uint64     skippedBytes;                   // sum of skippped bytes
+    ulong      errorFiles;                     // number of files with errors
+    uint64     errorBytes;                     // sum of bytes of files with errors
+    double     filesPerSecond;                 // average processed files per second
+    double     bytesPerSecond;                 // average processed bytes per second
+    double     storageBytesPerSecond;          // average processed storage bytes per second
+    uint64     archiveBytes;                   // number of bytes stored in archive
+    double     compressionRatio;
+    String     fileName;                       // current file
+    uint64     fileDoneBytes;                  // current file bytes done
+    uint64     fileTotalBytes;                 // current file bytes total
+    String     storageName;                    // current storage file
+    uint64     storageDoneBytes;               // current storage file bytes done
+    uint64     storageTotalBytes;              // current storage file bytes total
+    uint       volumeNumber;                   // current volume number
+    double     volumeProgress;                 // current volume progress
   } runningInfo;
 } JobNode;
 
@@ -325,6 +327,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_STRUCT_VALUE_SPECIAL  ("include",                JobNode,includePatternList,                     configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                     configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
+
+  CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",               JobNode,scheduleList,                           configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
 };
 
 /***************************** Variables *******************************/
@@ -367,82 +371,6 @@ LOCAL const char *getArchiveTypeName(ArchiveTypes archiveType)
   }
 
   return (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES))?CONFIG_VALUE_ARCHIVE_TYPES[z].name:"";
-}
-
-/***********************************************************************\
-* Name   : getArchiveType
-* Purpose: get archive type from name
-* Input  : name - name
-* Output : -
-* Return : archive type; see ARCHIVE_TYPE_*
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ArchiveTypes getArchiveType(const char *name)
-{
-  int z;
-
-  assert(name != NULL);
-
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES))
-         && (strcmp(name,CONFIG_VALUE_ARCHIVE_TYPES[z].name) != 0)
-        )
-  {
-    z++;
-  }
-
-  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES))?CONFIG_VALUE_ARCHIVE_TYPES[z].value:ARCHIVE_TYPE_UNKNOWN;
-}
-
-/***********************************************************************\
-* Name   : getPasswordModeName
-* Purpose: get name of password mode
-* Input  : passwordMode - password mode
-* Output : -
-* Return : name
-* Notes  : -
-\***********************************************************************/
-
-LOCAL const char *getPasswordModeName(PasswordModes passwordMode)
-{
-  int z;
-
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))
-         && (passwordMode != CONFIG_VALUE_PASSWORD_MODES[z].value)
-        )
-  {
-    z++;
-  }
-
-  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))?CONFIG_VALUE_PASSWORD_MODES[z].name:"";
-}
-
-/***********************************************************************\
-* Name   : getPasswordMode
-* Purpose: get password mode
-* Input  : name - password mode name
-* Output : -
-* Return : password mode or PASSWORD_MODE_UNKNOWN
-* Notes  : -
-\***********************************************************************/
-
-LOCAL PasswordModes getPasswordMode(const char *name)
-{
-  int z;
-
-  assert(name != NULL);
-
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))
-         && (strcmp(name,CONFIG_VALUE_PASSWORD_MODES[z].name) != 0)
-        )
-  {
-    z++;
-  }
-
-  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))?CONFIG_VALUE_PASSWORD_MODES[z].value:PASSWORD_MODE_UNKNOWN;
 }
 
 /***********************************************************************\
@@ -490,14 +418,15 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   /* init job node */
   jobNode->fileName                          = String_duplicate(fileName);
   jobNode->timeModified                      = 0LL;
-  jobNode->lastExecutedTime                  = 0LL;
+  jobNode->lastExecutionTime                 = 0LL;
 
   jobNode->type                              = jobType;
   jobNode->name                              = String_duplicate(name);
   jobNode->archiveName                       = String_new();
+  initJobOptions(&jobNode->jobOptions);
   Pattern_initList(&jobNode->includePatternList);
   Pattern_initList(&jobNode->excludePatternList);
-  initJobOptions(&jobNode->jobOptions);
+  List_init(&jobNode->scheduleList);
   jobNode->id                                = getNewJobId();
   jobNode->state                             = JOB_STATE_NONE;
   jobNode->requestedVolumeNumber             = 0;
@@ -548,9 +477,10 @@ LOCAL void freeJobNode(JobNode *jobNode)
   String_delete(jobNode->runningInfo.fileName);
   String_delete(jobNode->runningInfo.storageName);
 
-  freeJobOptions(&jobNode->jobOptions);
+  List_done(&jobNode->scheduleList,NULL,NULL);
   Pattern_doneList(&jobNode->excludePatternList);
   Pattern_doneList(&jobNode->includePatternList);
+  freeJobOptions(&jobNode->jobOptions);
   String_delete(jobNode->archiveName);
   String_delete(jobNode->name);
   String_delete(jobNode->fileName);
@@ -593,6 +523,13 @@ LOCAL JobNode *findJobById(int jobId)
   }
 
   return jobNode;
+}
+
+LOCAL uint64 calculateNextExecutionTime(uint64             lastExecutionTime,
+                                        const ScheduleList *scheduleList
+                                       )
+{
+  return 0;
 }
 
 /***********************************************************************\
@@ -702,7 +639,7 @@ LOCAL bool readJobFile(JobNode *jobNode)
   jobNode->timeModified = File_getFileTimeModified(jobNode->fileName);
 
   /* get last executed time */
-  jobNode->lastExecutedTime = 0LL;
+  jobNode->lastExecutionTime = 0LL;
   File_splitFileName(jobNode->fileName,&pathName,&baseName);
   fileName = File_newFileName();
   File_setFileName(fileName,pathName);
@@ -728,12 +665,17 @@ fprintf(stderr,"%s,%d: last executed fileName=%s\n",__FILE__,__LINE__,String_cSt
       /* parse */
       if (String_parse(line,"%lld",NULL,&n))
       {
-        jobNode->lastExecutedTime = n;
+        jobNode->lastExecutionTime = n;
       }
     }
     File_close(&fileHandle);
   }
   File_deleteFileName(fileName);
+
+  /* calculate next execution time */
+  jobNode->nextExecutionTime = calculateNextExecutionTime(jobNode->lastExecutionTime,
+                                                          &jobNode->scheduleList
+                                                         );
 
   /* free resources */
   String_delete(line);
@@ -746,7 +688,7 @@ fprintf(stderr,"%s,%d: last executed fileName=%s\n",__FILE__,__LINE__,String_cSt
 * Purpose: re-read job files
 * Input  : jobDirectory - job directory
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -825,15 +767,21 @@ fprintf(stderr,"%s,%d: config %s\n",__FILE__,__LINE__,String_cString(fileName));
       File_appendFileName(fileName,jobNode->name);
       if (File_isFileReadable(fileName))
       {
+        /* exists => ok */
         jobNode = jobNode->next;
       }
       else
       {
+        /* not exists => delete */
         deleteJobNode = jobNode;
         jobNode = jobNode->next;
         List_remove(&jobList,deleteJobNode);
         deleteJob(deleteJobNode);
       }
+    }
+    else
+    {
+      jobNode = jobNode->next;
     }
   }
   Semaphore_unlock(&jobList.lock);
@@ -1878,22 +1826,6 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_clear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  UNUSED_VARIABLE(arguments);
-  UNUSED_VARIABLE(argumentCount);
-
-  Pattern_clearList(&clientInfo->includePatternList);
-  Pattern_clearList(&clientInfo->excludePatternList);
-  freeJobOptions(&clientInfo->jobOptions);
-  initJobOptions(&clientInfo->jobOptions);
-
-  sendResult(clientInfo,id,TRUE,0,"");
-}
-
 LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint        jobId;
@@ -2534,7 +2466,11 @@ LOCAL void serverCommand_jobRun(ClientInfo *clientInfo, uint id, const String ar
   }
 
   /* run job */
-  if  (jobNode->state == JOB_STATE_NONE)
+  if  (   (jobNode->state == JOB_STATE_NONE)
+       || (jobNode->state != JOB_STATE_COMPLETED)
+       || (jobNode->state != JOB_STATE_ERROR)
+       || (jobNode->state != JOB_STATE_ABORTED)
+      )
   {
     jobNode->state = JOB_STATE_WAITING;
   }

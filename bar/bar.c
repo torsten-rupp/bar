@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.50 $
+* $Revision: 1.51 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -501,6 +501,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_BOOLEAN  ("no-bar-on-dvd",                &jobOptions.noBAROnDVDFlag,-1                            ),
   CONFIG_VALUE_BOOLEAN  ("quiet",                        &globalOptions.quietFlag,-1                              ),
   CONFIG_VALUE_INTEGER  ("verbose",                      &globalOptions.verboseLevel,-1,                          0,3,NULL),
+
+//  CONFIG_VALUE_SPECIAL  ("schedule",                     &jobOptions.scheduleList,-1,                             configValueParseSchedule,NULL,NULL,NULL,NULL),
 };
 
 /*---------------------------------------------------------------------*/
@@ -1439,7 +1441,10 @@ bool configValueParseIncludeExclude(void *userData, void *variable, const char *
 
 void configValueFormatInitIncludeExclude(void **formatUserData, void *userData, void *variable)
 {
+  assert(formatUserData != NULL);
+
   UNUSED_VARIABLE(userData);
+
   (*formatUserData) = ((PatternList*)variable)->head;
 }
 
@@ -1477,6 +1482,7 @@ bool configValueFormatIncludeExclude(void **formatUserData, void *userData, Stri
           break;
       #endif /* NDEBUG */
     }
+
     (*formatUserData) = patternNode->next;
 
     return TRUE;
@@ -1509,7 +1515,10 @@ bool configValueParsePassword(void *userData, void *variable, const char *name, 
 
 void configValueFormatInitPassord(void **formatUserData, void *userData, void *variable)
 {
+  assert(formatUserData != NULL);
+
   UNUSED_VARIABLE(userData);
+
   (*formatUserData) = (*(Password**)variable);
 }
 
@@ -1518,10 +1527,10 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   Password   *password;
   const char *s;
 
+  assert(formatUserData != NULL);
   assert(line != NULL);
 
   UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(formatUserData);
 
   password = (Password*)(*formatUserData);
   if (password != NULL)
@@ -1531,6 +1540,457 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
     Password_undeploy(password);
 
     (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+LOCAL bool parseScheduleNumber(const String s, uint *n, uint *repeat)
+{
+  bool   errorFlag;
+  String t0,t1;
+  ulong  nextIndex;
+
+  assert(n != NULL);
+  assert(repeat != NULL);
+
+  /* init variables */
+  errorFlag = FALSE;
+  t0 = String_new();
+  t1 = String_new();
+
+  if      (String_parse(s,"%S/%S",&nextIndex,t0,t1) && (nextIndex == STRING_END))
+  {
+    if   (String_equalsCString(t0,"*"))
+    {
+      (*n) = 0;
+    }
+    else 
+    {
+      (*n) = (uint)String_toInteger(t0,0,&nextIndex,NULL,0);
+      if (nextIndex != STRING_END) errorFlag = TRUE;
+    }
+
+    (*repeat) = (uint)String_toInteger(t1,0,&nextIndex,NULL,0);
+    if (nextIndex != STRING_END) errorFlag = TRUE;
+  }
+  else
+  {
+    if   (String_equalsCString(s,"*"))
+    {
+      (*n) = 0;
+    }
+    else 
+    {
+      (*n) = (uint)String_toInteger(s,0,&nextIndex,NULL,0);
+      if (nextIndex != STRING_END) errorFlag = TRUE;
+    }
+    (*repeat) = 0;
+  }
+
+  /* free resources */
+  String_delete(t1);
+  String_delete(t0);
+
+  return !errorFlag;
+}
+
+LOCAL bool parseScheduleMonth(const String s, uint *month, ulong *months, uint *repeat)
+{
+  bool            errorFlag;
+  String          t0,t1;
+  uint            n;
+  ulong           nextIndex;
+  String          name;
+  StringTokenizer stringTokenizer;
+  String          token;
+
+  assert(month != NULL);
+  assert(months != NULL);
+  assert(repeat != NULL);
+
+  /* init variables */
+  errorFlag = FALSE;
+  t0 = String_new();
+  t1 = String_new();
+
+  if      (String_parse(s,"%S/%S",&nextIndex,t0,t1) && (nextIndex == STRING_END))
+  {
+    n = (uint)String_toInteger(t0,0,&nextIndex,NULL,0);
+    if (nextIndex == STRING_END)
+    {
+      (*month)  = n;
+      (*months) = SCHEDULE_MONTHS_NONE;
+    }
+    else if (String_equalsCString(t0,"*"))
+    {
+      (*month)  = 0;
+      (*months) = SCHEDULE_MONTHS_ANY;
+    }
+    else
+    {
+      (*month ) = 0;
+      (*months) = SCHEDULE_MONTHS_NONE;
+
+      name = String_new();
+      String_initTokenizer(&stringTokenizer,t0,",",NULL,TRUE);
+      while (String_getNextToken(&stringTokenizer,&token,NULL))
+      {
+        String_toLower(String_set(name,token));
+
+        if      (String_equalsCString(name,"jan")) (*months) |= 1 << SCHEDULE_MONTH_JAN;
+        else if (String_equalsCString(name,"feb")) (*months) |= 1 << SCHEDULE_MONTH_FEB;
+        else if (String_equalsCString(name,"mar")) (*months) |= 1 << SCHEDULE_MONTH_MAR;
+        else if (String_equalsCString(name,"arp")) (*months) |= 1 << SCHEDULE_MONTH_APR;
+        else if (String_equalsCString(name,"may")) (*months) |= 1 << SCHEDULE_MONTH_MAY;
+        else if (String_equalsCString(name,"jun")) (*months) |= 1 << SCHEDULE_MONTH_JUN;
+        else if (String_equalsCString(name,"jul")) (*months) |= 1 << SCHEDULE_MONTH_JUL;
+        else if (String_equalsCString(name,"aug")) (*months) |= 1 << SCHEDULE_MONTH_AUG;
+        else if (String_equalsCString(name,"sep")) (*months) |= 1 << SCHEDULE_MONTH_SEP;
+        else if (String_equalsCString(name,"oct")) (*months) |= 1 << SCHEDULE_MONTH_OCT;
+        else if (String_equalsCString(name,"nov")) (*months) |= 1 << SCHEDULE_MONTH_NOV;
+        else if (String_equalsCString(name,"dec")) (*months) |= 1 << SCHEDULE_MONTH_DEC;
+        else errorFlag = TRUE;
+      }
+      String_doneTokenizer(&stringTokenizer);
+      String_delete(name);
+    }
+
+    (*repeat) = (uint)String_toInteger(t1,0,&nextIndex,NULL,0);
+    if (nextIndex != STRING_END) errorFlag = TRUE;
+  }
+  else
+  {
+    n = (uint)String_toInteger(t0,0,&nextIndex,NULL,0);
+    if (nextIndex == STRING_END)
+    {
+      (*month)  = n;
+      (*months) = SCHEDULE_MONTHS_NONE;
+    }
+    else if (String_equalsCString(t0,"*"))
+    {
+      (*month)  = 0;
+      (*months) = SCHEDULE_MONTHS_ANY;
+    }
+    else
+    {
+      (*month ) = 0;
+      (*months) = SCHEDULE_MONTHS_NONE;
+
+      name = String_new();
+      String_initTokenizer(&stringTokenizer,t0,",",NULL,TRUE);
+      while (String_getNextToken(&stringTokenizer,&token,NULL))
+      {
+        String_toLower(String_set(name,token));
+
+        if      (String_equalsCString(name,"jan")) (*months) |= 1 << SCHEDULE_MONTH_JAN;
+        else if (String_equalsCString(name,"feb")) (*months) |= 1 << SCHEDULE_MONTH_FEB;
+        else if (String_equalsCString(name,"mar")) (*months) |= 1 << SCHEDULE_MONTH_MAR;
+        else if (String_equalsCString(name,"arp")) (*months) |= 1 << SCHEDULE_MONTH_APR;
+        else if (String_equalsCString(name,"may")) (*months) |= 1 << SCHEDULE_MONTH_MAY;
+        else if (String_equalsCString(name,"jun")) (*months) |= 1 << SCHEDULE_MONTH_JUN;
+        else if (String_equalsCString(name,"jul")) (*months) |= 1 << SCHEDULE_MONTH_JUL;
+        else if (String_equalsCString(name,"aug")) (*months) |= 1 << SCHEDULE_MONTH_AUG;
+        else if (String_equalsCString(name,"sep")) (*months) |= 1 << SCHEDULE_MONTH_SEP;
+        else if (String_equalsCString(name,"oct")) (*months) |= 1 << SCHEDULE_MONTH_OCT;
+        else if (String_equalsCString(name,"nov")) (*months) |= 1 << SCHEDULE_MONTH_NOV;
+        else if (String_equalsCString(name,"dec")) (*months) |= 1 << SCHEDULE_MONTH_DEC;
+        else errorFlag = TRUE;
+      }
+      String_doneTokenizer(&stringTokenizer);
+      String_delete(name);
+    }
+
+    (*repeat) = 0;
+  }
+
+  /* free resources */
+  String_delete(t1);
+  String_delete(t0);
+
+  return !errorFlag;
+}
+
+LOCAL bool parseScheduleDay(const String s, uint *day, ulong *days, uint *repeat)
+{
+  bool            errorFlag;
+  String          t0,t1;
+  uint            n;
+  ulong           nextIndex;
+  String          name;
+  StringTokenizer stringTokenizer;
+  String          token;
+
+  assert(day != NULL);
+  assert(days != NULL);
+  assert(repeat != NULL);
+
+  /* init variables */
+  errorFlag = FALSE;
+  t0 = String_new();
+  t1 = String_new();
+
+  if      (String_parse(s,"%S/%S",&nextIndex,t0,t1) && (nextIndex == STRING_END))
+  {
+    n = (uint)String_toInteger(t0,0,&nextIndex,NULL,0);
+    if (nextIndex == STRING_END)
+    {
+      (*day)  = n;
+      (*days) = SCHEDULE_MONTHS_NONE;
+    }
+    else if (String_equalsCString(t0,"*"))
+    {
+      (*day)  = 0;
+      (*days) = SCHEDULE_MONTHS_ANY;
+    }
+    else
+    {
+      (*day)  = 0;
+      (*days) = SCHEDULE_MONTHS_NONE;
+
+      name = String_new();
+      String_initTokenizer(&stringTokenizer,t0,",",NULL,TRUE);
+      while (String_getNextToken(&stringTokenizer,&token,NULL))
+      {
+        String_toLower(String_set(name,token));
+
+        if      (String_equalsCString(name,"mon")) (*days) |= 1 << SCHEDULE_DAY_MON;
+        else if (String_equalsCString(name,"tue")) (*days) |= 1 << SCHEDULE_DAY_TUE;
+        else if (String_equalsCString(name,"wed")) (*days) |= 1 << SCHEDULE_DAY_WED;
+        else if (String_equalsCString(name,"thu")) (*days) |= 1 << SCHEDULE_DAY_THU;
+        else if (String_equalsCString(name,"fri")) (*days) |= 1 << SCHEDULE_DAY_FRI;
+        else if (String_equalsCString(name,"sat")) (*days) |= 1 << SCHEDULE_DAY_SAT;
+        else if (String_equalsCString(name,"sun")) (*days) |= 1 << SCHEDULE_DAY_SUN;
+        else errorFlag = TRUE;
+      }
+      String_doneTokenizer(&stringTokenizer);
+      String_delete(name);
+    }
+
+    (*repeat) = (uint)String_toInteger(t1,0,&nextIndex,NULL,0);
+    if (nextIndex != STRING_END) errorFlag = TRUE;
+  }
+  else
+  {
+    n = (uint)String_toInteger(t0,0,&nextIndex,NULL,0);
+    if (nextIndex == STRING_END)
+    {
+      (*day)  = n;
+      (*days) = SCHEDULE_MONTHS_NONE;
+    }
+    else if (String_equalsCString(t0,"*"))
+    {
+      (*day)  = 0;
+      (*days) = SCHEDULE_MONTHS_ANY;
+    }
+    else
+    {
+      (*day)  = 0;
+      (*days) = SCHEDULE_MONTHS_NONE;
+
+      name = String_new();
+      String_initTokenizer(&stringTokenizer,t0,",",NULL,TRUE);
+      while (String_getNextToken(&stringTokenizer,&token,NULL))
+      {
+        String_toLower(String_set(name,token));
+
+        if      (String_equalsCString(name,"mon")) (*days) |= 1 << SCHEDULE_DAY_MON;
+        else if (String_equalsCString(name,"tue")) (*days) |= 1 << SCHEDULE_DAY_TUE;
+        else if (String_equalsCString(name,"wed")) (*days) |= 1 << SCHEDULE_DAY_WED;
+        else if (String_equalsCString(name,"thu")) (*days) |= 1 << SCHEDULE_DAY_THU;
+        else if (String_equalsCString(name,"fri")) (*days) |= 1 << SCHEDULE_DAY_FRI;
+        else if (String_equalsCString(name,"sat")) (*days) |= 1 << SCHEDULE_DAY_SAT;
+        else if (String_equalsCString(name,"sun")) (*days) |= 1 << SCHEDULE_DAY_SUN;
+        else errorFlag = TRUE;
+      }
+      String_doneTokenizer(&stringTokenizer);
+      String_delete(name);
+    }
+
+    (*repeat) = 0;
+  }
+
+  /* free resources */
+  String_delete(t1);
+  String_delete(t0);
+
+  return !errorFlag;
+}
+
+bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value)
+{
+  ScheduleNode *scheduleNode;
+  String       s;
+  String       year,month,day,hour,minute;
+  ulong        nextIndex;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  /* allocate new schedule node */
+  scheduleNode = LIST_NEW_NODE(ScheduleNode);
+  if (scheduleNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  /* parse schedule */
+  s = String_newCString(value);
+  year   = String_new();
+  month  = String_new();
+  day    = String_new();
+  hour   = String_new();
+  minute = String_new();
+  if      (String_parse(s,"%S-%S-%S %S:%S",&nextIndex,year,month,day,hour,minute) && (nextIndex == STRING_END))
+  {
+    parseScheduleNumber(year,  &scheduleNode->year,                        &scheduleNode->repeat.year  );
+    parseScheduleMonth (month, &scheduleNode->month, &scheduleNode->months,&scheduleNode->repeat.month );
+    parseScheduleDay   (day,   &scheduleNode->day,   &scheduleNode->days,  &scheduleNode->repeat.day   );
+    parseScheduleNumber(hour,  &scheduleNode->hour,                        &scheduleNode->repeat.hour  );
+    parseScheduleNumber(minute,&scheduleNode->minute,                      &scheduleNode->repeat.minute);
+  }
+  else if (String_parse(s,"%S-%S-%S",&nextIndex,year,month,day) && (nextIndex == STRING_END))
+  {
+    parseScheduleNumber(year,  &scheduleNode->year,                        &scheduleNode->repeat.year  );
+    parseScheduleMonth (month, &scheduleNode->month, &scheduleNode->months,&scheduleNode->repeat.month );
+    parseScheduleDay   (day,   &scheduleNode->day,   &scheduleNode->days,  &scheduleNode->repeat.day   );
+    scheduleNode->hour   = 0; scheduleNode->repeat.hour   = 0;
+    scheduleNode->minute = 0; scheduleNode->repeat.minute = 0;
+  }
+  else if (String_parse(s,"%S:%S",&nextIndex,hour,minute) && (nextIndex == STRING_END))
+  {
+    scheduleNode->year  = 0;                                             scheduleNode->repeat.year  = 0;
+    scheduleNode->month = 0; scheduleNode->months = SCHEDULE_MONTHS_ANY; scheduleNode->repeat.month = 0;
+    scheduleNode->day   = 0; scheduleNode->days   = SCHEDULE_DAYS_ANY;   scheduleNode->repeat.day   = 0;
+    parseScheduleNumber(hour,  &scheduleNode->hour,  &scheduleNode->repeat.hour  );
+    parseScheduleNumber(minute,&scheduleNode->minute,&scheduleNode->repeat.minute);
+  }
+  else
+  {
+    String_delete(minute);
+    String_delete(hour);
+    String_delete(day);
+    String_delete(month);
+    String_delete(year);
+    String_delete(s);
+    return FALSE;
+  }
+  String_delete(minute);
+  String_delete(hour);
+  String_delete(day);
+  String_delete(month);
+  String_delete(year);
+  String_delete(s);
+
+  /* append to list */
+  List_append((ScheduleList*)variable,scheduleNode);
+
+  return TRUE;
+}
+
+void configValueFormatInitSchedule(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = ((ScheduleList*)variable)->head;
+}
+
+void configValueFormatDoneSchedule(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(formatUserData);  
+}
+
+bool configValueFormatSchedule(void **formatUserData, void *userData, String line)
+{
+  ScheduleNode *scheduleNode;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  scheduleNode = (ScheduleNode*)(*formatUserData);
+  if (scheduleNode != NULL)
+  {
+    /* date */
+    if (scheduleNode->year != 0)
+    {
+      String_format(line,"%d",scheduleNode->year);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    if (scheduleNode->repeat.year != 0)
+    {
+      String_format(line,"/%d",scheduleNode->repeat.year);
+    }
+    String_appendChar(line,'-');
+    if (scheduleNode->month != 0)
+    {
+      String_format(line,"%d",scheduleNode->month);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    if (scheduleNode->repeat.month != 0)
+    {
+      String_format(line,"/%d",scheduleNode->repeat.month);
+    }
+    String_appendChar(line,'-');
+    if (scheduleNode->day != 0)
+    {
+      String_format(line,"%d",scheduleNode->day);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    if (scheduleNode->repeat.day != 0)
+    {
+      String_format(line,"/%d",scheduleNode->repeat.day);
+    }
+
+    String_appendChar(line,' ');
+
+    /* time */
+    if (scheduleNode->hour != 0)
+    {
+      String_format(line,"%d",scheduleNode->hour);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    if (scheduleNode->repeat.hour != 0)
+    {
+      String_format(line,"/%d",scheduleNode->repeat.hour);
+    }
+    String_appendChar(line,':');
+    if (scheduleNode->minute != 0)
+    {
+      String_format(line,"%d",scheduleNode->minute);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    if (scheduleNode->repeat.minute != 0)
+    {
+      String_format(line,"/%d",scheduleNode->repeat.minute);
+    }
+
+    (*formatUserData) = scheduleNode->next;
 
     return TRUE;
   }

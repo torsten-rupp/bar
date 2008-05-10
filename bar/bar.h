@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.34 $
+* $Revision: 1.35 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -74,6 +74,40 @@ typedef enum
   ARCHIVE_TYPE_INCREMENTAL,             // incremental achives
   ARCHIVE_TYPE_UNKNOWN,
 } ArchiveTypes;
+
+/* month, day names */
+typedef enum
+{
+  SCHEDULE_MONTH_JAN,
+  SCHEDULE_MONTH_FEB,
+  SCHEDULE_MONTH_MAR,
+  SCHEDULE_MONTH_APR,
+  SCHEDULE_MONTH_MAY,
+  SCHEDULE_MONTH_JUN,
+  SCHEDULE_MONTH_JUL,
+  SCHEDULE_MONTH_AUG,
+  SCHEDULE_MONTH_SEP,
+  SCHEDULE_MONTH_OCT,
+  SCHEDULE_MONTH_NOV,
+  SCHEDULE_MONTH_DEC,
+} ScheduleMonths;
+
+#define SCHEDULE_MONTHS_NONE 0
+#define SCHEDULE_MONTHS_ANY  0xFFFF
+
+typedef enum
+{
+  SCHEDULE_DAY_MON,
+  SCHEDULE_DAY_TUE,
+  SCHEDULE_DAY_WED,
+  SCHEDULE_DAY_THU,
+  SCHEDULE_DAY_FRI,
+  SCHEDULE_DAY_SAT,
+  SCHEDULE_DAY_SUN,
+} ScheduleDays;
+
+#define SCHEDULE_DAYS_NONE 0
+#define SCHEDULE_DAYS_ANY  0xFFFF
 
 /***************************** Datatypes *******************************/
 
@@ -194,6 +228,34 @@ typedef struct
   bool                quietFlag;
   long                verboseLevel;
 } GlobalOptions;
+
+/* schedule */
+typedef struct ScheduleNode
+{
+  NODE_HEADER(struct ScheduleNode);
+
+  uint  hour;
+  uint  minute;
+  uint  day;
+  ulong days;
+  uint  month;
+  ulong months;
+  uint  year;
+
+  struct
+  {
+    uint hour;
+    uint minute;
+    uint day;
+    uint month;
+    uint year;
+  } repeat;
+} ScheduleNode;
+
+typedef struct
+{
+  LIST_HEADER(ScheduleNode);
+} ScheduleList;
 
 /* job options */
 typedef struct
@@ -426,7 +488,7 @@ bool inputCryptPassword(Password **cryptPassword);
 
 /***********************************************************************\
 * Name   : configValueParseIncludeExclude
-* Purpose: command line option call back for parsing include/exclude
+* Purpose: config value option call back for parsing include/exclude
 *          patterns
 * Input  : userData - user data
 *          variable - config variable
@@ -481,7 +543,7 @@ bool configValueFormatIncludeExclude(void **formatUserData, void *userData, Stri
 
 /***********************************************************************\
 * Name   : configValueParsePassword
-* Purpose: command line option call back for parsing password
+* Purpose: config value option call back for parsing password
 * Input  : userData - user data
 *          variable - config variable
 *          name     - config name
@@ -521,6 +583,62 @@ void configValueFormatInitPassord(void **formatUserData, void *userData, void *v
 \***********************************************************************/
 
 bool configValueFormatPassword(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseSchedule
+* Purpose: config value option call back for parsing schedule
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value);
+
+/***********************************************************************\
+* Name   : configValueFormatInitSchedule
+* Purpose: init format config schedule
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitSchedule(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneSchedule
+* Purpose: done format of config schedule statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneSchedule(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatSchedule
+* Purpose: format schedule config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatSchedule(void **formatUserData, void *userData, String line);
 
 #ifdef __cplusplus
   }
