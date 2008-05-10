@@ -1,9 +1,9 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/configvalues.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
-* Contents: command line options parser
+* Contents: config file entry parser
 * Systems: all
 *
 ***********************************************************************/
@@ -25,10 +25,9 @@
 
 /**************************** Constants *******************************/
 
-#define CMD_LEVEL_ALL    -1
-#define CMD_PRIORITY_ANY -1
-
 /***************************** Datatypes ******************************/
+
+/* config value data types */
 typedef enum
 {
   CONFIG_VALUE_TYPE_INTEGER,
@@ -43,24 +42,28 @@ typedef enum
   CONFIG_VALUE_TYPE_SPECIAL
 } ConfigValueTypes;
 
+/* configu value unit */
 typedef struct
 {
   const char *name;
   uint64     factor;
 } ConfigValueUnit;
 
+/* configu value select value */
 typedef struct
 {
   const char *name;
   int        value;
 } ConfigValueSelect;
 
+/* configu value set value */
 typedef struct
 {
   const char *name;
   int        value;
 } ConfigValueSet;
 
+/* configu value variable */
 typedef union
 {
   void   *pointer;
@@ -77,6 +80,7 @@ typedef union
   void   *special;
 } ConfigVariable;
 
+/* configu value definition */
 typedef struct
 {
   const char       *name;                         // name of config value
@@ -129,7 +133,7 @@ typedef struct
     bool(*parse)(void *userData, void *variable, const char *name, const char *value);
     void(*formatInit)(void **formatUserData, void *userData, void *variable);
     void(*formatDone)(void **formatUserData, void *userData);
-    bool(*format)(void **formatUserData, void *userData, String line, const char *name);
+    bool(*format)(void **formatUserData, void *userData, String line);
     void                    *userData;            // user data for parse special
   } specialValue;
 } ConfigValue;
@@ -213,13 +217,21 @@ const ConfigValue CONFIG_VALUES[] =
 
 */
 
+typedef enum
+{
+  CONFIG_VALUE_FORMAT_MODE_VALUE,                 // format value only
+  CONFIG_VALUE_FORMAT_MODE_LINE,                  // format line
+} ConfigValueFormatModes;
+
+/* configu value format info */
 typedef struct
 {
-  void              *formatUserData;              // user data for special value call back
-  void              *userData;
-  const ConfigValue *configValue;                 // config value to format
-  void              *variable;                    // config value variable
-  bool              endOfDataFlag;                // TRUE iff no more data
+  void                   *formatUserData;         // user data for special value call back
+  void                   *userData;
+  const ConfigValue      *configValue;            // config value to format
+  void                   *variable;               // config value variable
+  ConfigValueFormatModes mode;
+  bool                   endOfDataFlag;           // TRUE iff no more data
 } ConfigValueFormat;
 
 /***************************** Variables ******************************/
@@ -503,23 +515,26 @@ bool ConfigValue_parse(const char        *name,
 
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
+* Name   : ConfigValue_formatInit
+* Purpose: initialize config valule format
+* Input  : configValue - config value definition
+*          mode        - format mode; see CONFIG_VALUE_FORMAT_MODE_*
+*          variable    - config value variable
+* Output : configValueFormat - config format info
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void ConfigValue_formatInit(ConfigValueFormat *configValueFormat,
-                            void              *variable,
-                            const ConfigValue *configValue
+void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
+                            const ConfigValue      *configValue,
+                            ConfigValueFormatModes mode,
+                            void                   *variable
                            );
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : ConfigValue_formatDone
+* Purpose: done config value format
+* Input  : configValueFormat - config format info
 * Output : -
 * Return : -
 * Notes  : -
@@ -528,11 +543,12 @@ void ConfigValue_formatInit(ConfigValueFormat *configValueFormat,
 void ConfigValue_formatDone(ConfigValueFormat *configValueFormat);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
+* Name   : ConfigValue_format
+* Purpose: format next config value
+* Input  : configValueFormat - config format info
+*          line              - line variable
+* Output : line - line
+* Return : TRUE if config value formated, FALSE for no more data
 * Notes  : -
 \***********************************************************************/
 

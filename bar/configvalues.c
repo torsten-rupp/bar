@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/configvalues.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -853,9 +853,10 @@ bool ConfigValue_parse(const char        *name,
   return TRUE;
 }
 
-void ConfigValue_formatInit(ConfigValueFormat *configValueFormat,
-                            void              *variable,
-                            const ConfigValue *configValue
+void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
+                            const ConfigValue      *configValue,
+                            ConfigValueFormatModes mode,
+                            void                   *variable
                            )
 {
   assert(configValueFormat != NULL);
@@ -864,6 +865,7 @@ void ConfigValue_formatInit(ConfigValueFormat *configValueFormat,
   configValueFormat->formatUserData = NULL;
   configValueFormat->userData       = NULL;
   configValueFormat->configValue    = configValue;
+  configValueFormat->mode           = mode;
   configValueFormat->endOfDataFlag  = FALSE;
 
   switch (configValue->type)
@@ -969,6 +971,20 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
   String_clear(line);
   if (!configValueFormat->endOfDataFlag)
   {
+    switch (configValueFormat->mode)
+    {
+      case CONFIG_VALUE_FORMAT_MODE_VALUE:
+        break;
+      case CONFIG_VALUE_FORMAT_MODE_LINE:
+        String_format(line,"%s = ",configValueFormat->configValue->name);
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
     switch (configValueFormat->configValue->type)
     {
       case CONFIG_VALUE_TYPE_INTEGER:
@@ -1020,11 +1036,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 
         if (factor > 0)
         {
-          String_format(line,"%s = %ld%s",configValueFormat->configValue->name,(*configVariable.n)/factor,unit);
+          String_format(line,"%ld%s",(*configVariable.n)/factor,unit);
         }
         else
         {
-          String_format(line,"%s = %ld",configValueFormat->configValue->name,*configVariable.n);
+          String_format(line,"%ld",*configVariable.n);
         }
 
         configValueFormat->endOfDataFlag = TRUE;
@@ -1078,11 +1094,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 
         if (factor > 0)
         {
-          String_format(line,"%s = %lld%s",configValueFormat->configValue->name,(*configVariable.l)/factor,unit);
+          String_format(line,"%lld%s",(*configVariable.l)/factor,unit);
         }
         else
         {
-          String_format(line,"%s = %lld",configValueFormat->configValue->name,*configVariable.l);
+          String_format(line,"%lld",*configVariable.l);
         }
 
         configValueFormat->endOfDataFlag = TRUE;
@@ -1136,11 +1152,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 
         if (factor > 0)
         {
-          String_format(line,"%s = %lf",configValueFormat->configValue->name,(*configVariable.d)/factor,unit);
+          String_format(line,"%lf",(*configVariable.d)/factor,unit);
         }
         else
         {
-          String_format(line,"%s = %lf",configValueFormat->configValue->name,*configVariable.d);
+          String_format(line,"%lf",*configVariable.d);
         }
 
         configValueFormat->endOfDataFlag = TRUE;
@@ -1166,7 +1182,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         /* format value */
-        String_format(line,"%s = %s",configValueFormat->configValue->name,(*configVariable.b)?"yes":"no");
+        String_format(line,"%s",(*configVariable.b)?"yes":"no");
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
@@ -1191,7 +1207,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         /* format value */
-        String_format(line,"%s = %d",configValueFormat->configValue->name,configVariable.enumeration);
+        String_format(line,"%d",configVariable.enumeration);
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
@@ -1223,7 +1239,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         /* format value */
-        String_format(line,"%s = %s",configValueFormat->configValue->name,(z < configValueFormat->configValue->selectValue.selectCount)?configValueFormat->configValue->selectValue.select[z].name:"");
+        String_format(line,"%s",(z < configValueFormat->configValue->selectValue.selectCount)?configValueFormat->configValue->selectValue.select[z].name:"");
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
@@ -1257,7 +1273,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         /* format value */
-        String_format(line,"%s = %s",configValueFormat->configValue->name,s);
+        String_format(line,"%s",s);
 
         /* free resources */
         String_delete(s);
@@ -1287,11 +1303,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         /* format value */
         if (((*configVariable.cString) != NULL) && (strchr(*configVariable.cString,' ') != NULL))
         {
-          String_format(line,"%s = %'s",configValueFormat->configValue->name,*configVariable.cString);
+          String_format(line,"%'s",*configVariable.cString);
         }
         else
         {
-          String_format(line,"%s = %s",configValueFormat->configValue->name,*configVariable.cString);
+          String_format(line,"%s",*configVariable.cString);
         }
 
         configValueFormat->endOfDataFlag = TRUE;
@@ -1320,11 +1336,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 // always '?
 //        if (!String_empty(*configVariable.string) && (String_findChar(*configVariable.string,STRING_BEGIN,' ') >= 0))
 //        {
-          String_format(line,"%s = %'S",configValueFormat->configValue->name,*configVariable.string);
+          String_format(line,"%'S",*configVariable.string);
 //        }
 //        else
 //        {
-//          String_format(line,"%s = %S",configValueFormat->configValue->name,*configVariable.string);
+//          String_format(line,"%S",*configVariable.string);
 //        }
 
         configValueFormat->endOfDataFlag = TRUE;
@@ -1338,8 +1354,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
             {
               configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
                                                                                                       configValueFormat->configValue->specialValue.userData,
-                                                                                                      line,
-                                                                                                      configValueFormat->configValue->name
+                                                                                                      line
                                                                                                      );
             }
             else
@@ -1349,8 +1364,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
               {
                 configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
                                                                                                         configValueFormat->configValue->specialValue.userData,
-                                                                                                        line,
-                                                                                                        configValueFormat->configValue->name
+                                                                                                        line
                                                                                                        );
               }
               else
@@ -1364,8 +1378,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
             assert(configValueFormat->configValue->variable.special != NULL);
             configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
                                                                                                     configValueFormat->configValue->specialValue.userData,
-                                                                                                    line,
-                                                                                                    configValueFormat->configValue->name
+                                                                                                    line
                                                                                                    );
           }
         }
