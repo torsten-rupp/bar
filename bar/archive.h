@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -59,6 +59,8 @@ typedef struct
   ArchiveNewFileFunction archiveNewFileFunction;     // new archive file call back function
   void                   *archiveNewFileUserData;    // user data for new archive file call back function
   JobOptions             *jobOptions;
+
+  Password               *cryptPassword;             // crypt password
 
   uint                   blockLength;                /* block length for file entry/file
                                                         data (depend on used crypt

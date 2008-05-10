@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.30 $
+* $Revision: 1.31 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -286,9 +286,9 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] =
 {
-  {"none",      PASSWORD_MODE_NONE,       },
   {"default",   PASSWORD_MODE_DEFAULT,    },
   {"ask",       PASSWORD_MODE_ASK,        },
+  {"config",    PASSWORD_MODE_CONFIG,     },
 };
 
 LOCAL const ConfigValue CONFIG_VALUES[] =
@@ -893,108 +893,6 @@ LOCAL StringNode *deleteJobFileEntries(StringList *stringList,
 }
 
 /***********************************************************************\
-* Name   : setJobFileEntry
-* Purpose: set entry in job file string list
-* Input  : jobFileList - job file string list to modify
-*          name        - name of value
-*          format      - format string for value
-*          ...         - values
-* Output : -
-* Return : -
-* Notes  : all entries with "<name> = ..." are removed and a new entry
-*          of the format
-*
-*            <name> = <format>
-*
-*          is added a the position of the first removed entry or at the
-*          end of the list.
-\***********************************************************************/
-
-LOCAL void setJobFileEntry(StringList *jobFileList,
-                           const char *name,
-                           const char *format,
-                           ...
-                          )
-{
-  StringNode *nextNode;
-  va_list    arguments;
-  String     line;
-
-  assert(jobFileList != NULL);
-  assert(name != NULL);
-  assert(format != NULL);
-
-  /* delete old entries, get position for insert new entry */
-  nextNode = deleteJobFileEntries(jobFileList,name);
-
-  /* format line */
-  line = String_new();
-  va_start(arguments,format);
-  String_setCString(line,name);
-  String_appendCString(line," = ");
-  String_vformat(line,format,arguments);
-  va_end(arguments);
-
-  /* insert new entry */
-  StringList_insert(jobFileList,line,nextNode);
-
-  /* free resources */
-  String_delete(line);
-}
-
-/***********************************************************************\
-* Name   : setJobFileEntry
-* Purpose: set entry in job file string list
-* Input  : jobFileList - job file string list to modify
-*          name        - name of value
-*          patternList - pattern list
-* Output : -
-* Return : -
-* Notes  : all entries with "<name> = ..." are removed and a new entry
-*          of the format
-*
-*            <name> = <pattern>
-*
-*          is added a the position of the first removed entry or at the
-*          end of the list.
-\***********************************************************************/
-
-LOCAL void setJobFileEntryPatternList(StringList  *jobFileList,
-                                      const char  *name,
-                                      PatternList *patternList
-                                     )
-{
-  StringNode  *nextNode;
-  String      line;
-  PatternNode *patternNode;
-
-  assert(jobFileList != NULL);
-  assert(name != NULL);
-  assert(patternList != NULL);
-
-  /* delete old entries, get position for insert new entry */
-  nextNode = deleteJobFileEntries(jobFileList,name);
-
-  /* format and insert new entries */
-  line = String_new();
-  patternNode = patternList->head;
-  while (patternNode != NULL)
-  {
-    /* format line */
-    String_clear(line);
-    String_format(line,"%s = %'S",name,patternNode->pattern);
-
-    /* insert new entry */
-    StringList_insert(jobFileList,line,nextNode);
-
-    patternNode = patternNode->next;
-  }
-
-  /* free resources */
-  String_delete(line);
-}
-
-/***********************************************************************\
 * Name   : updateJobFile
 * Purpose: update job file
 * Input  : jobNode - job node
@@ -1053,8 +951,9 @@ LOCAL Errors updateJobFile(JobNode *jobNode)
 
       /* insert new entries */      
       ConfigValue_formatInit(&configValueFormat,
-                             jobNode,
-                             &CONFIG_VALUES[z]
+                             &CONFIG_VALUES[z],
+                             CONFIG_VALUE_FORMAT_MODE_LINE,
+                             jobNode
                             );
       while (ConfigValue_format(&configValueFormat,line))
       {
@@ -2321,9 +2220,12 @@ LOCAL void serverCommand_excludePatternsAdd(ClientInfo *clientInfo, uint id, con
 
 LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  uint    jobId;
-  String  name;
-  JobNode *jobNode;
+  uint              jobId;
+  String            name;
+  JobNode           *jobNode;
+  uint              z;
+  String            s;
+  ConfigValueFormat configValueFormat;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -2354,78 +2256,32 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String argum
     return;
   }
 
-  if      (String_equalsCString(name,"archive-name"))
+  /* find config value */
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
+         && !String_equalsCString(name,CONFIG_VALUES[z].name)
+        )
   {
-    sendResult(clientInfo,id,TRUE,0,"%S",jobNode->archiveName);
+    z++;
   }
-  else if (String_equalsCString(name,"archive-type"))
+  if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
   {
-    sendResult(clientInfo,id,TRUE,0,"%s",getArchiveTypeName(jobNode->jobOptions.archiveType));
+    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",name);
+    Semaphore_unlock(&jobList.lock);
+    return;
   }
-  else if (String_equalsCString(name,"archive-part-size"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%llu",jobNode->jobOptions.archivePartSize);
-  }
-#if 0
-  else if (String_equalsCString(name,"max-tmp-size"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%llu",jobNode->jobOptions.maxTmpSize);
-  }
-#endif /* 0 */
-  else if (String_equalsCString(name,"incremental-list-file"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%'S",jobNode->jobOptions.incrementalListFileName);
-  }
-#if 0
-  else if (String_equalsCString(arguments[0],"max-band-width"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%'S",jobNode->jobOptions.maxBandWidth);
-  }
-#endif /* 0 */
-  else if (String_equalsCString(name,"compress-algorithm"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%'s",Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm));
-  }
-  else if (String_equalsCString(name,"crypt-password-mode"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%'s",getPasswordModeName(jobNode->jobOptions.cryptPasswordMode));
-  }
-  else if (String_equalsCString(name,"crypt-algorithm"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%'s",Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm));
-  }
-  else if (String_equalsCString(name,"load-volume-command"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%S",jobNode->jobOptions.device.loadVolumeCommand);
-  }
-  else if (String_equalsCString(name,"volume-size"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%llu",jobNode->jobOptions.device.volumeSize);
-  }
-  else if (String_equalsCString(name,"skip-unreadable"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%d",jobNode->jobOptions.skipUnreadableFlag?1:0);
-  }
-  else if (String_equalsCString(name,"overwrite-archive-files"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%d",jobNode->jobOptions.overwriteArchiveFilesFlag?1:0);
-  }
-  else if (String_equalsCString(name,"overwrite-files"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%d",jobNode->jobOptions.overwriteFilesFlag?1:0);
-  }
-  else if (String_equalsCString(name,"ecc"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%d",jobNode->jobOptions.errorCorrectionCodesFlag?1:0);
-  }
-  else if (String_equalsCString(name,"wait-first-volume"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%d",jobNode->jobOptions.waitFirstVolumeFlag?1:0);
-  }
-  else
-  {
-    sendResult(clientInfo,id,TRUE,1,"unknown config value");
-  }
+
+  /* send value */
+  s = String_new();
+  ConfigValue_formatInit(&configValueFormat,
+                         &CONFIG_VALUES[z],
+                         CONFIG_VALUE_FORMAT_MODE_VALUE,
+                         jobNode
+                        );
+  ConfigValue_format(&configValueFormat,s);
+  ConfigValue_formatDone(&configValueFormat);
+  sendResult(clientInfo,id,TRUE,0,"%S",s);
+  String_delete(s);
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
@@ -2473,193 +2329,16 @@ fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(arguments[0]));
     return;
   }
 
-  if      (String_equalsCString(name,"archive-name"))
+  /* parse */
+  if (ConfigValue_parse(String_cString(name),
+                        String_cString(value),
+                        CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                        NULL,
+                        NULL,
+                        jobNode
+                       )
+     )
   {
-    String_set(jobNode->archiveName,value);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"archive-part-size"))
-  {
-    // archive-part-size <n>
-    const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
-
-    jobNode->jobOptions.archivePartSize = (uint64)String_toDouble(value,0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-#if 0
-  else if (String_equalsCString(name,"max-tmp-size"))
-  {
-    // max-tmp-size <n>
-    const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
-
-    jobNode->jobOptions.maxTmpSize = (uint64)String_toDouble(value,0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-#endif /* 0 */
-  else if (String_equalsCString(name,"archive-type"))
-  {
-    ArchiveTypes archiveType;
-
-    archiveType = getArchiveType(String_cString(value));
-    if (archiveType != ARCHIVE_TYPE_UNKNOWN)
-    {
-      jobNode->jobOptions.archiveType = archiveType;
-      jobNode->modifiedFlag = TRUE;;
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else
-    {
-      sendResult(clientInfo,id,FALSE,0,"unknown type '%S'",value);
-    }
-  }
-  else if (String_equalsCString(name,"incremental-list-file"))
-  {
-    // incremental-list-file <file name>
-    String_copy(&jobNode->jobOptions.incrementalListFileName,value);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-#if 0
-  else if (String_equalsCString(name,"max-band-width"))
-  {
-    // max-band-width <n>
-    const StringUnit UNITS[] = {{"K",1024}};
-
-    jobNode->jobOptions.maxBandWidth = (ulong)String_toDouble(value,0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-#endif /* 0 */
-  else if (String_equalsCString(name,"ssh-port"))
-  {
-    // ssh-port <n>
-    jobNode->jobOptions.sshServer.port = String_toInteger(value,0,NULL,NULL,0);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"ssh-public-key"))
-  {
-    // ssh-public-key <file name>
-    String_copy(&jobNode->jobOptions.sshServer.publicKeyFileName,value);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"ssh-private-key"))
-  {
-    // ssh-private-key <file name>
-    String_copy(&jobNode->jobOptions.sshServer.privateKeyFileName,value);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"volume-size"))
-  {
-    // volume-size <n>
-    const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
-
-    jobNode->jobOptions.device.volumeSize = (uint64)String_toDouble(value,0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"load-volume-command"))
-  {
-    // load-volume-command <s>
-    String_copy(&jobNode->jobOptions.device.loadVolumeCommand,value);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"compress-algorithm"))
-  {
-    // compress-algorithm <name>
-    CompressAlgorithms compressAlgorithm;
-
-    compressAlgorithm = Compress_getAlgorithm(String_cString(value));
-    if (compressAlgorithm != COMPRESS_ALGORITHM_UNKNOWN)
-    {
-      jobNode->jobOptions.compressAlgorithm = compressAlgorithm;
-      jobNode->modifiedFlag = TRUE;;
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else
-    {
-      sendResult(clientInfo,id,TRUE,1,"unknown compress algorithm %'S",value);
-    }
-  }
-  else if (String_equalsCString(name,"crypt-password-mode"))
-  {
-    // crypt-password-mode <name>
-    PasswordModes passwordMode;
-
-    passwordMode = getPasswordMode(String_cString(value));
-    if (passwordMode != PASSWORD_MODE_UNKNOWN)
-    {
-      jobNode->jobOptions.cryptPasswordMode = passwordMode;
-      jobNode->modifiedFlag = TRUE;;
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else
-    {
-      sendResult(clientInfo,id,TRUE,1,"unknown password mode %'S",value);
-    }
-  }
-  else if (String_equalsCString(name,"crypt-algorithm"))
-  {
-    // crypt-algorithm <name>
-    CryptAlgorithms cryptAlgorithm;
-
-    cryptAlgorithm = Crypt_getAlgorithm(String_cString(value));
-    if (cryptAlgorithm != CRYPT_ALGORITHM_UNKNOWN)
-    {
-      jobNode->jobOptions.cryptAlgorithm = cryptAlgorithm;
-      jobNode->modifiedFlag = TRUE;;
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else
-    {
-      sendResult(clientInfo,id,TRUE,1,"unknown crypt algorithm");
-    }
-  }
-  else if (String_equalsCString(name,"crypt-password"))
-  {
-    // crypt-password <password>
-    Password_setString(jobNode->jobOptions.cryptPassword,value);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"skip-unreadable"))
-  {
-    // skip-unreadable 1|0
-    jobNode->jobOptions.skipUnreadableFlag = String_toBoolean(value,0,NULL,NULL,0,NULL,0);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"overwrite-archive-files"))
-  {
-    // overwrite-archive-files 1|0
-    jobNode->jobOptions.overwriteArchiveFilesFlag = String_toBoolean(value,0,NULL,NULL,0,NULL,0);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"overwrite-files"))
-  {
-    // overwrite-files 1|0
-    jobNode->jobOptions.overwriteFilesFlag = String_toBoolean(value,0,NULL,NULL,0,NULL,0);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"ecc"))
-  {
-    // overwrite-archive-files 1|0
-    jobNode->jobOptions.errorCorrectionCodesFlag = String_toBoolean(value,0,NULL,NULL,0,NULL,0);
-    jobNode->modifiedFlag = TRUE;;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(name,"wait-first-volume"))
-  {
-    // overwrite-archive-files 1|0
-    jobNode->jobOptions.waitFirstVolumeFlag = String_toBoolean(value,0,NULL,NULL,0,NULL,0);
     jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }

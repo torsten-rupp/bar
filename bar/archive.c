@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.41 $
+* $Revision: 1.42 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -64,15 +64,49 @@ typedef enum
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initCryptPassword(CryptAlgorithms cryptAlgorithm,
-                             Password        **cryptPassword
+LOCAL bool initCryptPassword(const JobOptions *jobOptions,
+                             CryptAlgorithms  cryptAlgorithm,
+                             Password         **cryptPassword
                             )
 {
+  assert(jobOptions != NULL);
   assert(cryptPassword != NULL);
 
   if ((cryptAlgorithm != CRYPT_ALGORITHM_NONE) && ((*cryptPassword) == NULL))
   {
-    return inputCryptPassword(cryptPassword);
+    switch (jobOptions->cryptPasswordMode)
+    {
+      case PASSWORD_MODE_DEFAULT:
+        if (globalOptions.cryptPassword != NULL)
+        {
+          (*cryptPassword) = Password_duplicate(globalOptions.cryptPassword);
+          return ((*cryptPassword) != NULL);
+        }
+        else
+        {
+          return inputCryptPassword(cryptPassword);
+        }
+        break;
+      case PASSWORD_MODE_ASK:
+        return inputCryptPassword(cryptPassword);
+        break;
+      case PASSWORD_MODE_CONFIG:
+        if (jobOptions->cryptPassword != NULL)
+        {
+          (*cryptPassword) = Password_duplicate(jobOptions->cryptPassword);
+          return ((*cryptPassword) != NULL);
+        }
+        else
+        {
+          return inputCryptPassword(cryptPassword);
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
   }
   else
   {
@@ -201,7 +235,6 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
   assert(!archiveInfo->fileOpenFlag);
 
   /* get output filename */
-  archiveInfo->fileName = String_new();
   error = File_getTmpFileName(archiveInfo->fileName,NULL,globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
@@ -212,7 +245,6 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
   error = File_open(&archiveInfo->fileHandle,archiveInfo->fileName,FILE_OPENMODE_CREATE);
   if (error != ERROR_NONE)
   {
-    String_delete(archiveInfo->fileName);
     return error;
   }
  
@@ -256,7 +288,6 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
                                                );
     if (error != ERROR_NONE)
     {
-      String_delete(archiveInfo->fileName);
       archiveInfo->fileOpenFlag = FALSE;
       return error;
     }
@@ -265,9 +296,6 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
   {
     archiveInfo->partNumber++;
   }
-
-  /* free resources */
-  String_delete(archiveInfo->fileName);
 
   archiveInfo->fileOpenFlag = FALSE;
 
@@ -689,9 +717,11 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
   archiveInfo->archiveNewFileUserData  = archiveNewFileUserData;  
   archiveInfo->jobOptions              = jobOptions;
 
+  archiveInfo->cryptPassword           = NULL;
+
   archiveInfo->partNumber              = 0;
   archiveInfo->fileOpenFlag            = FALSE;
-  archiveInfo->fileName                = NULL;
+  archiveInfo->fileName                = String_new();
 
   archiveInfo->nextChunkHeaderReadFlag = FALSE;
 
@@ -712,6 +742,8 @@ Errors Archive_open(ArchiveInfo  *archiveInfo,
   archiveInfo->archiveNewFileFunction  = NULL;  
   archiveInfo->archiveNewFileUserData  = NULL;  
   archiveInfo->jobOptions              = jobOptions;
+
+  archiveInfo->cryptPassword           = NULL;
 
   archiveInfo->partNumber              = 0;
   archiveInfo->fileOpenFlag            = TRUE;
@@ -783,6 +815,9 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
     closeArchiveFile(archiveInfo,TRUE);
   }
 
+  if (archiveInfo->fileName != NULL) String_delete(archiveInfo->fileName);
+  if (archiveInfo->cryptPassword  != NULL) Password_delete(archiveInfo->cryptPassword);
+
   return ERROR_NONE;
 }
 
@@ -799,8 +834,9 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   assert(fileInfo != NULL);
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveInfo->jobOptions->cryptAlgorithm,
-                         &archiveInfo->jobOptions->cryptPassword
+  if (!initCryptPassword(archiveInfo->jobOptions,
+                         archiveInfo->jobOptions->cryptAlgorithm,
+                         &archiveInfo->cryptPassword
                         )
      )
   {
@@ -863,7 +899,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   /* init crypt */
   error = Crypt_new(&archiveFileInfo->file.cryptInfoFileEntry,
                     archiveInfo->jobOptions->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -873,7 +909,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   }
   error = Crypt_new(&archiveFileInfo->file.cryptInfoFileData,
                     archiveInfo->jobOptions->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -884,7 +920,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   }
   error = Crypt_new(&archiveFileInfo->file.cryptInfoData,
                     archiveInfo->jobOptions->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -968,8 +1004,9 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   assert(fileInfo != NULL);
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveInfo->jobOptions->cryptAlgorithm,
-                         &archiveInfo->jobOptions->cryptPassword
+  if (!initCryptPassword(archiveInfo->jobOptions,
+                         archiveInfo->jobOptions->cryptAlgorithm,
+                         &archiveInfo->cryptPassword
                         )
      )
   {
@@ -1011,7 +1048,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   /* init crypt */
   error = Crypt_new(&archiveFileInfo->directory.cryptInfoDirectoryEntry,
                     archiveInfo->jobOptions->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -1120,8 +1157,9 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   assert(fileInfo != NULL);
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveInfo->jobOptions->cryptAlgorithm,
-                         &archiveInfo->jobOptions->cryptPassword
+  if (!initCryptPassword(archiveInfo->jobOptions,
+                         archiveInfo->jobOptions->cryptAlgorithm,
+                         &archiveInfo->cryptPassword
                         )
      )
   {
@@ -1165,7 +1203,7 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   /* init crypt */
   error = Crypt_new(&archiveFileInfo->link.cryptInfoLinkEntry,
                     archiveInfo->jobOptions->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -1280,8 +1318,9 @@ Errors Archive_newSpecialEntry(ArchiveInfo     *archiveInfo,
   assert(fileInfo != NULL);
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveInfo->jobOptions->cryptAlgorithm,
-                         &archiveInfo->jobOptions->cryptPassword
+  if (!initCryptPassword(archiveInfo->jobOptions,
+                         archiveInfo->jobOptions->cryptAlgorithm,
+                         &archiveInfo->cryptPassword
                         )
      )
   {
@@ -1326,7 +1365,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo     *archiveInfo,
   /* init crypt */
   error = Crypt_new(&archiveFileInfo->special.cryptInfoSpecialEntry,
                     archiveInfo->jobOptions->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -1562,8 +1601,9 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   archiveFileInfo->file.compressAlgorithm = archiveFileInfo->file.chunkFile.compressAlgorithm;
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,
-                         &archiveInfo->jobOptions->cryptPassword
+  if (!initCryptPassword(archiveInfo->jobOptions,
+                         archiveFileInfo->cryptAlgorithm,
+                         &archiveInfo->cryptPassword
                         )
      )
   {
@@ -1593,7 +1633,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   /* init crypt */
   error = Crypt_new(&archiveFileInfo->file.cryptInfoFileEntry,
                     archiveFileInfo->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -1604,7 +1644,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   }
   error = Crypt_new(&archiveFileInfo->file.cryptInfoFileData,
                     archiveFileInfo->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -1616,7 +1656,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   }
   error = Crypt_new(&archiveFileInfo->file.cryptInfoData,
                     archiveFileInfo->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -1853,8 +1893,9 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->cryptAlgorithm = archiveFileInfo->directory.chunkDirectory.cryptAlgorithm;
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,
-                         &archiveInfo->jobOptions->cryptPassword
+  if (!initCryptPassword(archiveInfo->jobOptions,
+                         archiveFileInfo->cryptAlgorithm,
+                         &archiveInfo->cryptPassword
                         )
      )
   {
@@ -1876,7 +1917,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   /* init crypt */
   error = Crypt_new(&archiveFileInfo->directory.cryptInfoDirectoryEntry,
                     archiveFileInfo->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -2039,8 +2080,9 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->cryptAlgorithm = archiveFileInfo->link.chunkLink.cryptAlgorithm;
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,
-                         &archiveInfo->jobOptions->cryptPassword
+  if (!initCryptPassword(archiveInfo->jobOptions,
+                         archiveFileInfo->cryptAlgorithm,
+                         &archiveInfo->cryptPassword
                         )
      )
   {
@@ -2062,7 +2104,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   /* init crypt */
   error = Crypt_new(&archiveFileInfo->link.cryptInfoLinkEntry,
                     archiveFileInfo->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {
@@ -2225,8 +2267,9 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
   archiveFileInfo->cryptAlgorithm = archiveFileInfo->special.chunkSpecial.cryptAlgorithm;
 
   /* init crypt password (if needed) */
-  if (!initCryptPassword(archiveFileInfo->cryptAlgorithm,
-                         &archiveInfo->jobOptions->cryptPassword
+  if (!initCryptPassword(archiveInfo->jobOptions,
+                         archiveFileInfo->cryptAlgorithm,
+                         &archiveInfo->cryptPassword
                         )
      )
   {
@@ -2248,7 +2291,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
   /* init crypt */
   error = Crypt_new(&archiveFileInfo->special.cryptInfoSpecialEntry,
                     archiveFileInfo->cryptAlgorithm,
-                    archiveInfo->jobOptions->cryptPassword
+                    archiveInfo->cryptPassword
                    );
   if (error != ERROR_NONE)
   {

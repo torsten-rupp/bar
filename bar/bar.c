@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.49 $
+* $Revision: 1.50 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -266,7 +266,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,0,globalOptions.compressMinFileSize,                    DEFAULT_COMPRESS_MIN_FILE_SIZE,0,INT_MAX,COMMAND_LINE_BYTES_UNITS, "minimal size of file for compression"                                     ),
 
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,0,jobOptions.cryptAlgorithm,                            CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
-  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&jobOptions.cryptPassword,                            NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
+//  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&globalOptions.cryptPassword,                         NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
 
   CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,0,sshServer.port,                                       0,0,65535,NULL,                                                    "ssh port"                                                                 ),
   CMD_OPTION_SPECIAL      ("ssh-login-name",               0,  0,0,&sshServer.loginName,                                 NULL,cmdOptionParseString,NULL,                                    "ssh login name","name"                                                    ),
@@ -441,7 +441,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                   0,INT_MAX,CONFIG_VALUE_BYTES_UNITS),
 
   CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                           CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_VALUE_SPECIAL  ("crypt-password",               &jobOptions.cryptPassword,-1,                            configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL  ("crypt-password",               &globalOptions.cryptPassword,-1,                         configValueParsePassword,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(SSHServer,port),              0,65535,NULL),
   CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(SSHServer,loginName)          ),
@@ -1380,6 +1380,8 @@ bool inputCryptPassword(Password **cryptPassword)
 {
   Password *password;
 
+  assert(cryptPassword != NULL);
+
   password = (*cryptPassword);
   if (password == NULL)
   {
@@ -1408,28 +1410,6 @@ bool inputCryptPassword(Password **cryptPassword)
 
   return TRUE;
 }
-
-#if 0
-bool configValueParseString(void *userData, void *variable, const char *name, const char *value)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(userData);
-
-  if ((*(String*)variable) != NULL)
-  {
-    String_setCString(*(String*)variable,value);
-  }
-  else
-  {
-    (*(String*)variable) = String_newCString(value);
-  }
-
-  return TRUE;
-}
-#endif /* 0 */
 
 bool configValueParseIncludeExclude(void *userData, void *variable, const char *name, const char *value)
 {
@@ -1469,7 +1449,7 @@ void configValueFormatDoneIncludeExclude(void **formatUserData, void *userData)
   UNUSED_VARIABLE(formatUserData);  
 }
 
-bool configValueFormatIncludeExclude(void **formatUserData, void *userData, String line, const char *name)
+bool configValueFormatIncludeExclude(void **formatUserData, void *userData, String line)
 {
   PatternNode *patternNode;
 
@@ -1477,21 +1457,19 @@ bool configValueFormatIncludeExclude(void **formatUserData, void *userData, Stri
 
   UNUSED_VARIABLE(userData);
 
-  String_clear(line);
-
   patternNode = (PatternNode*)(*formatUserData);
   if (patternNode != NULL)
   {
     switch (patternNode->type)
     {
       case PATTERN_TYPE_GLOB:
-        String_format(line,"%s = %'S",name,patternNode->pattern);
+        String_format(line,"%'S",patternNode->pattern);
         break;
       case PATTERN_TYPE_REGEX:
-        String_format(line,"%s = r:%'S",name,patternNode->pattern);
+        String_format(line,"r:%'S",patternNode->pattern);
         break;
       case PATTERN_TYPE_EXTENDED_REGEX:
-        String_format(line,"%s = x:%'S",name,patternNode->pattern);
+        String_format(line,"x:%'S",patternNode->pattern);
         break;
       #ifndef NDEBUG
         default:
@@ -1535,7 +1513,7 @@ void configValueFormatInitPassord(void **formatUserData, void *userData, void *v
   (*formatUserData) = (*(Password**)variable);
 }
 
-bool configValueFormatPassword(void **formatUserData, void *userData, String line, const char *name)
+bool configValueFormatPassword(void **formatUserData, void *userData, String line)
 {
   Password   *password;
   const char *s;
@@ -1545,13 +1523,11 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(formatUserData);
 
-  String_clear(line);
-
   password = (Password*)(*formatUserData);
   if (password != NULL)
   {
     s = Password_deploy(password);
-    String_format(line,"%s = %'s",name,s);
+    String_format(line,"%'s",s);
     Password_undeploy(password);
 
     (*formatUserData) = NULL;

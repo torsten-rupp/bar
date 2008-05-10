@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.33 $
+* $Revision: 1.34 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -80,9 +80,9 @@ typedef enum
 /* password mode */
 typedef enum
 {
-  PASSWORD_MODE_NONE,
-  PASSWORD_MODE_DEFAULT,
-  PASSWORD_MODE_ASK,
+  PASSWORD_MODE_DEFAULT,                // use global password
+  PASSWORD_MODE_ASK,                    // ask for password
+  PASSWORD_MODE_CONFIG,                 // use password from config
   PASSWORD_MODE_UNKNOWN,
 } PasswordModes;
 
@@ -161,7 +161,7 @@ typedef struct
   LIST_HEADER(DeviceNode);
 } DeviceList;
 
-/* options */
+/* global options */
 typedef struct
 {
   const char          *barExecutable;                  // name of BAR executable
@@ -174,6 +174,8 @@ typedef struct
   ulong               maxBandWidth;
 
   ulong               compressMinFileSize;
+
+  Password            *cryptPassword;
 
   SSHServer           *sshServer;                      // SSH server
   const SSHServerList *sshServerList;                  // list with SSH servers
@@ -193,7 +195,7 @@ typedef struct
   long                verboseLevel;
 } GlobalOptions;
 
-/* options */
+/* job options */
 typedef struct
 {
   ArchiveTypes        archiveType;                     // archive type (backup, restore)
@@ -209,8 +211,8 @@ typedef struct
 
   CompressAlgorithms  compressAlgorithm;
   CryptAlgorithms     cryptAlgorithm;
-  Password            *cryptPassword;
   PasswordModes       cryptPasswordMode;
+  Password            *cryptPassword;
 
   SSHServer           sshServer;
 
@@ -475,7 +477,7 @@ void configValueFormatDoneIncludeExclude(void **formatUserData, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatIncludeExclude(void **formatUserData, void *userData, String line, const char *name);
+bool configValueFormatIncludeExclude(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParsePassword
@@ -518,7 +520,7 @@ void configValueFormatInitPassord(void **formatUserData, void *userData, void *v
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatPassword(void **formatUserData, void *userData, String line, const char *name);
+bool configValueFormatPassword(void **formatUserData, void *userData, String line);
 
 #ifdef __cplusplus
   }
