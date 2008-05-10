@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.42 $
+* $Revision: 1.43 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -104,6 +104,7 @@ LOCAL bool initCryptPassword(const JobOptions *jobOptions,
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          return TRUE; /* not reached */
           break; /* not reached */
       #endif /* NDEBUG */
     }
