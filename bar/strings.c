@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1310,7 +1310,7 @@ JAMAICA_HALT_NOT_YET_IMPLEMENTED();
   }
   if (nextIndex != NULL)
   {
-    (*nextIndex) = index;
+    (*nextIndex) = (index >= string->length)?STRING_END:index;
   }
   else
   {
