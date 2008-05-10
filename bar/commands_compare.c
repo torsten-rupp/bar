@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_compare.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive compare function
 * Systems : all
@@ -90,7 +90,7 @@ LOCAL ulong compare(const void *p0, const void *p1, ulong length)
 Errors Command_compare(StringList  *archiveFileNameList,
                        PatternList *includePatternList,
                        PatternList *excludePatternList,
-                       Options     *options
+                       JobOptions  *jobOptions
                       )
 {
   byte             *archiveBuffer,*fileBuffer;
@@ -106,7 +106,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
-  assert(options != NULL);
+  assert(jobOptions != NULL);
 
   /* allocate resources */
   archiveBuffer = (byte*)malloc(BUFFER_SIZE);
@@ -134,7 +134,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         options
+                         jobOptions
                         );
     if (error != ERROR_NONE)
     {
@@ -216,7 +216,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 printError("File '%s' not found!\n",String_cString(fileName));
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_FILE_NOT_FOUND;
                 }
@@ -228,7 +228,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 printError("'%s' is not a file!\n",String_cString(fileName));
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_WRONG_FILE_TYPE;
                 }
@@ -254,7 +254,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = error;
                 }
@@ -273,7 +273,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 File_close(&fileHandle);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_FILES_DIFFER;
                 }
@@ -292,7 +292,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 File_close(&fileHandle);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = error;
                 }
@@ -325,7 +325,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                              String_cString(fileName),
                              getErrorText(error)
                             );
-                  if (options->stopOnErrorFlag)
+                  if (jobOptions->stopOnErrorFlag)
                   {
                     failError = error;
                   }
@@ -342,7 +342,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                              String_cString(fileName),
                              fragmentOffset+length+diffIndex
                             );
-                  if (options->stopOnErrorFlag)
+                  if (jobOptions->stopOnErrorFlag)
                   {
                     failError = ERROR_FILES_DIFFER;
                   }
@@ -426,7 +426,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 printError("Directory '%s' does not exists!\n",String_cString(directoryName));
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_FILE_NOT_FOUND;
                 }
@@ -440,7 +440,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_WRONG_FILE_TYPE;
                 }
@@ -526,7 +526,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_FILE_NOT_FOUND;
                 }
@@ -541,7 +541,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_WRONG_FILE_TYPE;
                 }
@@ -561,7 +561,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = error;
                 }
@@ -578,7 +578,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_FILES_DIFFER;
                 }
@@ -660,7 +660,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_FILE_NOT_FOUND;
                 }
@@ -674,7 +674,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_WRONG_FILE_TYPE;
                 }
@@ -691,7 +691,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = error;
                 }
@@ -704,7 +704,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   failError = error;
                 }
@@ -721,7 +721,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                             );
                   Archive_closeEntry(&archiveFileInfo);
                   String_delete(fileName);
-                  if (options->stopOnErrorFlag)
+                  if (jobOptions->stopOnErrorFlag)
                   {
                     failError = error;
                   }
@@ -734,7 +734,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                             );
                   Archive_closeEntry(&archiveFileInfo);
                   String_delete(fileName);
-                  if (options->stopOnErrorFlag)
+                  if (jobOptions->stopOnErrorFlag)
                   {
                     failError = error;
                   }

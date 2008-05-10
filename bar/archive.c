@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.40 $
+* $Revision: 1.41 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -202,7 +202,7 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
 
   /* get output filename */
   archiveInfo->fileName = String_new();
-  error = File_getTmpFileName(archiveInfo->fileName,globalOptions.tmpDirectory);
+  error = File_getTmpFileName(archiveInfo->fileName,NULL,globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
     return error;

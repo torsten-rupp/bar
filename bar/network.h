@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -151,14 +151,14 @@ void Network_doneAll(void);
 /***********************************************************************\
 * Name   : Network_connect
 * Purpose: connect to host
-* Input  : socketType           - socket type; see SOCKET_TYPE_*
-*          hostName             - host name
-*          hostPort             - host port
-*          flags                - socket falgs
-*          sshLoginName         - SSH login user name
-*          sshPublicKeyFileName - SSH public key file for login
-*          sshPublicKeyFileName - SSH public key file for login
-*          sshPassword          - SSH password
+* Input  : socketType            - socket type; see SOCKET_TYPE_*
+*          hostName              - host name
+*          hostPort              - host port
+*          flags                 - socket falgs
+*          sshLoginName          - SSH login user name
+*          sshPublicKeyFileName  - SSH public key file for login
+*          sshPrivateKeyFileName - SSH private key file for login
+*          sshPassword           - SSH password
 * Output : socketHandle - socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -170,7 +170,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         hostPort,
                        const String sshLoginName,
                        const String sshPublicKeyFileName,
-                       const String sshPrivatKeyFileName,
+                       const String sshPrivateKeyFileName,
                        Password     *sshPassword,
                        uint         flags
                       );

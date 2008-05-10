@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems : all
@@ -177,11 +177,11 @@ void StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferL
 * Input  : stringList - string list
 *          stringNode - string node to remove
 * Output : -
-* Return : -
+* Return : next node in list or NULL
 * Notes  : -
 \***********************************************************************/
 
-void StringList_remove(StringList *stringList, StringNode *stringNode);
+StringNode *StringList_remove(StringList *stringList, StringNode *stringNode);
 
 /***********************************************************************\
 * Name   : StringList_getFirst
@@ -219,6 +219,10 @@ String StringList_getLast(StringList *stringList, String string);
 \***********************************************************************/
 
 const char* const *StringList_toCStringArray(const StringList *stringList);
+
+#ifndef NDEBUG
+void StringList_print(const StringList *stringList);
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }

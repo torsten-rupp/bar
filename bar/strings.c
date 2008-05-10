@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -864,18 +864,15 @@ LOCAL bool parseString(const struct __String *string,
           {
             case FORMAT_LENGTH_TYPE_INTEGER:
               value.i = va_arg(arguments,int*);
-              assert(value.i != NULL);
-              (*value.i) = strtol(buffer,NULL,10);
+              if (value.i != NULL) (*value.i) = strtol(buffer,NULL,10);
               break;
             case FORMAT_LENGTH_TYPE_LONG:
               value.l = va_arg(arguments,long int*);
-              assert(value.l != NULL);
-              (*value.l) = strtol(buffer,NULL,10);
+              if (value.l != NULL) (*value.l) = strtol(buffer,NULL,10);
               break;
             case FORMAT_LENGTH_TYPE_LONGLONG:
               value.ll = va_arg(arguments,long long int*);
-              assert(value.ll != NULL);
-              (*value.ll) = strtoll(buffer,NULL,10);
+              if (value.ll != NULL) (*value.ll) = strtoll(buffer,NULL,10);
               break;
             case FORMAT_LENGTH_TYPE_DOUBLE:
               break;
@@ -895,8 +892,7 @@ LOCAL bool parseString(const struct __String *string,
 
           /* convert */
           value.c = va_arg(arguments,char*);
-          assert(value.c != NULL);
-          (*value.c) = buffer[0];
+          if (value.c != NULL) (*value.c) = buffer[0];
           break;
         case 'o':
           /* get data */
@@ -915,8 +911,7 @@ LOCAL bool parseString(const struct __String *string,
 
           /* convert */
           value.i = va_arg(arguments,int*);
-          assert(value.i != NULL);
-          (*value.i) = strtol(buffer,NULL,8);
+          if (value.i != NULL) (*value.i) = strtol(buffer,NULL,8);
           break;
         case 'x':
         case 'X':
@@ -942,18 +937,15 @@ LOCAL bool parseString(const struct __String *string,
           {
             case FORMAT_LENGTH_TYPE_INTEGER:
               value.i = va_arg(arguments,int*);
-              assert(value.i != NULL);
-              (*value.i) = strtol(buffer,NULL,16);
+              if (value.i != NULL) (*value.i) = strtol(buffer,NULL,16);
               break;
             case FORMAT_LENGTH_TYPE_LONG:
               value.l = va_arg(arguments,long int*);
-              assert(value.l != NULL);
-              (*value.l) = strtol(buffer,NULL,16);
+              if (value.l != NULL) (*value.l) = strtol(buffer,NULL,16);
               break;
             case FORMAT_LENGTH_TYPE_LONGLONG:
               value.ll = va_arg(arguments,long long int*);
-              assert(value.ll != NULL);
-              (*value.ll) = strtol(buffer,NULL,16);
+              if (value.ll != NULL) (*value.ll) = strtol(buffer,NULL,16);
               break;
             case FORMAT_LENGTH_TYPE_DOUBLE:
               break;
@@ -1001,14 +993,11 @@ LOCAL bool parseString(const struct __String *string,
 
           /* convert */
           value.d = va_arg(arguments,double*);
-          assert(value.d != NULL);
-          (*value.d) = strtod(buffer,NULL);
+          if (value.d != NULL) (*value.d) = strtod(buffer,NULL);
           break;
         case 's':
           /* get and copy data */
           value.s = va_arg(arguments,char*);
-          assert(value.s != NULL);
-
           assert(formatToken.width > 0);
 
           z = 0;
@@ -1024,7 +1013,7 @@ LOCAL bool parseString(const struct __String *string,
               {
                 if (z < formatToken.width-1)
                 {
-                  value.s[z] = string->data[index];
+                  if (value.s != NULL) value.s[z] = string->data[index];
                   z++;
                 }
                 index++;
@@ -1054,7 +1043,7 @@ LOCAL bool parseString(const struct __String *string,
                       {
                         if (z < (formatToken.width-1))
                         {
-                          value.s[z] = string->data[index];
+                          if (value.s != NULL) value.s[z] = string->data[index];
                           z++;
                         }
                         index++;
@@ -1064,7 +1053,7 @@ LOCAL bool parseString(const struct __String *string,
                     {
                       if (z < (formatToken.width-1))
                       {
-                        value.s[z] = string->data[index];
+                        if (value.s != NULL) value.s[z] = string->data[index];
                         z++;
                       }
                       index++;
@@ -1084,14 +1073,14 @@ LOCAL bool parseString(const struct __String *string,
               {
                 if (z < (formatToken.width-1))
                 {
-                  value.s[z] = string->data[index];
+                  if (value.s != NULL) value.s[z] = string->data[index];
                   z++;
                 }
                 index++;
               }
             }
           }
-          value.s[z] = '\0';
+          if (value.s != NULL) value.s[z] = '\0';
           break;
         case 'p':
         case 'n':
@@ -1099,11 +1088,9 @@ LOCAL bool parseString(const struct __String *string,
         case 'S':
           /* get and copy data */
           value.string = va_arg(arguments,String);
-          assert(value.string != NULL);
-
           CHECK_VALID(value.string);
 
-          String_clear(value.string);
+          String_clear(value.string);           
           z = 0;
           while (   (index < string->length)
                  && (((*format) == '\0') || !isspace(string->data[index]))
@@ -1278,7 +1265,7 @@ JAMAICA_HALT_NOT_YET_IMPLEMENTED();
           {
             if (strcmp(buffer,DEFAULT_TRUE_STRINGS[z]) == 0)
             {
-              (*value.b) = TRUE;
+              if (value.b != NULL) (*value.b) = TRUE;
               foundFlag = TRUE;
             }
             z++;
@@ -1288,7 +1275,7 @@ JAMAICA_HALT_NOT_YET_IMPLEMENTED();
           {
             if (strcmp(buffer,DEFAULT_FALSE_STRINGS[z]) == 0)
             {
-              (*value.b) = FALSE;
+              if (value.b != NULL) (*value.b) = FALSE;
               foundFlag = TRUE;
             }
             z++;

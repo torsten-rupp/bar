@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -22,6 +22,7 @@
 #include "lists.h"
 #include "strings.h"
 #include "arrays.h"
+#include "configvalues.h"
 #include "threads.h"
 #include "semaphores.h"
 #include "msgqueues.h"
@@ -34,6 +35,7 @@
 #include "patterns.h"
 #include "archive.h"
 #include "storage.h"
+#include "misc.h"
 
 #include "commands_create.h"
 #include "commands_restore.h"
@@ -42,7 +44,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define _SERVER_DEBUG
+#define SERVER_DEBUG
 #define _NO_SESSION_ID
 #define _SIMULATOR
 
@@ -51,21 +53,16 @@
 #define PROTOCOL_VERSION_MAJOR 1
 #define PROTOCOL_VERSION_MINOR 0
 
-#define SESSION_ID_LENGTH 64
+#define SESSION_ID_LENGTH 64                   // max. length of session id
 
-#define MAX_JOBS_IN_LIST 32
+#define MAX_JOBS_IN_LIST 32                    // max. number of executed jobs kept in job list
 
 /***************************** Datatypes *******************************/
 
-/* backup/restore job */
+/* job states */
 typedef enum
 {
-  JOB_TYPE_BACKUP,
-  JOB_TYPE_RESTORE,
-} JobTypes;
-
-typedef enum
-{
+  JOB_STATE_NONE,
   JOB_STATE_WAITING,
   JOB_STATE_RUNNING,
   JOB_STATE_REQUEST_VOLUME,
@@ -78,12 +75,20 @@ typedef struct JobNode
 {
   NODE_HEADER(struct JobNode);
 
+  String      fileName;                        // file name
+  uint64      timeModified;
+  uint64      lastExecutedTime;
+
+  /* job config */
   JobTypes    type;                            // job type: backup, restore
   String      name;                            // name of job
   String      archiveName;                     // archive name
   PatternList includePatternList;              // included files
   PatternList excludePatternList;              // excluded files
-  Options     options;
+  JobOptions  jobOptions;                      // options for job
+  bool        modifiedFlag;                    // TRUE iff job config modified
+
+  /* job info */
   uint        id;                              // uniq job id
   JobStates   state;                           // current state of job
   uint        requestedVolumeNumber;           // requested volume number
@@ -148,6 +153,7 @@ typedef enum
   AUTHORIZATION_STATE_FAIL,
 } AuthorizationStates;
 
+/* client info */
 typedef struct
 {
   ClientTypes         type;
@@ -180,7 +186,7 @@ typedef struct
 
   PatternList         includePatternList;
   PatternList         excludePatternList;
-  Options             options;
+  JobOptions          jobOptions;
 } ClientInfo;
 
 /* client node */
@@ -203,6 +209,7 @@ typedef void(*ServerCommandFunction)(ClientInfo    *clientInfo,
                                      uint          argumentCount
                                     );
 
+/* server command message */
 typedef struct
 {
   ServerCommandFunction serverCommandFunction;
@@ -211,12 +218,122 @@ typedef struct
   Array                 arguments;
 } CommandMsg;
 
+LOCAL const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] =
+{
+  {"G",1024*1024*1024},
+  {"M",1024*1024},
+  {"K",1024},
+};
+
+LOCAL const ConfigValueUnit CONFIG_VALUE_BITS_UNITS[] =
+{
+  {"K",1024},
+};
+
+LOCAL const ConfigValueSelect CONFIG_VALUE_ARCHIVE_TYPES[] =
+{
+  {"normal",     ARCHIVE_TYPE_NORMAL,    },
+  {"full",       ARCHIVE_TYPE_FULL,      },
+  {"incremental",ARCHIVE_TYPE_INCREMENTAL},
+};
+
+LOCAL const ConfigValueSelect CONFIG_VALUE_PATTERN_TYPES[] =
+{
+  {"glob",    PATTERN_TYPE_GLOB,         },
+  {"regex",   PATTERN_TYPE_REGEX,        },
+  {"extended",PATTERN_TYPE_EXTENDED_REGEX},
+};
+
+LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
+{
+  {"none", COMPRESS_ALGORITHM_NONE,  },
+
+  {"zip0", COMPRESS_ALGORITHM_ZIP_0, },
+  {"zip1", COMPRESS_ALGORITHM_ZIP_1, },
+  {"zip2", COMPRESS_ALGORITHM_ZIP_2, },
+  {"zip3", COMPRESS_ALGORITHM_ZIP_3, },
+  {"zip4", COMPRESS_ALGORITHM_ZIP_4, },
+  {"zip5", COMPRESS_ALGORITHM_ZIP_5, },
+  {"zip6", COMPRESS_ALGORITHM_ZIP_6, },
+  {"zip7", COMPRESS_ALGORITHM_ZIP_7, },
+  {"zip8", COMPRESS_ALGORITHM_ZIP_8, },
+  {"zip9", COMPRESS_ALGORITHM_ZIP_9, },
+
+  {"bzip1",COMPRESS_ALGORITHM_BZIP2_1},
+  {"bzip2",COMPRESS_ALGORITHM_BZIP2_2},
+  {"bzip3",COMPRESS_ALGORITHM_BZIP2_3},
+  {"bzip4",COMPRESS_ALGORITHM_BZIP2_4},
+  {"bzip5",COMPRESS_ALGORITHM_BZIP2_5},
+  {"bzip6",COMPRESS_ALGORITHM_BZIP2_6},
+  {"bzip7",COMPRESS_ALGORITHM_BZIP2_7},
+  {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
+  {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
+};
+
+LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
+{
+  {"none",      CRYPT_ALGORITHM_NONE,     },
+
+  {"3DES",      CRYPT_ALGORITHM_3DES,     },
+  {"CAST5",     CRYPT_ALGORITHM_CAST5,    },
+  {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH, },
+  {"AES128",    CRYPT_ALGORITHM_AES128,   },
+  {"AES192",    CRYPT_ALGORITHM_AES192,   },
+  {"AES256",    CRYPT_ALGORITHM_AES256,   },
+  {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128},
+  {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256},
+};
+
+LOCAL const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] =
+{
+  {"none",      PASSWORD_MODE_NONE,       },
+  {"default",   PASSWORD_MODE_DEFAULT,    },
+  {"ask",       PASSWORD_MODE_ASK,        },
+};
+
+LOCAL const ConfigValue CONFIG_VALUES[] =
+{
+  CONFIG_STRUCT_VALUE_STRING   ("archive-name",           JobNode,archiveName                             ),
+  CONFIG_STRUCT_VALUE_SELECT   ("archive-type",           JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",      JobNode,jobOptions.archivePartSize,             0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+
+  CONFIG_STRUCT_VALUE_STRING   ("incremental-list-file",  JobNode,jobOptions.incrementalListFileName      ),
+
+  CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",        JobNode,jobOptions.directoryStripCount,         0,INT_MAX,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("directory",              JobNode,jobOptions.directory                    ),
+
+  CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",           JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
+
+  CONFIG_STRUCT_VALUE_SELECT   ("compress-algorithm",     JobNode,jobOptions.compressAlgorithm,           CONFIG_VALUE_COMPRESS_ALGORITHMS),
+
+  CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",        JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_STRUCT_VALUE_SELECT   ("crypt-password-mode",    JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",         JobNode,jobOptions.cryptPassword,               configValueParsePassword,NULL,NULL,configValueFormatPassword,NULL),
+
+  CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",               JobNode,jobOptions.sshServer.port,              0,65535,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",         JobNode,jobOptions.sshServer.loginName          ),
+  CONFIG_STRUCT_VALUE_STRING   ("ssh-public-key",         JobNode,jobOptions.sshServer.publicKeyFileName  ),
+  CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",        JobNode,jobOptions.sshServer.privateKeyFileName ),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",           JobNode,jobOptions.sshServer.password ,         configValueParsePassword,NULL,NULL,configValueFormatPassword,NULL),
+
+  CONFIG_STRUCT_VALUE_INTEGER64("volume-size",            JobNode,jobOptions.device.volumeSize,           0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",        JobNode,jobOptions.skipUnreadableFlag           ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files",JobNode,jobOptions.overwriteArchiveFilesFlag    ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",        JobNode,jobOptions.overwriteFilesFlag           ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                    JobNode,jobOptions.errorCorrectionCodesFlag     ),
+
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include",                JobNode,includePatternList,                     configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                     configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
+};
+
 /***************************** Variables *******************************/
-LOCAL Password   *password;
-LOCAL JobList    jobList;
-LOCAL Thread     jobThread;
-LOCAL ClientList clientList;
-LOCAL bool       quitFlag;
+LOCAL const Password *password;
+LOCAL JobList        jobList;
+LOCAL Thread         jobThread;
+LOCAL Thread         schedulerThread;
+LOCAL ClientList     clientList;
+LOCAL bool           quitFlag;
 
 /****************************** Macros *********************************/
 
@@ -227,6 +344,764 @@ LOCAL bool       quitFlag;
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : getArchiveTypeName
+* Purpose: get archive type name
+* Input  : archiveType - archive type
+* Output : -
+* Return : name
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char *getArchiveTypeName(ArchiveTypes archiveType)
+{
+  int z;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES))
+         && (archiveType != CONFIG_VALUE_ARCHIVE_TYPES[z].value)
+        )
+  {
+    z++;
+  }
+
+  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES))?CONFIG_VALUE_ARCHIVE_TYPES[z].name:"";
+}
+
+/***********************************************************************\
+* Name   : getArchiveType
+* Purpose: get archive type from name
+* Input  : name - name
+* Output : -
+* Return : archive type; see ARCHIVE_TYPE_*
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ArchiveTypes getArchiveType(const char *name)
+{
+  int z;
+
+  assert(name != NULL);
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES))
+         && (strcmp(name,CONFIG_VALUE_ARCHIVE_TYPES[z].name) != 0)
+        )
+  {
+    z++;
+  }
+
+  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES))?CONFIG_VALUE_ARCHIVE_TYPES[z].value:ARCHIVE_TYPE_UNKNOWN;
+}
+
+/***********************************************************************\
+* Name   : getPasswordModeName
+* Purpose: get name of password mode
+* Input  : passwordMode - password mode
+* Output : -
+* Return : name
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char *getPasswordModeName(PasswordModes passwordMode)
+{
+  int z;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))
+         && (passwordMode != CONFIG_VALUE_PASSWORD_MODES[z].value)
+        )
+  {
+    z++;
+  }
+
+  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))?CONFIG_VALUE_PASSWORD_MODES[z].name:"";
+}
+
+/***********************************************************************\
+* Name   : getPasswordMode
+* Purpose: get password mode
+* Input  : name - password mode name
+* Output : -
+* Return : password mode or PASSWORD_MODE_UNKNOWN
+* Notes  : -
+\***********************************************************************/
+
+LOCAL PasswordModes getPasswordMode(const char *name)
+{
+  int z;
+
+  assert(name != NULL);
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))
+         && (strcmp(name,CONFIG_VALUE_PASSWORD_MODES[z].name) != 0)
+        )
+  {
+    z++;
+  }
+
+  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))?CONFIG_VALUE_PASSWORD_MODES[z].value:PASSWORD_MODE_UNKNOWN;
+}
+
+/***********************************************************************\
+* Name   : getNewJobId
+* Purpose: get new job id
+* Input  : -
+* Output : -
+* Return : job id
+* Notes  : -
+\***********************************************************************/
+
+LOCAL uint getNewJobId(void)
+{
+
+  jobList.lastJobId++;
+
+  return jobList.lastJobId;
+}
+
+/***********************************************************************\
+* Name   : newJob
+* Purpose: create new job
+* Input  : jobType  - job type
+*          fileName - file name or NULL
+*          name     - name of job
+* Output : -
+* Return : job node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL JobNode *newJob(JobTypes     jobType,
+                      const String fileName,
+                      const String name
+                     )
+{
+  JobNode *jobNode;
+
+  /* allocate job node */
+  jobNode = LIST_NEW_NODE(JobNode);
+  if (jobNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  /* init job node */
+  jobNode->fileName                          = String_duplicate(fileName);
+  jobNode->timeModified                      = 0LL;
+  jobNode->lastExecutedTime                  = 0LL;
+
+  jobNode->type                              = jobType;
+  jobNode->name                              = String_duplicate(name);
+  jobNode->archiveName                       = String_new();
+  Pattern_initList(&jobNode->includePatternList);
+  Pattern_initList(&jobNode->excludePatternList);
+  initJobOptions(&jobNode->jobOptions);
+  jobNode->id                                = getNewJobId();
+  jobNode->state                             = JOB_STATE_NONE;
+  jobNode->requestedVolumeNumber             = 0;
+  jobNode->volumeNumber                      = 0;
+  jobNode->requestedAbortFlag                = FALSE;
+
+  jobNode->runningInfo.error                 = ERROR_NONE;
+  jobNode->runningInfo.startTime             = 0;
+  jobNode->runningInfo.estimatedRestTime     = 0;
+  jobNode->runningInfo.doneFiles             = 0L;
+  jobNode->runningInfo.doneBytes             = 0LL;
+  jobNode->runningInfo.totalFiles            = 0L;
+  jobNode->runningInfo.totalBytes            = 0LL;
+  jobNode->runningInfo.skippedFiles          = 0L;
+  jobNode->runningInfo.skippedBytes          = 0LL;
+  jobNode->runningInfo.errorFiles            = 0L;
+  jobNode->runningInfo.errorBytes            = 0LL;
+  jobNode->runningInfo.filesPerSecond        = 0.0;
+  jobNode->runningInfo.bytesPerSecond        = 0.0;
+  jobNode->runningInfo.storageBytesPerSecond = 0.0;
+  jobNode->runningInfo.archiveBytes          = 0LL;
+  jobNode->runningInfo.compressionRatio      = 0.0;
+  jobNode->runningInfo.fileName              = String_new();
+  jobNode->runningInfo.fileDoneBytes         = 0LL;
+  jobNode->runningInfo.fileTotalBytes        = 0LL;
+  jobNode->runningInfo.storageName           = String_new();
+  jobNode->runningInfo.storageDoneBytes      = 0LL;
+  jobNode->runningInfo.storageTotalBytes     = 0LL;
+  jobNode->runningInfo.volumeNumber          = 0;
+  jobNode->runningInfo.volumeProgress        = 0.0;
+
+  return jobNode;
+}
+
+/***********************************************************************\
+* Name   : freeJobNode
+* Purpose: free job node
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeJobNode(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  String_delete(jobNode->runningInfo.fileName);
+  String_delete(jobNode->runningInfo.storageName);
+
+  freeJobOptions(&jobNode->jobOptions);
+  Pattern_doneList(&jobNode->excludePatternList);
+  Pattern_doneList(&jobNode->includePatternList);
+  String_delete(jobNode->archiveName);
+  String_delete(jobNode->name);
+  String_delete(jobNode->fileName);
+}
+
+/***********************************************************************\
+* Name   : deleteJob
+* Purpose: delete job
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deleteJob(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  freeJobNode(jobNode);
+  LIST_DELETE_NODE(jobNode);
+}
+
+/***********************************************************************\
+* Name   : findJobById
+* Purpose: find job by id
+* Input  : jobId - job id
+* Output : -
+* Return : job node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL JobNode *findJobById(int jobId)
+{
+  JobNode *jobNode;
+
+  jobNode = jobList.head;
+  while ((jobNode != NULL) && (jobNode->id != jobId))
+  {
+    jobNode = jobNode->next;
+  }
+
+  return jobNode;
+}
+
+/***********************************************************************\
+* Name   : readJobFile
+* Purpose: read job from file
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE iff job read, FALSE otherwise (error)
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool readJobFile(JobNode *jobNode)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  bool       failFlag;
+  uint       lineNb;
+  String     line;
+  String     name,value;
+  String     fileName,pathName,baseName;
+  uint64     n;
+
+  assert(jobNode != NULL);
+  assert(jobNode->fileName != NULL);
+
+  /* initialise variables */
+  line = String_new();
+
+  /* open file */
+  error = File_open(&fileHandle,jobNode->fileName,FILE_OPENMODE_READ);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot open file '%s' (error: %s)!\n",
+               String_cString(jobNode->fileName),
+               getErrorText(error)
+              );
+    String_delete(line);
+    return FALSE;
+  }
+
+  /* parse file */
+  failFlag = FALSE;
+  lineNb   = 0;
+  name     = String_new();
+  value    = String_new();
+  while (!File_eof(&fileHandle) && !failFlag)
+  {
+    /* read line */
+    error = File_readLine(&fileHandle,line);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot read file '%s' (error: %s)!\n",
+                 String_cString(jobNode->fileName),
+                 getErrorText(error)
+                );
+      failFlag = TRUE;
+      break;
+    }
+    String_trim(line,STRING_WHITE_SPACES);
+    lineNb++;
+
+    /* skip comments, empty lines */
+    if ((String_length(line) == 0) || (String_index(line,0) == '#'))
+    {
+      continue;
+    }
+
+    /* parse line */
+    if (String_parse(line,"%S=%S",NULL,name,value))
+    {
+      if (!ConfigValue_parse(String_cString(name),
+                             String_cString(value),
+                             CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                             NULL,
+                             NULL,
+                             jobNode
+                            )
+         )
+      {
+        printError("Unknown or invalid config value '%s' in %s, line %ld - skipped\n",
+                   String_cString(name),
+                   String_cString(jobNode->fileName),
+                   lineNb
+                  );
+//        failFlag = TRUE;
+//        break;
+      }
+    }
+    else
+    {
+      printError("Error in %s, line %ld: '%s' - skipped\n",
+                 String_cString(jobNode->fileName),
+                 lineNb,
+                 String_cString(line)
+                );
+//      failFlag = TRUE;
+//      break;
+    }
+  }
+  String_delete(value);
+  String_delete(name);
+
+  /* close file */
+  File_close(&fileHandle);
+
+  /* save time modified */
+  jobNode->timeModified = File_getFileTimeModified(jobNode->fileName);
+
+  /* get last executed time */
+  jobNode->lastExecutedTime = 0LL;
+  File_splitFileName(jobNode->fileName,&pathName,&baseName);
+  fileName = File_newFileName();
+  File_setFileName(fileName,pathName);
+  File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
+  File_deleteFileName(baseName);
+  File_deleteFileName(pathName);
+fprintf(stderr,"%s,%d: last executed fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
+  error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+  if (error == ERROR_NONE)
+  {
+    while (!File_eof(&fileHandle))
+    {
+      /* read line */
+      error = File_readLine(&fileHandle,line);
+      if (error != ERROR_NONE) break;
+
+      /* skip comments, empty lines */
+      if ((String_length(line) == 0) || (String_index(line,0) == '#'))
+      {
+        continue;
+      }
+
+      /* parse */
+      if (String_parse(line,"%lld",NULL,&n))
+      {
+        jobNode->lastExecutedTime = n;
+      }
+    }
+    File_close(&fileHandle);
+  }
+  File_deleteFileName(fileName);
+
+  /* free resources */
+  String_delete(line);
+
+  return !failFlag;
+}
+
+/***********************************************************************\
+* Name   : rereadJobFiles
+* Purpose: re-read job files
+* Input  : jobDirectory - job directory
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors rereadJobFiles(const char *jobDirectory)
+{
+  Errors          error;
+  DirectoryHandle directoryHandle;
+  String          fileName;
+  String          baseName;
+  JobNode         *jobNode,*deleteJobNode;
+
+  assert(jobDirectory != NULL);
+
+  /* init variables */
+  fileName = File_newFileName();
+
+  /* add new/update jobs */
+  File_setFileNameCString(fileName,jobDirectory);
+  error = File_openDirectory(&directoryHandle,fileName);
+  if (error != ERROR_NONE)
+  {
+    File_deleteFileName(fileName);
+    return error;
+  }
+  baseName = File_newFileName();
+  while (!File_endOfDirectory(&directoryHandle))
+  {
+    /* read directory entry */
+    File_readDirectory(&directoryHandle,fileName);
+
+    /* get base name */
+    File_getFileBaseName(baseName,fileName);
+
+    /* check if readable file and not ".*" */
+    if (File_isFileReadable(fileName) && (String_index(baseName,0) != '.'))
+    {
+      /* lock */
+      Semaphore_lock(&jobList.lock);
+
+      /* find/create job */
+      jobNode = jobList.head;
+      while ((jobNode != NULL) && !String_equals(jobNode->name,baseName))
+      {
+        jobNode = jobNode->next;
+      }
+      if (jobNode == NULL)
+      {
+        jobNode = newJob(JOB_TYPE_BACKUP,fileName,baseName);
+        List_append(&jobList,jobNode);
+      }
+
+      if (   (jobNode->state == JOB_STATE_NONE)
+          && (jobNode->timeModified < File_getFileTimeModified(fileName))
+         )
+      {
+fprintf(stderr,"%s,%d: config %s\n",__FILE__,__LINE__,String_cString(fileName));
+        /* read job */
+        readJobFile(jobNode);
+      }
+
+      /* unlock */
+      Semaphore_unlock(&jobList.lock);
+    }
+  }
+  File_deleteFileName(baseName);
+  File_closeDirectory(&directoryHandle);
+
+  /* remove not existing jobs */
+  Semaphore_lock(&jobList.lock);
+  jobNode = jobList.head;
+  while (jobNode != NULL)
+  {
+    if (jobNode->state == JOB_STATE_NONE)
+    {
+      File_setFileNameCString(fileName,jobDirectory);
+      File_appendFileName(fileName,jobNode->name);
+      if (File_isFileReadable(fileName))
+      {
+        jobNode = jobNode->next;
+      }
+      else
+      {
+        deleteJobNode = jobNode;
+        jobNode = jobNode->next;
+        List_remove(&jobList,deleteJobNode);
+        deleteJob(deleteJobNode);
+      }
+    }
+  }
+  Semaphore_unlock(&jobList.lock);
+
+  /* free resources */
+  File_deleteFileName(fileName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : deleteJobFileEntries
+* Purpose: delete entries from job file
+* Input  : stringList - job file string list to modify
+*          name       - name of value
+* Output : -
+* Return : next entry in string list or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL StringNode *deleteJobFileEntries(StringList *stringList, 
+                                       const char *name
+                                      )
+{
+  StringNode *nextNode;
+  
+  StringNode *stringNode;
+  String     s;
+
+  nextNode = NULL;
+
+  s = String_new();
+  stringNode = stringList->head;
+  while (stringNode != NULL)
+  {
+    /* skip comments, empty lines */
+    if ((String_length(stringNode->string) == 0) || (String_index(stringNode->string,0) == '#'))
+    {
+      stringNode = stringNode->next;
+      continue;
+    }
+
+    /* parse and delete */
+    if (String_parse(stringNode->string,"%S=%S",NULL,s,NULL) && String_equalsCString(s,name))
+    {
+      if ((nextNode == NULL) || (nextNode = stringNode)) nextNode = stringNode->next;
+      stringNode = StringList_remove(stringList,stringNode);
+    }
+    else
+    {
+      stringNode = stringNode->next;
+    }
+  }
+  String_delete(s);
+
+  return nextNode;
+}
+
+/***********************************************************************\
+* Name   : setJobFileEntry
+* Purpose: set entry in job file string list
+* Input  : jobFileList - job file string list to modify
+*          name        - name of value
+*          format      - format string for value
+*          ...         - values
+* Output : -
+* Return : -
+* Notes  : all entries with "<name> = ..." are removed and a new entry
+*          of the format
+*
+*            <name> = <format>
+*
+*          is added a the position of the first removed entry or at the
+*          end of the list.
+\***********************************************************************/
+
+LOCAL void setJobFileEntry(StringList *jobFileList,
+                           const char *name,
+                           const char *format,
+                           ...
+                          )
+{
+  StringNode *nextNode;
+  va_list    arguments;
+  String     line;
+
+  assert(jobFileList != NULL);
+  assert(name != NULL);
+  assert(format != NULL);
+
+  /* delete old entries, get position for insert new entry */
+  nextNode = deleteJobFileEntries(jobFileList,name);
+
+  /* format line */
+  line = String_new();
+  va_start(arguments,format);
+  String_setCString(line,name);
+  String_appendCString(line," = ");
+  String_vformat(line,format,arguments);
+  va_end(arguments);
+
+  /* insert new entry */
+  StringList_insert(jobFileList,line,nextNode);
+
+  /* free resources */
+  String_delete(line);
+}
+
+/***********************************************************************\
+* Name   : setJobFileEntry
+* Purpose: set entry in job file string list
+* Input  : jobFileList - job file string list to modify
+*          name        - name of value
+*          patternList - pattern list
+* Output : -
+* Return : -
+* Notes  : all entries with "<name> = ..." are removed and a new entry
+*          of the format
+*
+*            <name> = <pattern>
+*
+*          is added a the position of the first removed entry or at the
+*          end of the list.
+\***********************************************************************/
+
+LOCAL void setJobFileEntryPatternList(StringList  *jobFileList,
+                                      const char  *name,
+                                      PatternList *patternList
+                                     )
+{
+  StringNode  *nextNode;
+  String      line;
+  PatternNode *patternNode;
+
+  assert(jobFileList != NULL);
+  assert(name != NULL);
+  assert(patternList != NULL);
+
+  /* delete old entries, get position for insert new entry */
+  nextNode = deleteJobFileEntries(jobFileList,name);
+
+  /* format and insert new entries */
+  line = String_new();
+  patternNode = patternList->head;
+  while (patternNode != NULL)
+  {
+    /* format line */
+    String_clear(line);
+    String_format(line,"%s = %'S",name,patternNode->pattern);
+
+    /* insert new entry */
+    StringList_insert(jobFileList,line,nextNode);
+
+    patternNode = patternNode->next;
+  }
+
+  /* free resources */
+  String_delete(line);
+}
+
+/***********************************************************************\
+* Name   : updateJobFile
+* Purpose: update job file
+* Input  : jobNode - job node
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors updateJobFile(JobNode *jobNode)
+{
+  StringList jobFileList;
+  String     line;
+  Errors     error;
+  FileHandle fileHandle;
+  uint       z;
+  StringNode *nextNode;
+  ConfigValueFormat configValueFormat;
+
+  assert(jobNode != NULL);
+
+  if (jobNode->modifiedFlag)
+  {
+    StringList_init(&jobFileList);
+    line  = String_new();
+
+    /* read file */
+    error = File_open(&fileHandle,jobNode->fileName,FILE_OPENMODE_READ);
+    if (error != ERROR_NONE)
+    {
+      StringList_done(&jobFileList);
+      String_delete(line);
+      return error;
+    }
+    line  = String_new();
+    while (!File_eof(&fileHandle))
+    {
+      /* read line */
+      error = File_readLine(&fileHandle,line);
+      if (error != ERROR_NONE) break;
+
+      StringList_append(&jobFileList,line);
+    }
+    File_close(&fileHandle);
+    if (error != ERROR_NONE)
+    {
+      StringList_done(&jobFileList);
+      String_delete(line);
+      return error;
+    }
+
+    /* update in line list */
+    for (z = 0; z < SIZE_OF_ARRAY(CONFIG_VALUES); z++)
+    {
+      /* delete old entries, get position for insert new entries */
+      nextNode = deleteJobFileEntries(&jobFileList,CONFIG_VALUES[z].name);
+
+      /* insert new entries */      
+      ConfigValue_formatInit(&configValueFormat,
+                             jobNode,
+                             &CONFIG_VALUES[z]
+                            );
+      while (ConfigValue_format(&configValueFormat,line))
+      {
+        StringList_insert(&jobFileList,line,nextNode);
+      }
+      ConfigValue_formatDone(&configValueFormat);
+    }
+//StringList_print(&jobFileList);
+//  return ERROR_NONE;
+
+    /* write file */
+    error = File_open(&fileHandle,jobNode->fileName,FILE_OPENMODE_CREATE);
+    if (error != ERROR_NONE)
+    {
+      String_delete(line);
+      StringList_done(&jobFileList);
+      return error;
+    }
+    while (!StringList_empty(&jobFileList))
+    {
+      StringList_getFirst(&jobFileList,line);
+      error = File_writeLine(&fileHandle,line);
+      if (error != ERROR_NONE) break;
+    }
+    File_close(&fileHandle);
+    if (error != ERROR_NONE)
+    {
+      String_delete(line);
+      StringList_done(&jobFileList);
+      return error;
+    }
+
+    /* save time modified */
+    jobNode->timeModified = File_getFileTimeModified(jobNode->fileName);
+
+    /* free resources */
+    String_delete(line);
+    StringList_done(&jobFileList);
+
+    /* reset modified flag */
+    jobNode->modifiedFlag = FALSE;
+  }
+
+  return ERROR_NONE;
+}
+
+/*---------------------------------------------------------------------*/
 
 /***********************************************************************\
 * Name   : updateCreateStatus
@@ -431,30 +1306,31 @@ LOCAL bool storageRequestVolume(JobNode *jobNode,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void jobThreadEntry(JobList *jobList)
+LOCAL void jobThreadEntry(void)
 {
   JobNode *jobNode;
 //  Options options;
+  bool    deletedFlag;
 
   while (!quitFlag)
   {
     /* get next job */
-    Semaphore_lock(&jobList->lock);
+    Semaphore_lock(&jobList.lock);
     do
     {
-      jobNode = jobList->head;
+      jobNode = jobList.head;
       while ((jobNode != NULL) && (jobNode->state != JOB_STATE_WAITING))
       {
         jobNode = jobNode->next;
       }
-      if (jobNode == NULL) Semaphore_waitModified(&jobList->lock);
+      if (jobNode == NULL) Semaphore_waitModified(&jobList.lock);
     }
     while (!quitFlag && (jobNode == NULL));
     if (jobNode != NULL)
     {
       jobNode->state = JOB_STATE_RUNNING;
     }
-    Semaphore_unlock(&jobList->lock);    /* unlock is ok; job is protected by running state */
+    Semaphore_unlock(&jobList.lock);    /* unlock is ok; job is protected by running state */
     if (quitFlag) break;
 
     /* run job */
@@ -500,7 +1376,7 @@ LOCAL void jobThreadEntry(JobList *jobList)
         jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveName),
                                                     &jobNode->includePatternList,
                                                     &jobNode->excludePatternList,
-                                                    &jobNode->options,
+                                                    &jobNode->jobOptions,
                                                     (CreateStatusInfoFunction)updateCreateStatus,
                                                     jobNode,
                                                     (StorageRequestVolumeFunction)storageRequestVolume,
@@ -519,7 +1395,7 @@ LOCAL void jobThreadEntry(JobList *jobList)
           jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
                                                        &jobNode->includePatternList,
                                                        &jobNode->excludePatternList,
-                                                       &jobNode->options,
+                                                       &jobNode->jobOptions,
                                                        (RestoreStatusInfoFunction)updateRestoreStatus,
                                                        jobNode,
                                                        &jobNode->requestedAbortFlag
@@ -538,8 +1414,9 @@ LOCAL void jobThreadEntry(JobList *jobList)
 
 #endif /* SIMULATOR */
 
-    /* done job (lock list to signal modifcation to waiting threads) */
-    Semaphore_lock(&jobList->lock);
+    Semaphore_lock(&jobList.lock);
+
+    /* done job */
     if      (jobNode->requestedAbortFlag)
     {
       jobNode->state = JOB_STATE_ABORTED;
@@ -552,126 +1429,66 @@ LOCAL void jobThreadEntry(JobList *jobList)
     {
       jobNode->state = JOB_STATE_COMPLETED;
     }
-    Semaphore_unlock(&jobList->lock);
+
+    /* clean-up old executed jobs from list */
+    if (List_count(&jobList) >= MAX_JOBS_IN_LIST)
+    {
+      do
+      {
+        deletedFlag = FALSE;
+
+        /* find executed job to delete */
+        jobNode = jobList.head;
+        while (   (jobNode != NULL)
+               && (jobNode->state != JOB_STATE_WAITING)
+               && (jobNode->state != JOB_STATE_COMPLETED)
+               && (jobNode->state != JOB_STATE_ERROR)
+              )
+        {
+          jobNode = jobNode->next;
+        }
+
+        /* delete job */
+        if (jobNode != NULL)
+        {
+          List_remove(&jobList,jobNode);
+          deleteJob(jobNode);
+          deletedFlag = TRUE;
+        }
+      }
+      while ((List_count(&jobList) >= MAX_JOBS_IN_LIST) && deletedFlag);
+    }
+
+    Semaphore_unlock(&jobList.lock);
   }
 }
 
-/***********************************************************************\
-* Name   : getNewJobId
-* Purpose: get new job id
-* Input  : -
-* Output : -
-* Return : job id
-* Notes  : -
-\***********************************************************************/
+/*---------------------------------------------------------------------*/
 
-LOCAL uint getNewJobId(void)
+LOCAL void schedulerThreadEntry(const char *jobDirectory)
 {
+//  JobNode *jobNode;
+//  Options options;
+  int z;
 
-  jobList.lastJobId++;
-
-  return jobList.lastJobId;
-}
-
-/***********************************************************************\
-* Name   : freeJobNode
-* Purpose: free job node
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeJobNode(JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-
-  String_delete(jobNode->runningInfo.fileName);
-  String_delete(jobNode->runningInfo.storageName);
-
-  freeOptions(&jobNode->options);
-  Pattern_doneList(&jobNode->excludePatternList);
-  Pattern_doneList(&jobNode->includePatternList);
-  String_delete(jobNode->archiveName);
-  String_delete(jobNode->name);
-}
-
-/***********************************************************************\
-* Name   : newJob
-* Purpose: create new job
-* Input  : -
-* Output : -
-* Return : job node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL JobNode *newJob(JobTypes jobType)
-{
-  JobNode *jobNode;
-
-  jobNode = LIST_NEW_NODE(JobNode);
-  if (jobNode == NULL)
+  while (!quitFlag)
   {
-    HALT_INSUFFICIENT_MEMORY();
+    /* re-read config files */
+    rereadJobFiles(jobDirectory);
+
+    /* find next job to execute */
+
+    /* check if execution time reached */
+
+    /* sleep 1min */
+    z = 0;
+    while ((z < 60/10) && !quitFlag)
+    {
+      Misc_udelay(10LL*1000LL*1000LL);
+      z+=10;
+    }
   }
-  jobNode->type                  = jobType;
-  jobNode->name                  = String_new();
-  jobNode->archiveName           = String_new();
-  Pattern_initList(&jobNode->includePatternList);
-  Pattern_initList(&jobNode->excludePatternList);
-  copyOptions(&jobNode->options,&defaultOptions);
-  jobNode->id                    = 0;
-  jobNode->state                 = JOB_STATE_WAITING;
-  jobNode->requestedVolumeNumber = 0;
-  jobNode->volumeNumber          = 0;
-  jobNode->requestedAbortFlag    = FALSE;
-
-  jobNode->runningInfo.error                 = ERROR_NONE;
-  jobNode->runningInfo.startTime             = 0;
-  jobNode->runningInfo.estimatedRestTime     = 0;
-  jobNode->runningInfo.doneFiles             = 0L;
-  jobNode->runningInfo.doneBytes             = 0LL;
-  jobNode->runningInfo.totalFiles            = 0L;
-  jobNode->runningInfo.totalBytes            = 0LL;
-  jobNode->runningInfo.skippedFiles          = 0L;
-  jobNode->runningInfo.skippedBytes          = 0LL;
-  jobNode->runningInfo.totalFiles            = 0L;
-  jobNode->runningInfo.totalBytes            = 0LL;
-  jobNode->runningInfo.filesPerSecond        = 0.0;
-  jobNode->runningInfo.bytesPerSecond        = 0.0;
-  jobNode->runningInfo.storageBytesPerSecond = 0.0;
-  jobNode->runningInfo.archiveBytes          = 0LL;
-  jobNode->runningInfo.compressionRatio      = 0.0;
-  jobNode->runningInfo.fileName              = String_new();
-  jobNode->runningInfo.fileDoneBytes         = 0LL;
-  jobNode->runningInfo.fileTotalBytes        = 0LL;
-  jobNode->runningInfo.storageName           = String_new();
-  jobNode->runningInfo.storageDoneBytes      = 0LL;
-  jobNode->runningInfo.storageTotalBytes     = 0LL;
-  jobNode->runningInfo.volumeNumber          = 0;
-  jobNode->runningInfo.volumeProgress        = 0.0;
-
-  return jobNode;
 }
-
-#if 0
-/***********************************************************************\
-* Name   : deleteJob
-* Purpose: delete job
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deleteJob(JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-
-  freeJobNode(jobNode);
-  LIST_DELETE_NODE(jobNode);
-}
-#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 
@@ -766,6 +1583,7 @@ LOCAL const char *getJobStateText(JobStates jobState)
   stateText = "unknown";
   switch (jobState)
   {
+    case JOB_STATE_NONE:           stateText = "none";           break;
     case JOB_STATE_WAITING:        stateText = "waiting";        break;
     case JOB_STATE_RUNNING:        stateText = "running";        break;
     case JOB_STATE_REQUEST_VOLUME: stateText = "request volume"; break;
@@ -1063,8 +1881,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  JobNode    *jobNode;
-  const char *type;
+  JobNode *jobNode;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -1076,27 +1893,15 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   jobNode = jobList.head;
   while (jobNode != NULL)
   {
-    type = NULL;
-    switch (jobNode->options.archiveType)
-    {
-      case ARCHIVE_TYPE_NORMAL:      type = "normal";      break;
-      case ARCHIVE_TYPE_FULL:        type = "full";        break;
-      case ARCHIVE_TYPE_INCREMENTAL: type = "incremental"; break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
     sendResult(clientInfo,id,FALSE,0,
                "%u %'S %'s %s %llu %'s %'s %lu %lu",
                jobNode->id,
                jobNode->name,
                getJobStateText(jobNode->state),
-               type,
-               jobNode->options.archivePartSize,
-               Compress_getAlgorithmName(jobNode->options.compressAlgorithm),
-               Crypt_getAlgorithmName(jobNode->options.cryptAlgorithm),
+               getArchiveTypeName(jobNode->jobOptions.archiveType),
+               jobNode->jobOptions.archivePartSize,
+               Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm),
+               Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm),
                jobNode->runningInfo.startTime,
                jobNode->runningInfo.estimatedRestTime
               );
@@ -1184,344 +1989,690 @@ LOCAL void serverCommand_clear(ClientInfo *clientInfo, uint id, const String arg
 
   Pattern_clearList(&clientInfo->includePatternList);
   Pattern_clearList(&clientInfo->excludePatternList);
-  freeOptions(&clientInfo->options);
-  copyOptions(&clientInfo->options,&defaultOptions);
+  freeJobOptions(&clientInfo->jobOptions);
+  initJobOptions(&clientInfo->jobOptions);
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
 
-LOCAL void serverCommand_addIncludePattern(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  uint        jobId;
+  JobNode     *jobNode;
+  PatternNode *patternNode;
+  const char  *type;
+
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get include pattern */
+  /* get job id, type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,1,"expected pattern type");
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
     return;
   }
-  if (argumentCount < 2)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected pattern");
-    return;
-  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  if      (String_equalsCString(arguments[0],"GLOB"))
-  {
-    Pattern_appendList(&clientInfo->includePatternList,String_cString(arguments[1]),PATTERN_TYPE_GLOB);
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(arguments[0],"REGEX"))
-  {
-    Pattern_appendList(&clientInfo->includePatternList,String_cString(arguments[1]),PATTERN_TYPE_REGEX);
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(arguments[0],"EXTENDED_REGEX"))
-  {
-    Pattern_appendList(&clientInfo->includePatternList,String_cString(arguments[1]),PATTERN_TYPE_EXTENDED_REGEX);
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else
-  {
-    sendResult(clientInfo,id,TRUE,1,"unknown pattern type");
-  }
-}
+  /* lock */
+  Semaphore_lock(&jobList.lock);
 
-LOCAL void serverCommand_addExcludePattern(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get exclude pattern */
-  if (argumentCount < 1)
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"expected pattern");
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
     return;
   }
 
-  if      (String_equalsCString(arguments[0],"GLOB"))
+  /* send include list */
+  patternNode = jobNode->includePatternList.head;
+  while (patternNode != NULL)
   {
-    Pattern_appendList(&clientInfo->excludePatternList,String_cString(arguments[1]),PATTERN_TYPE_GLOB);
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(arguments[0],"REGEX"))
-  {
-    Pattern_appendList(&clientInfo->excludePatternList,String_cString(arguments[1]),PATTERN_TYPE_REGEX);
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else if (String_equalsCString(arguments[0],"EXTENDED_REGEX"))
-  {
-    Pattern_appendList(&clientInfo->excludePatternList,String_cString(arguments[1]),PATTERN_TYPE_EXTENDED_REGEX);
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else
-  {
-    sendResult(clientInfo,id,TRUE,1,"unknown pattern type");
-  }
-}
-
-LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get config value name */
-  if (argumentCount < 1)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected config value name");
-    return;
-  }
-
-  if      (String_equalsCString(arguments[0],"archive-part-size"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->options.archivePartSize);
-  }
-  else if (String_equalsCString(arguments[0],"max-tmp-size"))
-  {
-    sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->options.maxTmpSize);
-  }
-  else if (String_equalsCString(arguments[0],"archive-type"))
-  {
-    const char *type;
-
-    type = NULL;
-    switch (clientInfo->options.archiveType)
+    switch (patternNode->type)
     {
-      case ARCHIVE_TYPE_NORMAL:      type = "normal";      break;
-      case ARCHIVE_TYPE_FULL:        type = "full";        break;
-      case ARCHIVE_TYPE_INCREMENTAL: type = "incremental"; break;
+      case PATTERN_TYPE_GLOB          : type = "GLOB";           break;
+      case PATTERN_TYPE_REGEX         : type = "REGEX";          break;
+      case PATTERN_TYPE_EXTENDED_REGEX: type = "EXTENDED_REGEX"; break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break;
       #endif /* NDEBUG */
     }
-    sendResult(clientInfo,id,TRUE,0,"%s",type);
+    sendResult(clientInfo,id,FALSE,0,
+               "%s %'S",
+               type,
+               patternNode->pattern
+              );
+    patternNode = patternNode->next;
   }
-  else if (String_equalsCString(arguments[0],"incremental-list-file"))
+  sendResult(clientInfo,id,TRUE,0,"");
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_includePatternsClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->options.incrementalListFileName);
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
   }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* clear include list */
+  Pattern_clearList(&jobNode->includePatternList);
+  jobNode->modifiedFlag = TRUE;;
+  sendResult(clientInfo,id,TRUE,0,"");
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_includePatternsAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint         jobId;
+  PatternTypes patternType;
+  String       pattern;
+  JobNode      *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected pattern type");
+    return;
+  }
+  if      (String_equalsCString(arguments[1],"GLOB"))
+  {
+    patternType = PATTERN_TYPE_GLOB;
+  }
+  else if (String_equalsCString(arguments[1],"REGEX"))
+  {
+    patternType = PATTERN_TYPE_REGEX;
+  }
+  else if (String_equalsCString(arguments[1],"EXTENDED_REGEX"))
+  {
+    patternType = PATTERN_TYPE_EXTENDED_REGEX;
+  }
+  else
+  {
+    sendResult(clientInfo,id,TRUE,1,"unknown pattern type '%S'",arguments[1]);
+    return;
+  }
+  if (argumentCount < 3)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected pattern");
+    return;
+  }
+  pattern = arguments[2];
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* add to include list */
+  Pattern_appendList(&jobNode->includePatternList,String_cString(pattern),patternType);
+  jobNode->modifiedFlag = TRUE;;
+  sendResult(clientInfo,id,TRUE,0,"");
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_excludePatternsList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint        jobId;
+  JobNode     *jobNode;
+  PatternNode *patternNode;
+  const char  *type;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* send exclude list */
+  patternNode = jobNode->excludePatternList.head;
+  while (patternNode != NULL)
+  {
+    switch (patternNode->type)
+    {
+      case PATTERN_TYPE_GLOB          : type = "GLOB";           break;
+      case PATTERN_TYPE_REGEX         : type = "REGEX";          break;
+      case PATTERN_TYPE_EXTENDED_REGEX: type = "EXTENDED_REGEX"; break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+    sendResult(clientInfo,id,FALSE,0,
+               "%s %'S",
+               type,
+               patternNode->pattern
+              );
+    patternNode = patternNode->next;
+  }
+  sendResult(clientInfo,id,TRUE,0,"");
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_excludePatternsClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* clear exclude list */
+  Pattern_clearList(&jobNode->excludePatternList);
+  jobNode->modifiedFlag = TRUE;;
+  sendResult(clientInfo,id,TRUE,0,"");
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_excludePatternsAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint         jobId;
+  PatternTypes patternType;
+  String       pattern;
+  JobNode      *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected pattern type");
+    return;
+  }
+  if      (String_equalsCString(arguments[1],"GLOB"))
+  {
+    patternType = PATTERN_TYPE_GLOB;
+  }
+  else if (String_equalsCString(arguments[1],"REGEX"))
+  {
+    patternType = PATTERN_TYPE_REGEX;
+  }
+  else if (String_equalsCString(arguments[1],"EXTENDED_REGEX"))
+  {
+    patternType = PATTERN_TYPE_EXTENDED_REGEX;
+  }
+  else
+  {
+    sendResult(clientInfo,id,TRUE,1,"unknown pattern type '%S'",arguments[1]);
+    return;
+  }
+  if (argumentCount < 3)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected pattern");
+    return;
+  }
+  pattern = arguments[2];
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* add to exclude list */
+  Pattern_appendList(&jobNode->excludePatternList,String_cString(pattern),patternType);
+  jobNode->modifiedFlag = TRUE;;
+  sendResult(clientInfo,id,TRUE,0,"");
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  String  name;
+  JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, name, value */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected config value name");
+    return;
+  }
+  name = arguments[1];
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  if      (String_equalsCString(name,"archive-name"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%S",jobNode->archiveName);
+  }
+  else if (String_equalsCString(name,"archive-type"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%s",getArchiveTypeName(jobNode->jobOptions.archiveType));
+  }
+  else if (String_equalsCString(name,"archive-part-size"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%llu",jobNode->jobOptions.archivePartSize);
+  }
+#if 0
+  else if (String_equalsCString(name,"max-tmp-size"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%llu",jobNode->jobOptions.maxTmpSize);
+  }
+#endif /* 0 */
+  else if (String_equalsCString(name,"incremental-list-file"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%'S",jobNode->jobOptions.incrementalListFileName);
+  }
+#if 0
   else if (String_equalsCString(arguments[0],"max-band-width"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%'S",clientInfo->options.maxBandWidth);
+    sendResult(clientInfo,id,TRUE,0,"%'S",jobNode->jobOptions.maxBandWidth);
   }
-  else if (String_equalsCString(arguments[0],"compress-algorithm"))
+#endif /* 0 */
+  else if (String_equalsCString(name,"compress-algorithm"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%'s",Compress_getAlgorithmName(clientInfo->options.compressAlgorithm));
+    sendResult(clientInfo,id,TRUE,0,"%'s",Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm));
   }
-  else if (String_equalsCString(arguments[0],"crypt-algorithm"))
+  else if (String_equalsCString(name,"crypt-password-mode"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%'s",Crypt_getAlgorithmName(clientInfo->options.cryptAlgorithm));
+    sendResult(clientInfo,id,TRUE,0,"%'s",getPasswordModeName(jobNode->jobOptions.cryptPasswordMode));
   }
-  else if (String_equalsCString(arguments[0],"load-volume-command"))
+  else if (String_equalsCString(name,"crypt-algorithm"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%S",clientInfo->options.device->loadVolumeCommand);
+    sendResult(clientInfo,id,TRUE,0,"%'s",Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm));
   }
-  else if (String_equalsCString(arguments[0],"volume-size"))
+  else if (String_equalsCString(name,"load-volume-command"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%llu",clientInfo->options.device->volumeSize);
+    sendResult(clientInfo,id,TRUE,0,"%S",jobNode->jobOptions.device.loadVolumeCommand);
   }
-  else if (String_equalsCString(arguments[0],"skip-unreadable"))
+  else if (String_equalsCString(name,"volume-size"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.skipUnreadableFlag?1:0);
+    sendResult(clientInfo,id,TRUE,0,"%llu",jobNode->jobOptions.device.volumeSize);
   }
-  else if (String_equalsCString(arguments[0],"overwrite-archive-files"))
+  else if (String_equalsCString(name,"skip-unreadable"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.overwriteArchiveFilesFlag?1:0);
+    sendResult(clientInfo,id,TRUE,0,"%d",jobNode->jobOptions.skipUnreadableFlag?1:0);
   }
-  else if (String_equalsCString(arguments[0],"overwrite-files"))
+  else if (String_equalsCString(name,"overwrite-archive-files"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.overwriteFilesFlag?1:0);
+    sendResult(clientInfo,id,TRUE,0,"%d",jobNode->jobOptions.overwriteArchiveFilesFlag?1:0);
   }
-  else if (String_equalsCString(arguments[0],"ecc"))
+  else if (String_equalsCString(name,"overwrite-files"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.errorCorrectionCodesFlag?1:0);
+    sendResult(clientInfo,id,TRUE,0,"%d",jobNode->jobOptions.overwriteFilesFlag?1:0);
   }
-  else if (String_equalsCString(arguments[0],"wait-first-volume"))
+  else if (String_equalsCString(name,"ecc"))
   {
-    sendResult(clientInfo,id,TRUE,0,"%d",clientInfo->options.waitFirstVolumeFlag?1:0);
+    sendResult(clientInfo,id,TRUE,0,"%d",jobNode->jobOptions.errorCorrectionCodesFlag?1:0);
+  }
+  else if (String_equalsCString(name,"wait-first-volume"))
+  {
+    sendResult(clientInfo,id,TRUE,0,"%d",jobNode->jobOptions.waitFirstVolumeFlag?1:0);
   }
   else
   {
     sendResult(clientInfo,id,TRUE,1,"unknown config value");
   }
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
 }
 
 LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  uint    jobId;
+  String  name,value;
+  JobNode *jobNode;
+
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get config value name */
+  /* get job id, name, value */
   if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(arguments[0]));
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
   {
     sendResult(clientInfo,id,TRUE,1,"expected config name");
     return;
   }
-  if (argumentCount < 2)
+  name = arguments[1];
+  if (argumentCount < 3)
   {
     sendResult(clientInfo,id,TRUE,1,"expected config value for '%S'",arguments[0]);
     return;
   }
+  value = arguments[2];
 
-  if      (String_equalsCString(arguments[0],"archive-part-size"))
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  if      (String_equalsCString(name,"archive-name"))
+  {
+    String_set(jobNode->archiveName,value);
+    jobNode->modifiedFlag = TRUE;;
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else if (String_equalsCString(name,"archive-part-size"))
   {
     // archive-part-size <n>
     const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-    clientInfo->options.archivePartSize = (uint64)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    jobNode->jobOptions.archivePartSize = (uint64)String_toDouble(value,0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"max-tmp-size"))
+#if 0
+  else if (String_equalsCString(name,"max-tmp-size"))
   {
     // max-tmp-size <n>
     const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-    clientInfo->options.maxTmpSize = (uint64)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    jobNode->jobOptions.maxTmpSize = (uint64)String_toDouble(value,0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"archive-type"))
+#endif /* 0 */
+  else if (String_equalsCString(name,"archive-type"))
   {
-    // archive-type normal|full|incremental
-    if      (String_equalsCString(arguments[1],"normal"))
+    ArchiveTypes archiveType;
+
+    archiveType = getArchiveType(String_cString(value));
+    if (archiveType != ARCHIVE_TYPE_UNKNOWN)
     {
-      clientInfo->options.archiveType = ARCHIVE_TYPE_NORMAL;
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[1],"full"))
-    {
-      clientInfo->options.archiveType = ARCHIVE_TYPE_FULL;
-      sendResult(clientInfo,id,TRUE,0,"");
-    }
-    else if (String_equalsCString(arguments[1],"incremental"))
-    {
-      clientInfo->options.archiveType = ARCHIVE_TYPE_INCREMENTAL;
+      jobNode->jobOptions.archiveType = archiveType;
+      jobNode->modifiedFlag = TRUE;;
       sendResult(clientInfo,id,TRUE,0,"");
     }
     else
     {
-      sendResult(clientInfo,id,FALSE,0,"unknown type '%S'",arguments[1]);
+      sendResult(clientInfo,id,FALSE,0,"unknown type '%S'",value);
     }
   }
-  else if (String_equalsCString(arguments[0],"incremental-list-file"))
+  else if (String_equalsCString(name,"incremental-list-file"))
   {
     // incremental-list-file <file name>
-    String_copy(&clientInfo->options.incrementalListFileName,arguments[1]);
+    String_copy(&jobNode->jobOptions.incrementalListFileName,value);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"max-band-width"))
+#if 0
+  else if (String_equalsCString(name,"max-band-width"))
   {
     // max-band-width <n>
     const StringUnit UNITS[] = {{"K",1024}};
 
-    clientInfo->options.maxBandWidth = (ulong)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    jobNode->jobOptions.maxBandWidth = (ulong)String_toDouble(value,0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"ssh-port"))
+#endif /* 0 */
+  else if (String_equalsCString(name,"ssh-port"))
   {
     // ssh-port <n>
-    clientInfo->options.sshServer->port = String_toInteger(arguments[1],0,NULL,NULL,0);
+    jobNode->jobOptions.sshServer.port = String_toInteger(value,0,NULL,NULL,0);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"ssh-public-key"))
+  else if (String_equalsCString(name,"ssh-public-key"))
   {
     // ssh-public-key <file name>
-    String_copy(&clientInfo->options.sshServer->publicKeyFileName,arguments[1]);
+    String_copy(&jobNode->jobOptions.sshServer.publicKeyFileName,value);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"ssh-prvat-key"))
+  else if (String_equalsCString(name,"ssh-private-key"))
   {
-    // ssh-privat-key <file name>
-    String_copy(&clientInfo->options.sshServer->privatKeyFileName,arguments[1]);
+    // ssh-private-key <file name>
+    String_copy(&jobNode->jobOptions.sshServer.privateKeyFileName,value);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"volume-size"))
+  else if (String_equalsCString(name,"volume-size"))
   {
     // volume-size <n>
     const StringUnit UNITS[] = {{"K",1024},{"M",1024*1024},{"G",1024*1024*1024}};
 
-    clientInfo->options.device->volumeSize = (uint64)String_toDouble(arguments[1],0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    jobNode->jobOptions.device.volumeSize = (uint64)String_toDouble(value,0,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"load-volume-command"))
+  else if (String_equalsCString(name,"load-volume-command"))
   {
     // load-volume-command <s>
-    String_copy(&clientInfo->options.device->loadVolumeCommand,arguments[1]);
+    String_copy(&jobNode->jobOptions.device.loadVolumeCommand,value);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"compress-algorithm"))
+  else if (String_equalsCString(name,"compress-algorithm"))
   {
     // compress-algorithm <name>
     CompressAlgorithms compressAlgorithm;
 
-    compressAlgorithm = Compress_getAlgorithm(String_cString(arguments[1]));
-    if (compressAlgorithm == COMPRESS_ALGORITHM_UNKNOWN)
+    compressAlgorithm = Compress_getAlgorithm(String_cString(value));
+    if (compressAlgorithm != COMPRESS_ALGORITHM_UNKNOWN)
     {
-      sendResult(clientInfo,id,TRUE,1,"unknown compress algorithm");
-      return;
+      jobNode->jobOptions.compressAlgorithm = compressAlgorithm;
+      jobNode->modifiedFlag = TRUE;;
+      sendResult(clientInfo,id,TRUE,0,"");
     }
-    clientInfo->options.compressAlgorithm = compressAlgorithm;
-    sendResult(clientInfo,id,TRUE,0,"");
+    else
+    {
+      sendResult(clientInfo,id,TRUE,1,"unknown compress algorithm %'S",value);
+    }
   }
-  else if (String_equalsCString(arguments[0],"crypt-algorithm"))
+  else if (String_equalsCString(name,"crypt-password-mode"))
+  {
+    // crypt-password-mode <name>
+    PasswordModes passwordMode;
+
+    passwordMode = getPasswordMode(String_cString(value));
+    if (passwordMode != PASSWORD_MODE_UNKNOWN)
+    {
+      jobNode->jobOptions.cryptPasswordMode = passwordMode;
+      jobNode->modifiedFlag = TRUE;;
+      sendResult(clientInfo,id,TRUE,0,"");
+    }
+    else
+    {
+      sendResult(clientInfo,id,TRUE,1,"unknown password mode %'S",value);
+    }
+  }
+  else if (String_equalsCString(name,"crypt-algorithm"))
   {
     // crypt-algorithm <name>
     CryptAlgorithms cryptAlgorithm;
 
-    cryptAlgorithm = Crypt_getAlgorithm(String_cString(arguments[1]));
-    if (cryptAlgorithm == CRYPT_ALGORITHM_UNKNOWN)
+    cryptAlgorithm = Crypt_getAlgorithm(String_cString(value));
+    if (cryptAlgorithm != CRYPT_ALGORITHM_UNKNOWN)
+    {
+      jobNode->jobOptions.cryptAlgorithm = cryptAlgorithm;
+      jobNode->modifiedFlag = TRUE;;
+      sendResult(clientInfo,id,TRUE,0,"");
+    }
+    else
     {
       sendResult(clientInfo,id,TRUE,1,"unknown crypt algorithm");
-      return;
     }
-    clientInfo->options.cryptAlgorithm = cryptAlgorithm;
-    sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"crypt-password"))
+  else if (String_equalsCString(name,"crypt-password"))
   {
     // crypt-password <password>
-    Password_setString(clientInfo->options.cryptPassword,arguments[1]);
+    Password_setString(jobNode->jobOptions.cryptPassword,value);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"skip-unreadable"))
+  else if (String_equalsCString(name,"skip-unreadable"))
   {
     // skip-unreadable 1|0
-    clientInfo->options.skipUnreadableFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    jobNode->jobOptions.skipUnreadableFlag = String_toBoolean(value,0,NULL,NULL,0,NULL,0);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"overwrite-archive-files"))
+  else if (String_equalsCString(name,"overwrite-archive-files"))
   {
     // overwrite-archive-files 1|0
-    clientInfo->options.overwriteArchiveFilesFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    jobNode->jobOptions.overwriteArchiveFilesFlag = String_toBoolean(value,0,NULL,NULL,0,NULL,0);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"overwrite-files"))
+  else if (String_equalsCString(name,"overwrite-files"))
   {
     // overwrite-files 1|0
-    clientInfo->options.overwriteFilesFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    jobNode->jobOptions.overwriteFilesFlag = String_toBoolean(value,0,NULL,NULL,0,NULL,0);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"ecc"))
+  else if (String_equalsCString(name,"ecc"))
   {
     // overwrite-archive-files 1|0
-    clientInfo->options.errorCorrectionCodesFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    jobNode->jobOptions.errorCorrectionCodesFlag = String_toBoolean(value,0,NULL,NULL,0,NULL,0);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
-  else if (String_equalsCString(arguments[0],"wait-first-volume"))
+  else if (String_equalsCString(name,"wait-first-volume"))
   {
     // overwrite-archive-files 1|0
-    clientInfo->options.waitFirstVolumeFlag = String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0);
+    jobNode->jobOptions.waitFirstVolumeFlag = String_toBoolean(value,0,NULL,NULL,0,NULL,0);
+    jobNode->modifiedFlag = TRUE;;
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",arguments[0]);
+    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",name);
   }
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_addJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   JobTypes jobType;
   JobNode  *jobNode;
@@ -1561,40 +2712,20 @@ LOCAL void serverCommand_addJob(ClientInfo *clientInfo, uint id, const String ar
     return;
   }
 
-  /* create new job */
-  jobNode = newJob(jobType);
+  /* add new job */
+  jobNode = newJob(jobType,NULL,arguments[1]);
   if (jobNode == NULL)
   {
     sendResult(clientInfo,id,TRUE,1,"insufficient memory");
     return;
   }
-  String_set(jobNode->name,arguments[1]);
-  jobNode->id = getNewJobId();
   String_set(jobNode->archiveName,arguments[2]);
   Pattern_copyList(&clientInfo->includePatternList,&jobNode->includePatternList);
   Pattern_copyList(&clientInfo->excludePatternList,&jobNode->excludePatternList);
-  freeOptions(&jobNode->options); copyOptions(&jobNode->options,&clientInfo->options);
+  copyJobOptions(&clientInfo->jobOptions,&jobNode->jobOptions);
 
   /* lock */
   Semaphore_lock(&jobList.lock);
-
-  /* clean-up job list */
-  while (List_count(&jobList) >= MAX_JOBS_IN_LIST)
-  {
-    jobNode = jobList.head;
-    while (   (jobNode != NULL)
-           && (jobNode->state != JOB_STATE_WAITING)
-           && (jobNode->state != JOB_STATE_COMPLETED)
-           && (jobNode->state != JOB_STATE_ERROR)
-          )
-    {
-      jobNode = jobNode->next;
-    }
-    if (jobNode != NULL)
-    {
-      List_remove(&jobList,jobNode);
-    }
-  }
 
   /* add new job to list */
   List_append(&jobList,jobNode);
@@ -1605,7 +2736,7 @@ LOCAL void serverCommand_addJob(ClientInfo *clientInfo, uint id, const String ar
   sendResult(clientInfo,id,TRUE,0,"%d",jobNode->id);
 }
 
-LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint    jobId;
   JobNode *jobNode;
@@ -1625,11 +2756,7 @@ LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String ar
   Semaphore_lock(&jobList.lock);
 
   /* find job */
-  jobNode = jobList.head;
-  while ((jobNode != NULL) && (jobNode->id != jobId))
-  {
-    jobNode = jobNode->next;
-  }
+  jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
     sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
@@ -1648,17 +2775,21 @@ LOCAL void serverCommand_remJob(ClientInfo *clientInfo, uint id, const String ar
   }
   List_remove(&jobList,jobNode);
 
+  /* delete job file */
+  if (jobNode->fileName != NULL)
+  {
+  }
+
   /* unlock */
   Semaphore_unlock(&jobList.lock);
 
   /* free job */
-  freeJobNode(jobNode);
-  LIST_DELETE_NODE(jobNode);
+  deleteJob(jobNode);
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
 
-LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_jobSave(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint    jobId;
   JobNode *jobNode;
@@ -1678,11 +2809,84 @@ LOCAL void serverCommand_abortJob(ClientInfo *clientInfo, uint id, const String 
   Semaphore_lock(&jobList.lock);
 
   /* find job */
-  jobNode = jobList.head;
-  while ((jobNode != NULL) && (jobNode->id != jobId))
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
   {
-    jobNode = jobNode->next;
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
   }
+
+  /* save job */
+  updateJobFile(jobNode);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_jobRun(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* run job */
+  if  (jobNode->state == JOB_STATE_NONE)
+  {
+    jobNode->state = JOB_STATE_WAITING;
+  }
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
     sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
@@ -1773,7 +2977,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   /* open archive */
   error = Archive_open(&archiveInfo,
                        arguments[0],
-                       &clientInfo->options
+                       &clientInfo->jobOptions
                       );
   if (error != ERROR_NONE)
   {
@@ -1957,7 +3161,7 @@ LOCAL void serverCommand_debugMemoryInfo(ClientInfo *clientInfo, uint id, const 
 }
 #endif /* NDEBUG */
 
-// server commands 
+// server commands
 const struct
 {
   const char            *name;
@@ -1967,24 +3171,30 @@ const struct
 }
 SERVER_COMMANDS[] =
 {
-  { "AUTHORIZE",           "S",   serverCommand_authorize,         AUTHORIZATION_STATE_WAITING },
-  { "ERROR_INFO",          "i",   serverCommand_errorInfo,         AUTHORIZATION_STATE_OK      },
-  { "DEVICE_LIST",         "",    serverCommand_deviceList,        AUTHORIZATION_STATE_OK      },
-  { "FILE_LIST",           "S",   serverCommand_fileList,          AUTHORIZATION_STATE_OK      },
-  { "JOB_LIST",            "",    serverCommand_jobList,           AUTHORIZATION_STATE_OK      },
-  { "JOB_INFO",            "i",   serverCommand_jobInfo,           AUTHORIZATION_STATE_OK      },
-  { "CLEAR",               "",    serverCommand_clear,             AUTHORIZATION_STATE_OK      },
-  { "ADD_INCLUDE_PATTERN", "S",   serverCommand_addIncludePattern, AUTHORIZATION_STATE_OK      },
-  { "ADD_EXCLUDE_PATTERN", "S",   serverCommand_addExcludePattern, AUTHORIZATION_STATE_OK      },
-  { "GET",                 "s",   serverCommand_get,               AUTHORIZATION_STATE_OK      },
-  { "SET",                 "s S", serverCommand_set,               AUTHORIZATION_STATE_OK      },
-  { "ADD_JOB",             "",    serverCommand_addJob,            AUTHORIZATION_STATE_OK      },
-  { "REM_JOB",             "i",   serverCommand_remJob,            AUTHORIZATION_STATE_OK      },
-  { "ABORT_JOB",           "i",   serverCommand_abortJob,          AUTHORIZATION_STATE_OK      },
-  { "VOLUME",              "S i", serverCommand_volume,            AUTHORIZATION_STATE_OK      },
-  { "ARCHIVE_LIST",        "S",   serverCommand_archiveList,       AUTHORIZATION_STATE_OK      },
+  { "AUTHORIZE",             "S",   serverCommand_authorize,           AUTHORIZATION_STATE_WAITING },
+  { "ERROR_INFO",            "i",   serverCommand_errorInfo,           AUTHORIZATION_STATE_OK      },
+  { "DEVICE_LIST",           "",    serverCommand_deviceList,          AUTHORIZATION_STATE_OK      },
+  { "FILE_LIST",             "S",   serverCommand_fileList,            AUTHORIZATION_STATE_OK      },
+  { "JOB_LIST",              "",    serverCommand_jobList,             AUTHORIZATION_STATE_OK      },
+  { "JOB_INFO",              "i",   serverCommand_jobInfo,             AUTHORIZATION_STATE_OK      },
+//  { "CLEAR",               "",    serverCommand_clear,               AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_PATTERNS_LIST", "i",   serverCommand_includePatternsList, AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_PATTERNS_CLEAR","i",   serverCommand_includePatternsClear,AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_PATTERNS_ADD",  "i S", serverCommand_includePatternsAdd,  AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_PATTERNS_LIST", "i",   serverCommand_excludePatternsList, AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_PATTERNS_CLEAR","i",   serverCommand_excludePatternsClear,AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_PATTERNS_ADD",  "i S", serverCommand_excludePatternsAdd,  AUTHORIZATION_STATE_OK      },
+  { "GET",                   "s",   serverCommand_get,                 AUTHORIZATION_STATE_OK      },
+  { "SET",                   "s S", serverCommand_set,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_NEW",               "S",   serverCommand_jobNew,              AUTHORIZATION_STATE_OK      },
+  { "JOB_DELETE",            "i",   serverCommand_jobDelete,           AUTHORIZATION_STATE_OK      },
+  { "JOB_SAVE",              "i",   serverCommand_jobSave,             AUTHORIZATION_STATE_OK      },
+  { "JOB_RUN",               "i",   serverCommand_jobRun,              AUTHORIZATION_STATE_OK      },
+  { "JOB_ABORT",             "i",   serverCommand_jobAbort,            AUTHORIZATION_STATE_OK      },
+  { "VOLUME",                "S i", serverCommand_volume,              AUTHORIZATION_STATE_OK      },
+  { "ARCHIVE_LIST",          "S",   serverCommand_archiveList,         AUTHORIZATION_STATE_OK      },
   #ifndef NDEBUG
-  { "DEBUG_MEMORY_INFO",   "",    serverCommand_debugMemoryInfo,   AUTHORIZATION_STATE_OK      },
+  { "DEBUG_MEMORY_INFO",     "",    serverCommand_debugMemoryInfo,     AUTHORIZATION_STATE_OK      },
   #endif /* NDEBUG */
 };
 
@@ -2227,7 +3437,7 @@ clientInfo->authorizationState   = AUTHORIZATION_STATE_OK;
 
   Pattern_initList(&clientInfo->includePatternList);
   Pattern_initList(&clientInfo->excludePatternList);
-  copyOptions(&clientInfo->options,&defaultOptions);
+  initJobOptions(&clientInfo->jobOptions);
 
   /* create and send session id */
 // authorization?
@@ -2265,7 +3475,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
 
   Pattern_initList(&clientInfo->includePatternList);
   Pattern_initList(&clientInfo->excludePatternList);
-  copyOptions(&clientInfo->options,&defaultOptions);
+  initJobOptions(&clientInfo->jobOptions);
 
   if (!MsgQueue_init(&clientInfo->network.commandMsgQueue,0))
   {
@@ -2315,7 +3525,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       break;
   }
 
-  freeOptions(&clientInfo->options);
+  freeJobOptions(&clientInfo->jobOptions);
   Pattern_doneList(&clientInfo->excludePatternList);
   Pattern_doneList(&clientInfo->includePatternList);
 }
@@ -2469,12 +3679,13 @@ void Server_doneAll(void)
 {
 }
 
-Errors Server_run(uint       serverPort,
-                  uint       serverTLSPort,
-                  const char *caFileName,
-                  const char *certFileName,
-                  const char *keyFileName,
-                  Password   *serverPassword
+Errors Server_run(uint           serverPort,
+                  uint           serverTLSPort,
+                  const char     *caFileName,
+                  const char     *certFileName,
+                  const char     *keyFileName,
+                  const Password *serverPassword,
+                  const char     *jobDirectory
                  )
 {
   Errors             error;
@@ -2544,10 +3755,14 @@ Errors Server_run(uint       serverPort,
   #endif /* HAVE_GNU_TLS */
   }
 
-  /* start job-thread */
-  if (!Thread_init(&jobThread,0,jobThreadEntry,&jobList))
+  /* start threads */
+  if (!Thread_init(&jobThread,0,jobThreadEntry,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialise job thread!");
+  }
+  if (!Thread_init(&schedulerThread,0,schedulerThreadEntry,(void*)jobDirectory))
+  {
+    HALT_FATAL_ERROR("Cannot initialise scheduler thread!");
   }
 
   /* run server */
@@ -2687,6 +3902,10 @@ Errors Server_run(uint       serverPort,
   }
   String_delete(name);
 
+  /* wait for thread exit */
+  Thread_join(&schedulerThread);
+  Thread_join(&jobThread);
+
   /* done server */
   if (serverPort    != 0) Network_doneServer(&serverSocketHandle);
   if (serverTLSPort != 0) Network_doneServer(&serverTLSSocketHandle);
@@ -2763,6 +3982,49 @@ processCommand(&clientInfo,commandString);
 
   return ERROR_NONE;
 }
+
+#if 0
+Errors Server_addJob(JobTypes          jobType,
+                     const String      name,
+                     const String      archiveName,
+                     const PatternList *includePatternList,
+                     const PatternList *excludePatternList,
+                     const Options     *options
+                    )
+{
+  JobNode *jobNode;
+
+  assert(name != NULL);
+  assert(name != NULL);
+  assert(name != NULL);
+  assert(name != NULL);
+  assert(name != NULL);
+
+  jobNode = newJob(jobType,
+                   NULL,
+                   name,
+                   archiveName,
+                   includePatternList,
+                   excludePatternList,
+                   options
+                  );
+  if (jobNode == NULL)
+  {
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* add new job to list */
+  List_append(&jobList,jobNode);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  return ERROR_NONE;
+}
+#endif /* 0 */
 
 #ifdef __cplusplus
   }

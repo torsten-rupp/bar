@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems : all
@@ -34,6 +34,23 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+Node *List_newNode(ulong size)
+{
+  return (Node*)malloc(size);
+}
+
+Node *List_deleteNode(Node *node)
+{
+  Node *nextNode;
+
+  assert(node != NULL);
+
+  nextNode = node->next;
+  free(node);
+
+  return nextNode;
+}
 
 void List_init(void *list)
 {
@@ -235,7 +252,7 @@ void List_insert(void *list,
     ((Node*)node)->prev = ((Node*)nextNode)->prev;
     ((Node*)node)->next = ((Node*)nextNode);
     if (((Node*)nextNode)->prev != NULL) ((Node*)nextNode)->prev->next = node;
-    if (((Node*)nextNode)->next != NULL) ((Node*)nextNode)->next->prev = node;
+    ((Node*)nextNode)->prev = node;
 
     if (((List*)list)->head == nextNode) ((List*)list)->head = node;
     ((List*)list)->count++;

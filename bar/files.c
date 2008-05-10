@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.33 $
+* $Revision: 1.34 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -31,7 +31,6 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define MAX_BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
 
@@ -46,6 +45,16 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+String File_newFileName(void)
+{
+  return String_new();
+}
+
+void File_deleteFileName(String fileName)
+{
+  String_delete(fileName);
+}
 
 String File_setFileName(String fileName, const String name)
 {
@@ -186,8 +195,8 @@ void File_splitFileName(const String fileName, String *pathName, String *baseNam
   assert(pathName != NULL);
   assert(baseName != NULL);
 
-  (*pathName) = File_getFilePathName(String_new(),fileName);
-  (*baseName) = File_getFileBaseName(String_new(),fileName);
+  (*pathName) = File_getFilePathName(File_newFileName(),fileName);
+  (*baseName) = File_getFileBaseName(File_newFileName(),fileName);
 }
 
 void File_initSplitFileName(StringTokenizer *stringTokenizer, String fileName)
@@ -215,7 +224,12 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const n
 
 /*---------------------------------------------------------------------*/
 
-Errors File_getTmpFileName(String fileName, const String directory)
+Errors File_getTmpFileName(String fileName, const String pattern, const String directory)
+{
+  return File_getTmpFileNameCString(fileName,String_cString(pattern),directory);
+}
+
+Errors File_getTmpFileNameCString(String fileName, char const *pattern, const String directory)
 {
   char   *s;
   int    handle;
@@ -223,14 +237,16 @@ Errors File_getTmpFileName(String fileName, const String directory)
 
   assert(fileName != NULL);
 
+  if (pattern == NULL) pattern = "tmp-XXXXXX";
+
   if (directory != NULL)
   {
     String_set(fileName,directory);
-    File_appendFileNameCString(fileName,"bar-XXXXXX");
+    File_appendFileNameCString(fileName,pattern);
   }
   else
   {
-    String_setCString(fileName,"bar-XXXXXX");
+    String_setCString(fileName,pattern);
   }
   s = String_toCString(fileName);
   if (s == NULL)
@@ -254,21 +270,28 @@ Errors File_getTmpFileName(String fileName, const String directory)
   return ERROR_NONE;
 }
 
-Errors File_getTmpDirectoryName(String directoryName, const String directory)
+Errors File_getTmpDirectoryName(String directoryName, const String pattern, const String directory)
+{
+  return File_getTmpDirectoryNameCString(directoryName,String_cString(pattern),directory);
+}
+
+Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern, const String directory)
 {
   char   *s;
   Errors error;
 
   assert(directoryName != NULL);
 
+  if (pattern == NULL) pattern = "tmp-XXXXXX";
+
   if (directory != NULL)
   {
     String_set(directoryName,directory);
-    File_appendFileNameCString(directoryName,"bar-XXXXXX");
+    File_appendFileNameCString(directoryName,pattern);
   }
   else
   {
-    String_setCString(directoryName,"bar-XXXXXX");
+    String_setCString(directoryName,pattern);
   }
   s = String_toCString(directoryName);
   if (s == NULL)
@@ -304,8 +327,6 @@ Errors File_open(FileHandle    *fileHandle,
   assert(fileHandle != NULL);
   assert(fileName != NULL);
 
-  fileHandle->index = 0;
-
   switch (fileOpenMode)
   {
     case FILE_OPENMODE_CREATE:
@@ -316,6 +337,7 @@ Errors File_open(FileHandle    *fileHandle,
         return ERROR(CREATE_FILE,errno);
       }
 
+      fileHandle->index = 0;
       fileHandle->size  = 0;
       break;
     case FILE_OPENMODE_READ:
@@ -340,17 +362,19 @@ Errors File_open(FileHandle    *fileHandle,
         fclose(fileHandle->file);
         return error;
       }
-      fileHandle->size = (uint64)n;
       if (fseeko(fileHandle->file,(off_t)0,SEEK_SET) == -1)
       {
         error = ERROR(IO_ERROR,errno);
         fclose(fileHandle->file);
         return error;
       }
+
+      fileHandle->index = 0;
+      fileHandle->size  = (uint64)n;
       break;
     case FILE_OPENMODE_WRITE:
       /* create directory if needed */
-      pathName = File_getFilePathName(String_new(),fileName);
+      pathName = File_getFilePathName(File_newFileName(),fileName);
       if (!File_exists(pathName))
       {
         error = File_makeDirectory(pathName);
@@ -359,7 +383,7 @@ Errors File_open(FileHandle    *fileHandle,
           return error;
         }
       }
-      String_delete(pathName);
+      File_deleteFileName(pathName);
 
       /* open existing file for writing */
       fileHandle->file = fopen(String_cString(fileName),"r+b");
@@ -379,11 +403,12 @@ Errors File_open(FileHandle    *fileHandle,
         }
       }
 
+      fileHandle->index = 0;
       fileHandle->size  = 0;
       break;
     case FILE_OPENMODE_APPEND:
       /* create directory if needed */
-      pathName = File_getFilePathName(String_new(),fileName);
+      pathName = File_getFilePathName(File_newFileName(),fileName);
       if (!File_exists(pathName))
       {
         error = File_makeDirectory(pathName);
@@ -392,7 +417,7 @@ Errors File_open(FileHandle    *fileHandle,
           return error;
         }
       }
-      String_delete(pathName);
+      File_deleteFileName(pathName);
 
       /* open existing file for writing */
       fileHandle->file = fopen(String_cString(fileName),"ab");
@@ -409,7 +434,9 @@ Errors File_open(FileHandle    *fileHandle,
         fclose(fileHandle->file);
         return error;
       }
-      fileHandle->size = (uint64)n;
+
+      fileHandle->index = (uint64)n;
+      fileHandle->size  = (uint64)n;
       break;
     #ifndef NDEBUG
       default:
@@ -432,9 +459,6 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
   assert(fileHandle != NULL);
   assert(fileDescriptor >= 0);
 
-  fileHandle->index = 0;
-  fileHandle->size  = 0;
-
   switch (fileOpenMode)
   {
     case FILE_OPENMODE_CREATE:
@@ -445,6 +469,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
         return ERROR(CREATE_FILE,errno);
       }
 
+      fileHandle->index = 0;
       fileHandle->size  = 0;
       break;
     case FILE_OPENMODE_READ:
@@ -454,6 +479,9 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
       {
         return ERROR(OPEN_FILE,errno);
       }
+
+      fileHandle->index = 0;
+      fileHandle->size  = 0;
       break;
     case FILE_OPENMODE_WRITE:
       /* open file for writing */
@@ -463,6 +491,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
         return ERROR(OPEN_FILE,errno);
       }
 
+      fileHandle->index = 0;
       fileHandle->size  = 0;
       break;
     case FILE_OPENMODE_APPEND:
@@ -481,7 +510,9 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
         fclose(fileHandle->file);
         return error;
       }
-      fileHandle->size = (uint64)n;
+
+      fileHandle->index = (uint64)n;
+      fileHandle->size  = (uint64)n;
       break;
     #ifndef NDEBUG
       default:
@@ -496,8 +527,8 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
 Errors File_close(FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
-  assert(fileHandle->file != NULL);
-
+  assert(fileHandle->file);
+ 
   fclose(fileHandle->file);
   fileHandle->file = NULL;
 
@@ -534,6 +565,7 @@ Errors File_read(FileHandle *fileHandle,
   ssize_t n;
 
   assert(fileHandle != NULL);
+  assert(buffer != NULL);
 
   n = fread(buffer,1,bufferLength,fileHandle->file);
   if (   ((n <= 0) && ferror(fileHandle->file))
@@ -557,6 +589,7 @@ Errors File_write(FileHandle *fileHandle,
   ssize_t n;
 
   assert(fileHandle != NULL);
+  assert(buffer != NULL);
 
   n = fwrite(buffer,1,bufferLength,fileHandle->file);
   if (n > 0) fileHandle->index += n;
@@ -576,6 +609,7 @@ Errors File_readLine(FileHandle *fileHandle,
   int ch;
 
   assert(fileHandle != NULL);
+  assert(line != NULL);
 
   String_clear(line);
   do
@@ -595,7 +629,12 @@ Errors File_readLine(FileHandle *fileHandle,
   if      ((char)ch == '\r')
   {
     ch = getc(fileHandle->file);
-    if (ch != '\n') ungetc(ch,fileHandle->file);
+    if (ch >= 0) fileHandle->index += 1;
+    if (ch != '\n')
+    {
+      fileHandle->index -= 1;
+      ungetc(ch,fileHandle->file);
+    }
   }
 
   return ERROR_NONE;
@@ -605,9 +644,23 @@ Errors File_writeLine(FileHandle   *fileHandle,
                       const String line
                      )
 {
-  assert(fileHandle != NULL);
+  Errors error;
 
-  return File_write(fileHandle,String_cString(line),String_length(line));
+  assert(fileHandle != NULL);
+  assert(line != NULL);
+
+  error = File_write(fileHandle,String_cString(line),String_length(line));
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = File_write(fileHandle,"\n",1);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 uint64 File_getSize(FileHandle *fileHandle)
@@ -680,7 +733,7 @@ Errors File_makeDirectory(const String pathName)
 
   assert(pathName != NULL);
 
-  directoryName = String_new();
+  directoryName = File_newFileName();
   File_initSplitFileName(&pathNameTokenizer,pathName);
   if (File_getNextSplitFileName(&pathNameTokenizer,&name))
   {
@@ -699,7 +752,7 @@ Errors File_makeDirectory(const String pathName)
     {
       error = ERROR(IO_ERROR,errno);
       File_doneSplitFileName(&pathNameTokenizer);
-      String_delete(directoryName);
+      File_deleteFileName(directoryName);
       return error;
     }
   }
@@ -715,14 +768,14 @@ Errors File_makeDirectory(const String pathName)
         {
           error = ERROR(IO_ERROR,errno);
           File_doneSplitFileName(&pathNameTokenizer);
-          String_delete(directoryName);
+          File_deleteFileName(directoryName);
           return error;
         }
       }
     }
   }
   File_doneSplitFileName(&pathNameTokenizer);
-  String_delete(directoryName);
+  File_deleteFileName(directoryName);
 
   return ERROR_NONE;
 }
@@ -751,7 +804,7 @@ void File_closeDirectory(DirectoryHandle *directoryHandle)
   assert(directoryHandle != NULL);
 
   closedir(directoryHandle->dir);
-  String_delete(directoryHandle->name);
+  File_deleteFileName(directoryHandle->name);
 }
 
 bool File_endOfDirectory(DirectoryHandle *directoryHandle)
@@ -946,8 +999,8 @@ Errors File_delete(const String fileName, bool recursiveFlag)
       /* delete entries in directory */
       StringList_init(&directoryList);
       StringList_append(&directoryList,fileName);
-      directoryName = String_new();
-      name = String_new();
+      directoryName = File_newFileName();
+      name = File_newFileName();
       while (!StringList_empty(&directoryList) && (error == ERROR_NONE))
       {
         StringList_getFirst(&directoryList,directoryName);
@@ -998,8 +1051,8 @@ Errors File_delete(const String fileName, bool recursiveFlag)
           }
         }
       }
-      String_delete(name);
-      String_delete(directoryName);
+      File_deleteFileName(name);
+      File_deleteFileName(directoryName);
       StringList_done(&directoryList);
     }
     else
@@ -1294,6 +1347,20 @@ Errors File_getFileInfo(const String fileName,
   memcpy(fileInfo->cast,&cast,sizeof(FileCast));
 
   return ERROR_NONE;
+}
+
+uint64 File_getFileTimeModified(const String fileName)
+{
+  struct stat64 fileStat;
+
+  assert(fileName != NULL);
+
+  if (lstat64(String_cString(fileName),&fileStat) != 0)
+  {
+    return 0LL;
+  }
+
+  return (uint64)fileStat.st_mtime;
 }
 
 Errors File_setFileInfo(const String fileName,

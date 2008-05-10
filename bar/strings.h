@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -398,7 +398,7 @@ String String_toUpper(String string);
 * Name   : String_trim, String_trimRight, String_trimLeft
 * Purpose: trim string right/left
 * Input  : string - string
-*          chs    - chars to trim
+*          chars  - chars to trim
 * Output : -
 * Return : string
 * Notes  : -
@@ -510,6 +510,7 @@ bool String_scan(const String string, const char *format, ...);
 *              all \0 at the end of the string
 *            - %s and %S are parsed as strings which could be enclosed
 *              in "..." or '...'
+*            - if a value is NULL, skip value
 \***********************************************************************/
 
 bool String_parse(const String string, const char *format, ulong *nextIndex, ...);

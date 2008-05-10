@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -48,7 +48,7 @@
 * Input  : fileNameList - list with archive files
 *          includeList  - include list
 *          excludeList  - exclude list
-*          optiosn      - options
+*          jobOptions   - job options
 * Output : -
 * Return : ERROR_NONE if archive ok, otherwise error code
 * Notes  : -
@@ -57,7 +57,7 @@
 Errors Command_test(StringList  *fileNameList,
                     PatternList *includeList,
                     PatternList *excludeList,
-                    Options     *options
+                    JobOptions  *jobOptions
                    );
 
 #ifdef __cplusplus

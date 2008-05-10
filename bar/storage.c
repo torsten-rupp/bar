@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -105,11 +105,11 @@ LOCAL void updateStatusInfo(const StorageFileHandle *storageFileHandle)
 \***********************************************************************/
 
 #ifdef HAVE_SSH2
-LOCAL bool initSSHPassword(const Options *options)
+LOCAL bool initSSHPassword(const JobOptions *jobOptions)
 {
-  assert(options != NULL);
+  assert(jobOptions != NULL);
 
-  if (options->defaultSSHServer.password == NULL)
+  if (jobOptions->sshServer.password == NULL)
   {
     return Password_input(defaultSSHPassword,"SSH login password");
   }
@@ -224,7 +224,7 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
     /* sleep a short time to give hardware time for finishing volume, then unload current volume */
     printInfo(0,"Unload DVD #%d...",storageFileHandle->volumeNumber);
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
-    Misc_executeCommand(String_cString(storageFileHandle->options->dvd.unloadVolumeCommand),
+    Misc_executeCommand(String_cString(globalOptions.dvd.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
                         NULL,
                         NULL,
@@ -249,13 +249,13 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
 
     storageFileHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
-  else if (storageFileHandle->options->dvd.requestVolumeCommand != NULL)
+  else if (globalOptions.dvd.requestVolumeCommand != NULL)
   {
     dvdRequestedFlag = TRUE;
 
     /* request new volume via external command */
     printInfo(0,"Request new DVD #%d...",storageFileHandle->requestedVolumeNumber);
-    if (Misc_executeCommand(String_cString(storageFileHandle->options->dvd.requestVolumeCommand),
+    if (Misc_executeCommand(String_cString(globalOptions.dvd.requestVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             NULL,
                             NULL,
@@ -299,7 +299,7 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
     {
       /* load volume, then sleep a short time to give hardware time for reading volume information */
       printInfo(0,"Load DVD #%d...",storageFileHandle->requestedVolumeNumber);
-      Misc_executeCommand(String_cString(storageFileHandle->options->dvd.loadVolumeCommand),
+      Misc_executeCommand(String_cString(globalOptions.dvd.loadVolumeCommand),
                           textMacros,SIZE_OF_ARRAY(textMacros),
                           NULL,
                           NULL,
@@ -685,8 +685,8 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
   return TRUE;
 }
 
-Errors Storage_prepare(const String  storageName,
-                       const Options *options
+Errors Storage_prepare(const String     storageName,
+                       const JobOptions *jobOptions
                       )
 {
   String    storageSpecifier;
@@ -695,7 +695,7 @@ Errors Storage_prepare(const String  storageName,
   #endif /* HAVE_SSH2 */
 
   assert(storageName != NULL);
-  assert(options != NULL);
+  assert(jobOptions != NULL);
 
   storageSpecifier = String_new();
   switch (Storage_getType(storageName,storageSpecifier))
@@ -740,7 +740,7 @@ Errors Storage_prepare(const String  storageName,
           }
 
           /* initialize password */
-          if (!initSSHPassword(options))
+          if (!initSSHPassword(jobOptions))
           {
             String_delete(hostFileName);
             String_delete(hostName);
@@ -750,7 +750,7 @@ Errors Storage_prepare(const String  storageName,
           }
 
           /* check if ssh login is possible */
-          getSSHServer(hostName,options,&sshServer);
+          getSSHServer(hostName,jobOptions,&sshServer);
           if (String_empty(loginName)) String_set(loginName,sshServer.loginName);
           error = Network_connect(&socketHandle,
                                   SOCKET_TYPE_SSH,
@@ -758,7 +758,7 @@ Errors Storage_prepare(const String  storageName,
                                   sshServer.port,
                                   loginName,
                                   sshServer.publicKeyFileName,
-                                  sshServer.privatKeyFileName,
+                                  sshServer.privateKeyFileName,
                                   (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
                                   0
                                  );
@@ -778,7 +778,7 @@ Errors Storage_prepare(const String  storageName,
           String_delete(loginName);
         }
       #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(options);
+        UNUSED_VARIABLE(jobOptions);
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
@@ -824,7 +824,7 @@ Errors Storage_prepare(const String  storageName,
 
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const String                 storageName,
-                    const Options                *options,
+                    const JobOptions             *jobOptions,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
@@ -839,15 +839,15 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
   assert(storageFileHandle != NULL);
   assert(storageName != NULL);
-  assert(options != NULL);
+  assert(jobOptions != NULL);
   assert(fileName != NULL);
 
-  storageFileHandle->options                   = options;
+  storageFileHandle->jobOptions                = jobOptions;
   storageFileHandle->requestVolumeFunction     = storageRequestVolumeFunction;
   storageFileHandle->requestVolumeUserData     = storageRequestVolumeUserData;
   storageFileHandle->storageStatusInfoFunction = storageStatusInfoFunction;
   storageFileHandle->storageStatusInfoUserData = storageStatusInfoUserData;
-  if (options->waitFirstVolumeFlag)
+  if (jobOptions->waitFirstVolumeFlag)
   {
     storageFileHandle->volumeNumber          = 0;
     storageFileHandle->requestedVolumeNumber = 0;
@@ -878,18 +878,18 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           uint z;
 
           /* init variables */
-          storageFileHandle->type                     = STORAGE_TYPE_SCP;
-          storageFileHandle->scp.hostName             = String_new();
-          storageFileHandle->scp.hostPort             = 0;
-          storageFileHandle->scp.sshLoginName         = String_new();
-          storageFileHandle->scp.sshPublicKeyFileName = NULL;
-          storageFileHandle->scp.sshPrivatKeyFileName = NULL;
-          storageFileHandle->scp.sshPassword          = Password_new();
-          storageFileHandle->scp.bandWidth.max        = options->maxBandWidth;
-          storageFileHandle->scp.bandWidth.blockSize  = 64*1024;
+          storageFileHandle->type                      = STORAGE_TYPE_SCP;
+          storageFileHandle->scp.hostName              = String_new();
+          storageFileHandle->scp.hostPort              = 0;
+          storageFileHandle->scp.sshLoginName          = String_new();
+          storageFileHandle->scp.sshPublicKeyFileName  = NULL;
+          storageFileHandle->scp.sshPrivateKeyFileName = NULL;
+          storageFileHandle->scp.sshPassword           = Password_new();
+          storageFileHandle->scp.bandWidth.max         = globalOptions.maxBandWidth;
+          storageFileHandle->scp.bandWidth.blockSize   = 64*1024;
           for (z = 0; z < MAX_BAND_WIDTH_MEASUREMENTS; z++)
           {
-            storageFileHandle->scp.bandWidth.measurements[z] = options->maxBandWidth;
+            storageFileHandle->scp.bandWidth.measurements[z] = globalOptions.maxBandWidth;
           }
           storageFileHandle->scp.bandWidth.measurementNextIndex = 0;
           storageFileHandle->scp.bandWidth.measurementBytes     = 0;
@@ -911,11 +911,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           /* get ssh server data */
-          getSSHServer(storageFileHandle->scp.hostName,options,&sshServer);
+          getSSHServer(storageFileHandle->scp.hostName,jobOptions,&sshServer);
           storageFileHandle->scp.hostPort = sshServer.port;
           if (String_empty(storageFileHandle->scp.sshLoginName)) String_set(storageFileHandle->scp.sshLoginName,sshServer.loginName);
-          storageFileHandle->scp.sshPublicKeyFileName = sshServer.publicKeyFileName;
-          storageFileHandle->scp.sshPrivatKeyFileName = sshServer.privatKeyFileName;
+          storageFileHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
+          storageFileHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
           Password_set(storageFileHandle->scp.sshPassword,sshServer.password);
 
           /* free resources */
@@ -931,18 +931,18 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           uint z;
 
           /* init variables */
-          storageFileHandle->type                      = STORAGE_TYPE_SFTP;    
-          storageFileHandle->sftp.hostName             = String_new();         
-          storageFileHandle->sftp.hostPort             = 0;                    
-          storageFileHandle->sftp.sshLoginName         = String_new();         
-          storageFileHandle->sftp.sshPublicKeyFileName = NULL;                 
-          storageFileHandle->sftp.sshPrivatKeyFileName = NULL;                 
-          storageFileHandle->sftp.sshPassword          = Password_new();       
-          storageFileHandle->sftp.bandWidth.max        = options->maxBandWidth;
-          storageFileHandle->sftp.bandWidth.blockSize  = 64*1024;
+          storageFileHandle->type                       = STORAGE_TYPE_SFTP;    
+          storageFileHandle->sftp.hostName              = String_new();         
+          storageFileHandle->sftp.hostPort              = 0;                    
+          storageFileHandle->sftp.sshLoginName          = String_new();         
+          storageFileHandle->sftp.sshPublicKeyFileName  = NULL;                 
+          storageFileHandle->sftp.sshPrivateKeyFileName = NULL;                 
+          storageFileHandle->sftp.sshPassword           = Password_new();       
+          storageFileHandle->sftp.bandWidth.max         = globalOptions.maxBandWidth;
+          storageFileHandle->sftp.bandWidth.blockSize   = 64*1024;
           for (z = 0; z < MAX_BAND_WIDTH_MEASUREMENTS; z++)
           {
-            storageFileHandle->sftp.bandWidth.measurements[z] = options->maxBandWidth;
+            storageFileHandle->sftp.bandWidth.measurements[z] = globalOptions.maxBandWidth;
           }
           storageFileHandle->sftp.bandWidth.measurementNextIndex = 0;
           storageFileHandle->sftp.bandWidth.measurementBytes     = 0;
@@ -971,11 +971,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           /* get ssh server data */
-          getSSHServer(storageFileHandle->sftp.hostName,options,&sshServer);
+          getSSHServer(storageFileHandle->sftp.hostName,jobOptions,&sshServer);
           storageFileHandle->sftp.hostPort = sshServer.port;
           if (String_empty(storageFileHandle->sftp.sshLoginName)) String_set(storageFileHandle->sftp.sshLoginName,sshServer.loginName);
-          storageFileHandle->sftp.sshPublicKeyFileName = sshServer.publicKeyFileName;
-          storageFileHandle->sftp.sshPrivatKeyFileName = sshServer.privatKeyFileName;
+          storageFileHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
+          storageFileHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
           Password_set(storageFileHandle->sftp.sshPassword,sshServer.password);
         }
       #else /* not HAVE_SSH2 */
@@ -993,7 +993,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         /* parse storage string */
         deviceName = String_new();
         if (!Storage_parseDeviceSpecifier(storageSpecifier,
-                                          options->defaultDeviceName,
+                                          jobOptions->deviceName,
                                           deviceName,
                                           fileName
                                          )
@@ -1005,31 +1005,31 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         }
 
         /* check space in temporary directory */
-        error = File_getFileSystemInfo(options->tmpDirectory,&fileSystemInfo);
+        error = File_getFileSystemInfo(globalOptions.tmpDirectory,&fileSystemInfo);
         if (error != ERROR_NONE)
         {
           String_delete(deviceName);
           String_delete(storageSpecifier);
           return error;
         }
-        if (fileSystemInfo.freeBytes < (storageFileHandle->options->dvd.volumeSize+MAX_DVD_SIZE*(options->errorCorrectionCodesFlag?2:1)))
+        if (fileSystemInfo.freeBytes < (globalOptions.dvd.volumeSize+MAX_DVD_SIZE*(jobOptions->errorCorrectionCodesFlag?2:1)))
         {
           printWarning("Insufficient space in temporary directory '%s' (%.1f%s free, %.1f%s recommended)!\n",
-                       String_cString(options->tmpDirectory),
+                       String_cString(globalOptions.tmpDirectory),
                        BYTES_SHORT(fileSystemInfo.freeBytes),BYTES_UNIT(fileSystemInfo.freeBytes),
-                       BYTES_SHORT((storageFileHandle->options->dvd.volumeSize+MAX_DVD_SIZE*(options->errorCorrectionCodesFlag?2:1))),BYTES_UNIT((storageFileHandle->options->dvd.volumeSize+MAX_DVD_SIZE*(options->errorCorrectionCodesFlag?2:1)))
+                       BYTES_SHORT((globalOptions.dvd.volumeSize+MAX_DVD_SIZE*(jobOptions->errorCorrectionCodesFlag?2:1))),BYTES_UNIT((globalOptions.dvd.volumeSize+MAX_DVD_SIZE*(jobOptions->errorCorrectionCodesFlag?2:1)))
                       );
         }
 
         /* init variables */
         storageFileHandle->type             = STORAGE_TYPE_DVD;
         storageFileHandle->dvd.name         = deviceName;
-        storageFileHandle->dvd.steps        = options->errorCorrectionCodesFlag?4:1;
+        storageFileHandle->dvd.steps        = jobOptions->errorCorrectionCodesFlag?4:1;
         storageFileHandle->dvd.directory    = String_new();
-        storageFileHandle->dvd.volumeSize   = (storageFileHandle->options->dvd.volumeSize > 0LL)?storageFileHandle->options->dvd.volumeSize:(options->errorCorrectionCodesFlag?DVD_VOLUME_ECC_SIZE:DVD_VOLUME_SIZE);
+        storageFileHandle->dvd.volumeSize   = (globalOptions.dvd.volumeSize > 0LL)?globalOptions.dvd.volumeSize:(jobOptions->errorCorrectionCodesFlag?DVD_VOLUME_ECC_SIZE:DVD_VOLUME_SIZE);
         storageFileHandle->dvd.step         = 0;
 
-        if (options->waitFirstVolumeFlag)
+        if (jobOptions->waitFirstVolumeFlag)
         {
           storageFileHandle->dvd.number  = 0;
           storageFileHandle->dvd.newFlag = TRUE;
@@ -1044,7 +1044,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         storageFileHandle->dvd.totalSize    = 0LL;
 
         /* create temporary directory for DVD files */
-        error = File_getTmpDirectoryName(storageFileHandle->dvd.directory,options->tmpDirectory);
+        error = File_getTmpDirectoryName(storageFileHandle->dvd.directory,NULL,globalOptions.tmpDirectory);
         if (error != ERROR_NONE)
         {
           String_delete(storageFileHandle->device.fileName);
@@ -1054,10 +1054,10 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           return error;
         }
 
-        if (!options->noBAROnDVDFlag)
+        if (!jobOptions->noBAROnDVDFlag)
         {
           /* store a copy of BAR executable on DVD (ignore errors) */
-          sourceFileName = String_newCString(options->barExecutable);
+          sourceFileName = String_newCString(globalOptions.barExecutable);
           fileBaseName = File_getFileBaseName(String_new(),sourceFileName);
           destinationFileName = File_appendFileName(String_duplicate(storageFileHandle->dvd.directory),fileBaseName);
           File_copy(sourceFileName,destinationFileName);
@@ -1080,7 +1080,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         /* parse storage string */
         deviceName = String_new();
         if (!Storage_parseDeviceSpecifier(storageSpecifier,
-                                          options->defaultDeviceName,
+                                          jobOptions->deviceName,
                                           deviceName,
                                           fileName
                                          )
@@ -1092,10 +1092,10 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         }
 
         /* get device */
-        getDevice(deviceName,options,&storageFileHandle->device.device);
+        getDevice(deviceName,jobOptions,&storageFileHandle->device.device);
 
         /* check space in temporary directory */
-        error = File_getFileSystemInfo(options->tmpDirectory,&fileSystemInfo);
+        error = File_getFileSystemInfo(globalOptions.tmpDirectory,&fileSystemInfo);
         if (error != ERROR_NONE)
         {
           String_delete(deviceName);
@@ -1105,7 +1105,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         if (fileSystemInfo.freeBytes < (storageFileHandle->device.device.volumeSize*2))
         {
           printWarning("Insufficient space in temporary directory '%s' (%.1f%s free, %.1f%s recommended)!\n",
-                       String_cString(options->tmpDirectory),
+                       String_cString(globalOptions.tmpDirectory),
                        BYTES_SHORT(fileSystemInfo.freeBytes),BYTES_UNIT(fileSystemInfo.freeBytes),
                        BYTES_SHORT(storageFileHandle->device.device.volumeSize*2),BYTES_UNIT(storageFileHandle->device.device.volumeSize*2)
                       );
@@ -1116,7 +1116,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         storageFileHandle->device.name         = deviceName;
         storageFileHandle->device.directory    = String_new();
 
-        if (options->waitFirstVolumeFlag)
+        if (jobOptions->waitFirstVolumeFlag)
         {
           storageFileHandle->device.number  = 0;
           storageFileHandle->device.newFlag = TRUE;
@@ -1131,7 +1131,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         storageFileHandle->device.totalSize    = 0LL;
 
         /* create temporary directory for device files */
-        error = File_getTmpDirectoryName(storageFileHandle->device.directory,options->tmpDirectory);
+        error = File_getTmpDirectoryName(storageFileHandle->device.directory,NULL,globalOptions.tmpDirectory);
         if (error != ERROR_NONE)
         {
           String_delete(storageFileHandle->device.fileName);
@@ -1363,7 +1363,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
 
           /* get temporary image file name */
           imageFileName = String_new();
-          error = File_getTmpFileName(imageFileName,storageFileHandle->options->tmpDirectory);
+          error = File_getTmpFileName(imageFileName,NULL,globalOptions.tmpDirectory);
           if (error != ERROR_NONE)
           {
             return error;
@@ -1376,12 +1376,12 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           TEXT_MACRO_INT   (textMacros[3],"%sectors",0                               );
           TEXT_MACRO_INT   (textMacros[4],"%number", storageFileHandle->volumeNumber );
 
-          if (storageFileHandle->options->errorCorrectionCodesFlag)
+          if (storageFileHandle->jobOptions->errorCorrectionCodesFlag)
           {
             /* create DVD image */
             printInfo(0,"Make DVD image #%d with %d file(s)...",storageFileHandle->dvd.number,StringList_count(&storageFileHandle->dvd.fileNameList));
             storageFileHandle->dvd.step = 0;
-            error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.imageCommand),
+            error = Misc_executeCommand(String_cString(globalOptions.dvd.imageCommand),
                                         textMacros,SIZE_OF_ARRAY(textMacros),
                                         (ExecuteIOFunction)processIOmkisofs,
                                         (ExecuteIOFunction)processIOmkisofs,
@@ -1400,7 +1400,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             /* add error-correction codes to DVD image */
             printInfo(0,"Add ECC to image #%d...",storageFileHandle->dvd.number);
             storageFileHandle->dvd.step = 1;
-            error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.eccCommand),
+            error = Misc_executeCommand(String_cString(globalOptions.dvd.eccCommand),
                                         textMacros,SIZE_OF_ARRAY(textMacros),
                                         (ExecuteIOFunction)processIOdvdisaster,
                                         (ExecuteIOFunction)processIOdvdisaster,
@@ -1439,7 +1439,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             /* write to DVD */
             printInfo(0,"Write DVD #%d...",storageFileHandle->dvd.number);
             storageFileHandle->dvd.step = 3;
-            error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.writeCommand),
+            error = Misc_executeCommand(String_cString(globalOptions.dvd.writeCommand),
                                         textMacros,SIZE_OF_ARRAY(textMacros),
                                         (ExecuteIOFunction)processIOgrowisofs,
                                         (ExecuteIOFunction)processIOgrowisofs,
@@ -1473,7 +1473,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             /* write to DVD */
             printInfo(0,"Write DVD #%d with %d file(s)...",storageFileHandle->dvd.number,StringList_count(&storageFileHandle->dvd.fileNameList));
             storageFileHandle->dvd.step = 0;
-            error = Misc_executeCommand(String_cString(storageFileHandle->options->dvd.writeCommand),
+            error = Misc_executeCommand(String_cString(globalOptions.dvd.writeCommand),
                                         textMacros,SIZE_OF_ARRAY(textMacros),
                                         (ExecuteIOFunction)processIOgrowisofs,
                                         NULL,
@@ -1539,7 +1539,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
 
           /* get temporary image file name */
           imageFileName = String_new();
-          error = File_getTmpFileName(imageFileName,storageFileHandle->options->tmpDirectory);
+          error = File_getTmpFileName(imageFileName,NULL,globalOptions.tmpDirectory);
           if (error != ERROR_NONE)
           {
             return error;
@@ -1649,7 +1649,7 @@ void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
 Errors Storage_create(StorageFileHandle *storageFileHandle,
                       const String      fileName,
                       uint64            fileSize,
-                      const Options     *options
+                      const JobOptions  *jobOptions
                      )
 {
   Errors error;
@@ -1657,9 +1657,9 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 
   assert(storageFileHandle != NULL);
   assert(fileName != NULL);
-  assert(options != NULL);
+  assert(jobOptions != NULL);
 
-  UNUSED_VARIABLE(options);
+  UNUSED_VARIABLE(jobOptions);
 
   /* init variables */
   storageFileHandle->mode = STORAGE_MODE_WRITE;
@@ -1668,7 +1668,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
   {
     case STORAGE_TYPE_FILESYSTEM:
       /* check if archive file exists */
-      if (!options->overwriteArchiveFilesFlag && File_exists(fileName))
+      if (!jobOptions->overwriteArchiveFilesFlag && File_exists(fileName))
       {
         return ERROR_FILE_EXITS;
       }
@@ -1696,7 +1696,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
                                   storageFileHandle->scp.hostPort,
                                   storageFileHandle->scp.sshLoginName,
                                   storageFileHandle->scp.sshPublicKeyFileName,
-                                  storageFileHandle->scp.sshPrivatKeyFileName,
+                                  storageFileHandle->scp.sshPrivateKeyFileName,
                                   storageFileHandle->scp.sshPassword,
                                   0
                                  );
@@ -1734,7 +1734,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
                                   storageFileHandle->sftp.hostPort,
                                   storageFileHandle->sftp.sshLoginName,
                                   storageFileHandle->sftp.sshPublicKeyFileName,
-                                  storageFileHandle->sftp.sshPrivatKeyFileName,
+                                  storageFileHandle->sftp.sshPrivateKeyFileName,
                                   storageFileHandle->sftp.sshPassword,
                                   0
                                  );
@@ -1827,14 +1827,14 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
 
 Errors Storage_open(StorageFileHandle *storageFileHandle,
                     const String      fileName,
-                    const Options     *options
+                    const JobOptions  *jobOptions
                    )
 {
   Errors error;
 
   assert(storageFileHandle != NULL);
   assert(fileName != NULL);
-  assert(options != NULL);
+  assert(jobOptions != NULL);
 
   /* init variables */
   storageFileHandle->mode          = STORAGE_MODE_READ;
@@ -1861,7 +1861,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           struct stat fileInfo;
 
           /* init variables */
-          storageFileHandle->scp.bandWidth.max = options->maxBandWidth;
+          storageFileHandle->scp.bandWidth.max = globalOptions.maxBandWidth;
 
           /* open network connection */
           error = Network_connect(&storageFileHandle->scp.socketHandle,
@@ -1870,7 +1870,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
                                   storageFileHandle->scp.hostPort,
                                   storageFileHandle->scp.sshLoginName,
                                   storageFileHandle->scp.sshPublicKeyFileName,
-                                  storageFileHandle->scp.sshPrivatKeyFileName,
+                                  storageFileHandle->scp.sshPrivateKeyFileName,
                                   storageFileHandle->scp.sshPassword,
                                   0
                                  );
@@ -1892,7 +1892,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           }
         }
       #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(options);
+        UNUSED_VARIABLE(jobOptions);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -1905,7 +1905,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           storageFileHandle->sftp.index                  = 0LL;
           storageFileHandle->sftp.readAheadBuffer.offset = 0LL;
           storageFileHandle->sftp.readAheadBuffer.length = 0L;
-          storageFileHandle->sftp.bandWidth.max          = options->maxBandWidth;
+          storageFileHandle->sftp.bandWidth.max          = globalOptions.maxBandWidth;
           
           /* open network connection */
           error = Network_connect(&storageFileHandle->sftp.socketHandle,
@@ -1914,7 +1914,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
                                   storageFileHandle->sftp.hostPort,
                                   storageFileHandle->sftp.sshLoginName,
                                   storageFileHandle->sftp.sshPublicKeyFileName,
-                                  storageFileHandle->sftp.sshPrivatKeyFileName,
+                                  storageFileHandle->sftp.sshPrivateKeyFileName,
                                   storageFileHandle->sftp.sshPassword,
                                   0
                                  );
@@ -1961,7 +1961,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           storageFileHandle->sftp.size = sftpAttributes.filesize;
         }
       #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(options);
+        UNUSED_VARIABLE(jobOptions);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -2516,7 +2516,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
                              const String           storageName,
-                             const Options          *options
+                             const JobOptions       *jobOptions
                             )
 {
   String    storageSpecifier;
@@ -2527,7 +2527,7 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
 
   assert(storageDirectoryHandle != NULL);
   assert(storageName != NULL);
-  assert(options != NULL);
+  assert(jobOptions != NULL);
 
   storageSpecifier = String_new();
   switch (Storage_getType(storageName,storageSpecifier))
@@ -2579,7 +2579,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           String_set(storageDirectoryHandle->sftp.pathName,hostFileName);
 
           /* open network connection */
-          getSSHServer(hostName,options,&sshServer);
+          getSSHServer(hostName,jobOptions,&sshServer);
           if (String_empty(loginName)) String_set(loginName,sshServer.loginName);
           error = Network_connect(&storageDirectoryHandle->sftp.socketHandle,
                                   SOCKET_TYPE_SSH,
@@ -2587,7 +2587,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                                   sshServer.port,
                                   loginName,
                                   sshServer.publicKeyFileName,
-                                  sshServer.privatKeyFileName,
+                                  sshServer.privateKeyFileName,
                                   (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
                                   0
                                  );
@@ -2633,7 +2633,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           }
         }
       #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(options);
+        UNUSED_VARIABLE(jobOptions);
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:

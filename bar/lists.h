@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -57,8 +57,8 @@ typedef int(*ListNodeCompareFunction)(const void *node, void *userData);
 
 #define LIST_STATIC_INIT {NULL,NULL}
 
-#define LIST_NEW_NODE(Type) (Type*)malloc(sizeof(Type))
-#define LIST_DELETE_NODE(node) free(node)
+#define LIST_NEW_NODE(Type) (Type*)List_newNode(sizeof(Type))
+#define LIST_DELETE_NODE(node) List_deleteNode((Node*)node)
 
 /***************************** Forwards ********************************/
 
@@ -67,6 +67,28 @@ typedef int(*ListNodeCompareFunction)(const void *node, void *userData);
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : List_newNode
+* Purpose: allocate new list node
+* Input  : size - size of node
+* Output : -
+* Return : node or NULL if insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+Node *List_newNode(ulong size);
+
+/***********************************************************************\
+* Name   : List_deleteNode
+* Purpose: delete list node
+* Input  : node - list node
+* Output : -
+* Return : next node in list or NULL
+* Notes  : -
+\***********************************************************************/
+
+Node *List_deleteNode(Node *node);
 
 /***********************************************************************\
 * Name   : List_init

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.32 $
+* $Revision: 1.33 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -72,9 +72,19 @@ typedef enum
   ARCHIVE_TYPE_NORMAL,                  // normal archives; no incremental list file
   ARCHIVE_TYPE_FULL,                    // full archives, create incremental list file
   ARCHIVE_TYPE_INCREMENTAL,             // incremental achives
+  ARCHIVE_TYPE_UNKNOWN,
 } ArchiveTypes;
 
 /***************************** Datatypes *******************************/
+
+/* password mode */
+typedef enum
+{
+  PASSWORD_MODE_NONE,
+  PASSWORD_MODE_DEFAULT,
+  PASSWORD_MODE_ASK,
+  PASSWORD_MODE_UNKNOWN,
+} PasswordModes;
 
 /* ssh server */
 typedef struct
@@ -82,7 +92,7 @@ typedef struct
   uint     port;
   String   loginName;
   String   publicKeyFileName;
-  String   privatKeyFileName;
+  String   privateKeyFileName;
   Password *password;
 } SSHServer;
 
@@ -151,32 +161,19 @@ typedef struct
   LIST_HEADER(DeviceNode);
 } DeviceList;
 
-/* global options */
+/* options */
 typedef struct
 {
   const char          *barExecutable;                  // name of BAR executable
 
   uint                niceLevel;
   
-  ArchiveTypes        archiveType;
-
-  uint64              archivePartSize;
   String              tmpDirectory;
   uint64              maxTmpSize;
 
-  String              incrementalListFileName;
-
-  uint                directoryStripCount;
-  String              directory;
-
   ulong               maxBandWidth;
 
-  PatternTypes        patternType;
-
-  CompressAlgorithms  compressAlgorithm;
-  CryptAlgorithms     cryptAlgorithm;
   ulong               compressMinFileSize;
-  Password            *cryptPassword;
 
   SSHServer           *sshServer;                      // SSH server
   const SSHServerList *sshServerList;                  // list with SSH servers
@@ -191,21 +188,47 @@ typedef struct
   const DeviceList    *deviceList;                     // list with devices
   Device              defaultDevice;                   // default device
 
+  bool                noDefaultConfigFlag;             // do not read default config
+  bool                quietFlag;
+  long                verboseLevel;
+} GlobalOptions;
+
+/* options */
+typedef struct
+{
+  ArchiveTypes        archiveType;                     // archive type (backup, restore)
+
+  uint64              archivePartSize;                 // archive part size [bytes]
+
+  String              incrementalListFileName;         // name of incremental list file
+
+  uint                directoryStripCount;             // number of directories to strip in restore
+  String              directory;                       // restore destination directory
+
+  PatternTypes        patternType;
+
+  CompressAlgorithms  compressAlgorithm;
+  CryptAlgorithms     cryptAlgorithm;
+  Password            *cryptPassword;
+  PasswordModes       cryptPasswordMode;
+
+  SSHServer           sshServer;
+
+  String              deviceName;
+  Device              device;
+
   bool                skipUnreadableFlag;
   bool                overwriteArchiveFilesFlag;
   bool                overwriteFilesFlag;
-  bool                noDefaultConfigFlag;
   bool                errorCorrectionCodesFlag;
   bool                waitFirstVolumeFlag;
   bool                noStorageFlag;
   bool                noBAROnDVDFlag;                  // TRUE for not storing BAR on DVDs
   bool                stopOnErrorFlag;
-  bool                quietFlag;
-  long                verboseLevel;
-} Options;
+} JobOptions;
 
 /***************************** Variables *******************************/
-extern Options defaultOptions;
+extern GlobalOptions globalOptions;
 
 /****************************** Macros *********************************/
 
@@ -322,58 +345,69 @@ void printError(const char *text, ...);
 void logPostProcess(void);
 
 /***********************************************************************\
-* Name   : copyOptions
-* Purpose: copy options structure
-* Input  : destinationOptions - destination options variable
-*          sourceOptions      - source options
-* Output : -
+* Name   : initJobOptions
+* Purpose: init job options structure
+* Input  : jobOptions - job options variable
+* Output : jobOptions - initialized job options variable
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void copyOptions(Options *destinationOptions, const Options *sourceOptions);
+void initJobOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
-* Name   : freeOptions
-* Purpose: free options
-* Input  : -
+* Name   : copyJobOptions
+* Purpose: copy job options structure
+* Input  : sourceJobOptions      - source job options
+*          destinationJobOptions - destination job options variable
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void freeOptions(Options *options);
+void copyJobOptions(const JobOptions *sourceJobOptions, JobOptions *destinationJobOptions);
+
+/***********************************************************************\
+* Name   : freeJobOptions
+* Purpose: free job options
+* Input  : jobOptions - job options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeJobOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
 * Name   : getSSHServer
 * Purpose: get SSH server data
-* Input  : name    - server name
-*          options - options
+* Input  : name       - server name
+*          jobOptions - job options
 * Output : sshServer - SSH server data from server list or default
 *                      server values
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void getSSHServer(const String  name,
-                  const Options *options,
-                  SSHServer     *sshServer
+void getSSHServer(const String     name,
+                  const JobOptions *jobOptions,
+                  SSHServer        *sshServer
                  );
 
 /***********************************************************************\
 * Name   : getDevice
 * Purpose: get device data
-* Input  : name    - device name
-*          options - options
+* Input  : name       - device name
+*          jobOptions - job options
 * Output : device - device data from devie list or default
 *                   device values
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void getDevice(const String  name,
-               const Options *options,
-               Device        *device
+void getDevice(const String     name,
+               const JobOptions *jobOptions,
+               Device           *device
               );
 
 /***********************************************************************\
@@ -387,6 +421,104 @@ void getDevice(const String  name,
 \***********************************************************************/
 
 bool inputCryptPassword(Password **cryptPassword);
+
+/***********************************************************************\
+* Name   : configValueParseIncludeExclude
+* Purpose: command line option call back for parsing include/exclude
+*          patterns
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseIncludeExclude(void *userData, void *variable, const char *name, const char *value);
+
+/***********************************************************************\
+* Name   : configValueFormatInitIncludeExclude
+* Purpose: init format of config include/exclude statements
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitIncludeExclude(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneIncludeExclude
+* Purpose: done format of config include/exclude statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneIncludeExclude(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatIncludeExclude
+* Purpose: format next config include/exclude statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatIncludeExclude(void **formatUserData, void *userData, String line, const char *name);
+
+/***********************************************************************\
+* Name   : configValueParsePassword
+* Purpose: command line option call back for parsing password
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value);
+
+/***********************************************************************\
+* Name   : configValueFormatInitPassord
+* Purpose: init format config password
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitPassord(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatPassword
+* Purpose: format password config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatPassword(void **formatUserData, void *userData, String line, const char *name);
 
 #ifdef __cplusplus
   }

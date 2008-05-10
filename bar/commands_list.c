@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -275,7 +275,7 @@ LOCAL void printSpecialInfo(const String     fileName,
 Errors Command_list(StringList  *archiveFileNameList,
                     PatternList *includePatternList,
                     PatternList *excludePatternList,
-                    Options     *options
+                    JobOptions  *jobOptions
                    )
 {
   String       archiveFileName;
@@ -293,7 +293,7 @@ bool         remoteBarFlag;
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
-  assert(options != NULL);
+  assert(jobOptions != NULL);
 
   archiveFileName = String_new();
 remoteBarFlag=FALSE;
@@ -321,7 +321,7 @@ remoteBarFlag=FALSE;
           /* open archive */
           error = Archive_open(&archiveInfo,
                                archiveFileName,
-                               options
+                               jobOptions
                               );
           if (error != ERROR_NONE)
           {
@@ -380,7 +380,7 @@ remoteBarFlag=FALSE;
                     retryFlag = FALSE;
                     if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
                     {
-                      inputCryptPassword(&options->cryptPassword);
+                      inputCryptPassword(&jobOptions->cryptPassword);
                       retryFlag         = TRUE;
                       inputPasswordFlag = TRUE;
                     }
@@ -443,7 +443,7 @@ remoteBarFlag=FALSE;
                     retryFlag = FALSE;
                     if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
                     {
-                      inputCryptPassword(&options->cryptPassword);
+                      inputCryptPassword(&jobOptions->cryptPassword);
                       retryFlag         = TRUE;
                       inputPasswordFlag = TRUE;
                     }
@@ -504,7 +504,7 @@ remoteBarFlag=FALSE;
                     retryFlag = FALSE;
                     if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
                     {
-                      inputCryptPassword(&options->cryptPassword);
+                      inputCryptPassword(&jobOptions->cryptPassword);
                       retryFlag         = TRUE;
                       inputPasswordFlag = TRUE;
                     }
@@ -565,7 +565,7 @@ remoteBarFlag=FALSE;
                     retryFlag = FALSE;
                     if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
                     {
-                      inputCryptPassword(&options->cryptPassword);
+                      inputCryptPassword(&jobOptions->cryptPassword);
                       retryFlag         = TRUE;
                       inputPasswordFlag = TRUE;
                     }
@@ -655,14 +655,14 @@ remoteBarFlag=FALSE;
           /* start remote BAR via SSH (if not already started) */
           if (!remoteBarFlag)
           {
-            getSSHServer(hostName,options,&sshServer);
+            getSSHServer(hostName,jobOptions,&sshServer);
             error = Network_connect(&socketHandle,
                                     SOCKET_TYPE_SSH,
                                     hostName,
                                     sshServer.port,
                                     userName,
                                     sshServer.publicKeyFileName,
-                                    sshServer.privatKeyFileName,
+                                    sshServer.privateKeyFileName,
                                     sshServer.password,
                                     0
                                    );
@@ -690,7 +690,7 @@ remoteBarFlag=FALSE;
 
 
           /* start remote BAR in batch mode */
-          String_format(String_clear(line),"%S --batch",options->remoteBARExecutable);
+          String_format(String_clear(line),"%S --batch",globalOptions.remoteBARExecutable);
           error = Network_execute(&networkExecuteHandle,
                                   &socketHandle,
                                   NETWORK_EXECUTE_IO_MASK_STDOUT|NETWORK_EXECUTE_IO_MASK_STDERR,
@@ -709,7 +709,7 @@ remoteBarFlag=FALSE;
           do
           {
             /* send list archive command */
-            String_format(String_clear(line),"1 SET crypt-password %'s",options->cryptPassword);
+            String_format(String_clear(line),"1 SET crypt-password %'s",jobOptions->cryptPassword);
             Network_executeWriteLine(&networkExecuteHandle,line);
             String_format(String_clear(line),"2 ARCHIVE_LIST %S",hostFileName);
             Network_executeWriteLine(&networkExecuteHandle,line);
@@ -833,7 +833,7 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
             retryFlag = FALSE;
             if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
             {
-              inputCryptPassword(&options->cryptPassword);
+              inputCryptPassword(&jobOptions->cryptPassword);
               retryFlag         = TRUE;
               inputPasswordFlag = TRUE;
             }

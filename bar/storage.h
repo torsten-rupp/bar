@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -89,7 +89,7 @@ typedef struct
 {
   StorageModes                 mode;
   StorageTypes                 type;
-  const Options                *options;
+  const JobOptions             *jobOptions;
 
   StorageRequestVolumeFunction requestVolumeFunction;
   void                         *requestVolumeUserData;
@@ -115,7 +115,7 @@ typedef struct
         uint             hostPort;
         String           sshLoginName;
         String           sshPublicKeyFileName;
-        String           sshPrivatKeyFileName;
+        String           sshPrivateKeyFileName;
         Password         *sshPassword;
 
         SocketHandle     socketHandle;
@@ -129,7 +129,7 @@ typedef struct
         uint             hostPort;
         String           sshLoginName;
         String           sshPublicKeyFileName;
-        String           sshPrivatKeyFileName;
+        String           sshPrivateKeyFileName;
         Password         *sshPassword;
 
         SocketHandle     socketHandle;
@@ -143,7 +143,7 @@ typedef struct
         uint                hostPort;
         String              sshLoginName;
         String              sshPublicKeyFileName;
-        String              sshPrivatKeyFileName;
+        String              sshPrivateKeyFileName;
         Password            *sshPassword;
 
         SocketHandle        socketHandle;
@@ -323,8 +323,8 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_prepare(const String  storageName,
-                       const Options *options
+Errors Storage_prepare(const String     storageName,
+                       const JobOptions *jobOptions
                       );
 
 /***********************************************************************\
@@ -335,7 +335,7 @@ Errors Storage_prepare(const String  storageName,
 *                                           <file name>
 *                                           scp:<user name>@<host name>:<file name>
 *                                           sftp:<user name>@<host name>:<file name>
-*          options                      - options
+*          jobOptions                   - job options
 *          storageRequestVolumeFunction - volume request call back
 *          storageRequestVolumeUserData - user data for volume request
 *                                         call back
@@ -348,7 +348,7 @@ Errors Storage_prepare(const String  storageName,
 
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const String                 storageName,
-                    const Options                *options,
+                    const JobOptions             *jobOptions,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
@@ -405,7 +405,7 @@ void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
 *                               scp:<user name>@<host name>:<file name>
 *                               sftp:<user name>@<host name>:<file name>
 *          fileSize         - storage file size
-*          options          - options
+*          jobOptions       - job options
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -414,7 +414,7 @@ void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
 Errors Storage_create(StorageFileHandle *storageFileHandle,
                       const String      fileName,
                       uint64            fileSize,
-                      const Options     *options
+                      const JobOptions  *jobOptions
                      );
 
 /***********************************************************************\
@@ -424,7 +424,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 *          storageName       - storage name:
 *                                <file name>
 *                                sftp:<user name>@<host name>:<file name>
-*          options           - options
+*          jobOptions        - job options
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -432,7 +432,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 
 Errors Storage_open(StorageFileHandle *storageFileHandle,
                     const String      fileName,
-                    const Options     *options
+                    const JobOptions  *jobOptions
                    );
 
 /***********************************************************************\
@@ -535,7 +535,7 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
 * Purpose: open storage
 * Input  : storageDirectoryBandle - storage directory handle variable
 *          storageName            - storage name
-*          options                - options
+*          jobOptions             - job options
 * Output : storageDirectoryHandle - initialized storage directory handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -543,7 +543,7 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
 
 Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
                              const String           storageName,
-                             const Options          *options
+                             const JobOptions       *jobOptions
                             );
 
 /***********************************************************************\

@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -30,13 +30,15 @@
 
 /***************************** Constants *******************************/
 
+/* pattern types */
 typedef enum
 {
-  PATTERN_TYPE_GLOB,
-  PATTERN_TYPE_REGEX,
-  PATTERN_TYPE_EXTENDED_REGEX
+  PATTERN_TYPE_GLOB,                    // * and ?
+  PATTERN_TYPE_REGEX,                   // regular expressions
+  PATTERN_TYPE_EXTENDED_REGEX           // extended regular expressions
 } PatternTypes;
 
+/* match modes */
 typedef enum
 {
   PATTERN_MATCH_MODE_BEGIN,
@@ -52,9 +54,9 @@ typedef struct PatternNode
 
   PatternTypes type;
   String       pattern;
-  regex_t      regexBegin;   // regular expression for matching begin
-  regex_t      regexEnd;     // regular expression for matching end
-  regex_t      regexExact;   // regular expression for matching exact
+  regex_t      regexBegin;              // regular expression for matching begin
+  regex_t      regexEnd;                // regular expression for matching end
+  regex_t      regexExact;              // regular expression for matching exact
 } PatternNode;
 
 typedef struct

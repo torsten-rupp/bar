@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -180,12 +180,12 @@ void StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferL
   insertString(stringList,String_newBuffer(buffer,bufferLength),NULL);
 }
 
-void StringList_remove(StringList *stringList, StringNode *stringNode)
+StringNode *StringList_remove(StringList *stringList, StringNode *stringNode)
 {
   assert(stringList != NULL);
   assert(stringNode != NULL);
 
-  List_remove(stringList,stringNode);
+  return (StringNode*)List_remove(stringList,stringNode);
 }
 
 String StringList_getFirst(StringList *stringList, String string)
@@ -256,7 +256,7 @@ String StringList_getLast(StringList *stringList, String string)
 
 const char* const *StringList_toCStringArray(const StringList *stringList)
 {
-  char const  **cStringArray;
+  char const **cStringArray;
   StringNode *stringNode;
   uint       z;
 
@@ -277,6 +277,25 @@ const char* const *StringList_toCStringArray(const StringList *stringList)
 
   return cStringArray;
 }
+
+#ifndef NDEBUG
+void StringList_print(const StringList *stringList)
+{
+  StringNode *stringNode;
+  uint       z;
+
+  assert(stringList != NULL);
+
+  stringNode = stringList->head;
+  z = 1;
+  while (stringNode != NULL)
+  {
+    printf("%d: %s\n",z,String_cString(stringNode->string));
+    stringNode = stringNode->next;
+    z++;
+  }
+}
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }

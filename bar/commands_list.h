@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -48,7 +48,7 @@
 * Input  : fileNameList - list with archive files
 *          includeList  - include list
 *          excludeList  - exclude list
-*          optiosn      - options
+*          jobOptiosn   - job options
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -57,7 +57,7 @@
 Errors Command_list(StringList  *archiveFileNameList,
                     PatternList *includePatternList,
                     PatternList *excludePatternList,
-                    Options     *options
+                    JobOptions  *joboptions
                    );
 
 #ifdef __cplusplus

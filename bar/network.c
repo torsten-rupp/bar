@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -53,7 +53,7 @@
 
 /***************************** Variables *******************************/
 LOCAL String defaultSSHPublicKeyFileName;
-LOCAL String defaultSSHPrivatKeyFileName;
+LOCAL String defaultSSHPrivateKeyFileName;
 
 /****************************** Macros *********************************/
 
@@ -68,14 +68,14 @@ LOCAL String defaultSSHPrivatKeyFileName;
 Errors Network_initAll(void)
 {
   #ifdef HAVE_SSH2
-    defaultSSHPublicKeyFileName = String_new();
-    defaultSSHPrivatKeyFileName = String_new();
+    defaultSSHPublicKeyFileName  = String_new();
+    defaultSSHPrivateKeyFileName = String_new();
     File_setFileNameCString(defaultSSHPublicKeyFileName,getenv("HOME"));
     File_appendFileNameCString(defaultSSHPublicKeyFileName,".ssh");
     File_appendFileNameCString(defaultSSHPublicKeyFileName,"id_rsa.pub");
-    File_setFileNameCString(defaultSSHPrivatKeyFileName,getenv("HOME"));
-    File_appendFileNameCString(defaultSSHPrivatKeyFileName,".ssh");
-    File_appendFileNameCString(defaultSSHPrivatKeyFileName,"id_rsa");
+    File_setFileNameCString(defaultSSHPrivateKeyFileName,getenv("HOME"));
+    File_appendFileNameCString(defaultSSHPrivateKeyFileName,".ssh");
+    File_appendFileNameCString(defaultSSHPrivateKeyFileName,"id_rsa");
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */
 
@@ -93,7 +93,7 @@ void Network_doneAll(void)
   #endif /* HAVE_GNU_TLS */
   #ifdef HAVE_SSH2
     String_delete(defaultSSHPublicKeyFileName);
-    String_delete(defaultSSHPrivatKeyFileName);
+    String_delete(defaultSSHPrivateKeyFileName);
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */
 }
@@ -104,7 +104,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         hostPort,
                        const String sshLoginName,
                        const String sshPublicKeyFileName,
-                       const String sshPrivatKeyFileName,
+                       const String sshPrivateKeyFileName,
                        Password     *sshPassword,
                        uint         flags
                       )
@@ -198,7 +198,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         if (libssh2_userauth_publickey_fromfile(socketHandle->ssh2.session,
                                                 String_cString(sshLoginName),
                                                 String_cString((sshPublicKeyFileName != NULL)?sshPublicKeyFileName:defaultSSHPublicKeyFileName),
-                                                String_cString((sshPrivatKeyFileName != NULL)?sshPrivatKeyFileName:defaultSSHPrivatKeyFileName),
+                                                String_cString((sshPrivateKeyFileName != NULL)?sshPrivateKeyFileName:defaultSSHPrivateKeyFileName),
                                                 password
                                                ) != 0
            )

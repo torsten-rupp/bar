@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -53,7 +53,7 @@ typedef enum
   FILE_OPENMODE_CREATE,
   FILE_OPENMODE_READ,
   FILE_OPENMODE_WRITE,
-  FILE_OPENMODE_APPEND,
+  FILE_OPENMODE_APPEND
 } FileOpenModes;
 
 typedef enum
@@ -69,12 +69,13 @@ typedef enum
 /* file i/o handle */
 typedef struct
 {
-  FILE   *file;
-  uint64 index;
-  uint64 size;
+  String        fileName;
+  FILE          *file;
+  uint64        index;
+  uint64        size;
 } FileHandle;
 
-/* directory read handle */
+/* directory list tread handle */
 typedef struct
 {
   String        name;
@@ -82,7 +83,7 @@ typedef struct
   struct dirent *entry;
 } DirectoryHandle;
 
-/* device read handle */
+/* device list read handle */
 typedef struct
 {
   FILE *file;
@@ -130,6 +131,28 @@ typedef struct
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : File_newFileName
+* Purpose: create new file name variable
+* Input  : -
+* Output : -
+* Return : file name variable (empty)
+* Notes  : -
+\***********************************************************************/
+
+String File_newFileName(void);
+
+/***********************************************************************\
+* Name   : File_deleteFileName
+* Purpose: delete file name variable
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_deleteFileName(String fileName);
 
 /***********************************************************************\
 * Name   : File_setFileName
@@ -226,26 +249,30 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const n
 * Name   : File_getTmpFileName
 * Purpose: create and get a temporary file name
 * Input  : fileName  - variable for temporary file name
+*          pattern   - pattern with XXXXXX or NULL
 *          directory - directory to create temporary file (can be NULL)
-* Output : -
+* Output : fileName - temporary file name
 * Return : TRUE iff temporary file created, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-Errors File_getTmpFileName(String fileName, const String directory);
+Errors File_getTmpFileName(String fileName, const String pattern, const String directory);
+Errors File_getTmpFileNameCString(String fileName, char const *pattern, const String directory);
 
 /***********************************************************************\
 * Name   : File_getTmpDirectoryName
 * Purpose: create and get a temporary directory name
 * Input  : directoryName - variable for temporary directory name
+*          pattern       - pattern with XXXXXX or NULL
 *          directory     - directory to create temporary file (can be
 *                          NULL)
-* Output : -
+* Output : directoryName - temporary directory name
 * Return : TRUE iff temporary directory created, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-Errors File_getTmpDirectoryName(String directoryName, const String directory);
+Errors File_getTmpDirectoryName(String directoryName, const String pattern, const String directory);
+Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern, const String directory);
 
 /*---------------------------------------------------------------------*/
 
@@ -291,6 +318,8 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
 \***********************************************************************/
 
 Errors File_close(FileHandle *fileHandle);
+
+Errors File_fail(FileHandle *fileHandle);
 
 /***********************************************************************\
 * Name   : File_eof
@@ -642,6 +671,17 @@ bool File_isFileReadableCString(const char *fileName);
 Errors File_getFileInfo(const String fileName,
                         FileInfo     *fileInfo
                        );
+
+/***********************************************************************\
+* Name   : File_getFileTimeModified
+* Purpose: get file modified time
+* Input  : fileName - file name
+* Output : -
+* Return : time modified or 0
+* Notes  : -
+\***********************************************************************/
+
+uint64 File_getFileTimeModified(const String fileName);
 
 /***********************************************************************\
 * Name   : File_setInfo

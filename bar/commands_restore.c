@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.30 $
+* $Revision: 1.31 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -46,7 +46,7 @@ typedef struct
 {
   PatternList               *includePatternList;
   PatternList               *excludePatternList;
-  const Options             *options;
+  const JobOptions          *jobOptions;
 
   time_t                    startTime;
 
@@ -144,7 +144,7 @@ LOCAL void updateStatusInfo(const RestoreInfo *restoreInfo)
 Errors Command_restore(StringList                *archiveFileNameList,
                        PatternList               *includePatternList,
                        PatternList               *excludePatternList,
-                       Options                   *options,
+                       JobOptions                *jobOptions,
                        RestoreStatusInfoFunction restoreStatusInfoFunction,
                        void                      *restoreStatusInfoUserData,
                        bool                      *abortRequestFlag
@@ -163,12 +163,12 @@ Errors Command_restore(StringList                *archiveFileNameList,
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
-  assert(options != NULL);
+  assert(jobOptions != NULL);
 
   /* initialize variables */
   restoreInfo.includePatternList           = includePatternList;
   restoreInfo.excludePatternList           = excludePatternList;
-  restoreInfo.options                      = options;
+  restoreInfo.jobOptions                   = jobOptions;
   restoreInfo.startTime                    = time(NULL);
   restoreInfo.error                        = ERROR_NONE;
   restoreInfo.statusInfoFunction           = restoreStatusInfoFunction;
@@ -206,7 +206,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         options
+                         jobOptions
                         );
     if (error != ERROR_NONE)
     {
@@ -290,8 +290,8 @@ Errors Command_restore(StringList                *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            fileName,
-                                                           options->directory,
-                                                           options->directoryStripCount
+                                                           jobOptions->directory,
+                                                           jobOptions->directoryStripCount
                                                           );
 
 
@@ -299,7 +299,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
               fileFragmentNode = FileFragmentList_findFile(&fileFragmentList,fileName);
               if (fileFragmentNode != NULL)
               {
-                if (!options->overwriteFilesFlag && FileFragmentList_checkExists(fileFragmentNode,fragmentOffset,fragmentSize))
+                if (!jobOptions->overwriteFilesFlag && FileFragmentList_checkExists(fileFragmentNode,fragmentOffset,fragmentSize))
                 {
                   printInfo(1,"  Restore file '%s'...skipped (file part %ll..%ll exists)\n",
                             String_cString(destinationFileName),
@@ -314,7 +314,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
               }
               else
               {
-                if (!options->overwriteFilesFlag && File_exists(destinationFileName))
+                if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                 {
                   printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
                   String_delete(destinationFileName);
@@ -362,7 +362,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = error;
                 }
@@ -380,7 +380,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = error;
                 }
@@ -413,7 +413,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                              String_cString(destinationFileName),
                              getErrorText(error)
                             );
-                  if (options->stopOnErrorFlag)
+                  if (jobOptions->stopOnErrorFlag)
                   {
                     restoreInfo.error = error;
                   }
@@ -463,7 +463,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = error;
                 }
@@ -530,14 +530,14 @@ Errors Command_restore(StringList                *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            directoryName,
-                                                           options->directory,
-                                                           options->directoryStripCount
+                                                           jobOptions->directory,
+                                                           jobOptions->directoryStripCount
                                                           );
 
 
               /* create directory */
 //File_delete(destinationFileName,TRUE);
-              if (!options->overwriteFilesFlag && File_exists(destinationFileName))
+              if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
               {
                 printInfo(1,
                           "  Restore directory '%s'...skipped (file exists)\n",
@@ -562,7 +562,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = error;
                 }
@@ -581,7 +581,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = error;
                 }
@@ -646,13 +646,13 @@ Errors Command_restore(StringList                *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            linkName,
-                                                           options->directory,
-                                                           options->directoryStripCount
+                                                           jobOptions->directory,
+                                                           jobOptions->directoryStripCount
                                                           );
 
 
               /* create link */
-              if (!options->overwriteFilesFlag && File_exists(destinationFileName))
+              if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
               {
                 printInfo(1,
                           "  Restore link '%s'...skipped (file exists)\n",
@@ -662,7 +662,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = ERROR_FILE_EXITS;
                 }
@@ -684,7 +684,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = error;
                 }
@@ -704,7 +704,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = error;
                 }
@@ -766,13 +766,13 @@ Errors Command_restore(StringList                *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            fileName,
-                                                           options->directory,
-                                                           options->directoryStripCount
+                                                           jobOptions->directory,
+                                                           jobOptions->directoryStripCount
                                                           );
 
 
               /* create special device */
-              if (!options->overwriteFilesFlag && File_exists(destinationFileName))
+              if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
               {
                 printInfo(1,
                           "  Restore special device '%s'...skipped (file exists)\n",
@@ -781,7 +781,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = ERROR_FILE_EXITS;
                 }
@@ -805,7 +805,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = error;
                 }
@@ -824,7 +824,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
-                if (options->stopOnErrorFlag)
+                if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.error = error;
                 }

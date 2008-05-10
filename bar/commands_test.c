@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -60,7 +60,7 @@
 Errors Command_test(StringList  *archiveFileNameList,
                     PatternList *includePatternList,
                     PatternList *excludePatternList,
-                    Options     *options
+                    JobOptions  *jobOptions
                    )
 {
   byte             *archiveBuffer,*fileBuffer;
@@ -76,7 +76,7 @@ Errors Command_test(StringList  *archiveFileNameList,
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
   assert(excludePatternList != NULL);
-  assert(options != NULL);
+  assert(jobOptions != NULL);
 
   /* allocate resources */
   archiveBuffer = (byte*)malloc(BUFFER_SIZE);
@@ -102,7 +102,7 @@ Errors Command_test(StringList  *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         options
+                         jobOptions
                         );
     if (error != ERROR_NONE)
     {
