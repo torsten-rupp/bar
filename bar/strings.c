@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -793,13 +793,13 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
 \***********************************************************************/
 
 LOCAL bool parseString(const struct __String *string,
+                       ulong                 index,
                        const char            *format,
                        const va_list         arguments,
                        const char            *stringQuotes,
                        ulong                 *nextIndex
                       )
 {
-  ulong       index;
   FormatToken formatToken;
   union
   {
@@ -820,7 +820,6 @@ LOCAL bool parseString(const struct __String *string,
 
   CHECK_VALID(string);
 
-  index = 0;
   while ((*format) != '\0')
   {
     /* skip white spaces in format */
@@ -1002,7 +1001,8 @@ LOCAL bool parseString(const struct __String *string,
 
           z = 0;
           while (   (index < string->length)
-                 && (((*format) == '\0') || !isspace(string->data[index]))
+//                 && (((*format) == '\0') || !isspace(string->data[index]))
+                 && (formatToken.blankFlag || !isspace(string->data[index]))
                  && (string->data[index] != (*format))
                 )
           {
@@ -1093,7 +1093,8 @@ LOCAL bool parseString(const struct __String *string,
           String_clear(value.string);           
           z = 0;
           while (   (index < string->length)
-                 && (((*format) == '\0') || !isspace(string->data[index]))
+//                 && (((*format) == '\0') || !isspace(string->data[index]))
+                 && (formatToken.blankFlag || !isspace(string->data[index]))
                  && (string->data[index] != (*format))
                 )
           {
@@ -2693,6 +2694,85 @@ String String_trimLeft(String string, const char *chars)
   return string;
 }
 
+String String_quote(String string, char quoteChar)
+{
+  String s;
+  ulong  z;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    s = String_new();
+    String_appendChar(s,quoteChar);
+    z = 0;
+    while (z < string->length)
+    {
+      if (string->data[z] == quoteChar)
+      {
+        String_appendChar(s,'\\');
+        String_appendChar(s,quoteChar);
+      }
+      else
+      {
+        String_appendChar(s,string->data[z]);
+      }
+      z++;
+    }
+    String_appendChar(s,quoteChar);
+    String_set(string,s);
+    String_delete(s);
+  }
+
+  return string;
+}
+
+String String_unquote(String string, const char *quoteChars)
+{
+  const char *t0,*t1;
+  char       quoteChar;
+  String     s;
+  ulong      z;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    if (string->length > 0)
+    {
+      t0 = strchr(quoteChars,string->data[0]);
+      t1 = strchr(quoteChars,string->data[string->length-1]);
+      if ((t0 != NULL) && (t1 != NULL) && ((*t0) == (*t1)))
+      {
+        quoteChar = (*t0);
+        s = String_new();
+        z = 1;
+        while (z < string->length-1)
+        {
+          if      ((z < string->length-2) && (string->data[z+0] == '\\') && (string->data[z+1] == quoteChar))
+          {
+            String_appendChar(s,quoteChar);
+            z+=2;
+          }
+          else
+          {
+            String_appendChar(s,string->data[z]);
+            z+=1;
+          }
+        }
+        String_set(string,s);
+        String_delete(s);
+      }
+    }
+  }
+
+  return string;
+}
+
 String String_padRight(String string, ulong length, char ch)
 {
   ulong n;
@@ -2902,41 +2982,43 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   return TRUE;
 }
 
-bool String_scan(const String string, const char *format, ...)
+bool String_scan(const String string, ulong index, const char *format, ...)
 {
   va_list arguments;
   bool    result;
 
   assert(string != NULL);
+  assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
   assert(format != NULL);
 
   CHECK_VALID(string);
 
   va_start(arguments,format);
-  result = parseString(string,format,arguments,NULL,NULL);
+  result = parseString(string,index,format,arguments,NULL,NULL);
   va_end(arguments);
 
   return result;
 }
 
-bool String_parse(const String string, const char *format, ulong *nextIndex, ...)
+bool String_parse(const String string, ulong index, const char *format, ulong *nextIndex, ...)
 {
   va_list arguments;
   bool    result;
 
   assert(string != NULL);
+  assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
   assert(format != NULL);
 
   CHECK_VALID(string);
 
   va_start(arguments,nextIndex);
-  result = parseString(string,format,arguments,STRING_QUOTES,nextIndex);
+  result = parseString(string,index,format,arguments,STRING_QUOTES,nextIndex);
   va_end(arguments);
 
   return result;
 }
 
-bool String_match(const String string, const char *pattern, String matchString, ...)
+bool String_match(const String string, ulong index, const char *pattern, String matchString, ...)
 {
   String     subPattern;
   regex_t    regex;
@@ -2945,6 +3027,10 @@ bool String_match(const String string, const char *pattern, String matchString, 
   regmatch_t *subPatterns;
   bool       matchFlag;
   uint       z;
+
+  assert(string != NULL);
+  assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
+  assert(pattern != NULL);
 
   /* compile pattern */
   if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
@@ -2972,7 +3058,7 @@ bool String_match(const String string, const char *pattern, String matchString, 
   }
 
   /* match */
-  matchFlag = (regexec(&regex,String_cString(string),subPatternCount,subPatterns,0) == 0);
+  matchFlag = (regexec(&regex,String_cString(string)+index,subPatternCount,subPatterns,0) == 0);
 
   /* get sub-patterns */
   if (matchFlag)

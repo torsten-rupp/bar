@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -25,6 +25,7 @@
 #define STRING_END   -1
 
 #define STRING_WHITE_SPACES " \t\f\v\n\r"
+#define STRING_QUOTE        "'"
 #define STRING_QUOTES       "\"'"
 
 /***************************** Datatypes *******************************/
@@ -37,13 +38,13 @@ typedef struct __String* String;
 /* internal tokenizer data */
 typedef struct
 {
-  const char *data;
-  ulong      length;
-  long       index;
-  const char *separatorChars;
-  const char *stringQuotes;
-  bool       skipEmptyTokens;
-  String     token;
+  const char *data;                     // string data
+  ulong      length;                    // string length
+  long       index;                     // index in string
+  const char *separatorChars;           // token separator characters
+  const char *stringQuotes;             // string quote characters
+  bool       skipEmptyTokens;           // TRUE for skipping empty tokens
+  String     token;                     // next token
 } StringTokenizer;
 
 /* comparison, iteration functions */
@@ -409,6 +410,20 @@ String String_trimRight(String string, const char *chars);
 String String_trimLeft(String string, const char *chars);
 
 /***********************************************************************\
+* Name   : String_quote, String_unquote
+* Purpose: quote/unquote string
+* Input  : string     - string
+*          quoteChar  - quote character to add
+*          quoteChars - quote characters to remove
+* Output : -
+* Return : quoted/unquoted string
+* Notes  : -
+\***********************************************************************/
+
+String String_quote(String string, char quoteChar);
+String String_unquote(String string, const char *quoteChars);
+
+/***********************************************************************\
 * Name   : String_rightPad, String_rightPad
 * Purpose: pad string right/left
 * Input  : string - string
@@ -493,7 +508,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 * Notes  : for C-strings the max. length have to be specified with %<n>s
 \***********************************************************************/
 
-bool String_scan(const String string, const char *format, ...);
+bool String_scan(const String string, ulong index, const char *format, ...);
 
 /***********************************************************************\
 * Name   : String_parse
@@ -510,17 +525,18 @@ bool String_scan(const String string, const char *format, ...);
 *              all \0 at the end of the string
 *            - %s and %S are parsed as strings which could be enclosed
 *              in "..." or '...'
+*            - % s and % S parse rest of string (including spaces)
 *            - if a value is NULL, skip value
 \***********************************************************************/
 
-bool String_parse(const String string, const char *format, ulong *nextIndex, ...);
+bool String_parse(const String string, ulong index, const char *format, ulong *nextIndex, ...);
 
 /***********************************************************************\
 * Name   : String_match
 * Purpose: match string pattern
 * Input  : string      - string
 *          pattern     - pattern
-*          matchString - match string (can be NULL)
+*          matchString - regular expression match string
 *          ...         - optional sub-patterns (strings), last value
 *                        have to be NULL!
 * Output : -
@@ -528,13 +544,13 @@ bool String_parse(const String string, const char *format, ulong *nextIndex, ...
 * Notes  : -
 \***********************************************************************/
 
-bool String_match(const String string, const char *pattern, String matchString, ...);
+bool String_match(const String string, ulong index, const char *pattern, String matchString, ...);
 
 /***********************************************************************\
 * Name   : String_toInteger, String_toInteger64, String_toDouble,
 *          String_toBoolean
 * Purpose: convert string into integer, integer64, double, boolean or
-*          string (string without ' and ")
+*          string (string without enclosing quotes ' or ")
 * Input  : string                   - string variable (for string)
 *          convertString            - string to convert
 *          index                    - start index
@@ -563,7 +579,7 @@ String String_toString(String string, const String convertString, ulong index, l
 * Input  : string - string
 * Output : -
 * Return : C-string or NULL on insufficient memory
-* Notes  : -
+* Notes  : memory have to be deallocated by free()!
 \***********************************************************************/
 
 char* String_toCString(const String string);
