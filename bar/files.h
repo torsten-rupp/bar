@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -392,6 +392,22 @@ Errors File_readLine(FileHandle *fileHandle,
 
 Errors File_writeLine(FileHandle   *fileHandle,
                       const String line
+                     );
+
+/***********************************************************************\
+* Name   : File_printLine
+* Purpose: print line into file
+* Input  : fileHandle - file handle
+*          format     - format (like printf)
+*          ...        - optional arguments
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_printLine(FileHandle *fileHandle,
+                      const char *format,
+                      ...
                      );
 
 /***********************************************************************\

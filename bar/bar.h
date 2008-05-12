@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.35 $
+* $Revision: 1.36 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -75,39 +75,7 @@ typedef enum
   ARCHIVE_TYPE_UNKNOWN,
 } ArchiveTypes;
 
-/* month, day names */
-typedef enum
-{
-  SCHEDULE_MONTH_JAN,
-  SCHEDULE_MONTH_FEB,
-  SCHEDULE_MONTH_MAR,
-  SCHEDULE_MONTH_APR,
-  SCHEDULE_MONTH_MAY,
-  SCHEDULE_MONTH_JUN,
-  SCHEDULE_MONTH_JUL,
-  SCHEDULE_MONTH_AUG,
-  SCHEDULE_MONTH_SEP,
-  SCHEDULE_MONTH_OCT,
-  SCHEDULE_MONTH_NOV,
-  SCHEDULE_MONTH_DEC,
-} ScheduleMonths;
-
-#define SCHEDULE_MONTHS_NONE 0
-#define SCHEDULE_MONTHS_ANY  0xFFFF
-
-typedef enum
-{
-  SCHEDULE_DAY_MON,
-  SCHEDULE_DAY_TUE,
-  SCHEDULE_DAY_WED,
-  SCHEDULE_DAY_THU,
-  SCHEDULE_DAY_FRI,
-  SCHEDULE_DAY_SAT,
-  SCHEDULE_DAY_SUN,
-} ScheduleDays;
-
-#define SCHEDULE_DAYS_NONE 0
-#define SCHEDULE_DAYS_ANY  0xFFFF
+#define SCHEDULE_ANY -1
 
 /***************************** Datatypes *******************************/
 
@@ -234,22 +202,14 @@ typedef struct ScheduleNode
 {
   NODE_HEADER(struct ScheduleNode);
 
-  uint  hour;
-  uint  minute;
-  uint  day;
-  ulong days;
-  uint  month;
-  ulong months;
-  uint  year;
-
-  struct
-  {
-    uint hour;
-    uint minute;
-    uint day;
-    uint month;
-    uint year;
-  } repeat;
+  int          year;
+  int          month;
+  int          day;
+  int          hour;
+  int          minute;
+  int          weekDay;
+  ArchiveTypes archiveType;
+//  String       comment;
 } ScheduleNode;
 
 typedef struct
@@ -260,7 +220,7 @@ typedef struct
 /* job options */
 typedef struct
 {
-  ArchiveTypes        archiveType;                     // archive type (backup, restore)
+  ArchiveTypes        archiveType;                     // archive type (normal, full, incremental)
 
   uint64              archivePartSize;                 // archive part size [bytes]
 
@@ -308,6 +268,14 @@ extern GlobalOptions globalOptions;
                        ((n)>                1024LL)?"KB": \
                        "bytes" \
                       )
+
+#define DAY_ADD(days,day)    ((days) |=  (1 << (day)))
+#define DAY_REM(days,day)    ((days) &= ~(1 << (day)))
+#define DAY_TEST(days,day)   (((days) & (1 << (day))) != 0)
+
+#define MONTH_ADD(months,month)  ((months) |=  (1 << (month)))
+#define MONTH_REM(months,month)  ((months) &= ~(1 << (month)))
+#define MONTH_TEST(months,month) (((months) &  (1 << (month))) != 0)
 
 /***************************** Forwards ********************************/
 
@@ -583,6 +551,17 @@ void configValueFormatInitPassord(void **formatUserData, void *userData, void *v
 \***********************************************************************/
 
 bool configValueFormatPassword(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : parseSchedule
+* Purpose: parse schedule
+* Input  : s            - string
+* Output : 
+* Return : scheduleNode or NULL on error
+* Notes  : -
+\***********************************************************************/
+
+ScheduleNode *parseSchedule(const String s);
 
 /***********************************************************************\
 * Name   : configValueParseSchedule

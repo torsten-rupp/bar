@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -724,6 +724,7 @@ remoteBarFlag=FALSE;
 
               /* parse and output list */
               if      (String_parse(line,
+                                    STRING_BEGIN,
                                     "%d %d %y FILE %llu %llu %llu %llu %d %d %S",
                                     NULL,
                                     &id,
@@ -762,6 +763,7 @@ remoteBarFlag=FALSE;
                 }
               }
               else if (String_parse(line,
+                                    STRING_BEGIN,
                                     "%d %d %d DIRECTORY %d %S",
                                     NULL,
                                     &id,
@@ -790,6 +792,7 @@ remoteBarFlag=FALSE;
                 }
               }
               else if (String_parse(line,
+                                    STRING_BEGIN,
                                     "%d %d %d LINK %d %S %S",
                                     NULL,
                                     &id,

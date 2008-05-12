@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -112,19 +112,84 @@ uint64 Misc_getTimestamp(void)
   }
 }
 
-const char *Misc_getDateTime(char *buffer, uint bufferSize)
+uint64 Misc_getCurrentDateTime(void)
 {
-  time_t    dateTime;
+  struct timeval tv;
+
+  gettimeofday(&tv,NULL);
+
+  return (uint64)tv.tv_sec;
+}
+
+void Misc_splitDateTime(uint64   dateTime,
+                        uint     *year,   
+                        uint     *month,  
+                        uint     *day,    
+                        uint     *hour,   
+                        uint     *minute, 
+                        uint     *second, 
+                        WeekDays *weekDay 
+                       )
+{
+  time_t    n;
+  struct tm tmStruct;
+
+  n = (time_t)dateTime;
+  localtime_r(&n,&tmStruct);
+  if (year    != NULL) (*year)    = tmStruct.tm_year + 1900;
+  if (month   != NULL) (*month)   = tmStruct.tm_mon + 1;
+  if (day     != NULL) (*day)     = tmStruct.tm_mday;
+  if (hour    != NULL) (*hour)    = tmStruct.tm_hour;
+  if (minute  != NULL) (*minute)  = tmStruct.tm_min;
+  if (second  != NULL) (*second)  = tmStruct.tm_sec;
+  if (weekDay != NULL) (*weekDay) = (tmStruct.tm_wday + WEEKDAY_SUN) % 7;
+}
+
+const char *Misc_getDateTime(uint64 dateTime, char *buffer, uint bufferSize)
+{
+  time_t    n;
   struct tm tmStruct;
 
   assert(buffer != NULL);
 
-  time(&dateTime);
-  localtime_r(&dateTime,&tmStruct);
+  n = (time_t)dateTime;
+  localtime_r(&n,&tmStruct);
   strftime(buffer,bufferSize-1,DATE_TIME_FORMAT,&tmStruct);
   buffer[bufferSize-1] = '\0';
 
   return buffer;
+}
+
+uint64 Misc_makeDateTime(uint year,
+                         uint month,
+                         uint day,
+                         uint hour,
+                         uint minute,
+                         uint second
+                        )
+{
+  struct tm tmStruct;
+
+  assert(year >= 1900);
+  assert(month >= 1);
+  assert(month <= 12);
+  assert(day >= 1);
+  assert(day <= 31);
+  assert(hour >= 0);
+  assert(hour <= 23);
+  assert(minute >= 0);
+  assert(minute <= 59);
+  assert(second >= 0);
+  assert(second <= 59);
+
+  tmStruct.tm_year = year - 1900;
+  tmStruct.tm_mon  = month - 1;
+  tmStruct.tm_mday = day;
+  tmStruct.tm_hour = hour;
+  tmStruct.tm_min  = minute;
+  tmStruct.tm_sec  = second;
+
+  return (uint64)mktime(&tmStruct);
 }
 
 void Misc_udelay(uint64 time)

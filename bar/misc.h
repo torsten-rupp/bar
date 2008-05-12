@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -47,6 +47,34 @@ typedef struct
 typedef void(*ExecuteIOFunction)(void         *userData,
                                  const String line
                                 );
+
+/* month, day names */
+typedef enum
+{
+  MONTH_JAN =  1,
+  MONTH_FEB =  2,
+  MONTH_MAR =  3,
+  MONTH_APR =  4,
+  MONTH_MAY =  5,
+  MONTH_JUN =  6,
+  MONTH_JUL =  7,
+  MONTH_AUG =  8,
+  MONTH_SEP =  9,
+  MONTH_OCT = 10,
+  MONTH_NOV = 11,
+  MONTH_DEC = 12,
+} Months;
+
+typedef enum
+{
+  WEEKDAY_MON = 0,
+  WEEKDAY_TUE = 1,
+  WEEKDAY_WED = 2,
+  WEEKDAY_THU = 3,
+  WEEKDAY_FRI = 4,
+  WEEKDAY_SAT = 5,
+  WEEKDAY_SUN = 6,
+} WeekDays;
 
 /***************************** Variables *******************************/
 
@@ -97,16 +125,75 @@ typedef void(*ExecuteIOFunction)(void         *userData,
 uint64 Misc_getTimestamp(void);
 
 /***********************************************************************\
+* Name   : Misc_getCurrentDateTime
+* Purpose: get current date/time
+* Input  : -
+* Output : -
+* Return : date/time (seconds since 1970-1-1 00:00:00)
+* Notes  : -
+\***********************************************************************/
+
+uint64 Misc_getCurrentDateTime(void);
+
+/***********************************************************************\
+* Name   : Misc_splitDateTime
+* Purpose: split date/time into parts
+* Input  : dateTime - date/time
+* Output : year    - year, YYYY (could be NULL)
+*          month   - month, 1..12 (could be NULL)
+*          day     - day, 1..31 (could be NULL)
+*          hour    - hour, 0..23 (could be NULL)
+*          minute  - minute, 0..59 (could be NULL)
+*          second  - second, 0..59 (could be NULL)
+*          weekDay - week day, DAY_* (could be NULL)
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_splitDateTime(uint64   dateTime,
+                        uint     *year,
+                        uint     *month,
+                        uint     *day,
+                        uint     *hour,
+                        uint     *minute,
+                        uint     *second,
+                        WeekDays *weekDay
+                       );
+
+/***********************************************************************\
+* Name   : Misc_makeDateTime
+* Purpose: create date/time from parts
+* Input  : year    - year, YYYY
+*          month   - month, 1..12
+*          day     - day, 1..31
+*          hour    - hour, 0..23
+*          minute  - minute, 0..59
+*          second  - second, 0..59
+* Return : date/time (seconds since 1970-1-1 00:00:00)
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+uint64 Misc_makeDateTime(uint year,
+                         uint month,
+                         uint day,
+                         uint hour,
+                         uint minute,
+                         uint second
+                        );
+
+/***********************************************************************\
 * Name   : Misc_getDateTime
 * Purpose: get current date/time
-* Input  : buffer     - buffer for date/time stirng
+* Input  : dateTime   - date/time (seconds since 1970-1-1 00:00:00)
+*          buffer     - buffer for date/time stirng
 *          bufferSize - buffer size
 * Output : -
 * Return : date/time string
 * Notes  : -
 \***********************************************************************/
 
-const char *Misc_getDateTime(char *buffer, uint bufferSize);
+const char *Misc_getDateTime(uint64 dateTime, char *buffer, uint bufferSize);
 
 /***********************************************************************\
 * Name   : udelay

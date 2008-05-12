@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -471,7 +471,7 @@ LOCAL void processIOmkisofs(StorageFileHandle *storageFileHandle,
   double p;
 
   s = String_new();
-  if (String_match(line,".* ([0-9\\.]+)% done.*",NULL,s,NULL))
+  if (String_match(line,STRING_BEGIN,".* ([0-9\\.]+)% done.*",NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: mkisofs: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
@@ -499,14 +499,14 @@ LOCAL void processIOdvdisaster(StorageFileHandle *storageFileHandle,
   double p;
 
   s = String_new();
-  if (String_match(line,".*adding space\\): +([0-9\\.]+)%",NULL,s,NULL))
+  if (String_match(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: dvdisaster1: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
     storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->dvd.step+0)*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
     updateStatusInfo(storageFileHandle);
   }
-  if (String_match(line,".*generation: +([0-9\\.]+)%",NULL,s,NULL))
+  if (String_match(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: dvdisaster2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
@@ -535,7 +535,7 @@ LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
   double p;
 
   s = String_new();
-  if (String_match(line,".* \\(([0-9\\.]+)%\\) .*",NULL,s,NULL))
+  if (String_match(line,STRING_BEGIN,".* \\(([0-9\\.]+)%\\) .*",NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: growisofs2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
