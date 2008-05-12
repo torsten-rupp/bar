@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.32 $
+* $Revision: 1.33 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -76,23 +76,24 @@ typedef struct JobNode
   NODE_HEADER(struct JobNode);
 
   String       fileName;                       // file name
-  uint64       timeModified;
-  uint64       lastExecutionTime;              // last execution time (timestamp)
+  uint64       timeModified;                   // file modified date/time (timestamp)
 
   /* job config */
   JobTypes     type;                           // job type: backup, restore
   String       name;                           // name of job
   String       archiveName;                    // archive name
-  JobOptions   jobOptions;                     // options for job
   PatternList  includePatternList;             // included files
   PatternList  excludePatternList;             // excluded files
   ScheduleList scheduleList;                   // schedule list
+  JobOptions   jobOptions;                     // options for job
   bool         modifiedFlag;                   // TRUE iff job config modified
+
+  /* schedule info */
+  uint64       lastExecutionDateTime;          // last execution date/time (timestamp)
 
   /* job info */
   uint         id;                             // uniq job id
   JobStates    state;                          // current state of job
-  uint64       nextExecutionTime;              // next execution time (timestamp)
   uint         requestedVolumeNumber;          // requested volume number
   uint         volumeNumber;                   // loaded volume number
   bool         requestedAbortFlag;             // TRUE for abort operation
@@ -341,6 +342,15 @@ LOCAL bool           quitFlag;
 
 /****************************** Macros *********************************/
 
+#define CHECK_JOB_IS_ACTIVE(jobNode) (   (jobNode->state == JOB_STATE_WAITING) \
+                                      || (jobNode->state == JOB_STATE_RUNNING) \
+                                      || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
+                                     )
+
+#define CHECK_JOB_IS_RUNNING(jobNode) (   (jobNode->state == JOB_STATE_RUNNING) \
+                                       || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
+                                      )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -418,7 +428,7 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   /* init job node */
   jobNode->fileName                          = String_duplicate(fileName);
   jobNode->timeModified                      = 0LL;
-  jobNode->lastExecutionTime                 = 0LL;
+  jobNode->lastExecutionDateTime             = 0LL;
 
   jobNode->type                              = jobType;
   jobNode->name                              = String_duplicate(name);
@@ -525,11 +535,138 @@ LOCAL JobNode *findJobById(int jobId)
   return jobNode;
 }
 
-LOCAL uint64 calculateNextExecutionTime(uint64             lastExecutionTime,
-                                        const ScheduleList *scheduleList
-                                       )
+/***********************************************************************\
+* Name   : readJobFileScheduleInfo
+* Purpose: read job file schedule info
+* Input  : jobNode - job node
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readJobFileScheduleInfo(JobNode *jobNode)
 {
-  return 0;
+  String     fileName,pathName,baseName;
+  FileHandle fileHandle;
+  Errors     error;
+  String     line;
+  uint64     n;
+
+  assert(jobNode != NULL);
+
+  jobNode->lastExecutionDateTime = 0LL;
+
+  /* get filename*/
+  fileName = File_newFileName();
+  File_splitFileName(jobNode->fileName,&pathName,&baseName);
+  File_setFileName(fileName,pathName);
+  File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
+  File_deleteFileName(baseName);
+  File_deleteFileName(pathName);
+
+  if (File_exists(fileName))
+  {
+    /* open file .name */
+    error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+    if (error != ERROR_NONE)
+    {
+      File_deleteFileName(fileName);
+      return error;
+    }
+
+    /* read file */
+    line = String_new();
+    while (!File_eof(&fileHandle))
+    {
+      /* read line */
+      error = File_readLine(&fileHandle,line);
+      if (error != ERROR_NONE) break;
+
+      /* skip comments, empty lines */
+      if ((String_length(line) == 0) || (String_index(line,0) == '#'))
+      {
+        continue;
+      }
+
+      /* parse */
+      if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
+      {
+        jobNode->lastExecutionDateTime = n;
+      }
+    }
+    String_delete(line);
+
+    /* close file */
+    File_close(&fileHandle);
+
+    if (error != ERROR_NONE)
+    {
+      File_deleteFileName(fileName);
+      return error;
+    }
+  }
+  else
+  {
+    jobNode->lastExecutionDateTime = Misc_getCurrentDateTime();
+
+    error = ERROR_NONE;
+  }
+
+  /* free resources */
+  File_deleteFileName(fileName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : writeJobFileScheduleInfo
+* Purpose: write job file schedule info
+* Input  : jobNode - job node
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors writeJobFileScheduleInfo(JobNode *jobNode)
+{
+  String     fileName,pathName,baseName;
+  FileHandle fileHandle;
+  Errors     error;
+
+  assert(jobNode != NULL);
+
+  /* get filename*/
+  fileName = File_newFileName();
+  File_splitFileName(jobNode->fileName,&pathName,&baseName);
+  File_setFileName(fileName,pathName);
+  File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
+  File_deleteFileName(baseName);
+  File_deleteFileName(pathName);
+
+  /* create file .name */
+  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+  if (error != ERROR_NONE)
+  {
+    File_deleteFileName(fileName);
+    return error;
+  }
+
+  /* write file */
+  error = File_printLine(&fileHandle,"%lld",jobNode->lastExecutionDateTime);
+
+  /* close file */
+  File_close(&fileHandle);
+
+  if (error != ERROR_NONE)
+  {
+    File_deleteFileName(fileName);
+    return error;
+  }
+
+  /* free resources */
+  File_deleteFileName(fileName);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -549,8 +686,7 @@ LOCAL bool readJobFile(JobNode *jobNode)
   uint       lineNb;
   String     line;
   String     name,value;
-  String     fileName,pathName,baseName;
-  uint64     n;
+  ulong      nextIndex;
 
   assert(jobNode != NULL);
   assert(jobNode->fileName != NULL);
@@ -569,6 +705,11 @@ LOCAL bool readJobFile(JobNode *jobNode)
     String_delete(line);
     return FALSE;
   }
+
+  /* reset values */
+  Pattern_clearList(&jobNode->includePatternList);
+  Pattern_clearList(&jobNode->excludePatternList);
+  List_clear(&jobNode->scheduleList,NULL,NULL);
 
   /* parse file */
   failFlag = FALSE;
@@ -598,8 +739,9 @@ LOCAL bool readJobFile(JobNode *jobNode)
     }
 
     /* parse line */
-    if (String_parse(line,"%S=%S",NULL,name,value))
+    if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
+//      String_unquote(String_trim(String_sub(value,line,nextIndex,STRING_END),STRING_WHITE_SPACES),STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
                              CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
@@ -638,44 +780,8 @@ LOCAL bool readJobFile(JobNode *jobNode)
   /* save time modified */
   jobNode->timeModified = File_getFileTimeModified(jobNode->fileName);
 
-  /* get last executed time */
-  jobNode->lastExecutionTime = 0LL;
-  File_splitFileName(jobNode->fileName,&pathName,&baseName);
-  fileName = File_newFileName();
-  File_setFileName(fileName,pathName);
-  File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
-  File_deleteFileName(baseName);
-  File_deleteFileName(pathName);
-fprintf(stderr,"%s,%d: last executed fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
-  error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
-  if (error == ERROR_NONE)
-  {
-    while (!File_eof(&fileHandle))
-    {
-      /* read line */
-      error = File_readLine(&fileHandle,line);
-      if (error != ERROR_NONE) break;
-
-      /* skip comments, empty lines */
-      if ((String_length(line) == 0) || (String_index(line,0) == '#'))
-      {
-        continue;
-      }
-
-      /* parse */
-      if (String_parse(line,"%lld",NULL,&n))
-      {
-        jobNode->lastExecutionTime = n;
-      }
-    }
-    File_close(&fileHandle);
-  }
-  File_deleteFileName(fileName);
-
-  /* calculate next execution time */
-  jobNode->nextExecutionTime = calculateNextExecutionTime(jobNode->lastExecutionTime,
-                                                          &jobNode->scheduleList
-                                                         );
+  /* read schedule info */
+  readJobFileScheduleInfo(jobNode);
 
   /* free resources */
   String_delete(line);
@@ -740,11 +846,10 @@ LOCAL Errors rereadJobFiles(const char *jobDirectory)
         List_append(&jobList,jobNode);
       }
 
-      if (   (jobNode->state == JOB_STATE_NONE)
+      if (   !CHECK_JOB_IS_ACTIVE(jobNode)
           && (jobNode->timeModified < File_getFileTimeModified(fileName))
          )
       {
-fprintf(stderr,"%s,%d: config %s\n",__FILE__,__LINE__,String_cString(fileName));
         /* read job */
         readJobFile(jobNode);
       }
@@ -825,7 +930,7 @@ LOCAL StringNode *deleteJobFileEntries(StringList *stringList,
     }
 
     /* parse and delete */
-    if (String_parse(stringNode->string,"%S=%S",NULL,s,NULL) && String_equalsCString(s,name))
+    if (String_parse(stringNode->string,STRING_BEGIN,"%S=%S",NULL,s,NULL) && String_equalsCString(s,name))
     {
       if ((nextNode == NULL) || (nextNode = stringNode)) nextNode = stringNode->next;
       stringNode = StringList_remove(stringList,stringNode);
@@ -1264,6 +1369,7 @@ LOCAL void jobThreadEntry(void)
     Semaphore_lock(&jobList.lock);
 
     /* done job */
+    jobNode->lastExecutionDateTime = Misc_getCurrentDateTime();
     if      (jobNode->requestedAbortFlag)
     {
       jobNode->state = JOB_STATE_ABORTED;
@@ -1275,6 +1381,9 @@ LOCAL void jobThreadEntry(void)
     else
     {
       jobNode->state = JOB_STATE_COMPLETED;
+
+      /* store schedule info */
+      writeJobFileScheduleInfo(jobNode);
     }
 
     /* clean-up old executed jobs from list */
@@ -1314,18 +1423,71 @@ LOCAL void jobThreadEntry(void)
 
 LOCAL void schedulerThreadEntry(const char *jobDirectory)
 {
-//  JobNode *jobNode;
-//  Options options;
-  int z;
+  JobNode      *jobNode;
+  uint64       dateTime;
+  uint64       nextExecutionDateTime;
+  uint         year,month,day,hour,minute;
+  WeekDays     weekDay;
+  ScheduleNode *scheduleNode;
+  int          z;
 
   while (!quitFlag)
   {
     /* re-read config files */
     rereadJobFiles(jobDirectory);
 
-    /* find next job to execute */
+    /* trigger jobs */
+    Semaphore_lock(&jobList.lock);
+    jobNode = jobList.head;
+    while (jobNode != NULL)
+    {
+      if (!CHECK_JOB_IS_ACTIVE(jobNode))
+      {
+        dateTime              = Misc_getCurrentDateTime();
+        nextExecutionDateTime = 0LL;
+        while (   ((dateTime/60LL) > (jobNode->lastExecutionDateTime/60LL))
+               && (nextExecutionDateTime == 0LL)
+              )
+        {
+          Misc_splitDateTime(dateTime,
+                             &year,
+                             &month,
+                             &day,
+                             &hour,
+                             &minute,
+                             NULL,
+                             &weekDay
+                            );
 
-    /* check if execution time reached */
+          scheduleNode = jobNode->scheduleList.head;
+          while ((scheduleNode != NULL) && (nextExecutionDateTime == 0LL))
+          {
+            if (   ((scheduleNode->year    == SCHEDULE_ANY) || (scheduleNode->year    == year   ))
+                && ((scheduleNode->month   == SCHEDULE_ANY) || (scheduleNode->month   == month  ))
+                && ((scheduleNode->day     == SCHEDULE_ANY) || (scheduleNode->day     == day    ))
+                && ((scheduleNode->hour    == SCHEDULE_ANY) || (scheduleNode->hour    == hour   ))
+                && ((scheduleNode->minute  == SCHEDULE_ANY) || (scheduleNode->minute  == minute ))
+                && ((scheduleNode->weekDay == SCHEDULE_ANY) || (scheduleNode->weekDay == weekDay))
+               )
+            {
+              nextExecutionDateTime = dateTime;
+            }
+            scheduleNode = scheduleNode->next;
+          }
+
+          dateTime -= 60LL;
+        }
+
+        /* trigger job */
+        if (nextExecutionDateTime != 0LL)
+        {
+          jobNode->state = JOB_STATE_WAITING;
+        }
+      }
+
+      jobNode = jobNode->next;
+    }
+    Semaphore_unlock(&jobList.lock);
 
     /* sleep 1min */
     z = 0;
@@ -2150,6 +2312,240 @@ LOCAL void serverCommand_excludePatternsAdd(ClientInfo *clientInfo, uint id, con
   Semaphore_unlock(&jobList.lock);
 }
 
+LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint         jobId;
+  JobNode      *jobNode;
+  String       line;
+  ScheduleNode *scheduleNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* send schedule list */
+  line = String_new();
+  scheduleNode = jobNode->scheduleList.head;
+  while (scheduleNode != NULL)
+  {
+    String_clear(line);
+
+    if (scheduleNode->year != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleNode->year);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,'-');
+    if (scheduleNode->month != SCHEDULE_ANY)
+    {
+      String_format(line,"%02d",scheduleNode->month);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,'-');
+    if (scheduleNode->day != SCHEDULE_ANY)
+    {
+      String_format(line,"%02d",scheduleNode->day);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,' ');
+    if (scheduleNode->weekDay != SCHEDULE_ANY)
+    {
+      switch (scheduleNode->weekDay)
+      {
+        case WEEKDAY_MON: String_appendCString(line,"Mon"); break;
+        case WEEKDAY_TUE: String_appendCString(line,"Tue"); break;
+        case WEEKDAY_WED: String_appendCString(line,"Wed"); break;
+        case WEEKDAY_THU: String_appendCString(line,"Thu"); break;
+        case WEEKDAY_FRI: String_appendCString(line,"Fri"); break;
+        case WEEKDAY_SAT: String_appendCString(line,"Sat"); break;
+        case WEEKDAY_SUN: String_appendCString(line,"Sun"); break;
+      }
+      String_appendChar(line,' ');
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,' ');
+    if (scheduleNode->hour != SCHEDULE_ANY)
+    {
+      String_format(line,"%02d",scheduleNode->hour);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,':');
+    if (scheduleNode->minute != SCHEDULE_ANY)
+    {
+      String_format(line,"%02d",scheduleNode->minute);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,' ');
+    switch (scheduleNode->archiveType)
+    {
+      case ARCHIVE_TYPE_NORMAL     : String_appendCString(line,"normal"     ); break;
+      case ARCHIVE_TYPE_FULL       : String_appendCString(line,"full"       ); break;
+      case ARCHIVE_TYPE_INCREMENTAL: String_appendCString(line,"incremental"); break;
+      default                      : String_appendCString(line,"*"          ); break;
+    }
+
+    sendResult(clientInfo,id,FALSE,0,
+               "%S",
+               line
+              );
+    scheduleNode = scheduleNode->next;
+  }
+  sendResult(clientInfo,id,TRUE,0,"");
+  String_delete(line);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* clear schedule list */
+  List_clear(&jobNode->scheduleList,NULL,NULL);
+  jobNode->modifiedFlag = TRUE;;
+  sendResult(clientInfo,id,TRUE,0,"");
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  String       s;
+  uint         jobId;
+  JobNode      *jobNode;
+  ScheduleNode *scheduleNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* initialise variables */
+  s = String_new();
+
+  /* get job id, date, weekday, time */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    String_delete(s);
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected date");
+    String_delete(s);
+    return;
+  }
+  if (argumentCount < 3)
+  {
+    String_delete(s);
+    sendResult(clientInfo,id,TRUE,1,"expected week day");
+    return;
+  }
+  if (argumentCount < 4)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected time");
+    String_delete(s);
+    return;
+  }
+  String_format(s,"%S %S %S %S %S",arguments[1],arguments[2],arguments[3],arguments[4],arguments[5]);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    String_delete(s);
+    return;
+  }
+
+  /* parse schedule */
+  scheduleNode = parseSchedule(s);  
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"cannot parse schedule '%S'",s);
+    Semaphore_unlock(&jobList.lock);
+    String_delete(s);
+    return;
+  }
+  /* add to schedule list */
+  List_append(&jobNode->scheduleList,scheduleNode);
+  jobNode->modifiedFlag = TRUE;
+  sendResult(clientInfo,id,TRUE,0,"");
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  /* free resources */
+  String_delete(s);
+}
+
 LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint              jobId;
@@ -2376,9 +2772,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   }
 
   /* remove job in list if not running or requested volume */
-  if (   (jobNode->state == JOB_STATE_RUNNING)
-      || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
-     )
+  if (!CHECK_JOB_IS_RUNNING(jobNode))
   {
     sendResult(clientInfo,id,TRUE,1,"job %d running",jobId);
     Semaphore_unlock(&jobList.lock);
@@ -2466,11 +2860,7 @@ LOCAL void serverCommand_jobRun(ClientInfo *clientInfo, uint id, const String ar
   }
 
   /* run job */
-  if  (   (jobNode->state == JOB_STATE_NONE)
-       || (jobNode->state != JOB_STATE_COMPLETED)
-       || (jobNode->state != JOB_STATE_ERROR)
-       || (jobNode->state != JOB_STATE_ABORTED)
-      )
+  if  (!CHECK_JOB_IS_ACTIVE(jobNode))
   {
     jobNode->state = JOB_STATE_WAITING;
   }
@@ -2799,6 +3189,9 @@ SERVER_COMMANDS[] =
   { "EXCLUDE_PATTERNS_LIST", "i",   serverCommand_excludePatternsList, AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_PATTERNS_CLEAR","i",   serverCommand_excludePatternsClear,AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_PATTERNS_ADD",  "i S", serverCommand_excludePatternsAdd,  AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST",         "i",   serverCommand_scheduleList,        AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_CLEAR",        "i",   serverCommand_scheduleClear,       AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_ADD",          "i S", serverCommand_scheduleAdd,         AUTHORIZATION_STATE_OK      },
   { "GET",                   "s",   serverCommand_get,                 AUTHORIZATION_STATE_OK      },
   { "SET",                   "s S", serverCommand_set,                 AUTHORIZATION_STATE_OK      },
   { "JOB_NEW",               "S",   serverCommand_jobNew,              AUTHORIZATION_STATE_OK      },
