@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.34 $
+* $Revision: 1.35 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -659,6 +660,46 @@ Errors File_writeLine(FileHandle   *fileHandle,
   {
     return error;
   }
+
+  return ERROR_NONE;
+}
+
+Errors File_printLine(FileHandle *fileHandle,
+                      const char *format,
+                      ...
+                     )
+{
+  String  line;
+  va_list arguments;
+  Errors  error;
+
+  assert(fileHandle != NULL);
+  assert(line != NULL);
+
+  /* initialise variables */
+  line = String_new();
+
+  /* format line */
+  va_start(arguments,format);
+  String_vformat(line,format,arguments);
+  va_end(arguments);
+
+  /* write line */
+  error = File_write(fileHandle,String_cString(line),String_length(line));
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+  error = File_write(fileHandle,"\n",1);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+
+  /* free resources */
+  String_delete(line);
 
   return ERROR_NONE;
 }
