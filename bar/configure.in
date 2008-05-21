@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.7 $
+dnl $Revision: 1.8 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -309,6 +309,7 @@ if test $ENABLE_SSH = "yes"; then
   else
     AC_SEARCH_LIBS(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2 crypto";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
   fi
+  AC_CHECK_FUNC(libssh2_channel_send_keepalive,AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,1,[SSH2 libssh2_channel_send_keepalive]))
 fi
 if test $ENABLE_TLS = "yes"; then
   AC_CHECK_TYPE(gnutls_session_t,,AC_MSG_WARN([no or wrong version of gnutls. gnutls version >=2.0.1 needed. Disabled TLS support.]); ENABLE_TLS=no,[#include <gnutls/gnutls.h>])

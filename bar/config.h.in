@@ -40,6 +40,9 @@
 /* SSH2 installed */
 #undef HAVE_SSH2
 
+/* SSH2 libssh2_channel_send_keepalive */
+#undef HAVE_SSH2_CHANNEL_SEND_KEEPALIVE
+
 /* z installed */
 #undef HAVE_Z
 
