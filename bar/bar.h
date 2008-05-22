@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.36 $
+* $Revision: 1.37 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -209,7 +209,6 @@ typedef struct ScheduleNode
   int          minute;
   int          weekDay;
   ArchiveTypes archiveType;
-//  String       comment;
 } ScheduleNode;
 
 typedef struct

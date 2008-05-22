@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -26,6 +26,7 @@
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
+/* text macro definitions */
 typedef enum
 {
   TEXT_MACRO_TYPE_INT,
