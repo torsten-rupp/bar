@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -197,8 +197,8 @@ Errors Network_connect(SocketHandle *socketHandle,
         password = Password_deploy(sshPassword);
         if (libssh2_userauth_publickey_fromfile(socketHandle->ssh2.session,
                                                 String_cString(sshLoginName),
-                                                String_cString((sshPublicKeyFileName != NULL)?sshPublicKeyFileName:defaultSSHPublicKeyFileName),
-                                                String_cString((sshPrivateKeyFileName != NULL)?sshPrivateKeyFileName:defaultSSHPrivateKeyFileName),
+                                                String_cString(!String_empty(sshPublicKeyFileName)?sshPublicKeyFileName:defaultSSHPublicKeyFileName),
+                                                String_cString(!String_empty(sshPrivateKeyFileName)?sshPrivateKeyFileName:defaultSSHPrivateKeyFileName),
                                                 password
                                                ) != 0
            )
@@ -1255,6 +1255,23 @@ void Network_executeFlush(NetworkExecuteHandle  *networkExecuteHandle,
   #else /* not HAVE_SSH2 */
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
+}
+
+Errors Network_executeKeepAlive(NetworkExecuteHandle *networkExecuteHandle)
+{
+  assert(networkExecuteHandle != NULL);
+
+  #ifdef HAVE_SSH2
+    #ifdef HAVE_SSH2_CHANNEL_SEND_KEEPALIVE
+      if (libssh2_channel_send_keepalive(networkExecuteHandle->channel) != 0)
+      {
+        return ERROR_NETWORK_SEND;
+      }
+    #endif /* HAVE_SSH2_CHANNEL_SEND_KEEPALIVE */
+  #else /* not HAVE_SSH2 */
+  #endif /* HAVE_SSH2 */
+
+  return ERROR_NONE;
 }
 
 #ifdef __cplusplus

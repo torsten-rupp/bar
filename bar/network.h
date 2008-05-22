@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -531,6 +531,17 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
 void Network_executeFlush(NetworkExecuteHandle  *networkExecuteHandle,
                           NetworkExecuteIOTypes ioType
                          );
+
+/***********************************************************************\
+* Name   : Network_keepAlive
+* Purpose: send keep alive
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_executeKeepAlive(NetworkExecuteHandle *networkExecuteHandle);
 
 #ifdef __cplusplus
   }
