@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.46 $
+* $Revision: 1.47 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -73,7 +73,8 @@ typedef struct
   PatternList                 *includePatternList;
   PatternList                 *excludePatternList;
   const JobOptions            *jobOptions;
-  bool                        *abortRequestFlag;                  // TRUE if abort requested
+  bool                        *pauseFlag;                         // TRUE for pause
+  bool                        *requestedAbortFlag;                  // TRUE to abort create
 
   Dictionary                  filesDictionary;                    // dictionary with files (used for incremental backup)
   StorageFileHandle           storageFileHandle;                  // storage handle
@@ -782,10 +783,16 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
   includePatternNode = createInfo->includePatternList->head;
   while (   !createInfo->collectorSumThreadExitFlag
          && (createInfo->failError == ERROR_NONE)
-         && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
+         && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
          && (includePatternNode != NULL)
         )
   {
+    /* pause */
+    while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+    {
+      Misc_udelay(500*1000);
+    }
+
     /* find base path */
     basePath = String_new();
     File_initSplitFileName(&fileNameTokenizer,includePatternNode->pattern);
@@ -810,10 +817,16 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
     StringList_append(&nameList,basePath);
     while (   !createInfo->collectorSumThreadExitFlag
            && (createInfo->failError == ERROR_NONE)
-           && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
+           && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
            && !StringList_empty(&nameList)
           )
     {
+      /* pause */
+      while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+      {
+        Misc_udelay(500*1000);
+      }
+
       /* get next directory to process */
       name = StringList_getLast(&nameList,name);
       if (   checkIsIncluded(includePatternNode,name)
@@ -852,10 +865,15 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
               fileName = String_new();
               while (   !createInfo->collectorSumThreadExitFlag
                      && (createInfo->failError == ERROR_NONE)
-                     && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
+                     && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
                      && !File_endOfDirectory(&directoryHandle)
                     )
               {
+                /* pause */
+                while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+                {
+                  Misc_udelay(500*1000);
+                }
 /*
 xx++;
 if ((xx%1000)==0)
@@ -987,11 +1005,17 @@ LOCAL void collectorThread(CreateInfo *createInfo)
 
   includePatternNode = createInfo->includePatternList->head;
   while (   (createInfo->failError == ERROR_NONE)
-         && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
+         && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
          && (includePatternNode != NULL)
         )
   {
 #if 1
+    /* pause */
+    while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+    {
+      Misc_udelay(500*1000);
+    }
+
     /* find base path */
     basePath = String_new();
     File_initSplitFileName(&fileNameTokenizer,includePatternNode->pattern);
@@ -1015,10 +1039,16 @@ LOCAL void collectorThread(CreateInfo *createInfo)
     /* find files */
     StringList_append(&nameList,basePath);
     while (   (createInfo->failError == ERROR_NONE)
-           && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
+           && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
            && !StringList_empty(&nameList)
           )
     {
+      /* pause */
+      while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+      {
+        Misc_udelay(500*1000);
+      }
+
       /* get next directory to process */
       name = StringList_getLast(&nameList,name);
       if (   checkIsIncluded(includePatternNode,name)
@@ -1059,10 +1089,16 @@ LOCAL void collectorThread(CreateInfo *createInfo)
               /* read directory contents */
               fileName = String_new();
               while (   (createInfo->failError == ERROR_NONE)
-                     && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
+                     && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
                      && !File_endOfDirectory(&directoryHandle)
                     )
               {
+                /* pause */
+                while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+                {
+                  Misc_udelay(500*1000);
+                }
+
                 /* read next directory entry */
                 error = File_readDirectory(&directoryHandle,fileName);
                 if (error != ERROR_NONE)
@@ -1298,6 +1334,7 @@ LOCAL Errors storeArchiveFile(String fileName,
   updateStatusInfo(createInfo);
 
   /* wait for space in temporary directory */
+fprintf(stderr,"%s,%d: %lld %lld\n",__FILE__,__LINE__,globalOptions.maxTmpSize,createInfo->storageBytes);
   if (globalOptions.maxTmpSize > 0)
   {
     Semaphore_lock(&createInfo->storageSemaphore);
@@ -1343,171 +1380,208 @@ LOCAL void storageThread(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  /* initial pre-processing */
-  if (createInfo->failError == ERROR_NONE)
+  if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
   {
-    /* initial pre-process */
-    error = Storage_preProcess(&createInfo->storageFileHandle);
-    if (error != ERROR_NONE)
+    /* initial pre-processing */
+    if (createInfo->failError == ERROR_NONE)
     {
-      printError("Cannot pre-process storage (error: %s)!\n",
-                 getErrorText(error)
-                );
-      createInfo->failError = error;
+      /* pause */
+      while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+      {
+        Misc_udelay(500*1000);
+      }
+
+      /* initial pre-process */
+      error = Storage_preProcess(&createInfo->storageFileHandle);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot pre-process storage (error: %s)!\n",
+                   getErrorText(error)
+                  );
+        createInfo->failError = error;
+      }
     }
   }
 
   /* store data */
-  while (   (createInfo->failError == ERROR_NONE)
-         && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
-         && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg))
-        )
+  while (MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg)))
   {
-    if (createInfo->failError == ERROR_NONE)
+    if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
     {
-      /* pre-process */
-      error = Storage_preProcess(&createInfo->storageFileHandle);
-      if (error != ERROR_NONE)
+      if (createInfo->failError == ERROR_NONE)
       {
-        printError("Cannot pre-process file '%s' (error: %s)!\n",
-                   String_cString(storageMsg.fileName),
-                   getErrorText(error)
-                  );
-        createInfo->failError = error;
-        continue;
-      }
+        /* pause */
+        while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+        {
+          Misc_udelay(500*1000);
+        }
 
-      printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageMsg.destinationFileName));
-
-      /* open file to store */
-      error = File_open(&fileHandle,storageMsg.fileName,FILE_OPENMODE_READ);
-      if (error != ERROR_NONE)
-      {
-        printInfo(0,"FAIL!\n");
-        printError("Cannot open file '%s' (error: %s)!\n",
-                   String_cString(storageMsg.fileName),
-                   getErrorText(error)
-                  );
-        File_delete(storageMsg.fileName,FALSE);
-        String_delete(storageMsg.fileName);
-        String_delete(storageMsg.destinationFileName);
-        createInfo->failError = error;
-        continue;
-      }
-
-      retryCount = 0;
-      do
-      {
-        /* next try */
-        retryCount++;
-        if (retryCount > MAX_RETRIES) break;
-
-        /* create storage file */
-        error = Storage_create(&createInfo->storageFileHandle,
-                               storageMsg.destinationFileName,
-                               storageMsg.fileSize,
-                               createInfo->jobOptions
-                              );
+        /* pre-process */
+        error = Storage_preProcess(&createInfo->storageFileHandle);
         if (error != ERROR_NONE)
         {
-          if (retryCount >= MAX_RETRIES)
-          {
-            printInfo(0,"FAIL!\n");
-            printError("Cannot store file '%s' (error: %s)\n",
-                       String_cString(storageMsg.destinationFileName),
-                       getErrorText(error)
-                      );
-            createInfo->failError = error;
-          }
+          printError("Cannot pre-process file '%s' (error: %s)!\n",
+                     String_cString(storageMsg.fileName),
+                     getErrorText(error)
+                    );
+          createInfo->failError = error;
           continue;
         }
-        String_set(createInfo->statusInfo.storageName,storageMsg.destinationFileName);
 
-        /* store data */
-        File_seek(&fileHandle,0);
+        printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageMsg.destinationFileName));
+
+        /* open file to store */
+        error = File_open(&fileHandle,storageMsg.fileName,FILE_OPENMODE_READ);
+        if (error != ERROR_NONE)
+        {
+          printInfo(0,"FAIL!\n");
+          printError("Cannot open file '%s' (error: %s)!\n",
+                     String_cString(storageMsg.fileName),
+                     getErrorText(error)
+                    );
+          File_delete(storageMsg.fileName,FALSE);
+          String_delete(storageMsg.fileName);
+          String_delete(storageMsg.destinationFileName);
+          createInfo->failError = error;
+          continue;
+        }
+
+        retryCount = 0;
         do
         {
-          error = File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
-          if (error != ERROR_NONE)
+          /* pause */
+          while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
           {
-            printInfo(0,"FAIL!\n");
-            printError("Cannot read file '%s' (error: %s)!\n",
-                       String_cString(storageMsg.fileName),
-                       getErrorText(error)
-                      );
-            createInfo->failError = error;
-            break;
+            Misc_udelay(500*1000);
           }
-          error = Storage_write(&createInfo->storageFileHandle,buffer,n);
+
+          /* next try */
+          retryCount++;
+          if (retryCount > MAX_RETRIES) break;
+
+          /* create storage file */
+          error = Storage_create(&createInfo->storageFileHandle,
+                                 storageMsg.destinationFileName,
+                                 storageMsg.fileSize,
+                                 createInfo->jobOptions
+                                );
           if (error != ERROR_NONE)
           {
             if (retryCount >= MAX_RETRIES)
             {
               printInfo(0,"FAIL!\n");
-              printError("Cannot write file '%s' (error: %s)!\n",
+              printError("Cannot store file '%s' (error: %s)\n",
                          String_cString(storageMsg.destinationFileName),
                          getErrorText(error)
                         );
               createInfo->failError = error;
             }
-            break;
+            continue;
           }
-          createInfo->statusInfo.storageDoneBytes += n;
-          updateStatusInfo(createInfo);
+          String_set(createInfo->statusInfo.storageName,storageMsg.destinationFileName);
+
+          /* store data */
+  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+          File_seek(&fileHandle,0);
+          do
+          {
+            /* pause */
+            while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+            {
+              Misc_udelay(500*1000);
+            }
+
+  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+            error = File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+            if (error != ERROR_NONE)
+            {
+              printInfo(0,"FAIL!\n");
+              printError("Cannot read file '%s' (error: %s)!\n",
+                         String_cString(storageMsg.fileName),
+                         getErrorText(error)
+                        );
+              createInfo->failError = error;
+              break;
+            }
+  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+            error = Storage_write(&createInfo->storageFileHandle,buffer,n);
+            if (error != ERROR_NONE)
+            {
+              if (retryCount >= MAX_RETRIES)
+              {
+                printInfo(0,"FAIL!\n");
+                printError("Cannot write file '%s' (error: %s)!\n",
+                           String_cString(storageMsg.destinationFileName),
+                           getErrorText(error)
+                          );
+                createInfo->failError = error;
+              }
+              break;
+            }
+            createInfo->statusInfo.storageDoneBytes += n;
+  fprintf(stderr,"%s,%d: %lld\n",__FILE__,__LINE__,createInfo->statusInfo.storageDoneBytes);
+            updateStatusInfo(createInfo);
+          }
+          while (   (createInfo->failError == ERROR_NONE)
+                 && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+                 && !File_eof(&fileHandle)
+                );
+  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+
+          /* close storage file */
+          Storage_close(&createInfo->storageFileHandle);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+
+          if (error == ERROR_NONE)
+          {
+            logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageMsg.destinationFileName));
+            printInfo(0,"ok\n");
+          }
         }
-        while (   (createInfo->failError == ERROR_NONE)
-               && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
-               && !File_eof(&fileHandle)
+        while (   (error != ERROR_NONE)
+               && (createInfo->failError == ERROR_NONE)
+               && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
               );
+  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
-        /* close storage file */
-        Storage_close(&createInfo->storageFileHandle);
+        /* close file to store */
+        File_close(&fileHandle);
 
-        if (error == ERROR_NONE)
+        /* check for error */
+        if (   (error != ERROR_NONE)
+            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+           )
         {
-          logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageMsg.destinationFileName));
-          printInfo(0,"ok\n");
+          File_delete(storageMsg.fileName,FALSE);
+          String_delete(storageMsg.fileName);
+          String_delete(storageMsg.destinationFileName);
+          continue;
         }
-      }
-      while (   (error != ERROR_NONE)
-             && (createInfo->failError == ERROR_NONE)
-             && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
-            );
+  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
-      /* close file to store */
-      File_close(&fileHandle);
-
-      /* check for error */
-      if (   (error != ERROR_NONE)
-          && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
-         )
-      {
-        File_delete(storageMsg.fileName,FALSE);
-        String_delete(storageMsg.fileName);
-        String_delete(storageMsg.destinationFileName);
-        continue;
-      }
-
-      /* post-process */
-      if (   (createInfo->failError == ERROR_NONE)
-          && ((createInfo->abortRequestFlag == NULL) || !(*createInfo->abortRequestFlag))
-         )
-      {
-        error = Storage_postProcess(&createInfo->storageFileHandle,FALSE);
-        if (error != ERROR_NONE)
+        /* post-process */
+        if (   (createInfo->failError == ERROR_NONE)
+            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+           )
         {
-          printError("Cannot post-process storage file '%s' (error: %s)!\n",
-                     String_cString(storageMsg.fileName),
-                     getErrorText(error)
-                    );
-          createInfo->failError = error;
+          error = Storage_postProcess(&createInfo->storageFileHandle,FALSE);
+          if (error != ERROR_NONE)
+          {
+            printError("Cannot post-process storage file '%s' (error: %s)!\n",
+                       String_cString(storageMsg.fileName),
+                       getErrorText(error)
+                      );
+            createInfo->failError = error;
+          }
         }
+  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       }
-    }
 else
 {
 fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErrorText(createInfo->failError));
 }
+    }
+
     /* delete source file */
     error = File_delete(storageMsg.fileName,FALSE);
     if (error != ERROR_NONE)
@@ -1521,7 +1595,7 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
     /* update storage info */
     Semaphore_lock(&createInfo->storageSemaphore);
     assert(createInfo->storageCount > 0);
-    assert(createInfo->storageBytes>= storageMsg.fileSize);
+    assert(createInfo->storageBytes >= storageMsg.fileSize);
     createInfo->storageCount -= 1;
     createInfo->storageBytes -= storageMsg.fileSize;
     Semaphore_unlock(&createInfo->storageSemaphore);
@@ -1531,16 +1605,25 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
     String_delete(storageMsg.destinationFileName);
   }
 
-  /* final post-processing */
-  if (createInfo->failError == ERROR_NONE)
+  if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
   {
-    error = Storage_postProcess(&createInfo->storageFileHandle,TRUE);
-    if (error != ERROR_NONE)
+    /* final post-processing */
+    if (createInfo->failError == ERROR_NONE)
     {
-      printError("Cannot post-process storage (error: %s)!\n",
-                 getErrorText(error)
-                );
-      createInfo->failError = error;
+      /* pause */
+      while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+      {
+        Misc_udelay(500*1000);
+      }
+
+      error = Storage_postProcess(&createInfo->storageFileHandle,TRUE);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot post-process storage (error: %s)!\n",
+                   getErrorText(error)
+                  );
+        createInfo->failError = error;
+      }
     }
   }
 
@@ -1560,7 +1643,8 @@ Errors Command_create(const char                   *archiveFileName,
                       void                         *createStatusInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,
                       void                         *storageRequestVolumeUserData,
-                      bool                         *abortRequestFlag
+                      bool                         *pauseFlag,
+                      bool                         *requestedAbortFlag
                      )
 {
   CreateInfo      createInfo;
@@ -1581,7 +1665,8 @@ Errors Command_create(const char                   *archiveFileName,
   createInfo.includePatternList           = includePatternList;
   createInfo.excludePatternList           = excludePatternList;
   createInfo.jobOptions                   = jobOptions;
-  createInfo.abortRequestFlag             = abortRequestFlag;
+  createInfo.pauseFlag                    = pauseFlag;
+  createInfo.requestedAbortFlag           = requestedAbortFlag;
   createInfo.archiveFileName              = String_newCString(archiveFileName);
   createInfo.startTime                    = time(NULL);
   createInfo.collectorSumThreadExitFlag   = FALSE;
@@ -1768,12 +1853,18 @@ Errors Command_create(const char                   *archiveFileName,
   }
 
   /* store files */
-  while (   ((createInfo.abortRequestFlag == NULL) || !(*createInfo.abortRequestFlag))
+  while (   ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
          && getNextFile(&createInfo.fileMsgQueue,fileName,&fileType)
         )
   {
     if (createInfo.failError == ERROR_NONE)
     {
+      /* pause */
+      while ((createInfo.pauseFlag != NULL) && (*createInfo.pauseFlag))
+      {
+        Misc_udelay(500*1000);
+      }
+
       printInfo(1,"Add '%s'...",String_cString(fileName));
 
       switch (fileType)
@@ -1854,6 +1945,12 @@ Errors Command_create(const char                   *archiveFileName,
               error = ERROR_NONE;
               do
               {
+                /* pause */
+                while ((createInfo.pauseFlag != NULL) && (*createInfo.pauseFlag))
+                {
+                  Misc_udelay(500*1000);
+                }
+
                 File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
                 if (n > 0)
                 {
@@ -1866,12 +1963,12 @@ Errors Command_create(const char                   *archiveFileName,
                   updateStatusInfo(&createInfo);
                 }
               }
-              while (   ((createInfo.abortRequestFlag == NULL) || !(*createInfo.abortRequestFlag))
+              while (   ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
                      && (n > 0)
                      && (createInfo.failError == ERROR_NONE)
                      && (error == ERROR_NONE)
                     );
-              if ((createInfo.abortRequestFlag != NULL) && (*createInfo.abortRequestFlag))
+              if ((createInfo.requestedAbortFlag != NULL) && (*createInfo.requestedAbortFlag))
               {
                 printInfo(1,"ABORTED\n");
                 File_close(&fileHandle);
@@ -2203,8 +2300,7 @@ Errors Command_create(const char                   *archiveFileName,
     }
   }
 
-  /* close archive */
-  Archive_close(&archiveInfo);
+ /* signal end of data */
   createInfo.collectorSumThreadExitFlag = TRUE;
   MsgQueue_setEndOfMsg(&createInfo.fileMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
@@ -2215,7 +2311,10 @@ Errors Command_create(const char                   *archiveFileName,
   Thread_join(&createInfo.collectorThread);
   Thread_join(&createInfo.collectorSumThread);
 
-  /* close storage */
+  /* close archive */
+  Archive_close(&archiveInfo);
+
+  /* done storage */
   Storage_done(&createInfo.storageFileHandle);
 
   /* write incremental list */
@@ -2269,7 +2368,7 @@ Errors Command_create(const char                   *archiveFileName,
   String_delete(createInfo.statusInfo.fileName);
   String_delete(createInfo.archiveFileName);
 
-  if ((createInfo.abortRequestFlag == NULL) || !(*createInfo.abortRequestFlag))
+  if ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
   {
     return createInfo.failError;
   }

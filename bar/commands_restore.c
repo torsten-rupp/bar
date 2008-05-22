@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.31 $
+* $Revision: 1.32 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -47,8 +47,8 @@ typedef struct
   PatternList               *includePatternList;
   PatternList               *excludePatternList;
   const JobOptions          *jobOptions;
-
-  time_t                    startTime;
+  bool                      *pauseFlag;              // pause flag (can be NULL)
+  bool                      *requestedAbortFlag;     // request abort flag (can be NULL)
 
   Errors                    error;
 
@@ -147,7 +147,8 @@ Errors Command_restore(StringList                *archiveFileNameList,
                        JobOptions                *jobOptions,
                        RestoreStatusInfoFunction restoreStatusInfoFunction,
                        void                      *restoreStatusInfoUserData,
-                       bool                      *abortRequestFlag
+                       bool                      *pauseFlag,
+                       bool                      *requestedAbortFlag
                       )
 {
   RestoreInfo       restoreInfo;
@@ -169,7 +170,8 @@ Errors Command_restore(StringList                *archiveFileNameList,
   restoreInfo.includePatternList           = includePatternList;
   restoreInfo.excludePatternList           = excludePatternList;
   restoreInfo.jobOptions                   = jobOptions;
-  restoreInfo.startTime                    = time(NULL);
+  restoreInfo.pauseFlag                    = pauseFlag;
+  restoreInfo.requestedAbortFlag           = requestedAbortFlag;
   restoreInfo.error                        = ERROR_NONE;
   restoreInfo.statusInfoFunction           = restoreStatusInfoFunction;
   restoreInfo.statusInfoUserData           = restoreStatusInfoUserData;
@@ -195,11 +197,17 @@ Errors Command_restore(StringList                *archiveFileNameList,
   FileFragmentList_init(&fileFragmentList);
   archiveFileName = String_new();
 
-  while (   ((abortRequestFlag == NULL) || !(*abortRequestFlag))
+  while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
          && !StringList_empty(archiveFileNameList)
          && (restoreInfo.error == ERROR_NONE)
         )
   {
+    /* pause */
+    while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
+    {
+      Misc_udelay(500*1000);
+    }
+
     StringList_getFirst(archiveFileNameList,archiveFileName);
     printInfo(0,"Restore archive '%s':\n",String_cString(archiveFileName));
 
@@ -221,11 +229,17 @@ Errors Command_restore(StringList                *archiveFileNameList,
     updateStatusInfo(&restoreInfo);
 
     /* read files */
-    while (   ((abortRequestFlag == NULL) || !(*abortRequestFlag))
+    while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
            && !Archive_eof(&archiveInfo)
            && (restoreInfo.error == ERROR_NONE)
           )
     {
+      /* pause */
+      while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
+      {
+        Misc_udelay(500*1000);
+      }
+
       /* get next file type */
       error = Archive_getNextFileType(&archiveInfo,
                                       &archiveFileInfo,
@@ -388,10 +402,16 @@ Errors Command_restore(StringList                *archiveFileNameList,
               }
 
               length = 0;
-              while (   ((abortRequestFlag == NULL) || !(*abortRequestFlag))
+              while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                      && (length < fragmentSize)
                     )
               {
+                /* pause */
+                while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
+                {
+                  Misc_udelay(500*1000);
+                }
+
                 n = MIN(fragmentSize-length,BUFFER_SIZE);
 
                 error = Archive_readFileData(&archiveFileInfo,buffer,n);
@@ -429,7 +449,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 File_truncate(&fileHandle,fileInfo.size);
               }
               File_close(&fileHandle);
-              if ((abortRequestFlag != NULL) && (*abortRequestFlag))
+              if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
               {
                 printInfo(2,"ABORTED\n");
                 String_delete(destinationFileName);
@@ -858,14 +878,10 @@ Errors Command_restore(StringList                *archiveFileNameList,
     /* close archive */
     Archive_close(&archiveInfo);
   }
-  if ((abortRequestFlag != NULL) && (*abortRequestFlag))
-  {
-    restoreInfo.error = ERROR_ABORTED;
-  }
 
-  if ((abortRequestFlag == NULL) || !(*abortRequestFlag))
+  /* check fragment lists */
+  if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
   {
-    /* check fragment lists */
     for (fileFragmentNode = fileFragmentList.head; fileFragmentNode != NULL; fileFragmentNode = fileFragmentNode->next)
     {
       if (!FileFragmentList_checkComplete(fileFragmentNode))
@@ -883,7 +899,14 @@ Errors Command_restore(StringList                *archiveFileNameList,
   String_delete(restoreInfo.statusInfo.fileName);
   String_delete(restoreInfo.statusInfo.storageName);
 
-  return restoreInfo.error;
+  if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
+  {
+    return restoreInfo.error;
+  }
+  else
+  {
+    return ERROR_ABORTED;
+  }
 }
 
 #ifdef __cplusplus

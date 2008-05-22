@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.33 $
+* $Revision: 1.34 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -44,7 +44,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define SERVER_DEBUG
+#define _SERVER_DEBUG
 #define _NO_SESSION_ID
 #define _SIMULATOR
 
@@ -90,13 +90,14 @@ typedef struct JobNode
 
   /* schedule info */
   uint64       lastExecutionDateTime;          // last execution date/time (timestamp)
+  uint64       lastCheckDateTime;              // last check date/time (timestamp)
 
   /* job info */
-  uint         id;                             // uniq job id
-  JobStates    state;                          // current state of job
-  uint         requestedVolumeNumber;          // requested volume number
-  uint         volumeNumber;                   // loaded volume number
-  bool         requestedAbortFlag;             // TRUE for abort operation
+  uint          id;                            // unique job id
+  JobStates     state;                         // current state of job
+  bool          requestedAbortFlag;            // request abort
+  uint          requestedVolumeNumber;         // requested volume number
+  uint          volumeNumber;                  // loaded volume number
 
   /* running info */
   struct
@@ -333,11 +334,13 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 };
 
 /***************************** Variables *******************************/
+LOCAL const char     *jobDirectory;
 LOCAL const Password *password;
 LOCAL JobList        jobList;
 LOCAL Thread         jobThread;
 LOCAL Thread         schedulerThread;
 LOCAL ClientList     clientList;
+LOCAL bool           pauseFlag;
 LOCAL bool           quitFlag;
 
 /****************************** Macros *********************************/
@@ -412,8 +415,7 @@ LOCAL uint getNewJobId(void)
 \***********************************************************************/
 
 LOCAL JobNode *newJob(JobTypes     jobType,
-                      const String fileName,
-                      const String name
+                      const String fileName
                      )
 {
   JobNode *jobNode;
@@ -429,9 +431,10 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   jobNode->fileName                          = String_duplicate(fileName);
   jobNode->timeModified                      = 0LL;
   jobNode->lastExecutionDateTime             = 0LL;
+  jobNode->lastCheckDateTime                 = 0LL;
 
   jobNode->type                              = jobType;
-  jobNode->name                              = String_duplicate(name);
+  jobNode->name                              = File_getFileBaseName(File_newFileName(),fileName);
   jobNode->archiveName                       = String_new();
   initJobOptions(&jobNode->jobOptions);
   Pattern_initList(&jobNode->includePatternList);
@@ -439,9 +442,9 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   List_init(&jobNode->scheduleList);
   jobNode->id                                = getNewJobId();
   jobNode->state                             = JOB_STATE_NONE;
+  jobNode->requestedAbortFlag                = FALSE;
   jobNode->requestedVolumeNumber             = 0;
   jobNode->volumeNumber                      = 0;
-  jobNode->requestedAbortFlag                = FALSE;
 
   jobNode->runningInfo.error                 = ERROR_NONE;
   jobNode->runningInfo.startTime             = 0;
@@ -592,6 +595,7 @@ LOCAL Errors readJobFileScheduleInfo(JobNode *jobNode)
       if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
       {
         jobNode->lastExecutionDateTime = n;
+        jobNode->lastCheckDateTime     = n;
       }
     }
     String_delete(line);
@@ -604,12 +608,6 @@ LOCAL Errors readJobFileScheduleInfo(JobNode *jobNode)
       File_deleteFileName(fileName);
       return error;
     }
-  }
-  else
-  {
-    jobNode->lastExecutionDateTime = Misc_getCurrentDateTime();
-
-    error = ERROR_NONE;
   }
 
   /* free resources */
@@ -842,7 +840,7 @@ LOCAL Errors rereadJobFiles(const char *jobDirectory)
       }
       if (jobNode == NULL)
       {
-        jobNode = newJob(JOB_TYPE_BACKUP,fileName,baseName);
+        jobNode = newJob(JOB_TYPE_BACKUP,fileName);
         List_append(&jobList,jobNode);
       }
 
@@ -930,7 +928,7 @@ LOCAL StringNode *deleteJobFileEntries(StringList *stringList,
     }
 
     /* parse and delete */
-    if (String_parse(stringNode->string,STRING_BEGIN,"%S=%S",NULL,s,NULL) && String_equalsCString(s,name))
+    if (String_parse(stringNode->string,STRING_BEGIN,"%S=% S",NULL,s,NULL) && String_equalsCString(s,name))
     {
       if ((nextNode == NULL) || (nextNode = stringNode)) nextNode = stringNode->next;
       stringNode = StringList_remove(stringList,stringNode);
@@ -1238,8 +1236,8 @@ LOCAL bool storageRequestVolume(JobNode *jobNode,
   {
     Semaphore_waitModified(&jobList.lock);
   }
-  while (   (jobNode->volumeNumber != jobNode->requestedVolumeNumber)
-         && !jobNode->requestedAbortFlag
+  while (   !jobNode->requestedAbortFlag
+         && (jobNode->volumeNumber != jobNode->requestedVolumeNumber)
         );
   jobNode->state = JOB_STATE_RUNNING;
 
@@ -1261,8 +1259,6 @@ LOCAL bool storageRequestVolume(JobNode *jobNode,
 LOCAL void jobThreadEntry(void)
 {
   JobNode *jobNode;
-//  Options options;
-  bool    deletedFlag;
 
   while (!quitFlag)
   {
@@ -1333,6 +1329,7 @@ LOCAL void jobThreadEntry(void)
                                                     jobNode,
                                                     (StorageRequestVolumeFunction)storageRequestVolume,
                                                     jobNode,
+                                                    &pauseFlag,
                                                     &jobNode->requestedAbortFlag
                                                    );
         logMessage(LOG_TYPE_ALWAYS,"done create (error: %s)",getErrorText(jobNode->runningInfo.error));
@@ -1350,6 +1347,7 @@ LOCAL void jobThreadEntry(void)
                                                        &jobNode->jobOptions,
                                                        (RestoreStatusInfoFunction)updateRestoreStatus,
                                                        jobNode,
+                                                       &pauseFlag,
                                                        &jobNode->requestedAbortFlag
                                                       );
           StringList_done(&archiveFileNameList);
@@ -1381,39 +1379,10 @@ LOCAL void jobThreadEntry(void)
     else
     {
       jobNode->state = JOB_STATE_COMPLETED;
-
-      /* store schedule info */
-      writeJobFileScheduleInfo(jobNode);
     }
 
-    /* clean-up old executed jobs from list */
-    if (List_count(&jobList) >= MAX_JOBS_IN_LIST)
-    {
-      do
-      {
-        deletedFlag = FALSE;
-
-        /* find executed job to delete */
-        jobNode = jobList.head;
-        while (   (jobNode != NULL)
-               && (jobNode->state != JOB_STATE_WAITING)
-               && (jobNode->state != JOB_STATE_COMPLETED)
-               && (jobNode->state != JOB_STATE_ERROR)
-              )
-        {
-          jobNode = jobNode->next;
-        }
-
-        /* delete job */
-        if (jobNode != NULL)
-        {
-          List_remove(&jobList,jobNode);
-          deleteJob(jobNode);
-          deletedFlag = TRUE;
-        }
-      }
-      while ((List_count(&jobList) >= MAX_JOBS_IN_LIST) && deletedFlag);
-    }
+    /* store schedule info */
+    writeJobFileScheduleInfo(jobNode);
 
     Semaphore_unlock(&jobList.lock);
   }
@@ -1421,15 +1390,17 @@ LOCAL void jobThreadEntry(void)
 
 /*---------------------------------------------------------------------*/
 
-LOCAL void schedulerThreadEntry(const char *jobDirectory)
+LOCAL void schedulerThreadEntry(void)
 {
   JobNode      *jobNode;
+  uint64       currentDateTime;
+  JobNode      *executeJobNode;
   uint64       dateTime;
-  uint64       nextExecutionDateTime;
   uint         year,month,day,hour,minute;
   WeekDays     weekDay;
   ScheduleNode *scheduleNode;
   int          z;
+  JobNode      *nextJobNode;
 
   while (!quitFlag)
   {
@@ -1438,15 +1409,17 @@ LOCAL void schedulerThreadEntry(const char *jobDirectory)
 
     /* trigger jobs */
     Semaphore_lock(&jobList.lock);
-    jobNode = jobList.head;
+    currentDateTime = Misc_getCurrentDateTime();
+    jobNode         = jobList.head;
     while (jobNode != NULL)
     {
+      /* check if job have to be executed */
+      executeJobNode = NULL;
       if (!CHECK_JOB_IS_ACTIVE(jobNode))
       {
-        dateTime              = Misc_getCurrentDateTime();
-        nextExecutionDateTime = 0LL;
-        while (   ((dateTime/60LL) > (jobNode->lastExecutionDateTime/60LL))
-               && (nextExecutionDateTime == 0LL)
+        dateTime = currentDateTime;
+        while (   ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
+               && (executeJobNode == NULL)
               )
         {
           Misc_splitDateTime(dateTime,
@@ -1460,7 +1433,7 @@ LOCAL void schedulerThreadEntry(const char *jobDirectory)
                             );
 
           scheduleNode = jobNode->scheduleList.head;
-          while ((scheduleNode != NULL) && (nextExecutionDateTime == 0LL))
+          while ((scheduleNode != NULL) && (executeJobNode == NULL))
           {
             if (   ((scheduleNode->year    == SCHEDULE_ANY) || (scheduleNode->year    == year   ))
                 && ((scheduleNode->month   == SCHEDULE_ANY) || (scheduleNode->month   == month  ))
@@ -1470,22 +1443,40 @@ LOCAL void schedulerThreadEntry(const char *jobDirectory)
                 && ((scheduleNode->weekDay == SCHEDULE_ANY) || (scheduleNode->weekDay == weekDay))
                )
             {
-              nextExecutionDateTime = dateTime;
+              executeJobNode = jobNode;
             }
             scheduleNode = scheduleNode->next;
           }
 
           dateTime -= 60LL;
         }
-
-        /* trigger job */
-        if (nextExecutionDateTime != 0LL)
-        {
-          jobNode->state = JOB_STATE_WAITING;
-        }
+        jobNode->lastCheckDateTime = currentDateTime;
       }
 
-      jobNode = jobNode->next;
+      /* trigger job */
+      if (executeJobNode != NULL)
+      {
+        /* set state */
+        jobNode->state              = JOB_STATE_WAITING;
+        jobNode->requestedAbortFlag = FALSE;
+
+        /* resort */
+        List_remove(&jobList,jobNode);
+        nextJobNode = jobList.head;
+        while ((nextJobNode != NULL) && CHECK_JOB_IS_ACTIVE(nextJobNode))
+        {
+          nextJobNode = nextJobNode->next;
+        }
+        List_insert(&jobList,jobNode,nextJobNode);
+
+        /* start from beginning of list */
+        jobNode = jobList.head;
+      }
+      else
+      {
+        /* check next job */
+        jobNode = jobNode->next;
+      }
     }
     Semaphore_unlock(&jobList.lock);
 
@@ -1724,6 +1715,47 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
   {
     clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
   }
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
+  /* format result */
+  sendResult(clientInfo,id,TRUE,0,
+             "%s",
+             pauseFlag?"pause":"ok"
+            );
+}
+
+LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
+  pauseFlag = TRUE;
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
+  pauseFlag = FALSE;
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
@@ -2510,7 +2542,13 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
     String_delete(s);
     return;
   }
-  String_format(s,"%S %S %S %S %S",arguments[1],arguments[2],arguments[3],arguments[4],arguments[5]);
+  if (argumentCount < 5)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected type");
+    String_delete(s);
+    return;
+  }
+  String_format(s,"%S %S %S %S",arguments[1],arguments[2],arguments[3],arguments[4]);
 
   /* lock */
   Semaphore_lock(&jobList.lock);
@@ -2527,7 +2565,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
 
   /* parse schedule */
   scheduleNode = parseSchedule(s);  
-  if (jobNode == NULL)
+  if (scheduleNode == NULL)
   {
     sendResult(clientInfo,id,TRUE,1,"cannot parse schedule '%S'",s);
     Semaphore_unlock(&jobList.lock);
@@ -2546,7 +2584,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   String_delete(s);
 }
 
-LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint              jobId;
   String            name;
@@ -2615,7 +2653,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String argum
   Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint    jobId;
   String  name,value;
@@ -2630,7 +2668,6 @@ LOCAL void serverCommand_set(ClientInfo *clientInfo, uint id, const String argum
     sendResult(clientInfo,id,TRUE,1,"expected job id");
     return;
   }
-fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(arguments[0]));
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
@@ -2679,10 +2716,70 @@ fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(arguments[0]));
   Semaphore_unlock(&jobList.lock);
 }
 
+LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  String  name;
+  JobNode *jobNode;
+  uint    z;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, name, value */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected config value name");
+    return;
+  }
+  name = arguments[1];
+
+  /* lock */
+  Semaphore_lock(&jobList.lock);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* find config value */
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
+         && !String_equalsCString(name,CONFIG_VALUES[z].name)
+        )
+  {
+    z++;
+  }
+  if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+  {
+    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",name);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* delete value */
+//  ConfigValue_reset(&CONFIG_VALUES[z],jobNode);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
 LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  JobTypes jobType;
-  JobNode  *jobNode;
+  String     fileName;
+  JobNode    *jobNode;
+  FileHandle fileHandle;
+  Errors     error;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -2690,46 +2787,36 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   /* get archive name */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,1,"expected type");
-    return;
-  }
-  if (argumentCount < 2)
-  {
     sendResult(clientInfo,id,TRUE,1,"expected name");
     return;
   }
-  if (argumentCount < 3)
+
+  /* get filename */
+  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),jobDirectory),arguments[0]);
+  if (File_exists(fileName))
   {
-    sendResult(clientInfo,id,TRUE,1,"expected archive name");
+    sendResult(clientInfo,id,TRUE,1,"job already exists");
     return;
   }
 
-  /* get job type */
-  if      (String_equalsCString(arguments[0],"BACKUP"))
+  /* create file */
+  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+  if (error != ERROR_NONE)
   {
-    jobType = JOB_TYPE_BACKUP;
-  }
-  else if (String_equalsCString(arguments[0],"RESTORE"))
-  {
-    jobType = JOB_TYPE_RESTORE;
-  }
-  else
-  {
-    sendResult(clientInfo,id,TRUE,1,"unknown job type");
+    File_deleteFileName(fileName);
     return;
   }
+  File_close(&fileHandle);
 
   /* add new job */
-  jobNode = newJob(jobType,NULL,arguments[1]);
+  jobNode = newJob(JOB_TYPE_BACKUP,fileName);
   if (jobNode == NULL)
   {
+    File_delete(fileName,FALSE);
+    File_deleteFileName(fileName);
     sendResult(clientInfo,id,TRUE,1,"insufficient memory");
     return;
   }
-  String_set(jobNode->archiveName,arguments[2]);
-  Pattern_copyList(&clientInfo->includePatternList,&jobNode->includePatternList);
-  Pattern_copyList(&clientInfo->excludePatternList,&jobNode->excludePatternList);
-  copyJobOptions(&clientInfo->jobOptions,&jobNode->jobOptions);
 
   /* lock */
   Semaphore_lock(&jobList.lock);
@@ -2741,12 +2828,16 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   Semaphore_unlock(&jobList.lock);
 
   sendResult(clientInfo,id,TRUE,0,"%d",jobNode->id);
+
+  /* free resources */
+  File_deleteFileName(fileName);
 }
 
 LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint    jobId;
   JobNode *jobNode;
+  Errors  error;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -2772,24 +2863,26 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   }
 
   /* remove job in list if not running or requested volume */
-  if (!CHECK_JOB_IS_RUNNING(jobNode))
+  if (CHECK_JOB_IS_RUNNING(jobNode))
   {
     sendResult(clientInfo,id,TRUE,1,"job %d running",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
-  List_remove(&jobList,jobNode);
 
   /* delete job file */
-  if (jobNode->fileName != NULL)
+  error = File_delete(jobNode->fileName,FALSE);
+  if (error != ERROR_NONE)
   {
+    sendResult(clientInfo,id,TRUE,1,"error deleting job %d: %s",getErrorText(error));
+    Semaphore_unlock(&jobList.lock);
+    return;
   }
+  List_remove(&jobList,jobNode);
+  deleteJob(jobNode);
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
-
-  /* free job */
-  deleteJob(jobNode);
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
@@ -2835,6 +2928,7 @@ LOCAL void serverCommand_jobRun(ClientInfo *clientInfo, uint id, const String ar
 {
   uint    jobId;
   JobNode *jobNode;
+  JobNode *nextJobNode;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -2862,7 +2956,18 @@ LOCAL void serverCommand_jobRun(ClientInfo *clientInfo, uint id, const String ar
   /* run job */
   if  (!CHECK_JOB_IS_ACTIVE(jobNode))
   {
-    jobNode->state = JOB_STATE_WAITING;
+    /* set state */
+    jobNode->state              = JOB_STATE_WAITING;
+    jobNode->requestedAbortFlag = FALSE;
+
+    /* resort */
+    List_remove(&jobList,jobNode);
+    nextJobNode = jobList.head;
+    while ((nextJobNode != NULL) && CHECK_JOB_IS_ACTIVE(nextJobNode))
+    {
+      nextJobNode = nextJobNode->next;
+    }
+    List_insert(&jobList,jobNode,nextJobNode);
   }
 
   /* unlock */
@@ -3177,12 +3282,19 @@ const struct
 SERVER_COMMANDS[] =
 {
   { "AUTHORIZE",             "S",   serverCommand_authorize,           AUTHORIZATION_STATE_WAITING },
+  { "STATUS",                "",    serverCommand_status,              AUTHORIZATION_STATE_OK      },
+  { "PAUSE",                 "",    serverCommand_pause ,              AUTHORIZATION_STATE_OK      },
+  { "CONTINUE",              "",    serverCommand_continue,            AUTHORIZATION_STATE_OK      },
   { "ERROR_INFO",            "i",   serverCommand_errorInfo,           AUTHORIZATION_STATE_OK      },
   { "DEVICE_LIST",           "",    serverCommand_deviceList,          AUTHORIZATION_STATE_OK      },
   { "FILE_LIST",             "S",   serverCommand_fileList,            AUTHORIZATION_STATE_OK      },
   { "JOB_LIST",              "",    serverCommand_jobList,             AUTHORIZATION_STATE_OK      },
   { "JOB_INFO",              "i",   serverCommand_jobInfo,             AUTHORIZATION_STATE_OK      },
-//  { "CLEAR",               "",    serverCommand_clear,               AUTHORIZATION_STATE_OK      },
+  { "JOB_NEW",               "S",   serverCommand_jobNew,              AUTHORIZATION_STATE_OK      },
+  { "JOB_DELETE",            "i",   serverCommand_jobDelete,           AUTHORIZATION_STATE_OK      },
+  { "JOB_SAVE",              "i",   serverCommand_jobSave,             AUTHORIZATION_STATE_OK      },
+  { "JOB_RUN",               "i",   serverCommand_jobRun,              AUTHORIZATION_STATE_OK      },
+  { "JOB_ABORT",             "i",   serverCommand_jobAbort,            AUTHORIZATION_STATE_OK      },
   { "INCLUDE_PATTERNS_LIST", "i",   serverCommand_includePatternsList, AUTHORIZATION_STATE_OK      },
   { "INCLUDE_PATTERNS_CLEAR","i",   serverCommand_includePatternsClear,AUTHORIZATION_STATE_OK      },
   { "INCLUDE_PATTERNS_ADD",  "i S", serverCommand_includePatternsAdd,  AUTHORIZATION_STATE_OK      },
@@ -3192,13 +3304,9 @@ SERVER_COMMANDS[] =
   { "SCHEDULE_LIST",         "i",   serverCommand_scheduleList,        AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_CLEAR",        "i",   serverCommand_scheduleClear,       AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_ADD",          "i S", serverCommand_scheduleAdd,         AUTHORIZATION_STATE_OK      },
-  { "GET",                   "s",   serverCommand_get,                 AUTHORIZATION_STATE_OK      },
-  { "SET",                   "s S", serverCommand_set,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_NEW",               "S",   serverCommand_jobNew,              AUTHORIZATION_STATE_OK      },
-  { "JOB_DELETE",            "i",   serverCommand_jobDelete,           AUTHORIZATION_STATE_OK      },
-  { "JOB_SAVE",              "i",   serverCommand_jobSave,             AUTHORIZATION_STATE_OK      },
-  { "JOB_RUN",               "i",   serverCommand_jobRun,              AUTHORIZATION_STATE_OK      },
-  { "JOB_ABORT",             "i",   serverCommand_jobAbort,            AUTHORIZATION_STATE_OK      },
+  { "OPTION_GET",            "s",   serverCommand_optionGet,           AUTHORIZATION_STATE_OK      },
+  { "OPTION_SET",            "s S", serverCommand_optionSet,           AUTHORIZATION_STATE_OK      },
+  { "OPTION_DELETE",         "s S", serverCommand_optionDelete,        AUTHORIZATION_STATE_OK      },
   { "VOLUME",                "S i", serverCommand_volume,              AUTHORIZATION_STATE_OK      },
   { "ARCHIVE_LIST",          "S",   serverCommand_archiveList,         AUTHORIZATION_STATE_OK      },
   #ifndef NDEBUG
@@ -3693,7 +3801,7 @@ Errors Server_run(uint           serverPort,
                   const char     *certFileName,
                   const char     *keyFileName,
                   const Password *serverPassword,
-                  const char     *jobDirectory
+                  const char     *serverJobDirectory
                  )
 {
   Errors             error;
@@ -3711,10 +3819,12 @@ Errors Server_run(uint           serverPort,
   assert((serverPort != 0) || (serverTLSPort != 0));
 
   /* initialise variables */
-  password = serverPassword;
+  password     = serverPassword;
+  jobDirectory = serverJobDirectory;
   List_init(&jobList);
   List_init(&clientList);
-  quitFlag = FALSE;
+  pauseFlag    = FALSE;
+  quitFlag     = FALSE;
 
   /* init server sockets */
   if (serverPort != 0)
@@ -3768,7 +3878,7 @@ Errors Server_run(uint           serverPort,
   {
     HALT_FATAL_ERROR("Cannot initialise job thread!");
   }
-  if (!Thread_init(&schedulerThread,0,schedulerThreadEntry,(void*)jobDirectory))
+  if (!Thread_init(&schedulerThread,0,schedulerThreadEntry,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialise scheduler thread!");
   }
@@ -3990,49 +4100,6 @@ processCommand(&clientInfo,commandString);
 
   return ERROR_NONE;
 }
-
-#if 0
-Errors Server_addJob(JobTypes          jobType,
-                     const String      name,
-                     const String      archiveName,
-                     const PatternList *includePatternList,
-                     const PatternList *excludePatternList,
-                     const Options     *options
-                    )
-{
-  JobNode *jobNode;
-
-  assert(name != NULL);
-  assert(name != NULL);
-  assert(name != NULL);
-  assert(name != NULL);
-  assert(name != NULL);
-
-  jobNode = newJob(jobType,
-                   NULL,
-                   name,
-                   archiveName,
-                   includePatternList,
-                   excludePatternList,
-                   options
-                  );
-  if (jobNode == NULL)
-  {
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
-
-  /* lock */
-  Semaphore_lock(&jobList.lock);
-
-  /* add new job to list */
-  List_append(&jobList,jobNode);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  return ERROR_NONE;
-}
-#endif /* 0 */
 
 #ifdef __cplusplus
   }

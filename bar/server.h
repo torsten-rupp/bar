@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -99,13 +99,13 @@ void Server_doneAll(void);
 /***********************************************************************\
 * Name   : Server_run
 * Purpose: run network server
-* Input  : serverPort     - server port (or 0 to disable)
-*          serverTLSPort  - server TLS (SSL) port (or 0 to disable)
-*          caFileName     - file with TLS CA or NULL
-*          certFileName   - file with TLS cerificate or NULL
-*          keyFileName    - file with TLS key or NULL
-*          serverPassword - server authenfication password
-*          jobDirectory   - server job directory
+* Input  : serverPort         - server port (or 0 to disable)
+*          serverTLSPort      - server TLS (SSL) port (or 0 to disable)
+*          caFileName         - file with TLS CA or NULL
+*          certFileName       - file with TLS cerificate or NULL
+*          keyFileName        - file with TLS key or NULL
+*          serverPassword     - server authenfication password
+*          serverJobDirectory - server job directory
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -117,7 +117,7 @@ Errors Server_run(uint           serverPort,
                   const char     *certFileName,
                   const char     *keyFileName,
                   const Password *serverPassword,
-                  const char     *jobDirectory
+                  const char     *serverJobDirectory
                  );
 
 /***********************************************************************\

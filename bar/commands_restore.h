@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -73,8 +73,8 @@ typedef void(*RestoreStatusInfoFunction)(Errors                  error,
 *          createStatusInfoFunction - status info call back function
 *                                     (can be NULL)
 *          createStatusInfoUserData - user data for status info function
-*          abortRequestFlag         - flag to request abort (can be
-*                                     NULL)
+*          pauseFlag                - pause flag (can be NULL)
+*          requestedAbortFlag       - request abort flag (can be NULL)
 * Output : -
 * Return : ERROR_NONE if all files restored, otherwise error code
 * Notes  : -
@@ -86,7 +86,8 @@ Errors Command_restore(StringList                *archiveFileNameList,
                        JobOptions                *jobOptions,
                        RestoreStatusInfoFunction restoreStatusInfoFunction,
                        void                      *restoreStatusInfoUserData,
-                       bool                      *abortRequestFlag
+                       bool                      *pauseFlag,
+                       bool                      *requestedAbortFlag
                       );
 
 #ifdef __cplusplus
