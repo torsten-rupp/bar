@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.52 $
+* $Revision: 1.53 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -281,7 +281,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("server-cert-file",             0,  1,0,serverCertFileName,                                   DEFAULT_TLS_SERVER_CERTIFICATE_FILE,                               "TLS (SSL) server certificate file","file name"                            ),
   CMD_OPTION_STRING       ("server-key-file",              0,  1,0,serverKeyFileName,                                    DEFAULT_TLS_SERVER_KEY_FILE,                                       "TLS (SSL) server key file","file name"                                    ),
   CMD_OPTION_SPECIAL      ("server-password",              0,  1,0,&serverPassword,                                      NULL,cmdOptionParsePassword,NULL,                                  "server password (use with care!)","password"                              ),
-  CMD_OPTION_STRING       ("job-directory",                0,  1,0,serverJobDirectory,                                         DEFAULT_JOB_DIRECTORY,                                       "server job directory","path name"                                         ),
+  CMD_OPTION_STRING       ("job-directory",                0,  1,0,serverJobDirectory,                                   DEFAULT_JOB_DIRECTORY,                                       "server job directory","path name"                                         ),
 
   CMD_OPTION_BOOLEAN      ("batch",                        0,  2,0,batchFlag,                                            FALSE,                                                             "run in batch mode"                                                        ),
   CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,0,&globalOptions.remoteBARExecutable,                   DEFAULT_REMOTE_BAR_EXECUTABLE,cmdOptionParseString,NULL,           "remote BAR executable","file name"                                        ),
@@ -1342,11 +1342,11 @@ void getSSHServer(const String     name,
   {
     sshServerNode = sshServerNode->next;
   }
-  sshServer->port               = (jobOptions->sshServer.port               != 0)?jobOptions->sshServer.port              :((sshServerNode != NULL)?sshServerNode->sshServer.port              :globalOptions.defaultSSHServer.port              );
-  sshServer->loginName          = (jobOptions->sshServer.loginName          != 0)?jobOptions->sshServer.loginName         :((sshServerNode != NULL)?sshServerNode->sshServer.loginName         :globalOptions.defaultSSHServer.loginName         );
-  sshServer->publicKeyFileName  = (jobOptions->sshServer.publicKeyFileName  != 0)?jobOptions->sshServer.publicKeyFileName :((sshServerNode != NULL)?sshServerNode->sshServer.publicKeyFileName :globalOptions.defaultSSHServer.publicKeyFileName );
-  sshServer->privateKeyFileName = (jobOptions->sshServer.privateKeyFileName != 0)?jobOptions->sshServer.privateKeyFileName:((sshServerNode != NULL)?sshServerNode->sshServer.privateKeyFileName:globalOptions.defaultSSHServer.privateKeyFileName);
-  sshServer->password           = (jobOptions->sshServer.password           != 0)?jobOptions->sshServer.password          :((sshServerNode != NULL)?sshServerNode->sshServer.password          :globalOptions.defaultSSHServer.password          );
+  sshServer->port               = (jobOptions->sshServer.port != 0                      )?jobOptions->sshServer.port              :((sshServerNode != NULL)?sshServerNode->sshServer.port              :globalOptions.defaultSSHServer.port              );
+  sshServer->loginName          = !String_empty(jobOptions->sshServer.loginName         )?jobOptions->sshServer.loginName         :((sshServerNode != NULL)?sshServerNode->sshServer.loginName         :globalOptions.defaultSSHServer.loginName         );
+  sshServer->publicKeyFileName  = !String_empty(jobOptions->sshServer.publicKeyFileName )?jobOptions->sshServer.publicKeyFileName :((sshServerNode != NULL)?sshServerNode->sshServer.publicKeyFileName :globalOptions.defaultSSHServer.publicKeyFileName );
+  sshServer->privateKeyFileName = !String_empty(jobOptions->sshServer.privateKeyFileName)?jobOptions->sshServer.privateKeyFileName:((sshServerNode != NULL)?sshServerNode->sshServer.privateKeyFileName:globalOptions.defaultSSHServer.privateKeyFileName);
+  sshServer->password           = !Password_empty(jobOptions->sshServer.password        )?jobOptions->sshServer.password          :((sshServerNode != NULL)?sshServerNode->sshServer.password          :globalOptions.defaultSSHServer.password          );
 }
 
 void getDevice(const String     name,
@@ -1365,19 +1365,19 @@ void getDevice(const String     name,
   {
     deviceNode = deviceNode->next;
   }
-  device->requestVolumeCommand    = (jobOptions->device.requestVolumeCommand    != 0)?jobOptions->device.requestVolumeCommand   :((deviceNode != NULL)?deviceNode->device.requestVolumeCommand   :globalOptions.defaultDevice.requestVolumeCommand   );
-  device->unloadVolumeCommand     = (jobOptions->device.unloadVolumeCommand     != 0)?jobOptions->device.unloadVolumeCommand    :((deviceNode != NULL)?deviceNode->device.unloadVolumeCommand    :globalOptions.defaultDevice.unloadVolumeCommand    );
-  device->loadVolumeCommand       = (jobOptions->device.loadVolumeCommand       != 0)?jobOptions->device.loadVolumeCommand      :((deviceNode != NULL)?deviceNode->device.loadVolumeCommand      :globalOptions.defaultDevice.loadVolumeCommand      );
-  device->volumeSize              = (jobOptions->device.volumeSize              != 0)?jobOptions->device.volumeSize             :((deviceNode != NULL)?deviceNode->device.volumeSize             :globalOptions.defaultDevice.volumeSize             );
-  device->imagePreProcessCommand  = (jobOptions->device.imagePreProcessCommand  != 0)?jobOptions->device.imagePreProcessCommand :((deviceNode != NULL)?deviceNode->device.imagePreProcessCommand :globalOptions.defaultDevice.imagePreProcessCommand );
-  device->imagePostProcessCommand = (jobOptions->device.imagePostProcessCommand != 0)?jobOptions->device.imagePostProcessCommand:((deviceNode != NULL)?deviceNode->device.imagePostProcessCommand:globalOptions.defaultDevice.imagePostProcessCommand);
-  device->imageCommand            = (jobOptions->device.imageCommand            != 0)?jobOptions->device.imageCommand           :((deviceNode != NULL)?deviceNode->device.imageCommand           :globalOptions.defaultDevice.imageCommand           );
-  device->eccPreProcessCommand    = (jobOptions->device.eccPreProcessCommand    != 0)?jobOptions->device.eccPreProcessCommand   :((deviceNode != NULL)?deviceNode->device.eccPreProcessCommand   :globalOptions.defaultDevice.eccPreProcessCommand   );
-  device->eccPostProcessCommand   = (jobOptions->device.eccPostProcessCommand   != 0)?jobOptions->device.eccPostProcessCommand  :((deviceNode != NULL)?deviceNode->device.eccPostProcessCommand  :globalOptions.defaultDevice.eccPostProcessCommand  );
-  device->eccCommand              = (jobOptions->device.eccCommand              != 0)?jobOptions->device.eccCommand             :((deviceNode != NULL)?deviceNode->device.eccCommand             :globalOptions.defaultDevice.eccCommand             );
-  device->writePreProcessCommand  = (jobOptions->device.writePreProcessCommand  != 0)?jobOptions->device.writePreProcessCommand :((deviceNode != NULL)?deviceNode->device.writePreProcessCommand :globalOptions.defaultDevice.writePreProcessCommand );
-  device->writePostProcessCommand = (jobOptions->device.writePostProcessCommand != 0)?jobOptions->device.writePostProcessCommand:((deviceNode != NULL)?deviceNode->device.writePostProcessCommand:globalOptions.defaultDevice.writePostProcessCommand);
-  device->writeCommand            = (jobOptions->device.writeCommand            != 0)?jobOptions->device.writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :globalOptions.defaultDevice.writeCommand           );
+  device->requestVolumeCommand    = (jobOptions->device.requestVolumeCommand    != NULL)?jobOptions->device.requestVolumeCommand   :((deviceNode != NULL)?deviceNode->device.requestVolumeCommand   :globalOptions.defaultDevice.requestVolumeCommand   );
+  device->unloadVolumeCommand     = (jobOptions->device.unloadVolumeCommand     != NULL)?jobOptions->device.unloadVolumeCommand    :((deviceNode != NULL)?deviceNode->device.unloadVolumeCommand    :globalOptions.defaultDevice.unloadVolumeCommand    );
+  device->loadVolumeCommand       = (jobOptions->device.loadVolumeCommand       != NULL)?jobOptions->device.loadVolumeCommand      :((deviceNode != NULL)?deviceNode->device.loadVolumeCommand      :globalOptions.defaultDevice.loadVolumeCommand      );
+  device->volumeSize              = (jobOptions->device.volumeSize              != 0   )?jobOptions->device.volumeSize             :((deviceNode != NULL)?deviceNode->device.volumeSize             :globalOptions.defaultDevice.volumeSize             );
+  device->imagePreProcessCommand  = (jobOptions->device.imagePreProcessCommand  != NULL)?jobOptions->device.imagePreProcessCommand :((deviceNode != NULL)?deviceNode->device.imagePreProcessCommand :globalOptions.defaultDevice.imagePreProcessCommand );
+  device->imagePostProcessCommand = (jobOptions->device.imagePostProcessCommand != NULL)?jobOptions->device.imagePostProcessCommand:((deviceNode != NULL)?deviceNode->device.imagePostProcessCommand:globalOptions.defaultDevice.imagePostProcessCommand);
+  device->imageCommand            = (jobOptions->device.imageCommand            != NULL)?jobOptions->device.imageCommand           :((deviceNode != NULL)?deviceNode->device.imageCommand           :globalOptions.defaultDevice.imageCommand           );
+  device->eccPreProcessCommand    = (jobOptions->device.eccPreProcessCommand    != NULL)?jobOptions->device.eccPreProcessCommand   :((deviceNode != NULL)?deviceNode->device.eccPreProcessCommand   :globalOptions.defaultDevice.eccPreProcessCommand   );
+  device->eccPostProcessCommand   = (jobOptions->device.eccPostProcessCommand   != NULL)?jobOptions->device.eccPostProcessCommand  :((deviceNode != NULL)?deviceNode->device.eccPostProcessCommand  :globalOptions.defaultDevice.eccPostProcessCommand  );
+  device->eccCommand              = (jobOptions->device.eccCommand              != NULL)?jobOptions->device.eccCommand             :((deviceNode != NULL)?deviceNode->device.eccCommand             :globalOptions.defaultDevice.eccCommand             );
+  device->writePreProcessCommand  = (jobOptions->device.writePreProcessCommand  != NULL)?jobOptions->device.writePreProcessCommand :((deviceNode != NULL)?deviceNode->device.writePreProcessCommand :globalOptions.defaultDevice.writePreProcessCommand );
+  device->writePostProcessCommand = (jobOptions->device.writePostProcessCommand != NULL)?jobOptions->device.writePostProcessCommand:((deviceNode != NULL)?deviceNode->device.writePostProcessCommand:globalOptions.defaultDevice.writePostProcessCommand);
+  device->writeCommand            = (jobOptions->device.writeCommand            != NULL)?jobOptions->device.writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :globalOptions.defaultDevice.writeCommand           );
 }
 
 bool inputCryptPassword(Password **cryptPassword)
@@ -2055,6 +2055,7 @@ int main(int argc, const char *argv[])
                                  NULL,
                                  NULL,
                                  NULL,
+                                 NULL,
                                  NULL
                                 );
         }
@@ -2102,6 +2103,7 @@ int main(int argc, const char *argv[])
                                       &includePatternList,
                                       &excludePatternList,
                                       &jobOptions,
+                                      NULL,
                                       NULL,
                                       NULL,
                                       NULL
