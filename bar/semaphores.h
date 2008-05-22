@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/semaphores.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -115,7 +115,7 @@ void Semaphore_unlock(Semaphore *semaphore);
 
 /***********************************************************************\
 * Name   : Semaphore_waitModified
-* Purpose: wait until semaphore modified
+* Purpose: wait until semaphore is modified
 * Input  : semaphore - semaphore
 * Output : -
 * Return : -

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -158,6 +158,17 @@ void Password_appendChar(Password *password, char ch);
 \***********************************************************************/
 
 uint Password_length(const Password *password);
+
+/***********************************************************************\
+* Name   : Password_empty
+* Purpose: check if password is empty
+* Input  : password - password
+* Output : -
+* Return : TRUE iff password is empty, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Password_empty(const Password *password);
 
 /***********************************************************************\
 * Name   : Password_getQualityLevel

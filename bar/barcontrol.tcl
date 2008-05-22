@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.24 $
+# $Revision: 1.25 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -90,6 +90,8 @@ set startFlag       0
 set fullFlag        0
 set incrementalFlag 0
 set abortId         0
+set pauseFlag       0
+set continueFlag    0
 set quitFlag        0
 set debugFlag       0
 set guiMode         0
@@ -144,48 +146,52 @@ set barConfig(overwriteArchiveFilesFlag)       0
 set barConfig(overwriteFilesFlag)              0
 set barConfig(errorCorrectionCodesFlag)        1
 
-set status(id)                             0
-set status(error)                          0
-set status(doneFiles)                      0
-set status(doneBytes)                      0
-set status(doneBytesShort)                 0
-set status(doneBytesShortUnit)             "KBytes"
-set status(totalFiles)                     0
-set status(totalBytes)                     0
-set status(totalBytesShort)                0
-set status(totalBytesShortUnit)            "KBytes"
-set status(skippedFiles)                   0
-set status(skippedBytes)                   0
-set status(skippedBytesShort)              0
-set status(skippedBytesShortUnit)          "KBytes"
-set status(errorFiles)                     0
-set status(errorBytes)                     0
-set status(errorBytesShort)                0
-set status(errorBytesShortUnit)            "KBytes"
-set status(filesPerSecond)                 0
-set status(bytesPerSecond)                 0
-set status(bytesPerSecondShort)            0
-set status(bytesPerSecondShortUnit)        "KBytes/s"
-set status(archiveBytes)                   0
-set status(archiveBytesShort)              0
-set status(archiveBytesShortUnit)          "KBytes"
-set status(storageBytesPerSecond)          0
-set status(storageBytesPerSecondShort)     0
-set status(storageBytesPerSecondShortUnit) "KBytes/s"
-set status(compressionRatio)               0  
-set status(fileName)                       "" 
-set status(fileDoneBytes)                  0  
-set status(fileTotalBytes)                 0  
-set status(storageName)                    "" 
-set status(storageDoneBytes)               0  
-set status(storageTotalBytes)              0  
-set status(storageTotalBytesShort)         0
-set status(storageTotalBytesShortUnit)     "KBytes"
-set status(volumeNumber)                   0
-set status(volumeProgress)                 0.0
-set status(requestedVolumeNumber)          0
-set status(requestedVolumeNumberDialogFlag) 0
-set status(message)                        ""
+set status "ok"
+
+set jobStatus(id)                              0
+set jobStatus(name)                            ""
+set jobStatus(state)                           ""
+set jobStatus(error)                           0
+set jobStatus(doneFiles)                       0
+set jobStatus(doneBytes)                       0
+set jobStatus(doneBytesShort)                  0
+set jobStatus(doneBytesShortUnit)              "KBytes"
+set jobStatus(totalFiles)                      0
+set jobStatus(totalBytes)                      0
+set jobStatus(totalBytesShort)                 0
+set jobStatus(totalBytesShortUnit)             "KBytes"
+set jobStatus(skippedFiles)                    0
+set jobStatus(skippedBytes)                    0
+set jobStatus(skippedBytesShort)               0
+set jobStatus(skippedBytesShortUnit)           "KBytes"
+set jobStatus(errorFiles)                      0
+set jobStatus(errorBytes)                      0
+set jobStatus(errorBytesShort)                 0
+set jobStatus(errorBytesShortUnit)             "KBytes"
+set jobStatus(filesPerSecond)                  0
+set jobStatus(bytesPerSecond)                  0
+set jobStatus(bytesPerSecondShort)             0
+set jobStatus(bytesPerSecondShortUnit)         "KBytes/s"
+set jobStatus(archiveBytes)                    0
+set jobStatus(archiveBytesShort)               0
+set jobStatus(archiveBytesShortUnit)           "KBytes"
+set jobStatus(storageBytesPerSecond)           0
+set jobStatus(storageBytesPerSecondShort)      0
+set jobStatus(storageBytesPerSecondShortUnit)  "KBytes/s"
+set jobStatus(compressionRatio)                0  
+set jobStatus(fileName)                        "" 
+set jobStatus(fileDoneBytes)                   0  
+set jobStatus(fileTotalBytes)                  0  
+set jobStatus(storageName)                     "" 
+set jobStatus(storageDoneBytes)                0  
+set jobStatus(storageTotalBytes)               0  
+set jobStatus(storageTotalBytesShort)          0
+set jobStatus(storageTotalBytesShortUnit)      "KBytes"
+set jobStatus(volumeNumber)                    0
+set jobStatus(volumeProgress)                  0.0
+set jobStatus(requestedVolumeNumber)           0
+set jobStatus(requestedVolumeNumberDialogFlag) 0
+set jobStatus(message)                         ""
 
 set selectedJob(id)                        0
 set selectedJob(storageType)               ""
@@ -902,6 +908,8 @@ proc printUsage { } \
   puts "         --full                       - create full archive (overwrite settings in config)"
   puts "         --incremental                - create incremental archives (overwrite settings in config)"
   puts "         --abort=<id>                 - abort running job"
+  puts "         --pause                      - pause jobs"
+  puts "         --continue                   - continue jobs"
   puts "         --quit                       - quit"
   puts "         --debug                      - enable debug mode"
   puts "         --password=<password>        - server password (use with care!)"
@@ -1258,9 +1266,10 @@ after 100
 # Name   : BackupServer:executeCommand
 # Purpose: execute command
 # Input  : command - command
-#          args    - arguments for command
-# Output : _errorCode - error code (will only be set if 0)
-#          _errorText - error text (will only be set if _errorCode is 0)
+# Output : _globalErrorCode - error code (will only be set if 0)
+#          _globalErrorText - error text (will only be set if _errorCode is 0)
+#          _result          - result (optional)
+#          script           - script to execute on success (optional)
 # Return : 1 if command executed, 0 otherwise
 # Notes  : -
 #***********************************************************************
@@ -1272,7 +1281,7 @@ proc BackupServer:executeCommand { _globalErrorCode _globalErrorText command {_r
 
   if {$globalErrorCode==0} \
   {
-puts "execute command: $command"
+#puts "execute command: $command"
     set commandId [BackupServer:sendCommand $command]
     if {$commandId == 0} \
     {
@@ -1282,13 +1291,21 @@ puts "execute command: $command"
     {
       return 0
     }
-#puts "execute result: $errorCode $result [expr {$errorCode == 0}]"
+#puts "execute result: error=$errorCode $result"
 
     if {$errorCode == 0} \
     {
+#puts "_result=$_result"
       if {$_result != ""} \
       {
-        eval {scanx $result "%S" $_result}
+         if {[regexp {^::.*} $_result]} \
+         {
+           set $_result $result
+         } \
+         else \
+         {
+           upvar $_result tmp; set tmp $result
+         }
       }
       eval "set result \"$result\"; $script"
       return 1
@@ -1369,6 +1386,7 @@ proc BackupServer:connect { hostname port password tlsFlag } \
     incr z
   }
   set errorCode 0
+  set errorText ""
   BackupServer:executeCommand errorCode errorText "AUTHORIZE $s"
   if {$errorCode != 0} \
   {
@@ -1415,7 +1433,7 @@ proc BackupServer:get { id name variable {script {}} } \
 {
   set errorCode 0
   set errorText ""
-  return [BackupServer:executeCommand errorCode errorText "GET $id $name" $variable $script]
+  return [BackupServer:executeCommand errorCode errorText "OPTION_GET $id $name" $variable $script]
 }
 
 #***********************************************************************
@@ -1432,7 +1450,7 @@ proc BackupServer:set { id name value } \
 {
   set errorCode 0
   set errorText ""
-  return [BackupServer:executeCommand errorCode errorText "SET $id $name $value"]
+  return [BackupServer:executeCommand errorCode errorText "OPTION_SET $id $name $value"]
 }
 
 proc Restore:open {} \
@@ -1759,6 +1777,7 @@ proc setEntryState { widget itemPath prefixFlag state } \
   if {$includedFlag} \
   {
     set errorCode 0
+    set errorText ""
     BackupServer:executeCommand errorCode errorText "INCLUDE_PATTERNS_CLEAR $::selectedJob(id)"
     foreach pattern $included \
     {
@@ -1773,6 +1792,7 @@ proc setEntryState { widget itemPath prefixFlag state } \
   if {$excludedFlag} \
   {
     set errorCode 0
+    set errorText ""
     BackupServer:executeCommand errorCode errorText "EXCLUDE_PATTERNS_CLEAR $::selectedJob(id)"
     foreach pattern $excluded \
     {
@@ -2450,6 +2470,7 @@ puts "item=$itemPath dir=$directoryName archiveName=$archiveName"
       update
 
       set errorCode 0
+      set errorText ""
       BackupServer:executeCommand errorCode errorText "CLEAR"
 #      BackupServer:executeCommand errorCode errorText "ADD_INCLUDE_PATTERN REGEX ^$directoryName/\[^/\]+"
       set commandId [BackupServer:sendCommand "ARCHIVE_LIST [escapeString$archiveName]"]
@@ -2809,7 +2830,7 @@ proc updateFileTreeStates { } \
 
 proc updateStatusList { statusListWidget } \
 {
-  global jobListTimerId status barControlConfig
+  global jobListTimerId status jobStatus barControlConfig
 
   catch {after cancel $jobListTimerId}
 
@@ -2823,6 +2844,7 @@ proc updateStatusList { statusListWidget } \
   set yview [lindex [$statusListWidget yview] 0]
 
   # update list
+  set n 0
   $statusListWidget delete 0 end
 #puts "start 3"
   set commandId [BackupServer:sendCommand "JOB_LIST"]
@@ -2841,24 +2863,45 @@ proc updateStatusList { statusListWidget } \
       estimatedRestTime
 #puts "1: ok"
 
-    set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
-    set estimatedRestHours   [expr {int($estimatedRestTime%(24*60*60)/(60*60))}]
-    set estimatedRestMinutes [expr {int($estimatedRestTime%(60*60   )/60     )}]
-    set estimatedRestSeconds [expr {int($estimatedRestTime%(60)              )}]
+    if {($state == "waiting") || ($state == "running")} \
+    {
+      set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
+      set estimatedRestHours   [expr {int($estimatedRestTime%(24*60*60)/(60*60))}]
+      set estimatedRestMinutes [expr {int($estimatedRestTime%(60*60   )/60     )}]
+      set estimatedRestSeconds [expr {int($estimatedRestTime%(60)              )}]
 
-    $statusListWidget insert end [list \
-      $id \
-      $name \
-      $state \
-      $type \
-      [expr {($archivePartSize > 0)?[formatByteSize $archivePartSize]:"-"}] \
-      $compressAlgorithm \
-      $cryptAlgorithm \
-      [expr {($startTime > 0)?[clock format $startTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
-      [format "%2d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds] \
-    ]
+      $statusListWidget insert end \
+      [list \
+        $id \
+        $name \
+        [expr {($status eq "pause")?"pause":$state}] \
+        $type \
+        [expr {($archivePartSize > 0)?[formatByteSize $archivePartSize]:"-"}] \
+        $compressAlgorithm \
+        $cryptAlgorithm \
+        [expr {($startTime > 0)?[clock format $startTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
+        [format "%2d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds] \
+      ]
+      incr n
+    }
   }
 #puts "end 3"
+  if {$n > 0} \
+  {
+    if {$selectedId == 0} \
+    {
+      set entry [lindex [$statusListWidget get 0 0] 0]
+      set selectedId      [lindex $entry 0]
+      set jobStatus(id)   [lindex $entry 0]
+      set jobStatus(name) [lindex $entry 1]
+    }
+  } \
+  else \
+  {
+    set selectedId      0
+    set jobStatus(id)   0
+    set jobStatus(name) ""
+  }
 
   # restore selection
   if     {$selectedId > 0} \
@@ -2871,18 +2914,9 @@ proc updateStatusList { statusListWidget } \
     if {$n < [$statusListWidget index end]} \
     {
       $statusListWidget selection set $n
-    }
-  } \
-  elseif {$status(id) == 0} \
-  {
-    set id [lindex [lindex [$statusListWidget get 0 0] 0] 0]
-    if {$id != ""} \
-    {
-      set status(id) $id
-      $statusListWidget selection set 0 0 
+      $statusListWidget yview moveto $yview
     }
   }
-  $statusListWidget yview moveto $yview
 
   set jobListTimerId [after $barControlConfig(statusListUpdateTime) "updateStatusList $statusListWidget"]
 }
@@ -2898,113 +2932,119 @@ proc updateStatusList { statusListWidget } \
 
 proc updateStatus { } \
 {
-  global status statusTimerId barControlConfig
+  global jobStatus statusTimerId barControlConfig
 
   catch {after cancel $statusTimerId}
 
-  if {$status(id) != 0} \
+  # get status
+  set errorCode 0
+  set errorText ""
+  BackupServer:executeCommand errorCode errorText "STATUS" ::status
+
+  # get job status
+  if {$jobStatus(id) != 0} \
   {
 #puts "start 2"
-    set commandId [BackupServer:sendCommand "JOB_INFO $status(id)"]
+    set commandId [BackupServer:sendCommand "JOB_INFO $jobStatus(id)"]
     if {[BackupServer:readResult $commandId completeFlag errorCode result] && ($errorCode == 0)} \
     {
 #puts "2: $result"
       scanx $result "%S %S %lu %lu %lu %lu %lu %lu %lu %lu %f %f %f %lu %f %S %lu %lu %S %lu %lu %d %f %d" \
-        state \
-        status(error) \
-        status(doneFiles) \
-        status(doneBytes) \
-        status(totalFiles) \
-        status(totalBytes) \
-        status(skippedFiles) \
-        status(skippedBytes) \
-        status(errorFiles) \
-        status(errorBytes) \
+        jobStatus(state) \
+        jobStatus(error) \
+        jobStatus(doneFiles) \
+        jobStatus(doneBytes) \
+        jobStatus(totalFiles) \
+        jobStatus(totalBytes) \
+        jobStatus(skippedFiles) \
+        jobStatus(skippedBytes) \
+        jobStatus(errorFiles) \
+        jobStatus(errorBytes) \
         filesPerSecond \
-        status(bytesPerSecond) \
-        status(storageBytesPerSecond) \
-        status(archiveBytes) \
+        jobStatus(bytesPerSecond) \
+        jobStatus(storageBytesPerSecond) \
+        jobStatus(archiveBytes) \
         ratio \
-        status(fileName) \
-        status(fileDoneBytes) \
-        status(fileTotalBytes) \
-        status(storageName) \
-        status(storageDoneBytes) \
-        status(storageTotalBytes) \
-        status(volumeNumber) \
-        status(volumeProgress) \
-        status(requestedVolumeNumber)
+        jobStatus(fileName) \
+        jobStatus(fileDoneBytes) \
+        jobStatus(fileTotalBytes) \
+        jobStatus(storageName) \
+        jobStatus(storageDoneBytes) \
+        jobStatus(storageTotalBytes) \
+        jobStatus(volumeNumber) \
+        jobStatus(volumeProgress) \
+        jobStatus(requestedVolumeNumber)
 #puts "2: ok"
-      if {$status(error) != ""} { set status(message) $status(error) }
+      if {$jobStatus(error) != ""} { set jobStatus(message) $jobStatus(error) }
 
-      if     {$status(doneBytes)            > 1024*1024*1024} { set status(doneBytesShort)             [format "%.1f" [expr {double($status(doneBytes)            )/(1024*1024*1024)}]]; set status(doneBytesShortUnit)             "GBytes"   } \
-      elseif {$status(doneBytes)            >      1024*1024} { set status(doneBytesShort)             [format "%.1f" [expr {double($status(doneBytes)            )/(     1024*1024)}]]; set status(doneBytesShortUnit)             "MBytes"   } \
-      else                                                    { set status(doneBytesShort)             [format "%.1f" [expr {double($status(doneBytes)            )/(          1024)}]]; set status(doneBytesShortUnit)             "KBytes"   }
-      if     {$status(totalBytes)           > 1024*1024*1024} { set status(totalBytesShort)            [format "%.1f" [expr {double($status(totalBytes)           )/(1024*1024*1024)}]]; set status(totalBytesShortUnit)            "GBytes"   } \
-      elseif {$status(totalBytes)           >      1024*1024} { set status(totalBytesShort)            [format "%.1f" [expr {double($status(totalBytes)           )/(     1024*1024)}]]; set status(totalBytesShortUnit)            "MBytes"   } \
-      else                                                    { set status(totalBytesShort)            [format "%.1f" [expr {double($status(totalBytes)           )/(          1024)}]]; set status(totalBytesShortUnit)            "KBytes"   }
-      if     {$status(skippedBytes)         > 1024*1024*1024} { set status(skippedBytesShort)          [format "%.1f" [expr {double($status(skippedBytes)         )/(1024*1024*1024)}]]; set status(skippedBytesShortUnit)          "GBytes"   } \
-      elseif {$status(skippedBytes)         >      1024*1024} { set status(skippedBytesShort)          [format "%.1f" [expr {double($status(skippedBytes)         )/(     1024*1024)}]]; set status(skippedBytesShortUnit)          "MBytes"   } \
-      else                                                    { set status(skippedBytesShort)          [format "%.1f" [expr {double($status(skippedBytes)         )/(          1024)}]]; set status(skippedBytesShortUnit)          "KBytes"   }
-      if     {$status(errorBytes)           > 1024*1024*1024} { set status(errorBytesShort)            [format "%.1f" [expr {double($status(errorBytes)           )/(1024*1024*1024)}]]; set status(errorBytesShortUnit)            "GBytes"   } \
-      elseif {$status(errorBytes)           >      1024*1024} { set status(errorBytesShort)            [format "%.1f" [expr {double($status(errorBytes)           )/(     1024*1024)}]]; set status(errorBytesShortUnit)            "MBytes"   } \
-      else                                                    { set status(errorBytesShort)            [format "%.1f" [expr {double($status(errorBytes)           )/(          1024)}]]; set status(errorBytesShortUnit)            "KBytes"   }
-      if     {$status(bytesPerSecond)       > 1024*1024*1024} { set status(bytesPerSecondShort)        [format "%.1f" [expr {double($status(bytesPerSecond)       )/(1024*1024*1024)}]]; set status(bytesPerSecondUnit)             "GBytes/s" } \
-      elseif {$status(bytesPerSecond)       >      1024*1024} { set status(bytesPerSecondShort)        [format "%.1f" [expr {double($status(bytesPerSecond)       )/(     1024*1024)}]]; set status(bytesPerSecondShortUnit)        "MBytes/s" } \
-      else                                                    { set status(bytesPerSecondShort)        [format "%.1f" [expr {double($status(bytesPerSecond)       )/(          1024)}]]; set status(bytesPerSecondShortUnit)        "KBytes/s" }
-      if     {$status(storageBytesPerSecond)> 1024*1024*1024} { set status(storageBytesPerSecondShort) [format "%.1f" [expr {double($status(storageBytesPerSecond))/(1024*1024*1024)}]]; set status(storageBytesPerSecondShortUnit) "GBytes/s" } \
-      elseif {$status(storageBytesPerSecond)>      1024*1024} { set status(storageBytesPerSecondShort) [format "%.1f" [expr {double($status(storageBytesPerSecond))/(     1024*1024)}]]; set status(storageBytesPerSecondShortUnit) "MBytes/s" } \
-      else                                                    { set status(storageBytesPerSecondShort) [format "%.1f" [expr {double($status(storageBytesPerSecond))/(          1024)}]]; set status(storageBytesPerSecondShortUnit) "KBytes/s" }
-      if     {$status(archiveBytes)         > 1024*1024*1024} { set status(archiveBytesShort)          [format "%.1f" [expr {double($status(archiveBytes)         )/(1024*1024*1024)}]]; set status(archiveBytesShortUnit)          "GBytes"   } \
-      elseif {$status(archiveBytes)         >      1024*1024} { set status(archiveBytesShort)          [format "%.1f" [expr {double($status(archiveBytes)         )/(     1024*1024)}]]; set status(archiveBytesShortUnit)          "MBytes"   } \
-      else                                                    { set status(archiveBytesShort)          [format "%.1f" [expr {double($status(archiveBytes)         )/(          1024)}]]; set status(archiveBytesShortUnit)          "KBytes"   }
-      if     {$status(storageTotalBytes)    > 1024*1024*1024} { set status(storageTotalBytesShort)     [format "%.1f" [expr {double($status(storageTotalBytes)    )/(1024*1024*1024)}]]; set status(storageTotalBytesShortUnit)     "GBytes"   } \
-      elseif {$status(storageTotalBytes)    >      1024*1024} { set status(storageTotalBytesShort)     [format "%.1f" [expr {double($status(storageTotalBytes)    )/(     1024*1024)}]]; set status(storageTotalBytesShortUnit)     "MBytes"   } \
-      else                                                    { set status(storageTotalBytesShort)     [format "%.1f" [expr {double($status(storageTotalBytes)    )/(          1024)}]]; set status(storageTotalBytesShortUnit)     "KBytes"   }
+      if     {$jobStatus(doneBytes)            > 1024*1024*1024} { set jobStatus(doneBytesShort)             [format "%.1f" [expr {double($jobStatus(doneBytes)            )/(1024*1024*1024)}]]; set jobStatus(doneBytesShortUnit)             "GBytes"   } \
+      elseif {$jobStatus(doneBytes)            >      1024*1024} { set jobStatus(doneBytesShort)             [format "%.1f" [expr {double($jobStatus(doneBytes)            )/(     1024*1024)}]]; set jobStatus(doneBytesShortUnit)             "MBytes"   } \
+      else                                                       { set jobStatus(doneBytesShort)             [format "%.1f" [expr {double($jobStatus(doneBytes)            )/(          1024)}]]; set jobStatus(doneBytesShortUnit)             "KBytes"   }
+      if     {$jobStatus(totalBytes)           > 1024*1024*1024} { set jobStatus(totalBytesShort)            [format "%.1f" [expr {double($jobStatus(totalBytes)           )/(1024*1024*1024)}]]; set jobStatus(totalBytesShortUnit)            "GBytes"   } \
+      elseif {$jobStatus(totalBytes)           >      1024*1024} { set jobStatus(totalBytesShort)            [format "%.1f" [expr {double($jobStatus(totalBytes)           )/(     1024*1024)}]]; set jobStatus(totalBytesShortUnit)            "MBytes"   } \
+      else                                                       { set jobStatus(totalBytesShort)            [format "%.1f" [expr {double($jobStatus(totalBytes)           )/(          1024)}]]; set jobStatus(totalBytesShortUnit)            "KBytes"   }
+      if     {$jobStatus(skippedBytes)         > 1024*1024*1024} { set jobStatus(skippedBytesShort)          [format "%.1f" [expr {double($jobStatus(skippedBytes)         )/(1024*1024*1024)}]]; set jobStatus(skippedBytesShortUnit)          "GBytes"   } \
+      elseif {$jobStatus(skippedBytes)         >      1024*1024} { set jobStatus(skippedBytesShort)          [format "%.1f" [expr {double($jobStatus(skippedBytes)         )/(     1024*1024)}]]; set jobStatus(skippedBytesShortUnit)          "MBytes"   } \
+      else                                                       { set jobStatus(skippedBytesShort)          [format "%.1f" [expr {double($jobStatus(skippedBytes)         )/(          1024)}]]; set jobStatus(skippedBytesShortUnit)          "KBytes"   }
+      if     {$jobStatus(errorBytes)           > 1024*1024*1024} { set jobStatus(errorBytesShort)            [format "%.1f" [expr {double($jobStatus(errorBytes)           )/(1024*1024*1024)}]]; set jobStatus(errorBytesShortUnit)            "GBytes"   } \
+      elseif {$jobStatus(errorBytes)           >      1024*1024} { set jobStatus(errorBytesShort)            [format "%.1f" [expr {double($jobStatus(errorBytes)           )/(     1024*1024)}]]; set jobStatus(errorBytesShortUnit)            "MBytes"   } \
+      else                                                       { set jobStatus(errorBytesShort)            [format "%.1f" [expr {double($jobStatus(errorBytes)           )/(          1024)}]]; set jobStatus(errorBytesShortUnit)            "KBytes"   }
+      if     {$jobStatus(bytesPerSecond)       > 1024*1024*1024} { set jobStatus(bytesPerSecondShort)        [format "%.1f" [expr {double($jobStatus(bytesPerSecond)       )/(1024*1024*1024)}]]; set jobStatus(bytesPerSecondUnit)             "GBytes/s" } \
+      elseif {$jobStatus(bytesPerSecond)       >      1024*1024} { set jobStatus(bytesPerSecondShort)        [format "%.1f" [expr {double($jobStatus(bytesPerSecond)       )/(     1024*1024)}]]; set jobStatus(bytesPerSecondShortUnit)        "MBytes/s" } \
+      else                                                       { set jobStatus(bytesPerSecondShort)        [format "%.1f" [expr {double($jobStatus(bytesPerSecond)       )/(          1024)}]]; set jobStatus(bytesPerSecondShortUnit)        "KBytes/s" }
+      if     {$jobStatus(storageBytesPerSecond)> 1024*1024*1024} { set jobStatus(storageBytesPerSecondShort) [format "%.1f" [expr {double($jobStatus(storageBytesPerSecond))/(1024*1024*1024)}]]; set jobStatus(storageBytesPerSecondShortUnit) "GBytes/s" } \
+      elseif {$jobStatus(storageBytesPerSecond)>      1024*1024} { set jobStatus(storageBytesPerSecondShort) [format "%.1f" [expr {double($jobStatus(storageBytesPerSecond))/(     1024*1024)}]]; set jobStatus(storageBytesPerSecondShortUnit) "MBytes/s" } \
+      else                                                       { set jobStatus(storageBytesPerSecondShort) [format "%.1f" [expr {double($jobStatus(storageBytesPerSecond))/(          1024)}]]; set jobStatus(storageBytesPerSecondShortUnit) "KBytes/s" }
+      if     {$jobStatus(archiveBytes)         > 1024*1024*1024} { set jobStatus(archiveBytesShort)          [format "%.1f" [expr {double($jobStatus(archiveBytes)         )/(1024*1024*1024)}]]; set jobStatus(archiveBytesShortUnit)          "GBytes"   } \
+      elseif {$jobStatus(archiveBytes)         >      1024*1024} { set jobStatus(archiveBytesShort)          [format "%.1f" [expr {double($jobStatus(archiveBytes)         )/(     1024*1024)}]]; set jobStatus(archiveBytesShortUnit)          "MBytes"   } \
+      else                                                       { set jobStatus(archiveBytesShort)          [format "%.1f" [expr {double($jobStatus(archiveBytes)         )/(          1024)}]]; set jobStatus(archiveBytesShortUnit)          "KBytes"   }
+      if     {$jobStatus(storageTotalBytes)    > 1024*1024*1024} { set jobStatus(storageTotalBytesShort)     [format "%.1f" [expr {double($jobStatus(storageTotalBytes)    )/(1024*1024*1024)}]]; set jobStatus(storageTotalBytesShortUnit)     "GBytes"   } \
+      elseif {$jobStatus(storageTotalBytes)    >      1024*1024} { set jobStatus(storageTotalBytesShort)     [format "%.1f" [expr {double($jobStatus(storageTotalBytes)    )/(     1024*1024)}]]; set jobStatus(storageTotalBytesShortUnit)     "MBytes"   } \
+      else                                                       { set jobStatus(storageTotalBytesShort)     [format "%.1f" [expr {double($jobStatus(storageTotalBytes)    )/(          1024)}]]; set jobStatus(storageTotalBytesShortUnit)     "KBytes"   }
 
-      set status(filesPerSecond)   [format "%.1f" $filesPerSecond]
-      set status(compressionRatio) [format "%.1f" $ratio]
+      set jobStatus(filesPerSecond)   [format "%.1f" $filesPerSecond]
+      set jobStatus(compressionRatio) [format "%.1f" $ratio]
     }
 #puts "end 2"
   } \
   else \
   {
-    set status(doneFiles)                      0
-    set status(doneBytes)                      0
-    set status(doneBytesShort)                 0
-    set status(doneBytesShortUnit)             "KBytes"
-    set status(totalFiles)                     0
-    set status(totalBytes)                     0
-    set status(totalBytesShort)                0
-    set status(totalBytesShortUnit)            "KBytes"
-    set status(skippedFiles)                   0
-    set status(skippedBytes)                   0
-    set status(skippedBytesShort)              0
-    set status(skippedBytesShortUnit)          "KBytes"
-    set status(errorFiles)                     0
-    set status(errorBytes)                     0
-    set status(errorBytesShort)                0
-    set status(errorBytesShortUnit)            "KBytes"
-    set status(filesPerSecond)                 0
-    set status(filesPerSecondUnit)             "files/s"
-    set status(bytesPerSecond)                 0
-    set status(bytesPerSecondShort)            0
-    set status(bytesPerSecondShortUnit)        "KBytes/s"
-    set status(storageBytesPerSecond)          0
-    set status(storageBytesPerSecondShort)     0
-    set status(storageBytesPerSecondShortUnit) "KBytes/s"
-    set status(compressionRatio)               0
-    set status(fileName)                       ""
-    set status(fileDoneBytes)                  0
-    set status(fileTotalBytes)                 0
-    set status(storageName)                    ""
-    set status(storageName)                    ""
-    set status(storageDoneBytes)               0
-    set status(storageTotalBytes)              0
-    set status(storageTotalBytesShort)         0
-    set status(storageTotalBytesUnit)          "KBytes"
-    set status(volumeNumber)                   0
-    set status(requestedVolumeNumber)          0
+    set jobStatus(doneFiles)                      0
+    set jobStatus(doneBytes)                      0
+    set jobStatus(doneBytesShort)                 0
+    set jobStatus(doneBytesShortUnit)             "KBytes"
+    set jobStatus(totalFiles)                     0
+    set jobStatus(totalBytes)                     0
+    set jobStatus(totalBytesShort)                0
+    set jobStatus(totalBytesShortUnit)            "KBytes"
+    set jobStatus(skippedFiles)                   0
+    set jobStatus(skippedBytes)                   0
+    set jobStatus(skippedBytesShort)              0
+    set jobStatus(skippedBytesShortUnit)          "KBytes"
+    set jobStatus(errorFiles)                     0
+    set jobStatus(errorBytes)                     0
+    set jobStatus(errorBytesShort)                0
+    set jobStatus(errorBytesShortUnit)            "KBytes"
+    set jobStatus(filesPerSecond)                 0
+    set jobStatus(filesPerSecondUnit)             "files/s"
+    set jobStatus(bytesPerSecond)                 0
+    set jobStatus(bytesPerSecondShort)            0
+    set jobStatus(bytesPerSecondShortUnit)        "KBytes/s"
+    set jobStatus(storageBytesPerSecond)          0
+    set jobStatus(storageBytesPerSecondShort)     0
+    set jobStatus(storageBytesPerSecondShortUnit) "KBytes/s"
+    set jobStatus(compressionRatio)               0
+    set jobStatus(fileName)                       ""
+    set jobStatus(fileDoneBytes)                  0
+    set jobStatus(fileTotalBytes)                 0
+    set jobStatus(storageName)                    ""
+    set jobStatus(storageName)                    ""
+    set jobStatus(storageDoneBytes)               0
+    set jobStatus(storageTotalBytes)              0
+    set jobStatus(storageTotalBytesShort)         0
+    set jobStatus(storageTotalBytesUnit)          "KBytes"
+    set jobStatus(volumeNumber)                   0
+    set jobStatus(requestedVolumeNumber)          0
   }
 
   set statusTimerId [after $barControlConfig(statusUpdateTime) "updateStatus"]
@@ -3021,18 +3061,15 @@ proc updateStatus { } \
 
 proc updateJobList { jobListWidget } \
 {
-  global selectedJob barControlConfig
+  global barControlConfig
 
   # get selection
-  set selectedJobId $selectedJob(id)
+  set selectedJobId $::selectedJob(id)
+  if {$selectedJobId == ""} { set selectedJobId 0 }
 
-  # update list
-  foreach name [$jobListWidget entries] \
-  {
-    $jobListWidget delete $name
-  }
+  # get jobs
 #puts "start 3"
-  $jobListWidget add command 0 -label ""
+  set jobs {}
   set commandId [BackupServer:sendCommand "JOB_LIST"]
   while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
   {
@@ -3049,12 +3086,24 @@ proc updateJobList { jobListWidget } \
       estimatedRestTime
 #puts "1: ok"
 
-    $jobListWidget add command $id -label $name
+    lappend jobs [list $id $name]
   }
-#puts "end 3"
+  set jobs [lsort -index 1 $jobs]
+#puts "end 3: $jobs"
+
+  # update list
+  foreach name [$jobListWidget entries] \
+  {
+    $jobListWidget delete $name
+  }
+  $jobListWidget add command 0 -label ""
+  foreach job $jobs \
+  {
+    $jobListWidget add command [lindex $job 0] -label [lindex $job 1]
+  }
 
   # restore selection
-  set selectedJob(id) $selectedJobId
+  set ::selectedJob(id) $selectedJobId
 }
 
 #***********************************************************************
@@ -3118,8 +3167,8 @@ proc clearJob {} \
 
 proc selectJob { id } \
 {
-if {$::selectedJob(id)==0} { return }
-puts "selectJob $id $::selectedJob(id)"
+#if {$::selectedJob(id)==0} { return }
+#puts "selectJob $id $::selectedJob(id)"
   # clear
   clearJob
 
@@ -3182,8 +3231,14 @@ puts "selectJob $id $::selectedJob(id)"
   set ::selectedJob(cryptPassword)       ""
   set ::selectedJob(cryptPasswordVerify) ""
   BackupServer:get $id "ssh-port" ::selectedJob(sshPort)
-  BackupServer:get $id "ssh-public-key" ::selectedJob(sshPublicKeyFileName)
-  BackupServer:get $id "ssh-private-key" ::selectedJob(sshPrivateKeyFileName)
+  BackupServer:get $id "ssh-public-key" "" \
+  {
+    scanx $result "%S" ::selectedJob(sshPublicKeyFileName)
+  }
+  BackupServer:get $id "ssh-private-key" "" \
+  {
+    scanx $result "%S" ::selectedJob(sshPrivateKeyFileName)
+  }
   BackupServer:get $id "volume-size" ::selectedJob(volumeSize)
   BackupServer:get $id "skip-unreadable" ::selectedJob(skipUnreadableFlag)
   BackupServer:get $id "overwrite-archive-files" ::selectedJob(overwriteArchiveFilesFlag)
@@ -3222,9 +3277,7 @@ puts "selectJob $id $::selectedJob(id)"
   while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
   {
     # parse
-puts $result
     scanx $result "%S %S %S %S" date weekDay time type
-puts $time
 
     # add to schedule list
     lappend ::selectedJob(schedule) [list $date $weekDay $time $type]
@@ -3527,6 +3580,7 @@ proc addIncludedPattern { pattern } \
 
   # store
   set errorCode 0
+  set errorText ""
   BackupServer:executeCommand errorCode errorText "INCLUDE_PATTERNS_CLEAR $::selectedJob(id)"
   foreach pattern $included \
   {
@@ -3561,6 +3615,7 @@ proc remIncludedPattern { pattern } \
     # remove
     set included [lreplace $::selectedJob(included) $index $index]
     set errorCode 0
+    set errorText ""
     BackupServer:executeCommand errorCode errorText "INCLUDE_PATTERNS_CLEAR $::selectedJob(id)"
     foreach pattern $included \
     {
@@ -3648,6 +3703,7 @@ proc addExcludedPattern { pattern } \
 
   # store
   set errorCode 0
+  set errorText ""
   BackupServer:executeCommand errorCode errorText "EXCLUDE_PATTERNS_CLEAR $::selectedJob(id)"
   foreach pattern $excluded \
   {
@@ -3682,6 +3738,7 @@ proc remExcludedPattern { pattern } \
     # remove
     set excluded [lreplace $::selectedJob(excluded) $index $index]
     set errorCode 0
+    set errorText ""
     BackupServer:executeCommand errorCode errorText "EXCLUDE_PATTERNS_CLEAR $::selectedJob(id)"
     foreach pattern $excluded \
     {
@@ -3699,38 +3756,31 @@ proc remExcludedPattern { pattern } \
 }
 
 #***********************************************************************
-# Name   : addSchedule
-# Purpose: add schedule
+# Name   : jobNewDialog
+# Purpose: new job dialog
 # Input  : -
 # Output : -
-# Return : -
+# Return : name or "" on cancel
 # Notes  : -
 #***********************************************************************
 
-proc addSchedule { } \
+proc jobNewDialog {} \
 {
-  global barConfig
-
   # dialog
   set handle [Dialog:window "Add schedule"]
-  Dialog:addVariable $handle result  -1
-  Dialog:addVariable $handle year    "*"
-  Dialog:addVariable $handle month   "*"
-  Dialog:addVariable $handle day     "*"
-  Dialog:addVariable $handle weekDay "*"
-  Dialog:addVariable $handle hour    "*"
-  Dialog:addVariable $handle minute  "*"
+  Dialog:addVariable $handle result      -1
+  Dialog:addVariable $handle name        ""
 
-  frame $handle.schedule
-    label $handle.schedule.title -text "Pattern:"
-    grid $handle.schedule.title -row 2 -column 0 -sticky "w"
-    entry $handle.schedule.data -width 30 -bg white -textvariable [Dialog:variable $handle pattern]
-    grid $handle.schedule.data -row 2 -column 1 -sticky "we"
-    bind $handle.schedule.data <Return> "focus $handle.buttons.add"
+  frame $handle.name
+    label $handle.name.title -text "Name:"
+    grid $handle.name.title -row 0 -column 0 -sticky "w"
+    entry $handle.name.data -textvariable [Dialog:variable $handle name] -bg white
+    grid $handle.name.data -row 0 -column 1 -sticky "we"
+    bind $handle.name.data <Return> "focus $handle.buttons.add"
 
-    grid rowconfigure    $handle.pattern { 0 } -weight 1
-    grid columnconfigure $handle.pattern { 1 } -weight 1
-  grid $handle.pattern -row 0 -column 0 -sticky "nswe" -padx 3p -pady 3p
+    grid rowconfigure    $handle.name { 0 } -weight 1
+    grid columnconfigure $handle.name { 1 } -weight 1
+  grid $handle.name -row 0 -column 0 -sticky "nswe" -padx 3p -pady 3p
 
   frame $handle.buttons
     button $handle.buttons.add -text "Add" -command "event generate $handle <<Event_add>>"
@@ -3758,7 +3808,272 @@ proc addSchedule { } \
     Dialog:close $handle
    "
 
-  focus $handle.pattern.data
+  focus $handle.name.data
+
+  Dialog:show $handle
+  set result [Dialog:get $handle result     ]
+  set name   [Dialog:get $handle name       ]
+  Dialog:delete $handle
+  if {($result != 1)} { return "" }
+
+  return $name
+}
+
+#***********************************************************************
+# Name   : jobNew
+# Purpose: create new job
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc jobNew { } \
+{
+  global barConfig
+
+  # new
+  set name [jobNewDialog]
+  if {$name == ""} \
+  {
+    return
+  }
+
+  # add job
+  set errorCode 0
+  set errorText ""
+  set result    ""
+  BackupServer:executeCommand errorCode errorText "JOB_NEW $name" result
+  if {$errorCode != 0} \
+  {
+    return
+  }
+  scanx $result "%d" id
+
+  return $id
+}
+
+#***********************************************************************
+# Name   : jobDelete
+# Purpose: delete job
+# Input  : id - job id
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc jobDelete { id } \
+{
+  global barConfig
+
+  set errorCode 0
+  set errorText ""
+  BackupServer:executeCommand errorCode errorText "JOB_DELETE $id"
+  if {$errorCode != 0} \
+  {
+    return
+  }
+}
+
+#***********************************************************************
+# Name   : jobAbort
+# Purpose: abort running job
+# Input  : id - job id
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc jobAbort { id } \
+{
+  global guiMode
+
+  set errorCode 0
+  set errorText ""
+  BackupServer:executeCommand errorCode errorText "JOB_ABORT $id"
+  if {$errorCode != 0} \
+  {
+    return
+  }
+}
+
+#***********************************************************************
+# Name   : jobPause
+# Purpose: pause running job
+# Input  : id - job id
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc jobTogglePause { } \
+{
+  global guiMode
+
+  set errorCode 0
+  set errorText ""
+  BackupServer:executeCommand errorCode errorText "JOB_PAUSE $id"
+  if {$errorCode != 0} \
+  {
+    return
+  }
+}
+
+#***********************************************************************
+# Name   : editScheduleDialog
+# Purpose: edit schedule
+# Input  : titleText - title text
+#          okText    - ok-button text
+#          _schedule - schedule to edit
+# Output : _schedule - schedule
+# Return : 1 if schedule edited, 0 otherwise
+# Notes  : -
+#***********************************************************************
+
+proc editScheduleDialog { titleText okText _schedule } \
+{
+  global barConfig
+
+  upvar $_schedule schedule
+
+  # format number or *
+  proc numberFormat {f s} \
+  {
+    if {[string is integer $s]} \
+    {
+      return [format $f $s]
+    } \
+    else \
+    {
+      return $s
+    }
+  }
+
+  # dialog
+  set handle [Dialog:window $titleText]
+  Dialog:addVariable $handle result      -1
+  Dialog:addVariable $handle year        "*"
+  Dialog:addVariable $handle month       "*"
+  Dialog:addVariable $handle day         "*"
+  Dialog:addVariable $handle weekDay     "*"
+  Dialog:addVariable $handle hour        "*"
+  Dialog:addVariable $handle minute      "*"
+  Dialog:addVariable $handle archiveType "*"
+
+  frame $handle.schedule
+    label $handle.schedule.date -text "Date:"
+    grid $handle.schedule.date -row 0 -column 0 -sticky "w"
+    tixOptionMenu $handle.schedule.year -label "" -labelside right -variable [Dialog:variable $handle year] -dynamicgeometry true  -options { entry.background white }
+    $handle.schedule.year add command "*"
+    for {set z [clock format [clock seconds] -format "%G"]} {$z < [expr {[clock format [clock seconds] -format "%G"]+8}]} {incr z} \
+    {
+      $handle.schedule.year add command $z
+    }
+    grid $handle.schedule.year -row 0 -column 1 -sticky "we"
+    bind [$handle.schedule.year subwidget menubutton] <Return> "focus \[$handle.schedule.month subwidget menubutton\]"
+    tixOptionMenu $handle.schedule.month -label "" -labelside right -variable [Dialog:variable $handle month] -dynamicgeometry true  -options { entry.background white }
+    foreach z {"*" "Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"} \
+    {
+      $handle.schedule.month add command $z -label $z
+    }
+    grid $handle.schedule.month -row 0 -column 2 -sticky "we"
+    bind [$handle.schedule.month subwidget menubutton] <Return> "focus \[$handle.schedule.day subwidget menubutton\]"
+    tixOptionMenu $handle.schedule.day -label "" -labelside right -variable [Dialog:variable $handle day] -dynamicgeometry true  -options { entry.background white }
+    $handle.schedule.day add command "*"
+    for {set z 1} {$z <= 31} {incr z} \
+    {
+      $handle.schedule.day add command $z
+    }
+    grid $handle.schedule.day -row 0 -column 3 -sticky "we"
+    bind [$handle.schedule.day subwidget menubutton] <Return> "focus \[$handle.schedule.weekday subwidget menubutton\]"
+    tixOptionMenu $handle.schedule.weekday -label "" -labelside right -variable [Dialog:variable $handle weekDay] -dynamicgeometry true  -options { entry.background white }
+    foreach z {"*" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun"} \
+    {
+      $handle.schedule.weekday add command $z
+    }
+    grid $handle.schedule.weekday -row 0 -column 4 -sticky "we"
+    bind [$handle.schedule.weekday subwidget menubutton] <Return> "focus \[$handle.schedule.hour subwidget menubutton\]"
+
+    label $handle.schedule.time -text "Time:"
+    grid $handle.schedule.time -row 1 -column 0 -sticky "w"
+    tixOptionMenu $handle.schedule.hour -label "" -labelside right -variable [Dialog:variable $handle hour] -dynamicgeometry true  -options { entry.background white }
+    $handle.schedule.hour add command "*"
+    for {set z 0} {$z <= 23} {incr z} \
+    {
+      $handle.schedule.hour add command $z -label $z
+    }
+    grid $handle.schedule.hour -row 1 -column 1 -sticky "we"
+    bind [$handle.schedule.hour subwidget menubutton] <Return> "focus \[$handle.schedule.minute subwidget menubutton\]"
+    tixOptionMenu $handle.schedule.minute -label "" -labelside right -variable [Dialog:variable $handle minute] -dynamicgeometry true  -options { entry.background white }
+    $handle.schedule.minute add command "*"
+    for {set z 0} {$z <= 59} {incr z 5} \
+    {
+      $handle.schedule.minute add command $z
+    }
+    grid $handle.schedule.minute -row 1 -column 2 -sticky "we"
+    bind [$handle.schedule.minute subwidget menubutton] <Return> "focus $handle.schedule.archivetype.any"
+
+    label $handle.schedule.archivetypetitle -text "Type:"
+    grid $handle.schedule.archivetypetitle -row 2 -column 0 -sticky "w"
+    frame $handle.schedule.archivetype
+      radiobutton $handle.schedule.archivetype.any -text "*" -anchor w -variable [Dialog:variable $handle archiveType] -value "*"
+      pack $handle.schedule.archivetype.any -side left
+      bind $handle.schedule.archivetype.any <Return> "focus $handle.buttons.add"
+      radiobutton $handle.schedule.archivetype.normal -text "normal" -anchor w -variable [Dialog:variable $handle archiveType] -value "normal"
+      pack $handle.schedule.archivetype.normal -side left
+      bind $handle.schedule.archivetype.normal <Return> "focus $handle.buttons.add"
+      radiobutton $handle.schedule.archivetype.full -text "full" -anchor w -variable [Dialog:variable $handle archiveType] -value "full"
+      pack $handle.schedule.archivetype.full -side left
+      bind $handle.schedule.archivetype.full <Return> "focus $handle.buttons.add"
+      radiobutton $handle.schedule.archivetype.incremental -text "incremental" -anchor w -variable [Dialog:variable $handle archiveType] -value "incremental"
+      pack $handle.schedule.archivetype.incremental -side left
+      bind $handle.schedule.archivetype.incremental <Return> "focus $handle.buttons.add"
+    grid $handle.schedule.archivetype -row 2 -column 1 -sticky "we"
+
+    grid rowconfigure    $handle.schedule { 0 } -weight 1
+    grid columnconfigure $handle.schedule { 1 } -weight 1
+  grid $handle.schedule -row 0 -column 0 -sticky "nswe" -padx 3p -pady 3p
+
+  frame $handle.buttons
+    button $handle.buttons.add -text $okText -command "event generate $handle <<Event_add>>"
+    pack $handle.buttons.add -side left -padx 2p -pady 2p
+    bind $handle.buttons.add <Return> "$handle.buttons.add invoke"
+    button $handle.buttons.cancel -text "Cancel" -command "event generate $handle <<Event_cancel>>"
+    pack $handle.buttons.cancel -side right -padx 2p -pady 2p
+    bind $handle.buttons.cancel <Return> "$handle.buttons.cancel invoke"
+  grid $handle.buttons -row 1 -column 0 -sticky "we"
+
+  grid rowconfigure $handle    { 0 } -weight 1
+  grid columnconfigure $handle { 0 } -weight 1
+
+  # bindings
+  bind $handle <KeyPress-Escape> "$handle.buttons.cancel invoke"
+
+  bind $handle <<Event_add>> \
+   "
+    Dialog:set $handle result 1
+    Dialog:close $handle
+   "
+  bind $handle <<Event_cancel>> \
+   "
+    Dialog:set $handle result 0
+    Dialog:close $handle
+   "
+
+  # set values
+  set year "*"; set month "*"; set day "*"
+  regexp {0*([^-]+)-0*([^-]+)-0*([^-]+)} [lindex $schedule 0] * year month day
+  set hour "*"; set minute "*"
+  regexp {0*([^-]+):0*([^-]+)} [lindex $schedule 2] * hour minute
+  Dialog:set $handle year        $year
+  Dialog:set $handle month       $month
+  Dialog:set $handle day         $day
+  Dialog:set $handle weekDay     [lindex $schedule 1]
+  Dialog:set $handle hour        $hour
+  Dialog:set $handle minute      $minute
+  Dialog:set $handle archiveType [lindex $schedule 3]
+
+  focus [$handle.schedule.year subwidget menubutton]
 
   Dialog:show $handle
   set result      [Dialog:get $handle result     ]
@@ -3770,17 +4085,43 @@ proc addSchedule { } \
   set minute      [Dialog:get $handle minute     ]
   set archiveType [Dialog:get $handle archiveType]
   Dialog:delete $handle
-  if {($result != 1)} { return }
+  if {($result != 1)} { return 0 }
+
+  set date "[numberFormat "%04d" $year]-[numberFormat "%04d" $month]-[numberFormat "%04d" $day]"
+  set time "[numberFormat "%02d" $hour]:[numberFormat "%02d" $minute]"
+  set schedule [list $date $weekDay $time $archiveType]
+
+  return 1
+}
+
+#***********************************************************************
+# Name   : addSchedule
+# Purpose: add new schedule
+# Input  : -
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc addSchedule { } \
+{
+  global barConfig
+
+  # edit
+  set schedule [list "*" "*" "*" "*"]
+  if {![editScheduleDialog "Add schedule" "Add" schedule]} \
+  {
+    return
+  }
 
   # add
-  set scheduleList [concat $::selectedJob(schedule) [list "$year-$month-$day" $weekDay "$hour:$minute" $archiveType]]]
-
-  # store
+  set scheduleList [concat $::selectedJob(schedule) [list $schedule]]
   set errorCode 0
+  set errorText ""
   BackupServer:executeCommand errorCode errorText "SCHEDULE_CLEAR $::selectedJob(id)"
   foreach schedule $scheduleList \
   {
-    BackupServer:executeCommand errorCode errorText "SCHEDULE_ADD $::selectedJob(id) [lindex $schedule 1] [lindex $schedule 2] [lindex $schedule 3] [lindex $schedule 4] [lindex $schedule 5]"
+    BackupServer:executeCommand errorCode errorText "SCHEDULE_ADD $::selectedJob(id) [lindex $schedule 0] [lindex $schedule 1] [lindex $schedule 2] [lindex $schedule 3]"
   }
   if {$errorCode != 0} \
   {
@@ -3790,25 +4131,62 @@ proc addSchedule { } \
 }
 
 #***********************************************************************
-# Name   : remSchedule
-# Purpose: remove schedule widget list
-# Input  : schedule - schedule
+# Name   : editSchedule
+# Purpose: edit schedule
+# Input  : index - index of schedule in widget list
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc remSchedule { id } \
+proc editSchedule { index } \
+{
+  global barConfig
+
+  # edit schedule
+  set schedule [lindex $::selectedJob(schedule) $index]
+  if {![editScheduleDialog "Edit schedule" "Save" schedule]} \
+  {
+    return
+  }
+
+  # update list
+  set scheduleList [lreplace $::selectedJob(schedule) $index $index $schedule]
+  set errorCode 0
+  set errorText ""
+  BackupServer:executeCommand errorCode errorText "SCHEDULE_CLEAR $::selectedJob(id)"
+  foreach schedule $scheduleList \
+  {
+    BackupServer:executeCommand errorCode errorText "SCHEDULE_ADD $::selectedJob(id) [lindex $schedule 0] [lindex $schedule 1] [lindex $schedule 2] [lindex $schedule 3]"
+  }
+  if {$errorCode != 0} \
+  {
+    return
+  }
+  set ::selectedJob(schedule) [lreplace $::selectedJob(schedule) $index $index $schedule]
+}
+
+#***********************************************************************
+# Name   : remSchedule
+# Purpose: remove schedule widget list
+# Input  : index - index of schedule in widget list
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc remSchedule { index } \
 {
   global barConfig
 
   # remove
   set scheduleList [lreplace $::selectedJob(schedule) $index $index]
   set errorCode 0
+  set errorText ""
   BackupServer:executeCommand errorCode errorText "SCHEDULE_CLEAR $::selectedJob(id)"
   foreach schedule $scheduleList \
   {
-    BackupServer:executeCommand errorCode errorText "SCHEDULE_ADD $::selectedJob(id) [lindex $schedule 1] [lindex $schedule 2] [lindex $schedule 3] [lindex $schedule 4] [lindex $schedule 5]"
+    BackupServer:executeCommand errorCode errorText "SCHEDULE_ADD $::selectedJob(id) [lindex $schedule 0] [lindex $schedule 1] [lindex $schedule 2] [lindex $schedule 3]"
   }
   if {$errorCode != 0} \
   {
@@ -4074,9 +4452,7 @@ proc editStorageFileName { fileName } \
     set selectedIndex [Dialog:get $handle selectedIndex]
     if {$selectedIndex!=""} \
     {
-puts "selectedIndex=$selectedIndex v=[Dialog:get $handle fileNamePartList]"
       set fileNamePartList [lreplace [Dialog:get $handle fileNamePartList] $selectedIndex $selectedIndex]
-puts "n=$fileNamePartList"
       Dialog:set $handle fileNamePartList $fileNamePartList
       updateList $handle $handle.edit.data $fileNamePartList
     }
@@ -4187,31 +4563,31 @@ proc jobStart { jobListWidget } \
   }
 
   # set other parameters
-  BackupServer:executeCommand errorCode errorText "SET archive-part-size $barConfig(archivePartSize)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET archive-part-size $barConfig(archivePartSize)"
   if       {$fullFlag} \
   {
-     BackupServer:executeCommand errorCode errorText "SET archive-type full"
+     BackupServer:executeCommand errorCode errorText "OPTION_SET archive-type full"
   } elseif {$incrementalFlag} \
   {
-     BackupServer:executeCommand errorCode errorText "SET archive-type incremental"
+     BackupServer:executeCommand errorCode errorText "OPTION_SET archive-type incremental"
   } \
   else \
   {
     switch $barConfig(archiveType) \
     {
-      "full"        { BackupServer:executeCommand errorCode errorText "SET archive-type full"        }
-      "incremental" { BackupServer:executeCommand errorCode errorText "SET archive-type incremental" }
+      "full"        { BackupServer:executeCommand errorCode errorText "OPTION_SET archive-type full"        }
+      "incremental" { BackupServer:executeCommand errorCode errorText "OPTION_SET archive-type incremental" }
     }
   }
   if {$barConfig(incrementalListFileName) != ""} \
   {
-    BackupServer:executeCommand errorCode errorText "SET incremental-list-file $barConfig(incrementalListFileName)"
+    BackupServer:executeCommand errorCode errorText "OPTION_SET incremental-list-file $barConfig(incrementalListFileName)"
   }
-  BackupServer:executeCommand errorCode errorText "SET max-tmp-size $barConfig(maxTmpSize)"
-  BackupServer:executeCommand errorCode errorText "SET max-band-width $barConfig(maxBandWidth)"
-  BackupServer:executeCommand errorCode errorText "SET ssh-port $barConfig(sshPort)"
-  BackupServer:executeCommand errorCode errorText "SET compress-algorithm $barConfig(compressAlgorithm)"
-  BackupServer:executeCommand errorCode errorText "SET crypt-algorithm $barConfig(cryptAlgorithm)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET max-tmp-size $barConfig(maxTmpSize)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET max-band-width $barConfig(maxBandWidth)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET ssh-port $barConfig(sshPort)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET compress-algorithm $barConfig(compressAlgorithm)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET crypt-algorithm $barConfig(cryptAlgorithm)"
   switch $barConfig(cryptPasswordMode) \
   {
     "default" \
@@ -4224,7 +4600,7 @@ proc jobStart { jobListWidget } \
       {
         return
       }
-      BackupServer:executeCommand errorCode errorText "SET crypt-password [escapeString $password]"
+      BackupServer:executeCommand errorCode errorText "OPTION_SET crypt-password [escapeString $password]"
     }
     "config" \
     {
@@ -4252,14 +4628,14 @@ proc jobStart { jobListWidget } \
         }
         return
       }
-      BackupServer:executeCommand errorCode errorText "SET crypt-password [escapeString $barConfig(cryptPassword)]"
+      BackupServer:executeCommand errorCode errorText "OPTION_SET crypt-password [escapeString $barConfig(cryptPassword)]"
     }
   } 
-  BackupServer:executeCommand errorCode errorText "SET volume-size $barConfig(volumeSize)"
-  BackupServer:executeCommand errorCode errorText "SET skip-unreadable $barConfig(skipUnreadableFlag)"
-  BackupServer:executeCommand errorCode errorText "SET overwrite-archive-files $barConfig(overwriteArchiveFilesFlag)"
-  BackupServer:executeCommand errorCode errorText "SET overwrite-files $barConfig(overwriteFilesFlag)"
-  BackupServer:executeCommand errorCode errorText "SET ecc $barConfig(errorCorrectionCodesFlag)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET volume-size $barConfig(volumeSize)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET skip-unreadable $barConfig(skipUnreadableFlag)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET overwrite-archive-files $barConfig(overwriteArchiveFilesFlag)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET overwrite-files $barConfig(overwriteFilesFlag)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET ecc $barConfig(errorCorrectionCodesFlag)"
 
   # add jobs archive file name
   if     {$barConfig(storageType) == "filesystem"} \
@@ -4334,6 +4710,7 @@ proc addRestoreJob { jobListWidget } \
   global barConfig currentJob guiMode
 
   set errorCode 0
+  set errorText ""
 
   # clear settings
   BackupServer:executeCommand errorCode errorText "CLEAR"
@@ -4351,11 +4728,11 @@ proc addRestoreJob { jobListWidget } \
   }
 
   # set other parameters
-  BackupServer:executeCommand errorCode errorText "SET max-band-width $barConfig(maxBandWidth)"
-  BackupServer:executeCommand errorCode errorText "SET ssh-port $barConfig(sshPort)"
-  BackupServer:executeCommand errorCode errorText "SET overwrite-files $barConfig(overwriteFilesFlag)"
-  BackupServer:executeCommand errorCode errorText "SET destination-directory $barConfig(destinationDirectoryName)"
-  BackupServer:executeCommand errorCode errorText "SET destination-strip-count $barConfig(destinationStripCount)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET max-band-width $barConfig(maxBandWidth)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET ssh-port $barConfig(sshPort)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET overwrite-files $barConfig(overwriteFilesFlag)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET destination-directory $barConfig(destinationDirectoryName)"
+  BackupServer:executeCommand errorCode errorText "OPTION_SET destination-strip-count $barConfig(destinationStripCount)"
 
   # add jobs archive file name
   if     {$barConfig(storageType) == "filesystem"} \
@@ -4389,47 +4766,6 @@ proc addRestoreJob { jobListWidget } \
   {
     Dialog:error "Error adding new job: $errorText"
   }
-
-  if {$guiMode} \
-  {
-    updateJobList $jobListWidget
-  }
-}
-
-#***********************************************************************
-# Name   : remJob
-# Purpose: remove job
-# Input  : jobListWidget - job list widget
-#          id            - job id
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-proc remJob { jobListWidget id } \
-{
-  set errorCode 0
-  BackupServer:executeCommand errorCode errorText "REM_JOB $id"
-
-  updateJobList $jobListWidget
-}
-
-#***********************************************************************
-# Name   : abortJob
-# Purpose: abort running job
-# Input  : jobListWidget - job list widget
-#          id            - job id
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-proc abortJob { jobListWidget id } \
-{
-  global guiMode
-
-  set errorCode 0
-  BackupServer:executeCommand errorCode errorText "ABORT_JOB $id"
 
   if {$guiMode} \
   {
@@ -4552,6 +4888,16 @@ while {$z<[llength $argv]} \
         exit 1
       }
       set abortId [lindex $argv $z]
+      set guiMode 0
+    }
+    "^--pause$" \
+    {
+      set pauseFlag 1
+      set guiMode 0
+    }
+    "^--continue$" \
+    {
+      set continueFlag 1
       set guiMode 0
     }
     "^--quit$" \
@@ -4691,7 +5037,19 @@ puts "NYI"; exit 1;
   }
   if {$abortId != 0} \
   {
-    abortJob "" $abortId
+    jobAbort $abortId
+  }
+  if {$pauseFlag} \
+  {
+    set errorCode 0
+    set errorText ""
+    BackupServer:executeCommand errorCode errorText "PAUSE"
+  }
+  if {$continueFlag} \
+  {
+    set errorCode 0
+    set errorText ""
+    BackupServer:executeCommand errorCode errorText "CONTINUE"
   }
   if {$quitFlag} \
   {
@@ -4781,8 +5139,8 @@ pack $mainWindow.tabs -fill both -expand yes -padx 2p -pady 2p
 
 frame .status
   frame .status.list
-    mclistbox::mclistbox .status.list.data -height 1 -bg white -labelanchor w -selectmode single -xscrollcommand ".status.list.xscroll set" -yscrollcommand ".status.list.yscroll set"
-    .status.list.data column add id                -label "Nb."            -width 5
+    mclistbox::mclistbox .status.list.data -height 1 -bg white -fillcolumn name -labelanchor w -selectmode single -exportselection 0 -xscrollcommand ".status.list.xscroll set" -yscrollcommand ".status.list.yscroll set"
+    .status.list.data column add id                -visible 0
     .status.list.data column add name              -label "Name"           -width 12
     .status.list.data column add state             -label "State"          -width 16
     .status.list.data column add type              -label "Type"           -width 10
@@ -4806,14 +5164,14 @@ frame .status
     grid .status.selected.done -row 0 -column 0 -sticky "w" 
 
     frame .status.selected.doneFiles
-      entry .status.selected.doneFiles.data -width 10 -textvariable status(doneFiles) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.doneFiles.data -width 10 -textvariable jobStatus(doneFiles) -justify right -borderwidth 0 -state readonly
       pack .status.selected.doneFiles.data -side left
       label .status.selected.doneFiles.unit -text "files" -anchor w
       pack .status.selected.doneFiles.unit -side left
     grid .status.selected.doneFiles -row 0 -column 1 -sticky "w" -padx 2p -pady 2p
 
     frame .status.selected.doneBytes
-      entry .status.selected.doneBytes.data -width 20 -textvariable status(doneBytes) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.doneBytes.data -width 20 -textvariable jobStatus(doneBytes) -justify right -borderwidth 0 -state readonly
       pack .status.selected.doneBytes.data -side left
       label .status.selected.doneBytes.unit -text "bytes" -anchor w
       pack .status.selected.doneBytes.unit -side left
@@ -4823,9 +5181,9 @@ frame .status
     grid .status.selected.doneSeparator1 -row 0 -column 3 -sticky "w" 
 
     frame .status.selected.doneBytesShort
-      entry .status.selected.doneBytesShort.data -width 6 -textvariable status(doneBytesShort) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.doneBytesShort.data -width 6 -textvariable jobStatus(doneBytesShort) -justify right -borderwidth 0 -state readonly
       pack .status.selected.doneBytesShort.data -side left
-      label .status.selected.doneBytesShort.unit -width 8 -textvariable status(doneBytesShortUnit) -anchor w
+      label .status.selected.doneBytesShort.unit -width 8 -textvariable jobStatus(doneBytesShortUnit) -anchor w
       pack .status.selected.doneBytesShort.unit -side left
     grid .status.selected.doneBytesShort -row 0 -column 4 -sticky "w" -padx 2p -pady 2p
 
@@ -4833,7 +5191,7 @@ frame .status
     grid .status.selected.stored -row 1 -column 0 -sticky "w" 
 
     frame .status.selected.storageTotalBytes
-      entry .status.selected.storageTotalBytes.data -width 20 -textvariable status(archiveBytes) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.storageTotalBytes.data -width 20 -textvariable jobStatus(archiveBytes) -justify right -borderwidth 0 -state readonly
       pack .status.selected.storageTotalBytes.data -side left
       label .status.selected.storageTotalBytes.postfix -text "bytes" -anchor w
       pack .status.selected.storageTotalBytes.postfix -side left
@@ -4843,16 +5201,16 @@ frame .status
     grid .status.selected.doneSeparator2 -row 1 -column 3 -sticky "w" 
 
     frame .status.selected.doneStorageTotalBytesShort
-      entry .status.selected.doneStorageTotalBytesShort.data -width 6 -textvariable status(archiveBytesShort) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.doneStorageTotalBytesShort.data -width 6 -textvariable jobStatus(archiveBytesShort) -justify right -borderwidth 0 -state readonly
       pack .status.selected.doneStorageTotalBytesShort.data -side left
-      label .status.selected.doneStorageTotalBytesShort.unit -width 8 -textvariable status(archiveBytesShortUnit) -anchor w
+      label .status.selected.doneStorageTotalBytesShort.unit -width 8 -textvariable jobStatus(archiveBytesShortUnit) -anchor w
       pack .status.selected.doneStorageTotalBytesShort.unit -side left
     grid .status.selected.doneStorageTotalBytesShort -row 1 -column 4 -sticky "w" -padx 2p -pady 2p
 
     frame .status.selected.doneCompressRatio
       label .status.selected.doneCompressRatio.title -text "Ratio"
       pack .status.selected.doneCompressRatio.title -side left
-      entry .status.selected.doneCompressRatio.data -width 7 -textvariable status(compressionRatio) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.doneCompressRatio.data -width 7 -textvariable jobStatus(compressionRatio) -justify right -borderwidth 0 -state readonly
       pack .status.selected.doneCompressRatio.data -side left
       label .status.selected.doneCompressRatio.postfix -text "%" -anchor w
       pack .status.selected.doneCompressRatio.postfix -side left
@@ -4862,14 +5220,14 @@ frame .status
     grid .status.selected.skipped -row 2 -column 0 -sticky "w" 
 
     frame .status.selected.skippedFiles
-      entry .status.selected.skippedFiles.data -width 10 -textvariable status(skippedFiles) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.skippedFiles.data -width 10 -textvariable jobStatus(skippedFiles) -justify right -borderwidth 0 -state readonly
       pack .status.selected.skippedFiles.data -side left
       label .status.selected.skippedFiles.unit -text "files" -anchor w
       pack .status.selected.skippedFiles.unit -side left
     grid .status.selected.skippedFiles -row 2 -column 1 -sticky "w" -padx 2p -pady 2p
 
     frame .status.selected.skippedBytes
-      entry .status.selected.skippedBytes.data -width 20 -textvariable status(skippedBytes) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.skippedBytes.data -width 20 -textvariable jobStatus(skippedBytes) -justify right -borderwidth 0 -state readonly
       pack .status.selected.skippedBytes.data -side left
       label .status.selected.skippedBytes.unit -text "bytes" -anchor w
       pack .status.selected.skippedBytes.unit -side left
@@ -4879,9 +5237,9 @@ frame .status
     grid .status.selected.skippedSeparator -row 2 -column 3 -sticky "w" 
 
     frame .status.selected.skippedBytesShort
-      entry .status.selected.skippedBytesShort.data -width 6 -textvariable status(skippedBytesShort) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.skippedBytesShort.data -width 6 -textvariable jobStatus(skippedBytesShort) -justify right -borderwidth 0 -state readonly
       pack .status.selected.skippedBytesShort.data -side left
-      label .status.selected.skippedBytesShort.unit -width 8 -textvariable status(skippedBytesShortUnit) -anchor w
+      label .status.selected.skippedBytesShort.unit -width 8 -textvariable jobStatus(skippedBytesShortUnit) -anchor w
       pack .status.selected.skippedBytesShort.unit -side left
     grid .status.selected.skippedBytesShort -row 2 -column 4 -sticky "w" -padx 2p -pady 2p
 
@@ -4889,14 +5247,14 @@ frame .status
     grid .status.selected.error -row 3 -column 0 -sticky "w" 
 
     frame .status.selected.errorFiles
-      entry .status.selected.errorFiles.data -width 10 -textvariable status(errorFiles) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.errorFiles.data -width 10 -textvariable jobStatus(errorFiles) -justify right -borderwidth 0 -state readonly
       pack .status.selected.errorFiles.data -side left
       label .status.selected.errorFiles.unit -text "files" -anchor w
       pack .status.selected.errorFiles.unit -side left
     grid .status.selected.errorFiles -row 3 -column 1 -sticky "w" -padx 2p -pady 2p
 
     frame .status.selected.errorBytes
-      entry .status.selected.errorBytes.data -width 20 -textvariable status(errorBytes) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.errorBytes.data -width 20 -textvariable jobStatus(errorBytes) -justify right -borderwidth 0 -state readonly
       pack .status.selected.errorBytes.data -side left
       label .status.selected.errorBytes.unit -text "bytes"
       pack .status.selected.errorBytes.unit -side left
@@ -4906,9 +5264,9 @@ frame .status
     grid .status.selected.errorSeparator -row 3 -column 3 -sticky "w" 
 
     frame .status.selected.errorBytesShort
-      entry .status.selected.errorBytesShort.data -width 6 -textvariable status(errorBytesShort) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.errorBytesShort.data -width 6 -textvariable jobStatus(errorBytesShort) -justify right -borderwidth 0 -state readonly
       pack .status.selected.errorBytesShort.data -side left
-      label .status.selected.errorBytesShort.unit -width 8 -textvariable status(errorBytesShortUnit) -anchor w
+      label .status.selected.errorBytesShort.unit -width 8 -textvariable jobStatus(errorBytesShortUnit) -anchor w
       pack .status.selected.errorBytesShort.unit -side left
     grid .status.selected.errorBytesShort -row 3 -column 4 -sticky "w" -padx 2p -pady 2p
 
@@ -4916,14 +5274,14 @@ frame .status
     grid .status.selected.total -row 4 -column 0 -sticky "w" 
 
     frame .status.selected.totalFiles
-      entry .status.selected.totalFiles.data -width 10 -textvariable status(totalFiles) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.totalFiles.data -width 10 -textvariable jobStatus(totalFiles) -justify right -borderwidth 0 -state readonly
       pack .status.selected.totalFiles.data -side left
       label .status.selected.totalFiles.unit -text "files" -anchor w
       pack .status.selected.totalFiles.unit -side left
     grid .status.selected.totalFiles -row 4 -column 1 -sticky "w" -padx 2p -pady 2p
 
     frame .status.selected.totalBytes
-      entry .status.selected.totalBytes.data -width 20 -textvariable status(totalBytes) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.totalBytes.data -width 20 -textvariable jobStatus(totalBytes) -justify right -borderwidth 0 -state readonly
       pack .status.selected.totalBytes.data -side left
       label .status.selected.totalBytes.unit -text "bytes"
       pack .status.selected.totalBytes.unit -side left
@@ -4933,29 +5291,29 @@ frame .status
     grid .status.selected.totalSeparator -row 4 -column 3 -sticky "w" 
 
     frame .status.selected.totalBytesShort
-      entry .status.selected.totalBytesShort.data -width 6 -textvariable status(totalBytesShort) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.totalBytesShort.data -width 6 -textvariable jobStatus(totalBytesShort) -justify right -borderwidth 0 -state readonly
       pack .status.selected.totalBytesShort.data -side left
-      label .status.selected.totalBytesShort.unit -width 8 -textvariable status(totalBytesShortUnit) -anchor w
+      label .status.selected.totalBytesShort.unit -width 8 -textvariable jobStatus(totalBytesShortUnit) -anchor w
       pack .status.selected.totalBytesShort.unit -side left
     grid .status.selected.totalBytesShort -row 4 -column 4 -sticky "w" -padx 2p -pady 2p
 
     frame .status.selected.doneFilesPerSecond
-      entry .status.selected.doneFilesPerSecond.data -width 10 -textvariable status(filesPerSecond) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.doneFilesPerSecond.data -width 10 -textvariable jobStatus(filesPerSecond) -justify right -borderwidth 0 -state readonly
       pack .status.selected.doneFilesPerSecond.data -side left
       label .status.selected.doneFilesPerSecond.unit -text "files/s" -anchor w
       pack .status.selected.doneFilesPerSecond.unit -side left
     grid .status.selected.doneFilesPerSecond -row 4 -column 5 -sticky "w" -padx 2p -pady 2p
 
     frame .status.selected.doneBytesPerSecond
-      entry .status.selected.doneBytesPerSecond.data -width 10 -textvariable status(bytesPerSecondShort) -justify right -borderwidth 0 -state readonly
+      entry .status.selected.doneBytesPerSecond.data -width 10 -textvariable jobStatus(bytesPerSecondShort) -justify right -borderwidth 0 -state readonly
       pack .status.selected.doneBytesPerSecond.data -side left
-      label .status.selected.doneBytesPerSecond.unit -width 8 -textvariable status(bytesPerSecondShortUnit) -anchor w
+      label .status.selected.doneBytesPerSecond.unit -width 8 -textvariable jobStatus(bytesPerSecondShortUnit) -anchor w
       pack .status.selected.doneBytesPerSecond.unit -side left
     grid .status.selected.doneBytesPerSecond -row 4 -column 6 -sticky "w" -padx 2p -pady 2p
 
     label .status.selected.currentFileNameTitle -text "File:"
     grid .status.selected.currentFileNameTitle -row 5 -column 0 -sticky "w"
-    entry .status.selected.currentFileName -textvariable status(fileName) -borderwidth 0 -state readonly
+    entry .status.selected.currentFileName -textvariable jobStatus(fileName) -borderwidth 0 -state readonly
     grid .status.selected.currentFileName -row 5 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
 
     Dialog:progressbar .status.selected.filePercentage
@@ -4963,7 +5321,7 @@ frame .status
 
     label .status.selected.storageNameTitle -text "Storage:"
     grid .status.selected.storageNameTitle -row 7 -column 0 -sticky "w"
-    entry .status.selected.storageName -textvariable status(storageName) -borderwidth 0 -state readonly
+    entry .status.selected.storageName -textvariable jobStatus(storageName) -borderwidth 0 -state readonly
     grid .status.selected.storageName -row 7 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
 
     Dialog:progressbar .status.selected.storagePercentage
@@ -4986,7 +5344,7 @@ frame .status
 
     label .status.selected.messageTitle -text "Message:"
     grid .status.selected.messageTitle -row 12 -column 0 -sticky "w"
-    entry .status.selected.message -textvariable status(message) -borderwidth 0 -highlightthickness 0 -state readonly -font -*-*-bold-*-*-*-*-*-*-*-*-*-*-*-*
+    entry .status.selected.message -textvariable jobStatus(message) -borderwidth 0 -highlightthickness 0 -state readonly -font -*-*-bold-*-*-*-*-*-*-*-*-*-*-*-*
     grid .status.selected.message -row 12 -column 1 -columnspan 6 -sticky "we" -padx 2p -pady 2p
 
 #    grid rowconfigure    .status.selected { 0 } -weight 1
@@ -4994,19 +5352,17 @@ frame .status
   grid .status.selected -row 1 -column 0 -sticky "we" -padx 2p -pady 2p
 
   frame .status.buttons
-    button .status.buttons.abort -text "Abort" -state disabled -command "event generate . <<Event_abortJob>>"
+    button .status.buttons.abort -text "Abort" -state disabled -command "event generate . <<Event_jobAbort>>"
     pack .status.buttons.abort -side left -padx 2p
-    button .status.buttons.rem -text "Rem (Del)" -state disabled -command "event generate . <<Event_remJob>>"
-    pack .status.buttons.rem -side left -padx 2p
+    button .status.buttons.pausecontinue -text "Pause" -width 12 -command "event generate . <<Event_jobPauseContinue>>"
+    pack .status.buttons.pausecontinue -side left -padx 2p
     button .status.buttons.volume -text "Volume" -state disabled -command "event generate . <<Event_volume>>"
     pack .status.buttons.volume -side left -padx 2p
     button .status.buttons.quit -text "Quit" -command "event generate . <<Event_quit>>"
     pack .status.buttons.quit -side right -padx 2p
   grid .status.buttons -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
 
-  bind .status.list.data <ButtonRelease-1>    "event generate . <<Event_selectJobStatus>>"
-  bind .status.list.data <KeyPress-Delete>    "event generate . <<Event_remJob>>"
-  bind .status.list.data <KeyPress-KP_Delete> "event generate . <<Event_remJob>>"
+  bind .status.list.data <ButtonRelease-1> "event generate . <<Event_selectJobStatus>>"
 
   grid rowconfigure    .status { 0 } -weight 1
   grid columnconfigure .status { 0 } -weight 1
@@ -5017,13 +5373,21 @@ pack .status -side top -fill both -expand yes -in [$mainWindow.tabs subwidget jo
 frame .jobs
   label .jobs.listTitle -text "Name:"
   grid .jobs.listTitle -row 0 -column 0 -sticky "w"
-  tixOptionMenu .jobs.list -label "" -labelside right -variable selectedJob(id) -command selectJob -options { entry.background white }
+  frame .jobs.list
+    tixOptionMenu .jobs.list.data -label "" -labelside right -variable selectedJob(id) -command selectJob -options { entry.background white }
+    grid .jobs.list.data -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
+    button .jobs.list.new -text "New" -command "event generate . <<Event_jobNew>>"
+    grid .jobs.list.new -row 0 -column 1 -sticky "e" -padx 2p -pady 2p
+    button .jobs.list.delete -text "Delete" -command "event generate . <<Event_jobDelete>>"
+    grid .jobs.list.delete -row 0 -column 2 -sticky "e" -padx 2p -pady 2p
+
+    grid columnconfigure .jobs.list { 0 } -weight 1
   grid .jobs.list -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
 
   tixNoteBook .jobs.tabs
     .jobs.tabs add files    -label "Files"    -underline -1 -raisecmd { focus .jobs.files.list }
     .jobs.tabs add filters  -label "Filters"  -underline -1 -raisecmd { focus .jobs.filters.included }
-    .jobs.tabs add storage  -label "Storage"  -underline -1
+    .jobs.tabs add storage  -label "Storage"  -underline -1 
     .jobs.tabs add schedule -label "Schedule" -underline -1 -raisecmd { focus .jobs.schedule.list }
   #  $mainWindow.tabs add misc          -label "Misc"             -underline -1
   grid .jobs.tabs -row 1 -column 0 -columnspan 2 -sticky "nswe" -padx 2p -pady 2p
@@ -5499,7 +5863,7 @@ if {0} {
         addEnableTrace ::barConfig(maxBandWidthFlag) 1 .jobs.storage.destination.ssh.maxBandWidth.size
         addModifyTrace {::selectedJob(maxBandWidthFlag) ::selectedJob(maxBandWidth)} \
         {
-puts "???"
+#puts "???"
 #          BackupServer:set $::selectedJob(id) "ssh-private-key" $::selectedJob(sshPrivateKeyFileName)
         }
 
@@ -5638,8 +6002,9 @@ puts "???"
     grid .jobs.schedule.yscroll -row 0 -column 1 -sticky "ns"
     scrollbar .jobs.schedule.xscroll -orient horizontal -command ".jobs.schedule.list xview"
     grid .jobs.schedule.xscroll -row 1 -column 0 -sticky "we"
-    bind .jobs.schedule.list <Button-1> ".jobs.schedule.buttons.rem configure -state normal"
+    bind .jobs.schedule.list <Button-1> ".jobs.schedule.buttons.edit configure -state normal; .jobs.schedule.buttons.rem configure -state normal"
     bind .jobs.schedule.list <Insert> "event generate . <<Event_backupAddSchedule>>"
+    bind .jobs.schedule.list <Double-Button-1> "event generate . <<Event_backupEditSchedule>>"
     bind .jobs.schedule.list <Delete> "event generate . <<Event_backupRemSchedule>>"
     addModifyTrace {::selectedJob(schedule)} \
     {
@@ -5653,6 +6018,8 @@ puts "???"
     frame .jobs.schedule.buttons
       button .jobs.schedule.buttons.add -text "Add" -command "event generate . <<Event_backupAddSchedule>>"
       pack .jobs.schedule.buttons.add -side left
+      button .jobs.schedule.buttons.edit -text "Edit" -state disabled -command "event generate . <<Event_backupEditSchedule>>"
+      pack .jobs.schedule.buttons.edit -side left
       button .jobs.schedule.buttons.rem -text "Rem" -state disabled -command "event generate . <<Event_backupRemSchedule>>"
       pack .jobs.schedule.buttons.rem -side left
     grid .jobs.schedule.buttons -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
@@ -5691,86 +6058,99 @@ update
 $::backupFilesTreeWidget configure -command "openCloseBackupDirectory"
 #$restoreFilesTreeWidget configure -command "openCloseRestoreDirectory"
 
-addModifyTrace ::status(id) \
+addModifyTrace {::status} \
   "
-    if {\$::status(id) != 0} \
+    global status
+
+    if {\$status == \"pause\"} \
     {
-       .status.selected configure -text \"Selected #\$::status(id)\"
+      .status.buttons.pausecontinue configure -text \"Continue\"
+    } \
+    else \
+    {
+      .status.buttons.pausecontinue configure -text \"Pause\"
+    }
+  "
+addModifyTrace {::jobStatus(id) ::jobStatus(name)} \
+  "
+    global jobStatus
+
+    if {\$jobStatus(id) != 0} \
+    {
+       .status.selected configure -text \"Selected '\$jobStatus(name)'\"
        .status.buttons.abort configure -state normal
-       .status.buttons.rem configure -state normal
     } \
     else \
     {
        .status.selected configure -text \"Selected\"
        .status.buttons.abort configure -state disabled
-       .status.buttons.rem configure -state disabled
     }
   "
-addModifyTrace ::status(fileDoneBytes) \
+addModifyTrace ::jobStatus(fileDoneBytes) \
   "
-    global status
+    global jobStatus
 
-    if {\$status(fileTotalBytes) > 0} \
+    if {\$jobStatus(fileTotalBytes) > 0} \
     {
-      set p \[expr {double(\$status(fileDoneBytes))/\$status(fileTotalBytes)}]
+      set p \[expr {double(\$jobStatus(fileDoneBytes))/\$jobStatus(fileTotalBytes)}]
       Dialog:progressbar .status.selected.filePercentage update \$p
     }
   "
-addModifyTrace ::status(fileTotalBytes) \
+addModifyTrace ::jobStatus(fileTotalBytes) \
   "
-    global status
+    global jobStatus
 
-    if {\$status(fileTotalBytes) > 0} \
+    if {\$jobStatus(fileTotalBytes) > 0} \
     {
-      set p \[expr {double(\$status(fileDoneBytes))/\$status(fileTotalBytes)}]
+      set p \[expr {double(\$jobStatus(fileDoneBytes))/\$jobStatus(fileTotalBytes)}]
       Dialog:progressbar .status.selected.filePercentage update \$p
     }
   "
-addModifyTrace ::status(storageDoneBytes) \
+addModifyTrace ::jobStatus(storageDoneBytes) \
   "
-    global status
+    global jobStatus
 
-    if {\$status(storageTotalBytes) > 0} \
+    if {\$jobStatus(storageTotalBytes) > 0} \
     {
-      set p \[expr {double(\$status(storageDoneBytes))/\$status(storageTotalBytes)}]
+      set p \[expr {double(\$jobStatus(storageDoneBytes))/\$jobStatus(storageTotalBytes)}]
       Dialog:progressbar .status.selected.storagePercentage update \$p
     }
   "
-addModifyTrace ::status(doneBytes) \
+addModifyTrace ::jobStatus(doneBytes) \
   "
-    global status
+    global jobStatus
 
-    if {\$status(totalBytes) > 0} \
+    if {\$jobStatus(totalBytes) > 0} \
     {
-      set p \[expr {double(\$status(doneBytes))/\$status(totalBytes)}]
+      set p \[expr {double(\$jobStatus(doneBytes))/\$jobStatus(totalBytes)}]
       Dialog:progressbar .status.selected.totalBytesPercentage update \$p
     }
   "
-addModifyTrace ::status(doneFiles) \
+addModifyTrace ::jobStatus(doneFiles) \
   "
-    global status
+    global jobStatus
 
-    if {\$status(totalFiles) > 0} \
+    if {\$jobStatus(totalFiles) > 0} \
     {
-      set p \[expr {double(\$status(doneFiles))/\$status(totalFiles)}]
+      set p \[expr {double(\$jobStatus(doneFiles))/\$jobStatus(totalFiles)}]
       Dialog:progressbar .status.selected.totalFilesPercentage update \$p
     }
   "
-addModifyTrace ::status(storageTotalBytes) \
+addModifyTrace ::jobStatus(storageTotalBytes) \
   "
-    global status
+    global jobStatus
 
-    if {\$status(storageTotalBytes) > 0} \
+    if {\$jobStatus(storageTotalBytes) > 0} \
     {
-      set p \[expr {double(\$status(storageDoneBytes))/\$status(storageTotalBytes)}]
+      set p \[expr {double(\$jobStatus(storageDoneBytes))/\$jobStatus(storageTotalBytes)}]
       Dialog:progressbar .status.selected.storagePercentage update \$p
     }
   "
-addModifyTrace ::status(volumeProgress) \
+addModifyTrace ::jobStatus(volumeProgress) \
   "
-    global status
+    global jobStatus
 
-    Dialog:progressbar .status.selected.storageVolume update \$::status(volumeProgress)
+    Dialog:progressbar .status.selected.storageVolume update \$::jobStatus(volumeProgress)
   "
 addModifyTrace {::barConfig(name) ::barConfig(included)} \
   "
@@ -5785,54 +6165,64 @@ addModifyTrace {::barConfig(name) ::barConfig(included)} \
 #      .restore.buttons.addRestoreJob configure -state disabled
     }
   "
-addModifyTrace ::status(totalFiles) \
+addModifyTrace ::jobStatus(totalFiles) \
   "
-    global status
+    global jobStatus
 
-    if {\$status(totalFiles) > 0} \
+    if {\$jobStatus(totalFiles) > 0} \
     {
-      set p \[expr {double(\$status(doneFiles))/\$status(totalFiles)}]
+      set p \[expr {double(\$jobStatus(doneFiles))/\$jobStatus(totalFiles)}]
       Dialog:progressbar .status.selected.totalFilesPercentage update \$p
     }
   "
-addModifyTrace ::status(totalBytes) \
+addModifyTrace ::jobStatus(totalBytes) \
   "
-    global status
+    global jobStatus
 
-    if {\$status(totalBytes) > 0} \
+    if {\$jobStatus(totalBytes) > 0} \
     {
-      set p \[expr {double(\$status(doneBytes))/\$status(totalBytes)}]
+      set p \[expr {double(\$jobStatus(doneBytes))/\$jobStatus(totalBytes)}]
       Dialog:progressbar .status.selected.totalBytesPercentage update \$p
     }
   "
 
-if {0} {
-addModifyTrace {::barConfig(storageType) ::barConfig(storageFileName)} \
-  "
-    newRestoreArchive
-  "
-#addFocusTrace {.restore.storage.source.fileSystem.fileName} \
-#  "" \
-#  "
-#    newRestoreArchive
-#  "
-}
-addModifyTrace {::status(requestedVolumeNumber)} \
+addModifyTrace {::selectedJob(id)} \
+{
+  # note tab disble does not work => remove/add whole tab-set
+  if {$::selectedJob(id) != 0} \
   {
-    if {($::status(volumeNumber) != $::status(requestedVolumeNumber)) && ($::status(requestedVolumeNumber) > 0)} \
+     grid .jobs.tabs -row 1 -column 0 -columnspan 2 -sticky "nswe" -padx 2p -pady 2p
+     .jobs.list.delete configure -state normal
+     .jobs.buttons.save configure -state normal
+     .jobs.buttons.start configure -state normal
+  } \
+  else \
+  {
+     grid remove .jobs.tabs
+     .jobs.list.delete configure -state disabled
+     .jobs.buttons.save configure -state disabled
+     .jobs.buttons.start configure -state disabled
+  }
+}
+
+addModifyTrace {::jobStatus(requestedVolumeNumber)} \
+  {
+    if {($::jobStatus(volumeNumber) != $::jobStatus(requestedVolumeNumber)) && ($::jobStatus(requestedVolumeNumber) > 0)} \
     {
 if {0} {
-      switch [Dialog:select "Request" "Please insert volume #$::status(requestedVolumeNumber) into drive." "" [list [list "Continue"] [list "Abort job"] [list "Cancel" Escape]]]
+      switch [Dialog:select "Request" "Please insert volume #$::jobStatus(requestedVolumeNumber) into drive." "" [list [list "Continue"] [list "Abort job"] [list "Cancel" Escape]]]
       {
         0 \
         {
           set errorCode 0
-          BackupServer:executeCommand errorCode errorText "VOLUME $::status(id) $::status(requestedVolumeNumber)"
+          set errorText ""
+          BackupServer:executeCommand errorCode errorText "VOLUME $::jobStatus(id) $::jobStatus(requestedVolumeNumber)"
         }
         1 \
         {
           set errorCode 0
-          BackupServer:executeCommand errorCode errorText "ABORT_JOB $::status(id)"
+          set errorText ""
+          BackupServer:executeCommand errorCode errorText "ABORT_JOB $::jobStatus(id)"
         }
         2 \
         {
@@ -5840,12 +6230,12 @@ if {0} {
       }
 }
       .status.buttons.volume configure -state normal
-      set ::status(message) "Please insert volume #$::status(requestedVolumeNumber) into drive."
+      set ::jobStatus(message) "Please insert volume #$::jobStatus(requestedVolumeNumber) into drive."
     } \
     else \
     {
       .status.buttons.volume configure -state disabled
-      set ::status(message) ""
+      set ::jobStatus(message) ""
     }
   }
 
@@ -5872,6 +6262,96 @@ bind . <<Event_new>> \
 bind . <<Event_quit>> \
 {
   quit
+}
+
+bind . <<Event_jobNew>> \
+{
+  set id [jobNew]
+  if {$id != ""} \
+  {
+    updateJobList .jobs.list.data
+    set selectedJob(id) $id
+  }
+}
+
+bind . <<Event_jobDelete>> \
+{
+  if {$selectedJob(id) != 0} \
+  {
+    if {[Dialog:confirm "Delete job?" "Delete" "Cancel"]} \
+    {
+      jobDelete $selectedJob(id)
+      clearJob
+      updateJobList .jobs.list.data
+    }
+  }
+ }
+
+bind . <<Event_selectJobStatus>> \
+{
+  set n [.status.list.data curselection]
+  if {$n != {}} \
+  {
+    set entry [lindex [.status.list.data get $n $n] 0]
+    set jobStatus(id)   [lindex $entry 0]
+    set jobStatus(name) [lindex $entry 1]
+  }
+}
+
+bind . <<Event_jobSave>> \
+{
+  # save
+  set errorCode 0
+  set errorText ""
+  BackupServer:executeCommand errorCode errorText "JOB_SAVE $selectedJob(id)"
+  clearConfigModify
+}
+
+bind . <<Event_jobStart>> \
+{
+  if {[Dialog:confirm "Start this job?" "Start job" "Cancel"]} \
+  {
+    # save
+    set errorCode 0
+    set errorText ""
+    BackupServer:executeCommand errorCode errorText "JOB_RUN $selectedJob(id)"
+  }
+}
+
+bind . <<Event_addRestoreJob>> \
+{
+  if {[Dialog:confirm "Start this restore?" "Start restore" "Cancel"]} \
+  {
+    addRestoreJob .status.list.data
+  }
+}
+
+bind . <<Event_jobAbort>> \
+{
+  set n [.status.list.data curselection]
+  if {$n != {}} \
+  {
+    if {[Dialog:confirm "Really abort job?" "Abort job" "Cancel"]} \
+    {
+      set id [lindex [lindex [.status.list.data get $n $n] 0] 0]
+      jobAbort $id
+      updateStatusList .status.list.data
+    }
+  }
+}
+
+bind . <<Event_jobPauseContinue>> \
+{
+  set errorCode 0
+  set errorText ""
+  if {$status eq "pause"} \
+  {
+    BackupServer:executeCommand errorCode errorText "CONTINUE"
+  } \
+  else \
+  {
+    BackupServer:executeCommand errorCode errorText "PAUSE"
+  }
 }
 
 bind . <<Event_backupStateNone>> \
@@ -6020,91 +6500,34 @@ bind . <<Event_restoreRemExcludePattern>> \
 
 bind . <<Event_backupAddSchedule>> \
 {
-  addSchedule ""
+  addSchedule
+}
+
+bind . <<Event_backupEditSchedule>> \
+{
+  set index [lindex [.jobs.schedule.list curselection] 0]
+  if {$index != ""} \
+  {
+    editSchedule $index
+  }
 }
 
 bind . <<Event_backupRemSchedule>> \
 {
-  set scheduleList {}
   foreach index [.jobs.schedule.list curselection] \
   {
-    lappend scheduleList [.jobs.schedule.list get $index]
-  }
-  foreach schedule $scheduleList \
-  {
-    remSchedule [lindex $schedule 0]
+    remSchedule $index
   }
   .jobs.schedule.list selection clear 0 end
+  .jobs.schedule.buttons.edit configure -state disabled
   .jobs.schedule.buttons.rem configure -state disabled
-}
-
-bind . <<Event_selectJobStatus>> \
-{
-  set n [.status.list.data curselection]
-  if {$n != {}} \
-  {
-    set status(id) [lindex [lindex [.status.list.data get $n $n] 0] 0]
-  }
-}
-
-bind . <<Event_jobSave>> \
-{
-  set errorCode 0
-  set errorText ""
-
-  # save
-  BackupServer:executeCommand errorCode errorText "JOB_SAVE $selectedJob(id)"
-  clearConfigModify
-}
-
-bind . <<Event_jobStart>> \
-{
-  if {[Dialog:confirm "Start this backup?" "Start backup" "Cancel"]} \
-  {
-    set errorCode 0
-    set errorText ""
-
-    # save
-    BackupServer:executeCommand errorCode errorText "JOB_RUN $selectedJob(id)"
-  }
-}
-
-bind . <<Event_addRestoreJob>> \
-{
-  if {[Dialog:confirm "Start this restore?" "Start restore" "Cancel"]} \
-  {
-    addRestoreJob .status.list.data
-  }
-}
-
-bind . <<Event_remJob>> \
-{
-  set n [.status.list.data curselection]
-  if {$n != {}} \
-  {
-    set status(id) 0
-    set id [lindex [lindex [.status.list.data get $n $n] 0] 0]
-    remJob .status.list.data $id
-  }
-}
-
-bind . <<Event_abortJob>> \
-{
-  set n [.status.list.data curselection]
-  if {$n != {}} \
-  {
-    if {[Dialog:confirm "Really abort job?" "Abort job" "Cancel"]} \
-    {
-      set id [lindex [lindex [.status.list.data get $n $n] 0] 0]
-      abortJob .status.list.data $id
-    }
-  }
 }
 
 bind . <<Event_volume>> \
 {
   set errorCode 0
-  BackupServer:executeCommand errorCode errorText "VOLUME $::status(id) $::status(requestedVolumeNumber)"
+  set errorText ""
+  BackupServer:executeCommand errorCode errorText "VOLUME $::jobStatus(id) $::jobStatus(requestedVolumeNumber)"
 }
 
 if {$debugFlag} \
@@ -6112,6 +6535,7 @@ if {$debugFlag} \
   bind . <<Event_debugMemoryInfo>> \
   {
     set errorCode 0
+    set errorText ""
     BackupServer:executeCommand errorCode errorText "DEBUG_MEMORY_INFO"
   }
 }
@@ -6147,11 +6571,11 @@ else  \
   exit 1
 }
 
-if {0} {
+if {1} {
 updateStatusList .status.list.data
 updateStatus
 }
-updateJobList .jobs.list
+updateJobList .jobs.list.data
 
 # read devices
 #set commandId [BackupServer:sendCommand "DEVICE_LIST"]
@@ -6184,7 +6608,8 @@ puts "NYI"; exit 1;
   }
 }
 
-selectJob 1
+#selectJob 1
+#addSchedule
 #Dialog:password "xxx" 0
 #editStorageFileName "test-%type-%a-###.bar"
 #Dialog:fileSelector "x" "/tmp/test.bnid" {}

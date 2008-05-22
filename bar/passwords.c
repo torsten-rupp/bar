@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -220,6 +220,11 @@ void Password_appendChar(Password *password, char ch)
 uint Password_length(const Password *password)
 {
   return (password != NULL)?password->length:0;
+}
+
+bool Password_empty(const Password *password)
+{
+  return (password == NULL) || (password->length == 0);
 }
 
 char Password_getChar(const Password *password, uint index)
