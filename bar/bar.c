@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.53 $
+* $Revision: 1.54 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1551,6 +1551,15 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   }
 }
 
+/***********************************************************************\
+* Name   : parseScheduleNumber
+* Purpose: parse schedule number (year, day, month, hour, minute)
+* Input  : s - string to parse
+* Output : n - number variable
+* Return : TRUE iff number parsed
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool parseScheduleNumber(const String s, uint *n)
 {
   ulong nextIndex;
@@ -1570,6 +1579,15 @@ LOCAL bool parseScheduleNumber(const String s, uint *n)
 
   return TRUE;
 }
+
+/***********************************************************************\
+* Name   : parseScheduleMonth
+* Purpose: parse month name
+* Input  : s - string to parse
+* Output : month - month (MONTH_JAN..MONTH_DEC)
+* Return : TRUE iff month parsed
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool parseScheduleMonth(const String s, uint *month)
 {
@@ -1608,6 +1626,15 @@ LOCAL bool parseScheduleMonth(const String s, uint *month)
   return TRUE;
 }
 
+/***********************************************************************\
+* Name   : parseScheduleWeekDay
+* Purpose: parse week day
+* Input  : s - string to parse
+* Output : weekday - week day
+* Return : TRUE iff week day parsed
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool parseScheduleWeekDay(const String s, uint *weekday)
 {
   String name;
@@ -1635,6 +1662,15 @@ LOCAL bool parseScheduleWeekDay(const String s, uint *weekday)
 
   return TRUE;
 }
+
+/***********************************************************************\
+* Name   : parseScheduleArchiveType
+* Purpose: parse archive type
+* Input  : s - string to parse
+* Output : archiveType - archive type
+* Return : TRUE iff archive type parsed
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
 {
@@ -1829,6 +1865,11 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
         case WEEKDAY_FRI: String_appendCString(line,"Fri"); break;
         case WEEKDAY_SAT: String_appendCString(line,"Sat"); break;
         case WEEKDAY_SUN: String_appendCString(line,"Sun"); break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
       }
       String_appendChar(line,' ');
     }
@@ -1849,6 +1890,24 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
     else
     {
       String_appendCString(line,"*");
+    }
+    String_appendChar(line,' ');
+    switch (scheduleNode->archiveType)
+    {
+      case ARCHIVE_TYPE_NORMAL:
+        String_appendCString(line,"*");
+        break;
+      case ARCHIVE_TYPE_FULL:
+        String_appendCString(line,"FULL");
+        break;
+      case ARCHIVE_TYPE_INCREMENTAL:
+        String_appendCString(line,"INCREMENTAL");
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
     }
 
     (*formatUserData) = scheduleNode->next;
