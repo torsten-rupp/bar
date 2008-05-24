@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.32 $
+* $Revision: 1.33 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -32,6 +32,7 @@
 #include "files.h"
 #include "archive.h"
 #include "filefragmentlists.h"
+#include "misc.h"
 
 #include "commands_restore.h"
 
