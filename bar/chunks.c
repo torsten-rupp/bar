@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -428,6 +428,9 @@ LOCAL Errors writeDefinition(void       *userData,
     return error;
   }
   (*bytesWritten) = bufferLength;
+
+  /* free resources */
+  free(buffer);
 
   return ERROR_NONE;
 }

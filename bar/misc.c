@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -485,6 +485,7 @@ error = ERROR_NONE;
     String_delete(stderrLine);
     String_delete(stdoutLine);
 
+    /* check exit code */
     exitcode = WEXITSTATUS(status);
     if (exitcode != 0)
     {
@@ -492,6 +493,8 @@ error = ERROR_NONE;
                  String_cString(command),
                  exitcode
                 );
+      StringList_done(&argumentList);
+      String_delete(command);
       return ERROR(EXEC_FAIL,exitcode);
     }
 
