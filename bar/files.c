@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.35 $
+* $Revision: 1.36 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -338,8 +338,8 @@ Errors File_open(FileHandle    *fileHandle,
         return ERROR(CREATE_FILE,errno);
       }
 
-      fileHandle->index = 0;
-      fileHandle->size  = 0;
+      fileHandle->index = 0LL;
+      fileHandle->size  = 0LL;
       break;
     case FILE_OPENMODE_READ:
       /* open file for reading */
@@ -370,7 +370,7 @@ Errors File_open(FileHandle    *fileHandle,
         return error;
       }
 
-      fileHandle->index = 0;
+      fileHandle->index = 0LL;
       fileHandle->size  = (uint64)n;
       break;
     case FILE_OPENMODE_WRITE:
@@ -404,8 +404,8 @@ Errors File_open(FileHandle    *fileHandle,
         }
       }
 
-      fileHandle->index = 0;
-      fileHandle->size  = 0;
+      fileHandle->index = 0LL;
+      fileHandle->size  = 0LL;
       break;
     case FILE_OPENMODE_APPEND:
       /* create directory if needed */
@@ -470,8 +470,8 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
         return ERROR(CREATE_FILE,errno);
       }
 
-      fileHandle->index = 0;
-      fileHandle->size  = 0;
+      fileHandle->index = 0LL;
+      fileHandle->size  = 0LL;
       break;
     case FILE_OPENMODE_READ:
       /* open file for reading */
@@ -481,8 +481,8 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
         return ERROR(OPEN_FILE,errno);
       }
 
-      fileHandle->index = 0;
-      fileHandle->size  = 0;
+      fileHandle->index = 0LL;
+      fileHandle->size  = 0LL;
       break;
     case FILE_OPENMODE_WRITE:
       /* open file for writing */
@@ -492,8 +492,8 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
         return ERROR(OPEN_FILE,errno);
       }
 
-      fileHandle->index = 0;
-      fileHandle->size  = 0;
+      fileHandle->index = 0LL;
+      fileHandle->size  = 0LL;
       break;
     case FILE_OPENMODE_APPEND:
       /* open file for writing */
@@ -528,7 +528,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
 Errors File_close(FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
-  assert(fileHandle->file);
+  assert(fileHandle->file != NULL);
  
   fclose(fileHandle->file);
   fileHandle->file = NULL;
@@ -542,6 +542,7 @@ bool File_eof(FileHandle *fileHandle)
   bool eofFlag;
 
   assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
 
   ch = getc(fileHandle->file);
   if (ch != EOF)
@@ -566,6 +567,7 @@ Errors File_read(FileHandle *fileHandle,
   ssize_t n;
 
   assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
   assert(buffer != NULL);
 
   n = fread(buffer,1,bufferLength,fileHandle->file);
@@ -590,6 +592,7 @@ Errors File_write(FileHandle *fileHandle,
   ssize_t n;
 
   assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
   assert(buffer != NULL);
 
   n = fwrite(buffer,1,bufferLength,fileHandle->file);
@@ -610,6 +613,7 @@ Errors File_readLine(FileHandle *fileHandle,
   int ch;
 
   assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
   assert(line != NULL);
 
   String_clear(line);
@@ -648,6 +652,7 @@ Errors File_writeLine(FileHandle   *fileHandle,
   Errors error;
 
   assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
   assert(line != NULL);
 
   error = File_write(fileHandle,String_cString(line),String_length(line));
@@ -674,6 +679,7 @@ Errors File_printLine(FileHandle *fileHandle,
   Errors  error;
 
   assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
   assert(line != NULL);
 
   /* initialise variables */
@@ -707,6 +713,7 @@ Errors File_printLine(FileHandle *fileHandle,
 uint64 File_getSize(FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
 
   return fileHandle->size;
 }
@@ -716,6 +723,7 @@ Errors File_tell(FileHandle *fileHandle, uint64 *offset)
   off_t n;
 
   assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
   assert(offset != NULL);
 
   n = ftello(fileHandle->file);
@@ -737,6 +745,7 @@ Errors File_seek(FileHandle *fileHandle,
                 )
 {
   assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
 
   if (fseeko(fileHandle->file,(off_t)offset,SEEK_SET) == -1)
   {
@@ -843,6 +852,8 @@ Errors File_openDirectory(DirectoryHandle *directoryHandle,
 void File_closeDirectory(DirectoryHandle *directoryHandle)
 {
   assert(directoryHandle != NULL);
+  assert(directoryHandle->name != NULL);
+  assert(directoryHandle->dir != NULL);
 
   closedir(directoryHandle->dir);
   File_deleteFileName(directoryHandle->name);
@@ -851,6 +862,8 @@ void File_closeDirectory(DirectoryHandle *directoryHandle)
 bool File_endOfDirectory(DirectoryHandle *directoryHandle)
 {
   assert(directoryHandle != NULL);
+  assert(directoryHandle->name != NULL);
+  assert(directoryHandle->dir != NULL);
 
   /* read entry iff not read */
   if (directoryHandle->entry == NULL)
@@ -876,6 +889,8 @@ Errors File_readDirectory(DirectoryHandle *directoryHandle,
                          )
 {
   assert(directoryHandle != NULL);
+  assert(directoryHandle->name != NULL);
+  assert(directoryHandle->dir != NULL);
   assert(fileName != NULL);
 
   /* read entry iff not read */
@@ -923,6 +938,7 @@ Errors File_openDevices(DeviceHandle *deviceHandle)
 void File_closeDevices(DeviceHandle *deviceHandle)
 {
   assert(deviceHandle != NULL);
+  assert(deviceHandle->file != NULL);
 
   fclose(deviceHandle->file);
 }
@@ -930,6 +946,7 @@ void File_closeDevices(DeviceHandle *deviceHandle)
 bool File_endOfDevices(DeviceHandle *deviceHandle)
 {
   assert(deviceHandle != NULL);
+  assert(deviceHandle->file != NULL);
 
   if (!deviceHandle->bufferFilledFlag)
   {
@@ -950,6 +967,7 @@ Errors File_readDevice(DeviceHandle *deviceHandle,
   char *s0,*s1;
 
   assert(deviceHandle != NULL);
+  assert(deviceHandle->file != NULL);
   assert(deviceName != NULL);
 
   if (!deviceHandle->bufferFilledFlag)

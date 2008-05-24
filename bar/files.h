@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -69,13 +69,12 @@ typedef enum
 /* file i/o handle */
 typedef struct
 {
-  String        fileName;
-  FILE          *file;
-  uint64        index;
-  uint64        size;
+  FILE   *file;
+  uint64 index;
+  uint64 size;
 } FileHandle;
 
-/* directory list tread handle */
+/* directory list handle */
 typedef struct
 {
   String        name;
