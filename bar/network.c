@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -90,10 +90,11 @@ Errors Network_initAll(void)
 void Network_doneAll(void)
 {
   #ifdef HAVE_GNU_TLS
+    gnutls_global_deinit();
   #endif /* HAVE_GNU_TLS */
   #ifdef HAVE_SSH2
-    String_delete(defaultSSHPublicKeyFileName);
-    String_delete(defaultSSHPrivateKeyFileName);
+    String_delete(defaultSSHPublicKeyFileName); defaultSSHPublicKeyFileName=NULL;
+    String_delete(defaultSSHPrivateKeyFileName); defaultSSHPrivateKeyFileName=NULL;
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */
 }
