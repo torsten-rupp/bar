@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.h,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -94,6 +94,7 @@ Errors Command_create(const char                   *archiveFileName,
                       PatternList                  *includePatternList,
                       PatternList                  *excludePatternList,
                       JobOptions                   *jobOptions,
+                      ArchiveTypes                 archiveType,
                       CreateStatusInfoFunction     createStatusInfoFunction,
                       void                         *createStatusInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,

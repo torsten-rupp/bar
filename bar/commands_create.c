@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.47 $
+* $Revision: 1.48 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -73,8 +73,9 @@ typedef struct
   PatternList                 *includePatternList;
   PatternList                 *excludePatternList;
   const JobOptions            *jobOptions;
+  ArchiveTypes                archiveType;                        // archive type to create
   bool                        *pauseFlag;                         // TRUE for pause
-  bool                        *requestedAbortFlag;                  // TRUE to abort create
+  bool                        *requestedAbortFlag;                // TRUE to abort create
 
   Dictionary                  filesDictionary;                    // dictionary with files (used for incremental backup)
   StorageFileHandle           storageFileHandle;                  // storage handle
@@ -631,12 +632,12 @@ LOCAL bool getNextFile(MsgQueue  *fileMsgQueue,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String formatArchiveFileName(String           fileName,
-                                   const String     templateFileName,
-                                   int              partNumber,
-                                   bool             lastPartFlag,
-                                   time_t           time,
-                                   const JobOptions *jobOptions
+LOCAL String formatArchiveFileName(String       fileName,
+                                   const String templateFileName,
+                                   int          partNumber,
+                                   bool         lastPartFlag,
+                                   time_t       time,
+                                   ArchiveTypes archiveType
                                   )
 {
   TextMacro  textMacros[2];
@@ -652,7 +653,7 @@ LOCAL String formatArchiveFileName(String           fileName,
   int        d;
 
   /* expand macros */
-  switch (jobOptions->archiveType)
+  switch (archiveType)
   {
     case ARCHIVE_TYPE_NORMAL:      TEXT_MACRO_CSTRING(textMacros[0],"%type","normal");      break;
     case ARCHIVE_TYPE_FULL:        TEXT_MACRO_CSTRING(textMacros[0],"%type","full");        break;
@@ -843,7 +844,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
         switch (fileInfo.type)
         {
           case FILE_TYPE_FILE:
-            if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
             {
               createInfo->statusInfo.totalFiles++;
               createInfo->statusInfo.totalBytes += fileInfo.size;
@@ -851,7 +852,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
             }
             break;
           case FILE_TYPE_DIRECTORY:
-            if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
             {
               createInfo->statusInfo.totalFiles++;
               updateStatusInfo(createInfo);
@@ -903,7 +904,7 @@ fprintf(stderr,"%s,%d: %lu xx=%lu\n",__FILE__,__LINE__,StringList_count(&nameLis
                   switch (fileInfo.type)
                   {
                     case FILE_TYPE_FILE:
-                      if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                       {
                         createInfo->statusInfo.totalFiles++;
                         createInfo->statusInfo.totalBytes += fileInfo.size;
@@ -915,14 +916,14 @@ fprintf(stderr,"%s,%d: %lu xx=%lu\n",__FILE__,__LINE__,StringList_count(&nameLis
                       StringList_append(&nameList,fileName);
                       break;
                     case FILE_TYPE_LINK:
-                      if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                       {
                         createInfo->statusInfo.totalFiles++;
                         updateStatusInfo(createInfo);
                       }
                       break;
                     case FILE_TYPE_SPECIAL:
-                      if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                       {
                         createInfo->statusInfo.totalFiles++;
                         updateStatusInfo(createInfo);
@@ -940,14 +941,14 @@ fprintf(stderr,"%s,%d: %lu xx=%lu\n",__FILE__,__LINE__,StringList_count(&nameLis
             }
             break;
           case FILE_TYPE_LINK:
-            if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
             {
               createInfo->statusInfo.totalFiles++;
               updateStatusInfo(createInfo);
             }
             break;
           case FILE_TYPE_SPECIAL:
-            if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
             {
               createInfo->statusInfo.totalFiles++;
               updateStatusInfo(createInfo);
@@ -1069,14 +1070,14 @@ LOCAL void collectorThread(CreateInfo *createInfo)
         switch (fileInfo.type)
         {
           case FILE_TYPE_FILE:
-            if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
             {
               /* add to file list */
               appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_FILE);
             }
             break;
           case FILE_TYPE_DIRECTORY:
-            if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
             {
               /* add to file list */
               appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_DIRECTORY);
@@ -1130,7 +1131,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   switch (fileInfo.type)
                   {
                     case FILE_TYPE_FILE:
-                      if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                       {
                         /* add to file list */
                         appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_FILE);
@@ -1141,14 +1142,14 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                       StringList_append(&nameList,fileName);
                       break;
                     case FILE_TYPE_LINK:
-                      if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                       {
                         /* add to file list */
                         appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_LINK);
                       }
                       break;
                     case FILE_TYPE_SPECIAL:
-                      if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                       {
                         /* add to file list */
                         appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_SPECIAL);
@@ -1184,14 +1185,14 @@ LOCAL void collectorThread(CreateInfo *createInfo)
             }
             break;
           case FILE_TYPE_LINK:
-            if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
             {
               /* add to file list */
               appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_LINK);
             }
             break;
           case FILE_TYPE_SPECIAL:
-            if ((createInfo->jobOptions->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
             {
               /* add to file list */
               appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_SPECIAL);
@@ -1286,8 +1287,8 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(storageMsg->fileName);
   String_delete(storageMsg->destinationFileName);
+  String_delete(storageMsg->fileName);
 }
 
 /***********************************************************************\
@@ -1317,7 +1318,7 @@ LOCAL Errors storeArchiveFile(String fileName,
                                           partNumber,
                                           lastPartFlag,
                                           createInfo->startTime,
-                                          createInfo->jobOptions
+                                          createInfo->archiveType
                                          );
 
   /* send to storage controller */
@@ -1601,8 +1602,7 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
     Semaphore_unlock(&createInfo->storageSemaphore);
 
     /* free resources */
-    String_delete(storageMsg.fileName);
-    String_delete(storageMsg.destinationFileName);
+    freeStorageMsg(&storageMsg,NULL);
   }
 
   if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
@@ -1639,6 +1639,7 @@ Errors Command_create(const char                   *archiveFileName,
                       PatternList                  *includePatternList,
                       PatternList                  *excludePatternList,
                       JobOptions                   *jobOptions,
+                      ArchiveTypes                 archiveType,
                       CreateStatusInfoFunction     createStatusInfoFunction,
                       void                         *createStatusInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,
@@ -1665,6 +1666,7 @@ Errors Command_create(const char                   *archiveFileName,
   createInfo.includePatternList           = includePatternList;
   createInfo.excludePatternList           = excludePatternList;
   createInfo.jobOptions                   = jobOptions;
+  createInfo.archiveType                  = (archiveType != ARCHIVE_TYPE_NORMAL)?archiveType:jobOptions->archiveType;
   createInfo.pauseFlag                    = pauseFlag;
   createInfo.requestedAbortFlag           = requestedAbortFlag;
   createInfo.archiveFileName              = String_newCString(archiveFileName);
@@ -1750,8 +1752,8 @@ Errors Command_create(const char                   *archiveFileName,
     return error;
   }
 
-  if (   (jobOptions->archiveType == ARCHIVE_TYPE_FULL)
-      || (jobOptions->archiveType == ARCHIVE_TYPE_INCREMENTAL)
+  if (   (createInfo.archiveType == ARCHIVE_TYPE_FULL)
+      || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL)
       || !String_empty(jobOptions->incrementalListFileName)
      )
   {
@@ -1768,7 +1770,7 @@ Errors Command_create(const char                   *archiveFileName,
                             -1,
                             createInfo.startTime,
                             FALSE,
-                            jobOptions
+                            createInfo.archiveType
                            );
       String_appendCString(incrementalListFileName,".bid");
     }
@@ -1776,7 +1778,7 @@ Errors Command_create(const char                   *archiveFileName,
     storeIncrementalFileInfoFlag = TRUE;
 
     /* read incremental list */
-    if ((jobOptions->archiveType == ARCHIVE_TYPE_INCREMENTAL) && File_exists(incrementalListFileName))
+    if ((createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL) && File_exists(incrementalListFileName))
     {
       printInfo(1,"Read incremental list '%s'...",String_cString(incrementalListFileName));
       error = readIncrementalList(incrementalListFileName,
@@ -2300,7 +2302,10 @@ Errors Command_create(const char                   *archiveFileName,
     }
   }
 
- /* signal end of data */
+  /* close archive */
+  Archive_close(&archiveInfo);
+
+  /* signal end of data */
   createInfo.collectorSumThreadExitFlag = TRUE;
   MsgQueue_setEndOfMsg(&createInfo.fileMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
@@ -2310,9 +2315,6 @@ Errors Command_create(const char                   *archiveFileName,
   Thread_join(&createInfo.storageThread);
   Thread_join(&createInfo.collectorThread);
   Thread_join(&createInfo.collectorSumThread);
-
-  /* close archive */
-  Archive_close(&archiveInfo);
 
   /* done storage */
   Storage_done(&createInfo.storageFileHandle);
