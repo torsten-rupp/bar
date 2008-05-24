@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/arrays.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -180,7 +180,28 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
 void *Array_cArray(Array array);
 
 #ifndef NDEBUG
+/***********************************************************************\
+* Name   : Array_debug
+* Purpose: array debug function: output not deallocated strings
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Array_debug(void);
+
+/***********************************************************************\
+* Name   : Array_debugDone
+* Purpose: done array debug functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Array_debugDone(void);
+
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

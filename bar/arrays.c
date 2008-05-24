@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/arrays.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -15,6 +15,7 @@
 
 #include "global.h"
 #ifndef NDEBUG
+  #include <pthread.h>
   #include "lists.h"
 #endif /* not NDEBUG */
 
@@ -56,7 +57,9 @@ struct __Array
 
 /***************************** Variables *******************************/
 #ifndef NDEBUG
-  DebugArrayList debugArrayList = LIST_STATIC_INIT;
+  pthread_once_t  debugArrayInitFlag = PTHREAD_ONCE_INIT;
+  pthread_mutex_t debugArrayLock;
+  DebugArrayList  debugArrayList;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -68,6 +71,14 @@ struct __Array
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+#ifndef NDEBUG
+LOCAL void debugArrayInit(void)
+{
+  pthread_mutex_init(&debugArrayLock,NULL);
+  List_init(&debugArrayList);
+}
+#endif /* not NDEBUG */
 
 #ifdef NDEBUG
 void *Array_new(ulong elementSize, ulong length)
@@ -108,6 +119,7 @@ void *__Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong l
   array->maxLength   = length;
 
   #ifndef NDEBUG
+    pthread_mutex_lock(&debugArrayLock);
     debugArrayNode = LIST_NEW_NODE(DebugArrayNode);
     if (debugArrayNode == NULL)
     {
@@ -117,6 +129,7 @@ void *__Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong l
     debugArrayNode->lineNb   = lineNb;
     debugArrayNode->array    = array;
     List_append(&debugArrayList,debugArrayNode);
+    pthread_mutex_unlock(&debugArrayLock);
   #endif /* not NDEBUG */
 
   return array;
@@ -143,6 +156,7 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
     }
 
     #ifndef NDEBUG
+      pthread_mutex_lock(&debugArrayLock);
       debugArrayNode = debugArrayList.head;
       while ((debugArrayNode != NULL) && (debugArrayNode->array != array))
       {
@@ -158,6 +172,7 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
                 array
                );
       }
+      pthread_mutex_unlock(&debugArrayLock);
     #endif /* not NDEBUG */
 
     free(array->data);
@@ -358,21 +373,30 @@ void *Array_cArray(Array array)
 #ifndef NDEBUG
 void Array_debug(void)
 {
-  #ifndef NDEBUG
-    DebugArrayNode *debugArrayNode;
-  #endif /* not NDEBUG */
+  DebugArrayNode *debugArrayNode;
 
-  #ifndef NDEBUG
-    for (debugArrayNode = debugArrayList.head; debugArrayNode != NULL; debugArrayNode = debugArrayNode->next)
-    {
-      fprintf(stderr,"DEBUG WARNING: array %p[%ld] allocated at %s, line %ld\n",
-              debugArrayNode->array->data,
-              debugArrayNode->array->maxLength,
-              debugArrayNode->fileName,
-              debugArrayNode->lineNb
-             );
-    }
-  #endif /* not NDEBUG */
+  pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+  pthread_mutex_lock(&debugArrayLock);
+  for (debugArrayNode = debugArrayList.head; debugArrayNode != NULL; debugArrayNode = debugArrayNode->next)
+  {
+    fprintf(stderr,"DEBUG WARNING: array %p[%ld] allocated at %s, line %ld\n",
+            debugArrayNode->array->data,
+            debugArrayNode->array->maxLength,
+            debugArrayNode->fileName,
+            debugArrayNode->lineNb
+           );
+  }
+  pthread_mutex_unlock(&debugArrayLock);
+}
+
+void Array_debugDone(void)
+{
+  pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+  pthread_mutex_lock(&debugArrayLock);
+  List_done(&debugArrayList,NULL,NULL);
+  pthread_mutex_unlock(&debugArrayLock);
 }
 #endif /* not NDEBUG */
 
