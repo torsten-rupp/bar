@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.23 $
+# $Revision: 1.24 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -269,10 +269,17 @@ uinstall:
 # run server
 .PHONY: barserver barserver_ssl
 barserver: bar
-	nice ./bar --daemon
+	nice ./bar \
+          --daemon \
+          --job-directory jobs
 
 barserver_ssl: bar $(TLS_FILES)
-	nice ./bar --daemon --server-ca-file=bar-ca.pem --server-cert-file=bar-server-cert.pem --server-key-file=bar-server-key.pem
+	nice ./bar \
+          --daemon \
+          --job-directory jobs \
+          --server-ca-file=bar-ca.pem \
+          --server-cert-file=bar-server-cert.pem \
+          --server-key-file=bar-server-key.pem
 
 # do test
 .PHONY: test test1 test2 test3 test4 test_all
@@ -343,6 +350,58 @@ standard_test_destroy: bar destroyer
 	./bar -d test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	./bar -x test/test.bar_destroyed $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
+
+.PHONY: memcheck memcheck1
+memcheck: bar
+	$(MAKE) VALGRIND_OPTIONS="--leak-check=summary" $(if $(CHECK),memcheck$(CHECK),memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6)
+
+.PHONY: memcheck_extended
+memcheck_extended: bar
+	$(MAKE) VALGRIND_OPTIONS="--leak-check=full" $(if $(CHECK),memcheck$(CHECK),memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6)
+
+.PHONY: memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6
+memcheck1: bar
+	valgrind \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          ./bar --help > /dev/null
+memcheck2: bar
+	valgrind \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          ./bar -c test/test.bar test/data/zero1024.dat $(OPTIONS) --overwrite-archive-files > /dev/null
+memcheck3: bar
+	valgrind \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          ./bar -l test/test*.bar $(OPTIONS) > /dev/null
+memcheck4: bar
+	valgrind \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          ./bar -t test/test*.bar $(OPTIONS) > /dev/null
+memcheck5: bar
+	valgrind \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          ./bar -d test/test*.bar $(OPTIONS) > /dev/null
+memcheck6: bar
+	valgrind \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          ./bar -x test/test*.bar $(OPTIONS) --directory test/restore > /dev/null
 
 .PHONY: dist $(DISTRIBUTION_NAME).tar.bz2
 dist: $(DISTRIBUTION_NAME).tar.bz2
