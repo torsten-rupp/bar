@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/cmdoptions.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -844,8 +844,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
 
       assert(commandLineOptions[i].name != NULL);
 
-      /* --name */
-      n += 2 + strlen(commandLineOptions[i].name);
+      n += 2 + strlen(commandLineOptions[i].name); /* --name */
       switch (commandLineOptions[i].type)
       {
         case CMD_OPTION_TYPE_INTEGER:
@@ -905,7 +904,6 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           break;
         case CMD_OPTION_TYPE_SPECIAL:
           n += 2; /* =< */
-          strncat(name,"=<",sizeof(name)-strlen(name));
           if (commandLineOptions[i].specialOption.helpArgument != NULL)
           {
             n += strlen(commandLineOptions[i].specialOption.helpArgument);
