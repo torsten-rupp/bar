@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.54 $
+* $Revision: 1.55 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -266,7 +266,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,0,globalOptions.compressMinFileSize,                    DEFAULT_COMPRESS_MIN_FILE_SIZE,0,INT_MAX,COMMAND_LINE_BYTES_UNITS, "minimal size of file for compression"                                     ),
 
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,0,jobOptions.cryptAlgorithm,                            CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
-//  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&globalOptions.cryptPassword,                         NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
+  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&globalOptions.cryptPassword,                         NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
 
   CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,0,sshServer.port,                                       0,0,65535,NULL,                                                    "ssh port"                                                                 ),
   CMD_OPTION_SPECIAL      ("ssh-login-name",               0,  0,0,&sshServer.loginName,                                 NULL,cmdOptionParseString,NULL,                                    "ssh login name","name"                                                    ),
@@ -1934,6 +1934,7 @@ int main(int argc, const char *argv[])
     #ifndef NDEBUG
       Array_debug();
       String_debug();
+      String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_INIT_FAIL;
   }
@@ -1952,6 +1953,7 @@ int main(int argc, const char *argv[])
     #ifndef NDEBUG
       Array_debug();
       String_debug();
+      String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_INVALID_ARGUMENT;
   }
@@ -1992,6 +1994,7 @@ int main(int argc, const char *argv[])
       #ifndef NDEBUG
         Array_debug();
         String_debug();
+        String_debugDone();
       #endif /* not NDEBUG */
       return EXITCODE_CONFIG_ERROR;
     }
@@ -2010,6 +2013,7 @@ int main(int argc, const char *argv[])
     #ifndef NDEBUG
       Array_debug();
       String_debug();
+      String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_INVALID_ARGUMENT;
   }
@@ -2025,6 +2029,7 @@ int main(int argc, const char *argv[])
     #ifndef NDEBUG
       Array_debug();
       String_debug();
+      String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_OK;
   }
@@ -2038,6 +2043,7 @@ int main(int argc, const char *argv[])
     #ifndef NDEBUG
       Array_debug();
       String_debug();
+      String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_OK;
   }
@@ -2110,6 +2116,7 @@ int main(int argc, const char *argv[])
                                  &includePatternList,
                                  &excludePatternList,
                                  &jobOptions,
+                                 ARCHIVE_TYPE_NORMAL,
                                  NULL,
                                  NULL,
                                  NULL,
@@ -2198,6 +2205,7 @@ int main(int argc, const char *argv[])
   #ifndef NDEBUG
     Array_debug();
     String_debug();
+    String_debugDone();
   #endif /* not NDEBUG */
 
   switch (error)
