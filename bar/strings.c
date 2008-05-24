@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -27,6 +27,7 @@
 
 /****************** Conditional compilation switches *******************/
 #define HALT_ON_INSUFFICIENT_MEMORY
+#define _FILL_MEMORY
 
 /***************************** Constants *******************************/
 #define STRING_START_LENGTH 64   // string start length
@@ -46,6 +47,8 @@ LOCAL const char *DEFAULT_FALSE_STRINGS[] =
   "no",
   "off",
 };
+
+#define DEBUG_FILL_BYTE 0xFE
 
 /***************************** Datatypes *******************************/
 typedef enum
@@ -174,6 +177,7 @@ LOCAL void ensureStringLength(struct __String *string, ulong newLength)
   if ((newLength + 1) > string->maxLength)
   {
     newMaxLength = ((newLength + 1) + STRING_DELTA_LENGTH - 1) & ~(STRING_DELTA_LENGTH - 1);
+    assert(newMaxLength >= (newLength + 1));
     newData = realloc(string->data,newMaxLength);
 //??? error message?
     if (newData == NULL)
@@ -181,6 +185,11 @@ LOCAL void ensureStringLength(struct __String *string, ulong newLength)
       perror("insufficient memory for allocating string - program halted");
       exit(128);
     }
+    #ifndef NDEBUG
+      #ifdef FILL_MEMORY
+        memset(&newData[string->maxLength],DEBUG_FILL_BYTE,newMaxLength-string->maxLength);
+      #endif /* FILL_MEMORY */
+    #endif /* not NDEBUG */
 
     string->data      = newData;
     string->maxLength = newMaxLength;
@@ -416,7 +425,7 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            ensureStringLength(string,string->length+length+1);
+            ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
             string->length += length; 
             UPDATE_VALID(string);
@@ -436,7 +445,7 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length+1);
+                  ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
                   string->length += length; 
                   UPDATE_VALID(string);
@@ -453,7 +462,7 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length+1);
+                  ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.l);
                   string->length += length; 
                   UPDATE_VALID(string);
@@ -471,7 +480,7 @@ LOCAL void formatString(struct __String *string,
                   }
                   else
                   {
-                    ensureStringLength(string,string->length+length+1);
+                    ensureStringLength(string,string->length+length);
                     snprintf(&string->data[string->length],length+1,formatToken.token,data.ll);
                     string->length += length; 
                     UPDATE_VALID(string);
@@ -504,7 +513,7 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length+1);
+                  ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.ui);
                   string->length += length; 
                   UPDATE_VALID(string);
@@ -521,7 +530,7 @@ LOCAL void formatString(struct __String *string,
                 }
                 else
                 {
-                  ensureStringLength(string,string->length+length+1);
+                  ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.ul);
                   string->length += length; 
                   UPDATE_VALID(string);
@@ -539,7 +548,7 @@ LOCAL void formatString(struct __String *string,
                   }
                   else
                   {
-                    ensureStringLength(string,string->length+length+1);
+                    ensureStringLength(string,string->length+length);
                     snprintf(&string->data[string->length],length+1,formatToken.token,data.ull);
                     string->length += length; 
                     UPDATE_VALID(string);
@@ -572,7 +581,7 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            ensureStringLength(string,string->length+length+1);
+            ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
             string->length += length; 
             UPDATE_VALID(string);
@@ -608,7 +617,7 @@ LOCAL void formatString(struct __String *string,
             }
             else
             {
-              ensureStringLength(string,string->length+length+1);
+              ensureStringLength(string,string->length+length);
               snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
               string->length += length; 
               UPDATE_VALID(string);
@@ -627,7 +636,7 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            ensureStringLength(string,string->length+length+1);
+            ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token,data.p);
             string->length += length; 
             UPDATE_VALID(string);
@@ -666,7 +675,7 @@ LOCAL void formatString(struct __String *string,
             }
             else
             {
-              ensureStringLength(string,string->length+length+1);
+              ensureStringLength(string,string->length+length);
               snprintf(&string->data[string->length],length+1,formatToken.token,String_cString(data.string));
               string->length += length; 
               UPDATE_VALID(string);
@@ -758,7 +767,7 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           }
           else
           {
-            ensureStringLength(string,string->length+length+1);
+            ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token);
             string->length += length; 
             UPDATE_VALID(string);
@@ -1001,7 +1010,6 @@ LOCAL bool parseString(const struct __String *string,
 
           z = 0;
           while (   (index < string->length)
-//                 && (((*format) == '\0') || !isspace(string->data[index]))
                  && (formatToken.blankFlag || !isspace(string->data[index]))
                  && (string->data[index] != (*format))
                 )
@@ -1024,7 +1032,7 @@ LOCAL bool parseString(const struct __String *string,
               /* check for string quote */
               stringQuote = NULL;
               if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-              if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
+              if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
 
               if (stringQuote != NULL)
               {
@@ -1061,11 +1069,17 @@ LOCAL bool parseString(const struct __String *string,
                   }
 
                   /* skip quote-char */
-                  index++;
+                  if (index < string->length)
+                  {
+                    index++;
+                  }
 
                   stringQuote = NULL;
-                  if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-                  if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
+                  if (index < string->length)
+                  {
+                    if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+                    if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
+                  }
                 }
                 while (stringQuote != NULL);
               }
@@ -1093,7 +1107,6 @@ LOCAL bool parseString(const struct __String *string,
           String_clear(value.string);           
           z = 0;
           while (   (index < string->length)
-//                 && (((*format) == '\0') || !isspace(string->data[index]))
                  && (formatToken.blankFlag || !isspace(string->data[index]))
                  && (string->data[index] != (*format))
                 )
@@ -1116,7 +1129,7 @@ LOCAL bool parseString(const struct __String *string,
               /* check for string quote */
               stringQuote = NULL;
               if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-              if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
+              if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
 
               if (stringQuote != NULL)
               {
@@ -1153,11 +1166,18 @@ LOCAL bool parseString(const struct __String *string,
                   }
 
                   /* skip quote-char */
-                  index++;
+                  if (index < string->length)
+                  {
+                    index++;
+                  }
 
+                  /* check for string quote */
                   stringQuote = NULL;
-                  if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-                  if (stringQuotes != NULL) stringQuote = strchr(stringQuotes,string->data[index]);
+                  if (index < string->length)
+                  {
+                    if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+                    if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
+                  }
                 }
                 while (stringQuote != NULL);
               }
@@ -1403,6 +1423,11 @@ String __String_new(const char *fileName, ulong lineNb)
   string->length    = 0;
   string->maxLength = STRING_START_LENGTH;
   string->data[0]   = '\0';
+  #ifndef NDEBUG
+    #ifdef FILL_MEMORY
+      memset(&string->data[1],DEBUG_FILL_BYTE,STRING_START_LENGTH-1);
+    #endif /* FILL_MEMORY */
+  #endif /* not NDEBUG */
 
   #ifndef NDEBUG
     pthread_once(&debugStringInitFlag,debugStringInit);
@@ -1600,7 +1625,7 @@ String String_set(String string, const String sourceString)
     {
       assert(sourceString->data != NULL);
 
-      ensureStringLength(string,sourceString->length+1);
+      ensureStringLength(string,sourceString->length);
       memcpy(&string->data[0],&sourceString->data[0],sourceString->length);
       string->data[sourceString->length] = '\0';
       string->length = sourceString->length;
@@ -1664,7 +1689,7 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength)
     {
       assert(buffer != NULL);
 
-      ensureStringLength(string,bufferLength+1);
+      ensureStringLength(string,bufferLength);
       memcpy(&string->data[0],buffer,bufferLength);
       string->data[bufferLength] = '\0';
       string->length = bufferLength;
@@ -1705,7 +1730,7 @@ String __String_duplicate(const char *fileName, ulong lineNb, const String fromS
       return NULL;
     }
 
-    ensureStringLength(string,fromString->length+1);
+    ensureStringLength(string,fromString->length);
     memcpy(&string->data[0],&fromString->data[0],fromString->length);
     string->data[fromString->length] ='\0';
     string->length = fromString->length;
@@ -1745,7 +1770,7 @@ String __String_copy(const char *fileName, ulong lineNb, String *string, const S
       }
     }
 
-    ensureStringLength((*string),fromString->length+1);
+    ensureStringLength((*string),fromString->length);
     memcpy(&(*string)->data[0],&fromString->data[0],fromString->length);
     (*string)->data[fromString->length] ='\0';
     (*string)->length = fromString->length;
@@ -1789,7 +1814,7 @@ String String_sub(String string, const String fromString, ulong fromIndex, long 
         {
           n = MIN(fromLength,fromString->length-fromIndex);
         }
-        ensureStringLength(string,n+1);
+        ensureStringLength(string,n);
         memcpy(&string->data[0],&fromString->data[fromIndex],n);
         string->data[n] ='\0';
         string->length = n;
@@ -1888,7 +1913,7 @@ String String_append(String string, const String appendString)
     if (appendString != NULL)
     {
       n = string->length+appendString->length;
-      ensureStringLength(string,n+1);
+      ensureStringLength(string,n);
       memcpy(&string->data[string->length],&appendString->data[0],appendString->length);
       string->data[n] = '\0';
       string->length = n;
@@ -1924,7 +1949,7 @@ String String_appendSub(String string, const String fromString, ulong fromIndex,
         {
           n = MIN(fromLength,fromString->length-fromIndex);
         }
-        ensureStringLength(string,string->length+n+1);
+        ensureStringLength(string,string->length+n);
         memcpy(&string->data[string->length],&fromString->data[fromIndex],n);
         string->data[string->length+n] ='\0';
         string->length += n;
@@ -1949,7 +1974,7 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
     if (buffer != NULL)
     {
       n = string->length+bufferLength;
-      ensureStringLength(string,n+1);
+      ensureStringLength(string,n);
       memcpy(&string->data[string->length],buffer,bufferLength);
       string->data[n] = '\0';
       string->length = n;
@@ -2012,7 +2037,7 @@ String String_insert(String string, ulong index, const String insertString)
       if      (index == STRING_END)
       {
         n = string->length+insertString->length;
-        ensureStringLength(string,n+1);
+        ensureStringLength(string,n);
         memcpy(&string->data[string->length],&insertString->data[0],insertString->length);
         string->data[n] = '\0';
         string->length = n;
@@ -2020,7 +2045,7 @@ String String_insert(String string, ulong index, const String insertString)
       else if (index <= string->length)
       {
         n = string->length+insertString->length;
-        ensureStringLength(string,n+1);
+        ensureStringLength(string,n);
         memmove(&string->data[index+insertString->length],&string->data[index],string->length-index);
         memcpy(&string->data[index],&insertString->data[0],insertString->length);
         string->data[n] = '\0';
@@ -2060,14 +2085,14 @@ String String_insertSub(String string, ulong index, const String fromString, ulo
 
         if      (index == STRING_END)
         {
-          ensureStringLength(string,string->length+n+1);
+          ensureStringLength(string,string->length+n);
           memcpy(&string->data[string->length],&fromString->data[fromIndex],n);
           string->data[string->length+n] = '\0';
           string->length += n;
         }
         else if (index <= string->length)
         {
-          ensureStringLength(string,string->length+n+1);
+          ensureStringLength(string,string->length+n);
           memmove(&string->data[index+n],&string->data[index],string->length-index);
           memcpy(&string->data[index],&fromString->data[fromIndex],n);
           string->data[string->length+n] = '\0';
@@ -2097,7 +2122,7 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
       if      (index == STRING_END)
       {
         n = string->length+bufferLength;
-        ensureStringLength(string,n+1);
+        ensureStringLength(string,n);
         memcpy(&string->data[string->length],buffer,bufferLength);
         string->data[n] = '\0';
         string->length = n;
@@ -2105,7 +2130,7 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
       else if (index <= string->length)
       {
         n = string->length+bufferLength;
-        ensureStringLength(string,n+1);
+        ensureStringLength(string,n);
         memmove(&string->data[index+bufferLength],&string->data[index],string->length-index);
         memcpy(&string->data[index],buffer,bufferLength);
         string->data[n] = '\0';
@@ -2784,7 +2809,7 @@ String String_padRight(String string, ulong length, char ch)
   if (string->length < length)
   {
     n = length-string->length;
-    ensureStringLength(string,length+1);
+    ensureStringLength(string,length);
     memset(&string->data[string->length],ch,n);
     string->data[length] = '\0';
     string->length = length;
@@ -2806,7 +2831,7 @@ String String_padLeft(String string, ulong length, char ch)
   if (string->length < length)
   {
     n = length-string->length;
-    ensureStringLength(string,length+1);
+    ensureStringLength(string,length);
     memmove(&string->data[n],&string->data[0],string->length);
     memset(&string->data[0],ch,n);
     string->data[length] = '\0';
@@ -3336,26 +3361,35 @@ char* String_toCString(const String string)
 #ifndef NDEBUG
 void String_debug(void)
 {
-  #ifndef NDEBUG
-    DebugStringNode *debugStringNode;
-  #endif /* not NDEBUG */
+  DebugStringNode *debugStringNode;
 
-  #ifndef NDEBUG
-    pthread_once(&debugStringInitFlag,debugStringInit);
+  pthread_once(&debugStringInitFlag,debugStringInit);
 
-    pthread_mutex_lock(&debugStringLock);
-    for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
-    {
-      fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %ld\n",
-              debugStringNode->string,
-              debugStringNode->string->data,
-              debugStringNode->fileName,
-              debugStringNode->lineNb
-             );
-    }
-    pthread_mutex_unlock(&debugStringLock);
-  #endif /* not NDEBUG */
+  pthread_mutex_lock(&debugStringLock);
+  for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
+  {
+    fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %ld\n",
+            debugStringNode->string,
+            debugStringNode->string->data,
+            debugStringNode->fileName,
+            debugStringNode->lineNb
+           );
+  }
+  pthread_mutex_unlock(&debugStringLock);
 }
+
+void String_debugDone(void)
+{
+  DebugStringNode *debugStringNode;
+
+  pthread_once(&debugStringInitFlag,debugStringInit);
+
+  pthread_mutex_lock(&debugStringLock);
+  List_done(&debugFreeStringList,NULL,NULL);
+  List_done(&debugFreeStringList,NULL,NULL);
+  pthread_mutex_unlock(&debugStringLock);
+}
+
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

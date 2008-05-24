@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -595,6 +595,17 @@ char* String_toCString(const String string);
 \***********************************************************************/
 
 void String_debug(void);
+
+/***********************************************************************\
+* Name   : String_debugDone
+* Purpose: done string debug functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void String_debugDone(void);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus
