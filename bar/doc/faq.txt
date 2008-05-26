@@ -1,10 +1,18 @@
 Frequently asked questions (FAQ)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Q: Can I build a static linked version of BAR?
-A: Yes. Use --enable-link-static when calling configure. The
-   resulting binary is linked static with all needed
-   libraries except libc, libm and libpthread.
+Q: Why is BAR linked static?
+A: BAR is not fully linked static, but partially. All needed
+   libraries are linked static except libc, libm and libpthread.
+   The advantage of this type of linkage is that BAR can be
+   executed on many systems, even when some specific libraries
+   like libraries for compression or encryption are not
+   available on the target system. BAR can also be started from
+   a CD or DVD without installation.
+
+Q: Can I build a dynamic linked version of BAR?
+A: Yes. Use --enable-link-dynamic when calling configure. The
+   resulting binary is linked dynamic.
 
 Q: Can I create incremental archives even the file system does
    not have an "archive" bit?
@@ -13,5 +21,18 @@ A: Yes. BAR create his own incremental list files (.bid files).
    which files changed.
 
 Q: Can I just create the incremental list file?
-A: Yes. Use option --no-storage. The incremental list file is
-   created, but no archive files are neither created nor stored.
+A: Yes. Use option --no-storage and --create-incremental-list.
+   The incremental list file is created, but no archive files
+   are neither created nor stored.
+
+Q: I cannot establish a TLS/SSL connection with barcontrol.tcl.
+A: For the TLS/SSL connection in barcontrol.tcl the TclTk TLS
+   package is needed. Plese install:
+   http://downloads.sourceforge.net/tls/tls1.5.0-src.tar.gz
+
+Q: I tried to list a *.bid-file, but it does not show anything.
+A: The .bid-files are not archive files, but files with lists
+   of files names needed for the incremental backup. Do not
+   modified, delete or copy those files. The content is not
+   encrypted. There is no need to e. g. storage them on an
+   external server.
