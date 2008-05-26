@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.55 $
+* $Revision: 1.56 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -70,7 +70,7 @@
   #define DEFAULT_TLS_SERVER_CERTIFICATE_FILE ""
   #define DEFAULT_TLS_SERVER_KEY_FILE         ""
 #endif /* HAVE_GNU_TLS */
-#define DEFAULT_JOB_DIRECTORY          "/etc/bar/jobs"
+#define DEFAULT_JOB_DIRECTORY          CONFIG_DIR "/jobs"
 #define DEFAULT_DEVICE_NAME            "/dev/dvd"
 
 #define DEFAULT_REMOTE_BAR_EXECUTABLE "/usr/local/bin/bar"
@@ -107,10 +107,13 @@ LOCAL Commands      command;
 LOCAL const char    *archiveFileName;
 LOCAL PatternList   includePatternList;
 LOCAL PatternList   excludePatternList;
+LOCAL FTPServer     ftpServer;
 LOCAL SSHServer     sshServer;
+LOCAL FTPServerList ftpServerList;
 LOCAL SSHServerList sshServerList;
 LOCAL Device        device;
 LOCAL DeviceList    deviceList;
+LOCAL FTPServer     *currentFTPServer = &ftpServer;
 LOCAL SSHServer     *currentSSHServer = &sshServer;
 LOCAL Device        *currentDevice = &device;
 LOCAL bool          daemonFlag;
@@ -268,20 +271,23 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,0,jobOptions.cryptAlgorithm,                            CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&globalOptions.cryptPassword,                         NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
 
+  CMD_OPTION_SPECIAL      ("ftp-login-name",               0,  0,0,&ftpServer.loginName,                                 NULL,cmdOptionParseString,NULL,                                    "ftp login name","name"                                                    ),
+  CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,0,&ftpServer.password,                                  NULL,cmdOptionParsePassword,NULL,                                  "ftp password (use with care!)","password"                                 ),
+
   CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,0,sshServer.port,                                       0,0,65535,NULL,                                                    "ssh port"                                                                 ),
   CMD_OPTION_SPECIAL      ("ssh-login-name",               0,  0,0,&sshServer.loginName,                                 NULL,cmdOptionParseString,NULL,                                    "ssh login name","name"                                                    ),
+  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,0,&sshServer.password,                                  NULL,cmdOptionParsePassword,NULL,                                  "ssh password (use with care!)","password"                                 ),
   CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,0,&sshServer.publicKeyFileName,                         NULL,cmdOptionParseString,NULL,                                    "ssh public key file name","file name"                                     ),
   CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,0,&sshServer.privateKeyFileName,                        NULL,cmdOptionParseString,NULL,                                    "ssh privat key file name","file name"                                     ),
-  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,0,&sshServer.password,                                  NULL,cmdOptionParsePassword,NULL,                                  "ssh password (use with care!)","password"                                 ),
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                           FALSE,                                                             "run in daemon mode"                                                       ),
-  CMD_OPTION_INTEGER      ("port",                         0,  1,0,serverPort,                                           DEFAULT_SERVER_PORT,0,65535,NULL,                                  "server port"                                                              ),
-  CMD_OPTION_INTEGER      ("tls-port",                     0,  1,0,serverTLSPort,                                        DEFAULT_TLS_SERVER_PORT,0,65535,NULL,                              "TLS (SSL) server port"                                                    ),
+  CMD_OPTION_INTEGER      ("server-port",                  0,  1,0,serverPort,                                           DEFAULT_SERVER_PORT,0,65535,NULL,                                  "server port"                                                              ),
+  CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,0,serverTLSPort,                                        DEFAULT_TLS_SERVER_PORT,0,65535,NULL,                              "TLS (SSL) server port"                                                    ),
   CMD_OPTION_STRING       ("server-ca-file",               0,  1,0,serverCAFileName,                                     DEFAULT_TLS_SERVER_CA_FILE,                                        "TLS (SSL) server certificate authority file (CA file)","file name"        ),
   CMD_OPTION_STRING       ("server-cert-file",             0,  1,0,serverCertFileName,                                   DEFAULT_TLS_SERVER_CERTIFICATE_FILE,                               "TLS (SSL) server certificate file","file name"                            ),
   CMD_OPTION_STRING       ("server-key-file",              0,  1,0,serverKeyFileName,                                    DEFAULT_TLS_SERVER_KEY_FILE,                                       "TLS (SSL) server key file","file name"                                    ),
   CMD_OPTION_SPECIAL      ("server-password",              0,  1,0,&serverPassword,                                      NULL,cmdOptionParsePassword,NULL,                                  "server password (use with care!)","password"                              ),
-  CMD_OPTION_STRING       ("job-directory",                0,  1,0,serverJobDirectory,                                   DEFAULT_JOB_DIRECTORY,                                       "server job directory","path name"                                         ),
+  CMD_OPTION_STRING       ("job-directory",                0,  1,0,serverJobDirectory,                                   DEFAULT_JOB_DIRECTORY,                                             "server job directory","path name"                                         ),
 
   CMD_OPTION_BOOLEAN      ("batch",                        0,  2,0,batchFlag,                                            FALSE,                                                             "run in batch mode"                                                        ),
   CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,0,&globalOptions.remoteBARExecutable,                   DEFAULT_REMOTE_BAR_EXECUTABLE,cmdOptionParseString,NULL,           "remote BAR executable","file name"                                        ),
@@ -420,89 +426,92 @@ LOCAL const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
 
 LOCAL const ConfigValue CONFIG_VALUES[] =
 {
-  CONFIG_VALUE_SPECIAL  ("config",                       NULL,-1,                                                 configValueParseConfigFile,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL  ("config",                       NULL,-1,                                                configValueParseConfigFile,NULL,NULL,NULL,NULL),
 
-  CONFIG_VALUE_INTEGER64("archive-part-size",            &jobOptions.archivePartSize,-1,                          0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING   ("tmp-directory",                &globalOptions.tmpDirectory,-1                           ),
-  CONFIG_VALUE_INTEGER64("max-tmp-size",                 &globalOptions.maxTmpSize,-1,                            0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("archive-part-size",            &jobOptions.archivePartSize,-1,                         0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_STRING   ("tmp-directory",                &globalOptions.tmpDirectory,-1                          ),
+  CONFIG_VALUE_INTEGER64("max-tmp-size",                 &globalOptions.maxTmpSize,-1,                           0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_VALUE_INTEGER  ("directory-strip",              &jobOptions.directoryStripCount,-1,                      0,INT_MAX,NULL),
-  CONFIG_VALUE_STRING   ("directory",                    &jobOptions.directory,-1                                 ),
-  CONFIG_VALUE_INTEGER  ("nice-level",                   &globalOptions.niceLevel,-1,                             0,19,NULL),
+  CONFIG_VALUE_INTEGER  ("directory-strip",              &jobOptions.directoryStripCount,-1,                     0,INT_MAX,NULL),
+  CONFIG_VALUE_STRING   ("directory",                    &jobOptions.directory,-1                                ),
+  CONFIG_VALUE_INTEGER  ("nice-level",                   &globalOptions.niceLevel,-1,                            0,19,NULL),
 
-  CONFIG_VALUE_INTEGER  ("max-band-width",               &globalOptions.maxBandWidth,-1,                          0,INT_MAX,CONFIG_VALUE_BITS_UNITS),
+  CONFIG_VALUE_INTEGER  ("max-band-width",               &globalOptions.maxBandWidth,-1,                         0,INT_MAX,CONFIG_VALUE_BITS_UNITS),
 
-  CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                              CONFIG_VALUE_PATTERN_TYPES),
+  CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                             CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_VALUE_SPECIAL  ("include",                      &includePatternList,-1,                                  configValueParseIncludeExclude,NULL,NULL,NULL,&jobOptions.patternType),
-  CONFIG_VALUE_SPECIAL  ("exclude",                      &excludePatternList,-1,                                  configValueParseIncludeExclude,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL  ("include",                      &includePatternList,-1,                                 configValueParseIncludeExclude,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL  ("exclude",                      &excludePatternList,-1,                                 configValueParseIncludeExclude,NULL,NULL,NULL,&jobOptions.patternType),
 
-  CONFIG_VALUE_SELECT   ("compress-algorithm",           &jobOptions.compressAlgorithm,-1,                        CONFIG_VALUE_COMPRESS_ALGORITHMS),
-  CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                   0,INT_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_SELECT   ("compress-algorithm",           &jobOptions.compressAlgorithm,-1,                       CONFIG_VALUE_COMPRESS_ALGORITHMS),
+  CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                  0,INT_MAX,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                           CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_VALUE_SPECIAL  ("crypt-password",               &globalOptions.cryptPassword,-1,                         configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                          CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_VALUE_SPECIAL  ("crypt-password",               &globalOptions.cryptPassword,-1,                        configValueParsePassword,NULL,NULL,NULL,NULL),
 
-  CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(SSHServer,port),              0,65535,NULL),
-  CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(SSHServer,loginName)          ),
-  CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(SSHServer,publicKeyFileName)  ),
-  CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(SSHServer,privateKeyFileName) ),
-  CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(SSHServer,password),          configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(FTPServer,loginName)         ),
+  CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(FTPServer,password),         configValueParsePassword,NULL,NULL,NULL,NULL),
 
-  CONFIG_VALUE_INTEGER  ("port",                         &serverPort,-1,                                          0,65535,NULL),
-  CONFIG_VALUE_INTEGER  ("tls-port",                     &serverTLSPort,-1,                                       0,65535,NULL),
-  CONFIG_VALUE_CSTRING  ("server-ca-file",               &serverCAFileName,-1                                     ),
-  CONFIG_VALUE_CSTRING  ("server-cert-file",             &serverCertFileName,-1                                   ),
-  CONFIG_VALUE_CSTRING  ("server-key-file",              &serverKeyFileName,-1                                    ),
-  CONFIG_VALUE_SPECIAL  ("server-password",              &serverPassword,-1,                                      configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(SSHServer,port),             0,65535,NULL),
+  CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(SSHServer,loginName)         ),
+  CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(SSHServer,password),         configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(SSHServer,publicKeyFileName) ),
+  CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(SSHServer,privateKeyFileName)),
 
-  CONFIG_VALUE_STRING   ("remote-bar-executable",        &globalOptions.remoteBARExecutable,-1                    ),
+  CONFIG_VALUE_INTEGER  ("server-port",                  &serverPort,-1,                                         0,65535,NULL),
+  CONFIG_VALUE_INTEGER  ("server-tls-port",              &serverTLSPort,-1,                                      0,65535,NULL),
+  CONFIG_VALUE_CSTRING  ("server-ca-file",               &serverCAFileName,-1                                    ),
+  CONFIG_VALUE_CSTRING  ("server-cert-file",             &serverCertFileName,-1                                  ),
+  CONFIG_VALUE_CSTRING  ("server-key-file",              &serverKeyFileName,-1                                   ),
+  CONFIG_VALUE_SPECIAL  ("server-password",              &serverPassword,-1,                                     configValueParsePassword,NULL,NULL,NULL,NULL),
 
-  CONFIG_VALUE_STRING   ("dvd-request-volume-command",   &globalOptions.dvd.requestVolumeCommand,-1               ),
-  CONFIG_VALUE_STRING   ("dvd-unload-volume-command",    &globalOptions.dvd.unloadVolumeCommand,-1                ),
-  CONFIG_VALUE_STRING   ("dvd-load-volume-command",      &globalOptions.dvd.loadVolumeCommand,-1                  ),
-  CONFIG_VALUE_INTEGER64("dvd-volume-size",              &globalOptions.dvd.volumeSize,-1,                        0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING   ("dvd-image-pre-command",        &globalOptions.dvd.imagePreProcessCommand,-1             ),
-  CONFIG_VALUE_STRING   ("dvd-image-post-command",       &globalOptions.dvd.imagePostProcessCommand,-1            ),
-  CONFIG_VALUE_STRING   ("dvd-image-command",            &globalOptions.dvd.imageCommand,-1                       ),
-  CONFIG_VALUE_STRING   ("dvd-ecc-pre-command",          &globalOptions.dvd.eccPreProcessCommand,-1               ),
-  CONFIG_VALUE_STRING   ("dvd-ecc-post-command",         &globalOptions.dvd.eccPostProcessCommand,-1              ),
-  CONFIG_VALUE_STRING   ("dvd-ecc-command",              &globalOptions.dvd.eccCommand,-1                         ),
-  CONFIG_VALUE_STRING   ("dvd-write-pre-command",        &globalOptions.dvd.writePreProcessCommand,-1             ),
-  CONFIG_VALUE_STRING   ("dvd-write-post-command",       &globalOptions.dvd.writePostProcessCommand,-1            ),
-  CONFIG_VALUE_STRING   ("dvd-write-command",            &globalOptions.dvd.writeCommand,-1                       ),
-  CONFIG_VALUE_STRING   ("dvd-write-command",            &globalOptions.dvd.writeImageCommand,-1                  ),
+  CONFIG_VALUE_STRING   ("remote-bar-executable",        &globalOptions.remoteBARExecutable,-1                   ),
 
-  CONFIG_VALUE_STRING   ("device",                       &globalOptions.defaultDeviceName,-1                      ),
-  CONFIG_VALUE_STRING   ("device-request-volume-command",&currentDevice,offsetof(Device,requestVolumeCommand)     ),
-  CONFIG_VALUE_STRING   ("device-unload-volume-command", &currentDevice,offsetof(Device,unloadVolumeCommand)      ),
-  CONFIG_VALUE_STRING   ("device-load-volume-command",   &currentDevice,offsetof(Device,loadVolumeCommand)        ),
-  CONFIG_VALUE_INTEGER64("device-volume-size",           &currentDevice,offsetof(Device,volumeSize),              0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING   ("device-image-pre-command",     &currentDevice,offsetof(Device,imagePreProcessCommand)   ),
-  CONFIG_VALUE_STRING   ("device-image-post-command",    &currentDevice,offsetof(Device,imagePostProcessCommand)  ),
-  CONFIG_VALUE_STRING   ("device-image-command",         &currentDevice,offsetof(Device,imageCommand)             ),
-  CONFIG_VALUE_STRING   ("device-ecc-pre-command",       &currentDevice,offsetof(Device,eccPreProcessCommand)     ),
-  CONFIG_VALUE_STRING   ("device-ecc-post-command",      &currentDevice,offsetof(Device,eccPostProcessCommand)    ),
-  CONFIG_VALUE_STRING   ("device-ecc-command",           &currentDevice,offsetof(Device,eccCommand)               ),
-  CONFIG_VALUE_STRING   ("device-write-pre-command",     &currentDevice,offsetof(Device,writePreProcessCommand)   ),
-  CONFIG_VALUE_STRING   ("device-write-post-command",    &currentDevice,offsetof(Device,writePostProcessCommand)  ),
-  CONFIG_VALUE_STRING   ("device-write-command",         &currentDevice,offsetof(Device,writeCommand)             ),
+  CONFIG_VALUE_STRING   ("dvd-request-volume-command",   &globalOptions.dvd.requestVolumeCommand,-1              ),
+  CONFIG_VALUE_STRING   ("dvd-unload-volume-command",    &globalOptions.dvd.unloadVolumeCommand,-1               ),
+  CONFIG_VALUE_STRING   ("dvd-load-volume-command",      &globalOptions.dvd.loadVolumeCommand,-1                 ),
+  CONFIG_VALUE_INTEGER64("dvd-volume-size",              &globalOptions.dvd.volumeSize,-1,                       0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_STRING   ("dvd-image-pre-command",        &globalOptions.dvd.imagePreProcessCommand,-1            ),
+  CONFIG_VALUE_STRING   ("dvd-image-post-command",       &globalOptions.dvd.imagePostProcessCommand,-1           ),
+  CONFIG_VALUE_STRING   ("dvd-image-command",            &globalOptions.dvd.imageCommand,-1                      ),
+  CONFIG_VALUE_STRING   ("dvd-ecc-pre-command",          &globalOptions.dvd.eccPreProcessCommand,-1              ),
+  CONFIG_VALUE_STRING   ("dvd-ecc-post-command",         &globalOptions.dvd.eccPostProcessCommand,-1             ),
+  CONFIG_VALUE_STRING   ("dvd-ecc-command",              &globalOptions.dvd.eccCommand,-1                        ),
+  CONFIG_VALUE_STRING   ("dvd-write-pre-command",        &globalOptions.dvd.writePreProcessCommand,-1            ),
+  CONFIG_VALUE_STRING   ("dvd-write-post-command",       &globalOptions.dvd.writePostProcessCommand,-1           ),
+  CONFIG_VALUE_STRING   ("dvd-write-command",            &globalOptions.dvd.writeCommand,-1                      ),
+  CONFIG_VALUE_STRING   ("dvd-write-command",            &globalOptions.dvd.writeImageCommand,-1                 ),
 
-  CONFIG_VALUE_BOOLEAN  ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                  ),
+  CONFIG_VALUE_STRING   ("device",                       &globalOptions.defaultDeviceName,-1                     ),
+  CONFIG_VALUE_STRING   ("device-request-volume-command",&currentDevice,offsetof(Device,requestVolumeCommand)    ),
+  CONFIG_VALUE_STRING   ("device-unload-volume-command", &currentDevice,offsetof(Device,unloadVolumeCommand)     ),
+  CONFIG_VALUE_STRING   ("device-load-volume-command",   &currentDevice,offsetof(Device,loadVolumeCommand)       ),
+  CONFIG_VALUE_INTEGER64("device-volume-size",           &currentDevice,offsetof(Device,volumeSize),             0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_STRING   ("device-image-pre-command",     &currentDevice,offsetof(Device,imagePreProcessCommand)  ),
+  CONFIG_VALUE_STRING   ("device-image-post-command",    &currentDevice,offsetof(Device,imagePostProcessCommand) ),
+  CONFIG_VALUE_STRING   ("device-image-command",         &currentDevice,offsetof(Device,imageCommand)            ),
+  CONFIG_VALUE_STRING   ("device-ecc-pre-command",       &currentDevice,offsetof(Device,eccPreProcessCommand)    ),
+  CONFIG_VALUE_STRING   ("device-ecc-post-command",      &currentDevice,offsetof(Device,eccPostProcessCommand)   ),
+  CONFIG_VALUE_STRING   ("device-ecc-command",           &currentDevice,offsetof(Device,eccCommand)              ),
+  CONFIG_VALUE_STRING   ("device-write-pre-command",     &currentDevice,offsetof(Device,writePreProcessCommand)  ),
+  CONFIG_VALUE_STRING   ("device-write-post-command",    &currentDevice,offsetof(Device,writePostProcessCommand) ),
+  CONFIG_VALUE_STRING   ("device-write-command",         &currentDevice,offsetof(Device,writeCommand)            ),
 
-  CONFIG_VALUE_SET      ("log",                          &logTypes,-1,                                            CONFIG_VALUE_LOG_TYPES),
-  CONFIG_VALUE_CSTRING  ("log-file",                     &logFileName,-1                                          ),
-  CONFIG_VALUE_CSTRING  ("log-post-command",             &logPostCommand,-1                                       ),
+  CONFIG_VALUE_BOOLEAN  ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                 ),
 
-  CONFIG_VALUE_BOOLEAN  ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                        ),
-  CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",      &jobOptions.overwriteArchiveFilesFlag,-1                 ),
-  CONFIG_VALUE_BOOLEAN  ("overwrite-files",              &jobOptions.overwriteFilesFlag,-1                        ),
-  CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                       ),
-  CONFIG_VALUE_BOOLEAN  ("no-bar-on-dvd",                &jobOptions.noBAROnDVDFlag,-1                            ),
-  CONFIG_VALUE_BOOLEAN  ("quiet",                        &globalOptions.quietFlag,-1                              ),
-  CONFIG_VALUE_INTEGER  ("verbose",                      &globalOptions.verboseLevel,-1,                          0,3,NULL),
+  CONFIG_VALUE_SET      ("log",                          &logTypes,-1,                                           CONFIG_VALUE_LOG_TYPES),
+  CONFIG_VALUE_CSTRING  ("log-file",                     &logFileName,-1                                         ),
+  CONFIG_VALUE_CSTRING  ("log-post-command",             &logPostCommand,-1                                      ),
 
-//  CONFIG_VALUE_SPECIAL  ("schedule",                     &jobOptions.scheduleList,-1,                             configValueParseSchedule,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_BOOLEAN  ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                       ),
+  CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",      &jobOptions.overwriteArchiveFilesFlag,-1                ),
+  CONFIG_VALUE_BOOLEAN  ("overwrite-files",              &jobOptions.overwriteFilesFlag,-1                       ),
+  CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                      ),
+  CONFIG_VALUE_BOOLEAN  ("no-bar-on-dvd",                &jobOptions.noBAROnDVDFlag,-1                           ),
+  CONFIG_VALUE_BOOLEAN  ("quiet",                        &globalOptions.quietFlag,-1                             ),
+  CONFIG_VALUE_INTEGER  ("verbose",                      &globalOptions.verboseLevel,-1,                         0,3,NULL),
+
+//  CONFIG_VALUE_SPECIAL  ("schedule",                     &jobOptions.scheduleList,-1,                          configValueParseSchedule,NULL,NULL,NULL,NULL),
 };
 
 /*---------------------------------------------------------------------*/
@@ -626,7 +635,25 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     }
 
     /* parse line */
-    if      (String_parse(line,STRING_BEGIN,"[server %S]",NULL,name))
+    if      (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
+    {
+      FTPServerNode *ftpServerNode;
+
+      ftpServerNode = LIST_NEW_NODE(FTPServerNode);
+      if (ftpServerNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      ftpServerNode->name                = String_duplicate(name);
+      ftpServerNode->ftpServer.loginName = NULL;
+      ftpServerNode->ftpServer.password  = NULL;
+
+      List_append(&ftpServerList,ftpServerNode);
+
+      currentFTPServer = &ftpServerNode->ftpServer;
+      currentSSHServer = NULL;
+    }
+    else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
     {
       SSHServerNode *sshServerNode;
 
@@ -638,12 +665,13 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       sshServerNode->name                         = String_duplicate(name);
       sshServerNode->sshServer.port               = 0;
       sshServerNode->sshServer.loginName          = NULL;
+      sshServerNode->sshServer.password           = NULL;
       sshServerNode->sshServer.publicKeyFileName  = NULL;
       sshServerNode->sshServer.privateKeyFileName = NULL;
-      sshServerNode->sshServer.password           = NULL;
 
       List_append(&sshServerList,sshServerNode);
 
+      currentFTPServer = NULL;
       currentSSHServer = &sshServerNode->sshServer;
     }
     else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
@@ -676,6 +704,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     }
     else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
     {
+      currentFTPServer = &ftpServer;
       currentSSHServer = &sshServer;
       currentDevice    = &device;
     }
@@ -904,7 +933,9 @@ LOCAL void printUsage(const char *programName, uint level)
 LOCAL void initGlobalOptions(void)
 {
   memset(&globalOptions,0,sizeof(GlobalOptions));
+  globalOptions.ftpServerList = &ftpServerList;
   globalOptions.sshServerList = &sshServerList;
+  globalOptions.ftpServer     = &globalOptions.defaultFTPServer;
   globalOptions.sshServer     = &globalOptions.defaultSSHServer;
   globalOptions.deviceList    = &deviceList;
   globalOptions.device        = &globalOptions.defaultDevice;
@@ -942,6 +973,28 @@ LOCAL void doneGlobalOptions(void)
 }
 
 /***********************************************************************\
+* Name   : freeFTPServerNode
+* Purpose: free FTP server node
+* Input  : ftpServerNode - FTP server node
+*          userData      - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeFTPServerNode(FTPServerNode *ftpServerNode, void *userData)
+{
+  assert(ftpServerNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  Password_delete(ftpServerNode->ftpServer.password);
+  String_delete(ftpServerNode->ftpServer.loginName);
+  String_delete(ftpServerNode->name);
+  LIST_DELETE_NODE(ftpServerNode);
+}
+
+/***********************************************************************\
 * Name   : freeSSHServerNode
 * Purpose: free SSH server node
 * Input  : sshServerNode - SSH server node
@@ -957,11 +1010,12 @@ LOCAL void freeSSHServerNode(SSHServerNode *sshServerNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  Password_delete(sshServerNode->sshServer.password);
   String_delete(sshServerNode->sshServer.privateKeyFileName);
   String_delete(sshServerNode->sshServer.publicKeyFileName);
+  Password_delete(sshServerNode->sshServer.password);
   String_delete(sshServerNode->sshServer.loginName);
   String_delete(sshServerNode->name);
+  LIST_DELETE_NODE(sshServerNode);
 }
 
 /***********************************************************************\
@@ -1072,6 +1126,7 @@ LOCAL bool initAll(void)
   outputLine = String_new();
   outputNewLineFlag = TRUE;
   initGlobalOptions();
+  List_init(&ftpServerList);
   List_init(&sshServerList);
   List_init(&deviceList);
   serverPassword = Password_new();
@@ -1097,8 +1152,10 @@ LOCAL void doneAll(void)
   Pattern_doneList(&includePatternList);
   Password_delete(serverPassword);
   freeJobOptions(&jobOptions);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
   List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
+  List_done(&ftpServerList,(ListNodeFreeFunction)freeFTPServerNode,NULL);
   doneGlobalOptions();
   String_delete(outputLine);
   String_delete(tmpLogFileName);
@@ -1305,10 +1362,12 @@ void copyJobOptions(const JobOptions *sourceJobOptions, JobOptions *destinationJ
   destinationJobOptions->incrementalListFileName      = String_duplicate(sourceJobOptions->incrementalListFileName);
   destinationJobOptions->directory                    = String_duplicate(sourceJobOptions->directory);
   destinationJobOptions->cryptPassword                = Password_duplicate(sourceJobOptions->cryptPassword);
+  destinationJobOptions->ftpServer.loginName          = String_duplicate(sourceJobOptions->ftpServer.loginName);
+  destinationJobOptions->ftpServer.password           = Password_duplicate(sourceJobOptions->ftpServer.password);
   destinationJobOptions->sshServer.loginName          = String_duplicate(sourceJobOptions->sshServer.loginName);
+  destinationJobOptions->sshServer.password           = Password_duplicate(sourceJobOptions->sshServer.password);
   destinationJobOptions->sshServer.publicKeyFileName  = String_duplicate(sourceJobOptions->sshServer.publicKeyFileName);
   destinationJobOptions->sshServer.privateKeyFileName = String_duplicate(sourceJobOptions->sshServer.privateKeyFileName);
-  destinationJobOptions->sshServer.password           = Password_duplicate(sourceJobOptions->sshServer.password);
   destinationJobOptions->deviceName                   = String_duplicate(sourceJobOptions->deviceName);
 }
 
@@ -1316,14 +1375,36 @@ void freeJobOptions(JobOptions *jobOptions)
 {
   assert(jobOptions != NULL);
 
-  Password_delete(jobOptions->sshServer.password);
   String_delete(jobOptions->sshServer.privateKeyFileName);
   String_delete(jobOptions->sshServer.publicKeyFileName);
+  Password_delete(jobOptions->sshServer.password);
   String_delete(jobOptions->sshServer.loginName);
+  Password_delete(jobOptions->ftpServer.password);
+  String_delete(jobOptions->ftpServer.loginName);
   Password_delete(jobOptions->cryptPassword);
   String_delete(jobOptions->directory);
   String_delete(jobOptions->incrementalListFileName);
   memset(jobOptions,0,sizeof(JobOptions));
+}
+
+void getFTPServer(const String     name,
+                  const JobOptions *jobOptions,
+                  FTPServer        *ftpServer
+                 )
+{
+  FTPServerNode *ftpServerNode;
+
+  assert(name != NULL);
+  assert(jobOptions != NULL);
+  assert(ftpServer != NULL);
+
+  ftpServerNode = globalOptions.ftpServerList->head;
+  while ((ftpServerNode != NULL) && !String_equals(ftpServerNode->name,name))
+  {
+    ftpServerNode = ftpServerNode->next;
+  }
+  ftpServer->loginName = !String_empty(jobOptions->ftpServer.loginName         )?jobOptions->ftpServer.loginName         :((ftpServerNode != NULL)?ftpServerNode->ftpServer.loginName         :globalOptions.defaultFTPServer.loginName         );
+  ftpServer->password  = !Password_empty(jobOptions->ftpServer.password        )?jobOptions->ftpServer.password          :((ftpServerNode != NULL)?ftpServerNode->ftpServer.password          :globalOptions.defaultFTPServer.password          );
 }
 
 void getSSHServer(const String     name,
@@ -1344,9 +1425,9 @@ void getSSHServer(const String     name,
   }
   sshServer->port               = (jobOptions->sshServer.port != 0                      )?jobOptions->sshServer.port              :((sshServerNode != NULL)?sshServerNode->sshServer.port              :globalOptions.defaultSSHServer.port              );
   sshServer->loginName          = !String_empty(jobOptions->sshServer.loginName         )?jobOptions->sshServer.loginName         :((sshServerNode != NULL)?sshServerNode->sshServer.loginName         :globalOptions.defaultSSHServer.loginName         );
+  sshServer->password           = !Password_empty(jobOptions->sshServer.password        )?jobOptions->sshServer.password          :((sshServerNode != NULL)?sshServerNode->sshServer.password          :globalOptions.defaultSSHServer.password          );
   sshServer->publicKeyFileName  = !String_empty(jobOptions->sshServer.publicKeyFileName )?jobOptions->sshServer.publicKeyFileName :((sshServerNode != NULL)?sshServerNode->sshServer.publicKeyFileName :globalOptions.defaultSSHServer.publicKeyFileName );
   sshServer->privateKeyFileName = !String_empty(jobOptions->sshServer.privateKeyFileName)?jobOptions->sshServer.privateKeyFileName:((sshServerNode != NULL)?sshServerNode->sshServer.privateKeyFileName:globalOptions.defaultSSHServer.privateKeyFileName);
-  sshServer->password           = !Password_empty(jobOptions->sshServer.password        )?jobOptions->sshServer.password          :((sshServerNode != NULL)?sshServerNode->sshServer.password          :globalOptions.defaultSSHServer.password          );
 }
 
 void getDevice(const String     name,
@@ -1564,6 +1645,7 @@ LOCAL bool parseScheduleNumber(const String s, uint *n)
 {
   ulong nextIndex;
 
+  assert(s != NULL);
   assert(n != NULL);
 
   /* init variables */
@@ -1594,6 +1676,7 @@ LOCAL bool parseScheduleMonth(const String s, uint *month)
   String name;
   ulong  nextIndex;
 
+  assert(s != NULL);
   assert(month != NULL);
 
   name = String_toLower(String_duplicate(s));
@@ -1639,6 +1722,7 @@ LOCAL bool parseScheduleWeekDay(const String s, uint *weekday)
 {
   String name;
 
+  assert(s != NULL);
   assert(weekday != NULL);
 
   name = String_toLower(String_duplicate(s));
@@ -1676,6 +1760,7 @@ LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
 {
   String name;
 
+  assert(s != NULL);
   assert(archiveType != NULL);
 
   name = String_toLower(String_duplicate(s));
@@ -1703,7 +1788,6 @@ ScheduleNode *parseSchedule(const String s)
   String       s0,s1,s2;
   ulong        nextIndex;
 
-  assert(scheduleNode != NULL);
   assert(s != NULL);
 
   /* allocate new schedule node */
@@ -1718,7 +1802,7 @@ ScheduleNode *parseSchedule(const String s)
   scheduleNode->hour        = SCHEDULE_ANY;
   scheduleNode->minute      = SCHEDULE_ANY;
   scheduleNode->weekDay     = SCHEDULE_ANY;
-  scheduleNode->archiveType = ARCHIVE_TYPE_UNKNOWN;
+  scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
 //  scheduleNode->comment     = String_new();
 
   /* parse schedule: date, weekday, time, type, comment */

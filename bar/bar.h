@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.37 $
+* $Revision: 1.38 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -88,14 +88,34 @@ typedef enum
   PASSWORD_MODE_UNKNOWN,
 } PasswordModes;
 
-/* ssh server */
+/* FTP server */
 typedef struct
 {
-  uint     port;
-  String   loginName;
-  String   publicKeyFileName;
-  String   privateKeyFileName;
-  Password *password;
+  String   loginName;                   // login name
+  Password *password;                   // login password
+} FTPServer;
+
+typedef struct FTPServerNode
+{
+  NODE_HEADER(struct FTPServerNode);
+
+  String    name;
+  FTPServer ftpServer;
+} FTPServerNode;
+
+typedef struct
+{
+  LIST_HEADER(FTPServerNode);
+} FTPServerList;
+
+/* SSH server */
+typedef struct
+{
+  String   loginName;                   // login name
+  Password *password;                   // login password
+  uint     port;                        // server port (ssh,scp,sftp)
+  String   publicKeyFileName;           // public key file name (ssh,scp,sftp)
+  String   privateKeyFileName;          // private key file name (ssh,scp,sftp)
 } SSHServer;
 
 typedef struct SSHServerNode
@@ -166,35 +186,38 @@ typedef struct
 /* global options */
 typedef struct
 {
-  const char          *barExecutable;                  // name of BAR executable
+  const char             *barExecutable;               // name of BAR executable
 
-  uint                niceLevel;
+  uint                   niceLevel;
   
-  String              tmpDirectory;
-  uint64              maxTmpSize;
+  String                 tmpDirectory;
+  uint64                 maxTmpSize;
 
-  ulong               maxBandWidth;
+  ulong                  maxBandWidth;
 
-  ulong               compressMinFileSize;
+  ulong                  compressMinFileSize;
 
-  Password            *cryptPassword;
+  Password               *cryptPassword;
 
-  SSHServer           *sshServer;                      // SSH server
-  const SSHServerList *sshServerList;                  // list with SSH servers
-  SSHServer           defaultSSHServer;                // default SSH server
+  FTPServer              *ftpServer;                   // FTP server
+  SSHServer              *sshServer;                   // SSH server
+  const FTPServerList    *ftpServerList;               // list with remote servers
+  const SSHServerList    *sshServerList;               // list with remote servers
+  FTPServer              defaultFTPServer;             // default FTP server
+  SSHServer              defaultSSHServer;             // default SSH server
 
-  String              remoteBARExecutable;
+  String                 remoteBARExecutable;
 
-  DVD                 dvd;
+  DVD                    dvd;
 
-  String              defaultDeviceName;
-  Device              *device;                         // device
-  const DeviceList    *deviceList;                     // list with devices
-  Device              defaultDevice;                   // default device
+  String                 defaultDeviceName;
+  Device                 *device;                      // device
+  const DeviceList       *deviceList;                  // list with devices
+  Device                 defaultDevice;                // default device
 
-  bool                noDefaultConfigFlag;             // do not read default config
-  bool                quietFlag;
-  long                verboseLevel;
+  bool                   noDefaultConfigFlag;          // do not read default config
+  bool                   quietFlag;
+  long                   verboseLevel;
 } GlobalOptions;
 
 /* schedule */
@@ -235,6 +258,7 @@ typedef struct
   PasswordModes       cryptPasswordMode;
   Password            *cryptPassword;
 
+  FTPServer           ftpServer;
   SSHServer           sshServer;
 
   String              deviceName;
@@ -410,12 +434,28 @@ void copyJobOptions(const JobOptions *sourceJobOptions, JobOptions *destinationJ
 void freeJobOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
+* Name   : getFTPServer
+* Purpose: get FTP server data
+* Input  : name       - FTP server name
+*          jobOptions - job options
+* Output : ftperver   - FTP server data from server list or default
+*                       server values
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void getFTPServer(const String     name,
+                  const JobOptions *jobOptions,
+                  FTPServer        *ftpServer
+                 );
+
+/***********************************************************************\
 * Name   : getSSHServer
 * Purpose: get SSH server data
-* Input  : name       - server name
+* Input  : name       - SSH server name
 *          jobOptions - job options
-* Output : sshServer - SSH server data from server list or default
-*                      server values
+* Output : sshServer  - SSH server data from server list or default
+*                       server values
 * Return : -
 * Notes  : -
 \***********************************************************************/

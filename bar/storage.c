@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -60,6 +60,9 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+#ifdef HAVE_FTP
+  LOCAL Password *defaultFTPPassword;
+#endif /* HAVE_FTP */
 #ifdef HAVE_SSH2
   LOCAL Password *defaultSSHPassword;
 #endif /* HAVE_SSH2 */
@@ -96,11 +99,36 @@ LOCAL void updateStatusInfo(const StorageFileHandle *storageFileHandle)
 }
 
 /***********************************************************************\
-* Name   : initSSHPassword
-* Purpose: init ssh password
+* Name   : initPassword
+* Purpose: init FTP password
 * Input  : -
 * Output : -
-* Return : TRUE if ssh password intialized, FALSE otherwise
+* Return : TRUE if FTP password intialized, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+#ifdef HAVE_FTP
+LOCAL bool initFTPPassword(const JobOptions *jobOptions)
+{
+  assert(jobOptions != NULL);
+
+  if (jobOptions->ftpServer.password == NULL)
+  {
+    return Password_input(defaultFTPPassword,"FTP login password");
+  }
+  else
+  {
+    return TRUE;
+  }
+}
+#endif /* HAVE_FTP */
+
+/***********************************************************************\
+* Name   : initSSHPassword
+* Purpose: init SSH password
+* Input  : -
+* Output : -
+* Return : TRUE if SSH password intialized, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -111,7 +139,7 @@ LOCAL bool initSSHPassword(const JobOptions *jobOptions)
 
   if (jobOptions->sshServer.password == NULL)
   {
-    return Password_input(defaultSSHPassword,"SSH login password");
+    return Password_input(defaultSSHPassword,"Login password");
   }
   else
   {
@@ -549,6 +577,10 @@ LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
 
 Errors Storage_initAll(void)
 {
+  #ifdef HAVE_FTP
+    FtpInit();
+    defaultFTPPassword = Password_new();
+  #endif /* HAVE_FTP */
   #ifdef HAVE_SSH2
     defaultSSHPassword = Password_new();
   #endif /* HAVE_SSH2 */
@@ -561,6 +593,9 @@ void Storage_doneAll(void)
   #ifdef HAVE_SSH2
     Password_delete(defaultSSHPassword);
   #endif /* HAVE_SSH2 */
+  #ifdef HAVE_FTP
+    Password_delete(defaultFTPPassword);
+  #endif /* HAVE_FTP */
 }
 
 StorageTypes Storage_getType(const String storageName,
@@ -569,6 +604,11 @@ StorageTypes Storage_getType(const String storageName,
 {
   long i;
 
+  if      (String_findCString(storageName,STRING_BEGIN,"ftp:") == 0)
+  {
+    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,4,STRING_END);
+    return STORAGE_TYPE_FTP;
+  }
   if      (String_findCString(storageName,STRING_BEGIN,"ssh:") == 0)
   {
     if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,4,STRING_END);
@@ -605,6 +645,43 @@ StorageTypes Storage_getType(const String storageName,
 
   if (storageSpecifier != NULL) String_set(storageSpecifier,storageName);
   return STORAGE_TYPE_FILESYSTEM;
+}
+
+bool Storage_parseFTPSpecifier(const String ftpSpecifier,
+                               String       loginName,
+                               String       hostName,
+                               String       fileName
+                              )
+{
+  long i0,i1;
+
+  assert(ftpSpecifier != NULL);
+
+  /* get user name */
+  i0 = 0;
+  i1 = String_findChar(ftpSpecifier,i0,'@');
+  if (i1 < 0)
+  {
+    printError("No user name given!\n");
+    return FALSE;
+  }
+  if (loginName != NULL) String_sub(loginName,ftpSpecifier,i0,i1-i0);
+
+  /* get host name */
+  i0 = i1+1;
+  i1 = String_findChar(ftpSpecifier,i0,':');
+  if (i1 < 0)
+  {
+    printError("No host name given!\n");
+    return FALSE;
+  }
+  if (hostName != NULL) String_sub(hostName,ftpSpecifier,i0,i1-i0);
+
+  /* get file name */
+  i0 = i1+1;
+  if (fileName != NULL) String_sub(fileName,ftpSpecifier,i0,STRING_END);
+
+  return TRUE;
 }
 
 bool Storage_parseSSHSpecifier(const String sshSpecifier,
@@ -690,6 +767,9 @@ Errors Storage_prepare(const String     storageName,
                       )
 {
   String    storageSpecifier;
+  #ifdef HAVE_FTP
+    FTPServer ftpServer;
+  #endif /* HAVE_FTP */
   #ifdef HAVE_SSH2
     SSHServer sshServer;
   #endif /* HAVE_SSH2 */
@@ -714,6 +794,75 @@ Errors Storage_prepare(const String     storageName,
         File_close(&fileHandle);
         File_delete(storageName,FALSE);
       }
+      break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+        {
+          String     loginName;
+          String     hostName;
+          String     hostFileName;
+          netbuf     *ftpControl;
+          Password   *password;
+          const char *plainPassword;
+
+          /* parse ssh login specification */
+          loginName    = String_new();
+          hostName     = String_new();
+          hostFileName = String_new();
+          if (!Storage_parseFTPSpecifier(storageSpecifier,loginName,hostName,hostFileName))
+          {
+            String_delete(hostFileName);
+            String_delete(hostName);
+            String_delete(loginName);
+            String_delete(storageSpecifier);
+            return ERROR_FTP_SESSION_FAIL;
+          }
+
+          /* initialize password */
+          if (!initFTPPassword(jobOptions))
+          {
+            String_delete(hostFileName);
+            String_delete(hostName);
+            String_delete(loginName);
+            String_delete(storageSpecifier);
+            return ERROR_NO_PASSWORD;
+          }
+
+          /* check if FTP login is possible */
+          getFTPServer(hostName,jobOptions,&ftpServer);
+          if (String_empty(loginName)) String_set(loginName,ftpServer.loginName);
+          if (FtpConnect(String_cString(hostName),&ftpControl) != 1)
+          {
+            String_delete(hostFileName);
+            String_delete(hostName);
+            String_delete(loginName);
+            String_delete(storageSpecifier);
+            return ERROR_FTP_SESSION_FAIL;
+
+          }
+          password = (ftpServer.password != NULL)?ftpServer.password:defaultFTPPassword;
+          plainPassword = Password_deploy(password);
+          if (FtpLogin(String_cString(loginName),
+                       plainPassword,
+                       ftpControl
+                      ) != 1
+             )
+          {
+            Password_undeploy(password);
+            FtpQuit(ftpControl);
+            return ERROR_FTP_AUTHENTIFICATION;
+          }
+          Password_undeploy(password);
+          FtpQuit(ftpControl);
+
+          /* free resources */
+          String_delete(hostFileName);
+          String_delete(hostName);
+          String_delete(loginName);
+        }
+      #else /* not HAVE_FTP */
+        UNUSED_VARIABLE(jobOptions);
+      #endif /* HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
     case STORAGE_TYPE_SCP:
@@ -746,10 +895,10 @@ Errors Storage_prepare(const String     storageName,
             String_delete(hostName);
             String_delete(loginName);
             String_delete(storageSpecifier);
-            return ERROR_NO_SSH_PASSWORD;
+            return ERROR_NO_PASSWORD;
           }
 
-          /* check if ssh login is possible */
+          /* check if SSH login is possible */
           getSSHServer(hostName,jobOptions,&sshServer);
           if (String_empty(loginName)) String_set(loginName,sshServer.loginName);
           error = Network_connect(&socketHandle,
@@ -757,9 +906,9 @@ Errors Storage_prepare(const String     storageName,
                                   hostName,
                                   sshServer.port,
                                   loginName,
+                                  (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
                                   sshServer.publicKeyFileName,
                                   sshServer.privateKeyFileName,
-                                  (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -833,6 +982,9 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                    )
 {
   String    storageSpecifier;
+  #ifdef HAVE_FTP
+    FTPServer ftpServer;
+  #endif /* HAVE_FTP */
   #ifdef HAVE_SSH2
     SSHServer sshServer;
   #endif /* HAVE_SSH2 */
@@ -872,6 +1024,53 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
       String_delete(storageSpecifier);
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+        {
+          uint z;
+
+          /* init variables */
+          storageFileHandle->type                    = STORAGE_TYPE_FTP;
+          storageFileHandle->ftp.hostName            = String_new();
+          storageFileHandle->ftp.loginName           = String_new();
+          storageFileHandle->ftp.password            = Password_new();
+          storageFileHandle->ftp.bandWidth.max       = globalOptions.maxBandWidth;
+          storageFileHandle->ftp.bandWidth.blockSize = 64*1024;
+          for (z = 0; z < MAX_BAND_WIDTH_MEASUREMENTS; z++)
+          {
+            storageFileHandle->ftp.bandWidth.measurements[z] = globalOptions.maxBandWidth;
+          }
+          storageFileHandle->ftp.bandWidth.measurementNextIndex = 0;
+          storageFileHandle->ftp.bandWidth.measurementBytes     = 0;
+          storageFileHandle->ftp.bandWidth.measurementTime      = 0;
+
+          /* parse storage string */
+          if (!Storage_parseFTPSpecifier(storageSpecifier,
+                                         storageFileHandle->ftp.loginName,
+                                         storageFileHandle->ftp.hostName,
+                                         fileName
+                                        )
+             )
+          {
+            Password_delete(storageFileHandle->ftp.password);
+            String_delete(storageFileHandle->ftp.loginName);
+            String_delete(storageFileHandle->ftp.hostName);
+            String_delete(storageSpecifier);
+            return ERROR_INVALID_SSH_SPEFICIER;
+          }
+
+          /* get FTP server data */
+          getFTPServer(storageFileHandle->ftp.hostName,jobOptions,&ftpServer);
+          if (String_empty(storageFileHandle->ftp.loginName)) String_set(storageFileHandle->ftp.loginName,ftpServer.loginName);
+          Password_set(storageFileHandle->ftp.password,ftpServer.password);
+
+          /* free resources */
+        }
+      #else /* not HAVE_FTP */
+        String_delete(storageSpecifier);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_FTP */
+      break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         {
@@ -881,10 +1080,10 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           storageFileHandle->type                      = STORAGE_TYPE_SCP;
           storageFileHandle->scp.hostName              = String_new();
           storageFileHandle->scp.hostPort              = 0;
-          storageFileHandle->scp.sshLoginName          = String_new();
+          storageFileHandle->scp.loginName             = String_new();
+          storageFileHandle->scp.password              = Password_new();
           storageFileHandle->scp.sshPublicKeyFileName  = NULL;
           storageFileHandle->scp.sshPrivateKeyFileName = NULL;
-          storageFileHandle->scp.sshPassword           = Password_new();
           storageFileHandle->scp.bandWidth.max         = globalOptions.maxBandWidth;
           storageFileHandle->scp.bandWidth.blockSize   = 64*1024;
           for (z = 0; z < MAX_BAND_WIDTH_MEASUREMENTS; z++)
@@ -897,26 +1096,26 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           /* parse storage string */
           if (!Storage_parseSSHSpecifier(storageSpecifier,
-                                         storageFileHandle->scp.sshLoginName,
+                                         storageFileHandle->scp.loginName,
                                          storageFileHandle->scp.hostName,
                                          fileName
                                         )
              )
           {
-            Password_delete(storageFileHandle->scp.sshPassword);
-            String_delete(storageFileHandle->scp.sshLoginName);
+            Password_delete(storageFileHandle->scp.password);
+            String_delete(storageFileHandle->scp.loginName);
             String_delete(storageFileHandle->scp.hostName);
             String_delete(storageSpecifier);
             return ERROR_INVALID_SSH_SPEFICIER;
           }
 
-          /* get ssh server data */
+          /* get SSH server data */
           getSSHServer(storageFileHandle->scp.hostName,jobOptions,&sshServer);
           storageFileHandle->scp.hostPort = sshServer.port;
-          if (String_empty(storageFileHandle->scp.sshLoginName)) String_set(storageFileHandle->scp.sshLoginName,sshServer.loginName);
+          if (String_empty(storageFileHandle->scp.loginName)) String_set(storageFileHandle->scp.loginName,sshServer.loginName);
           storageFileHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
-          Password_set(storageFileHandle->scp.sshPassword,sshServer.password);
+          Password_set(storageFileHandle->scp.password,sshServer.password);
 
           /* free resources */
         }
@@ -934,10 +1133,10 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           storageFileHandle->type                       = STORAGE_TYPE_SFTP;    
           storageFileHandle->sftp.hostName              = String_new();         
           storageFileHandle->sftp.hostPort              = 0;                    
-          storageFileHandle->sftp.sshLoginName          = String_new();         
+          storageFileHandle->sftp.loginName             = String_new();         
+          storageFileHandle->sftp.password              = Password_new();       
           storageFileHandle->sftp.sshPublicKeyFileName  = NULL;                 
           storageFileHandle->sftp.sshPrivateKeyFileName = NULL;                 
-          storageFileHandle->sftp.sshPassword           = Password_new();       
           storageFileHandle->sftp.bandWidth.max         = globalOptions.maxBandWidth;
           storageFileHandle->sftp.bandWidth.blockSize   = 64*1024;
           for (z = 0; z < MAX_BAND_WIDTH_MEASUREMENTS; z++)
@@ -957,26 +1156,26 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           /* parse storage string */
           if (!Storage_parseSSHSpecifier(storageSpecifier,
-                                         storageFileHandle->sftp.sshLoginName,
+                                         storageFileHandle->sftp.loginName,
                                          storageFileHandle->sftp.hostName,
                                          fileName
                                         )
              )
           {
-            Password_delete(storageFileHandle->sftp.sshPassword);
-            String_delete(storageFileHandle->sftp.sshLoginName);
+            Password_delete(storageFileHandle->sftp.password);
+            String_delete(storageFileHandle->sftp.loginName);
             String_delete(storageFileHandle->sftp.hostName);
             String_delete(storageSpecifier);
             return ERROR_INVALID_SSH_SPEFICIER;
           }
 
-          /* get ssh server data */
+          /* get SSH server data */
           getSSHServer(storageFileHandle->sftp.hostName,jobOptions,&sshServer);
           storageFileHandle->sftp.hostPort = sshServer.port;
-          if (String_empty(storageFileHandle->sftp.sshLoginName)) String_set(storageFileHandle->sftp.sshLoginName,sshServer.loginName);
+          if (String_empty(storageFileHandle->sftp.loginName)) String_set(storageFileHandle->sftp.loginName,sshServer.loginName);
           storageFileHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
-          Password_set(storageFileHandle->sftp.sshPassword,sshServer.password);
+          Password_set(storageFileHandle->sftp.password,sshServer.password);
         }
       #else /* not HAVE_SSH2 */
         String_delete(storageSpecifier);
@@ -1169,10 +1368,18 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_SSH:
       break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+        Password_delete(storageFileHandle->ftp.password);
+        String_delete(storageFileHandle->ftp.loginName);
+        String_delete(storageFileHandle->ftp.hostName);
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
-        Password_delete(storageFileHandle->scp.sshPassword);
-        String_delete(storageFileHandle->scp.sshLoginName);
+        Password_delete(storageFileHandle->scp.password);
+        String_delete(storageFileHandle->scp.loginName);
         String_delete(storageFileHandle->scp.hostName);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
@@ -1180,8 +1387,8 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         free(storageFileHandle->sftp.readAheadBuffer.data);
-        Password_delete(storageFileHandle->sftp.sshPassword);
-        String_delete(storageFileHandle->scp.sshLoginName);
+        Password_delete(storageFileHandle->sftp.password);
+        String_delete(storageFileHandle->scp.loginName);
         String_delete(storageFileHandle->sftp.hostName);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
@@ -1262,6 +1469,11 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
   {
     case STORAGE_TYPE_FILESYSTEM:
       break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
     case STORAGE_TYPE_SSH:
       break;
     case STORAGE_TYPE_SCP:
@@ -1334,6 +1546,11 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
   switch (storageFileHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
+      break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       break;
@@ -1683,6 +1900,51 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
         return error;
       }
       break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+      {
+        const char *plainPassword;
+
+        /* initialise variables */
+
+        /* connect */
+        if (FtpConnect(String_cString(storageFileHandle->ftp.hostName),&storageFileHandle->ftp.control) != 1)
+        {
+          return ERROR_FTP_SESSION_FAIL;
+
+        }
+
+        /* login */
+        plainPassword = Password_deploy(storageFileHandle->ftp.password);
+        if (FtpLogin(String_cString(storageFileHandle->ftp.loginName),
+                     plainPassword,
+                     storageFileHandle->ftp.control
+                    ) != 1
+           )
+        {
+          Password_undeploy(storageFileHandle->ftp.password);
+          FtpQuit(storageFileHandle->ftp.control);
+          return ERROR_FTP_AUTHENTIFICATION;
+        }
+        Password_undeploy(storageFileHandle->ftp.password);
+
+        /* create file */
+        if (FtpAccess(String_cString(fileName),
+                      FTPLIB_FILE_WRITE,
+                      FTPLIB_IMAGE,
+                      storageFileHandle->ftp.control,
+                      &storageFileHandle->ftp.data
+                     ) != 1
+           )
+        {
+          FtpQuit(storageFileHandle->ftp.control);
+          return ERROR_FTP_AUTHENTIFICATION;
+        }
+      }
+      #else /* not HAVE_FTP */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_FTP */
+      break;
     case STORAGE_TYPE_SSH:
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
@@ -1694,10 +1956,10 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
                                   SOCKET_TYPE_SSH,
                                   storageFileHandle->scp.hostName,
                                   storageFileHandle->scp.hostPort,
-                                  storageFileHandle->scp.sshLoginName,
+                                  storageFileHandle->scp.loginName,
+                                  storageFileHandle->scp.password,
                                   storageFileHandle->scp.sshPublicKeyFileName,
                                   storageFileHandle->scp.sshPrivateKeyFileName,
-                                  storageFileHandle->scp.sshPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -1732,10 +1994,10 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
                                   SOCKET_TYPE_SSH,
                                   storageFileHandle->sftp.hostName,
                                   storageFileHandle->sftp.hostPort,
-                                  storageFileHandle->sftp.sshLoginName,
+                                  storageFileHandle->sftp.loginName,
+                                  storageFileHandle->sftp.password,
                                   storageFileHandle->sftp.sshPublicKeyFileName,
                                   storageFileHandle->sftp.sshPrivateKeyFileName,
-                                  storageFileHandle->sftp.sshPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -1837,7 +2099,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
   assert(jobOptions != NULL);
 
   /* init variables */
-  storageFileHandle->mode          = STORAGE_MODE_READ;
+  storageFileHandle->mode = STORAGE_MODE_READ;
 
   switch (storageFileHandle->type)
   {
@@ -1851,6 +2113,51 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
       {
         return error;
       }
+      break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+      {
+        const char *plainPassword;
+
+        /* initialise variables */
+
+        /* connect */
+        if (FtpConnect(String_cString(storageFileHandle->ftp.hostName),&storageFileHandle->ftp.control) != 1)
+        {
+          return ERROR_FTP_SESSION_FAIL;
+
+        }
+
+        /* login */
+        plainPassword = Password_deploy(storageFileHandle->ftp.password);
+        if (FtpLogin(String_cString(storageFileHandle->ftp.loginName),
+                     plainPassword,
+                     storageFileHandle->ftp.control
+                    ) != 1
+           )
+        {
+          Password_undeploy(storageFileHandle->ftp.password);
+          FtpQuit(storageFileHandle->ftp.control);
+          return ERROR_FTP_AUTHENTIFICATION;
+        }
+        Password_undeploy(storageFileHandle->ftp.password);
+
+        /* read file */
+        if (FtpAccess(String_cString(fileName),
+                      FTPLIB_FILE_READ,
+                      FTPLIB_IMAGE,
+                      storageFileHandle->ftp.control,
+                      &storageFileHandle->ftp.data
+                     ) != 1
+           )
+        {
+          FtpQuit(storageFileHandle->ftp.control);
+          return ERROR_FTP_AUTHENTIFICATION;
+        }
+      }
+      #else /* not HAVE_FTP */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1868,10 +2175,10 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
                                   SOCKET_TYPE_SSH,
                                   storageFileHandle->scp.hostName,
                                   storageFileHandle->scp.hostPort,
-                                  storageFileHandle->scp.sshLoginName,
+                                  storageFileHandle->scp.loginName,
+                                  storageFileHandle->scp.password,
                                   storageFileHandle->scp.sshPublicKeyFileName,
                                   storageFileHandle->scp.sshPrivateKeyFileName,
-                                  storageFileHandle->scp.sshPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -1912,10 +2219,10 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
                                   SOCKET_TYPE_SSH,
                                   storageFileHandle->sftp.hostName,
                                   storageFileHandle->sftp.hostPort,
-                                  storageFileHandle->sftp.sshLoginName,
+                                  storageFileHandle->sftp.loginName,
+                                  storageFileHandle->sftp.password,
                                   storageFileHandle->sftp.sshPublicKeyFileName,
                                   storageFileHandle->sftp.sshPrivateKeyFileName,
-                                  storageFileHandle->sftp.sshPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -2018,14 +2325,28 @@ void Storage_close(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_SSH:
       break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+        assert(storageFileHandle->ftp.control != NULL);
+        assert(storageFileHandle->ftp.data != NULL);
+
+        FtpClose(storageFileHandle->ftp.data);
+        FtpQuit(storageFileHandle->ftp.control);
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         switch (storageFileHandle->mode)
         {
           case STORAGE_MODE_WRITE:
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
             libssh2_channel_send_eof(storageFileHandle->scp.channel);
-            libssh2_channel_wait_eof(storageFileHandle->scp.channel);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+//            libssh2_channel_wait_eof(storageFileHandle->scp.channel);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
             libssh2_channel_wait_closed(storageFileHandle->scp.channel);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
             break;
           case STORAGE_MODE_READ:
             libssh2_channel_close(storageFileHandle->scp.channel);
@@ -2038,7 +2359,9 @@ void Storage_close(StorageFileHandle *storageFileHandle)
           #endif /* NDEBUG */
         }
         libssh2_channel_free(storageFileHandle->scp.channel);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
         Network_disconnect(&storageFileHandle->scp.socketHandle);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
@@ -2077,8 +2400,17 @@ bool Storage_eof(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_FILESYSTEM:
       return File_eof(&storageFileHandle->fileSystem.fileHandle);
       break;
-    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
@@ -2132,6 +2464,15 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
       {
         return error;
       }
+      break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+        assert(storageFileHandle->ftp.control != NULL);
+        assert(storageFileHandle->ftp.data != NULL);
+
+        (*bytesRead) = FtpRead(buffer,size,storageFileHandle->ftp.data);
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -2257,6 +2598,51 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
         return error;
       }
       break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+        {
+          ulong  writtenBytes;
+          long   length;
+          long   n;
+          uint64 startTimestamp,endTimestamp;
+
+          assert(storageFileHandle->ftp.control != NULL);
+          assert(storageFileHandle->ftp.data != NULL);
+
+          writtenBytes = 0;
+          while (writtenBytes < size)
+          {
+            /* get start time */
+            startTimestamp = Misc_getTimestamp();
+
+            /* send data */
+            if (storageFileHandle->ftp.bandWidth.max > 0)
+            {
+              length = MIN(storageFileHandle->ftp.bandWidth.blockSize,size-writtenBytes);
+            }
+            else
+            {
+              length = size-writtenBytes;
+            }
+            n = FtpWrite((void*)buffer,length,storageFileHandle->ftp.data);
+            if (n < 0)
+            {
+              return ERROR_NETWORK_SEND;
+            }
+            buffer = (byte*)buffer+n;
+            writtenBytes += n;
+
+            /* get end time, transmission time */
+            endTimestamp = Misc_getTimestamp();
+            assert(endTimestamp >= startTimestamp);
+
+            /* limit used band width if requested */
+            limitBandWidth(&storageFileHandle->ftp.bandWidth,n,endTimestamp-startTimestamp);
+          };
+        }
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
     case STORAGE_TYPE_SSH:
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
@@ -2264,6 +2650,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
       #ifdef HAVE_SSH2
         {
           ulong  writtenBytes;
+          long   length;
           long   n;
           uint64 startTimestamp,endTimestamp;
 
@@ -2276,30 +2663,37 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             /* send data */
             if (storageFileHandle->scp.bandWidth.max > 0)
             {
-              n = MIN(storageFileHandle->scp.bandWidth.blockSize,size-writtenBytes);
+              length = MIN(storageFileHandle->scp.bandWidth.blockSize,size-writtenBytes);
             }
             else
             {
-              n = size-writtenBytes;
+              length = size-writtenBytes;
             }
-            n = libssh2_channel_write(storageFileHandle->scp.channel,
-                                      buffer,
-                                      n
-                                     );
+fprintf(stderr,"%s,%d: %p\n",__FILE__,__LINE__,storageFileHandle->scp.channel);
+            do
+            {
+              n = libssh2_channel_write(storageFileHandle->scp.channel,
+                                        buffer,
+                                        length
+                                       );
+fprintf(stderr,"%s,%d: n=%ld\n",__FILE__,__LINE__,n);
+            }
+            while (n == LIBSSH2_ERROR_EAGAIN);
             if (n < 0)
             {
               return ERROR_NETWORK_SEND;
             }
             buffer = (byte*)buffer+n;
             writtenBytes += n;
-            storageFileHandle->sftp.index += (uint64)n;
 
             /* get end time, transmission time */
             endTimestamp = Misc_getTimestamp();
             assert(endTimestamp >= startTimestamp);
 
             /* limit used band width if requested */
+fprintf(stderr,"%s,%d: writtenBytes=%ld size=%ld\n",__FILE__,__LINE__,writtenBytes,size);
             limitBandWidth(&storageFileHandle->scp.bandWidth,n,endTimestamp-startTimestamp);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
           };
         }
       #else /* not HAVE_SSH2 */
@@ -2310,6 +2704,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
       #ifdef HAVE_SSH2
         {
           ulong  writtenBytes;
+          long   length;
           long   n;
           uint64 startTimestamp,endTimestamp;
 
@@ -2322,16 +2717,20 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             /* send data */
             if (storageFileHandle->sftp.bandWidth.max > 0)
             {
-              n = MIN(storageFileHandle->sftp.bandWidth.blockSize,size-writtenBytes);
+              length = MIN(storageFileHandle->sftp.bandWidth.blockSize,size-writtenBytes);
             }
             else
             {
-              n = size-writtenBytes;
+              length = size-writtenBytes;
             }
-            n = libssh2_sftp_write(storageFileHandle->sftp.sftpHandle,
-                                   buffer,
-                                   n
-                                  );
+            do
+            {
+              n = libssh2_sftp_write(storageFileHandle->sftp.sftpHandle,
+                                     buffer,
+                                     length
+                                    );
+            }
+            while (n == LIBSSH2_ERROR_EAGAIN);
             if (n < 0)
             {
               return ERROR_NETWORK_SEND;
@@ -2384,11 +2783,23 @@ uint64 Storage_getSize(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_FILESYSTEM:
       return File_getSize(&storageFileHandle->fileSystem.fileHandle);
       break;
-    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
+      #ifdef HAVE_SSH2
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -2429,10 +2840,22 @@ Errors Storage_tell(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_FILESYSTEM:
       return File_tell(&storageFileHandle->fileSystem.fileHandle,offset);
       break;
-    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
+      #ifdef HAVE_SSH2
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SFTP:
@@ -2474,10 +2897,22 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_FILESYSTEM:
       return File_seek(&storageFileHandle->fileSystem.fileHandle,offset);
       break;
-    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
+      #ifdef HAVE_SSH2
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SFTP:
@@ -2520,6 +2955,9 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
                             )
 {
   String    storageSpecifier;
+  #ifdef HAVE_FRP
+    FTPServer ftpServer;
+  #endif /* HAVE_FRP */
   #ifdef HAVE_SSH2
     SSHServer sshServer;
   #endif /* HAVE_SSH2 */
@@ -2546,8 +2984,17 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
         return error;
       }
       break;
-    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
       HALT_INTERNAL_ERROR("scp does not support directory operations");
@@ -2586,9 +3033,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                                   hostName,
                                   sshServer.port,
                                   loginName,
+                                  (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
                                   sshServer.publicKeyFileName,
                                   sshServer.privateKeyFileName,
-                                  (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -2673,8 +3120,17 @@ void Storage_closeDirectory(StorageDirectoryHandle *storageDirectoryHandle)
     case STORAGE_TYPE_FILESYSTEM:
       File_closeDirectory(&storageDirectoryHandle->fileSystem.directoryHandle);
       break;
-    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
       HALT_INTERNAL_ERROR("scp does not support directory operations");
@@ -2713,8 +3169,17 @@ bool Storage_endOfDirectory(StorageDirectoryHandle *storageDirectoryHandle)
     case STORAGE_TYPE_FILESYSTEM:
       endOfDirectoryFlag = File_endOfDirectory(&storageDirectoryHandle->fileSystem.directoryHandle);
       break;
-    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
       HALT_INTERNAL_ERROR("scp does not support directory operations");
@@ -2775,8 +3240,17 @@ Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
     case STORAGE_TYPE_FILESYSTEM:
       error = File_readDirectory(&storageDirectoryHandle->fileSystem.directoryHandle,fileName);
       break;
-    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
       HALT_INTERNAL_ERROR("scp does not support directory operations");

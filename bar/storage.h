@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.h,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -60,6 +60,7 @@ typedef enum
 typedef enum
 {
   STORAGE_TYPE_FILESYSTEM,
+  STORAGE_TYPE_FTP,
   STORAGE_TYPE_SSH,
   STORAGE_TYPE_SCP,
   STORAGE_TYPE_SFTP,
@@ -107,16 +108,29 @@ typedef struct
     {
       FileHandle fileHandle;
     } fileSystem;
+    #ifdef HAVE_FTP
+      // FTP storage
+      struct
+      {
+        String           hostName;
+        String           loginName;
+        Password         *password;
+
+        netbuf           *control;
+        netbuf           *data;
+        StorageBandWidth bandWidth;                      // band width data
+      } ftp;
+    #endif /* HAVE_FTP */
     #ifdef HAVE_SSH2
       // ssh storage (remote BAR)
       struct
       {
         String           hostName;
         uint             hostPort;
-        String           sshLoginName;
+        String           loginName;
+        Password         *password;
         String           sshPublicKeyFileName;
         String           sshPrivateKeyFileName;
-        Password         *sshPassword;
 
         SocketHandle     socketHandle;
         LIBSSH2_CHANNEL  *channel;                       // ssh channel
@@ -127,10 +141,10 @@ typedef struct
       {
         String           hostName;
         uint             hostPort;
-        String           sshLoginName;
+        String           loginName;
+        Password         *password;
         String           sshPublicKeyFileName;
         String           sshPrivateKeyFileName;
-        Password         *sshPassword;
 
         SocketHandle     socketHandle;
         LIBSSH2_CHANNEL  *channel;                       // scp channel
@@ -141,10 +155,10 @@ typedef struct
       {
         String              hostName;
         uint                hostPort;
-        String              sshLoginName;
+        String              loginName;
+        Password            *password;
         String              sshPublicKeyFileName;
         String              sshPrivateKeyFileName;
-        Password            *sshPassword;
 
         SocketHandle        socketHandle;
         LIBSSH2_SFTP        *sftp;                       // sftp session
@@ -275,6 +289,23 @@ void Storage_doneAll(void);
 StorageTypes Storage_getType(const String storageName,
                              String       storageSpecifier
                             );
+
+/***********************************************************************\
+* Name   : Storage_parseFTPSpecifier
+* Purpose: parse FTP specifier: <user name>@<host name>:<file name>
+* Input  : ftpSpecifier - FTP specifier string
+* Output : userName     - user name (can be NULL)
+*          hostName     - host name (can be NULL)
+*          fileName     - file name (can be NULL)
+* Return : TRUE if FTP specifier parsed, FALSE if specifier invalid
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_parseFTPSpecifier(const String ftpSpecifier,
+                               String       loginName,
+                               String       hostName,
+                               String       fileName
+                              );
 
 /***********************************************************************\
 * Name   : Storage_parseSSHSpecifier
