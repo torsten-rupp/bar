@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.26 $
+# $Revision: 1.27 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -2841,13 +2841,17 @@ proc updateStatusList { statusListWidget } \
 
   proc private_compareJobs { job0 job1 } \
   {
+    set name0   [lindex $job0 1]
     set status0 [lindex $job0 2]
+    set name1   [lindex $job1 1]
     set status1 [lindex $job1 2]
-    if {($status0 == "running") && ($status1 != "running")} { return -1 }
-    if {($status1 == "running") && ($status0 != "running")} { return  1 }
-    if {($status0 == "waiting") && ($status1 != "waiting")} { return -1 }
-    if {($status1 == "waiting") && ($status0 != "waiting")} { return  1 }
-    return 0
+    if     {($status0 == "running") && ($status1 != "running")} { return -1 } \
+    elseif {($status1 == "running") && ($status0 != "running")} { return  1 } \
+    elseif {($status0 == "waiting") && ($status1 != "waiting")} { return -1 } \
+    elseif {($status1 == "waiting") && ($status0 != "waiting")} { return  1 } \
+    elseif {$name0 < $name1} { return -1 } \
+    elseif {$name0 > $name1} { return  1 } \
+    else { return 0 }
   }
 
   catch {after cancel $jobListTimerId}

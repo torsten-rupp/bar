@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.35 $
+* $Revision: 1.36 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -1071,12 +1071,12 @@ LOCAL void updateCreateStatus(JobNode                *jobNode,
                               const CreateStatusInfo *createStatusInfo
                              )
 {
-  ulong  elapsedTime;
+  uint64 elapsedTime;
   double filesPerSecond,bytesPerSecond,storageBytesPerSecond;
   ulong  restFiles;
   uint64 restBytes;
   uint64 restStorageBytes;
-  ulong  estimtedRestTime;
+  ulong  estimatedRestTime;
   double sum;
   uint   n;
 
@@ -1087,9 +1087,9 @@ LOCAL void updateCreateStatus(JobNode                *jobNode,
 
   /* calculate estimated rest time */
   elapsedTime = Misc_getCurrentDateTime()-jobNode->runningInfo.startDateTime;
-  filesPerSecond        = (elapsedTime > 0)?(double)createStatusInfo->doneFiles/(double)elapsedTime:0;
-  bytesPerSecond        = (elapsedTime > 0)?(double)createStatusInfo->doneBytes/(double)elapsedTime:0;
-  storageBytesPerSecond = (elapsedTime > 0)?(double)createStatusInfo->storageDoneBytes/(double)elapsedTime:0;
+  filesPerSecond        = (elapsedTime > 0LL)?(double)createStatusInfo->doneFiles/(double)elapsedTime:0;
+  bytesPerSecond        = (elapsedTime > 0LL)?(double)createStatusInfo->doneBytes/(double)elapsedTime:0;
+  storageBytesPerSecond = (elapsedTime > 0LL)?(double)createStatusInfo->storageDoneBytes/(double)elapsedTime:0;
 
   restFiles        = (createStatusInfo->totalFiles        > createStatusInfo->doneFiles       )?createStatusInfo->totalFiles       -createStatusInfo->doneFiles       :0L;
   restBytes        = (createStatusInfo->totalBytes        > createStatusInfo->doneBytes       )?createStatusInfo->totalBytes       -createStatusInfo->doneBytes       :0LL;
@@ -1098,14 +1098,14 @@ LOCAL void updateCreateStatus(JobNode                *jobNode,
   if (filesPerSecond        > 0) { sum += (double)restFiles/filesPerSecond;               n++; }
   if (bytesPerSecond        > 0) { sum += (double)restBytes/bytesPerSecond;               n++; }
   if (storageBytesPerSecond > 0) { sum += (double)restStorageBytes/storageBytesPerSecond; n++; }
-  estimtedRestTime = (n > 0)?(ulong)round(sum/n):0;
+  estimatedRestTime = (n > 0)?(ulong)round(sum/n):0;
 /*
-fprintf(stderr,"%s,%d: createStatusInfo->doneFiles=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- elapsedTime=%lus filesPerSecond=%f bytesPerSecond=%f estimtedRestTime=%lus\n",__FILE__,__LINE__,
+fprintf(stderr,"%s,%d: createStatusInfo->doneFiles=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- elapsedTime=%lus filesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
 createStatusInfo->doneFiles,
 createStatusInfo->doneBytes,
 jobNode->runningInfo.totalFiles,
 jobNode->runningInfo.totalBytes,
-elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
+elapsedTime,filesPerSecond,bytesPerSecond,estimatedRestTime);
 */
 
   jobNode->runningInfo.error                 = error;
@@ -1123,7 +1123,7 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
   jobNode->runningInfo.storageBytesPerSecond = storageBytesPerSecond;
   jobNode->runningInfo.archiveBytes          = createStatusInfo->archiveBytes;
   jobNode->runningInfo.compressionRatio      = createStatusInfo->compressionRatio;
-  jobNode->runningInfo.estimatedRestTime     = estimtedRestTime;
+  jobNode->runningInfo.estimatedRestTime     = estimatedRestTime;
   String_set(jobNode->runningInfo.fileName,createStatusInfo->fileName);
   jobNode->runningInfo.fileDoneBytes         = createStatusInfo->fileDoneBytes;
   jobNode->runningInfo.fileTotalBytes        = createStatusInfo->fileTotalBytes;
@@ -1166,12 +1166,12 @@ LOCAL void updateRestoreStatus(JobNode                 *jobNode,
   storageBytesPerSecond = (elapsedTime > 0)?(double)restoreStatusInfo->storageDoneBytes/(double)elapsedTime:0;
 
 /*
-fprintf(stderr,"%s,%d: restoreStatusInfo->doneFiles=%lu restoreStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- elapsedTime=%lus filesPerSecond=%f bytesPerSecond=%f estimtedRestTime=%lus\n",__FILE__,__LINE__,
+fprintf(stderr,"%s,%d: restoreStatusInfo->doneFiles=%lu restoreStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- elapsedTime=%lus filesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
 restoreStatusInfo->doneFiles,
 restoreStatusInfo->doneBytes,
 jobNode->runningInfo.totalFiles,
 jobNode->runningInfo.totalBytes,
-elapsedTime,filesPerSecond,bytesPerSecond,estimtedRestTime);
+elapsedTime,filesPerSecond,bytesPerSecond,estimatedRestTime);
 */
 
   jobNode->runningInfo.error                 = error;
@@ -1931,7 +1931,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   while (jobNode != NULL)
   {
     sendResult(clientInfo,id,FALSE,0,
-               "%u %'S %'s %s %llu %'s %'s %lu %lu",
+               "%u %'S %'s %s %llu %'s %'s %llu %lu",
                jobNode->id,
                jobNode->name,
                getJobStateText(jobNode->state),
