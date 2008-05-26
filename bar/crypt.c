@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -267,12 +267,12 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
 
           if (password == NULL)
           {
-            return ERROR_NO_PASSWORD;
+            return ERROR_NO_CRYPT_PASSWORD;
           }
           passwordLength = Password_length(password);
           if (passwordLength <= 0)
           {
-            return ERROR_NO_PASSWORD;
+            return ERROR_NO_CRYPT_PASSWORD;
           }
 
           gcryptAlgorithm = 0;

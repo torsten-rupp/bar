@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -310,6 +310,7 @@ remoteBarFlag=FALSE;
     switch (Storage_getType(archiveFileName,storageSpecifier))
     {
       case STORAGE_TYPE_FILESYSTEM:
+      case STORAGE_TYPE_FTP:
       case STORAGE_TYPE_SCP:
       case STORAGE_TYPE_SFTP:
         {
@@ -661,9 +662,9 @@ remoteBarFlag=FALSE;
                                     hostName,
                                     sshServer.port,
                                     userName,
+                                    sshServer.password,
                                     sshServer.publicKeyFileName,
                                     sshServer.privateKeyFileName,
-                                    sshServer.password,
                                     0
                                    );
             if (error != ERROR_NONE)

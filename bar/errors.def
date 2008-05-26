@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/errors.def,v $
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
@@ -32,10 +32,12 @@ ERROR INVALID_TLS_CA                 "invalid TLS (SSL) certificate authority"
 ERROR INVALID_TLS_CERTIFICATE        "invalid TLS (SSL) certificate"
 ERROR TLS_HANDSHAKE                  "TLS (SSL) handshake failure"
 ERROR INVALID_SSH_SPEFICIER          "invalid SSH specifier"
-ERROR NO_SSH_LOGIN_NAME              "no ssh login name given"
-ERROR NO_SSH_PASSWORD                "no ssh password given"
 ERROR SSH_SESSION_FAIL               "initialize ssh session fail"
 ERROR SSH_AUTHENTIFICATION           "invalid ssh password"
+
+# FTP
+ERROR FTP_SESSION_FAIL               "initialize FTP session fail"
+ERROR FTP_AUTHENTIFICATION           "invalid FTP user/password"
 
 # compress
 ERROR INIT_COMPRESS                  "init compress"
@@ -46,7 +48,7 @@ ERROR INFLATE_ERROR                  "inflate"
 # crypt
 ERROR UNSUPPORTED_BLOCK_SIZE         "unsupported block size"
 ERROR INIT_CRYPT                     "init crypt"
-ERROR NO_PASSWORD                    "no password given for cipher"
+ERROR NO_CRYPT_PASSWORD              "no password given for cipher"
 ERROR INVALID_PASSWORD               "invalid password"
 ERROR INIT_CIPHER                    "init cipher"
 ERROR ENCRYPT_FAIL                   "encrypt"
@@ -87,6 +89,8 @@ ERROR HOST_NOT_FOUND                 "host not found"
 ERROR CONNECT_FAIL
   strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
 
+ERROR NO_LOGIN_NAME                  "no login name given"
+ERROR NO_PASSWORD                    "no password given"
 ERROR NETWORK_SEND                   "sending data fail"
 ERROR NETWORK_RECEIVE                "receiving data fail"
 ERROR NETWORK_EXECUTE_FAIL           "execute command fail"

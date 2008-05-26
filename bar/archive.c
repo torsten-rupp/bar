@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.44 $
+* $Revision: 1.45 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -841,7 +841,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
                         )
      )
   {
-    return ERROR_NO_PASSWORD;
+    return ERROR_NO_CRYPT_PASSWORD;
   }
 
   /* init archive file info */
@@ -1011,7 +1011,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
                         )
      )
   {
-    return ERROR_NO_PASSWORD;
+    return ERROR_NO_CRYPT_PASSWORD;
   }
 
   /* init archive file info */
@@ -1164,7 +1164,7 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
                         )
      )
   {
-    return ERROR_NO_PASSWORD;
+    return ERROR_NO_CRYPT_PASSWORD;
   }
 
   /* init archive file info */
@@ -1325,7 +1325,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo     *archiveInfo,
                         )
      )
   {
-    return ERROR_NO_PASSWORD;
+    return ERROR_NO_CRYPT_PASSWORD;
   }
 
   /* init archive file info */
@@ -1610,7 +1610,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   {
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
-    return ERROR_NO_PASSWORD;
+    return ERROR_NO_CRYPT_PASSWORD;
   }
 
   /* detect block length of use crypt algorithm */
@@ -1902,7 +1902,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   {
     Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
-    return ERROR_NO_PASSWORD;
+    return ERROR_NO_CRYPT_PASSWORD;
   }
 
   /* detect block length of use crypt algorithm */
@@ -2089,7 +2089,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   {
     Chunk_done(&archiveFileInfo->link.chunkInfoLink);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
-    return ERROR_NO_PASSWORD;
+    return ERROR_NO_CRYPT_PASSWORD;
   }
 
   /* detect block length of use crypt algorithm */
@@ -2276,7 +2276,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
   {
     Chunk_done(&archiveFileInfo->special.chunkInfoSpecial);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
-    return ERROR_NO_PASSWORD;
+    return ERROR_NO_CRYPT_PASSWORD;
   }
 
   /* detect block length of use crypt algorithm */
