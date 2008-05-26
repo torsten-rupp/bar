@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.48 $
+* $Revision: 1.49 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -342,7 +342,7 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
 
   /* create directory if not existing */
   directoryName = File_getFilePathName(String_new(),fileName);
-  if (!File_exists(directoryName))
+  if (!String_empty(directoryName) && !File_exists(directoryName))
   {
     error = File_makeDirectory(directoryName);
     if (error != ERROR_NONE)
@@ -1520,14 +1520,14 @@ LOCAL void storageThread(CreateInfo *createInfo)
               break;
             }
             createInfo->statusInfo.storageDoneBytes += n;
-  fprintf(stderr,"%s,%d: %lld\n",__FILE__,__LINE__,createInfo->statusInfo.storageDoneBytes);
+fprintf(stderr,"%s,%d: %lld\n",__FILE__,__LINE__,createInfo->statusInfo.storageDoneBytes);
             updateStatusInfo(createInfo);
           }
           while (   (createInfo->failError == ERROR_NONE)
                  && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
                  && !File_eof(&fileHandle)
                 );
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
           /* close storage file */
           Storage_close(&createInfo->storageFileHandle);
@@ -1666,7 +1666,7 @@ Errors Command_create(const char                   *archiveFileName,
   createInfo.includePatternList           = includePatternList;
   createInfo.excludePatternList           = excludePatternList;
   createInfo.jobOptions                   = jobOptions;
-  createInfo.archiveType                  = (archiveType != ARCHIVE_TYPE_NORMAL)?archiveType:jobOptions->archiveType;
+  createInfo.archiveType                  = ((archiveType == ARCHIVE_TYPE_FULL) || (archiveType == ARCHIVE_TYPE_INCREMENTAL))?archiveType:jobOptions->archiveType;
   createInfo.pauseFlag                    = pauseFlag;
   createInfo.requestedAbortFlag           = requestedAbortFlag;
   createInfo.archiveFileName              = String_newCString(archiveFileName);
