@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -335,16 +335,20 @@ int String_compare(const String          string1,
                   );
 
 /***********************************************************************\
-* Name   : String_equals
+* Name   : String_equals, String_equalsBuffer, String_equalsCString
+*          String_equalsChar
 * Purpose: check if strings are equal
-* Input  : string1,string2/string,s/string,ch - strings/character to
-*                                               compare
+* Input  : string1,string2            - strings to compare
+*          string/buffer/bufferLength - string/buffer to compare
+*          string/s                   - string/C-string to compare
+*          string,ch                  - strings/character to compare
 * Output : -
-* Return : TRUE if string equal, FALSE otherwise
+* Return : TRUE if strings equal, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool String_equals(const String string1, const String string2);
+bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength);
 bool String_equalsCString(const String string, const char *s);
 bool String_equalsChar(const String string, char ch);
 

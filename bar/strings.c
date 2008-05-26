@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.30 $
+* $Revision: 1.31 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -2389,10 +2389,36 @@ bool String_equals(const String string1, const String string2)
   return equalFlag;
 }
 
+bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength)
+{
+  bool  equalFlag;
+  ulong z;
+
+  assert(string != NULL);
+  assert(buffer != NULL);
+
+  CHECK_VALID(string);
+
+  if (string->length == bufferLength)
+  {
+    equalFlag = TRUE;
+    z         = 0;
+    while (equalFlag && (z < string->length))
+    {
+      equalFlag = (string->data[z] == buffer[z]);
+      z++;
+    }
+  }
+  else
+  {
+    equalFlag = FALSE;
+  }
+
+  return equalFlag;
+}
+
 bool String_equalsCString(const String string, const char *s)
 {
-  struct __String cString;
-
   CHECK_VALID(string);
 
   if (string != NULL)
@@ -2401,12 +2427,7 @@ bool String_equalsCString(const String string, const char *s)
 
     if (s != NULL)
     {
-      cString.length = strlen(s);
-      cString.data   = (char*)s;
-
-      UPDATE_VALID(&cString);
-
-      return String_equals(string,&cString);
+      return String_equalsBuffer(string,s,strlen(s));
     }
     else
     {
