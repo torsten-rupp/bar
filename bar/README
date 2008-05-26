@@ -7,8 +7,8 @@ BAR - BAckup Archiver
 * encryption with gcrypt algrithms (AES,TWOFISH etc.)
 * fast file format: can find and extract single files
   without decompressing/decryption of the whole archive
-* direct copy of archives to remote computer via SSH
-  (SCP or SFTP)
+* direct copy of archives to remote computer via FTP or
+  SSH (SCP or SFTP)
 * can store archives on DVD (with external tools)
 * support pre- and post-processing of DVD images (e. g.
   for including functions of dvdisaster)
@@ -22,8 +22,11 @@ BAR - BAckup Archiver
 * PTHREADs library
 * zlib library
 * bzib2 library
-* gcrypt library
-* ssh2 library
+* gcrypt library from http://www.gnupg.org (optional)
+* gnutls library from http://www.gnu.org/software/gnutls
+  (optional)
+* ftplib from http://nbpfaus.net/~pfau/ftplib (optional)
+* ssh2 library from http://www.libssh2.org (optional)
 * long long datatype (because of large files)
 * perl (only for compiling)
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
@@ -32,6 +35,46 @@ BAR - BAckup Archiver
   (see below)
 
 --- Installation
+
+Install gcrypt:
+  tar xzf libgcrypt-1.2.4.tar.gz 
+  cd libgcrypt-1.2.4
+  ./configure
+  make
+  make install
+
+Install gnutls:
+  tar xjf gnutls-2.0.1.tar.bz2
+  cd gnutls-2.0.1
+  ./configure
+  make
+  make install
+  ldconfig
+
+Install ftplib:
+  tar xzf ftplib-3.1-src.tar.gz
+  cd ftplib-3.1
+  patch -p3 < ftplib-3.1-1.patch
+  patch -p1 < <BAR source directory>/ftplib-3.1-without-perror.patch
+  cd ftplib-3.1/linux
+  make
+  cp libftp.a /usr/local/lib
+  cp libftp.so.3.1 /usr/local/lib
+  cp ftplib.h /usr/local/include
+  cd /usr/local/lib
+  ln -s libftp.so.3.1 libftp.so
+  ln -s libftp.so.3.1 libftp.so.3
+  ldconfig
+
+Install ssh2:
+  tar xzf libssh2-0.18.tar.gz
+  cd libssh2-0.18
+  ./configure
+  patch -p1 < <BAR source directory>/misc/libssh2-seek.patch
+  patch -p1 < <BAR source directory>/misc/libssh2-keepalive.patch
+  make
+  make install
+  ldconfig
 
 ./configure
 make
@@ -45,29 +88,29 @@ block, instead each file is encrypted. The archive file
 structure is readable (an BAR archive is organized in
 "chunks"), thus everybody can detect e. g. how many files
 are stored in the archive, but nobody except the owner of
-the passphrase used for encryption can read the contents
-of the files nor the file meta data, e. g. file names (as
-long as the used encryption algorithm is not broken by
-someone).
+the passphrase used for encryption can read the contents of
+the files nor the file meta data, e. g. file names (as long
+as the used encryption algorithm is not broken by someone).
 
 --- DVD
 
-For storing archive files on DVD an external like "growisofs"
-is needed which is actually writing data to a DVD. BAR
-create the archive files in a temporary directory and then
-call the external tool for burning the DVD. The tool "growisofs"
-is recommented for storing archive files directly on DVD. An
-ISO image can also be created first e. g. with mkisofs. BAR
-support external pre- and post-processing commands when
-creating an ISO-image and burning a DVD. With these commands
-e. g. dvdisaster can be integrated into BAR to create
-RS-protected backup DVDs
+For storing archive files on DVD an external program like
+"growisofs" is needed which is actually writing data to a
+DVD. BAR create the archive files in a temporary directory
+and then call the external tool for burning the DVD. The
+tool "growisofs" is recommented for storing archive files
+directly on DVD. An ISO image can also be created first e.
+g. with mkisofs. BAR support external pre- and
+post-processing commands when creating an ISO-image and
+burning a DVD. With these commands e. g. dvdisaster can be
+integrated into BAR to create RS-protected backup DVDs
 
 --- Graphical frontend
 
 barcontrol.tcl is a graphical user interface for BAR. It is
-written in TclTk, thus a TclTk-interpreter (wish) is needed.
-Additionally the following packages are required:
+written in TclTk. To use the graphical user interface a
+TclTk-interpreter (wish) is needed. Additionally the
+following TclTk extension packages are required:
 
 * Tix (widget extension for Tk)
 * tls (SSL/TLS extension for Tcl)
@@ -75,9 +118,10 @@ Additionally the following packages are required:
 * mclistbox (a copy is provided with BAR; thanks to
   Bryan Oakley for writing mclistbox)
 
-barcontrol.tcl connect to a running BAR-Server either via TLS
-or a plain socket connction. barcontrol.tcl can send jobs to
-server and display the current status of jobs.
+barcontrol.tcl connect to a running BAR-server either via
+TLS or a plain socket connection. barcontrol.tcl can edit
+jobs on a server, display the current status of jobs and
+start or stop jobs.
 
 Install TclTk TLS package:
 

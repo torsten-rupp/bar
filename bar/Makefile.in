@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.24 $
+# $Revision: 1.25 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -51,7 +51,7 @@ TAR        = tar
 #------------------------ specific variables/settings ------------------------
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 05c
+VERSION_MINOR = 07
 
 CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
@@ -353,13 +353,13 @@ standard_test_destroy: bar destroyer
 
 .PHONY: memcheck memcheck1
 memcheck: bar
-	$(MAKE) VALGRIND_OPTIONS="--leak-check=summary" $(if $(CHECK),memcheck$(CHECK),memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6)
+	$(MAKE) VALGRIND_OPTIONS="--leak-check=summary" $(if $(CHECK),memcheck$(CHECK),memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6 memcheck7)
 
 .PHONY: memcheck_extended
 memcheck_extended: bar
-	$(MAKE) VALGRIND_OPTIONS="--leak-check=full" $(if $(CHECK),memcheck$(CHECK),memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6)
+	$(MAKE) VALGRIND_OPTIONS="--leak-check=full" $(if $(CHECK),memcheck$(CHECK),memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6 memcheck7)
 
-.PHONY: memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6
+.PHONY: memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6 memcheck7
 memcheck1: bar
 	valgrind \
           --leak-resolution=high \
@@ -402,6 +402,18 @@ memcheck6: bar
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -x test/test*.bar $(OPTIONS) --directory test/restore > /dev/null
+memcheck7: bar
+	valgrind \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          ./bar \
+            --daemon \
+            --job-directory jobs \
+            --server-ca-file=bar-ca.pem \
+            --server-cert-file=bar-server-cert.pem \
+            --server-key-file=bar-server-key.pem
 
 .PHONY: dist $(DISTRIBUTION_NAME).tar.bz2
 dist: $(DISTRIBUTION_NAME).tar.bz2

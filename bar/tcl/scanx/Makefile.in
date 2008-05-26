@@ -4,7 +4,17 @@ INSTALL_PATH = /usr/local
 CC                  = @CC@
 CC_FLAGS            = -Wall -g -fPIC @CC_FLAGS@ @CC_WARN_FLAGS@ @CC_OPTIMIZE@
 CC_DEFINES          = @CC_DEFINES@
-CC_INCLUDES         = /usr/local/include /usr/include @CC_INCLUDES@
+CC_INCLUDES         = /usr/local/include \
+                      /usr/local/include/tcl8.4 \
+                      /usr/local/include/tcl8.4/tcl-private/generic \
+                      /usr/local/include/tcl8.3 \
+                      /usr/local/include/tcl8.3/tcl-private/generic \
+                      /usr/include \
+                      /usr/include/tcl8.4 \
+                      /usr/include/tcl8.4/tcl-private/generic \
+                      /usr/include/tcl8.3 \
+                      /usr/include/tcl8.3/tcl-private/generic \
+                      @CC_INCLUDES@
 
 LD                  = @LD@
 LD_FLAGS            = @LD_FLAGS@ -G -z text
@@ -18,7 +28,7 @@ RMF=rm -f
 RMRF=rm -rf
 
 %.o:%.c
-	$(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 .PHONY: all clean
 all: libscanx.so pkgIndex.tcl

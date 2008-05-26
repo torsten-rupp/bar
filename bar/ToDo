@@ -17,9 +17,7 @@ ToDo
 - internal scheduler for jobs
 - store executable bar on DVD
 - re-read configuration when modified
-- pause of upload
 - configure band-width on run-time
-- internal cron scheduler
-- list of configurations
 - view needed archives for restore
 - ACL
+- send job from server to other server

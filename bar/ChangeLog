@@ -3,6 +3,8 @@
   * added pause/continue of jobs
   * some internal bug fixes
   * clean-up barcontrol.tcl
+  * added FTP protocol
+  * changed some option names for better consistency
 
 2008-03-08 0.6
   * added option --debug to barcontrol.tcl; output debug info

@@ -25,6 +25,9 @@
 /* Define to 1 if you have the `ftello' function. */
 #undef HAVE_FTELLO
 
+/* FTP installed */
+#undef HAVE_FTP
+
 /* gcrypt installed */
 #undef HAVE_GCRYPT
 
