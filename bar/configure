@@ -809,6 +809,7 @@ Optional Features:
   --disable-zip           disable zip support
   --disable-bzip2         disable bzip2 support
   --disable-gcrypt        disable gcrypt support
+  --disable-ftp           disable FTP support
   --disable-ssh           disable SSH support
   --disable-tls           disable TLS support
   --disable-largefile     omit support for large files
@@ -817,7 +818,7 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-config-dir=<path>
-                          configuration directory (default: /etc)
+                          configuration directory (default: /etc/bar)
   --with-tls-dir=<path>   TLS/SLL configuration and certificate directory
                           (default: /etc/ssl)
 
@@ -1387,6 +1388,7 @@ ENABLE_LINK_DYNAMIC="no"
 ENABLE_ZIP="yes"
 ENABLE_BZIP2="yes"
 ENABLE_GCRYPT="yes"
+ENABLE_FTP="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 
@@ -1399,7 +1401,7 @@ if test "${with_config_dir+set}" = set; then
   withval="$with_config_dir"
   CONFIG_DIR=$withval
 else
-  CONFIG_DIR=/etc
+  CONFIG_DIR=/etc/bar
 
 fi;
 
@@ -1441,6 +1443,12 @@ fi;
 if test "${enable_gcrypt+set}" = set; then
   enableval="$enable_gcrypt"
   ENABLE_GCRYPT=$enableval
+
+fi;
+# Check whether --enable-ftp or --disable-ftp was given.
+if test "${enable_ftp+set}" = set; then
+  enableval="$enable_ftp"
+  ENABLE_FTP=$enableval
 
 fi;
 # Check whether --enable-ssh or --disable-ssh was given.
@@ -4762,6 +4770,271 @@ fi
 
   fi
 fi
+if test $ENABLE_FTP = "yes"; then
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    echo "$as_me:$LINENO: checking for library containing FtpInit" >&5
+echo $ECHO_N "checking for library containing FtpInit... $ECHO_C" >&6
+if test "${ac_cv_search_FtpInit+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+ac_cv_search_FtpInit=no
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char FtpInit ();
+int
+main ()
+{
+FtpInit ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_FtpInit="none required"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+if test "$ac_cv_search_FtpInit" = no; then
+  for ac_lib in ftp; do
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char FtpInit ();
+int
+main ()
+{
+FtpInit ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_FtpInit="-l$ac_lib"
+break
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+  done
+fi
+LIBS=$ac_func_search_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_search_FtpInit" >&5
+echo "${ECHO_T}$ac_cv_search_FtpInit" >&6
+if test "$ac_cv_search_FtpInit" != no; then
+  test "$ac_cv_search_FtpInit" = "none required" || LIBS="$ac_cv_search_FtpInit $LIBS"
+  HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_FTP 1
+_ACEOF
+
+fi
+
+  else
+    echo "$as_me:$LINENO: checking for library containing FtpInit" >&5
+echo $ECHO_N "checking for library containing FtpInit... $ECHO_C" >&6
+if test "${ac_cv_search_FtpInit+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+ac_cv_search_FtpInit=no
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char FtpInit ();
+int
+main ()
+{
+FtpInit ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_FtpInit="none required"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+if test "$ac_cv_search_FtpInit" = no; then
+  for ac_lib in ftp; do
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char FtpInit ();
+int
+main ()
+{
+FtpInit ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_FtpInit="-l$ac_lib"
+break
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+  done
+fi
+LIBS=$ac_func_search_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_search_FtpInit" >&5
+echo "${ECHO_T}$ac_cv_search_FtpInit" >&6
+if test "$ac_cv_search_FtpInit" != no; then
+  test "$ac_cv_search_FtpInit" = "none required" || LIBS="$ac_cv_search_FtpInit $LIBS"
+  HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_FTP 1
+_ACEOF
+
+fi
+
+  fi
+fi
 if test $ENABLE_SSH = "yes"; then
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     echo "$as_me:$LINENO: checking for library containing libssh2_session_init_ex" >&5
@@ -6036,6 +6309,7 @@ ENABLE_DEBUG=$ENABLE_DEBUG
                    HAVE_Z=$HAVE_Z
                    HAVE_BZ2=$HAVE_BZ2
                    HAVE_GCRYPT=$HAVE_GCRYPT
+                   HAVE_FTP=$HAVE_FTP
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
 
@@ -6760,6 +7034,7 @@ echo "$as_me: executing $ac_dest commands" >&6;}
                     echo "  zip compression  : `if test $HAVE_Z; then echo yes; else echo no; fi`";
                     echo "  bzip2 compression: `if test $HAVE_BZ2; then echo yes; else echo no; fi`";
                     echo "  crypto support   : `if test $HAVE_GCRYPT; then echo yes; else echo no; fi`";
+                    echo "  FTP support      : `if test $HAVE_FTP; then echo yes; else echo no; fi`";
                     echo "  SCP/SFTP support : `if test $HAVE_SSH2; then echo yes; else echo no; fi`";
                     echo "  TLS/SSL server   : `if test $HAVE_GNU_TLS; then echo yes; else echo no; fi`";
                     ;;
