@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.25 $
+# $Revision: 1.26 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -69,6 +69,8 @@ if {[info exists tk_version]} \
 
 set DEFAULT_PORT     38523
 set DEFAULT_TLS_PORT 38524
+
+set TIMEDATE_FORMAT "%Y-%m-%d %H:%M:%S"
 
 # --------------------------------- includes ---------------------------------
 
@@ -231,9 +233,10 @@ set selectedJob(schedule)                  {}
 set statuListTimerId 0
 set statusTimerId    0
 
-set backupFilesTreeWidget    ""
-set backupIncludedListWidget ""
-set backupExcludedListWidget ""
+set filesTreeWidget    ""
+set includedListWidget ""
+set excludedListWidget ""
+set scheduleListWidget ""
 
 set restoreFilesTreeWidget ""
 set restoreIncludedListWidget ""
@@ -1854,10 +1857,10 @@ proc clearBackupFilesTree { } \
 {
   global images
 
-  foreach itemPath [$::backupFilesTreeWidget info children ""] \
+  foreach itemPath [$::filesTreeWidget info children ""] \
   {
-    $::backupFilesTreeWidget delete offsprings $itemPath
-    $::backupFilesTreeWidget item configure $itemPath 0 -image $images(folder)
+    $::filesTreeWidget delete offsprings $itemPath
+    $::filesTreeWidget item configure $itemPath 0 -image $images(folder)
   }
 }
 
@@ -1872,21 +1875,21 @@ proc clearBackupFilesTree { } \
 
 proc addBackupDevice { deviceName } \
 {
-  catch {$::backupFilesTreeWidget delete entry $deviceName}
+  catch {$::filesTreeWidget delete entry $deviceName}
 
   set n 0
-  set l [$::backupFilesTreeWidget info children ""]
-  while {($n < [llength $l]) && (([$::backupFilesTreeWidget info data [lindex $l $n]] != {}) || ($deviceName>[lindex $l $n]))} \
+  set l [$::filesTreeWidget info children ""]
+  while {($n < [llength $l]) && (([$::filesTreeWidget info data [lindex $l $n]] != {}) || ($deviceName>[lindex $l $n]))} \
   {
     incr n
   }
 
-  set style [tixDisplayStyle imagetext -refwindow $::backupFilesTreeWidget]
+  set style [tixDisplayStyle imagetext -refwindow $::filesTreeWidget]
 
-  $::backupFilesTreeWidget add $deviceName -at $n -itemtype imagetext -text $deviceName -image [tix getimage folder] -style $style -data [list "DIRECTORY" "NONE" 0]
-  $::backupFilesTreeWidget item create $deviceName 1 -itemtype imagetext -style $style
-  $::backupFilesTreeWidget item create $deviceName 2 -itemtype imagetext -style $style
-  $::backupFilesTreeWidget item create $deviceName 3 -itemtype imagetext -style $style
+  $::filesTreeWidget add $deviceName -at $n -itemtype imagetext -text $deviceName -image [tix getimage folder] -style $style -data [list "DIRECTORY" "NONE" 0]
+  $::filesTreeWidget item create $deviceName 1 -itemtype imagetext -style $style
+  $::filesTreeWidget item create $deviceName 2 -itemtype imagetext -style $style
+  $::filesTreeWidget item create $deviceName 3 -itemtype imagetext -style $style
 }
 
 #***********************************************************************
@@ -1900,7 +1903,7 @@ proc addBackupDevice { deviceName } \
 # Notes  : -
 #***********************************************************************
 
-proc addBackupEntry { fileName fileType fileSize } \
+proc addBackupEntry { fileName fileType fileSize fileDateTime } \
 {
   global barConfig images
 
@@ -1915,18 +1918,18 @@ proc addBackupEntry { fileName fileType fileSize } \
   }
 
   # get item path, parent item path
-  set itemPath       [fileNameToItemPath $::backupFilesTreeWidget "" $fileName       ]
-  set parentItemPath [fileNameToItemPath $::backupFilesTreeWidget "" $parentDirectory]
+  set itemPath       [fileNameToItemPath $::filesTreeWidget "" $fileName       ]
+  set parentItemPath [fileNameToItemPath $::filesTreeWidget "" $parentDirectory]
 #puts "f=$fileName"
 #puts "i=$itemPath"
 #puts "p=$parentItemPath"
 
-  catch {$::backupFilesTreeWidget delete entry $itemPath}
+  catch {$::filesTreeWidget delete entry $itemPath}
 
   # create parent entry if it does not exists
-  if {($parentItemPath != "") && ![$::backupFilesTreeWidget info exists $parentItemPath]} \
+  if {($parentItemPath != "") && ![$::filesTreeWidget info exists $parentItemPath]} \
   {
-    addBackupEntry [file dirname $fileName] "DIRECTORY" 0
+    addBackupEntry [file dirname $fileName] "DIRECTORY" 0 0
   }
 
   # get excluded flag of entry
@@ -1934,17 +1937,17 @@ proc addBackupEntry { fileName fileType fileSize } \
   set excludedFlag [checkExcluded $fileName]
 
   # get styles
-  set styleImage     [tixDisplayStyle imagetext -refwindow $::backupFilesTreeWidget -anchor w]
-  set styleTextLeft  [tixDisplayStyle text      -refwindow $::backupFilesTreeWidget -anchor w]
-  set styleTextRight [tixDisplayStyle text      -refwindow $::backupFilesTreeWidget -anchor e]
+  set styleImage     [tixDisplayStyle imagetext -refwindow $::filesTreeWidget -anchor w]
+  set styleTextLeft  [tixDisplayStyle text      -refwindow $::filesTreeWidget -anchor w]
+  set styleTextRight [tixDisplayStyle text      -refwindow $::filesTreeWidget -anchor e]
 
    if     {$fileType=="FILE"} \
    {
 #puts "add file $fileName $itemPath - $parentItemPath -- [file tail $fileName]"
      # find insert position (sort)
      set n 0
-     set l [$::backupFilesTreeWidget info children $parentItemPath]
-     while {($n < [llength $l]) && (([lindex [$::backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     set l [$::filesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$::filesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
      {
        incr n
      }
@@ -1953,18 +1956,18 @@ proc addBackupEntry { fileName fileType fileSize } \
      if     {$includedFlag} { set image $images(fileIncluded) } \
      elseif {$excludedFlag} { set image $images(fileExcluded) } \
      else                   { set image $images(file)         }
-     $::backupFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
-     $::backupFilesTreeWidget item create $itemPath 1 -itemtype text -text "FILE"    -style $styleTextLeft
-     $::backupFilesTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
-     $::backupFilesTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
+     $::filesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
+     $::filesTreeWidget item create $itemPath 1 -itemtype text -style $styleTextLeft  -text "FILE"
+     $::filesTreeWidget item create $itemPath 2 -itemtype text -style $styleTextRight -text $fileSize
+     $::filesTreeWidget item create $itemPath 3 -itemtype text -style $styleTextLeft  -text [clock format $fileDateTime -format $::TIMEDATE_FORMAT]
    } \
    elseif {$fileType=="DIRECTORY"} \
    {
 #puts "add directory $fileName"
      # find insert position (sort)
      set n 0
-     set l [$::backupFilesTreeWidget info children $parentItemPath]
-     while {($n < [llength $l]) && ([lindex [$::backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") && ($itemPath > [lindex $l $n])} \
+     set l [$::filesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && ([lindex [$::filesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") && ($itemPath > [lindex $l $n])} \
      {
        incr n
      }
@@ -1973,17 +1976,17 @@ proc addBackupEntry { fileName fileType fileSize } \
      if     {$includedFlag} { set image $images(folderIncluded) } \
      elseif {$excludedFlag} { set image $images(folderExcluded) } \
      else                   { set image $images(folder)         }
-     $::backupFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "DIRECTORY" "NONE" 0]
-     $::backupFilesTreeWidget item create $itemPath 1 -itemtype text -style $styleTextLeft
-     $::backupFilesTreeWidget item create $itemPath 2 -itemtype text -style $styleTextLeft
-     $::backupFilesTreeWidget item create $itemPath 3 -itemtype text -style $styleTextLeft
+     $::filesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "DIRECTORY" "NONE" 0]
+     $::filesTreeWidget item create $itemPath 1 -itemtype text -style $styleTextLeft
+     $::filesTreeWidget item create $itemPath 2 -itemtype text -style $styleTextLeft
+     $::filesTreeWidget item create $itemPath 3 -itemtype text -style $styleTextLeft
    } \
    elseif {$fileType=="LINK"} \
    {
 #puts "add link $fileName"
      set n 0
-     set l [$::backupFilesTreeWidget info children $parentItemPath]
-     while {($n < [llength $l]) && (([lindex [$::backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     set l [$::filesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$::filesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
      {
        incr n
      }
@@ -1992,18 +1995,18 @@ proc addBackupEntry { fileName fileType fileSize } \
      if     {$includedFlag} { set image $images(linkIncluded) } \
      elseif {$excludedFlag} { set image $images(linkExcluded) } \
      else                   { set image $images(link)         }
-     $::backupFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "LINK" "NONE" 0]
-     $::backupFilesTreeWidget item create $itemPath 1 -itemtype text -text "LINK" -style $styleTextLeft
-     $::backupFilesTreeWidget item create $itemPath 2 -itemtype text              -style $styleTextLeft
-     $::backupFilesTreeWidget item create $itemPath 3 -itemtype text              -style $styleTextLeft
+     $::filesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "LINK" "NONE" 0]
+     $::filesTreeWidget item create $itemPath 1 -itemtype text -style $styleTextLeft -text "LINK"
+     $::filesTreeWidget item create $itemPath 2 -itemtype text -style $styleTextLeft
+     $::filesTreeWidget item create $itemPath 3 -itemtype text -style $styleTextLeft -text [clock format $fileDateTime -format $::TIMEDATE_FORMAT]
    } \
    elseif {$fileType=="DEVICE"} \
    {
 #puts "add file $fileName $itemPath - $parentItemPath -- [file tail $fileName]"
      # find insert position (sort)
      set n 0
-     set l [$::backupFilesTreeWidget info children $parentItemPath]
-     while {($n < [llength $l]) && (([lindex [$::backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     set l [$::filesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$::filesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
      {
        incr n
      }
@@ -2012,18 +2015,18 @@ proc addBackupEntry { fileName fileType fileSize } \
      if     {$includedFlag} { set image $images(fileIncluded) } \
      elseif {$excludedFlag} { set image $images(fileExcluded) } \
      else                   { set image $images(file)         }
-     $::backupFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
-     $::backupFilesTreeWidget item create $itemPath 1 -itemtype text -text "DEVICE"  -style $styleTextLeft
-     $::backupFilesTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
-     $::backupFilesTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
+     $::filesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
+     $::filesTreeWidget item create $itemPath 1 -itemtype text -text "DEVICE"  -style $styleTextLeft
+     $::filesTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
+     $::filesTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
    } \
    elseif {$fileType=="SOCKET"} \
    {
 #puts "add file $fileName $itemPath - $parentItemPath -- [file tail $fileName]"
      # find insert position (sort)
      set n 0
-     set l [$::backupFilesTreeWidget info children $parentItemPath]
-     while {($n < [llength $l]) && (([lindex [$::backupFilesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
+     set l [$::filesTreeWidget info children $parentItemPath]
+     while {($n < [llength $l]) && (([lindex [$::filesTreeWidget info data [lindex $l $n]] 0] == "DIRECTORY") || ($itemPath > [lindex $l $n]))} \
      {
        incr n
      }
@@ -2032,10 +2035,10 @@ proc addBackupEntry { fileName fileType fileSize } \
      if     {$includedFlag} { set image $images(fileIncluded) } \
      elseif {$excludedFlag} { set image $images(fileExcluded) } \
      else                   { set image $images(file)         }
-     $::backupFilesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
-     $::backupFilesTreeWidget item create $itemPath 1 -itemtype text -text "SOCKET"  -style $styleTextLeft
-     $::backupFilesTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
-     $::backupFilesTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
+     $::filesTreeWidget add $itemPath -at $n -itemtype imagetext -text [file tail $fileName] -image $image -style $styleImage -data [list "FILE" "NONE" 0]
+     $::filesTreeWidget item create $itemPath 1 -itemtype text -text "SOCKET"  -style $styleTextLeft
+     $::filesTreeWidget item create $itemPath 2 -itemtype text -text $fileSize -style $styleTextRight
+     $::filesTreeWidget item create $itemPath 3 -itemtype text -text 0         -style $styleTextLeft
    } \
 }
 
@@ -2054,33 +2057,33 @@ proc openCloseBackupDirectory { itemPath } \
 
 #puts $itemPath
   # get directory name
-  set directoryName [itemPathToFileName $::backupFilesTreeWidget $itemPath 0]
+  set directoryName [itemPathToFileName $::filesTreeWidget $itemPath 0]
 
   # check if existing, add if not exists
-  if {![$::backupFilesTreeWidget info exists $itemPath]} \
+  if {![$::filesTreeWidget info exists $itemPath]} \
   {
-    addBackupEntry $directoryName "DIRECTORY" 0
+    addBackupEntry $directoryName "DIRECTORY" 0 0
   }
-#puts [$::backupFilesTreeWidget info exists $itemPath]
-#puts [$::backupFilesTreeWidget info data $itemPath]
+#puts [$::filesTreeWidget info exists $itemPath]
+#puts [$::filesTreeWidget info data $itemPath]
 
   # check if parent exist and is open, open if needed
-  set parentItemPath [$::backupFilesTreeWidget info parent $itemPath]
-#  set data [$::backupFilesTreeWidget info data $parentItemPath]
+  set parentItemPath [$::filesTreeWidget info parent $itemPath]
+#  set data [$::filesTreeWidget info data $parentItemPath]
 #puts "$parentItemPath: $data"
-  if {[$::backupFilesTreeWidget info exists $parentItemPath]} \
+  if {[$::filesTreeWidget info exists $parentItemPath]} \
   {
-    set data [$::backupFilesTreeWidget info data $parentItemPath]
+    set data [$::filesTreeWidget info data $parentItemPath]
     if {[lindex $data 2] == 0} \
     {
       openCloseBackupDirectory $parentItemPath
     }
-    set data [$::backupFilesTreeWidget info data $parentItemPath]
+    set data [$::filesTreeWidget info data $parentItemPath]
     if {[lindex $data 0] == "LINK"} { return }
   }
 
   # get data
-  set data [$::backupFilesTreeWidget info data $itemPath]
+  set data [$::filesTreeWidget info data $itemPath]
   set type              [lindex $data 0]
   set state             [lindex $data 1]
   set directoryOpenFlag [lindex $data 2]
@@ -2089,41 +2092,45 @@ proc openCloseBackupDirectory { itemPath } \
   {
     # get open/closed flag
 
-    $::backupFilesTreeWidget delete offsprings $itemPath
+    $::filesTreeWidget delete offsprings $itemPath
     if {!$directoryOpenFlag} \
     {
       if     {$state == "INCLUDED"} { set image $images(folderIncludedOpen) } \
       elseif {$state == "EXCLUDED"} { set image $images(folderExcludedOpen) } \
       else                          { set image $images(folderOpen)         }
-      $::backupFilesTreeWidget item configure $itemPath 0 -image $image
+      $::filesTreeWidget item configure $itemPath 0 -image $image
       update
 
-      set fileName [itemPathToFileName $::backupFilesTreeWidget $itemPath 0]
+      set fileName [itemPathToFileName $::filesTreeWidget $itemPath 0]
       set commandId [BackupServer:sendCommand "FILE_LIST [escapeString $fileName] 0"]
       while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
       {
 #puts "add file $result"
-        if     {[scanx $result "FILE %d %S" fileSize fileName] == 2} \
+        if     {[scanx $result "FILE %ld %ld %S" fileSize fileDateTime fileName] == 3} \
         {
-          addBackupEntry $fileName "FILE" $fileSize
+          addBackupEntry $fileName "FILE" $fileSize $fileDateTime
         } \
-        elseif {[scanx $result "DIRECTORY %ld %S" totalSize directoryName] == 2} \
+        elseif {[scanx $result "DIRECTORY %ld %ld %S" directorySize directoryDateTime directoryName] == 3} \
         {
-          addBackupEntry $directoryName "DIRECTORY" $totalSize
+          addBackupEntry $directoryName "DIRECTORY" $directorySize $directoryDateTime
         } \
-        elseif {[scanx $result "LINK %S" linkName] == 1} \
+        elseif {[scanx $result "LINK %ld %S" linkDateTime linkName] == 2} \
         {
-          addBackupEntry $linkName "LINK" 0
+          addBackupEntry $linkName "LINK" 0 $linkDateTime
+        } \
+        elseif {[scanx $result "SPECIAL %ld %S" specialDateTime specialName] == 2} \
+        {
+          addBackupEntry $specialName "SPECIAL" 0 $specialDateTime
         } \
         elseif {[scanx $result "DEVICE %S" deviceName] == 1} \
         {
-          addBackupEntry $deviceName "DEVICE" 0
+          addBackupEntry $deviceName "DEVICE" 0 0
         } \
         elseif {[scanx $result "SOCKET %S" socketName] == 1} \
         {
-          addBackupEntry $socketName "SOCKET" 0
+          addBackupEntry $socketName "SOCKET" 0 0
         } else {
-  internalError "unknown file type in openclosedirectory: $result"
+  internalError "unknown file type in openCloseBackupDirectory: $result"
 }
       }
 
@@ -2134,14 +2141,14 @@ proc openCloseBackupDirectory { itemPath } \
       if     {$state == "INCLUDED"} { set image $images(folderIncluded) } \
       elseif {$state == "EXCLUDED"} { set image $images(folderExcluded) } \
       else                          { set image $images(folder)         }
-      $::backupFilesTreeWidget item configure $itemPath 0 -image $image
+      $::filesTreeWidget item configure $itemPath 0 -image $image
 
       set directoryOpenFlag 0
     }
 
     # update data
     lset data 2 $directoryOpenFlag
-    $::backupFilesTreeWidget entryconfigure $itemPath -data $data
+    $::filesTreeWidget entryconfigure $itemPath -data $data
   }
 }
 
@@ -2158,13 +2165,13 @@ proc backupUpdateFileTreeStates { } \
 {
   global images
 
-  set itemPathList [$::backupFilesTreeWidget info children ""]
+  set itemPathList [$::filesTreeWidget info children ""]
   while {[llength $itemPathList] > 0} \
   {
     set fileName [lindex $itemPathList 0]; set itemPathList [lreplace $itemPathList 0 0]
-    set itemPath [fileNameToItemPath $::backupFilesTreeWidget "" $fileName]
+    set itemPath [fileNameToItemPath $::filesTreeWidget "" $fileName]
 
-    set data [$::backupFilesTreeWidget info data $itemPath]
+    set data [$::filesTreeWidget info data $itemPath]
     set type              [lindex $data 0]
     set state             [lindex $data 1]
     set directoryOpenFlag [lindex $data 2]
@@ -2172,7 +2179,7 @@ proc backupUpdateFileTreeStates { } \
     # add sub-directories to update
     if {($type == "DIRECTORY") && ($state != "EXCLUDED") && $directoryOpenFlag} \
     {
-      foreach z [$::backupFilesTreeWidget info children $itemPath] \
+      foreach z [$::filesTreeWidget info children $itemPath] \
       {
         lappend itemPathList $z
       }
@@ -2231,7 +2238,7 @@ proc backupUpdateFileTreeStates { } \
         set image $images(folderExcluded)
         if {$directoryOpenFlag} \
         {
-          $::backupFilesTreeWidget delete offsprings $itemPath
+          $::filesTreeWidget delete offsprings $itemPath
           lset data 2 0
         }
       } \
@@ -2255,11 +2262,11 @@ proc backupUpdateFileTreeStates { } \
         set image $images(link)
       }
     }
-    $::backupFilesTreeWidget item configure [fileNameToItemPath $::backupFilesTreeWidget "" $fileName] 0 -image $image
+    $::filesTreeWidget item configure [fileNameToItemPath $::filesTreeWidget "" $fileName] 0 -image $image
 
     # update data
     lset data 1 $state
-    $::backupFilesTreeWidget entryconfigure $itemPath -data $data
+    $::filesTreeWidget entryconfigure $itemPath -data $data
   }
 }
 
@@ -2565,13 +2572,13 @@ proc restoreUpdateFileTreeStates { } \
 {
   global images
 
-  set itemPathList [$::backupFilesTreeWidget info children ""]
+  set itemPathList [$::filesTreeWidget info children ""]
   while {[llength $itemPathList] > 0} \
   {
     set fileName [lindex $itemPathList 0]; set itemPathList [lreplace $itemPathList 0 0]
-    set itemPath [fileNameToItemPath $::backupFilesTreeWidget "" $fileName]
+    set itemPath [fileNameToItemPath $::filesTreeWidget "" $fileName]
 
-    set data [$::backupFilesTreeWidget info data $itemPath]
+    set data [$::filesTreeWidget info data $itemPath]
     set type              [lindex $data 0]
     set state             [lindex $data 1]
     set directoryOpenFlag [lindex $data 2]
@@ -2579,7 +2586,7 @@ proc restoreUpdateFileTreeStates { } \
     # add sub-directories to update
     if {($type == "DIRECTORY") && ($state != "EXCLUDED") && $directoryOpenFlag} \
     {
-      foreach z [$::backupFilesTreeWidget info children $itemPath] \
+      foreach z [$::filesTreeWidget info children $itemPath] \
       {
         lappend itemPathList $z
       }
@@ -2652,7 +2659,7 @@ proc restoreUpdateFileTreeStates { } \
         set image $images(folderExcluded)
         if {$directoryOpenFlag} \
         {
-          $::backupFilesTreeWidget delete offsprings $itemPath
+          $::filesTreeWidget delete offsprings $itemPath
           lset data 2 0
         }
       } \
@@ -2676,11 +2683,11 @@ proc restoreUpdateFileTreeStates { } \
         set image $images(link)
       }
     }
-    $::backupFilesTreeWidget item configure [fileNameToItemPath $::backupFilesTreeWidget "" $fileName] 0 -image $image
+    $::filesTreeWidget item configure [fileNameToItemPath $::filesTreeWidget "" $fileName] 0 -image $image
 
     # update data
     lset data 1 $state
-    $::backupFilesTreeWidget entryconfigure $itemPath -data $data
+    $::filesTreeWidget entryconfigure $itemPath -data $data
   }
 }
 
@@ -2697,7 +2704,7 @@ proc updateFileTreeStates { } \
 {
   global images
 
-  set itemPathList [$::backupFilesTreeWidget info children ""]
+  set itemPathList [$::filesTreeWidget info children ""]
   while {[llength $itemPathList] > 0} \
   {
     set itemPath [lindex $itemPathList 0]; set itemPathList [lreplace $itemPathList 0 0]
@@ -2808,11 +2815,11 @@ proc updateFileTreeStates { } \
         set image $images(link)
       }
     }
-    $::backupFilesTreeWidget item configure $itemPath 0 -image $image
+    $::filesTreeWidget item configure $itemPath 0 -image $image
 
     # update data
     lset data 1 $state
-    $::backupFilesTreeWidget entryconfigure $itemPath -data $data
+    $::filesTreeWidget entryconfigure $itemPath -data $data
   }
 }
 }
@@ -2832,6 +2839,17 @@ proc updateStatusList { statusListWidget } \
 {
   global jobListTimerId status jobStatus barControlConfig
 
+  proc private_compareJobs { job0 job1 } \
+  {
+    set status0 [lindex $job0 2]
+    set status1 [lindex $job1 2]
+    if {($status0 == "running") && ($status1 != "running")} { return -1 }
+    if {($status1 == "running") && ($status0 != "running")} { return  1 }
+    if {($status0 == "waiting") && ($status1 != "waiting")} { return -1 }
+    if {($status1 == "waiting") && ($status0 != "waiting")} { return  1 }
+    return 0
+  }
+
   catch {after cancel $jobListTimerId}
 
   # get current selection
@@ -2843,9 +2861,8 @@ proc updateStatusList { statusListWidget } \
   }
   set yview [lindex [$statusListWidget yview] 0]
 
-  # update list
-  set n 0
-  $statusListWidget delete 0 end
+  # get list
+  set jobList {}
 #puts "start 3"
   set commandId [BackupServer:sendCommand "JOB_LIST"]
   while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
@@ -2859,18 +2876,16 @@ proc updateStatusList { statusListWidget } \
       archivePartSize \
       compressAlgorithm \
       cryptAlgorithm \
-      startTime \
+      lastExecutedDateTime \
       estimatedRestTime
 #puts "1: ok"
 
-    if {($state == "waiting") || ($state == "running")} \
-    {
-      set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
-      set estimatedRestHours   [expr {int($estimatedRestTime%(24*60*60)/(60*60))}]
-      set estimatedRestMinutes [expr {int($estimatedRestTime%(60*60   )/60     )}]
-      set estimatedRestSeconds [expr {int($estimatedRestTime%(60)              )}]
+    set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
+    set estimatedRestHours   [expr {int($estimatedRestTime%(24*60*60)/(60*60))}]
+    set estimatedRestMinutes [expr {int($estimatedRestTime%(60*60   )/60     )}]
+    set estimatedRestSeconds [expr {int($estimatedRestTime%(60)              )}]
 
-      $statusListWidget insert end \
+    lappend jobList \
       [list \
         $id \
         $name \
@@ -2879,15 +2894,36 @@ proc updateStatusList { statusListWidget } \
         [expr {($archivePartSize > 0)?[formatByteSize $archivePartSize]:"-"}] \
         $compressAlgorithm \
         $cryptAlgorithm \
-        [expr {($startTime > 0)?[clock format $startTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
+        [expr {($lastExecutedDateTime > 0)?[clock format $lastExecutedDateTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
         [format "%2d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds] \
       ]
-      incr n
-    }
   }
-#puts "end 3"
-  if {$n > 0} \
+  set jobList [lsort -command private_compareJobs $jobList]
+
+  # update list
+  $statusListWidget delete 0 end
+  foreach job $jobList \
   {
+    $statusListWidget insert end $job
+  }
+
+  # set selection
+#puts "end 3"
+  if {[llength $jobList] > 0} \
+  {
+    if {$selectedId == 0} \
+    {
+      foreach entry [$statusListWidget get 0 end] \
+      {
+        if {[lindex $entry 2] == "running"} \
+        {
+          set selectedId      [lindex $entry 0]
+          set jobStatus(id)   [lindex $entry 0]
+          set jobStatus(name) [lindex $entry 1]
+          break;
+        }
+      }
+    }
     if {$selectedId == 0} \
     {
       set entry [lindex [$statusListWidget get 0 0] 0]
@@ -3082,7 +3118,7 @@ proc updateJobList { jobListWidget } \
       archivePartSize \
       compressAlgorithm \
       cryptAlgorithm \
-      startTime \
+      lastExecutedDateTime \
       estimatedRestTime
 #puts "1: ok"
 
@@ -3152,8 +3188,8 @@ proc clearJob {} \
   set ::selectedJob(schedule)                  {}
 
   clearBackupFilesTree 
-  $::backupIncludedListWidget delete 0 end
-  $::backupExcludedListWidget delete 0 end
+  $::includedListWidget delete 0 end
+  $::excludedListWidget delete 0 end
 }
 
 #***********************************************************************
@@ -3172,7 +3208,10 @@ proc selectJob { id } \
   # clear
   clearJob
 
-#  disableModifyTrace
+  # disabled buttons
+  .jobs.list.data configure -state disabled
+  .jobs.list.new configure -state disabled
+  .jobs.list.delete configure -state disabled
 
   # settings
   BackupServer:get $id "archive-type" ::selectedJob(archiveType)
@@ -3180,7 +3219,14 @@ proc selectJob { id } \
   {
     scanx $result "%S" s
 
-    if     {[regexp {^scp:([^@]*)@([^:]*):(.*)} $s * loginName hostName fileName]} \
+    if     {[regexp {^ftp:([^@]*)@([^:]*):(.*)} $s * loginName hostName fileName]} \
+    {
+      set ::selectedJob(storageType)      "ftp"
+      set ::selectedJob(storageLoginName) $loginName
+      set ::selectedJob(storageHostName)  $hostName
+      set ::selectedJob(storageFileName)  $fileName
+    } \
+    elseif {[regexp {^scp:([^@]*)@([^:]*):(.*)} $s * loginName hostName fileName]} \
     {
       set ::selectedJob(storageType)      "scp"
       set ::selectedJob(storageLoginName) $loginName
@@ -3224,7 +3270,10 @@ proc selectJob { id } \
   {
     set ::selectedJob(archivePartSizeFlag) [expr {$::selectedJob(archivePartSize)>0}]
   }
-  BackupServer:get $id "incremental-list-file" ::selectedJob(incrementalListFileName)
+  BackupServer:get $id "incremental-list-file" "" \
+  {
+    scanx $result "%S" ::selectedJob(incrementalListFileName)
+  }
   BackupServer:get $id "compress-algorithm" ::selectedJob(compressAlgorithm)
   BackupServer:get $id "crypt-algorithm" ::selectedJob(cryptAlgorithm)
   BackupServer:get $id "crypt-password-mode" ::selectedJob(cryptPasswordMode)
@@ -3284,18 +3333,16 @@ proc selectJob { id } \
   }
   set ::selectedJob(schedule) [lsort -index 0 $::selectedJob(schedule)]
 
-#  enableModifyTrace
-
   # open included/excluded directories
   foreach pattern $::selectedJob(included) \
   {
     # get item path
-    set itemPath [fileNameToItemPath $::backupFilesTreeWidget "" $pattern]
+    set itemPath [fileNameToItemPath $::filesTreeWidget "" $pattern]
 
     # add directory for entry
     set directoryName [file dirname $pattern]
-    set directoryItemPath [fileNameToItemPath $::backupFilesTreeWidget "" $directoryName]
-    if {![$::backupFilesTreeWidget info exists $directoryItemPath]} \
+    set directoryItemPath [fileNameToItemPath $::filesTreeWidget "" $directoryName]
+    if {![$::filesTreeWidget info exists $directoryItemPath]} \
     {
       catch {openCloseBackupDirectory $directoryItemPath}
     }
@@ -3303,97 +3350,26 @@ proc selectJob { id } \
   foreach pattern $::selectedJob(excluded) \
   {
     # get item path
-    set itemPath [fileNameToItemPath $::backupFilesTreeWidget "" $pattern]
+    set itemPath [fileNameToItemPath $::filesTreeWidget "" $pattern]
 
     # add directory for entry
     set directoryName [file dirname $pattern]
-    set directoryItemPath [fileNameToItemPath $::backupFilesTreeWidget "" $directoryName]
-    if {![$::backupFilesTreeWidget info exists $directoryItemPath]} \
+    set directoryItemPath [fileNameToItemPath $::filesTreeWidget "" $directoryName]
+    if {![$::filesTreeWidget info exists $directoryItemPath]} \
     {
       catch {openCloseBackupDirectory $directoryItemPath}
     }
   }
+
+  # enable buttons
+  .jobs.list.data configure -state normal
+  .jobs.list.new configure -state normal
 
   # store id
   set ::selectedJob(id) $id
 }
 
 # ----------------------------------------------------------------------
-
-#***********************************************************************
-# Name   : clearConfigModify
-# Purpose: clear config modify state
-# Input  : -
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-proc clearConfigModify {} \
-{
-  global barConfigFileName guiMode barConfigModifiedFlag
-
-  if {$guiMode} \
-  {  
-    wm title . "$barConfigFileName"
-  }
-  set barConfigModifiedFlag 0
-}
-
-#***********************************************************************
-# Name   : setConfigModify
-# Purpose: set config modify state
-# Input  : args - ignored
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-proc setConfigModify { args } \
-{
-  global barConfigFileName barConfigModifiedFlag
-
-  if {!$barConfigModifiedFlag} \
-  {
-    wm title . "$barConfigFileName*"
-    set barConfigModifiedFlag 1
-  }
-}
-
-#***********************************************************************
-# Name   : resetBARConfig
-# Purpose: reset bar config to default values
-# Input  : -
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-proc resetBARConfig {} \
-{
-  global barConfig
-
-  set barConfig(storageType)               "filesystem"
-  set barConfig(storageHostName)           ""
-  set barConfig(storageLoginName)          ""
-  set barConfig(storageFileName)           ""
-  set barConfig(archivePartSizeFlag)       0
-  set barConfig(archivePartSize)           0
-  set barConfig(maxTmpSizeFlag)            0
-  set barConfig(maxTmpSize)                0
-  set barConfig(archiveType)               "normal"
-  set barConfig(incrementalListFileName)   ""
-  set barConfig(maxBandWidthFlag)          0
-  set barConfig(maxBandWidth)              0
-  set barConfig(sshPassword)               ""
-  set barConfig(sshPort)                   0
-  set barConfig(compressAlgorithm)         "bzip9"
-  set barConfig(cryptAlgorithm)            "none"
-  set barConfig(cryptPasswordMode)         "default"
-  set barConfig(cryptPassword)             ""
-  set barConfig(cryptPasswordVerify)       ""
-  clearConfigModify
-}
 
 #***********************************************************************
 # Name   : loadBARControlConfig
@@ -3871,6 +3847,31 @@ proc jobDelete { id } \
   BackupServer:executeCommand errorCode errorText "JOB_DELETE $id"
   if {$errorCode != 0} \
   {
+    Dialog:error "Cannot delete job!\n\nError: $errorText"
+    return
+  }
+}
+
+#***********************************************************************
+# Name   : jobStart
+# Purpose: run job
+# Input  : id   - job id
+#          type - FULL|INCREMENTAL
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc jobStart { id type } \
+{
+  global guiMode
+
+  set errorCode 0
+  set errorText ""
+  BackupServer:executeCommand errorCode errorText "JOB_START $id $type"
+  if {$errorCode != 0} \
+  {
+    Dialog:error "Cannot start job!\n\nError: $errorText"
     return
   }
 }
@@ -3893,6 +3894,7 @@ proc jobAbort { id } \
   BackupServer:executeCommand errorCode errorText "JOB_ABORT $id"
   if {$errorCode != 0} \
   {
+    Dialog:error "Cannot abort job!\n\nError: $errorText"
     return
   }
 }
@@ -3915,6 +3917,7 @@ proc jobTogglePause { } \
   BackupServer:executeCommand errorCode errorText "JOB_PAUSE $id"
   if {$errorCode != 0} \
   {
+    Dialog:error "Cannot pause/continue job!\n\nError: $errorText"
     return
   }
 }
@@ -4163,7 +4166,7 @@ proc editSchedule { index } \
   {
     return
   }
-  set ::selectedJob(schedule) [lreplace $::selectedJob(schedule) $index $index $schedule]
+  set ::selectedJob(schedule) $scheduleList
 }
 
 #***********************************************************************
@@ -4212,13 +4215,16 @@ proc editStorageFileName { fileName } \
 
   set partList \
   {
-    {0  1 "#"     "part number 1 digit"            "1"}
-    {0  2 "##"    "part number 2 digit"            "12"}
-    {0  3 "###"   "part number 3 digit"            "123"}
-    {0  4 "####"  "part number 4 digit"            "1234"}
+    {0  1 "-"     "text '-'"                       "-"}
+    {0  2 ".bar"  "text '.bar'"                    ".bar"}
 
-    {0  6 "%type" "archive type: full,incremental" "full"}
-    {0  7 "%last" "'-last' if last archive part"   "-last"}
+    {0  4 "#"     "part number 1 digit"            "1"}
+    {0  5 "##"    "part number 2 digit"            "12"}
+    {0  6 "###"   "part number 3 digit"            "123"}
+    {0  7 "####"  "part number 4 digit"            "1234"}
+
+    {0  9 "%type" "archive type: full,incremental" "full"}
+    {0 10 "%last" "'-last' if last archive part"   "-last"}
 
     {1  1 "%d"    "day 01..31"                     "24"}
     {1  2 "%j"    "day of year 001..366"           "354"}
@@ -4493,11 +4499,15 @@ proc editStorageFileName { fileName } \
 # ----------------------------------------------------------------------
 
 #***********************************************************************
-# Name   : 
-# Purpose: 
-# Input  : -
+# Name   : getArchiveName
+# Purpose: get archive name
+# Input  : storageType       - storage type
+#          storageFileName   - storage file name
+#          storageLoginName  - storage login name
+#          storageHostName   - storage host name
+#          storageDeviceName - storage device name
 # Output : -
-# Return : -
+# Return : archive name
 # Notes  : -
 #***********************************************************************
 
@@ -4506,6 +4516,10 @@ proc getArchiveName { storageType storageFileName storageLoginName storageHostNa
   if     {$storageType == "filesystem"} \
   {
     set archiveName $storageFileName
+  } \
+  elseif {$storageType == "ftp"} \
+  {
+    set archiveName "ftp:$storageLoginName@$storageHostName:$storageFileName"
   } \
   elseif {$storageType == "scp"} \
   {
@@ -4529,248 +4543,6 @@ proc getArchiveName { storageType storageFileName storageLoginName storageHostNa
   }
 
   return $archiveName;
-}
-
-#***********************************************************************
-# Name   : jobStart
-# Purpose: add new backup job
-# Input  : jobListWidget - job list widget
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-proc jobStart { jobListWidget } \
-{
-  global barConfig currentJob fullFlag incrementalFlag guiMode
-
-  set errorCode 0
-  set errorText ""
-
-  # clear settings
-  BackupServer:executeCommand errorCode errorText "CLEAR"
-
-  # add included directories/files
-  foreach pattern $barConfig(included) \
-  {
-    BackupServer:executeCommand errorCode errorText "ADD_INCLUDE_PATTERN GLOB [escapeString $pattern]"
-  }
-
-  # add excluded directories/files
-  foreach pattern $barConfig(excluded) \
-  {
-    BackupServer:executeCommand errorCode errorText "ADD_EXCLUDE_PATTERN GLOB [escapeString $pattern]"
-  }
-
-  # set other parameters
-  BackupServer:executeCommand errorCode errorText "OPTION_SET archive-part-size $barConfig(archivePartSize)"
-  if       {$fullFlag} \
-  {
-     BackupServer:executeCommand errorCode errorText "OPTION_SET archive-type full"
-  } elseif {$incrementalFlag} \
-  {
-     BackupServer:executeCommand errorCode errorText "OPTION_SET archive-type incremental"
-  } \
-  else \
-  {
-    switch $barConfig(archiveType) \
-    {
-      "full"        { BackupServer:executeCommand errorCode errorText "OPTION_SET archive-type full"        }
-      "incremental" { BackupServer:executeCommand errorCode errorText "OPTION_SET archive-type incremental" }
-    }
-  }
-  if {$barConfig(incrementalListFileName) != ""} \
-  {
-    BackupServer:executeCommand errorCode errorText "OPTION_SET incremental-list-file $barConfig(incrementalListFileName)"
-  }
-  BackupServer:executeCommand errorCode errorText "OPTION_SET max-tmp-size $barConfig(maxTmpSize)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET max-band-width $barConfig(maxBandWidth)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET ssh-port $barConfig(sshPort)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET compress-algorithm $barConfig(compressAlgorithm)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET crypt-algorithm $barConfig(cryptAlgorithm)"
-  switch $barConfig(cryptPasswordMode) \
-  {
-    "default" \
-    {
-    }
-    "ask" \
-    {
-      set password [getPassword "Crypt password" 1 0]
-      if {$password == ""} \
-      {
-        return
-      }
-      BackupServer:executeCommand errorCode errorText "OPTION_SET crypt-password [escapeString $password]"
-    }
-    "config" \
-    {
-      if {$barConfig(cryptPassword) != $barConfig(cryptPasswordVerify)} \
-      {
-        if {$guiMode} \
-        {
-          Dialog:error "Crypt passwords are not equal!"
-        } \
-        else \
-        {
-          puts stderr "Crypt passwords are not equal!"
-        }
-        return
-      }
-      if {$barConfig(cryptPassword) == ""} \
-      {
-        if {$guiMode} \
-        {
-          Dialog:error "No crypt passwords given!"
-        } \
-        else \
-        {
-          puts stderr "No crypt passwords given!"
-        }
-        return
-      }
-      BackupServer:executeCommand errorCode errorText "OPTION_SET crypt-password [escapeString $barConfig(cryptPassword)]"
-    }
-  } 
-  BackupServer:executeCommand errorCode errorText "OPTION_SET volume-size $barConfig(volumeSize)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET skip-unreadable $barConfig(skipUnreadableFlag)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET overwrite-archive-files $barConfig(overwriteArchiveFilesFlag)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET overwrite-files $barConfig(overwriteFilesFlag)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET ecc $barConfig(errorCorrectionCodesFlag)"
-
-  # add jobs archive file name
-  if     {$barConfig(storageType) == "filesystem"} \
-  {
-    set archiveFileName $barConfig(storageFileName)
-  } \
-  elseif {$barConfig(storageType) == "scp"} \
-  {
-    set archiveFileName "scp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
-  } \
-  elseif {$barConfig(storageType) == "sftp"} \
-  {
-    set archiveFileName "sftp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
-  } \
-  elseif {$barConfig(storageType) == "dvd"} \
-  {
-    set archiveFileName "dvd:$barConfig(storageDeviceName):$barConfig(storageFileName)"
-  } \
-  elseif {$barConfig(storageType) == "device"} \
-  {
-    set archiveFileName "$barConfig(storageDeviceName):$barConfig(storageFileName)"
-  } \
-  else \
-  {
-    internalError "unknown storage type '$barConfig(storageType)'"
-  }
-  if {$errorCode == 0} \
-  {
-    if {![BackupServer:executeCommand errorCode errorText "ADD_JOB BACKUP [escapeString $barConfig(name)] [escapeString $archiveFileName]"]} \
-    {
-      if {$guiMode} \
-      {
-        Dialog:error "Error adding new job: $errorText"
-      } \
-      else \
-      {
-        puts stderr "Error adding new job: $errorText"
-      }
-      return
-    }
-  } \
-  else \
-  {
-    if {$guiMode} \
-    {
-      Dialog:error "Error adding new job: $errorText"
-    } \
-    else \
-    {
-      puts stderr "Error adding new job: $errorText"
-    }
-    return
-  }
-
-  if {$guiMode} \
-  {
-    updateJobList $jobListWidget
-  }
-}
-
-#***********************************************************************
-# Name   : addBackupJob
-# Purpose: add new backup job
-# Input  : jobListWidget - job list widget
-# Output : -
-# Return : -
-# Notes  : -
-#***********************************************************************
-
-proc addRestoreJob { jobListWidget } \
-{
-  global barConfig currentJob guiMode
-
-  set errorCode 0
-  set errorText ""
-
-  # clear settings
-  BackupServer:executeCommand errorCode errorText "CLEAR"
-
-  # add included directories/files
-  foreach pattern $barConfig(included) \
-  {
-    BackupServer:executeCommand errorCode errorText "ADD_INCLUDE_PATTERN GLOB [escapeString $pattern]"
-  }
-
-  # add excluded directories/files
-  foreach pattern $barConfig(excluded) \
-  {
-    BackupServer:executeCommand errorCode errorText "ADD_EXCLUDE_PATTERN GLOB [escapeString $pattern]"
-  }
-
-  # set other parameters
-  BackupServer:executeCommand errorCode errorText "OPTION_SET max-band-width $barConfig(maxBandWidth)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET ssh-port $barConfig(sshPort)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET overwrite-files $barConfig(overwriteFilesFlag)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET destination-directory $barConfig(destinationDirectoryName)"
-  BackupServer:executeCommand errorCode errorText "OPTION_SET destination-strip-count $barConfig(destinationStripCount)"
-
-  # add jobs archive file name
-  if     {$barConfig(storageType) == "filesystem"} \
-  {
-    set archiveFileName $barConfig(storageFileName)
-  } \
-  elseif {$barConfig(storageType) == "scp"} \
-  {
-    set archiveFileName "scp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
-  } \
-  elseif {$barConfig(storageType) == "sftp"} \
-  {
-    set archiveFileName "sftp:$barConfig(storageLoginName)@$barConfig(storageHostName):$barConfig(storageFileName)"
-  } \
-  elseif {$barConfig(storageType) == "device"} \
-  {
-    set archiveFileName "$barConfig(storageDeviceName):$barConfig(storageFileName)"
-  } \
-  else \
-  {
-    internalError "unknown storage type '$barConfig(storageType)'"
-  }
-  if {$errorCode == 0} \
-  {
-    if {![BackupServer:executeCommand errorCode errorText "ADD_JOB RESTORE [escapeString $barConfig(name)] [escapeString $archiveFileName]"]} \
-    {
-      Dialog:error "Error adding new job: $errorText"
-    }
-  } \
-  else \
-  {
-    Dialog:error "Error adding new job: $errorText"
-  }
-
-  if {$guiMode} \
-  {
-    updateJobList $jobListWidget
-  }
 }
 
 # ----------------------------- main program  -------------------------------
@@ -5005,7 +4777,7 @@ if {![info exists tk_version] && !$guiMode} \
         archivePartSize \
         compressAlgorithm \
         cryptAlgorithm \
-        startTime \
+        lastExecutedDateTime \
         estimatedRestTime
 
       set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
@@ -5020,7 +4792,7 @@ if {![info exists tk_version] && !$guiMode} \
         [formatByteSize $archivePartSize] \
         $compressAlgorithm \
         $cryptAlgorithm \
-        [expr {($startTime > 0)?[clock format $startTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
+        [expr {($lastExecutedDateTime > 0)?[clock format $lastExecutedDateTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
         [format "%d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds] \
       ]
     }
@@ -5139,16 +4911,25 @@ pack $mainWindow.tabs -fill both -expand yes -padx 2p -pady 2p
 
 frame .status
   frame .status.list
-    mclistbox::mclistbox .status.list.data -height 1 -bg white -fillcolumn name -labelanchor w -selectmode single -exportselection 0 -xscrollcommand ".status.list.xscroll set" -yscrollcommand ".status.list.yscroll set"
-    .status.list.data column add id                -visible 0
-    .status.list.data column add name              -label "Name"           -width 12
-    .status.list.data column add state             -label "State"          -width 16
-    .status.list.data column add type              -label "Type"           -width 10
-    .status.list.data column add archivePartSize   -label "Part size"      -width 8
-    .status.list.data column add compressAlgortihm -label "Compress"       -width 10
-    .status.list.data column add cryptAlgorithm    -label "Crypt"          -width 10
-    .status.list.data column add startTime         -label "Started"        -width 20
-    .status.list.data column add estimatedRestTime -label "Estimated time" -width 20
+    mclistbox::mclistbox .status.list.data \
+      -height 1 \
+      -fillcolumn name \
+      -bg white \
+      -labelanchor w \
+      -selectmode single \
+      -exportselection 0 \
+      -xscrollcommand ".status.list.xscroll set" \
+      -yscrollcommand ".status.list.yscroll set"
+    # note: -visible 0 does not work; bug in mclistbox (no selection possible)
+    .status.list.data column add id                   -width 0 -resizable 0
+    .status.list.data column add name                 -label "Name"           -width 12
+    .status.list.data column add state                -label "State"          -width 16
+    .status.list.data column add type                 -label "Type"           -width 10
+    .status.list.data column add archivePartSize      -label "Part size"      -width 8
+    .status.list.data column add compressAlgortihm    -label "Compress"       -width 10
+    .status.list.data column add cryptAlgorithm       -label "Crypt"          -width 10
+    .status.list.data column add lastExecutedDateTime -label "Last executed"  -width 20
+    .status.list.data column add estimatedRestTime    -label "Estimated time" -width 20
     grid .status.list.data -row 0 -column 0 -sticky "nswe"
     scrollbar .status.list.yscroll -orient vertical -command ".status.list.data yview"
     grid .status.list.yscroll -row 0 -column 1 -sticky "ns"
@@ -5352,6 +5133,8 @@ frame .status
   grid .status.selected -row 1 -column 0 -sticky "we" -padx 2p -pady 2p
 
   frame .status.buttons
+    button .status.buttons.start -text "Start" -state disabled -command "event generate . <<Event_jobStart>>"
+    pack .status.buttons.start -side left -padx 2p
     button .status.buttons.abort -text "Abort" -state disabled -command "event generate . <<Event_jobAbort>>"
     pack .status.buttons.abort -side left -padx 2p
     button .status.buttons.pausecontinue -text "Pause" -width 12 -command "event generate . <<Event_jobPauseContinue>>"
@@ -5410,7 +5193,7 @@ frame .jobs
     .jobs.files.list subwidget hlist header create 3 -itemtype text -text "Modified"
     .jobs.files.list subwidget hlist column width 3 -char 15
     grid .jobs.files.list -row 0 -column 0 -sticky "nswe" -padx 2p -pady 2p
-    set backupFilesTreeWidget [.jobs.files.list subwidget hlist]
+    set filesTreeWidget [.jobs.files.list subwidget hlist]
 
     tixPopupMenu .jobs.files.list.popup -title "Command"
     .jobs.files.list.popup subwidget menu add command -label "Add include"                            -command ""
@@ -5497,10 +5280,10 @@ frame .jobs
     tixScrolledListBox .jobs.filters.included -height 1 -scrollbar both -options { listbox.background white  }
     grid .jobs.filters.included -row 0 -column 1 -sticky "nswe" -padx 2p -pady 2p
     .jobs.filters.included subwidget listbox configure -listvariable ::selectedJob(included) -selectmode extended
-    set backupIncludedListWidget [.jobs.filters.included subwidget listbox]
     bind [.jobs.filters.included subwidget listbox] <Button-1> ".jobs.filters.includedButtons.rem configure -state normal"
     bind [.jobs.filters.included subwidget listbox] <Insert> "event generate . <<Event_backupAddIncludePattern>>"
     bind [.jobs.filters.included subwidget listbox] <Delete> "event generate . <<Event_backupRemIncludePattern>>"
+    set includedListWidget [.jobs.filters.included subwidget listbox]
 
     frame .jobs.filters.includedButtons
       button .jobs.filters.includedButtons.add -text "Add (F5)" -command "event generate . <<Event_backupAddIncludePattern>>"
@@ -5514,10 +5297,10 @@ frame .jobs
     tixScrolledListBox .jobs.filters.excluded -height 1 -scrollbar both -options { listbox.background white }
     grid .jobs.filters.excluded -row 2 -column 1 -sticky "nswe" -padx 2p -pady 2p
     .jobs.filters.excluded subwidget listbox configure -listvariable ::selectedJob(excluded) -selectmode extended
-    set backupExcludedListWidget [.jobs.filters.excluded subwidget listbox]
     bind [.jobs.filters.excluded subwidget listbox] <Button-1> ".jobs.filters.excludedButtons.rem configure -state normal"
     bind [.jobs.filters.excluded subwidget listbox] <Insert> "event generate . <<Event_backupAddExcludePattern>>"
     bind [.jobs.filters.excluded subwidget listbox] <Delete> "event generate . <<Event_backupRemExcludePattern>>"
+    set excludedListWidget [.jobs.filters.excluded subwidget listbox]
 
     frame .jobs.filters.excludedButtons
       button .jobs.filters.excludedButtons.add -text "Add (F7)" -command "event generate . <<Event_backupAddExcludePattern>>"
@@ -5683,21 +5466,6 @@ if {0} {
 
       grid columnconfigure .jobs.storage.mode { 4 } -weight 1
     grid .jobs.storage.mode -row 5 -column 1 -sticky "we" -padx 2p -pady 2p
-    addModifyTrace {::selectedJob(archiveType)} \
-    {
-      if {   ($::selectedJob(archiveType) == "full")
-          || ($::selectedJob(archiveType) == "incremental")
-         } \
-      {
-        .jobs.storage.mode.incrementalListFileName.data configure -state normal
-        .jobs.storage.mode.incrementalListFileName.select configure -state normal
-      } \
-      else \
-      {
-        .jobs.storage.mode.incrementalListFileName.data configure -state disabled
-        .jobs.storage.mode.incrementalListFileName.select configure -state disabled
-      }
-    }
 
     label .jobs.storage.fileNameTitle -text "File name:"
     grid .jobs.storage.fileNameTitle -row 6 -column 0 -sticky "w" 
@@ -5729,20 +5497,23 @@ if {0} {
         radiobutton .jobs.storage.destination.type.fileSystem -text "File system" -variable ::selectedJob(storageType) -value "filesystem"
         grid .jobs.storage.destination.type.fileSystem -row 0 -column 0 -sticky "w"
 
+        radiobutton .jobs.storage.destination.type.ftp -text "ftp" -variable ::selectedJob(storageType) -value "ftp"
+        grid .jobs.storage.destination.type.ftp -row 0 -column 1 -sticky "w" 
+
         radiobutton .jobs.storage.destination.type.ssh -text "scp" -variable ::selectedJob(storageType) -value "scp"
-        grid .jobs.storage.destination.type.ssh -row 0 -column 1 -sticky "w" 
+        grid .jobs.storage.destination.type.ssh -row 0 -column 2 -sticky "w" 
 
         radiobutton .jobs.storage.destination.type.sftp -text "sftp" -variable ::selectedJob(storageType) -value "sftp"
-        grid .jobs.storage.destination.type.sftp -row 0 -column 2 -sticky "w" 
+        grid .jobs.storage.destination.type.sftp -row 0 -column 3 -sticky "w" 
 
         radiobutton .jobs.storage.destination.type.dvd -text "DVD" -variable ::selectedJob(storageType) -value "dvd"
-        grid .jobs.storage.destination.type.dvd -row 0 -column 3 -sticky "w"
+        grid .jobs.storage.destination.type.dvd -row 0 -column 4 -sticky "w"
 
         radiobutton .jobs.storage.destination.type.device -text "Device" -variable ::selectedJob(storageType) -value "device"
-        grid .jobs.storage.destination.type.device -row 0 -column 4 -sticky "w"
+        grid .jobs.storage.destination.type.device -row 0 -column 5 -sticky "w"
 
         grid rowconfigure    .jobs.storage.destination.type { 0 } -weight 1
-        grid columnconfigure .jobs.storage.destination.type { 5 } -weight 1
+        grid columnconfigure .jobs.storage.destination.type { 6 } -weight 1
       grid .jobs.storage.destination.type -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
       addModifyTrace {::selectedJob(storageType)} \
       {
@@ -5764,6 +5535,62 @@ if {0} {
         grid .jobs.storage.destination.fileSystem.options -row 0 -column 1 -sticky "we"
 
         grid columnconfigure .jobs.storage.destination.fileSystem { 1 } -weight 1
+
+      labelframe .jobs.storage.destination.ftp
+        label .jobs.storage.destination.ftp.loginTitle -text "Login:"
+        grid .jobs.storage.destination.ftp.loginTitle -row 0 -column 0 -sticky "w" 
+        frame .jobs.storage.destination.ftp.login
+          entry .jobs.storage.destination.ftp.login.name -textvariable ::selectedJob(storageLoginName) -bg white
+          pack .jobs.storage.destination.ftp.login.name -side left -fill x -expand yes
+          addModifyTrace {::selectedJob(storageLoginName)} \
+          {
+            if {$::selectedJob(storageType) != ""} { BackupServer:set $::selectedJob(id) "archive-name" [getArchiveName $::selectedJob(storageType) $::selectedJob(storageFileName) $::selectedJob(storageLoginName) $::selectedJob(storageHostName) $::selectedJob(storageDeviceName)] }
+          }
+
+      #    label .jobs.storage.destination.ftp.loginPasswordTitle -text "Password:"
+      #    pack .jobs.storage.destination.ftp.loginPasswordTitle -row 0 -column 2 -sticky "w" 
+      #    entry .jobs.storage.destination.ftp.loginPassword -textvariable barConfig(sshPassword) -bg white -show "*"
+      #    pack .jobs.storage.destination.ftp.loginPassword -row 0 -column 3 -sticky "we" 
+
+          label .jobs.storage.destination.ftp.login.hostNameTitle -text "Host:"
+          pack .jobs.storage.destination.ftp.login.hostNameTitle -side left
+          entry .jobs.storage.destination.ftp.login.hostName -textvariable ::selectedJob(storageHostName) -bg white
+          pack .jobs.storage.destination.ftp.login.hostName -side left -fill x -expand yes
+          addModifyTrace {::selectedJob(storageHostName)} \
+          {
+            if {$::selectedJob(storageType) != ""} { BackupServer:set $::selectedJob(id) "archive-name" [getArchiveName $::selectedJob(storageType) $::selectedJob(storageFileName) $::selectedJob(storageLoginName) $::selectedJob(storageHostName) $::selectedJob(storageDeviceName)] }
+          }
+        grid .jobs.storage.destination.ftp.login -row 0 -column 1 -sticky "we"
+
+        label .jobs.storage.destination.ftp.maxBandWidthTitle -text "Max. band width:"
+        grid .jobs.storage.destination.ftp.maxBandWidthTitle -row 3 -column 0 -sticky "w" 
+        frame .jobs.storage.destination.ftp.maxBandWidth
+          radiobutton .jobs.storage.destination.ftp.maxBandWidth.unlimited -text "unlimited" -anchor w -variable ::selectedJob(maxBandWidthFlag) -value 0
+          grid .jobs.storage.destination.ftp.maxBandWidth.unlimited -row 0 -column 1 -sticky "w" 
+          radiobutton .jobs.storage.destination.ftp.maxBandWidth.limitto -text "limit to" -width 8 -anchor w -variable ::selectedJob(maxBandWidthFlag) -value 1
+          grid .jobs.storage.destination.ftp.maxBandWidth.limitto -row 0 -column 2 -sticky "w" 
+          tixComboBox .jobs.storage.destination.ftp.maxBandWidth.size -variable ::selectedJob(maxBandWidth) -label "" -labelside right -editable true -options { entry.width 6 entry.background white entry.justify right }
+          grid .jobs.storage.destination.ftp.maxBandWidth.size -row 0 -column 3 -sticky "w" 
+          label .jobs.storage.destination.ftp.maxBandWidth.unit -text "bits/s"
+          grid .jobs.storage.destination.ftp.maxBandWidth.unit -row 0 -column 4 -sticky "w" 
+
+         .jobs.storage.destination.ftp.maxBandWidth.size insert end 64K
+         .jobs.storage.destination.ftp.maxBandWidth.size insert end 128K
+         .jobs.storage.destination.ftp.maxBandWidth.size insert end 256K
+         .jobs.storage.destination.ftp.maxBandWidth.size insert end 512K
+
+          grid rowconfigure    .jobs.storage.destination.ftp.maxBandWidth { 0 } -weight 1
+          grid columnconfigure .jobs.storage.destination.ftp.maxBandWidth { 1 } -weight 1
+        grid .jobs.storage.destination.ftp.maxBandWidth -row 3 -column 1 -sticky "w" -padx 2p -pady 2p
+        addEnableTrace ::barConfig(maxBandWidthFlag) 1 .jobs.storage.destination.ftp.maxBandWidth.size
+        addModifyTrace {::selectedJob(maxBandWidthFlag) ::selectedJob(maxBandWidth)} \
+        {
+#puts "???"
+#          BackupServer:set $::selectedJob(id) "ssh-private-key" $::selectedJob(sshPrivateKeyFileName)
+        }
+
+  #      grid rowconfigure    .jobs.storage.destination.ftp { } -weight 1
+        grid columnconfigure .jobs.storage.destination.ftp { 1 } -weight 1
 
       labelframe .jobs.storage.destination.ssh
         label .jobs.storage.destination.ssh.loginTitle -text "Login:"
@@ -5959,6 +5786,15 @@ if {0} {
         grid forget .jobs.storage.destination.fileSystem
       }
 
+      if {$::selectedJob(storageType) == "ftp"} \
+      {
+        grid .jobs.storage.destination.ftp -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
+      } \
+      else \
+      {
+        grid forget .jobs.storage.destination.ftp
+      }
+
       if {($::selectedJob(storageType) == "scp") || ($::selectedJob(storageType) == "sftp")} \
       {
         grid .jobs.storage.destination.ssh -row 1 -column 0 -sticky "nswe" -padx 2p -pady 2p
@@ -5992,7 +5828,15 @@ if {0} {
   pack .jobs.storage -side top -fill both -expand yes -in [.jobs.tabs subwidget storage]
 
   frame .jobs.schedule
-    mclistbox::mclistbox .jobs.schedule.list -height 1 -fillcolumn type -bg white -labelanchor w -selectmode single -xscrollcommand ".jobs.schedule.xscroll set" -yscrollcommand ".jobs.schedule.yscroll set"
+    mclistbox::mclistbox .jobs.schedule.list \
+      -height 1 \
+      -fillcolumn type \
+      -bg white \
+      -labelanchor w \
+      -selectmode single \
+      -exportselection 0 \
+      -xscrollcommand ".jobs.schedule.xscroll set" \
+      -yscrollcommand ".jobs.schedule.yscroll set"
     .jobs.schedule.list column add date    -label "Date"     -width 20
     .jobs.schedule.list column add weekday -label "Week day" -width 14
     .jobs.schedule.list column add time    -label "Time"     -width 20
@@ -6006,6 +5850,7 @@ if {0} {
     bind .jobs.schedule.list <Insert> "event generate . <<Event_backupAddSchedule>>"
     bind .jobs.schedule.list <Double-Button-1> "event generate . <<Event_backupEditSchedule>>"
     bind .jobs.schedule.list <Delete> "event generate . <<Event_backupRemSchedule>>"
+    set scheduleListWidget .jobs.schedule.list
     addModifyTrace {::selectedJob(schedule)} \
     {
       .jobs.schedule.list delete 0 end
@@ -6037,16 +5882,6 @@ if {0} {
     grid columnconfigure .jobs.schedule { 0 } -weight 1
   pack .jobs.schedule -side top -fill both -expand yes -in [.jobs.tabs subwidget schedule]
 
-
-  frame .jobs.buttons
-    button .jobs.buttons.save -text "Save" -command "event generate . <<Event_jobSave>>"
-    pack .jobs.buttons.save -side left -padx 2p
-    button .jobs.buttons.start -text "Start" -command "event generate . <<Event_jobStart>>"
-    pack .jobs.buttons.start -side left -padx 2p
-#    button .jobs.buttons.quit -text "Quit" -command "event generate . <<Event_quit>>"
-#    pack .jobs.buttons.quit -side right -padx 2p
-  grid .jobs.buttons -row 2 -column 0 -columnspan 2 -sticky "we" -padx 2p -pady 2p
-
   grid rowconfigure    .jobs { 1 } -weight 1
   grid columnconfigure .jobs { 1 } -weight 1
 pack .jobs -side top -fill both -expand yes -in [$mainWindow.tabs subwidget backup]
@@ -6055,7 +5890,7 @@ update
 
 # ----------------------------------------------------------------------
 
-$::backupFilesTreeWidget configure -command "openCloseBackupDirectory"
+$::filesTreeWidget configure -command "openCloseBackupDirectory"
 #$restoreFilesTreeWidget configure -command "openCloseRestoreDirectory"
 
 addModifyTrace {::status} \
@@ -6071,18 +5906,34 @@ addModifyTrace {::status} \
       .status.buttons.pausecontinue configure -text \"Pause\"
     }
   "
-addModifyTrace {::jobStatus(id) ::jobStatus(name)} \
+addModifyTrace {::jobStatus(id) ::jobStatus(state) ::jobStatus(name)} \
   "
     global jobStatus
 
     if {\$jobStatus(id) != 0} \
     {
        .status.selected configure -text \"Selected '\$jobStatus(name)'\"
-       .status.buttons.abort configure -state normal
+       if {(\$jobStatus(state) != \"waiting\") && (\$jobStatus(state) != \"running\")} \
+       {
+         .status.buttons.start configure -state normal
+       } \
+       else \
+       {
+         .status.buttons.start configure -state disabled
+       }
+       if {(\$jobStatus(state) == \"waiting\") || (\$jobStatus(state) == \"running\")} \
+       {
+         .status.buttons.abort configure -state normal
+       } \
+       else \
+       {
+         .status.buttons.abort configure -state disabled
+       }
     } \
     else \
     {
        .status.selected configure -text \"Selected\"
+       .status.buttons.start configure -state disabled
        .status.buttons.abort configure -state disabled
     }
   "
@@ -6152,19 +6003,6 @@ addModifyTrace ::jobStatus(volumeProgress) \
 
     Dialog:progressbar .status.selected.storageVolume update \$::jobStatus(volumeProgress)
   "
-addModifyTrace {::barConfig(name) ::barConfig(included)} \
-  "
-    if {(\$::barConfig(name) != \"\") && (\$::barConfig(included) != {})} \
-    {
-#      .jobs.buttons.addBackupJob configure -state normal
-#      .restore.buttons.addRestoreJob configure -state normal
-    } \
-    else \
-    {
-#      .jobs.buttons.addBackupJob configure -state disabled
-#      .restore.buttons.addRestoreJob configure -state disabled
-    }
-  "
 addModifyTrace ::jobStatus(totalFiles) \
   "
     global jobStatus
@@ -6193,15 +6031,11 @@ addModifyTrace {::selectedJob(id)} \
   {
      grid .jobs.tabs -row 1 -column 0 -columnspan 2 -sticky "nswe" -padx 2p -pady 2p
      .jobs.list.delete configure -state normal
-     .jobs.buttons.save configure -state normal
-     .jobs.buttons.start configure -state normal
   } \
   else \
   {
      grid remove .jobs.tabs
      .jobs.list.delete configure -state disabled
-     .jobs.buttons.save configure -state disabled
-     .jobs.buttons.start configure -state disabled
   }
 }
 
@@ -6253,9 +6087,6 @@ bind . <<Event_new>> \
 {
   if {[Dialog:confirm "New configuration?" "New" "Cancel"]} \
   {
-    barConfigFileName
-    resetBARConfig
-    clearConfigModify
   }
 }
 
@@ -6293,36 +6124,36 @@ bind . <<Event_selectJobStatus>> \
   if {$n != {}} \
   {
     set entry [lindex [.status.list.data get $n $n] 0]
-    set jobStatus(id)   [lindex $entry 0]
-    set jobStatus(name) [lindex $entry 1]
+    set jobStatus(id)    [lindex $entry 0]
+    set jobStatus(name)  [lindex $entry 1]
+    set jobStatus(state) [lindex $entry 2]
   }
-}
-
-bind . <<Event_jobSave>> \
-{
-  # save
-  set errorCode 0
-  set errorText ""
-  BackupServer:executeCommand errorCode errorText "JOB_SAVE $selectedJob(id)"
-  clearConfigModify
 }
 
 bind . <<Event_jobStart>> \
 {
-  if {[Dialog:confirm "Start this job?" "Start job" "Cancel"]} \
+  set n [.status.list.data curselection]
+  if {$n != {}} \
   {
-    # save
-    set errorCode 0
-    set errorText ""
-    BackupServer:executeCommand errorCode errorText "JOB_RUN $selectedJob(id)"
-  }
-}
-
-bind . <<Event_addRestoreJob>> \
-{
-  if {[Dialog:confirm "Start this restore?" "Start restore" "Cancel"]} \
-  {
-    addRestoreJob .status.list.data
+    set entry [lindex [.status.list.data get $n $n] 0]
+    switch [Dialog:select "Start job" "Start job '[lindex $entry 1]'?" "" {"Full" "Incremental" "Cancel"}] \
+    {
+      0 \
+      {
+        set id [lindex $entry 0]
+        jobStart $id "full"
+        updateStatusList .status.list.data
+      }
+      1 \
+      {
+        set id [lindex $entry 0]
+        jobStart $id "incremental"
+        updateStatusList .status.list.data
+      }
+      2 \
+      {
+      }
+    }
   }
 }
 
@@ -6331,9 +6162,10 @@ bind . <<Event_jobAbort>> \
   set n [.status.list.data curselection]
   if {$n != {}} \
   {
-    if {[Dialog:confirm "Really abort job?" "Abort job" "Cancel"]} \
+    set entry [lindex [.status.list.data get $n $n] 0]
+    if {[Dialog:confirm "Really abort job '[lindex $entry 1]'?" "Abort job" "Cancel"]} \
     {
-      set id [lindex [lindex [.status.list.data get $n $n] 0] 0]
+      set id [lindex $entry 0]
       jobAbort $id
       updateStatusList .status.list.data
     }
@@ -6356,33 +6188,33 @@ bind . <<Event_jobPauseContinue>> \
 
 bind . <<Event_backupStateNone>> \
 {
-  foreach itemPath [$::backupFilesTreeWidget info selection] \
+  foreach itemPath [$::filesTreeWidget info selection] \
   {
-    setEntryState $::backupFilesTreeWidget $itemPath 0 "NONE"
+    setEntryState $::filesTreeWidget $itemPath 0 "NONE"
   }
 }
 
 bind . <<Event_backupStateIncluded>> \
 {
-  foreach itemPath [$::backupFilesTreeWidget info selection] \
+  foreach itemPath [$::filesTreeWidget info selection] \
   {
-    setEntryState $::backupFilesTreeWidget $itemPath 0 "INCLUDED"
+    setEntryState $::filesTreeWidget $itemPath 0 "INCLUDED"
   }
 }
 
 bind . <<Event_backupStateExcluded>> \
 {
-  foreach itemPath [$::backupFilesTreeWidget info selection] \
+  foreach itemPath [$::filesTreeWidget info selection] \
   {
-    setEntryState $::backupFilesTreeWidget $itemPath 0 "EXCLUDED"
+    setEntryState $::filesTreeWidget $itemPath 0 "EXCLUDED"
   }
 }
 
 bind . <<Event_backupToggleStateNoneIncludedExcluded>> \
 {
-  foreach itemPath [$::backupFilesTreeWidget info selection] \
+  foreach itemPath [$::filesTreeWidget info selection] \
   {
-    toggleEntryIncludedExcluded $::backupFilesTreeWidget $itemPath 0
+    toggleEntryIncludedExcluded $::filesTreeWidget $itemPath 0
   }
 }
 
@@ -6426,15 +6258,15 @@ bind . <<Event_backupAddIncludePattern>> \
 bind . <<Event_backupRemIncludePattern>> \
 {
   set patternList {}
-  foreach index [$::backupIncludedListWidget curselection] \
+  foreach index [$::includedListWidget curselection] \
   {
-    lappend patternList [$::backupIncludedListWidget get $index]
+    lappend patternList [$::includedListWidget get $index]
   }
   foreach pattern $patternList \
   {
     remIncludedPattern $pattern
   }
-  $::backupIncludedListWidget selection clear 0 end
+  $::includedListWidget selection clear 0 end
   .jobs.filters.includedButtons.rem configure -state disabled
 }
 
@@ -6446,15 +6278,15 @@ bind . <<Event_backupAddExcludePattern>> \
 bind . <<Event_backupRemExcludePattern>> \
 {
   set patternList {}
-  foreach index [$backupExcludedListWidget curselection] \
+  foreach index [$excludedListWidget curselection] \
   {
-    lappend patternList [$backupExcludedListWidget get $index]
+    lappend patternList [$excludedListWidget get $index]
   }
   foreach pattern $patternList \
   {
     remExcludedPattern $pattern
   }
-  $backupExcludedListWidget selection clear 0 end
+  $excludedListWidget selection clear 0 end
   .jobs.filters.excludedButtons.rem configure -state disabled
 }
 
@@ -6505,7 +6337,7 @@ bind . <<Event_backupAddSchedule>> \
 
 bind . <<Event_backupEditSchedule>> \
 {
-  set index [lindex [.jobs.schedule.list curselection] 0]
+  set index [lindex [$scheduleListWidget curselection] 0]
   if {$index != ""} \
   {
     editSchedule $index
@@ -6514,11 +6346,11 @@ bind . <<Event_backupEditSchedule>> \
 
 bind . <<Event_backupRemSchedule>> \
 {
-  foreach index [.jobs.schedule.list curselection] \
+  foreach index [$scheduleListWidget curselection] \
   {
     remSchedule $index
   }
-  .jobs.schedule.list selection clear 0 end
+  $scheduleListWidget selection clear 0 end
   .jobs.schedule.buttons.edit configure -state disabled
   .jobs.schedule.buttons.rem configure -state disabled
 }
@@ -6539,9 +6371,6 @@ if {$debugFlag} \
     BackupServer:executeCommand errorCode errorText "DEBUG_MEMORY_INFO"
   }
 }
-
-# config modify trace
-trace add variable barConfig write "setConfigModify"
 
 # connect to server
 if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]} \
@@ -6586,7 +6415,6 @@ updateJobList .jobs.list.data
 addBackupDevice "/"
 
 # load config if given
-resetBARConfig
 if {$configFileName != ""} \
 {
   if {[file exists $configFileName]} \
@@ -6613,5 +6441,7 @@ puts "NYI"; exit 1;
 #Dialog:password "xxx" 0
 #editStorageFileName "test-%type-%a-###.bar"
 #Dialog:fileSelector "x" "/tmp/test.bnid" {}
+
+set xx 1
 
 # end of file
