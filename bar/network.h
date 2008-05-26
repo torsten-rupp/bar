@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -16,6 +16,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef HAVE_FTP
+  #include <ftplib.h>
+#endif /* HAVE_FTP */
 #ifdef HAVE_SSH2
   #include <libssh2.h>
 #endif /* HAVE_SSH2 */
@@ -47,6 +50,13 @@ typedef struct
   int         handle;
   union
   {
+    #ifdef HAVE_FTP
+      struct
+      {
+        netbuf *control;
+        netbuf *data;
+      } ftp;
+    #endif /* HAVE_SSH2 */
     #ifdef HAVE_SSH2
       struct
       {
@@ -155,10 +165,10 @@ void Network_doneAll(void);
 *          hostName              - host name
 *          hostPort              - host port
 *          flags                 - socket falgs
-*          sshLoginName          - SSH login user name
+*          loginName             - login user name
+*          password              - SSH password
 *          sshPublicKeyFileName  - SSH public key file for login
 *          sshPrivateKeyFileName - SSH private key file for login
-*          sshPassword           - SSH password
 * Output : socketHandle - socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -168,10 +178,10 @@ Errors Network_connect(SocketHandle *socketHandle,
                        SocketTypes  socketType,
                        const String hostName,
                        uint         hostPort,
-                       const String sshLoginName,
+                       const String loginName,
+                       Password     *password,
                        const String sshPublicKeyFileName,
                        const String sshPrivateKeyFileName,
-                       Password     *sshPassword,
                        uint         flags
                       );
 

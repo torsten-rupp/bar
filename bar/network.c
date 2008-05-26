@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -103,10 +103,10 @@ Errors Network_connect(SocketHandle *socketHandle,
                        SocketTypes  socketType,
                        const String hostName,
                        uint         hostPort,
-                       const String sshLoginName,
+                       const String loginName,
+                       Password     *password,
                        const String sshPublicKeyFileName,
                        const String sshPrivateKeyFileName,
-                       Password     *sshPassword,
                        uint         flags
                       )
 {
@@ -120,60 +120,102 @@ Errors Network_connect(SocketHandle *socketHandle,
   /* initialize variables */
   socketHandle->type = socketType;
 
-  /* get host IP address */
-  hostAddressEntry = gethostbyname(String_cString(hostName));
-  if (hostAddressEntry != NULL)
-  {
-    assert(hostAddressEntry->h_length > 0);
-    ipAddress = (*((in_addr_t*)hostAddressEntry->h_addr_list[0]));
-  }
-  else
-  {
-    ipAddress = inet_addr(String_cString(hostName));
-  }
-  if (ipAddress == INADDR_NONE)
-  {
-    return ERROR_HOST_NOT_FOUND;
-  }
-
-  /* connect */
-  socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
-  if (socketHandle->handle == -1)
-  {
-    return ERROR(CONNECT_FAIL,errno);
-  }
-  socketAddress.sin_family      = AF_INET;
-  socketAddress.sin_addr.s_addr = ipAddress;
-  socketAddress.sin_port        = htons(hostPort);
-  if (connect(socketHandle->handle,
-              (struct sockaddr*)&socketAddress,
-              sizeof(socketAddress)
-             ) != 0
-     )
-  {
-    error = ERROR(CONNECT_FAIL,errno);
-    close(socketHandle->handle);
-    return error;
-  }
-
   switch (socketType)
   {
     case SOCKET_TYPE_PLAIN:
+      /* get host IP address */
+      hostAddressEntry = gethostbyname(String_cString(hostName));
+      if (hostAddressEntry != NULL)
+      {
+        assert(hostAddressEntry->h_length > 0);
+        ipAddress = (*((in_addr_t*)hostAddressEntry->h_addr_list[0]));
+      }
+      else
+      {
+        ipAddress = inet_addr(String_cString(hostName));
+      }
+      if (ipAddress == INADDR_NONE)
+      {
+        return ERROR_HOST_NOT_FOUND;
+      }
+
+      /* connect */
+      socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
+      if (socketHandle->handle == -1)
+      {
+        return ERROR(CONNECT_FAIL,errno);
+      }
+      socketAddress.sin_family      = AF_INET;
+      socketAddress.sin_addr.s_addr = ipAddress;
+      socketAddress.sin_port        = htons(hostPort);
+      if (connect(socketHandle->handle,
+                  (struct sockaddr*)&socketAddress,
+                  sizeof(socketAddress)
+                 ) != 0
+         )
+      {
+        error = ERROR(CONNECT_FAIL,errno);
+        close(socketHandle->handle);
+        return error;
+      }
+
+      if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+      {
+        /* enable non-blocking */
+        fcntl(socketHandle->handle,F_SETFL,O_NONBLOCK);
+      }
+
       break;
     case SOCKET_TYPE_SSH:
       #ifdef HAVE_SSH2
       {
-        const char *password;
+        const char *plainPassword;
 
-        assert(sshLoginName != NULL);
+        assert(loginName != NULL);
 
         /* initialise variables */
 
+        /* get host IP address */
+        hostAddressEntry = gethostbyname(String_cString(hostName));
+        if (hostAddressEntry != NULL)
+        {
+          assert(hostAddressEntry->h_length > 0);
+          ipAddress = (*((in_addr_t*)hostAddressEntry->h_addr_list[0]));
+        }
+        else
+        {
+          ipAddress = inet_addr(String_cString(hostName));
+        }
+        if (ipAddress == INADDR_NONE)
+        {
+          return ERROR_HOST_NOT_FOUND;
+        }
+
+        /* connect */
+        socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
+        if (socketHandle->handle == -1)
+        {
+          return ERROR(CONNECT_FAIL,errno);
+        }
+        socketAddress.sin_family      = AF_INET;
+        socketAddress.sin_addr.s_addr = ipAddress;
+        socketAddress.sin_port        = htons(hostPort);
+        if (connect(socketHandle->handle,
+                    (struct sockaddr*)&socketAddress,
+                    sizeof(socketAddress)
+                   ) != 0
+           )
+        {
+          error = ERROR(CONNECT_FAIL,errno);
+          close(socketHandle->handle);
+          return error;
+        }
+
         /* check login name */
-        if (String_empty(sshLoginName))
+        if (String_empty(loginName))
         {
           close(socketHandle->handle);
-          return ERROR_NO_SSH_LOGIN_NAME;
+          return ERROR_NO_LOGIN_NAME;
         }
 
         /* init session */
@@ -195,25 +237,25 @@ Errors Network_connect(SocketHandle *socketHandle,
         }
 
 #if 1
-        password = Password_deploy(sshPassword);
+        plainPassword = Password_deploy(password);
         if (libssh2_userauth_publickey_fromfile(socketHandle->ssh2.session,
-                                                String_cString(sshLoginName),
+                                                String_cString(loginName),
                                                 String_cString(!String_empty(sshPublicKeyFileName)?sshPublicKeyFileName:defaultSSHPublicKeyFileName),
                                                 String_cString(!String_empty(sshPrivateKeyFileName)?sshPrivateKeyFileName:defaultSSHPrivateKeyFileName),
-                                                password
+                                                plainPassword
                                                ) != 0
            )
         {
-          Password_undeploy(sshPassword);
+          Password_undeploy(password);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
           close(socketHandle->handle);
           return ERROR_SSH_AUTHENTIFICATION;
         }
-        Password_undeploy(sshPassword);
+        Password_undeploy(password);
 #else
         if (libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,
-                                                  String_cString(sshLoginName),
+                                                  String_cString(loginName),
                                                   NULL
                                                 ) != 0
            )
@@ -224,6 +266,13 @@ Errors Network_connect(SocketHandle *socketHandle,
           return ERROR_SSH_AUTHENTIFICATION;
         }
 #endif /* 0 */
+
+        if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+        {
+          /* enable non-blocking */
+          fcntl(socketHandle->handle,F_SETFL,O_NONBLOCK);
+        }
+
       }
       #else /* not HAVE_SSH2 */
         close(socketHandle->handle);
@@ -231,7 +280,6 @@ Errors Network_connect(SocketHandle *socketHandle,
       #endif /* HAVE_SSH2 */
       break;
     case SOCKET_TYPE_TLS:
-      close(socketHandle->handle);
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     #ifndef NDEBUG
@@ -239,12 +287,6 @@ Errors Network_connect(SocketHandle *socketHandle,
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
         break; /* not reached */
     #endif /* NDEBUG */
-  }
-
-  if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
-  {
-    /* enable non-blocking */
-    fcntl(socketHandle->handle,F_SETFL,O_NONBLOCK);
   }
 
   return ERROR_NONE;
