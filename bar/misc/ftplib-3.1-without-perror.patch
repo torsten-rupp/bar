@@ -1,0 +1,11 @@
+--- ftplib-3.1/linux/Makefile	1998-06-24 04:54:30.000000000 +0900
++++ ftplib-3.1-without-perror/linux/Makefile	2008-05-25 19:41:48.000000000 +0900
+@@ -5,7 +5,7 @@
+ 
+ # By default, ftplib uses PASV.  If you need it to use  PORT
+ # instead, uncomment the next line
+-DEFINES = -DFTPLIB_DEFMODE=FTPLIB_PORT
++DEFINES = -DFTPLIB_DEFMODE=FTPLIB_PORT "-Dperror(x)="
+ 
+ SONAME = 3
+ SOVERSION = $(SONAME).1
