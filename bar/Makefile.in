@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.25 $
+# $Revision: 1.26 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -127,6 +127,7 @@ OTHER_SOURCES        = errors.pl \
                        errors.def \
                        archive_format.pl \
                        archive_format.def \
+                       valgrind.supp \
                        barcontrol.tcl \
                        bar.cfg \
 

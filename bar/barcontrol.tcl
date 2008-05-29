@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.27 $
+# $Revision: 1.28 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -94,7 +94,6 @@ set incrementalFlag 0
 set abortId         0
 set pauseFlag       0
 set continueFlag    0
-set quitFlag        0
 set debugFlag       0
 set guiMode         0
 
@@ -4676,11 +4675,6 @@ while {$z<[llength $argv]} \
       set continueFlag 1
       set guiMode 0
     }
-    "^--quit$" \
-    {
-      set quitFlag 1
-      set guiMode 0
-    }
     "^--debug$" \
     {
       set debugFlag 1
@@ -4774,10 +4768,11 @@ if {![info exists tk_version] && !$guiMode} \
     set commandId [BackupServer:sendCommand "JOB_LIST"]
     while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
     {
-      scanx $result "%d %S %S %d %S %S %d %d" \
+      scanx $result "%d %S %S %s %d %S %S %d %d" \
         id \
         name \
         state \
+        type \
         archivePartSize \
         compressAlgorithm \
         cryptAlgorithm \
@@ -4810,6 +4805,37 @@ if {![info exists tk_version] && !$guiMode} \
 puts "NYI"; exit 1;
       addBackupJob ""
     }
+
+    set commandId [BackupServer:sendCommand "JOB_LIST"]
+    while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
+    {
+      scanx $result "%d %S %S %s %d %S %S %d %d" \
+        id \
+        name \
+        state \
+        type \
+        archivePartSize \
+        compressAlgorithm \
+        cryptAlgorithm \
+        lastExecutedDateTime \
+        estimatedRestTime
+
+      set estimatedRestDays    [expr {int($estimatedRestTime/(24*60*60)        )}]
+      set estimatedRestHours   [expr {int($estimatedRestTime%(24*60*60)/(60*60))}]
+      set estimatedRestMinutes [expr {int($estimatedRestTime%(60*60   )/60     )}]
+      set estimatedRestSeconds [expr {int($estimatedRestTime%(60)              )}]
+
+      puts [format $formatString \
+        $id \
+        $name \
+        $state \
+        [formatByteSize $archivePartSize] \
+        $compressAlgorithm \
+        $cryptAlgorithm \
+        [expr {($lastExecutedDateTime > 0)?[clock format $lastExecutedDateTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
+        [format "%d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds] \
+      ]
+    }
   }
   if {$abortId != 0} \
   {
@@ -4827,12 +4853,12 @@ puts "NYI"; exit 1;
     set errorText ""
     BackupServer:executeCommand errorCode errorText "CONTINUE"
   }
-  if {$quitFlag} \
-  {
-    # disconnect
-    BackupServer:disconnect
-    exit 0
-  }
+
+  # disconnect
+  BackupServer:disconnect
+
+  # exit
+  exit 0
 }
 
 # ----------------------------------------------------------------------

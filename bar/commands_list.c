@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.30 $
+* $Revision: 1.31 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -283,7 +283,6 @@ Errors Command_list(StringList  *archiveFileNameList,
   ulong        fileCount;
   String       storageSpecifier;
   Errors       failError;
-  bool         inputPasswordFlag;
   bool         retryFlag;
 bool         remoteBarFlag;
 //  SSHSocketList sshSocketList;
@@ -295,12 +294,14 @@ bool         remoteBarFlag;
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
-  archiveFileName = String_new();
 remoteBarFlag=FALSE;
 
-  storageSpecifier  = String_new();
-  failError         = ERROR_NONE;
-  inputPasswordFlag = FALSE;
+  /* init variables */
+  archiveFileName  = String_new();
+  storageSpecifier = String_new();
+
+  /* list archive content */
+  failError = ERROR_NONE;
   while (!StringList_empty(archiveFileNameList))
   {
     StringList_getFirst(archiveFileNameList,archiveFileName);
@@ -322,7 +323,8 @@ remoteBarFlag=FALSE;
           /* open archive */
           error = Archive_open(&archiveInfo,
                                archiveFileName,
-                               jobOptions
+                               jobOptions,
+                               PASSWORD_MODE_DEFAULT
                               );
           if (error != ERROR_NONE)
           {
@@ -379,12 +381,14 @@ remoteBarFlag=FALSE;
                                                   &fragmentSize
                                                  );
                     retryFlag = FALSE;
+#if 0
                     if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
                     {
                       inputCryptPassword(&jobOptions->cryptPassword);
                       retryFlag         = TRUE;
                       inputPasswordFlag = TRUE;
                     }
+#endif /* 0 */
                   }
                   while ((error != ERROR_NONE) && retryFlag);
                   if (error != ERROR_NONE)
@@ -442,12 +446,14 @@ remoteBarFlag=FALSE;
                                                        &fileInfo
                                                       );
                     retryFlag = FALSE;
+#if 0
                     if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
                     {
                       inputCryptPassword(&jobOptions->cryptPassword);
                       retryFlag         = TRUE;
                       inputPasswordFlag = TRUE;
                     }
+#endif /* 0 */
                   }
                   while ((error != ERROR_NONE) && retryFlag);
                   if (error != ERROR_NONE)
@@ -503,12 +509,14 @@ remoteBarFlag=FALSE;
                                                   &fileInfo
                                                  );
                     retryFlag = FALSE;
+#if 0
                     if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
                     {
                       inputCryptPassword(&jobOptions->cryptPassword);
                       retryFlag         = TRUE;
                       inputPasswordFlag = TRUE;
                     }
+#endif /* 0 */
                   }
                   while ((error != ERROR_NONE) && retryFlag);
                   if (error != ERROR_NONE)
@@ -564,12 +572,14 @@ remoteBarFlag=FALSE;
                                                      &fileInfo
                                                     );
                     retryFlag = FALSE;
+#if 0
                     if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
                     {
                       inputCryptPassword(&jobOptions->cryptPassword);
                       retryFlag         = TRUE;
                       inputPasswordFlag = TRUE;
                     }
+#endif /* 0 */
                   }
                   while ((error != ERROR_NONE) && retryFlag);
                   if (error != ERROR_NONE)
@@ -835,12 +845,14 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
             }
 
             retryFlag = FALSE;
+#if 0
             if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
             {
               inputCryptPassword(&jobOptions->cryptPassword);
               retryFlag         = TRUE;
               inputPasswordFlag = TRUE;
             }
+#endif /* 0 */
           }
           while ((error != ERROR_NONE) && retryFlag);
 
@@ -872,9 +884,9 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
       printFooter(fileCount);
     }
   }
-  String_delete(storageSpecifier);
 
   /* free resources */
+  String_delete(storageSpecifier);
   String_delete(archiveFileName);
 
   return failError;

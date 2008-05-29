@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.49 $
+* $Revision: 1.50 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1592,6 +1592,7 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
                    getErrorText(error)
                   );
     }
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
     /* update storage info */
     Semaphore_lock(&createInfo->storageSemaphore);
@@ -1600,22 +1601,27 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
     createInfo->storageCount -= 1;
     createInfo->storageBytes -= storageMsg.fileSize;
     Semaphore_unlock(&createInfo->storageSemaphore);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
     /* free resources */
     freeStorageMsg(&storageMsg,NULL);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   }
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
   {
     /* final post-processing */
     if (createInfo->failError == ERROR_NONE)
     {
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       /* pause */
       while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
       {
         Misc_udelay(500*1000);
       }
 
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       error = Storage_postProcess(&createInfo->storageFileHandle,TRUE);
       if (error != ERROR_NONE)
       {
@@ -1624,13 +1630,17 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
                   );
         createInfo->failError = error;
       }
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     }
   }
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* free resoures */
   free(buffer);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   createInfo->storageThreadExitFlag = TRUE;
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 }
 
 /*---------------------------------------------------------------------*/
@@ -2301,27 +2311,35 @@ Errors Command_create(const char                   *archiveFileName,
       }
     }
   }
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* close archive */
   Archive_close(&archiveInfo);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* signal end of data */
   createInfo.collectorSumThreadExitFlag = TRUE;
   MsgQueue_setEndOfMsg(&createInfo.fileMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
   updateStatusInfo(&createInfo);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* wait for threads */
   Thread_join(&createInfo.storageThread);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   Thread_join(&createInfo.collectorThread);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   Thread_join(&createInfo.collectorSumThread);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* done storage */
   Storage_done(&createInfo.storageFileHandle);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* write incremental list */
   if ((createInfo.failError == ERROR_NONE) && storeIncrementalFileInfoFlag)
   {
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     printInfo(1,"Write incremental list '%s'...",String_cString(incrementalListFileName));
     error = writeIncrementalList(incrementalListFileName,
                                  &createInfo.filesDictionary
@@ -2346,9 +2364,11 @@ Errors Command_create(const char                   *archiveFileName,
       return error;
     }
     printInfo(1,"ok\n");
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
     logMessage(LOG_TYPE_ALWAYS,"create incremental file '%s'",String_cString(incrementalListFileName));
   }
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* output statics */
   printInfo(0,"%lu file(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneFiles,createInfo.statusInfo.doneBytes);
@@ -2356,6 +2376,7 @@ Errors Command_create(const char                   *archiveFileName,
   printInfo(2,"%lu file(s) with errors\n",createInfo.statusInfo.errorFiles);
 
   /* free resources */
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   if (storeIncrementalFileInfoFlag)
   {
     Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
@@ -2369,6 +2390,7 @@ Errors Command_create(const char                   *archiveFileName,
   String_delete(createInfo.statusInfo.storageName);
   String_delete(createInfo.statusInfo.fileName);
   String_delete(createInfo.archiveFileName);
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   if ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
   {

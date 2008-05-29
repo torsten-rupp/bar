@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -102,7 +102,8 @@ Errors Command_test(StringList  *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         jobOptions
+                         jobOptions,
+                         PASSWORD_MODE_DEFAULT
                         );
     if (error != ERROR_NONE)
     {
