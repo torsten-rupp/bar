@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.38 $
+* $Revision: 1.39 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -484,14 +484,18 @@ void getDevice(const String     name,
 /***********************************************************************\
 * Name   : inputCryptPassword
 * Purpose: input crypt password
-* Input  : cryptPassword - variable for crypt password (will be
-*                          initialized if needed)
+* Input  : fileName      - file name
+*          weakCheckFlag - TRUE for weak password checking, FALSE
+*                          otherwise (print warning if password seems to
+*                          be a weak password)
 * Output : -
-* Return : TRUE if passwort input ok, FALSE otherwise
+* Return : crypt password or NULL if input password fail/aborted
 * Notes  : -
 \***********************************************************************/
 
-bool inputCryptPassword(Password **cryptPassword);
+Password *inputCryptPassword(const String fileName,
+                             bool         weakCheckFlag
+                            );
 
 /***********************************************************************\
 * Name   : configValueParseIncludeExclude

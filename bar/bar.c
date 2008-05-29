@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.56 $
+* $Revision: 1.57 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1461,39 +1461,40 @@ void getDevice(const String     name,
   device->writeCommand            = (jobOptions->device.writeCommand            != NULL)?jobOptions->device.writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :globalOptions.defaultDevice.writeCommand           );
 }
 
-bool inputCryptPassword(Password **cryptPassword)
+Password *inputCryptPassword(const String fileName,
+                             bool         weakCheckFlag
+                            )
 {
   Password *password;
+  String   title;
 
-  assert(cryptPassword != NULL);
-
-  password = (*cryptPassword);
+  /* allocate password */
+  password = Password_new();
   if (password == NULL)
   {
-    /* allocate password */
-    password = Password_new();
-    if (password == NULL)
-    {
-      return FALSE;
-    }
+    return NULL;
   }
 
   /* input password */
-  if (!Password_input(password,"Crypt password") || (Password_length(password) <= 0))
+  title = String_format(String_new(),"Crypt password for '%S'",fileName);
+  if (!Password_input(password,String_cString(title)) || (Password_length(password) <= 0))
   {
-    if ((*cryptPassword) == NULL) Password_delete(password);
-    return FALSE;
+    String_delete(title);
+    Password_delete(password);
+    return NULL;
+  }
+  String_delete(title);
+
+  if (weakCheckFlag)
+  {
+    /* check password quality */
+    if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
+    {
+      printWarning("Low password quality!\n");
+    }
   }
 
-  /* check password quality */
-  if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
-  {
-    printWarning("Low password quality!\n");
-  }
-
-  (*cryptPassword) = password;
-
-  return TRUE;
+  return password;
 }
 
 bool configValueParseIncludeExclude(void *userData, void *variable, const char *name, const char *value)
