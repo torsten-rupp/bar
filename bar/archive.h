@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -56,24 +56,25 @@ typedef Errors(*ArchiveNewFileFunction)(String fileName,
 
 typedef struct
 {
-  ArchiveNewFileFunction archiveNewFileFunction;     // new archive file call back function
-  void                   *archiveNewFileUserData;    // user data for new archive file call back function
+  ArchiveNewFileFunction archiveNewFileFunction;         // new archive file call back function
+  void                   *archiveNewFileUserData;        // user data for new archive file call back function
   JobOptions             *jobOptions;
 
-  Password               *cryptPassword;             // crypt password
+  PasswordModes          passwordMode;                   // password mode (PASSWORD_MODE_DEFAULT for using settings in jobOptions)
+  Password               *cryptPassword;                 // cryption password
 
-  uint                   blockLength;                /* block length for file entry/file
-                                                        data (depend on used crypt
-                                                        algorithm)
-                                                     */
+  uint                   blockLength;                    /* block length for file entry/file
+                                                            data (depend on used crypt
+                                                            algorithm)
+                                                         */
 
-  uint                   partNumber;                 // file part number
-  bool                   fileOpenFlag;               // TRUE iff file is open
-  String                 fileName;                   // file name
-  FileHandle             fileHandle;                 // file handle
+  uint                   partNumber;                     // file part number
+  bool                   fileOpenFlag;                   // TRUE iff file is open
+  String                 fileName;                       // file name
+  FileHandle             fileHandle;                     // file handle
 
-  bool                   nextChunkHeaderReadFlag;    // TRUE iff next chunk header read
-  ChunkHeader            nextChunkHeader;            // next file, directory, link chunk header
+  bool                   nextChunkHeaderReadFlag;        // TRUE iff next chunk header read
+  ChunkHeader            nextChunkHeader;                // next file, directory, link chunk header
 } ArchiveInfo;
 
 typedef struct
@@ -208,15 +209,17 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
 * Purpose: open archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileName - archive file name
-*          options         - option settings
+*          jobOptions      - option settings
+*          passwordMode    - password mode
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_open(ArchiveInfo  *archiveInfo,
-                    const String archiveFileName,
-                    JobOptions   *jobOptions
+Errors Archive_open(ArchiveInfo   *archiveInfo,
+                    const String  archiveFileName,
+                    JobOptions    *jobOptions,
+                    PasswordModes passwordMode
                    );
 
 /***********************************************************************\
