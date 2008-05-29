@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.h,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems : all
@@ -58,9 +58,9 @@ typedef uint32 ChunkId;
 
 typedef struct
 {
-  uint32 id;                        // chunk id                              
-  uint64 size;                      // size of chunk (without chunk header)  
-  uint64 offset;                    // start of chunk in file (header)       
+  uint32 id;                        // chunk id
+  uint64 size;                      // size of chunk (without chunk header)
+  uint64 offset;                    // start of chunk in file (offset of header)
 } ChunkHeader;
 
 typedef struct ChunkInfo
@@ -76,9 +76,15 @@ typedef struct ChunkInfo
   const int        *definition;     // chunk definition
   ulong            definitionSize;  // chunk definition size (without data elements)
   uint64           size;            // total size of chunk (without chunk header)
-  uint64           offset;          // start of chunk in file (header) 
-  uint64           index;           // current position in chunk
+  uint64           offset;          // start of chunk in file (offset of header)
+  uint64           index;           // current position in chunk (from begin=end of header)
 } ChunkInfo;
+
+typedef struct
+{
+  uint64           offset;          // start of chunk in file (header)
+  uint64           index;           // current position in chunk
+} ChunkPosition;
 
 /***************************** Variables *******************************/
 
@@ -160,7 +166,6 @@ ulong Chunk_getSize(const int  *definition,
 *          userData        - user data for i/o
 *          alignment       - alignment to use
 *          cryptInfo       - crypt info
-*          dataCryptInfo   - crypt info for data elements
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -221,6 +226,29 @@ Errors Chunk_skip(void        *userData,
 \***********************************************************************/
 
 bool Chunk_eof(void *userData);
+
+/***********************************************************************\
+* Name   : Chunk_tell
+* Purpose: get current index position in chunk
+* Input  : chunkInfo      - chunk info block
+* Output : index - index
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Chunk_tell(ChunkInfo *chunkInfo, uint64 *index);
+
+/***********************************************************************\
+* Name   : Chunk_seek
+* Purpose: restore current index position in chunk
+* Input  : chunkInfo - chunk info block
+*          index     - index
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index);
 
 /***********************************************************************\
 * Name   : Chunk_open

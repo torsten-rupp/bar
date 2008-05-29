@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -106,6 +106,7 @@ LOCAL Errors readDefinition(void      *userData,
   Errors error;
   ulong  bufferLength;
   byte   *buffer;
+  uint64 offset;
   byte   *p;
   uint32 crc;
   int    z;
@@ -121,9 +122,11 @@ LOCAL Errors readDefinition(void      *userData,
   }
 
   /* read data */
+  IO.tell(userData,&offset);
   error = IO.read(userData,buffer,bufferLength,bytesRead);
   if (error != ERROR_NONE)
   {
+    IO.seek(userData,offset);
     free(buffer);
     return error;
   }
@@ -135,6 +138,7 @@ LOCAL Errors readDefinition(void      *userData,
     Crypt_reset(cryptInfo,0);
     if (Crypt_decrypt(cryptInfo,buffer,bufferLength) != ERROR_NONE)
     {
+      IO.seek(userData,offset);
       free(buffer);
       return ERROR_DECRYPT_FAIL;
     }
@@ -154,7 +158,12 @@ LOCAL Errors readDefinition(void      *userData,
           {
             uint8 n;
 
-            if (p+1 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
+            if (p+1 > buffer+bufferLength)
+            {
+              IO.seek(userData,offset);
+              free(buffer);
+              return ERROR_CORRUPT_DATA;
+            }
             crc = crc32(crc,p,1);
             n = (*((uint8*)p));
             p += 1;
@@ -167,7 +176,12 @@ LOCAL Errors readDefinition(void      *userData,
           {
             uint16 n;
 
-            if (p+2 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
+            if (p+2 > buffer+bufferLength)
+            {
+              IO.seek(userData,offset);
+              free(buffer);
+              return ERROR_CORRUPT_DATA;
+            }
             crc = crc32(crc,p,2);
             n = ntohs(*((uint16*)p));
             p += 2;
@@ -180,7 +194,12 @@ LOCAL Errors readDefinition(void      *userData,
           {
             uint32 n;
 
-            if (p+4 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
+            if (p+4 > buffer+bufferLength)
+            {
+              IO.seek(userData,offset);
+              free(buffer);
+              return ERROR_CORRUPT_DATA;
+            }
             crc = crc32(crc,p,4);
             n = ntohl(*((uint32*)p));
             p += 4;
@@ -194,7 +213,12 @@ LOCAL Errors readDefinition(void      *userData,
             uint64 n;
             uint32 h,l;
 
-            if (p+8 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
+            if (p+8 > buffer+bufferLength)
+            {
+              IO.seek(userData,offset);
+              free(buffer);
+              return ERROR_CORRUPT_DATA;
+            }
             crc = crc32(crc,p,4);
             h = ntohl(*((uint32*)p));
             p += 4;
@@ -211,11 +235,20 @@ LOCAL Errors readDefinition(void      *userData,
             uint16 length;
             String s;
 
-            if (p+2 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
+            if (p+2 > buffer+bufferLength)
+            {
+              IO.seek(userData,offset);
+              return ERROR_CORRUPT_DATA;
+            }
             crc = crc32(crc,p,2);
             length = ntohs(*((uint16*)p));
             p += 2;
-            if (p+length > buffer+bufferLength) return ERROR_CORRUPT_DATA;
+            if (p+length > buffer+bufferLength)
+            {
+              IO.seek(userData,offset);
+              free(buffer);
+              return ERROR_CORRUPT_DATA;
+            }
             crc = crc32(crc,p,length);
             s = String_newBuffer(p,length); p += length;
 
@@ -230,13 +263,19 @@ LOCAL Errors readDefinition(void      *userData,
           {
             uint32 n;
 
-            if (p+4 > buffer+bufferLength) return ERROR_CORRUPT_DATA;
+            if (p+4 > buffer+bufferLength)
+            {
+              IO.seek(userData,offset);
+              free(buffer);
+              return ERROR_CORRUPT_DATA;
+            }
             n = ntohl(*(uint32*)p);
             p += 4;
 
 //fprintf(stderr,"%s,%d: n=%x crc=%x\n",__FILE__,__LINE__,n,crc);
             if (n != crc)
             {
+              IO.seek(userData,offset);
               free(buffer);
               return ERROR_CRC_ERROR;
             }
@@ -645,6 +684,33 @@ Errors Chunk_skip(void        *userData,
 bool Chunk_eof(void *userData)
 {
   return IO.eof(userData);
+}
+
+void Chunk_tell(ChunkInfo *chunkInfo, uint64 *index)
+{
+  #ifndef NDEBUG
+    Errors error;
+    uint64 n;
+  #endif /* NDEBUG */
+
+  assert(chunkInfo != NULL);
+  assert(index != NULL);
+
+  #ifndef NDEBUG
+    error = IO.tell(chunkInfo->userData,&n);
+    assert(error == ERROR_NONE);
+    assert(n == chunkInfo->offset + CHUNK_HEADER_SIZE + chunkInfo->index);
+  #endif /* NDEBUG */
+
+  (*index) = chunkInfo->index;
+}
+
+Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index)
+{
+  assert(chunkInfo != NULL);
+
+  chunkInfo->index = index;
+  return IO.seek(chunkInfo->userData,chunkInfo->offset + CHUNK_HEADER_SIZE + index);
 }
 
 Errors Chunk_open(ChunkInfo   *chunkInfo,
