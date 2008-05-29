@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.31 $
+* $Revision: 1.32 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1525,6 +1525,91 @@ String __String_newBuffer(const char *fileName, ulong lineNb, const void *buffer
 }
 
 #ifdef NDEBUG
+String String_duplicate(const String fromString)
+#else /* not NDEBUG */
+String __String_duplicate(const char *fileName, ulong lineNb, const String fromString)
+#endif /* NDEBUG */
+{
+  struct __String *string;
+
+  CHECK_VALID(fromString);
+
+  if (fromString != NULL)
+  {
+    assert(fromString->data != NULL);
+
+    #ifdef NDEBUG
+      string = String_new();
+    #else /* not DEBUG */
+      string = __String_new(fileName,lineNb);
+    #endif /* NDEBUG */
+    if (string == NULL)
+    {
+      return NULL;
+    }
+
+    ensureStringLength(string,fromString->length);
+    memcpy(&string->data[0],&fromString->data[0],fromString->length);
+    string->data[fromString->length] ='\0';
+    string->length = fromString->length;
+
+    UPDATE_VALID(string);
+  }
+  else
+  {
+    string = NULL;
+  }
+
+  return string;
+}
+
+#ifdef NDEBUG
+String String_copy(String *string, const String fromString)
+#else /* not NDEBUG */
+String __String_copy(const char *fileName, ulong lineNb, String *string, const String fromString)
+#endif /* NDEBUG */
+{
+  CHECK_VALID(fromString);
+
+  if (fromString != NULL)
+  {
+    assert(fromString->data != NULL);
+
+    if ((*string) == NULL)
+    {
+      #ifdef NDEBUG
+        (*string) = String_new();
+      #else /* not DEBUG */
+        (*string) = __String_new(fileName,lineNb);
+      #endif /* NDEBUG */
+      if ((*string) == NULL)
+      {
+        return NULL;
+      }
+    }
+
+    ensureStringLength((*string),fromString->length);
+    memcpy(&(*string)->data[0],&fromString->data[0],fromString->length);
+    (*string)->data[fromString->length] ='\0';
+    (*string)->length = fromString->length;
+
+    UPDATE_VALID(*string);
+  }
+  else
+  {
+    if ((*string) != NULL)
+    {
+      (*string)->data[0] ='\0';
+      (*string)->length = 0;
+
+      UPDATE_VALID(*string);
+    }
+  }
+
+  return (*string);
+}
+
+#ifdef NDEBUG
 void String_delete(String string)
 #else /* not NDEBUG */
 void __String_delete(const char *fileName, ulong lineNb, String string)
@@ -1704,89 +1789,6 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength)
   UPDATE_VALID(string);
 
   return string;
-}
-
-#ifdef NDEBUG
-String String_duplicate(const String fromString)
-#else /* not NDEBUG */
-String __String_duplicate(const char *fileName, ulong lineNb, const String fromString)
-#endif /* NDEBUG */
-{
-  struct __String *string;
-
-  CHECK_VALID(fromString);
-
-  if (fromString != NULL)
-  {
-    assert(fromString->data != NULL);
-
-    #ifdef NDEBUG
-      string = String_new();
-    #else /* not DEBUG */
-      string = __String_new(fileName,lineNb);
-    #endif /* NDEBUG */
-    if (string == NULL)
-    {
-      return NULL;
-    }
-
-    ensureStringLength(string,fromString->length);
-    memcpy(&string->data[0],&fromString->data[0],fromString->length);
-    string->data[fromString->length] ='\0';
-    string->length = fromString->length;
-
-    UPDATE_VALID(string);
-  }
-  else
-  {
-    string = NULL;
-  }
-
-  return string;
-}
-
-#ifdef NDEBUG
-String String_copy(String *string, const String fromString)
-#else /* not NDEBUG */
-String __String_copy(const char *fileName, ulong lineNb, String *string, const String fromString)
-#endif /* NDEBUG */
-{
-  CHECK_VALID(fromString);
-
-  if (fromString != NULL)
-  {
-    assert(fromString->data != NULL);
-
-    if ((*string) == NULL)
-    {
-      #ifdef NDEBUG
-        (*string) = String_new();
-      #else /* not DEBUG */
-        (*string) = __String_new(fileName,lineNb);
-      #endif /* NDEBUG */
-      if ((*string) == NULL)
-      {
-        return NULL;
-      }
-    }
-
-    ensureStringLength((*string),fromString->length);
-    memcpy(&(*string)->data[0],&fromString->data[0],fromString->length);
-    (*string)->data[fromString->length] ='\0';
-    (*string)->length = fromString->length;
-
-    UPDATE_VALID(*string);
-  }
-  else
-  {
-    if ((*string) != NULL)
-    {
-      (*string)->data[0] ='\0';
-      (*string)->length = 0;
-    }
-  }
-
-  return (*string);
 }
 
 String String_sub(String string, const String fromString, ulong fromIndex, long fromLength)
@@ -3401,8 +3403,6 @@ void String_debug(void)
 
 void String_debugDone(void)
 {
-  DebugStringNode *debugStringNode;
-
   pthread_once(&debugStringInitFlag,debugStringInit);
 
   pthread_mutex_lock(&debugStringLock);

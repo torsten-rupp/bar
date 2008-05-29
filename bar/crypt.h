@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems: all
@@ -154,7 +154,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 
 Errors Crypt_new(CryptInfo       *cryptInfo,
                  CryptAlgorithms cryptAlgorithm,
-                 Password        *password
+                 const Password  *password
                 );
 
 /***********************************************************************\

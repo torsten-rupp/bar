@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -162,7 +162,7 @@ void Pattern_moveList(PatternList *fromPatternList, PatternList *toPatternList);
 *          pattern     - pattern
 *          patternType - pattern type; see PATTERN_TTYPE_*
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 

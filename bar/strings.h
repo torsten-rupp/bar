@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.h,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -103,6 +103,38 @@ String __String_newBuffer(const char *fileName, ulong lineNb, const void *buffer
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : String_duplicate
+* Purpose: duplicate string
+* Input  : fromString - string to duplicate
+* Output : -
+* Return : new string (copy)
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+String String_duplicate(const String fromString);
+#else /* not NDEBUG */
+String __String_duplicate(const char *fileName, ulong lineNb, const String fromString);
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : String_copy
+* Purpose: copy string
+* Input  : string     - reference to string variable (if referenced
+*                       string is NULL, a new string is allocated)
+*          fromString - string to copy
+* Output : -
+* Return : new string (copy)
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+String String_copy(String *string, const String fromString);
+#else /* not NDEBUG */
+String __String_copy(const char *fileName, ulong lineNb, String *string, const String fromString);
+#endif /* NDEBUG */
+
+/***********************************************************************\
 * Name   : String_delete
 * Purpose: delete string
 * Input  : string - string to delete
@@ -147,38 +179,6 @@ String String_set(String string, const String sourceString);
 String String_setCString(String string, const char *s);
 String String_setChar(String string, char ch);
 String String_setBuffer(String string, const void *buffer, ulong bufferLength);
-
-/***********************************************************************\
-* Name   : String_duplicate
-* Purpose: duplicate string
-* Input  : fromString - string to duplicate
-* Output : -
-* Return : new string (copy)
-* Notes  : -
-\***********************************************************************/
-
-#ifdef NDEBUG
-String String_duplicate(const String fromString);
-#else /* not NDEBUG */
-String __String_duplicate(const char *fileName, ulong lineNb, const String fromString);
-#endif /* NDEBUG */
-
-/***********************************************************************\
-* Name   : String_copy
-* Purpose: copy string
-* Input  : string     - reference to string variable (if referenced
-*                       string is NULL, a new string is allocated)
-*          fromString - string to copy
-* Output : -
-* Return : new string (copy)
-* Notes  : -
-\***********************************************************************/
-
-#ifdef NDEBUG
-String String_copy(String *string, const String fromString);
-#else /* not NDEBUG */
-String __String_copy(const char *fileName, ulong lineNb, String *string, const String fromString);
-#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : String_sub
