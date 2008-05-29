@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.36 $
+* $Revision: 1.37 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -680,7 +680,7 @@ Errors File_printLine(FileHandle *fileHandle,
 
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
-  assert(line != NULL);
+  assert(format != NULL);
 
   /* initialise variables */
   line = String_new();
