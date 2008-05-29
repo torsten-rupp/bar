@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.36 $
+* $Revision: 1.37 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -434,16 +434,19 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   /* init job node */
   jobNode->fileName                          = String_duplicate(fileName);
   jobNode->timeModified                      = 0LL;
-  jobNode->lastExecutedDateTime              = 0LL;
-  jobNode->lastCheckDateTime                 = 0LL;
 
   jobNode->type                              = jobType;
   jobNode->name                              = File_getFileBaseName(File_newFileName(),fileName);
   jobNode->archiveName                       = String_new();
-  initJobOptions(&jobNode->jobOptions);
   Pattern_initList(&jobNode->includePatternList);
   Pattern_initList(&jobNode->excludePatternList);
   List_init(&jobNode->scheduleList);
+  initJobOptions(&jobNode->jobOptions);
+  jobNode->modifiedFlag                      = FALSE;
+
+  jobNode->lastExecutedDateTime              = 0LL;
+  jobNode->lastCheckDateTime                 = 0LL;
+
   jobNode->id                                = getNewJobId();
   jobNode->state                             = JOB_STATE_NONE;
   jobNode->archiveType                       = ARCHIVE_TYPE_NORMAL;
@@ -1311,7 +1314,7 @@ LOCAL void jobThreadEntry(void)
     {
       case JOB_TYPE_BACKUP:
         /* create archive */
-        logMessage(LOG_TYPE_ALWAYS,"start create '%S'",jobNode->fileName);
+        logMessage(LOG_TYPE_ALWAYS,"start create '%s'",String_cString(jobNode->fileName));
         jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveName),
                                                     &jobNode->includePatternList,
                                                     &jobNode->excludePatternList,
@@ -1324,7 +1327,7 @@ LOCAL void jobThreadEntry(void)
                                                     &pauseFlag,
                                                     &jobNode->requestedAbortFlag
                                                    );
-        logMessage(LOG_TYPE_ALWAYS,"done create '%S' (error: %s)",jobNode->fileName,getErrorText(jobNode->runningInfo.error));
+        logMessage(LOG_TYPE_ALWAYS,"done create '%s' (error: %s)",String_cString(jobNode->fileName),getErrorText(jobNode->runningInfo.error));
         break;
       case JOB_TYPE_RESTORE:
         {
@@ -3057,7 +3060,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   /* open archive */
   error = Archive_open(&archiveInfo,
                        arguments[0],
-                       &clientInfo->jobOptions
+                       &clientInfo->jobOptions,
+                       PASSWORD_MODE_CONFIG
                       );
   if (error != ERROR_NONE)
   {
