@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -74,22 +74,44 @@ void Password_doneAll(void)
 {
 }
 
-Password *Password_new(void)
+void Password_init(Password *password)
 {
-  Password *password;
+  assert(password != NULL);
 
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   #ifdef HAVE_GCRYPT
-    password = (Password*)gcry_malloc_secure(sizeof(Password));
+    password->data = (char*)gcry_malloc_secure(MAX_PASSWORD_LENGTH+1);
   #else /* not HAVE_GCRYPT */
-    password = (Password*)malloc(sizeof(Password));
+    passworddata = (char*)malloc(MAX_PASSWORD_LENGTH+1);
   #endif /* HAVE_GCRYPT */
-//fprintf(stderr,"%s,%d: %p\n",__FILE__,__LINE__,password);
-  if (password == NULL)
+  if (password->data == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   password->length = 0;
+}
+
+void Password_done(Password *password)
+{
+  assert(password != NULL);
+
+  #ifdef HAVE_GCRYPT
+    gcry_free(password->data);
+  #else /* not HAVE_GCRYPT */
+    memset(password->data,0,sizeof(Password));
+    free(password->data);
+  #endif /* HAVE_GCRYPT */
+}
+
+Password *Password_new(void)
+{
+  Password *password;
+
+  password = (Password*)malloc(sizeof(Password));
+  if (password == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  Password_init(password);
 
   return password;
 }
@@ -104,17 +126,30 @@ Password *Password_newCString(const char *s)
   return password;
 }
 
+Password *Password_duplicate(const Password *fromPassword)
+{
+  Password *password;
+
+  if (fromPassword != NULL)
+  {
+    password = Password_new();
+    assert(password != NULL);
+    Password_set(password,fromPassword);
+  }
+  else
+  {
+    password = NULL;
+  }
+
+  return password;
+}
+
 void Password_delete(Password *password)
 {
   if (password != NULL)
   {
-//fprintf(stderr,"%s,%d: %p\n",__FILE__,__LINE__,password);
-    #ifdef HAVE_GCRYPT
-      gcry_free(password);
-    #else /* not HAVE_GCRYPT */
-      memset(password,0,sizeof(Password));
-      free(password);
-    #endif /* HAVE_GCRYPT */
+    Password_done(password);
+    free(password);
   }
 }
 
@@ -126,32 +161,14 @@ void Password_clear(Password *password)
   password->data[0] = '\0';
 }
 
-Password *Password_duplicate(const Password *sourcePassword)
-{
-  Password *destinationPassword;
-
-  if (sourcePassword != NULL)
-  {
-    destinationPassword = Password_new();
-    assert(destinationPassword != NULL);
-    memcpy(destinationPassword,sourcePassword,sizeof(Password));
-  }
-  else
-  {
-    destinationPassword = NULL;
-  }
-
-  return destinationPassword;
-}
-
 void Password_set(Password *password, const Password *fromPassword)
 {
   assert(password != NULL);
 
   if (fromPassword != NULL)
   {
+    memcpy(password->data,fromPassword->data,MAX_PASSWORD_LENGTH+1);
     password->length = fromPassword->length;
-    memcpy(password->data,fromPassword->data,sizeof(password->data));
   }
   else
   {
@@ -161,6 +178,7 @@ void Password_set(Password *password, const Password *fromPassword)
 
 void Password_setString(Password *password, const String string)
 {
+  uint length;
   #ifdef HAVE_GCRYPT
   #else /* not HAVE_GCRYPT */
     uint z;
@@ -168,20 +186,22 @@ void Password_setString(Password *password, const String string)
 
   assert(password != NULL);
 
-  password->length = MIN(String_length(string),MAX_PASSWORD_LENGTH);
+  length = MIN(String_length(string),MAX_PASSWORD_LENGTH);
   #ifdef HAVE_GCRYPT
-    memcpy(password->data,String_cString(string),password->length);
+    memcpy(password->data,String_cString(string),length);
   #else /* not HAVE_GCRYPT */
-    for (z = 0; z < MIN(String_length(string),MAX_PASSWORD_LENGTH); z++)
+    for (z = 0; z < length; z++)
     {
       password->data[z] = String_index(string,z)^obfuscator[z];
     }
   #endif /* HAVE_GCRYPT */
-  password->data[password->length] = '\0';
+  password->data[length] = '\0';
+  password->length = length;
 }
 
 void Password_setCString(Password *password, const char *s)
 {
+  uint length;
   #ifdef HAVE_GCRYPT
   #else /* not HAVE_GCRYPT */
     uint z;
@@ -189,16 +209,17 @@ void Password_setCString(Password *password, const char *s)
 
   assert(password != NULL);
 
-  password->length = MIN(strlen(s),MAX_PASSWORD_LENGTH);
+  length = MIN(strlen(s),MAX_PASSWORD_LENGTH);
   #ifdef HAVE_GCRYPT
-    memcpy(password->data,s,password->length);
+    memcpy(password->data,s,length);
   #else /* not HAVE_GCRYPT */
-    for (z = 0; z < MIN(strlen(s),MAX_PASSWORD_LENGTH); z++)
+    for (z = 0; z < length; z++)
     {
       password->data[z] = s[z]^obfuscator[z];
     }
   #endif /* HAVE_GCRYPT */
-  password->data[password->length] = '\0';
+  password->data[length] = '\0';
+  password->length = length;
 }
 
 void Password_appendChar(Password *password, char ch)
@@ -363,7 +384,7 @@ bool Password_input(Password *password, const char *title)
       command = String_newCString(sshAskPassword);
       if (title != NULL)
       {
-        String_format(command," '%s:'",title);
+        String_format(command," %\"s:",title);
       }
       file = popen(String_cString(command),"r");
       if (file == NULL)
@@ -432,7 +453,7 @@ bool Password_input(Password *password, const char *title)
     /* input password */
     if (title != NULL)
     {
-      printf("%s: ",title);
+      printf("%s: ",title);fflush(stdout);
     }
     eolFlag = FALSE;
     do

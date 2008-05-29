@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -32,7 +32,7 @@
 /***************************** Datatypes *******************************/
 typedef struct
 {
-  char data[MAX_PASSWORD_LENGTH+1];
+  char *data;
   uint length;
   #ifndef HAVE_GCRYPT
     char plain[MAX_PASSWORD_LENGTH+1];     /* needed for temporary storage
@@ -77,12 +77,15 @@ Errors Password_initAll(void);
 
 void Password_doneAll(void);
 
+void Password_init(Password *password);
+void Password_done(Password *password);
+
 /***********************************************************************\
 * Name   : Password_new, Password_newCString
 * Purpose: create new password
-* Input  : -
+* Input  : s - password string
 * Output : -
-* Return : password handle (password is still empty)
+* Return : password
 * Notes  : -
 \***********************************************************************/
 
@@ -90,9 +93,20 @@ Password *Password_new(void);
 Password *Password_newCString(const char *s);
 
 /***********************************************************************\
+* Name   : Password_duplicate
+* Purpose: duplicate a password
+* Input  : fromPassword - source password
+* Output : -
+* Return : password (password is still empty)
+* Notes  : -
+\***********************************************************************/
+
+Password *Password_duplicate(const Password *fromPassword);
+
+/***********************************************************************\
 * Name   : Password_delete
 * Purpose: delete password
-* Input  : password - password handle
+* Input  : password - password
 * Output : -
 * Return : -
 * Notes  : -
@@ -103,7 +117,7 @@ void Password_delete(Password *password);
 /***********************************************************************\
 * Name   : Password_clear
 * Purpose: clear password
-* Input  : password - password handle
+* Input  : password - password
 * Output : -
 * Return : -
 * Notes  : -
@@ -112,20 +126,9 @@ void Password_delete(Password *password);
 void Password_clear(Password *password);
 
 /***********************************************************************\
-* Name   : Password_duplicate
-* Purpose: copy a password
-* Input  : sourcePassword - source password
-* Output : -
-* Return : password handle (password is still empty)
-* Notes  : -
-\***********************************************************************/
-
-Password *Password_duplicate(const Password *sourcePassword);
-
-/***********************************************************************\
 * Name   : Passwort_set, Password_setCString
 * Purpose: set password from C-string
-* Input  : password - password handle
+* Input  : password - password
 *          s        - C-string
 * Output : -
 * Return : -
@@ -139,7 +142,7 @@ void Password_setCString(Password *password, const char *s);
 /***********************************************************************\
 * Name   : Password_appendChar
 * Purpose: append character to password
-* Input  : password - password handle
+* Input  : password - password
 *          ch       - character to append
 * Output : -
 * Return : -
@@ -151,7 +154,7 @@ void Password_appendChar(Password *password, char ch);
 /***********************************************************************\
 * Name   : Password_length
 * Purpose: get length of password
-* Input  : password - password handle
+* Input  : password - password
 * Output : -
 * Return : length of password
 * Notes  : -
@@ -173,7 +176,7 @@ bool Password_empty(const Password *password);
 /***********************************************************************\
 * Name   : Password_getQualityLevel
 * Purpose: get quality level of password
-* Input  : password - password handle
+* Input  : password - password
 * Output : -
 * Return : quality level (0=bad..1=good)
 * Notes  : -
@@ -184,7 +187,7 @@ double Password_getQualityLevel(const Password *password);
 /***********************************************************************\
 * Name   : Password_getChar
 * Purpose: get chararacter of password
-* Input  : password - password handle
+* Input  : password - password
 *          index    - index (0..n)
 * Output : -
 * Return : character a position specified by index
@@ -196,7 +199,7 @@ char Password_getChar(const Password *password, uint index);
 /***********************************************************************\
 * Name   : Password_deploy
 * Purpose: deploy password as C-string
-* Input  : password - password handle
+* Input  : password - password
 * Output : -
 * Return : C-string
 * Notes  : use depoy as less and as short a possible! If no secure
@@ -209,7 +212,7 @@ const char *Password_deploy(Password *password);
 /***********************************************************************\
 * Name   : Password_undeploy
 * Purpose: undeploy password
-* Input  : password - password handle
+* Input  : password - password
 * Output : -
 * Return : -
 * Notes  : -
@@ -220,7 +223,7 @@ void Password_undeploy(Password *password);
 /***********************************************************************\
 * Name   : Password_inputStdin
 * Purpose: input password from stdin (without echo characters)
-* Input  : password - password handle
+* Input  : password - password
 *          title    - dialog title text
 * Output : -
 * Return : TRUE if password read, FALSE otherwise
