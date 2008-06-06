@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.28 $
+# $Revision: 1.29 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -809,8 +809,10 @@ proc addModifyTrace { nameList action } \
     }
   }
 
+  # execute action now
   eval $action
 
+  # add traces for names
   foreach name $nameList \
   {
     trace variable $name w "modifyTraceHandler {$action}"
@@ -4093,7 +4095,7 @@ proc editScheduleDialog { titleText okText _schedule } \
   Dialog:delete $handle
   if {($result != 1)} { return 0 }
 
-  set date "[numberFormat "%04d" $year]-[numberFormat "%04d" $month]-[numberFormat "%04d" $day]"
+  set date "[numberFormat "%04d" $year]-[numberFormat "%02d" $month]-[numberFormat "%02d" $day]"
   set time "[numberFormat "%02d" $hour]:[numberFormat "%02d" $minute]"
   set schedule [list $date $weekDay $time $archiveType]
 
@@ -4899,7 +4901,7 @@ if {$barControlConfig(serverPassword) == ""} \
 set mainWindow ""
 wm title . "BAR control"
 wm iconname . "BAR"
-wm geometry . "800x600"
+wm geometry . "800x620"
 wm protocol . WM_DELETE_WINDOW quit
 wm state . normal
 
@@ -5175,7 +5177,8 @@ frame .status
     pack .status.buttons.quit -side right -padx 2p
   grid .status.buttons -row 2 -column 0 -sticky "we" -padx 2p -pady 2p
 
-  bind .status.list.data <ButtonRelease-1> "event generate . <<Event_selectJobStatus>>"
+  bind .status.list.data <Button-1> "event generate . <<Event_selectJobStatus>>"
+  bind .status.list.data <Double-Button-1> "event generate . <<Event_selectJob>>"
 
   grid rowconfigure    .status { 0 } -weight 1
   grid columnconfigure .status { 0 } -weight 1
@@ -5187,6 +5190,7 @@ frame .jobs
   label .jobs.listTitle -text "Name:"
   grid .jobs.listTitle -row 0 -column 0 -sticky "w"
   frame .jobs.list
+#  
     tixOptionMenu .jobs.list.data -label "" -labelside right -variable selectedJob(id) -command selectJob -options { entry.background white }
     grid .jobs.list.data -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
     button .jobs.list.new -text "New" -command "event generate . <<Event_jobNew>>"
@@ -6123,6 +6127,16 @@ bind . <<Event_new>> \
 bind . <<Event_quit>> \
 {
   quit
+}
+
+bind . <<Event_selectJob>> \
+{
+  set n [.status.list.data curselection]
+  if {$n != {}} \
+  {
+    set entry [lindex [.status.list.data get $n $n] 0]
+    selectJob [lindex $entry 0]
+  }
 }
 
 bind . <<Event_jobNew>> \

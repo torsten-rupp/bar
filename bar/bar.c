@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.57 $
+* $Revision: 1.58 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1152,7 +1152,6 @@ LOCAL void doneAll(void)
   Pattern_doneList(&includePatternList);
   Password_delete(serverPassword);
   freeJobOptions(&jobOptions);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
   List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
   List_done(&ftpServerList,(ListNodeFreeFunction)freeFTPServerNode,NULL);
@@ -2156,7 +2155,8 @@ int main(int argc, const char *argv[])
                          serverCertFileName,
                          serverKeyFileName,
                          serverPassword,
-                         serverJobDirectory
+                         serverJobDirectory,
+                         &jobOptions
                         );
     }
     else

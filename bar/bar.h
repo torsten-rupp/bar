@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.39 $
+* $Revision: 1.40 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -99,7 +99,7 @@ typedef struct FTPServerNode
 {
   NODE_HEADER(struct FTPServerNode);
 
-  String    name;
+  String    name;                      // ftp server name
   FTPServer ftpServer;
 } FTPServerNode;
 
@@ -122,7 +122,7 @@ typedef struct SSHServerNode
 {
   NODE_HEADER(struct SSHServerNode);
 
-  String    name;
+  String    name;                       // ssh server name
   SSHServer sshServer;
 } SSHServerNode;
 
@@ -134,47 +134,47 @@ typedef struct
 /* dvd */
 typedef struct
 {
-  String requestVolumeCommand;
-  String unloadVolumeCommand;
-  String loadVolumeCommand;
-  uint64 volumeSize;
+  String requestVolumeCommand;          // command to request new dvd
+  String unloadVolumeCommand;           // command to unload dvd
+  String loadVolumeCommand;             // command to load dvd
+  uint64 volumeSize;                    // size of dvd (bytes)
 
-  String imagePreProcessCommand;
-  String imagePostProcessCommand;
-  String imageCommand;
-  String eccPreProcessCommand;
-  String eccPostProcessCommand;
-  String eccCommand;
-  String writePreProcessCommand;
-  String writePostProcessCommand;
-  String writeCommand;
-  String writeImageCommand;
+  String imagePreProcessCommand;        // command to execute before creating image
+  String imagePostProcessCommand;       // command to execute after created image
+  String imageCommand;                  // command to create dvd image
+  String eccPreProcessCommand;          // command to execute before ECC calculation
+  String eccPostProcessCommand;         // command to execute after ECC calculation
+  String eccCommand;                    // command for ECC calculatin
+  String writePreProcessCommand;        // command to execute before writing dvd
+  String writePostProcessCommand;       // command to execute after writing dvd
+  String writeCommand;                  // command to write dvd
+  String writeImageCommand;             // command to write image on dvd
 } DVD;
 
 /* device */
 typedef struct
 {
-  String requestVolumeCommand;
-  String unloadVolumeCommand;
-  String loadVolumeCommand;
-  uint64 volumeSize;
+  String requestVolumeCommand;          // command to request new volume
+  String unloadVolumeCommand;           // command to unload volume
+  String loadVolumeCommand;             // command to load volume
+  uint64 volumeSize;                    // size of volume (bytes)
 
-  String imagePreProcessCommand;
-  String imagePostProcessCommand;
-  String imageCommand;
-  String eccPreProcessCommand;
-  String eccPostProcessCommand;
-  String eccCommand;
-  String writePreProcessCommand;
-  String writePostProcessCommand;
-  String writeCommand;
+  String imagePreProcessCommand;        // command to execute before creating image
+  String imagePostProcessCommand;       // command to execute after created image
+  String imageCommand;                  // command to create volume image
+  String eccPreProcessCommand;          // command to execute before ECC calculation
+  String eccPostProcessCommand;         // command to execute after ECC calculation
+  String eccCommand;                    // command for ECC calculatin
+  String writePreProcessCommand;        // command to execute before writing volume
+  String writePostProcessCommand;       // command to execute after writing volume
+  String writeCommand;                  // command to write volume
 } Device;
 
 typedef struct DeviceNode
 {
   NODE_HEADER(struct DeviceNode);
 
-  String name;
+  String name;                          // device name
   Device device;
 } DeviceNode;
 
@@ -195,9 +195,9 @@ typedef struct
 
   ulong                  maxBandWidth;
 
-  ulong                  compressMinFileSize;
+  ulong                  compressMinFileSize;          // min. size of file for using compression
 
-  Password               *cryptPassword;
+  Password               *cryptPassword;               // default password for encryption/decryption
 
   FTPServer              *ftpServer;                   // FTP server
   SSHServer              *sshServer;                   // SSH server
