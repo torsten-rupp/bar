@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.50 $
+* $Revision: 1.51 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1322,7 +1322,7 @@ LOCAL Errors storeArchiveFile(String fileName,
                                          );
 
   /* send to storage controller */
-  Semaphore_lock(&createInfo->storageSemaphore);
+  Semaphore_lock(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE);
   createInfo->storageCount += 1;
   createInfo->storageBytes += fileSize;
   appendToStorageList(&createInfo->storageMsgQueue,
@@ -1338,7 +1338,7 @@ LOCAL Errors storeArchiveFile(String fileName,
 fprintf(stderr,"%s,%d: %lld %lld\n",__FILE__,__LINE__,globalOptions.maxTmpSize,createInfo->storageBytes);
   if (globalOptions.maxTmpSize > 0)
   {
-    Semaphore_lock(&createInfo->storageSemaphore);
+    Semaphore_lock(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE);
     while ((createInfo->storageCount > 2) && (createInfo->storageBytes > globalOptions.maxTmpSize))
     {
       Semaphore_waitModified(&createInfo->storageSemaphore);
@@ -1595,7 +1595,7 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
 fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
     /* update storage info */
-    Semaphore_lock(&createInfo->storageSemaphore);
+    Semaphore_lock(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE);
     assert(createInfo->storageCount > 0);
     assert(createInfo->storageBytes >= storageMsg.fileSize);
     createInfo->storageCount -= 1;

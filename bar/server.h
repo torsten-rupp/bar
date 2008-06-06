@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -35,32 +35,6 @@ typedef enum
   JOB_TYPE_BACKUP,
   JOB_TYPE_RESTORE,
 } JobTypes;
-
-#if 0
-obsolet
-typedef enum
-{
-  SERVER_RESULT_TYPE_NONE,
-  SERVER_RESULT_TYPE_INT,
-  SERVER_RESULT_TYPE_INT64,
-  SERVER_RESULT_TYPE_DOUBLE,
-  SERVER_RESULT_TYPE_CSTRING,
-  SERVER_RESULT_TYPE_STRING,
-} ServerResultTypes;
-
-typedef struct
-{
-  ServerResultTypes type;
-  union
-  {
-    int    i;
-    int64  l;
-    double d;
-    char   s[256];
-    String string;
-  };
-} ServerResult;
-#endif /* 0 */
 
 /***************************** Variables *******************************/
 
@@ -106,18 +80,20 @@ void Server_doneAll(void);
 *          keyFileName        - file with TLS key or NULL
 *          serverPassword     - server authenfication password
 *          serverJobDirectory - server job directory
+*          defaultJobOptions  - default job options
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Server_run(uint           serverPort,
-                  uint           serverTLSPort,
-                  const char     *caFileName,
-                  const char     *certFileName,
-                  const char     *keyFileName,
-                  const Password *serverPassword,
-                  const char     *serverJobDirectory
+Errors Server_run(uint             serverPort,
+                  uint             serverTLSPort,
+                  const char       *caFileName,
+                  const char       *certFileName,
+                  const char       *keyFileName,
+                  const Password   *serverPassword,
+                  const char       *serverJobDirectory,
+                  const JobOptions *defaultJobOptions
                  );
 
 /***********************************************************************\

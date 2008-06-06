@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.37 $
+* $Revision: 1.38 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -54,8 +54,6 @@
 #define PROTOCOL_VERSION_MINOR 0
 
 #define SESSION_ID_LENGTH 64                   // max. length of session id
-
-#define MAX_JOBS_IN_LIST 32                    // max. number of executed jobs kept in job list
 
 /***************************** Datatypes *******************************/
 
@@ -208,6 +206,7 @@ typedef struct
   LIST_HEADER(ClientNode);
 } ClientList;
 
+/* server command function */
 typedef void(*ServerCommandFunction)(ClientInfo    *clientInfo,
                                      uint          id,
                                      const String  arguments[],
@@ -338,14 +337,15 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 };
 
 /***************************** Variables *******************************/
-LOCAL const char     *jobDirectory;
-LOCAL const Password *password;
-LOCAL JobList        jobList;
-LOCAL Thread         jobThread;
-LOCAL Thread         schedulerThread;
-LOCAL ClientList     clientList;
-LOCAL bool           pauseFlag;
-LOCAL bool           quitFlag;
+LOCAL const Password   *serverPassword;
+LOCAL const char       *serverJobDirectory;
+LOCAL const JobOptions *serverDefaultJobOptions;
+LOCAL JobList          jobList;
+LOCAL Thread           jobThread;
+LOCAL Thread           schedulerThread;
+LOCAL ClientList       clientList;
+LOCAL bool             pauseFlag;
+LOCAL bool             quitFlag;
 
 /****************************** Macros *********************************/
 
@@ -838,7 +838,7 @@ LOCAL Errors rereadJobFiles(const char *jobDirectory)
     if (File_isFileReadable(fileName) && (String_index(baseName,0) != '.'))
     {
       /* lock */
-      Semaphore_lock(&jobList.lock);
+      Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
       /* find/create job */
       jobNode = jobList.head;
@@ -868,7 +868,7 @@ LOCAL Errors rereadJobFiles(const char *jobDirectory)
   File_closeDirectory(&directoryHandle);
 
   /* remove not existing jobs */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
   jobNode = jobList.head;
   while (jobNode != NULL)
   {
@@ -1218,7 +1218,9 @@ LOCAL bool storageRequestVolume(JobNode *jobNode,
   assert(jobNode != NULL);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+//??? lock nicht readwrite
 
   /* request volume */
   jobNode->requestedVolumeNumber = volumeNumber;
@@ -1257,7 +1259,7 @@ LOCAL void jobThreadEntry(void)
   while (!quitFlag)
   {
     /* get next job */
-    Semaphore_lock(&jobList.lock);
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
     do
     {
       jobNode = jobList.head;
@@ -1359,7 +1361,7 @@ LOCAL void jobThreadEntry(void)
 
 #endif /* SIMULATOR */
 
-    Semaphore_lock(&jobList.lock);
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     /* done job */
     jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
@@ -1394,12 +1396,13 @@ LOCAL void schedulerThreadEntry(void)
   WeekDays     weekDay;
   ScheduleNode *executeScheduleNode;
   ScheduleNode *scheduleNode;
+  bool         pendingFlag;
   int          z;
 
   while (!quitFlag)
   {
     /* update job files */
-    Semaphore_lock(&jobList.lock);
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
     jobNode = jobList.head;
     while (jobNode != NULL)
     {
@@ -1413,13 +1416,14 @@ LOCAL void schedulerThreadEntry(void)
     Semaphore_unlock(&jobList.lock);
 
     /* re-read config files */
-    rereadJobFiles(jobDirectory);
+    rereadJobFiles(serverJobDirectory);
 
     /* trigger jobs */
-    Semaphore_lock(&jobList.lock);
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
     currentDateTime = Misc_getCurrentDateTime();
     jobNode         = jobList.head;
-    while (jobNode != NULL)
+    pendingFlag     = FALSE;
+    while ((jobNode != NULL) && !pendingFlag)
     {
       /* check if job have to be executed */
       executeScheduleNode = NULL;
@@ -1428,8 +1432,10 @@ LOCAL void schedulerThreadEntry(void)
         dateTime = currentDateTime;
         while (   ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
                && (executeScheduleNode == NULL)
+               && !pendingFlag
               )
         {
+          // get date/time values
           Misc_splitDateTime(dateTime,
                              &year,
                              &month,
@@ -1440,6 +1446,7 @@ LOCAL void schedulerThreadEntry(void)
                              &weekDay
                             );
 
+          // check if matching with schedule list node
           scheduleNode = jobNode->scheduleList.head;
           while ((scheduleNode != NULL) && (executeScheduleNode == NULL))
           {
@@ -1456,9 +1463,16 @@ LOCAL void schedulerThreadEntry(void)
             scheduleNode = scheduleNode->next;
           }
 
+          // check if other thread pending for job list
+          pendingFlag = Semaphore_checkPending(&jobList.lock);
+
+          // next time
           dateTime -= 60LL;
         }
-        jobNode->lastCheckDateTime = currentDateTime;
+        if (!pendingFlag)
+        {
+          jobNode->lastCheckDateTime = currentDateTime;
+        }
       }
 
       /* trigger job */
@@ -1477,7 +1491,7 @@ LOCAL void schedulerThreadEntry(void)
 
     /* sleep 1min */
     z = 0;
-    while ((z < 60/10) && !quitFlag)
+    while ((z < 60) && !quitFlag)
     {
       Misc_udelay(10LL*1000LL*1000LL);
       z+=10;
@@ -1690,14 +1704,14 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
 
   /* check password */
   okFlag = TRUE;
-  if (password != NULL)
+  if (serverPassword != NULL)
   {
     z = 0;
-    while ((z < Password_length(password)) && okFlag)
+    while ((z < Password_length(serverPassword)) && okFlag)
     {
       n0 = (char)(strtoul(String_subCString(s,arguments[0],z*2,2),NULL,16) & 0xFF);
       n1 = clientInfo->sessionId[z];
-      okFlag = (Password_getChar(password,z) == (n0^n1));
+      okFlag = (Password_getChar(serverPassword,z) == (n0^n1));
       z++;
     }
   }
@@ -1929,7 +1943,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
   jobNode = jobList.head;
   while (jobNode != NULL)
   {
@@ -1970,7 +1984,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
 
   /* find job */
   jobNode = jobList.head;
@@ -2038,7 +2052,7 @@ LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, co
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2094,7 +2108,7 @@ LOCAL void serverCommand_includePatternsClear(ClientInfo *clientInfo, uint id, c
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2161,7 +2175,7 @@ LOCAL void serverCommand_includePatternsAdd(ClientInfo *clientInfo, uint id, con
   pattern = arguments[2];
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2200,7 +2214,7 @@ LOCAL void serverCommand_excludePatternsList(ClientInfo *clientInfo, uint id, co
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2256,7 +2270,7 @@ LOCAL void serverCommand_excludePatternsClear(ClientInfo *clientInfo, uint id, c
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2323,7 +2337,7 @@ LOCAL void serverCommand_excludePatternsAdd(ClientInfo *clientInfo, uint id, con
   pattern = arguments[2];
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2362,7 +2376,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2482,7 +2496,7 @@ LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const St
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2550,7 +2564,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   String_format(s,"%S %S %S %S",arguments[1],arguments[2],arguments[3],arguments[4]);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2610,7 +2624,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
   name = arguments[1];
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2682,7 +2696,7 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
   value = arguments[2];
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2740,7 +2754,7 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
   name = arguments[1];
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2791,7 +2805,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   }
 
   /* get filename */
-  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),jobDirectory),arguments[0]);
+  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobDirectory),arguments[0]);
   if (File_exists(fileName))
   {
     sendResult(clientInfo,id,TRUE,1,"job already exists");
@@ -2807,7 +2821,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   }
   File_close(&fileHandle);
 
-  /* add new job */
+  /* create new job */
   jobNode = newJob(JOB_TYPE_BACKUP,fileName);
   if (jobNode == NULL)
   {
@@ -2816,9 +2830,10 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
     sendResult(clientInfo,id,TRUE,1,"insufficient memory");
     return;
   }
+  copyJobOptions(serverDefaultJobOptions,&jobNode->jobOptions);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* add new job to list */
   List_append(&jobList,jobNode);
@@ -2850,7 +2865,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2918,7 +2933,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
   }
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -2961,7 +2976,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -3018,7 +3033,7 @@ LOCAL void serverCommand_volume(ClientInfo *clientInfo, uint id, const String ar
   volumeNumber = String_toInteger(arguments[1],0,NULL,NULL,0);
 
   /* lock */
-  Semaphore_lock(&jobList.lock);
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* find job */
   jobNode = jobList.head;
@@ -3768,13 +3783,14 @@ void Server_doneAll(void)
 {
 }
 
-Errors Server_run(uint           serverPort,
-                  uint           serverTLSPort,
-                  const char     *caFileName,
-                  const char     *certFileName,
-                  const char     *keyFileName,
-                  const Password *serverPassword,
-                  const char     *serverJobDirectory
+Errors Server_run(uint             port,
+                  uint             tlsPort,
+                  const char       *caFileName,
+                  const char       *certFileName,
+                  const char       *keyFileName,
+                  const Password   *password,
+                  const char       *jobDirectory,
+                  const JobOptions *defaultJobOptions
                  )
 {
   Errors             error;
@@ -3782,28 +3798,29 @@ Errors Server_run(uint           serverPort,
   fd_set             selectSet;
   ClientNode         *clientNode;
   SocketHandle       socketHandle;
-  String             name;
-  uint               port;
+  String             clientName;
+  uint               clientPort;
   char               buffer[256];
   ulong              receivedBytes;
   ulong              z;
   ClientNode         *deleteClientNode;
 
-  assert((serverPort != 0) || (serverTLSPort != 0));
+  assert((port != 0) || (tlsPort != 0));
 
   /* initialise variables */
-  password     = serverPassword;
-  jobDirectory = serverJobDirectory;
+  serverPassword          = password;
+  serverJobDirectory      = jobDirectory;
+  serverDefaultJobOptions = defaultJobOptions;
   List_init(&jobList);
   List_init(&clientList);
-  pauseFlag    = FALSE;
-  quitFlag     = FALSE;
+  pauseFlag               = FALSE;
+  quitFlag                = FALSE;
 
   /* init server sockets */
-  if (serverPort != 0)
+  if (port != 0)
   {
     error = Network_initServer(&serverSocketHandle,
-                               serverPort,
+                               port,
                                SERVER_TYPE_PLAIN,
                                NULL,
                                NULL,
@@ -3812,18 +3829,18 @@ Errors Server_run(uint           serverPort,
     if (error != ERROR_NONE)
     {
       printError("Cannot initialize server at port %d (error: %s)!\n",
-                 serverPort,
+                 port,
                  getErrorText(error)
                 );
       return FALSE;
     }
-    printInfo(1,"Started server on port %d\n",serverPort);
+    printInfo(1,"Started server on port %d\n",port);
   }
-  if (serverTLSPort != 0)
+  if (tlsPort != 0)
   {
     #ifdef HAVE_GNU_TLS
       error = Network_initServer(&serverTLSSocketHandle,
-                                 serverTLSPort,
+                                 tlsPort,
                                  SERVER_TYPE_TLS,
                                  caFileName,
                                  certFileName,
@@ -3832,13 +3849,13 @@ Errors Server_run(uint           serverPort,
       if (error != ERROR_NONE)
       {
         printError("Cannot initialize TLS/SSL server at port %d (error: %s)!\n",
-                   serverTLSPort,
+                   tlsPort,
                    getErrorText(error)
                   );
-        if (serverPort != 0) Network_doneServer(&serverSocketHandle);
+        if (port != 0) Network_doneServer(&serverSocketHandle);
         return FALSE;
       }
-      printInfo(1,"Started TLS/SSL server on port %d\n",serverTLSPort);
+      printInfo(1,"Started TLS/SSL server on port %d\n",tlsPort);
   #else /* not HAVE_GNU_TLS */
     printError("TLS/SSL server is not supported!\n");
     Network_doneServer(&serverSocketHandle);
@@ -3847,23 +3864,25 @@ Errors Server_run(uint           serverPort,
   }
 
   /* start threads */
-  if (!Thread_init(&jobThread,0,jobThreadEntry,NULL))
+  if (!Thread_init(&jobThread,globalOptions.niceLevel,jobThreadEntry,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialise job thread!");
   }
-  if (!Thread_init(&schedulerThread,0,schedulerThreadEntry,NULL))
+#if 1
+  if (!Thread_init(&schedulerThread,globalOptions.niceLevel,schedulerThreadEntry,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialise scheduler thread!");
   }
+#endif /* 0 */
 
   /* run server */
-  name = String_new();
+  clientName = String_new();
   while (!quitFlag)
   {
     /* wait for command */
     FD_ZERO(&selectSet);
-    if (serverPort    != 0) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
-    if (serverTLSPort != 0) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
+    if (port    != 0) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
+    if (tlsPort != 0) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
     clientNode = clientList.head;
     while (clientNode != NULL)
     {
@@ -3873,7 +3892,7 @@ Errors Server_run(uint           serverPort,
     select(FD_SETSIZE,&selectSet,NULL,NULL,NULL);
 
     /* connect new clients */
-    if ((serverPort != 0) && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
+    if ((port != 0) && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
     {
       error = Network_accept(&socketHandle,
                              &serverSocketHandle,
@@ -3881,10 +3900,10 @@ Errors Server_run(uint           serverPort,
                             );
       if (error == ERROR_NONE)
       {
-        Network_getRemoteInfo(&socketHandle,name,&port);
+        Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
         clientNode = newClient();
         assert(clientNode != NULL);
-        initNetworkClient(&clientNode->clientInfo,name,port,socketHandle);
+        initNetworkClient(&clientNode->clientInfo,clientName,clientPort,socketHandle);
         List_append(&clientList,clientNode);
 
         printInfo(1,"Connected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
@@ -3896,7 +3915,7 @@ Errors Server_run(uint           serverPort,
                   );
       }
     }
-    if ((serverTLSPort != 0) && FD_ISSET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet))
+    if ((tlsPort != 0) && FD_ISSET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet))
     {
       error = Network_accept(&socketHandle,
                              &serverTLSSocketHandle,
@@ -3904,10 +3923,10 @@ Errors Server_run(uint           serverPort,
                             );
       if (error == ERROR_NONE)
       {
-        Network_getRemoteInfo(&socketHandle,name,&port);
+        Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
         clientNode = newClient();
         assert(clientNode != NULL);
-        initNetworkClient(&clientNode->clientInfo,name,port,socketHandle);
+        initNetworkClient(&clientNode->clientInfo,clientName,clientPort,socketHandle);
         List_append(&clientList,clientNode);
 
         printInfo(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
@@ -3991,15 +4010,15 @@ Errors Server_run(uint           serverPort,
       }
     }
   }
-  String_delete(name);
+  String_delete(clientName);
 
   /* wait for thread exit */
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);
 
   /* done server */
-  if (serverPort    != 0) Network_doneServer(&serverSocketHandle);
-  if (serverTLSPort != 0) Network_doneServer(&serverTLSSocketHandle);
+  if (port    != 0) Network_doneServer(&serverSocketHandle);
+  if (tlsPort != 0) Network_doneServer(&serverTLSSocketHandle);
 
   /* free resources */
   List_done(&clientList,(ListNodeFreeFunction)freeClientNode,NULL);
