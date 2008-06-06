@@ -2,6 +2,9 @@
   * integrated scheduler in bar
   * added pause/continue of jobs
   * some internal bug fixes
+  * improved response time of barcontrol.tcl by read/write-locking
+    of shared data structures in server
+  * implemented archive name editor in barcontrol.tcl
   * clean-up barcontrol.tcl
   * added FTP protocol
   * changed some option names for better consistency

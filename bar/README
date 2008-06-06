@@ -86,7 +86,8 @@ For encryption the algorithms of the gcrypt library are
 used. The BAR archive files are not encrypted in a single
 block, instead each file is encrypted. The archive file
 structure is readable (an BAR archive is organized in
-"chunks"), thus everybody can detect e. g. how many files
+"chunks"; see archiv_format.def if you are interested in
+details), thus everybody can detect e. g. how many files
 are stored in the archive, but nobody except the owner of
 the passphrase used for encryption can read the contents of
 the files nor the file meta data, e. g. file names (as long
@@ -103,7 +104,16 @@ directly on DVD. An ISO image can also be created first e.
 g. with mkisofs. BAR support external pre- and
 post-processing commands when creating an ISO-image and
 burning a DVD. With these commands e. g. dvdisaster can be
-integrated into BAR to create RS-protected backup DVDs
+integrated into BAR to create RS-protected backup DVDs.
+
+The following external tools are needed with the default
+settings of BAR to create an DVD:
+
+- growisofs
+- mkisofs
+- dvdisaster
+- eject
+- nice
 
 --- Graphical frontend
 
@@ -133,6 +143,10 @@ Install TclTk TLS package:
   ./configure --with-ssl-dir=/usr
   make
   make install
+
+--- License
+
+BAR and all files are under the GPL version 2.
 
 --- Contact
 
