@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/semaphores.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -26,12 +26,25 @@
 
 /***************************** Datatypes *******************************/
 
+typedef enum
+{
+  SEMAPHORE_LOCK_TYPE_NONE,
+  SEMAPHORE_LOCK_TYPE_READ,
+  SEMAPHORE_LOCK_TYPE_READ_WRITE,
+} SemaphoreLockTypes;
+
 typedef struct
 {
-  pthread_mutex_t     lock;
-  pthread_mutexattr_t lockAttributes;
-  uint                lockCount;
-  pthread_cond_t      modified;
+  pthread_mutex_t     requestLock;       // lock to update request counters
+  pthread_mutex_t     lock;              // lock
+//  pthread_mutexattr_t lockAttributes;
+  SemaphoreLockTypes  lockType;          // current lock type
+  uint                readRequestCount;  // number of pending read locks
+  uint                readLockCount;     // number of read locks
+  uint                writeRequestCount; // number of pending read/write locks
+  uint                writeLockCount;    // number of read/write locks
+  pthread_cond_t      readLockZero;      // signal read-lock is 0
+  pthread_cond_t      modified;          // signal modified
   bool                endFlag;
 } Semaphore;
 
@@ -100,7 +113,9 @@ void Semaphore_delete(Semaphore *semaphore);
 * Notes  : -
 \***********************************************************************/
 
-void Semaphore_lock(Semaphore *semaphore);
+void Semaphore_lock(Semaphore          *semaphore,
+                    SemaphoreLockTypes semaphoreLockType
+                   );
 
 /***********************************************************************\
 * Name   : Semaphore_unlock
@@ -123,6 +138,18 @@ void Semaphore_unlock(Semaphore *semaphore);
 \***********************************************************************/
 
 void Semaphore_waitModified(Semaphore *semaphore);
+
+/***********************************************************************\
+* Name   : Semaphore_checkPending
+* Purpose: check if thread is pending for semaphore
+* Input  : semaphore - semaphore
+* Output : -
+* Return : TRUE iff other thread is pending for semaphore, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Semaphore_checkPending(Semaphore *semaphore);
 
 /***********************************************************************\
 * Name   : Semaphore_setEndOfMail
