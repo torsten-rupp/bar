@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/threads.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: thread functions
 * Systems: all
@@ -81,6 +81,17 @@ void Thread_done(Thread *thread);
 \***********************************************************************/
 
 void Thread_join(Thread *thread);
+
+/***********************************************************************\
+* Name   : Thread_yield
+* Purpose: reschedule thread execution
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Thread_yield(void);
 
 #ifdef __cplusplus
   }

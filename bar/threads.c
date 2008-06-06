@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/threads.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: thread functions
 * Systems: all
@@ -119,6 +119,11 @@ void Thread_join(Thread *thread)
   assert(thread != NULL);
 
   pthread_join(thread->handle,NULL);
+}
+
+void Thread_yield(void)
+{
+  sched_yield();
 }
 
 #ifdef __cplusplus
