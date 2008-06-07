@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.58 $
+* $Revision: 1.59 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -341,8 +341,8 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                          FALSE,                                                             "output version"                                                           ),
   CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                             FALSE,                                                             "output this help"                                                         ),
-  CMD_OPTION_BOOLEAN      ("xhelp",                        'h',0,0,xhelpFlag,                                            FALSE,                                                             "output help to extended options"                                          ),
-  CMD_OPTION_BOOLEAN      ("help-internal",                'h',1,0,helpInternalFlag,                                     FALSE,                                                             "output help to internal options"                                          ),
+  CMD_OPTION_BOOLEAN      ("xhelp",                        0,  0,0,xhelpFlag,                                            FALSE,                                                             "output help to extended options"                                          ),
+  CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                                     FALSE,                                                             "output help to internal options"                                          ),
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value);
@@ -721,8 +721,9 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
          )
       {
         if (printInfoFlag) printf("FAIL!\n");
-        printError("Unknown or invalid config value '%s' in %s, line %ld\n",
+        printError("Unknown or invalid config '%s' with value '%s' in %s, line %ld\n",
                    String_cString(name),
+                   String_cString(value),
                    String_cString(fileName),
                    lineNb
                   );
@@ -733,10 +734,10 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     else
     {
       if (printInfoFlag) printf("FAIL!\n");
-      printError("Error in %s, line %ld: '%s'\n",
+      printError("Unknown config entry '%s' in %s, line %ld\n",
+                 String_cString(line),
                  String_cString(fileName),
-                 lineNb,
-                 String_cString(line)
+                 lineNb
                 );
       failFlag = TRUE;
       break;
@@ -2068,7 +2069,7 @@ int main(int argc, const char *argv[])
 
   /* read all configuration files */
   fileName = String_new();
-  printInfoFlag = !globalOptions.quietFlag;
+  printInfoFlag = daemonFlag;
   while (StringList_getFirst(&configFileNameList,fileName) != NULL)
   {
     if (!readConfigFile(fileName,printInfoFlag))

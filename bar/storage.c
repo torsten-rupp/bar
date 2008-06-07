@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -47,15 +47,6 @@
 
 #define DVD_VOLUME_SIZE            MAX_DVD_SIZE
 #define DVD_VOLUME_ECC_SIZE        (3600LL*1024LL*1024LL)
-
-/*
-#define DVD_UNLOAD_VOLUME_COMMAND  "eject -r %device"
-#define DVD_LOAD_VOLUME_COMMAND    "eject -t %device"
-#define DVD_WRITE_COMMAND          "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file"
-#define DVD_IMAGE_COMMAND          "nice mkisofs -V Backup -volset %number -r -o %image %file"
-#define DVD_ECC_COMMAND            "nice dvdisaster -mRS02 -n dvd -c -i %image -v"
-#define DVD_WRITE_IMAGE_COMMAND    "nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload"
-*/
 
 /***************************** Datatypes *******************************/
 
