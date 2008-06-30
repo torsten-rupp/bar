@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/semaphores.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -96,9 +96,12 @@ LOCAL void lock(Semaphore          *semaphore,
                )
 {
   assert(semaphore != NULL);
+  assert((semaphoreLockType == SEMAPHORE_LOCK_TYPE_READ) || (semaphoreLockType == SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
   switch (semaphoreLockType)
   {
+    case SEMAPHORE_LOCK_TYPE_NONE:
+      break;
     case SEMAPHORE_LOCK_TYPE_READ:
       // request read lock
       pthread_mutex_lock(&semaphore->requestLock);
@@ -159,6 +162,8 @@ LOCAL void unlock(Semaphore *semaphore)
 
   switch (semaphore->lockType)
   {
+    case SEMAPHORE_LOCK_TYPE_NONE:
+      break;
     case SEMAPHORE_LOCK_TYPE_READ:
       // lock
       LOCK(DEBUG_READ,"R",&semaphore->lock);
@@ -209,6 +214,8 @@ LOCAL void waitModified(Semaphore *semaphore)
 
   switch (semaphore->lockType)
   {
+    case SEMAPHORE_LOCK_TYPE_NONE:
+      break;
     case SEMAPHORE_LOCK_TYPE_READ:
       // lock
       LOCK(DEBUG_READ,"R",&semaphore->lock);

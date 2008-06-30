@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.26 $
+# $Revision: 1.27 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -37,6 +37,8 @@ LD_STATIC_PREFIX    = -Wl,-static
 
 #---------------------------------- commands----------------------------------
 
+CAT        = cat
+CHMOD      = chmod
 CP         = cp
 DIFF       = diff
 ECHO       = echo
@@ -44,6 +46,7 @@ ECHO_NO_LF = echo -n
 INSTALL    = @INSTALL@
 MKDIR      = mkdir
 PERL       = @PERL@
+RMDIR      = rmdir
 RMF        = rm -f
 RMRF       = rm -rf
 TAR        = tar
@@ -51,7 +54,7 @@ TAR        = tar
 #------------------------ specific variables/settings ------------------------
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 07
+VERSION_MINOR = 07a
 
 CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
@@ -142,6 +145,7 @@ TLS_FILES            = bar-key.pem \
                        bar-server-cert.pem \
 
 TARGETS              = bar \
+                       bar-keygen \
                        destroyer \
 
 #------------------------------ dependencies ---------------------------------
@@ -177,6 +181,21 @@ Makefile.depend: $(BAR_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
 
 # create BAR
 bar@EXEEXT@: $(BAR_OBJECTS)
+
+CA.TEMPL=123
+
+# create bar-keygen script
+bar-keygen: bar-keygen.in
+	$(CAT) bar-keygen.in | \
+        ( \
+          while IFS="" read -r line; do \
+            line=$${line//\@DESTDIR\@/$(DESTDIR)}; \
+            line=$${line//\@TLS_DIR\@/$(TLS_DIR)}; \
+            line=$${line//\@CA.TEMPL\@/$(CA.TEMPL)}; \
+            $(ECHO) "$$line"; \
+          done; \
+        ) > $@
+	$(CHMOD) 775 $@
 
 # error definition
 errors.h: errors.def
@@ -246,26 +265,30 @@ doc: doc/bar.7
 # install/uninstall
 .PHONY: install uninstall
 install:
-	if test ! -d "$(DESTDIR)$(INSTALL_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(INSTALL_DIR)"; fi
-	if test ! -d "$(DESTDIR)$(INSTALL_BIN_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"; fi
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_DIR)"
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	if test ! -d "$(DESTDIR)$(CONFIG_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)"; fi
+	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)"
 	if test ! -f "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; then $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(CONFIG_DIR)"; else echo "$(DESTDIR)$(CONFIG_DIR)/bar.cfg NOT installed - file already exists!"; fi
-	if test ! -d "$(DESTDIR)$(TLS_DIR)"; then $(INSTALL) -d "$(DESTDIR)$(TLS_DIR)"; fi
-	if test ! -d "$(DESTDIR)$(TLS_DIR)/certs"; then $(INSTALL) -d "$(DESTDIR)$(TLS_DIR)/certs"; fi
+	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)/jobs"
+	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)"
+	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)/certs"
 	$(INSTALL) -m 644 bar-ca.pem "$(DESTDIR)$(TLS_DIR)/certs"
 	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(TLS_DIR)/certs"
-	if test ! -d "$(DESTDIR)$(TLS_DIR)/private"; then $(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"; fi
+	$(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"
 	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(TLS_DIR)/private"
 	$(MAKE) -C tcl/scanx install
 	$(MAKE) -C tcl/mclistbox install
 
-uinstall:
-	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"
-	$(RMF) "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"
-	$(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-ca.pem"
-	$(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-server-cert.pem"
-	$(RMF) "$(DESTDIR)$(TLS_DIR)/private/bar-server-key.pem"
+uninstall:
+	@read -n 1 -p "Really uninstall? [y/N] " s; \
+        if test "$s" = "y" -o "$s" = "Y"; then \
+          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"; \
+          $(RMF) "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; \
+          $(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-ca.pem"; \
+          $(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-server-cert.pem"; \
+          $(RMF) "$(DESTDIR)$(TLS_DIR)/private/bar-server-key.pem"; \
+        fi
 
 # run server
 .PHONY: barserver barserver_ssl

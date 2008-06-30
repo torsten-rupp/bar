@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -154,6 +154,9 @@ void Crypt_randomize(byte *buffer, uint length)
 
   #ifdef HAVE_GCRYPT
     gcry_randomize((unsigned char*)buffer,length,GCRY_STRONG_RANDOM);
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(buffer);
+    UNUSED_VARIABLE(length);
   #endif /* HAVE_GCRYPT */
 }
 
@@ -404,6 +407,7 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
     #endif /* 0 */
         }
       #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(password);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GCRYPT */
       break;
@@ -512,6 +516,7 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
           }
         }
       #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(seed);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GCRYPT */
       break;
@@ -561,6 +566,9 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
           return ERROR_ENCRYPT_FAIL;
         }
       #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(buffer);
+        UNUSED_VARIABLE(bufferLength);
+        UNUSED_VARIABLE(gcryptError);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GCRYPT */
       break;
@@ -610,6 +618,9 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
         return ERROR_ENCRYPT_FAIL;
       }
       #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(buffer);
+        UNUSED_VARIABLE(bufferLength);
+        UNUSED_VARIABLE(gcryptError);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GCRYPT */
       break;

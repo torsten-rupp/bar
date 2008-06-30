@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.59 $
+* $Revision: 1.60 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -193,29 +193,33 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS[] =
   {"zip8", COMPRESS_ALGORITHM_ZIP_8,  "ZIP compression level 8"  },
   {"zip9", COMPRESS_ALGORITHM_ZIP_9,  "ZIP compression level 9"  },
 
-  {"bzip1",COMPRESS_ALGORITHM_BZIP2_1,"BZIP2 compression level 1"},
-  {"bzip2",COMPRESS_ALGORITHM_BZIP2_2,"BZIP2 compression level 2"},
-  {"bzip3",COMPRESS_ALGORITHM_BZIP2_3,"BZIP2 compression level 3"},
-  {"bzip4",COMPRESS_ALGORITHM_BZIP2_4,"BZIP2 compression level 4"},
-  {"bzip5",COMPRESS_ALGORITHM_BZIP2_5,"BZIP2 compression level 5"},
-  {"bzip6",COMPRESS_ALGORITHM_BZIP2_6,"BZIP2 compression level 6"},
-  {"bzip7",COMPRESS_ALGORITHM_BZIP2_7,"BZIP2 compression level 7"},
-  {"bzip8",COMPRESS_ALGORITHM_BZIP2_8,"BZIP2 compression level 8"},
-  {"bzip9",COMPRESS_ALGORITHM_BZIP2_9,"BZIP2 compression level 9"},
+  #ifdef HAVE_BZ2
+    {"bzip1",COMPRESS_ALGORITHM_BZIP2_1,"BZIP2 compression level 1"},
+    {"bzip2",COMPRESS_ALGORITHM_BZIP2_2,"BZIP2 compression level 2"},
+    {"bzip3",COMPRESS_ALGORITHM_BZIP2_3,"BZIP2 compression level 3"},
+    {"bzip4",COMPRESS_ALGORITHM_BZIP2_4,"BZIP2 compression level 4"},
+    {"bzip5",COMPRESS_ALGORITHM_BZIP2_5,"BZIP2 compression level 5"},
+    {"bzip6",COMPRESS_ALGORITHM_BZIP2_6,"BZIP2 compression level 6"},
+    {"bzip7",COMPRESS_ALGORITHM_BZIP2_7,"BZIP2 compression level 7"},
+    {"bzip8",COMPRESS_ALGORITHM_BZIP2_8,"BZIP2 compression level 8"},
+    {"bzip9",COMPRESS_ALGORITHM_BZIP2_9,"BZIP2 compression level 9"},
+  #endif /* HAVE_BZ2 */
 };
 
 LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
 {
   {"none",      CRYPT_ALGORITHM_NONE,      "no crypting"          },
 
-  {"3DES",      CRYPT_ALGORITHM_3DES,      "3DES cipher"          },
-  {"CAST5",     CRYPT_ALGORITHM_CAST5,     "CAST5 cipher"         },
-  {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH,  "Blowfish cipher"      },
-  {"AES128",    CRYPT_ALGORITHM_AES128,    "AES cipher 128bit"    },
-  {"AES192",    CRYPT_ALGORITHM_AES192,    "AES cipher 192bit"    },
-  {"AES256",    CRYPT_ALGORITHM_AES256,    "AES cipher 256bit"    },
-  {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128,"Twofish cipher 128bit"},
-  {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256,"Twofish cipher 256bit"},
+  #ifdef HAVE_GCRYPT
+    {"3DES",      CRYPT_ALGORITHM_3DES,      "3DES cipher"          },
+    {"CAST5",     CRYPT_ALGORITHM_CAST5,     "CAST5 cipher"         },
+    {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH,  "Blowfish cipher"      },
+    {"AES128",    CRYPT_ALGORITHM_AES128,    "AES cipher 128bit"    },
+    {"AES192",    CRYPT_ALGORITHM_AES192,    "AES cipher 192bit"    },
+    {"AES256",    CRYPT_ALGORITHM_AES256,    "AES cipher 256bit"    },
+    {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128,"Twofish cipher 128bit"},
+    {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256,"Twofish cipher 256bit"},
+  #endif /* HAVE_GCRYPT */
 };
 
 LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
@@ -381,29 +385,33 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
   {"zip8", COMPRESS_ALGORITHM_ZIP_8, },
   {"zip9", COMPRESS_ALGORITHM_ZIP_9, },
 
-  {"bzip1",COMPRESS_ALGORITHM_BZIP2_1},
-  {"bzip2",COMPRESS_ALGORITHM_BZIP2_2},
-  {"bzip3",COMPRESS_ALGORITHM_BZIP2_3},
-  {"bzip4",COMPRESS_ALGORITHM_BZIP2_4},
-  {"bzip5",COMPRESS_ALGORITHM_BZIP2_5},
-  {"bzip6",COMPRESS_ALGORITHM_BZIP2_6},
-  {"bzip7",COMPRESS_ALGORITHM_BZIP2_7},
-  {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
-  {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
+  #ifdef HAVE_BZ2
+    {"bzip1",COMPRESS_ALGORITHM_BZIP2_1},
+    {"bzip2",COMPRESS_ALGORITHM_BZIP2_2},
+    {"bzip3",COMPRESS_ALGORITHM_BZIP2_3},
+    {"bzip4",COMPRESS_ALGORITHM_BZIP2_4},
+    {"bzip5",COMPRESS_ALGORITHM_BZIP2_5},
+    {"bzip6",COMPRESS_ALGORITHM_BZIP2_6},
+    {"bzip7",COMPRESS_ALGORITHM_BZIP2_7},
+    {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
+    {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
+  #endif /* HAVE_BZ2 */
 };
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
 {
   {"none",      CRYPT_ALGORITHM_NONE,     },
 
-  {"3DES",      CRYPT_ALGORITHM_3DES,     },
-  {"CAST5",     CRYPT_ALGORITHM_CAST5,    },
-  {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH, },
-  {"AES128",    CRYPT_ALGORITHM_AES128,   },
-  {"AES192",    CRYPT_ALGORITHM_AES192,   },
-  {"AES256",    CRYPT_ALGORITHM_AES256,   },
-  {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128},
-  {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256},
+  #ifdef HAVE_GCRYPT
+    {"3DES",      CRYPT_ALGORITHM_3DES,     },
+    {"CAST5",     CRYPT_ALGORITHM_CAST5,    },
+    {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH, },
+    {"AES128",    CRYPT_ALGORITHM_AES128,   },
+    {"AES192",    CRYPT_ALGORITHM_AES192,   },
+    {"AES256",    CRYPT_ALGORITHM_AES256,   },
+    {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128},
+    {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256},
+  #endif /* HAVE_GCRYPT */
 };
 
 LOCAL const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
@@ -1987,6 +1995,9 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
         break;
       case ARCHIVE_TYPE_INCREMENTAL:
         String_appendCString(line,"INCREMENTAL");
+        break;
+      case ARCHIVE_TYPE_UNKNOWN:
+        return FALSE;
         break;
       #ifndef NDEBUG
         default:

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -280,13 +280,16 @@ Errors Misc_executeCommand(const char        *commandTemplate,
                           )
 {
   Errors          error;
-  String          command;
-  StringList      argumentList;
+  String          s;
+  String          commandLine;
   StringTokenizer stringTokenizer;
   String          token;
-  String          argument;
+  String          command;
+  StringList      argumentList;
+  const char      *path;
+  String          fileName;
+  bool            foundFlag;
   char const      **arguments;
-  String          s;
   StringNode      *argumentNode;
   int             pipeStdin[2],pipeStdout[2],pipeStderr[2];
   int             pid;
@@ -295,46 +298,61 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   int             status;
   String          stdoutLine,stderrLine;
   int             exitcode;
+  int             terminateSignal;
 
   error = ERROR_NONE;
   if (commandTemplate != NULL)
   {
-    command = String_new();
+    commandLine = String_new();
+    command     = File_newFileName();
     StringList_init(&argumentList);
 
+    /* expand command line */
+    s = String_newCString(commandTemplate);
+    Misc_expandMacros(commandLine,s,macros,macroCount);
+    String_delete(s);
+    printInfo(3,"Execute command '%s'...",String_cString(commandLine));
+
     /* parse command */
-    String_initTokenizerCString(&stringTokenizer,commandTemplate,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
+    String_initTokenizer(&stringTokenizer,commandLine,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
     if (!String_getNextToken(&stringTokenizer,&token,NULL))
     {
       String_doneTokenizer(&stringTokenizer);
       StringList_done(&argumentList);
       String_delete(command);
+      String_delete(commandLine);
       return ERROR_EXEC_FAIL;
     }
-    Misc_expandMacros(command,token,macros,macroCount);
+    File_setFileName(command,token);
 
     /* parse arguments */
-    argument = String_new();
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
-      Misc_expandMacros(argument,token,macros,macroCount);
-      StringList_append(&argumentList,argument);
+      StringList_append(&argumentList,token);
     }
     String_doneTokenizer(&stringTokenizer);
-    String_delete(argument);
 
-    /* get command */
-    s = String_new();
-    String_append(s,command);
-    argumentNode = argumentList.head;
-    while (argumentNode != NULL)
+    /* find command */
+    path = getenv("PATH");
+    if (path != NULL)
     {
-      String_appendChar(s,' ');
-      String_append(s,argumentNode->string);
-      argumentNode = argumentNode->next;
+      fileName  = File_newFileName();
+      foundFlag = FALSE;
+      String_initTokenizerCString(&stringTokenizer,path,":","",FALSE);
+      while (String_getNextToken(&stringTokenizer,&token,NULL) && !foundFlag)
+      {
+        File_setFileName(fileName,token);
+        File_appendFileName(fileName,command);
+        if (File_exists(fileName))
+        {
+          File_setFileName(command,fileName);
+          foundFlag = TRUE;
+        }
+      }
+      String_doneTokenizer(&stringTokenizer);
+      File_deleteFileName(fileName);
     }
-    printInfo(3,"Execute command '%s'...",String_cString(s));
-    String_delete(s);
+
 #if 0
 fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(command));
 stringNode = argumentList.head;
@@ -354,6 +372,7 @@ stringNode = stringNode->next;
                 );
       StringList_done(&argumentList);
       String_delete(command);
+      String_delete(commandLine);
       return ERROR_EXEC_FAIL;
     }
     if (pipe(pipeStdout) != 0)
@@ -365,6 +384,7 @@ stringNode = stringNode->next;
       close(pipeStdin[1]);
       StringList_done(&argumentList);
       String_delete(command);
+      String_delete(commandLine);
       return ERROR_EXEC_FAIL;
     }
     if (pipe(pipeStderr) != 0)
@@ -378,6 +398,7 @@ stringNode = stringNode->next;
       close(pipeStdin[1]);
       StringList_done(&argumentList);
       String_delete(command);
+      String_delete(commandLine);
       return ERROR_EXEC_FAIL;
     }
 
@@ -385,7 +406,8 @@ stringNode = stringNode->next;
     pid = fork();
     if      (pid == 0)
     {
-      /* close stdin, stdout, and stderr and reassign them to the  pipes */
+#if 1
+      /* close stdin, stdout, and stderr and reassign them to the pipes */
       close(STDERR_FILENO);
       close(STDOUT_FILENO);
       close(STDIN_FILENO);
@@ -401,10 +423,11 @@ stringNode = stringNode->next;
       close(pipeStderr[0]);
       close(pipeStdout[0]);
       close(pipeStdin[1]);
+#endif /* 0 */
 
       /* execute of external program */
       n = 1+StringList_count(&argumentList)+1;
-      arguments = (char const**)malloc((1000+n)*sizeof(char*));
+      arguments = (char const**)malloc(n*sizeof(char*));
       if (arguments == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
@@ -441,6 +464,7 @@ HALT_INTERNAL_ERROR("not reachable");
       close(pipeStdin[1]);
       StringList_done(&argumentList);
       String_delete(command);
+      String_delete(commandLine);
       return ERROR_EXEC_FAIL;
     }
 
@@ -455,7 +479,7 @@ error = ERROR_NONE;
     /* wait until process terminate and read stdout/stderr */
     stdoutLine = String_new();
     stderrLine = String_new();
-    while ((waitpid(pid,&status,WNOHANG) == 0) || !WIFEXITED(status))
+    while ((waitpid(pid,&status,WNOHANG) == 0) || (!WIFEXITED(status) && !WIFSIGNALED(status)))
     {
       if (readProcessIO(pipeStdout[0],stdoutLine))
       {
@@ -485,27 +509,51 @@ error = ERROR_NONE;
     String_delete(stderrLine);
     String_delete(stdoutLine);
 
-    /* check exit code */
-    exitcode = WEXITSTATUS(status);
-    if (exitcode != 0)
-    {
-      printError("Execute extern command '%s' fail (exitcode: %d)!\n",
-                 String_cString(command),
-                 exitcode
-                );
-      StringList_done(&argumentList);
-      String_delete(command);
-      return ERROR(EXEC_FAIL,exitcode);
-    }
-
-    printInfo(3,"ok (exitcode %d)\n",exitcode);
-
-    /* free resources */
+    /* close i/o */
     close(pipeStderr[0]);
     close(pipeStdout[0]);
     close(pipeStdin[1]);
+
+    /* check exit code */
+    exitcode = -1;
+    if      (WIFEXITED(status))
+    {
+      exitcode = WEXITSTATUS(status);
+      printInfo(3,"ok (exitcode %d)\n",exitcode);
+      if (exitcode != 0)
+      {
+        printError("Execute external command '%s' fail (exitcode: %d)!\n",
+                   String_cString(command),
+                   exitcode
+                  );
+        StringList_done(&argumentList);
+        String_delete(command);
+        String_delete(commandLine);
+        return ERROR(EXEC_FAIL,exitcode);
+      }
+    }
+    else if (WIFSIGNALED(status))
+    {
+      terminateSignal = WTERMSIG(status);
+      printInfo(3,"FAIL (signal %d)\n",terminateSignal);
+      printError("Execute external command '%s' fail (signal: %d)!\n",
+                 String_cString(command),
+                 terminateSignal
+                );
+      StringList_done(&argumentList);
+      String_delete(command);
+      String_delete(commandLine);
+      return ERROR(EXEC_FAIL,terminateSignal);
+    }
+    else
+    {
+      printInfo(3,"ok (unknown exit)\n");
+    }
+
+    /* free resources */
     StringList_done(&argumentList);
     String_delete(command);
+    String_delete(commandLine);
   }
 
   return error;

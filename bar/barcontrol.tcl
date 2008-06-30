@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.29 $
+# $Revision: 1.30 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -195,6 +195,7 @@ set jobStatus(requestedVolumeNumberDialogFlag) 0
 set jobStatus(message)                         ""
 
 set selectedJob(id)                        0
+set selectedJob(name)                      ""
 set selectedJob(storageType)               ""
 set selectedJob(storageFileName)           ""
 set selectedJob(storageLoginName)          ""
@@ -3018,30 +3019,30 @@ proc updateStatus { } \
 #puts "2: ok"
       if {$jobStatus(error) != ""} { set jobStatus(message) $jobStatus(error) }
 
-      if     {$jobStatus(doneBytes)            > 1024*1024*1024} { set jobStatus(doneBytesShort)             [format "%.1f" [expr {double($jobStatus(doneBytes)            )/(1024*1024*1024)}]]; set jobStatus(doneBytesShortUnit)             "GBytes"   } \
-      elseif {$jobStatus(doneBytes)            >      1024*1024} { set jobStatus(doneBytesShort)             [format "%.1f" [expr {double($jobStatus(doneBytes)            )/(     1024*1024)}]]; set jobStatus(doneBytesShortUnit)             "MBytes"   } \
-      else                                                       { set jobStatus(doneBytesShort)             [format "%.1f" [expr {double($jobStatus(doneBytes)            )/(          1024)}]]; set jobStatus(doneBytesShortUnit)             "KBytes"   }
-      if     {$jobStatus(totalBytes)           > 1024*1024*1024} { set jobStatus(totalBytesShort)            [format "%.1f" [expr {double($jobStatus(totalBytes)           )/(1024*1024*1024)}]]; set jobStatus(totalBytesShortUnit)            "GBytes"   } \
-      elseif {$jobStatus(totalBytes)           >      1024*1024} { set jobStatus(totalBytesShort)            [format "%.1f" [expr {double($jobStatus(totalBytes)           )/(     1024*1024)}]]; set jobStatus(totalBytesShortUnit)            "MBytes"   } \
-      else                                                       { set jobStatus(totalBytesShort)            [format "%.1f" [expr {double($jobStatus(totalBytes)           )/(          1024)}]]; set jobStatus(totalBytesShortUnit)            "KBytes"   }
-      if     {$jobStatus(skippedBytes)         > 1024*1024*1024} { set jobStatus(skippedBytesShort)          [format "%.1f" [expr {double($jobStatus(skippedBytes)         )/(1024*1024*1024)}]]; set jobStatus(skippedBytesShortUnit)          "GBytes"   } \
-      elseif {$jobStatus(skippedBytes)         >      1024*1024} { set jobStatus(skippedBytesShort)          [format "%.1f" [expr {double($jobStatus(skippedBytes)         )/(     1024*1024)}]]; set jobStatus(skippedBytesShortUnit)          "MBytes"   } \
-      else                                                       { set jobStatus(skippedBytesShort)          [format "%.1f" [expr {double($jobStatus(skippedBytes)         )/(          1024)}]]; set jobStatus(skippedBytesShortUnit)          "KBytes"   }
-      if     {$jobStatus(errorBytes)           > 1024*1024*1024} { set jobStatus(errorBytesShort)            [format "%.1f" [expr {double($jobStatus(errorBytes)           )/(1024*1024*1024)}]]; set jobStatus(errorBytesShortUnit)            "GBytes"   } \
-      elseif {$jobStatus(errorBytes)           >      1024*1024} { set jobStatus(errorBytesShort)            [format "%.1f" [expr {double($jobStatus(errorBytes)           )/(     1024*1024)}]]; set jobStatus(errorBytesShortUnit)            "MBytes"   } \
-      else                                                       { set jobStatus(errorBytesShort)            [format "%.1f" [expr {double($jobStatus(errorBytes)           )/(          1024)}]]; set jobStatus(errorBytesShortUnit)            "KBytes"   }
-      if     {$jobStatus(bytesPerSecond)       > 1024*1024*1024} { set jobStatus(bytesPerSecondShort)        [format "%.1f" [expr {double($jobStatus(bytesPerSecond)       )/(1024*1024*1024)}]]; set jobStatus(bytesPerSecondUnit)             "GBytes/s" } \
-      elseif {$jobStatus(bytesPerSecond)       >      1024*1024} { set jobStatus(bytesPerSecondShort)        [format "%.1f" [expr {double($jobStatus(bytesPerSecond)       )/(     1024*1024)}]]; set jobStatus(bytesPerSecondShortUnit)        "MBytes/s" } \
-      else                                                       { set jobStatus(bytesPerSecondShort)        [format "%.1f" [expr {double($jobStatus(bytesPerSecond)       )/(          1024)}]]; set jobStatus(bytesPerSecondShortUnit)        "KBytes/s" }
-      if     {$jobStatus(storageBytesPerSecond)> 1024*1024*1024} { set jobStatus(storageBytesPerSecondShort) [format "%.1f" [expr {double($jobStatus(storageBytesPerSecond))/(1024*1024*1024)}]]; set jobStatus(storageBytesPerSecondShortUnit) "GBytes/s" } \
-      elseif {$jobStatus(storageBytesPerSecond)>      1024*1024} { set jobStatus(storageBytesPerSecondShort) [format "%.1f" [expr {double($jobStatus(storageBytesPerSecond))/(     1024*1024)}]]; set jobStatus(storageBytesPerSecondShortUnit) "MBytes/s" } \
-      else                                                       { set jobStatus(storageBytesPerSecondShort) [format "%.1f" [expr {double($jobStatus(storageBytesPerSecond))/(          1024)}]]; set jobStatus(storageBytesPerSecondShortUnit) "KBytes/s" }
-      if     {$jobStatus(archiveBytes)         > 1024*1024*1024} { set jobStatus(archiveBytesShort)          [format "%.1f" [expr {double($jobStatus(archiveBytes)         )/(1024*1024*1024)}]]; set jobStatus(archiveBytesShortUnit)          "GBytes"   } \
-      elseif {$jobStatus(archiveBytes)         >      1024*1024} { set jobStatus(archiveBytesShort)          [format "%.1f" [expr {double($jobStatus(archiveBytes)         )/(     1024*1024)}]]; set jobStatus(archiveBytesShortUnit)          "MBytes"   } \
-      else                                                       { set jobStatus(archiveBytesShort)          [format "%.1f" [expr {double($jobStatus(archiveBytes)         )/(          1024)}]]; set jobStatus(archiveBytesShortUnit)          "KBytes"   }
-      if     {$jobStatus(storageTotalBytes)    > 1024*1024*1024} { set jobStatus(storageTotalBytesShort)     [format "%.1f" [expr {double($jobStatus(storageTotalBytes)    )/(1024*1024*1024)}]]; set jobStatus(storageTotalBytesShortUnit)     "GBytes"   } \
-      elseif {$jobStatus(storageTotalBytes)    >      1024*1024} { set jobStatus(storageTotalBytesShort)     [format "%.1f" [expr {double($jobStatus(storageTotalBytes)    )/(     1024*1024)}]]; set jobStatus(storageTotalBytesShortUnit)     "MBytes"   } \
-      else                                                       { set jobStatus(storageTotalBytesShort)     [format "%.1f" [expr {double($jobStatus(storageTotalBytes)    )/(          1024)}]]; set jobStatus(storageTotalBytesShortUnit)     "KBytes"   }
+      if     {$jobStatus(doneBytes)             > 1024*1024*1024} { set jobStatus(doneBytesShort)             [format "%.1f" [expr {double($jobStatus(doneBytes)            )/(1024*1024*1024)}]]; set jobStatus(doneBytesShortUnit)             "GBytes"   } \
+      elseif {$jobStatus(doneBytes)             >      1024*1024} { set jobStatus(doneBytesShort)             [format "%.1f" [expr {double($jobStatus(doneBytes)            )/(     1024*1024)}]]; set jobStatus(doneBytesShortUnit)             "MBytes"   } \
+      else                                                        { set jobStatus(doneBytesShort)             [format "%.1f" [expr {double($jobStatus(doneBytes)            )/(          1024)}]]; set jobStatus(doneBytesShortUnit)             "KBytes"   }
+      if     {$jobStatus(totalBytes)            > 1024*1024*1024} { set jobStatus(totalBytesShort)            [format "%.1f" [expr {double($jobStatus(totalBytes)           )/(1024*1024*1024)}]]; set jobStatus(totalBytesShortUnit)            "GBytes"   } \
+      elseif {$jobStatus(totalBytes)            >      1024*1024} { set jobStatus(totalBytesShort)            [format "%.1f" [expr {double($jobStatus(totalBytes)           )/(     1024*1024)}]]; set jobStatus(totalBytesShortUnit)            "MBytes"   } \
+      else                                                        { set jobStatus(totalBytesShort)            [format "%.1f" [expr {double($jobStatus(totalBytes)           )/(          1024)}]]; set jobStatus(totalBytesShortUnit)            "KBytes"   }
+      if     {$jobStatus(skippedBytes)          > 1024*1024*1024} { set jobStatus(skippedBytesShort)          [format "%.1f" [expr {double($jobStatus(skippedBytes)         )/(1024*1024*1024)}]]; set jobStatus(skippedBytesShortUnit)          "GBytes"   } \
+      elseif {$jobStatus(skippedBytes)          >      1024*1024} { set jobStatus(skippedBytesShort)          [format "%.1f" [expr {double($jobStatus(skippedBytes)         )/(     1024*1024)}]]; set jobStatus(skippedBytesShortUnit)          "MBytes"   } \
+      else                                                        { set jobStatus(skippedBytesShort)          [format "%.1f" [expr {double($jobStatus(skippedBytes)         )/(          1024)}]]; set jobStatus(skippedBytesShortUnit)          "KBytes"   }
+      if     {$jobStatus(errorBytes)            > 1024*1024*1024} { set jobStatus(errorBytesShort)            [format "%.1f" [expr {double($jobStatus(errorBytes)           )/(1024*1024*1024)}]]; set jobStatus(errorBytesShortUnit)            "GBytes"   } \
+      elseif {$jobStatus(errorBytes)            >      1024*1024} { set jobStatus(errorBytesShort)            [format "%.1f" [expr {double($jobStatus(errorBytes)           )/(     1024*1024)}]]; set jobStatus(errorBytesShortUnit)            "MBytes"   } \
+      else                                                        { set jobStatus(errorBytesShort)            [format "%.1f" [expr {double($jobStatus(errorBytes)           )/(          1024)}]]; set jobStatus(errorBytesShortUnit)            "KBytes"   }
+      if     {$jobStatus(bytesPerSecond)        > 1024*1024*1024} { set jobStatus(bytesPerSecondShort)        [format "%.1f" [expr {double($jobStatus(bytesPerSecond)       )/(1024*1024*1024)}]]; set jobStatus(bytesPerSecondUnit)             "GBytes/s" } \
+      elseif {$jobStatus(bytesPerSecond)        >      1024*1024} { set jobStatus(bytesPerSecondShort)        [format "%.1f" [expr {double($jobStatus(bytesPerSecond)       )/(     1024*1024)}]]; set jobStatus(bytesPerSecondShortUnit)        "MBytes/s" } \
+      else                                                        { set jobStatus(bytesPerSecondShort)        [format "%.1f" [expr {double($jobStatus(bytesPerSecond)       )/(          1024)}]]; set jobStatus(bytesPerSecondShortUnit)        "KBytes/s" }
+      if     {$jobStatus(storageBytesPerSecond) > 1024*1024*1024} { set jobStatus(storageBytesPerSecondShort) [format "%.1f" [expr {double($jobStatus(storageBytesPerSecond))/(1024*1024*1024)}]]; set jobStatus(storageBytesPerSecondShortUnit) "GBytes/s" } \
+      elseif {$jobStatus(storageBytesPerSecond) >      1024*1024} { set jobStatus(storageBytesPerSecondShort) [format "%.1f" [expr {double($jobStatus(storageBytesPerSecond))/(     1024*1024)}]]; set jobStatus(storageBytesPerSecondShortUnit) "MBytes/s" } \
+      else                                                        { set jobStatus(storageBytesPerSecondShort) [format "%.1f" [expr {double($jobStatus(storageBytesPerSecond))/(          1024)}]]; set jobStatus(storageBytesPerSecondShortUnit) "KBytes/s" }
+      if     {$jobStatus(archiveBytes)          > 1024*1024*1024} { set jobStatus(archiveBytesShort)          [format "%.1f" [expr {double($jobStatus(archiveBytes)         )/(1024*1024*1024)}]]; set jobStatus(archiveBytesShortUnit)          "GBytes"   } \
+      elseif {$jobStatus(archiveBytes)          >      1024*1024} { set jobStatus(archiveBytesShort)          [format "%.1f" [expr {double($jobStatus(archiveBytes)         )/(     1024*1024)}]]; set jobStatus(archiveBytesShortUnit)          "MBytes"   } \
+      else                                                        { set jobStatus(archiveBytesShort)          [format "%.1f" [expr {double($jobStatus(archiveBytes)         )/(          1024)}]]; set jobStatus(archiveBytesShortUnit)          "KBytes"   }
+      if     {$jobStatus(storageTotalBytes)     > 1024*1024*1024} { set jobStatus(storageTotalBytesShort)     [format "%.1f" [expr {double($jobStatus(storageTotalBytes)    )/(1024*1024*1024)}]]; set jobStatus(storageTotalBytesShortUnit)     "GBytes"   } \
+      elseif {$jobStatus(storageTotalBytes)     >      1024*1024} { set jobStatus(storageTotalBytesShort)     [format "%.1f" [expr {double($jobStatus(storageTotalBytes)    )/(     1024*1024)}]]; set jobStatus(storageTotalBytesShortUnit)     "MBytes"   } \
+      else                                                        { set jobStatus(storageTotalBytesShort)     [format "%.1f" [expr {double($jobStatus(storageTotalBytes)    )/(          1024)}]]; set jobStatus(storageTotalBytesShortUnit)     "KBytes"   }
 
       set jobStatus(filesPerSecond)   [format "%.1f" $filesPerSecond]
       set jobStatus(compressionRatio) [format "%.1f" $ratio]
@@ -3200,22 +3201,24 @@ proc clearJob {} \
 #***********************************************************************
 # Name   : selectJob
 # Purpose: select job and get settings
-# Input  : -
+# Input  : id   - job id
+#          name - job name
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc selectJob { id } \
+proc selectJob { id name } \
 {
 #if {$::selectedJob(id)==0} { return }
-#puts "selectJob $id $::selectedJob(id)"
+#puts "selectJob $id $name -- $::selectedJob(id)"
   # clear
   clearJob
 
   # disabled buttons
   .jobs.list.data configure -state disabled
   .jobs.list.new configure -state disabled
+  .jobs.list.rename configure -state disabled
   .jobs.list.delete configure -state disabled
 
   # settings
@@ -3370,8 +3373,24 @@ proc selectJob { id } \
   .jobs.list.data configure -state normal
   .jobs.list.new configure -state normal
 
-  # store id
-  set ::selectedJob(id) $id
+  # store id, name
+  set ::selectedJob(id)   $id
+  set ::selectedJob(name) $name
+}
+
+#***********************************************************************
+# Name   : seletJobFromMenu
+# Purpose: select job from jobs menu
+# Input  : id - selected id
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc seletJobFromMenu { id } \
+{
+  set name [lindex [.jobs.list.data entryconfigure $id -label] 4]
+  selectJob $id $name
 }
 
 # ----------------------------------------------------------------------
@@ -3748,7 +3767,7 @@ proc remExcludedPattern { pattern } \
 proc jobNewDialog {} \
 {
   # dialog
-  set handle [Dialog:window "Add schedule"]
+  set handle [Dialog:window "Add job"]
   Dialog:addVariable $handle result      -1
   Dialog:addVariable $handle name        ""
 
@@ -3792,8 +3811,73 @@ proc jobNewDialog {} \
   focus $handle.name.data
 
   Dialog:show $handle
-  set result [Dialog:get $handle result     ]
-  set name   [Dialog:get $handle name       ]
+  set result [Dialog:get $handle result]
+  set name   [Dialog:get $handle name  ]
+  Dialog:delete $handle
+  if {($result != 1)} { return "" }
+
+  return $name
+}
+
+#***********************************************************************
+# Name   : jobRenameDialog
+# Purpose: rename job dialog
+# Input  : name - old name
+# Output : -
+# Return : new name or "" on cancel
+# Notes  : -
+#***********************************************************************
+
+proc jobRenameDialog { name } \
+{
+  # dialog
+  set handle [Dialog:window "Rename job"]
+  Dialog:addVariable $handle result      -1
+  Dialog:addVariable $handle name        $name
+
+  frame $handle.name
+    label $handle.name.title -text "Name:"
+    grid $handle.name.title -row 0 -column 0 -sticky "w"
+    entry $handle.name.data -textvariable [Dialog:variable $handle name] -bg white
+    grid $handle.name.data -row 0 -column 1 -sticky "we"
+    bind $handle.name.data <Return> "focus $handle.buttons.rename"
+
+    grid rowconfigure    $handle.name { 0 1 } -weight 1
+    grid columnconfigure $handle.name { 1 } -weight 1
+  grid $handle.name -row 0 -column 0 -sticky "nswe" -padx 3p -pady 3p
+
+  frame $handle.buttons
+    button $handle.buttons.rename -text "Rename" -command "event generate $handle <<Event_add>>"
+    pack $handle.buttons.rename -side left -padx 2p -pady 2p
+    bind $handle.buttons.rename <Return> "$handle.buttons.rename invoke"
+    button $handle.buttons.cancel -text "Cancel" -command "event generate $handle <<Event_cancel>>"
+    pack $handle.buttons.cancel -side right -padx 2p -pady 2p
+    bind $handle.buttons.cancel <Return> "$handle.buttons.cancel invoke"
+  grid $handle.buttons -row 1 -column 0 -sticky "we"
+
+  grid rowconfigure $handle    { 0 } -weight 1
+  grid columnconfigure $handle { 0 } -weight 1
+
+  # bindings
+  bind $handle <KeyPress-Escape> "$handle.buttons.cancel invoke"
+
+  bind $handle <<Event_add>> \
+   "
+    Dialog:set $handle result 1
+    Dialog:close $handle
+   "
+  bind $handle <<Event_cancel>> \
+   "
+    Dialog:set $handle result 0
+    Dialog:close $handle
+   "
+
+  focus $handle.name.data
+  $handle.name.data icursor end
+
+  Dialog:show $handle
+  set result [Dialog:get $handle result]
+  set name   [Dialog:get $handle name  ]
   Dialog:delete $handle
   if {($result != 1)} { return "" }
 
@@ -3825,6 +3909,43 @@ proc jobNew { } \
   set errorText ""
   set result    ""
   BackupServer:executeCommand errorCode errorText "JOB_NEW $name" result
+  if {$errorCode != 0} \
+  {
+    return
+  }
+  scanx $result "%d" id
+
+  return $id
+}
+
+#***********************************************************************
+# Name   : jobRename
+# Purpose: rename job
+# Input  : id   - job id
+#          name - current job name
+# Output : -
+# Return : -
+# Notes  : -
+#***********************************************************************
+
+proc jobRename { id name } \
+{
+  global barConfig
+
+  # get old name
+
+  # new
+  set newName [jobRenameDialog $name]
+  if {$newName == ""} \
+  {
+    return
+  }
+
+  # rename job
+  set errorCode 0
+  set errorText ""
+  set result    ""
+  BackupServer:executeCommand errorCode errorText "JOB_RENAME $id [escapeString $newName]" result
   if {$errorCode != 0} \
   {
     return
@@ -4339,7 +4460,7 @@ proc editStorageFileName { fileName } \
   frame $handle.edit
     label $handle.edit.dataTitle -text "File name:"
     grid $handle.edit.dataTitle -row 0 -column 0 -sticky "w"
-    canvas $handle.edit.data -width 400 -height 20
+    canvas $handle.edit.data -width 600 -height 20
     grid $handle.edit.data -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
 
     label $handle.edit.exampleTitle -text "Example:"
@@ -4474,7 +4595,7 @@ proc editStorageFileName { fileName } \
   }
   bind $handle <B1-Motion>       "catch {editStorageFileName:motion $handle $handle.edit.data %X %Y}"
   bind $handle <ButtonRelease-1> "catch {editStorageFileName:drop   $handle $handle.edit.data %X %Y}"
-  bind $handle <<Event_delete>>  "puts 1; catch {editStorageFileName:delete $handle $handle.edit.data}"
+  bind $handle <<Event_delete>>  "catch {editStorageFileName:delete $handle $handle.edit.data}"
 
   focus $handle.parts.text
 
@@ -4954,14 +5075,14 @@ frame .status
       -yscrollcommand ".status.list.yscroll set"
     # note: -visible 0 does not work; bug in mclistbox (no selection possible)
     .status.list.data column add id                   -width 0 -resizable 0
-    .status.list.data column add name                 -label "Name"           -width 12
-    .status.list.data column add state                -label "State"          -width 16
-    .status.list.data column add type                 -label "Type"           -width 10
+    .status.list.data column add name                 -label "Name"           -width 20
+    .status.list.data column add state                -label "State"          -width 10
+    .status.list.data column add type                 -label "Type"           -width 12
     .status.list.data column add archivePartSize      -label "Part size"      -width 8
     .status.list.data column add compressAlgortihm    -label "Compress"       -width 10
     .status.list.data column add cryptAlgorithm       -label "Crypt"          -width 10
     .status.list.data column add lastExecutedDateTime -label "Last executed"  -width 20
-    .status.list.data column add estimatedRestTime    -label "Estimated time" -width 20
+    .status.list.data column add estimatedRestTime    -label "Estimated time" -width 18
     grid .status.list.data -row 0 -column 0 -sticky "nswe"
     scrollbar .status.list.yscroll -orient vertical -command ".status.list.data yview"
     grid .status.list.yscroll -row 0 -column 1 -sticky "ns"
@@ -5028,6 +5149,13 @@ frame .status
       label .status.selected.doneCompressRatio.postfix -text "%" -anchor w
       pack .status.selected.doneCompressRatio.postfix -side left
     grid .status.selected.doneCompressRatio -row 1 -column 5 -sticky "w" -padx 2p -pady 2p
+
+    frame .status.selected.doneStorageBytesPerSecond
+      entry .status.selected.doneStorageBytesPerSecond.data -width 10 -textvariable jobStatus(storageBytesPerSecondShort) -justify right -borderwidth 0 -state readonly
+      pack .status.selected.doneStorageBytesPerSecond.data -side left
+      label .status.selected.doneStorageBytesPerSecond.unit -width 8 -textvariable jobStatus(storageBytesPerSecondShortUnit) -anchor w
+      pack .status.selected.doneStorageBytesPerSecond.unit -side left
+    grid .status.selected.doneStorageBytesPerSecond -row 1 -column 6 -sticky "w" -padx 2p -pady 2p
 
     label .status.selected.skipped -text "Skipped:"
     grid .status.selected.skipped -row 2 -column 0 -sticky "w" 
@@ -5190,13 +5318,14 @@ frame .jobs
   label .jobs.listTitle -text "Name:"
   grid .jobs.listTitle -row 0 -column 0 -sticky "w"
   frame .jobs.list
-#  
-    tixOptionMenu .jobs.list.data -label "" -labelside right -variable selectedJob(id) -command selectJob -options { entry.background white }
+    tixOptionMenu .jobs.list.data -label "" -labelside right -command seletJobFromMenu -options { entry.background white }
     grid .jobs.list.data -row 0 -column 0 -sticky "we" -padx 2p -pady 2p
     button .jobs.list.new -text "New" -command "event generate . <<Event_jobNew>>"
     grid .jobs.list.new -row 0 -column 1 -sticky "e" -padx 2p -pady 2p
+    button .jobs.list.rename -text "Rename" -command "event generate . <<Event_jobRename>>"
+    grid .jobs.list.rename -row 0 -column 2 -sticky "e" -padx 2p -pady 2p
     button .jobs.list.delete -text "Delete" -command "event generate . <<Event_jobDelete>>"
-    grid .jobs.list.delete -row 0 -column 2 -sticky "e" -padx 2p -pady 2p
+    grid .jobs.list.delete -row 0 -column 3 -sticky "e" -padx 2p -pady 2p
 
     grid columnconfigure .jobs.list { 0 } -weight 1
   grid .jobs.list -row 0 -column 1 -sticky "we" -padx 2p -pady 2p
@@ -6060,15 +6189,17 @@ addModifyTrace ::jobStatus(totalBytes) \
 
 addModifyTrace {::selectedJob(id)} \
 {
-  # note tab disble does not work => remove/add whole tab-set
+  # note: tab disble does not work => remove/add whole tab-set
   if {$::selectedJob(id) != 0} \
   {
      grid .jobs.tabs -row 1 -column 0 -columnspan 2 -sticky "nswe" -padx 2p -pady 2p
+     .jobs.list.rename configure -state normal
      .jobs.list.delete configure -state normal
   } \
   else \
   {
      grid remove .jobs.tabs
+     .jobs.list.rename configure -state disabled
      .jobs.list.delete configure -state disabled
   }
 }
@@ -6135,7 +6266,7 @@ bind . <<Event_selectJob>> \
   if {$n != {}} \
   {
     set entry [lindex [.status.list.data get $n $n] 0]
-    selectJob [lindex $entry 0]
+    selectJob [lindex $entry 0] [lindex $entry 1]
   }
 }
 
@@ -6145,22 +6276,34 @@ bind . <<Event_jobNew>> \
   if {$id != ""} \
   {
     updateJobList .jobs.list.data
-    set selectedJob(id) $id
+    set ::selectedJob(id) $id
+    .jobs.list.data configure -value $id
+  }
+}
+
+bind . <<Event_jobRename>> \
+{
+  set id $::selectedJob(id)
+  if {$id != 0} \
+  {
+    jobRename $::selectedJob(id) $::selectedJob(name)
+    updateJobList .jobs.list.data
+    .jobs.list.data configure -value $id
   }
 }
 
 bind . <<Event_jobDelete>> \
 {
-  if {$selectedJob(id) != 0} \
+  if {$::selectedJob(id) != 0} \
   {
     if {[Dialog:confirm "Delete job?" "Delete" "Cancel"]} \
     {
-      jobDelete $selectedJob(id)
+      jobDelete $::selectedJob(id)
       clearJob
       updateJobList .jobs.list.data
     }
   }
- }
+}
 
 bind . <<Event_selectJobStatus>> \
 {

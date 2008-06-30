@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.46 $
+* $Revision: 1.47 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -143,6 +143,7 @@ LOCAL Password *getCryptPassword(const String     fileName,
   assert(fileName != NULL);
   assert(jobOptions != NULL);
 
+  password = NULL;
   switch ((passwordMode != PASSWORD_MODE_DEFAULT)?passwordMode:jobOptions->cryptPasswordMode)
   {
     case PASSWORD_MODE_DEFAULT:
@@ -194,6 +195,7 @@ LOCAL const Password *getNextCryptPassword(PasswordHandle *passwordHandle)
 
   assert(passwordHandle != NULL);
 
+  password = NULL;
   if      (passwordHandle->passwordNode != NULL)
   {
     /* next password from list */
@@ -227,6 +229,9 @@ LOCAL const Password *getNextCryptPassword(PasswordHandle *passwordHandle)
         {
           password = inputCryptPassword(passwordHandle->fileName,FALSE);
         }
+        break;
+      case PASSWORD_MODE_UNKNOWN:
+        password = NULL;
         break;
       #ifndef NDEBUG
         default:

@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/errors.def,v $
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
@@ -25,9 +25,9 @@ ERROR INVALID_PATTERN                "init pattern matching"
 
 # TLS/SSL
 ERROR INIT_TLS                       "init TLS (SSL)"
-ERROR NO_TLS_CA                      "no TLS (SSL) certificate authority file (bar-ca.pem)"
-ERROR NO_TLS_CERTIFICATE             "no TLS (SSL) certificate file (bar-server-cert.pem)"
-ERROR NO_TLS_KEY                     "no or unreadable TLS (SSL) key file (bar-server-key.pem)"
+ERROR NO_TLS_CA                      "no TLS (SSL) certificate authority file 'bar-ca.pem'"
+ERROR NO_TLS_CERTIFICATE             "no TLS (SSL) certificate file 'bar-server-cert.pem'"
+ERROR NO_TLS_KEY                     "no or unreadable TLS (SSL) key file 'bar-server-key.pem'"
 ERROR INVALID_TLS_CA                 "invalid TLS (SSL) certificate authority"
 ERROR INVALID_TLS_CERTIFICATE        "invalid TLS (SSL) certificate"
 ERROR TLS_HANDSHAKE                  "TLS (SSL) handshake failure"

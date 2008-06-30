@@ -1,4 +1,10 @@
-2008-05-24 0.7
+2008-06-29 0.07a
+  * fixed executing of external programs: handle signals
+  * use /dev/dvd as default device for writing dvds
+  * added storage bytes/s value to barcontrol.tcl
+  * implemented rename job in barcontrol.tcl
+
+2008-05-24 0.07
   * integrated scheduler in bar
   * added pause/continue of jobs
   * some internal bug fixes
@@ -9,7 +15,7 @@
   * added FTP protocol
   * changed some option names for better consistency
 
-2008-03-08 0.6
+2008-03-08 0.06
   * added option --debug to barcontrol.tcl; output debug info
     in server
   * fixed memory leak in server

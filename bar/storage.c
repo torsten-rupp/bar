@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -150,7 +150,7 @@ LOCAL bool initSSHPassword(const JobOptions *jobOptions)
 * Notes  : -
 \***********************************************************************/
 
-#ifdef HAVE_SSH2
+#if defined(HAVE_FTP) || defined(HAVE_SSH2)
 LOCAL void limitBandWidth(StorageBandWidth *storageBandWidth,
                           ulong            transmittedBytes,
                           uint64           transmissionTime
@@ -202,7 +202,7 @@ storageBandWidth->measurementTime
       }
 else {
         delayTime = 0LL;
-fprintf(stderr,"%s,%d: == averageBandWidth=%lu storageBandWidth->max=%lu deleta=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidth->max,storageBandWidth->measurementTime);
+//fprintf(stderr,"%s,%d: == averageBandWidth=%lu storageBandWidth->max=%lu deleta=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidth->max,storageBandWidth->measurementTime);
 }
       if (delayTime > 0) Misc_udelay(delayTime);
 
@@ -216,7 +216,7 @@ fprintf(stderr,"%s,%d: == averageBandWidth=%lu storageBandWidth->max=%lu deleta=
     }
   }
 }
-#endif /* HAVE_SSH2 */
+#endif /* defined(HAVE_FTP) || defined(HAVE_SSH2) */
 
 /***********************************************************************\
 * Name   : requestNewDVD
@@ -553,6 +553,7 @@ LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
   String s;
   double p;
 
+//fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
   if (String_match(line,STRING_BEGIN,".* \\(([0-9\\.]+)%\\) .*",NULL,s,NULL))
   {
@@ -1193,6 +1194,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           String_delete(storageSpecifier);
           return ERROR_INVALID_DEVICE_SPECIFIER;
         }
+        if (String_empty(deviceName)) String_set(deviceName,globalOptions.defaultDeviceName);
 
         /* check space in temporary directory */
         error = File_getFileSystemInfo(globalOptions.tmpDirectory,&fileSystemInfo);
@@ -2089,6 +2091,8 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
   assert(fileName != NULL);
   assert(jobOptions != NULL);
 
+  UNUSED_VARIABLE(jobOptions);
+
   /* init variables */
   storageFileHandle->mode = STORAGE_MODE_READ;
 
@@ -2331,13 +2335,10 @@ void Storage_close(StorageFileHandle *storageFileHandle)
         switch (storageFileHandle->mode)
         {
           case STORAGE_MODE_WRITE:
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
             libssh2_channel_send_eof(storageFileHandle->scp.channel);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+//???
 //            libssh2_channel_wait_eof(storageFileHandle->scp.channel);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
             libssh2_channel_wait_closed(storageFileHandle->scp.channel);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
             break;
           case STORAGE_MODE_READ:
             libssh2_channel_close(storageFileHandle->scp.channel);
@@ -2350,9 +2351,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
           #endif /* NDEBUG */
         }
         libssh2_channel_free(storageFileHandle->scp.channel);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
         Network_disconnect(&storageFileHandle->scp.socketHandle);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
@@ -2660,14 +2659,12 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             {
               length = size-writtenBytes;
             }
-fprintf(stderr,"%s,%d: %p\n",__FILE__,__LINE__,storageFileHandle->scp.channel);
             do
             {
               n = libssh2_channel_write(storageFileHandle->scp.channel,
                                         buffer,
                                         length
                                        );
-fprintf(stderr,"%s,%d: n=%ld\n",__FILE__,__LINE__,n);
             }
             while (n == LIBSSH2_ERROR_EAGAIN);
             if (n < 0)
@@ -2682,9 +2679,7 @@ fprintf(stderr,"%s,%d: n=%ld\n",__FILE__,__LINE__,n);
             assert(endTimestamp >= startTimestamp);
 
             /* limit used band width if requested */
-fprintf(stderr,"%s,%d: writtenBytes=%ld size=%ld\n",__FILE__,__LINE__,writtenBytes,size);
             limitBandWidth(&storageFileHandle->scp.bandWidth,n,endTimestamp-startTimestamp);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
           };
         }
       #else /* not HAVE_SSH2 */

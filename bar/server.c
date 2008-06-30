@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.38 $
+* $Revision: 1.39 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -64,7 +64,7 @@ typedef enum
   JOB_STATE_WAITING,
   JOB_STATE_RUNNING,
   JOB_STATE_REQUEST_VOLUME,
-  JOB_STATE_COMPLETED,
+  JOB_STATE_DONE,
   JOB_STATE_ERROR,
   JOB_STATE_ABORTED
 } JobStates;
@@ -263,29 +263,33 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
   {"zip8", COMPRESS_ALGORITHM_ZIP_8, },
   {"zip9", COMPRESS_ALGORITHM_ZIP_9, },
 
-  {"bzip1",COMPRESS_ALGORITHM_BZIP2_1},
-  {"bzip2",COMPRESS_ALGORITHM_BZIP2_2},
-  {"bzip3",COMPRESS_ALGORITHM_BZIP2_3},
-  {"bzip4",COMPRESS_ALGORITHM_BZIP2_4},
-  {"bzip5",COMPRESS_ALGORITHM_BZIP2_5},
-  {"bzip6",COMPRESS_ALGORITHM_BZIP2_6},
-  {"bzip7",COMPRESS_ALGORITHM_BZIP2_7},
-  {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
-  {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
+  #ifdef HAVE_BZ2
+    {"bzip1",COMPRESS_ALGORITHM_BZIP2_1},
+    {"bzip2",COMPRESS_ALGORITHM_BZIP2_2},
+    {"bzip3",COMPRESS_ALGORITHM_BZIP2_3},
+    {"bzip4",COMPRESS_ALGORITHM_BZIP2_4},
+    {"bzip5",COMPRESS_ALGORITHM_BZIP2_5},
+    {"bzip6",COMPRESS_ALGORITHM_BZIP2_6},
+    {"bzip7",COMPRESS_ALGORITHM_BZIP2_7},
+    {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
+    {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
+  #endif /* HAVE_BZ2 */
 };
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
 {
   {"none",      CRYPT_ALGORITHM_NONE,     },
 
-  {"3DES",      CRYPT_ALGORITHM_3DES,     },
-  {"CAST5",     CRYPT_ALGORITHM_CAST5,    },
-  {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH, },
-  {"AES128",    CRYPT_ALGORITHM_AES128,   },
-  {"AES192",    CRYPT_ALGORITHM_AES192,   },
-  {"AES256",    CRYPT_ALGORITHM_AES256,   },
-  {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128},
-  {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256},
+  #ifdef HAVE_GCRYPT
+    {"3DES",      CRYPT_ALGORITHM_3DES,     },
+    {"CAST5",     CRYPT_ALGORITHM_CAST5,    },
+    {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH, },
+    {"AES128",    CRYPT_ALGORITHM_AES128,   },
+    {"AES192",    CRYPT_ALGORITHM_AES192,   },
+    {"AES256",    CRYPT_ALGORITHM_AES256,   },
+    {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128},
+    {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256},
+  #endif /* HAVE_GCRYPT */
 };
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] =
@@ -1375,7 +1379,7 @@ LOCAL void jobThreadEntry(void)
     }
     else
     {
-      jobNode->state = JOB_STATE_COMPLETED;
+      jobNode->state = JOB_STATE_DONE;
     }
 
     /* store schedule info */
@@ -1592,11 +1596,11 @@ LOCAL const char *getJobStateText(JobStates jobState)
   stateText = "unknown";
   switch (jobState)
   {
-    case JOB_STATE_NONE:           stateText = "none";           break;
+    case JOB_STATE_NONE:           stateText = "-";              break;
     case JOB_STATE_WAITING:        stateText = "waiting";        break;
     case JOB_STATE_RUNNING:        stateText = "running";        break;
     case JOB_STATE_REQUEST_VOLUME: stateText = "request volume"; break;
-    case JOB_STATE_COMPLETED:      stateText = "completed";      break;
+    case JOB_STATE_DONE:           stateText = "done";           break;
     case JOB_STATE_ERROR:          stateText = "ERROR";          break;
     case JOB_STATE_ABORTED:        stateText = "aborted";        break;
     #ifndef NDEBUG
@@ -2026,7 +2030,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
   }
 
   /* unlock */
@@ -2058,7 +2062,7 @@ LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, co
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2067,6 +2071,7 @@ LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, co
   patternNode = jobNode->includePatternList.head;
   while (patternNode != NULL)
   {
+    type = NULL;
     switch (patternNode->type)
     {
       case PATTERN_TYPE_GLOB          : type = "GLOB";           break;
@@ -2114,7 +2119,7 @@ LOCAL void serverCommand_includePatternsClear(ClientInfo *clientInfo, uint id, c
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2181,7 +2186,7 @@ LOCAL void serverCommand_includePatternsAdd(ClientInfo *clientInfo, uint id, con
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2220,7 +2225,7 @@ LOCAL void serverCommand_excludePatternsList(ClientInfo *clientInfo, uint id, co
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2229,6 +2234,7 @@ LOCAL void serverCommand_excludePatternsList(ClientInfo *clientInfo, uint id, co
   patternNode = jobNode->excludePatternList.head;
   while (patternNode != NULL)
   {
+    type = NULL;
     switch (patternNode->type)
     {
       case PATTERN_TYPE_GLOB          : type = "GLOB";           break;
@@ -2276,7 +2282,7 @@ LOCAL void serverCommand_excludePatternsClear(ClientInfo *clientInfo, uint id, c
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2343,7 +2349,7 @@ LOCAL void serverCommand_excludePatternsAdd(ClientInfo *clientInfo, uint id, con
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2382,7 +2388,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2502,7 +2508,7 @@ LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const St
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2570,7 +2576,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     String_delete(s);
     return;
@@ -2630,7 +2636,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2702,7 +2708,7 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2760,7 +2766,7 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2797,18 +2803,16 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get archive name */
+  /* get filename */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,1,"expected name");
     return;
   }
-
-  /* get filename */
   fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobDirectory),arguments[0]);
   if (File_exists(fileName))
   {
-    sendResult(clientInfo,id,TRUE,1,"job already exists");
+    sendResult(clientInfo,id,TRUE,1,"job '%s' already exists",String_cString(arguments[0]));
     return;
   }
 
@@ -2847,6 +2851,72 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   File_deleteFileName(fileName);
 }
 
+LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  String  name;
+  JobNode *jobNode;
+  String  fileName;
+  Errors  error;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected name");
+    return;
+  }
+  name = arguments[1];
+  if (File_exists(name))
+  {
+    sendResult(clientInfo,id,TRUE,1,"job '%s' already exists",String_cString(arguments[1]));
+    File_deleteFileName(fileName);
+    return;
+  }
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    File_deleteFileName(fileName);
+    return;
+  }
+
+  /* rename job */
+  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobDirectory),name);
+  error = File_rename(jobNode->fileName,fileName);
+  if (error != ERROR_NONE)
+  {
+    sendResult(clientInfo,id,TRUE,1,"error renaming job #%d: %s",jobId,getErrorText(error));
+    Semaphore_unlock(&jobList.lock);
+    File_deleteFileName(fileName);
+    return;
+  }
+  File_deleteFileName(fileName);
+
+  /* store new file name */
+  File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobDirectory),name);
+  String_set(jobNode->name,name);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
 LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint    jobId;
@@ -2871,7 +2941,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2879,7 +2949,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   /* remove job in list if not running or requested volume */
   if (CHECK_JOB_IS_RUNNING(jobNode))
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d running",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d running",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2888,7 +2958,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   error = File_delete(jobNode->fileName,FALSE);
   if (error != ERROR_NONE)
   {
-    sendResult(clientInfo,id,TRUE,1,"error deleting job %d: %s",getErrorText(error));
+    sendResult(clientInfo,id,TRUE,1,"error deleting job #%d: %s",jobId,getErrorText(error));
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2939,7 +3009,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -2982,7 +3052,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
   jobNode = findJobById(jobId);
   if (jobNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
     return;
   }
@@ -3049,7 +3119,7 @@ LOCAL void serverCommand_volume(ClientInfo *clientInfo, uint id, const String ar
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,1,"job %d not found",jobId);
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
   }
 
   /* unlock */
@@ -3280,6 +3350,7 @@ SERVER_COMMANDS[] =
   { "JOB_LIST",              "",    serverCommand_jobList,             AUTHORIZATION_STATE_OK      },
   { "JOB_INFO",              "i",   serverCommand_jobInfo,             AUTHORIZATION_STATE_OK      },
   { "JOB_NEW",               "S",   serverCommand_jobNew,              AUTHORIZATION_STATE_OK      },
+  { "JOB_RENAME",            "i S", serverCommand_jobRename,           AUTHORIZATION_STATE_OK      },
   { "JOB_DELETE",            "i",   serverCommand_jobDelete,           AUTHORIZATION_STATE_OK      },
   { "JOB_START",             "i",   serverCommand_jobStart,            AUTHORIZATION_STATE_OK      },
   { "JOB_ABORT",             "i",   serverCommand_jobAbort,            AUTHORIZATION_STATE_OK      },
@@ -3857,6 +3928,10 @@ Errors Server_run(uint             port,
       }
       printInfo(1,"Started TLS/SSL server on port %d\n",tlsPort);
   #else /* not HAVE_GNU_TLS */
+    UNUSED_VARIABLE(caFileName);
+    UNUSED_VARIABLE(certFileName);
+    UNUSED_VARIABLE(keyFileName);
+
     printError("TLS/SSL server is not supported!\n");
     Network_doneServer(&serverSocketHandle);
     return ERROR_FUNCTION_NOT_SUPPORTED;

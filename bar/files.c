@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.37 $
+* $Revision: 1.38 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -1315,10 +1315,18 @@ bool File_isDirectoryCString(const char *fileName)
 
 bool File_isFileReadable(const String fileName)
 {
-  FILE *file;
+  struct stat fileStat;
+  FILE        *file;
 
   assert(fileName != NULL);
 
+  /* check if file */
+  if ((stat(String_cString(fileName),&fileStat) != 0) || !S_ISREG(fileStat.st_mode))
+  {
+    return FALSE;
+  }
+
+  /* check if readable */
   file = fopen(String_cString(fileName),"r");
   if (file != NULL)
   {
@@ -1333,10 +1341,18 @@ bool File_isFileReadable(const String fileName)
 
 bool File_isFileReadableCString(const char *fileName)
 {
-  FILE *file;
+  struct stat fileStat;
+  FILE        *file;
 
   assert(fileName != NULL);
 
+  /* check if file */
+  if ((stat(fileName,&fileStat) != 0) || !S_ISREG(fileStat.st_mode))
+  {
+    return FALSE;
+  }
+
+  /* check if readable */
   file = fopen(fileName,"r");
   if (file != NULL)
   {

@@ -9,15 +9,19 @@ ToDo
 - improve calculation for estimated rest time
 - improve password quality checker
 - balloon help in barcontrol.tcl
-- novice/expert mode i barcontrol.tcl
+- novice/expert mode in barcontrol.tcl
 - barconfig.tcl for creating/edit bar.cfg
 - Windows port
 - create RPMs
 - native graphical frontend?
-- internal scheduler for jobs
-- store executable bar on DVD
 - re-read configuration when modified
 - configure band-width on run-time
 - view needed archives for restore
 - ACL
 - send job from server to other server
+- asymmetric encryption
+- send-only ssh-login (possible?)
+- support to access multiple bar servers
+- script to generate pem-keys
+- asymmetric encryption
+

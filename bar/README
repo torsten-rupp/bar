@@ -19,9 +19,9 @@ BAR - BAckup Archiver
 --- Requirements
 
 * Unix system
-* PTHREADs library
-* zlib library
-* bzib2 library
+* PTHREADs library (mandatory)
+* zlib library (mandatory)
+* bzib2 library (optional)
 * gcrypt library from http://www.gnupg.org (optional)
 * gnutls library from http://www.gnu.org/software/gnutls
   (optional)
@@ -30,7 +30,7 @@ BAR - BAckup Archiver
 * long long datatype (because of large files)
 * perl (only for compiling)
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
-  eject
+  eject (optional)
 * TclTk and additional packages for graphical frontend
   (see below)
 

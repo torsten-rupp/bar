@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -52,8 +52,10 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL String defaultSSHPublicKeyFileName;
-LOCAL String defaultSSHPrivateKeyFileName;
+#ifdef HAVE_SSH2
+  LOCAL String defaultSSHPublicKeyFileName;
+  LOCAL String defaultSSHPrivateKeyFileName;
+#endif /* HAVE_SSH2 */
 
 /****************************** Macros *********************************/
 
@@ -275,6 +277,11 @@ Errors Network_connect(SocketHandle *socketHandle,
 
       }
       #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(loginName);
+        UNUSED_VARIABLE(password);
+        UNUSED_VARIABLE(sshPublicKeyFileName);
+        UNUSED_VARIABLE(sshPrivateKeyFileName);
+
         close(socketHandle->handle);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -649,17 +656,17 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
       break;
     case SERVER_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
-        if ((caFileName == NULL) || !File_existsCString(caFileName))
+        if ((caFileName == NULL) || !File_existsCString(caFileName) || !File_isFileReadableCString(caFileName))
         {
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_CA;
         }
-        if ((certFileName == NULL) || !File_existsCString(certFileName))
+        if ((certFileName == NULL) || !File_existsCString(certFileName) || !File_isFileReadableCString(certFileName))
         {
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_CERTIFICATE;
         }
-        if ((keyFileName == NULL) || !File_existsCString(keyFileName))
+        if ((keyFileName == NULL) || !File_existsCString(keyFileName) || !File_isFileReadableCString(keyFileName))
         {
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_KEY;
@@ -821,6 +828,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
           return ERROR_TLS_HANDSHAKE;
         }
       #else /* not HAVE_GNU_TLS */
+        UNUSED_VARIABLE(result);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GNU_TLS */
       break;
@@ -946,6 +954,10 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
 
     return ERROR_NONE;  
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(networkExecuteHandle);
+    UNUSED_VARIABLE(ioMask);
+    UNUSED_VARIABLE(command);
+
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 }
@@ -961,6 +973,8 @@ int Network_terminate(NetworkExecuteHandle *networkExecuteHandle)
     libssh2_channel_wait_closed(networkExecuteHandle->channel);
     exitcode = libssh2_channel_get_exit_status(networkExecuteHandle->channel);
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(networkExecuteHandle);
+
     exitcode = 128;
   #endif /* HAVE_SSH2 */
 
@@ -1038,6 +1052,7 @@ void Network_executeSendEOF(NetworkExecuteHandle *networkExecuteHandle)
   #ifdef HAVE_SSH2
     libssh2_channel_send_eof(networkExecuteHandle->channel);
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(networkExecuteHandle);
   #endif /* HAVE_SSH2 */
 }
 
@@ -1053,6 +1068,9 @@ Errors Network_executeWrite(NetworkExecuteHandle *networkExecuteHandle,
   #ifdef HAVE_SSH2
     sentBytes = libssh2_channel_write(networkExecuteHandle->channel,buffer,length);
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(networkExecuteHandle);
+    UNUSED_VARIABLE(buffer);
+    UNUSED_VARIABLE(length);
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 
@@ -1125,6 +1143,12 @@ Errors Network_executeRead(NetworkExecuteHandle  *networkExecuteHandle,
       }
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(networkExecuteHandle);
+    UNUSED_VARIABLE(ioType);
+    UNUSED_VARIABLE(buffer);
+    UNUSED_VARIABLE(maxLength);
+    UNUSED_VARIABLE(timeout);
+    UNUSED_VARIABLE(bytesRead);
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 
@@ -1296,7 +1320,8 @@ void Network_executeFlush(NetworkExecuteHandle  *networkExecuteHandle,
         break;
     }
   #else /* not HAVE_SSH2 */
-    return ERROR_FUNCTION_NOT_SUPPORTED;
+    UNUSED_VARIABLE(networkExecuteHandle);
+    UNUSED_VARIABLE(ioType);
   #endif /* HAVE_SSH2 */
 }
 
@@ -1312,6 +1337,7 @@ Errors Network_executeKeepAlive(NetworkExecuteHandle *networkExecuteHandle)
       }
     #endif /* HAVE_SSH2_CHANNEL_SEND_KEEPALIVE */
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(networkExecuteHandle);
   #endif /* HAVE_SSH2 */
 
   return ERROR_NONE;

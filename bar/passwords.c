@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -81,7 +81,7 @@ void Password_init(Password *password)
   #ifdef HAVE_GCRYPT
     password->data = (char*)gcry_malloc_secure(MAX_PASSWORD_LENGTH+1);
   #else /* not HAVE_GCRYPT */
-    passworddata = (char*)malloc(MAX_PASSWORD_LENGTH+1);
+    password->data = (char*)malloc(MAX_PASSWORD_LENGTH+1);
   #endif /* HAVE_GCRYPT */
   if (password->data == NULL)
   {
@@ -97,7 +97,7 @@ void Password_done(Password *password)
   #ifdef HAVE_GCRYPT
     gcry_free(password->data);
   #else /* not HAVE_GCRYPT */
-    memset(password->data,0,sizeof(Password));
+    memset(password->data,0,sizeof(MAX_PASSWORD_LENGTH+1));
     free(password->data);
   #endif /* HAVE_GCRYPT */
 }
@@ -453,7 +453,7 @@ bool Password_input(Password *password, const char *title)
     /* input password */
     if (title != NULL)
     {
-      printf("%s: ",title);fflush(stdout);
+      fprintf(stderr,"%s: ",title);fflush(stderr);
     }
     eolFlag = FALSE;
     do
@@ -481,7 +481,6 @@ bool Password_input(Password *password, const char *title)
 
     okFlag = TRUE;
   }
-//fprintf(stderr,"%s,%d: #%s#\n",__FILE__,__LINE__,password->data);
 
   return okFlag;
 }

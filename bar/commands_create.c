@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.51 $
+* $Revision: 1.52 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -658,6 +658,7 @@ LOCAL String formatArchiveFileName(String       fileName,
     case ARCHIVE_TYPE_NORMAL:      TEXT_MACRO_CSTRING(textMacros[0],"%type","normal");      break;
     case ARCHIVE_TYPE_FULL:        TEXT_MACRO_CSTRING(textMacros[0],"%type","full");        break;
     case ARCHIVE_TYPE_INCREMENTAL: TEXT_MACRO_CSTRING(textMacros[0],"%type","incremental"); break;
+    case ARCHIVE_TYPE_UNKNOWN:     TEXT_MACRO_CSTRING(textMacros[0],"%type","unknown");     break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1335,7 +1336,6 @@ LOCAL Errors storeArchiveFile(String fileName,
   updateStatusInfo(createInfo);
 
   /* wait for space in temporary directory */
-fprintf(stderr,"%s,%d: %lld %lld\n",__FILE__,__LINE__,globalOptions.maxTmpSize,createInfo->storageBytes);
   if (globalOptions.maxTmpSize > 0)
   {
     Semaphore_lock(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -1482,7 +1482,6 @@ LOCAL void storageThread(CreateInfo *createInfo)
           String_set(createInfo->statusInfo.storageName,storageMsg.destinationFileName);
 
           /* store data */
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
           File_seek(&fileHandle,0);
           do
           {
@@ -1492,7 +1491,6 @@ LOCAL void storageThread(CreateInfo *createInfo)
               Misc_udelay(500*1000);
             }
 
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
             error = File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
             if (error != ERROR_NONE)
             {
@@ -1504,7 +1502,6 @@ LOCAL void storageThread(CreateInfo *createInfo)
               createInfo->failError = error;
               break;
             }
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
             error = Storage_write(&createInfo->storageFileHandle,buffer,n);
             if (error != ERROR_NONE)
             {
@@ -1520,18 +1517,15 @@ LOCAL void storageThread(CreateInfo *createInfo)
               break;
             }
             createInfo->statusInfo.storageDoneBytes += n;
-fprintf(stderr,"%s,%d: %lld\n",__FILE__,__LINE__,createInfo->statusInfo.storageDoneBytes);
             updateStatusInfo(createInfo);
           }
           while (   (createInfo->failError == ERROR_NONE)
                  && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
                  && !File_eof(&fileHandle)
                 );
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
           /* close storage file */
           Storage_close(&createInfo->storageFileHandle);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
           if (error == ERROR_NONE)
           {
@@ -1543,7 +1537,6 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
                && (createInfo->failError == ERROR_NONE)
                && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
               );
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
         /* close file to store */
         File_close(&fileHandle);
@@ -1558,7 +1551,6 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
           String_delete(storageMsg.destinationFileName);
           continue;
         }
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
         /* post-process */
         if (   (createInfo->failError == ERROR_NONE)
@@ -1575,12 +1567,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
             createInfo->failError = error;
           }
         }
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       }
-else
-{
-fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErrorText(createInfo->failError));
-}
     }
 
     /* delete source file */
@@ -1592,7 +1579,6 @@ fprintf(stderr,"%s,%d: FAIL - only delete files? %s \n",__FILE__,__LINE__,getErr
                    getErrorText(error)
                   );
     }
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
     /* update storage info */
     Semaphore_lock(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -1601,27 +1587,22 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     createInfo->storageCount -= 1;
     createInfo->storageBytes -= storageMsg.fileSize;
     Semaphore_unlock(&createInfo->storageSemaphore);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
     /* free resources */
     freeStorageMsg(&storageMsg,NULL);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   }
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
   {
     /* final post-processing */
     if (createInfo->failError == ERROR_NONE)
     {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       /* pause */
       while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
       {
         Misc_udelay(500*1000);
       }
 
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       error = Storage_postProcess(&createInfo->storageFileHandle,TRUE);
       if (error != ERROR_NONE)
       {
@@ -1630,17 +1611,13 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
                   );
         createInfo->failError = error;
       }
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     }
   }
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* free resoures */
   free(buffer);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   createInfo->storageThreadExitFlag = TRUE;
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 }
 
 /*---------------------------------------------------------------------*/
@@ -2311,35 +2288,27 @@ Errors Command_create(const char                   *archiveFileName,
       }
     }
   }
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* close archive */
   Archive_close(&archiveInfo);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* signal end of data */
   createInfo.collectorSumThreadExitFlag = TRUE;
   MsgQueue_setEndOfMsg(&createInfo.fileMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
   updateStatusInfo(&createInfo);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* wait for threads */
   Thread_join(&createInfo.storageThread);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   Thread_join(&createInfo.collectorThread);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   Thread_join(&createInfo.collectorSumThread);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* done storage */
   Storage_done(&createInfo.storageFileHandle);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* write incremental list */
   if ((createInfo.failError == ERROR_NONE) && storeIncrementalFileInfoFlag)
   {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     printInfo(1,"Write incremental list '%s'...",String_cString(incrementalListFileName));
     error = writeIncrementalList(incrementalListFileName,
                                  &createInfo.filesDictionary
@@ -2364,11 +2333,9 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       return error;
     }
     printInfo(1,"ok\n");
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
     logMessage(LOG_TYPE_ALWAYS,"create incremental file '%s'",String_cString(incrementalListFileName));
   }
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   /* output statics */
   printInfo(0,"%lu file(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneFiles,createInfo.statusInfo.doneBytes);
@@ -2376,7 +2343,6 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   printInfo(2,"%lu file(s) with errors\n",createInfo.statusInfo.errorFiles);
 
   /* free resources */
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   if (storeIncrementalFileInfoFlag)
   {
     Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
@@ -2390,7 +2356,6 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   String_delete(createInfo.statusInfo.storageName);
   String_delete(createInfo.statusInfo.fileName);
   String_delete(createInfo.archiveFileName);
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   if ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
   {

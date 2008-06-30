@@ -806,7 +806,6 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          enable debug version
   --enable-link-dynamic   enable dynamic linkage
-  --disable-zip           disable zip support
   --disable-bzip2         disable bzip2 support
   --disable-gcrypt        disable gcrypt support
   --disable-ftp           disable FTP support
@@ -1385,7 +1384,6 @@ STATIC_LIBRARIES=""
 
 ENABLE_DEBUG="no"
 ENABLE_LINK_DYNAMIC="no"
-ENABLE_ZIP="yes"
 ENABLE_BZIP2="yes"
 ENABLE_GCRYPT="yes"
 ENABLE_FTP="yes"
@@ -1425,12 +1423,6 @@ fi;
 if test "${enable_link_dynamic+set}" = set; then
   enableval="$enable_link_dynamic"
   ENABLE_LINK_DYNAMIC=$enableval
-
-fi;
-# Check whether --enable-zip or --disable-zip was given.
-if test "${enable_zip+set}" = set; then
-  enableval="$enable_zip"
-  ENABLE_ZIP=$enableval
 
 fi;
 # Check whether --enable-bzip2 or --disable-bzip2 was given.
@@ -3646,9 +3638,8 @@ echo "$as_me: error: pthread library not found" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
-if test $ENABLE_ZIP = "yes"; then
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
+if test $ENABLE_LINK_DYNAMIC = "yes"; then
+  echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
 echo $ECHO_N "checking for library containing zlibVersion... $ECHO_C" >&6
 if test "${ac_cv_search_zlibVersion+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -3778,8 +3769,8 @@ _ACEOF
 
 fi
 
-  else
-    echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
+else
+  echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
 echo $ECHO_N "checking for library containing zlibVersion... $ECHO_C" >&6
 if test "${ac_cv_search_zlibVersion+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -3909,7 +3900,6 @@ _ACEOF
 
 fi
 
-  fi
 fi
 if test $ENABLE_BZIP2 = "yes"; then
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -6306,12 +6296,15 @@ cat >>$CONFIG_STATUS <<_ACEOF
 
 ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
-                   HAVE_Z=$HAVE_Z
                    HAVE_BZ2=$HAVE_BZ2
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
+                   INSTALL_DIR="$INSTALL_DIR"
+                   INSTALL_BIN_DIR="$INSTALL_BIN_DIR"
+                   CONFIG_DIR="$CONFIG_DIR"
+                   TLS_DIR="$TLS_DIR"
 
 
 _ACEOF
@@ -7031,12 +7024,16 @@ echo "$as_me: executing $ac_dest commands" >&6;}
                     echo "Configuration:";
                     echo "  debug version    : `if test $ENABLE_DEBUG = "yes"; then echo yes; else echo no; fi`";
                     echo "  dynamic linked   : `if test $ENABLE_LINK_DYNAMIC = "yes"; then echo yes; else echo no; fi`";
-                    echo "  zip compression  : `if test $HAVE_Z; then echo yes; else echo no; fi`";
                     echo "  bzip2 compression: `if test $HAVE_BZ2; then echo yes; else echo no; fi`";
                     echo "  crypto support   : `if test $HAVE_GCRYPT; then echo yes; else echo no; fi`";
                     echo "  FTP support      : `if test $HAVE_FTP; then echo yes; else echo no; fi`";
                     echo "  SCP/SFTP support : `if test $HAVE_SSH2; then echo yes; else echo no; fi`";
                     echo "  TLS/SSL server   : `if test $HAVE_GNU_TLS; then echo yes; else echo no; fi`";
+                    echo ""
+                    echo "  Install directory: $INSTALL_DIR"
+                    echo "  Binary directory : $INSTALL_BIN_DIR"
+                    echo "  Config directory : $CONFIG_DIR"
+                    echo "  TLS directory    : $TLS_DIR"
                     ;;
   esac
 done
