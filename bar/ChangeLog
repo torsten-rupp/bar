@@ -1,3 +1,7 @@
+2008-
+  * added option --long-format
+  * added date/time to -l
+
 2008-06-29 0.07a
   * fixed executing of external programs: handle signals
   * use /dev/dvd as default device for writing dvds

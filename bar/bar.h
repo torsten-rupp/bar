@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.40 $
+* $Revision: 1.41 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -216,6 +216,7 @@ typedef struct
   Device                 defaultDevice;                // default device
 
   bool                   noDefaultConfigFlag;          // do not read default config
+  bool                   longFormatFlag;
   bool                   quietFlag;
   long                   verboseLevel;
 } GlobalOptions;

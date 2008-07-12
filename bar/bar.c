@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.60 $
+* $Revision: 1.61 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -242,11 +242,11 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM         ("create",                       'c',0,0,command,                                              COMMAND_NONE,COMMAND_CREATE,                                       "create new archive"                                                       ),
-  CMD_OPTION_ENUM         ("list",                         'l',0,0,command,                                              COMMAND_NONE,COMMAND_LIST,                                         "list contents of archive"                                                 ),
-  CMD_OPTION_ENUM         ("test",                         't',0,0,command,                                              COMMAND_NONE,COMMAND_TEST,                                         "test contents of archive"                                                 ),
-  CMD_OPTION_ENUM         ("compare",                      'd',0,0,command,                                              COMMAND_NONE,COMMAND_COMPARE,                                      "compare contents of archive with files"                                   ),
-  CMD_OPTION_ENUM         ("extract",                      'x',0,0,command,                                              COMMAND_NONE,COMMAND_RESTORE,                                      "restore archive"                                                          ),
+  CMD_OPTION_ENUM         ("create",                       'c',0,0,command,                                              COMMAND_LIST,COMMAND_CREATE,                                       "create new archive"                                                       ),
+  CMD_OPTION_ENUM         ("list",                         'l',0,0,command,                                              COMMAND_LIST,COMMAND_LIST,                                         "list contents of archive"                                                 ),
+  CMD_OPTION_ENUM         ("test",                         't',0,0,command,                                              COMMAND_LIST,COMMAND_TEST,                                         "test contents of archive"                                                 ),
+  CMD_OPTION_ENUM         ("compare",                      'd',0,0,command,                                              COMMAND_LIST,COMMAND_COMPARE,                                      "compare contents of archive with files"                                   ),
+  CMD_OPTION_ENUM         ("extract",                      'x',0,0,command,                                              COMMAND_LIST,COMMAND_RESTORE,                                      "restore archive"                                                          ),
 
   CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                                 NULL,cmdOptionParseConfigFile,NULL,                                "configuration file","file name"                                           ),
 
@@ -340,6 +340,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-bar-on-dvd",                0,  1,0,jobOptions.noBAROnDVDFlag,                            FALSE,                                                             "do not store a copy of BAR on DVDs"                                       ),
   CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,0,jobOptions.stopOnErrorFlag,                           FALSE,                                                             "immediately stop on error"                                                ),
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,                    FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
+  CMD_OPTION_BOOLEAN      ("long-format",                  0,  0,0,globalOptions.longFormatFlag,                         FALSE,                                                             "list in long format"                                                      ),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                              FALSE,                                                             "surpress any output"                                                      ),
   CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                           1,0,3,NULL,                                                        "verbosity level"                                                          ),
 
@@ -1215,18 +1216,18 @@ void printInfo(uint verboseLevel, const char *format, ...)
 
 void vlogMessage(ulong logType, const char *prefix, const char *text, va_list arguments)
 {
-  char dateTime[32];
+  String dateTime;
 
   assert(text != NULL);
 
   if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
   {
-    Misc_getDateTime(Misc_getCurrentDateTime(),dateTime,sizeof(dateTime));
+    dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),NULL);
 
     if (tmpLogFile != NULL)
     {
       /* append to temporary log file */
-      fprintf(tmpLogFile,"%s> ",dateTime);
+      fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
       if (prefix != NULL) fprintf(tmpLogFile,prefix);
       vfprintf(tmpLogFile,text,arguments);
       fprintf(tmpLogFile,"\n");
@@ -1235,11 +1236,13 @@ void vlogMessage(ulong logType, const char *prefix, const char *text, va_list ar
     if (logFile != NULL)
     {
       /* append to log file */
-      fprintf(logFile,"%s> ",dateTime);
+      fprintf(logFile,"%s> ",String_cString(dateTime));
       if (prefix != NULL) fprintf(logFile,prefix);
       vfprintf(logFile,text,arguments);
       fprintf(logFile,"\n");
     }
+
+    String_delete(dateTime);
   }
 }
 
