@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -433,7 +433,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo);
 * Purpose: write data to file in archive
 * Input  : archiveFileInfo - archive file info block
 *          buffer          - data buffer
-*          bufferLength    - length of data buffer
+*          length          - length of data buffer
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -441,7 +441,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo);
 
 Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo,
                              const void      *buffer,
-                             ulong           bufferLength
+                             ulong           length
                             );
 
 /***********************************************************************\
@@ -449,7 +449,7 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo,
 * Purpose: read data from file in archive
 * Input  : archiveFileInfo - archive file info block
 *          buffer          - data buffer
-*          bufferLength    - length of data buffer
+*          length          - length of data buffer
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -457,7 +457,7 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo,
 
 Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo,
                             void            *buffer,
-                            ulong           bufferLength
+                            ulong           length
                            );
 
 /***********************************************************************\

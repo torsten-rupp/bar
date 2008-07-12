@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.47 $
+* $Revision: 1.48 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -2929,28 +2929,29 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
   return ERROR_NONE;
 }
 
-Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffer, ulong bufferLength)
+Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffer, ulong length)
 {
   byte   *p;
-  ulong  length;
   Errors error;
+  ulong  deflatedBytess;
 
   assert(archiveFileInfo != NULL);
   assert(archiveFileInfo->archiveInfo != NULL);
   assert((archiveFileInfo->file.bufferLength%archiveFileInfo->blockLength) == 0);
 
-  p      = (byte*)buffer;
-  length = 0;
-  while (length < bufferLength)
+  p = (byte*)buffer;
+  while (length > 0)
   {
     /* compress */
-    error = Compress_deflate(&archiveFileInfo->file.compressInfoData,*p);
+    error = Compress_deflate(&archiveFileInfo->file.compressInfoData,p,length,&deflatedBytess);
     if (error != ERROR_NONE)
     {
       return error;
     }
+    p += deflatedBytess;
+    length -= deflatedBytess;
 
-    /* check if block can be encrypted and written */
+    /* check if block can be encrypted and written to file */
     while (Compress_checkBlockIsFull(&archiveFileInfo->file.compressInfoData))
     {
       error = writeDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
@@ -2960,10 +2961,6 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
       }
     }
     assert(!Compress_checkBlockIsFull(&archiveFileInfo->file.compressInfoData));
-
-    /* next byte */
-    p++;
-    length++;
   }
 
   archiveFileInfo->file.bufferLength = 0;
@@ -2971,18 +2968,17 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
   return ERROR_NONE;
 }
 
-Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulong bufferLength)
+Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulong length)
 {
   byte   *p;
-  ulong  length;
   Errors error;
   ulong  n;
+  ulong  inflatedBytes;
 
   assert(archiveFileInfo != NULL);
 
-  p      = (byte*)buffer;
-  length = 0;
-  while (length < bufferLength)
+  p = (byte*)buffer;
+  while (length > 0)
   {
     /* fill decompressor with compressed data blocks */
     do
@@ -3005,15 +3001,13 @@ Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulon
     while (n <= 0);
 
     /* decompress data */
-    error = Compress_inflate(&archiveFileInfo->file.compressInfoData,p);
+    error = Compress_inflate(&archiveFileInfo->file.compressInfoData,p,1,&inflatedBytes);
     if (error != ERROR_NONE)
     {
       return error;
     }
-
-    /* next byte */
-    p++;
-    length++;
+    p += inflatedBytes;
+    length -= inflatedBytes;
   }
 
   return ERROR_NONE;

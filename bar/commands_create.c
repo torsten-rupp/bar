@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.52 $
+* $Revision: 1.53 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1930,7 +1930,7 @@ Errors Command_create(const char                   *archiveFileName,
               createInfo.statusInfo.fileTotalBytes = fileInfo.size;
               updateStatusInfo(&createInfo);
 
-              /* write file content into archive */
+              /* write file content to archive */
               error = ERROR_NONE;
               do
               {

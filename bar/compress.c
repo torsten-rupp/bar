@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -932,50 +932,95 @@ Errors Compress_reset(CompressInfo *compressInfo)
 }
 
 Errors Compress_deflate(CompressInfo *compressInfo,
-                        byte         data
+                        const byte   *data,
+                        ulong        length,
+                        ulong        *deflatedBytess
                        )
 {
   Errors error;
+  ulong  n;
 
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
+  assert(data != NULL);
+  assert(deflatedBytess != NULL);
 
-  if (compressInfo->dataBufferLength >= compressInfo->dataBufferSize)  // no more space in data buffer
+  (*deflatedBytess) = 0;
+  do
   {
-    error = compressData(compressInfo);
-    if (error != ERROR_NONE)
+    /* check if data buffer is full, compress data buffer */
+    if (compressInfo->dataBufferLength >= compressInfo->dataBufferSize)
     {
-      return error;
+      error = compressData(compressInfo);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
     }
+//    assert(compressInfo->dataBufferLength < compressInfo->dataBufferSize);
+
+    /* get available space in buffer */
+    n = MIN(length,compressInfo->dataBufferSize-compressInfo->dataBufferLength);
+
+    /* copy data to data buffer */
+    memcpy(compressInfo->dataBuffer+compressInfo->dataBufferLength,data,n);
+    compressInfo->dataBufferLength +=n;
+    data += n;
+    length -= n;
+
+    (*deflatedBytess) += n;
   }
-  assert(compressInfo->dataBufferLength < compressInfo->dataBufferSize);
-  (*(compressInfo->dataBuffer+compressInfo->dataBufferLength)) = data;
-  compressInfo->dataBufferLength++;
+  while (   (n > 0)
+         && (length > 0)
+         && (compressInfo->compressBufferLength < compressInfo->compressBufferSize)
+        );
 
   return ERROR_NONE;
 }
 
 Errors Compress_inflate(CompressInfo *compressInfo,
-                        byte         *data
+                        byte         *data,
+                        ulong        length,
+                        ulong        *inflatedBytes
                        )
 {
   Errors error;
+  ulong  n;
 
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_INFLATE);
   assert(data != NULL);
+  assert(inflatedBytes != NULL);
 
-  if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)
+  (*inflatedBytes) = 0;
+  do
   {
-    error = decompressData(compressInfo);
-    if (error != ERROR_NONE)
+    /* check if buffer is empty, decompress data */
+    if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)
     {
-      return error;
+      error = decompressData(compressInfo);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
     }
+//    assert(compressInfo->dataBufferIndex < compressInfo->dataBufferLength);
+
+    /* get number of bytes to read */
+    n = MIN(length,compressInfo->dataBufferLength-compressInfo->dataBufferIndex);
+
+    /* copy from data buffer */
+    memcpy(data,compressInfo->dataBuffer+compressInfo->dataBufferIndex,n);
+    compressInfo->dataBufferIndex += n;
+    data += n;
+    length -= n;
+
+    (*inflatedBytes) += n;
   }
-  assert(compressInfo->dataBufferIndex < compressInfo->dataBufferLength);
-  (*data) = (*(compressInfo->dataBuffer+compressInfo->dataBufferIndex));
-  compressInfo->dataBufferIndex++;
+  while (   (n > 0)
+         && (length > 0)
+         && (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)
+        );
 
   return ERROR_NONE;
 }

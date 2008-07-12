@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -107,12 +107,12 @@ typedef struct
   byte               *dataBuffer;               // buffer for uncompressed data
   ulong              dataBufferIndex;           // position of next byte in uncompressed data buffer
   ulong              dataBufferLength;          // length of data in uncompressed data buffer
-  ulong              dataBufferSize;            // length of data in uncompressed data buffer
+  ulong              dataBufferSize;            // size of uncompressed data buffer
 
   byte               *compressBuffer;           // buffer for compressed data
   ulong              compressBufferIndex;       // position of next byte in compressed data buffer
   ulong              compressBufferLength;      // length of data in compressed data buffer
-  ulong              compressBufferSize;        // length of data in compressed data buffer
+  ulong              compressBufferSize;        // size of compressed data buffer
 
 } CompressInfo;
 
@@ -213,29 +213,34 @@ Errors Compress_reset(CompressInfo *compressInfo);
 
 /***********************************************************************\
 * Name   : Compress_deflate
-* Purpose: deflate data
+* Purpose: deflate (compress) data
 * Input  : compressInfo - compress info block
-*          data         - data to compress
-* Output : -
+*          data         - data byte to compress
+* Output : deflatedBytess - number of processed data bytes
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Compress_deflate(CompressInfo *compressInfo,
-                        byte         data
+                        const byte   *data,
+                        ulong        length,
+                        ulong        *deflatedBytess
                        );
 
 /***********************************************************************\
 * Name   : Compress_inflate
-* Purpose: inflate data
+* Purpose: inflate (decompress) data
 * Input  : compressInfo - compress info block
-* Output : data - decompressed data
+* Output : data          - decompressed data
+*          inflatedBytes - number of data bytes
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Compress_inflate(CompressInfo *compressInfo,
-                        byte         *data
+                        byte         *data,
+                        ulong        length,
+                        ulong        *inflatedBytes
                        );
 
 /***********************************************************************\
