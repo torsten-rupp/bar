@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.31 $
+* $Revision: 1.32 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -30,6 +30,7 @@
 
 #include "bar.h"
 #include "errors.h"
+#include "misc.h"
 #include "patterns.h"
 #include "files.h"
 #include "archive.h"
@@ -75,7 +76,8 @@ typedef struct
 /***********************************************************************\
 * Name   : printHeader
 * Purpose: print list header
-* Input  : -
+* Input  : archiveFileName - archive file name
+*          
 * Output : -
 * Return : -
 * Notes  : -
@@ -85,16 +87,30 @@ LOCAL void printHeader(const String archiveFileName)
 {
   printInfo(0,"List archive '%s':\n",String_cString(archiveFileName));
   printInfo(0,"\n");
-  printInfo(0,
-            "%4s %-10s %-22s %-10s %-7s %-10s %s\n",
-            "Type",
-            "Size",
-            "Part",
-            "Compress",
-            "Ratio %",
-            "Crypt",
-            "Name"
-           );
+  if (globalOptions.longFormatFlag)
+  {
+    printInfo(0,
+              "%4s %-10s %-25s %-22s %-10s %-7s %-10s %s\n",
+              "Type",
+              "Size",
+              "Date/Time",
+              "Part",
+              "Compress",
+              "Ratio %",
+              "Crypt",
+              "Name"
+             );
+  }
+  else
+  {
+    printInfo(0,
+              "%4s %-10s %-25s %s\n",
+              "Type",
+              "Size",
+              "Date/Time",
+              "Name"
+             );
+  }
   printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
 }
 
@@ -131,6 +147,7 @@ LOCAL void printFooter(ulong fileCount)
 
 LOCAL void printFileInfo(const String       fileName,
                          uint64             fileSize,
+                         uint64             timeModified,
                          uint64             archiveFileSize,
                          CompressAlgorithms compressAlgorithm,
                          CryptAlgorithms    cryptAlgorithm,
@@ -138,9 +155,12 @@ LOCAL void printFileInfo(const String       fileName,
                          uint64             fragmentSize
                         )
 {
+  String dateTime;
   double ratio;
 
   assert(fileName != NULL);
+
+  dateTime = Misc_formatDateTime(String_new(),timeModified,NULL);
 
   if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (fragmentSize > 0))
   {
@@ -151,15 +171,29 @@ LOCAL void printFileInfo(const String       fileName,
     ratio = 0;
   }
 
-  printf("FILE %10llu %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
-         fileSize,
-         fragmentOffset,
-         (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset,
-         Compress_getAlgorithmName(compressAlgorithm),
-         ratio,
-         Crypt_getAlgorithmName(cryptAlgorithm),
-         String_cString(fileName)
-        );
+  if (globalOptions.longFormatFlag)
+  {
+    printf("FILE %10llu %-25s %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
+           fileSize,
+           String_cString(dateTime),
+           fragmentOffset,
+           (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset,
+           Compress_getAlgorithmName(compressAlgorithm),
+           ratio,
+           Crypt_getAlgorithmName(cryptAlgorithm),
+           String_cString(fileName)
+          );
+  }
+  else
+  {
+    printf("FILE %10llu %-25s %s\n",
+           fileSize,
+           String_cString(dateTime),
+           String_cString(fileName)
+          );
+  }
+
+  String_delete(dateTime);
 }
 
 /***********************************************************************\
@@ -178,10 +212,19 @@ LOCAL void printDirectoryInfo(const String    directoryName,
 {
   assert(directoryName != NULL);
 
-  printf("DIR                                                       %-10s %s\n",
-         Crypt_getAlgorithmName(cryptAlgorithm),
-         String_cString(directoryName)
-        );
+  if (globalOptions.longFormatFlag)
+  {
+    printf("DIR                                                                                 %-10s %s\n",
+           Crypt_getAlgorithmName(cryptAlgorithm),
+           String_cString(directoryName)
+          );
+  }
+  else
+  {
+    printf("DIR                                       %s\n",
+           String_cString(directoryName)
+          );
+  }
 }
 
 /***********************************************************************\
@@ -203,11 +246,21 @@ LOCAL void printLinkInfo(const String    linkName,
   assert(linkName != NULL);
   assert(destinationName != NULL);
 
-  printf("LINK                                                      %-10s %s -> %s\n",
-         Crypt_getAlgorithmName(cryptAlgorithm),
-         String_cString(linkName),
-         String_cString(destinationName)
-        );
+  if (globalOptions.longFormatFlag)
+  {
+    printf("LINK                                                                                %-10s %s -> %s\n",
+           Crypt_getAlgorithmName(cryptAlgorithm),
+           String_cString(linkName),
+           String_cString(destinationName)
+          );
+  }
+  else
+  {
+    printf("LINK                                      %s -> %s\n",
+           String_cString(linkName),
+           String_cString(destinationName)
+          );
+  }
 }
 
 /***********************************************************************\
@@ -235,32 +288,68 @@ LOCAL void printSpecialInfo(const String     fileName,
   switch (fileSpecialType)
   {
     case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
-      printf("CHAR                                                      %-10s %s, %lu %lu\n",
-             Crypt_getAlgorithmName(cryptAlgorithm),
-             String_cString(fileName),
-             major,
-             minor
-            );
+      if (globalOptions.longFormatFlag)
+      {
+        printf("CHAR                                                                                %-10s %s, %lu %lu\n",
+               Crypt_getAlgorithmName(cryptAlgorithm),
+               String_cString(fileName),
+               major,
+               minor
+              );
+      }
+      else
+      {
+        printf("CHAR                                      %s\n",
+               String_cString(fileName)
+              );
+      }
       break;
     case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
-      printf("BLOCK                                                     %-10s %s, %lu %lu\n",
-             Crypt_getAlgorithmName(cryptAlgorithm),
-             String_cString(fileName),
-             major,
-             minor
-            );
+      if (globalOptions.longFormatFlag)
+      {
+        printf("BLOCK                                                                               %-10s %s, %lu %lu\n",
+               Crypt_getAlgorithmName(cryptAlgorithm),
+               String_cString(fileName),
+               major,
+               minor
+              );
+      }
+      else
+      {
+        printf("BLOCK                                     %s\n",
+               String_cString(fileName)
+              );
+      }
       break;
     case FILE_SPECIAL_TYPE_FIFO:
-      printf("FIFO                                                      %-10s %s\n",
-             Crypt_getAlgorithmName(cryptAlgorithm),
-             String_cString(fileName)
-            );
+      if (globalOptions.longFormatFlag)
+      {
+        printf("FIFO                                                                                %-10s %s\n",
+               Crypt_getAlgorithmName(cryptAlgorithm),
+               String_cString(fileName)
+              );
+      }
+      else
+      {
+        printf("FIFO                                      %s\n",
+               String_cString(fileName)
+              );
+      }
       break;
     case FILE_SPECIAL_TYPE_SOCKET:
-      printf("SOCKET                                                    %-10s %s\n",
-             Crypt_getAlgorithmName(cryptAlgorithm),
-             String_cString(fileName)
-            );
+      if (globalOptions.longFormatFlag)
+      {
+        printf("SOCKET                                                                              %-10s %s\n",
+               Crypt_getAlgorithmName(cryptAlgorithm),
+               String_cString(fileName)
+              );
+      }
+      else
+      {
+        printf("SOCKET                                    %s\n",
+               String_cString(fileName)
+              );
+      }
       break;
     default:
       #ifndef NDEBUG
@@ -415,6 +504,7 @@ remoteBarFlag=FALSE;
                     /* output file info */
                     printFileInfo(fileName,
                                   fileInfo.size,
+                                  fileInfo.timeModified,
                                   archiveFileInfo.file.chunkInfoFileData.size,
                                   compressAlgorithm,
                                   cryptAlgorithm,
@@ -641,6 +731,7 @@ remoteBarFlag=FALSE;
           bool                 completedFlag;
           String               fileName,directoryName,linkName;
           uint64               fileSize;
+          uint64               timeModified;
           uint64               archiveFileSize;
           uint64               fragmentOffset,fragmentLength;
           CryptAlgorithms      compressAlgorithm;
@@ -742,6 +833,7 @@ remoteBarFlag=FALSE;
                                     &errorCode,
                                     &completedFlag,
                                     &fileSize,
+                                    &timeModified,
                                     &archiveFileSize,
                                     &fragmentOffset,
                                     &fragmentLength,
@@ -764,6 +856,7 @@ remoteBarFlag=FALSE;
                   /* output file info */
                   printFileInfo(fileName,
                                 fileSize,
+                                timeModified,
                                 archiveFileSize,
                                 compressAlgorithm,
                                 cryptAlgorithm,
