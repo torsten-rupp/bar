@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -36,7 +36,6 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define DATE_TIME_FORMAT "%Y-%m-%d %H:%M:%S %Z"
 
 /***************************** Datatypes *******************************/
 
@@ -145,19 +144,50 @@ void Misc_splitDateTime(uint64   dateTime,
   if (weekDay != NULL) (*weekDay) = (tmStruct.tm_wday + WEEKDAY_SUN) % 7;
 }
 
-const char *Misc_getDateTime(uint64 dateTime, char *buffer, uint bufferSize)
+String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
 {
+  #define START_BUFFER_SIZE 256
+  #define DELTA_BUFFER_SIZE 64
+
   time_t    n;
   struct tm tmStruct;
+  char      *buffer;
+  uint      bufferSize;
+  int       length;
 
-  assert(buffer != NULL);
+  assert(string != NULL);
 
   n = (time_t)dateTime;
   localtime_r(&n,&tmStruct);
-  strftime(buffer,bufferSize-1,DATE_TIME_FORMAT,&tmStruct);
-  buffer[bufferSize-1] = '\0';
 
-  return buffer;
+  if (format == NULL) format = "%c";
+
+  /* allocate buffer and format date/time */
+  bufferSize = START_BUFFER_SIZE;
+  do
+  {
+    buffer = (char*)malloc(bufferSize);
+    if (buffer == NULL)
+    {
+      return NULL;
+    }
+    length = strftime(buffer,bufferSize-1,format,&tmStruct);
+    if (length == 0)
+    {
+      free(buffer);
+      bufferSize += DELTA_BUFFER_SIZE;
+    }
+  }
+  while (length == 0);
+  buffer[length] = '\0';
+
+  /* set string */
+  String_setBuffer(string,buffer,length);
+
+  /* free resources */
+  free(buffer);
+
+  return string;
 }
 
 uint64 Misc_makeDateTime(uint year,
@@ -290,7 +320,6 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   String          fileName;
   bool            foundFlag;
   char const      **arguments;
-  StringNode      *argumentNode;
   int             pipeStdin[2],pipeStdout[2],pipeStderr[2];
   int             pid;
   StringNode      *stringNode;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -24,6 +24,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define DEFAULT_DATE_TIME_FORMAT "%Y-%m-%d %H:%M:%S %Z"
 
 /***************************** Datatypes *******************************/
 /* text macro definitions */
@@ -184,17 +185,17 @@ uint64 Misc_makeDateTime(uint year,
                         );
 
 /***********************************************************************\
-* Name   : Misc_getDateTime
-* Purpose: get current date/time
-* Input  : dateTime   - date/time (seconds since 1970-1-1 00:00:00)
-*          buffer     - buffer for date/time stirng
-*          bufferSize - buffer size
+* Name   : Misc_formatDateTime
+* Purpose: format date/time
+* Input  : string     - string variable
+*          dateTime   - date/time (seconds since 1970-1-1 00:00:00)
+*          format     - format string (strftime) or NULL
 * Output : -
 * Return : date/time string
 * Notes  : -
 \***********************************************************************/
 
-const char *Misc_getDateTime(uint64 dateTime, char *buffer, uint bufferSize);
+String Misc_formatDateTime(String string, uint64 dateTime, const char *format);
 
 /***********************************************************************\
 * Name   : udelay
