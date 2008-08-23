@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems: all
@@ -48,6 +48,8 @@ typedef enum
   CRYPT_ALGORITHM_UNKNOWN=65535,
 } CryptAlgorithms;
 
+#define DEFAULT_CRYPT_KEY_BITS 2048
+
 /***************************** Datatypes *******************************/
 
 /* crypt info block */
@@ -59,6 +61,14 @@ typedef struct
     gcry_cipher_hd_t gcry_cipher_hd;
   #endif /* HAVE_GCRYPT */
 } CryptInfo;
+
+/* public/private key */
+typedef struct
+{
+  #ifdef HAVE_GCRYPT
+    gcry_sexp_t key;
+  #endif /* HAVE_GCRYPT */
+} CryptKey;
 
 /***************************** Variables *******************************/
 
@@ -214,6 +224,138 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
                      void      *buffer,
                      ulong      bufferLength
                     );
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Crypt_initKey
+* Purpose: initialise public/private key
+* Input  : cryptKey - crypt key
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_initKey(CryptKey *cryptKey);
+
+/***********************************************************************\
+* Name   : public/private
+* Purpose: deinitialise public/private key
+* Input  : cryptKey - crypt key
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_doneKey(CryptKey *cryptKey);
+
+/***********************************************************************\
+* Name   : PublicKey_new
+* Purpose: create new public/private key
+* Input  : -
+* Output : -
+* Return : crypt key or NULL iff insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+CryptKey *Crypt_newKey(void);
+
+/***********************************************************************\
+* Name   : Crypt_createKeys
+* Purpose: create new public/private key pair
+* Input  : bits - number of RSA key bits
+* Output : publicKey  - public crypt key
+*          privateKey - private crypt key
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_createKeys(CryptKey *publicKey,
+                        CryptKey *privateKey,
+                        uint     bits
+                       );
+
+/***********************************************************************\
+* Name   : PublicKey_delete
+* Purpose: delete public/private key
+* Input  : cryptKey - crypt key
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_deleteKey(CryptKey *cryptKey);
+
+/***********************************************************************\
+* Name   : Crypt_getKeyData
+* Purpose: get public/private key data as string
+* Input  : string   - string variable
+*          cryptKey - crypt key
+* Output : -
+* Return : string with key data
+* Notes  : -
+\***********************************************************************/
+
+String Crypt_getKeyData(String         string,
+                        const CryptKey *cryptKey
+                       );
+/***********************************************************************\
+* Name   : Crypt_setKeyData
+* Purpose: set public/private key data from string
+* Input  : cryptKey - crypt key
+*          string   - string with key data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_setKeyData(CryptKey     *cryptKey,
+                        const String string
+                       );
+
+/***********************************************************************\
+* Name   : Crypt_keyEncrypt
+* Purpose: encrypt with public key
+* Input  : cryptKey                 - crypt key
+*          buffer                   - buffer with data
+*          bufferLength             - length of data
+*          encryptedBuffer          - buffer for encrypted data
+*          maxEncryptedBufferLength - max. length of encrypted data
+* Output : encryptedBuffer       - encrypted data
+*          encryptedBufferLength - length of encrypted data
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
+                        const void *buffer,
+                        ulong      bufferLength,
+                        void       *encryptedBuffer,
+                        ulong      maxEncryptedBufferLength,
+                        ulong      *encryptedBufferLength
+                       );
+
+/***********************************************************************\
+* Name   : Crypt_keyDecrypt
+* Purpose: decrypt with private key
+* Input  : cryptKey              - crypt key
+*          encryptedBuffer       - encrypted data
+*          encryptedBufferLength - length of encrypted data
+*          buffer                - buffer for data
+*          maxBufferLength       - max. length of buffer for data
+* Output : buffer       - data
+*          bufferLength - length of data
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_keyDecrypt(CryptKey   *cryptKey,
+                        const void *encryptedBuffer,
+                        ulong      encryptedBufferLength,
+                        void       *buffer,
+                        ulong      maxBufferLength,
+                        ulong      *bufferLength
+                       );
 
 #ifdef __cplusplus
   }

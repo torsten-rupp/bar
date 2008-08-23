@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/errors.def,v $
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
@@ -13,7 +13,7 @@ DEFAULT "unknown"
 
 # general
 ERROR INSUFFICIENT_MEMORY            "insufficient memory"
-ERROR INIT                           "init"
+ERROR INIT                           "init fail"
 ERROR INVALID_ARGUMENT               "invalid argument"
 ERROR CONFIG                         "config error"
 ERROR ABORTED                        "aborted"
@@ -24,7 +24,7 @@ ERROR STILL_NOT_IMPLEMENTED          "function still not implemented"
 ERROR INVALID_PATTERN                "init pattern matching"
 
 # TLS/SSL
-ERROR INIT_TLS                       "init TLS (SSL)"
+ERROR INIT_TLS                       "init TLS (SSL) fail"
 ERROR NO_TLS_CA                      "no TLS (SSL) certificate authority file 'bar-ca.pem'"
 ERROR NO_TLS_CERTIFICATE             "no TLS (SSL) certificate file 'bar-server-cert.pem'"
 ERROR NO_TLS_KEY                     "no or unreadable TLS (SSL) key file 'bar-server-key.pem'"
@@ -40,19 +40,24 @@ ERROR FTP_SESSION_FAIL               "initialize FTP session fail"
 ERROR FTP_AUTHENTIFICATION           "invalid FTP user/password"
 
 # compress
-ERROR INIT_COMPRESS                  "init compress"
-ERROR COMPRESS_ERROR                 "compress"
-ERROR DEFLATE_ERROR                  "deflate"
-ERROR INFLATE_ERROR                  "inflate"
+ERROR INIT_COMPRESS                  "init compress fail"
+ERROR COMPRESS_ERROR                 "compress fail"
+ERROR DEFLATE_ERROR                  "deflate fail"
+ERROR INFLATE_ERROR                  "inflate fail"
+ERROR COMPRESS_EOF                   "end of compressed file"
 
 # crypt
 ERROR UNSUPPORTED_BLOCK_SIZE         "unsupported block size"
-ERROR INIT_CRYPT                     "init crypt"
+ERROR INIT_CRYPT                     "init crypt fail"
 ERROR NO_CRYPT_PASSWORD              "no password given for cipher"
 ERROR INVALID_PASSWORD               "invalid password"
-ERROR INIT_CIPHER                    "init cipher"
-ERROR ENCRYPT_FAIL                   "encrypt"
-ERROR DECRYPT_FAIL                   "decrypt"
+ERROR INIT_CIPHER                    "init cipher fail"
+ERROR ENCRYPT_FAIL                   "encrypt fail"
+ERROR DECRYPT_FAIL                   "decrypt fail"
+ERROR CREATE_KEY_FAIL                "create public/private key fail"
+ERROR INVALID_KEY                    "invalid key"
+ERROR KEY_ENCRYPT_FAIL               "key encryption fail"
+ERROR KEY_DECRYPT_FAIL               "key decryption fail"
 
 # file i/o
 ERROR CREATE_FILE

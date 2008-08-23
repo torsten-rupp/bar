@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.41 $
+* $Revision: 1.42 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -97,7 +97,7 @@ typedef struct
 
 typedef struct FTPServerNode
 {
-  NODE_HEADER(struct FTPServerNode);
+  LIST_NODE_HEADER(struct FTPServerNode);
 
   String    name;                      // ftp server name
   FTPServer ftpServer;
@@ -120,7 +120,7 @@ typedef struct
 
 typedef struct SSHServerNode
 {
-  NODE_HEADER(struct SSHServerNode);
+  LIST_NODE_HEADER(struct SSHServerNode);
 
   String    name;                       // ssh server name
   SSHServer sshServer;
@@ -172,7 +172,7 @@ typedef struct
 
 typedef struct DeviceNode
 {
-  NODE_HEADER(struct DeviceNode);
+  LIST_NODE_HEADER(struct DeviceNode);
 
   String name;                          // device name
   Device device;
@@ -198,6 +198,8 @@ typedef struct
   ulong                  compressMinFileSize;          // min. size of file for using compression
 
   Password               *cryptPassword;               // default password for encryption/decryption
+  String                 cryptPublicKeyFileName;       // default public key file name for encryption
+  String                 cryptPrivateKeyFileName;      // default private key file name for decryption
 
   FTPServer              *ftpServer;                   // FTP server
   SSHServer              *sshServer;                   // SSH server
@@ -224,7 +226,7 @@ typedef struct
 /* schedule */
 typedef struct ScheduleNode
 {
-  NODE_HEADER(struct ScheduleNode);
+  LIST_NODE_HEADER(struct ScheduleNode);
 
   int          year;
   int          month;
@@ -258,6 +260,8 @@ typedef struct
   CryptAlgorithms     cryptAlgorithm;
   PasswordModes       cryptPasswordMode;
   Password            *cryptPassword;
+  String              cryptPublicKeyFileName;
+  String              cryptPrivateKeyFileName;
 
   FTPServer           ftpServer;
   SSHServer           sshServer;

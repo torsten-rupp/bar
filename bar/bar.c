@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.61 $
+* $Revision: 1.62 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -95,6 +95,8 @@ typedef enum
   COMMAND_TEST,
   COMMAND_COMPARE,
   COMMAND_RESTORE,
+
+  COMMAND_GENERATE_KEYS,
 
   COMMAND_UNKNOWN,
 } Commands;
@@ -247,6 +249,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("test",                         't',0,0,command,                                              COMMAND_LIST,COMMAND_TEST,                                         "test contents of archive"                                                 ),
   CMD_OPTION_ENUM         ("compare",                      'd',0,0,command,                                              COMMAND_LIST,COMMAND_COMPARE,                                      "compare contents of archive with files"                                   ),
   CMD_OPTION_ENUM         ("extract",                      'x',0,0,command,                                              COMMAND_LIST,COMMAND_RESTORE,                                      "restore archive"                                                          ),
+  CMD_OPTION_ENUM         ("generate-keys",                0  ,0,0,command,                                              COMMAND_LIST,COMMAND_GENERATE_KEYS,                                "generate new public/private key pair"                                     ),
 
   CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                                 NULL,cmdOptionParseConfigFile,NULL,                                "configuration file","file name"                                           ),
 
@@ -274,6 +277,8 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,0,jobOptions.cryptAlgorithm,                            CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&globalOptions.cryptPassword,                         NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
+  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,0,&globalOptions.cryptPublicKeyFileName,                NULL,cmdOptionParseString,NULL,                                    "public key for encryption","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,0,&globalOptions.cryptPrivateKeyFileName,               NULL,cmdOptionParseString,NULL,                                    "private key for decryption","file name"                                   ),
 
   CMD_OPTION_SPECIAL      ("ftp-login-name",               0,  0,0,&ftpServer.loginName,                                 NULL,cmdOptionParseString,NULL,                                    "ftp login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,0,&ftpServer.password,                                  NULL,cmdOptionParsePassword,NULL,                                  "ftp password (use with care!)","password"                                 ),
@@ -457,6 +462,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                          CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SPECIAL  ("crypt-password",               &globalOptions.cryptPassword,-1,                        configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_STRING   ("crypt-public-key",             &globalOptions.cryptPublicKeyFileName,-1                ),
+  CONFIG_VALUE_STRING   ("crypt-private-key",            &globalOptions.cryptPrivateKeyFileName,-1               ),
 
   CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(FTPServer,loginName)         ),
   CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(FTPServer,password),         configValueParsePassword,NULL,NULL,NULL,NULL),
@@ -867,6 +874,36 @@ LOCAL bool cmdOptionParseIncludeExclude(void *userData, void *variable, const ch
 \***********************************************************************/
 
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
+
+  if ((*(Password**)variable) != NULL)
+  {
+    Password_setCString(*(Password**)variable,value);
+  }
+  else
+  {
+    (*(Password**)variable) = Password_newCString(value);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseCryptKey
+* Purpose: command line option call back for parsing public key
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -1373,6 +1410,8 @@ void copyJobOptions(const JobOptions *sourceJobOptions, JobOptions *destinationJ
   destinationJobOptions->incrementalListFileName      = String_duplicate(sourceJobOptions->incrementalListFileName);
   destinationJobOptions->directory                    = String_duplicate(sourceJobOptions->directory);
   destinationJobOptions->cryptPassword                = Password_duplicate(sourceJobOptions->cryptPassword);
+  destinationJobOptions->cryptPublicKeyFileName       = String_duplicate(sourceJobOptions->cryptPublicKeyFileName);
+  destinationJobOptions->cryptPrivateKeyFileName      = String_duplicate(sourceJobOptions->cryptPrivateKeyFileName);
   destinationJobOptions->ftpServer.loginName          = String_duplicate(sourceJobOptions->ftpServer.loginName);
   destinationJobOptions->ftpServer.password           = Password_duplicate(sourceJobOptions->ftpServer.password);
   destinationJobOptions->sshServer.loginName          = String_duplicate(sourceJobOptions->sshServer.loginName);
@@ -1392,6 +1431,8 @@ void freeJobOptions(JobOptions *jobOptions)
   String_delete(jobOptions->sshServer.loginName);
   Password_delete(jobOptions->ftpServer.password);
   String_delete(jobOptions->ftpServer.loginName);
+  String_delete(jobOptions->cryptPrivateKeyFileName);
+  String_delete(jobOptions->cryptPublicKeyFileName);
   Password_delete(jobOptions->cryptPassword);
   String_delete(jobOptions->directory);
   String_delete(jobOptions->incrementalListFileName);
@@ -2196,10 +2237,10 @@ int main(int argc, const char *argv[])
           int    z;
           Errors error;
 
-          /* get archive filename */
-          if (argc < 1)
+          /* get archive file name */
+          if (argc <= 1)
           {
-            printError("No archive filename given!\n");
+            printError("No archive file name given!\n");
             error = ERROR_INVALID_ARGUMENT;
             break;
           }
@@ -2284,6 +2325,82 @@ int main(int argc, const char *argv[])
 
           /* log post command */
           logPostProcess();
+        }
+        break;
+      case COMMAND_GENERATE_KEYS:
+        {
+          const char *publicKeyFileName;
+          uint       bits;
+          CryptKey   publicKey,privateKey;
+          String     fileName;
+          FileHandle fileHandle;
+          String     s;
+
+          /* get key file name, type, bits */
+          if (argc <= 1)
+          {
+            printError("No key file name given!\n");
+            error = ERROR_INVALID_ARGUMENT;
+            break;
+          }
+          publicKeyFileName = argv[1];
+          if (argc > 2)
+          {
+            bits = atol(argv[3]);
+          }
+          else
+          {
+            bits = DEFAULT_CRYPT_KEY_BITS;
+          }
+
+          /* generate new keys pair */
+          Crypt_initKey(&publicKey);
+          Crypt_initKey(&privateKey);
+          s = String_new();
+          error = Crypt_createKeys(&publicKey,&privateKey,bits);
+          if (error == ERROR_NONE)
+          {
+            fileName = File_setFileNameCString(File_newFileName(),publicKeyFileName);
+            String_appendCString(fileName,".public");
+            error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+            if (error == ERROR_NONE)
+            {
+              Crypt_getKeyData(s,&publicKey);
+              File_writeLine(&fileHandle,s);
+              File_close(&fileHandle);
+            }
+            File_deleteFileName(fileName);
+
+            fileName = File_setFileNameCString(File_newFileName(),publicKeyFileName);
+            String_appendCString(fileName,".private");
+            error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+            if (error == ERROR_NONE)
+            {
+              Crypt_getKeyData(s,&privateKey);
+              File_writeLine(&fileHandle,s);
+              File_close(&fileHandle);
+            }
+            File_deleteFileName(fileName);
+          }
+          String_delete(s);
+
+{
+  char s[200],c[2000],t[200];
+  ulong n;
+
+  strcpy(s,"Hello World");
+
+  Crypt_keyEncrypt(&publicKey,s,200,c,2000,&n);
+
+  Crypt_keyDecrypt(&privateKey,c,n,t,200,&n);
+
+fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
+
+}
+
+
+          Crypt_doneKey(&privateKey);
+          Crypt_doneKey(&publicKey);
         }
         break;
       default:
