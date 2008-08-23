@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -62,6 +62,7 @@ typedef struct
 
   PasswordModes          passwordMode;                   // password mode (PASSWORD_MODE_DEFAULT for using settings in jobOptions)
   Password               *cryptPassword;                 // cryption password
+//  PublicKey              publicKey;
 
   uint                   blockLength;                    /* block length for file entry/file
                                                             data (depend on used crypt

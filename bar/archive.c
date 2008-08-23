@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.48 $
+* $Revision: 1.49 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -45,7 +45,7 @@ typedef enum
 
 typedef struct PasswordNode
 {
-  NODE_HEADER(struct PasswordNode);
+  LIST_NODE_HEADER(struct PasswordNode);
 
   Password *password;
 } PasswordNode;
@@ -124,10 +124,11 @@ LOCAL void freePasswordNode(PasswordNode *passwordNode, void *userData)
 }
 
 /***********************************************************************\
-* Name   : initCryptPassword
-* Purpose: initialize crypt password if password not set
-* Input  : fileName   - file name
-*          jobOptions - job options
+* Name   : getCryptPassword
+* Purpose: get crypt password if password not set
+* Input  : fileName     - file name
+*          jobOptions   - job options
+*          passwordMode - password mode
 * Output : -
 * Return : password or NULL if no password given
 * Notes  : -
@@ -616,7 +617,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMo
 
     /* flush compress buffer */
     Compress_flush(&archiveFileInfo->file.compressInfoData);
-    while (!Compress_checkBlockIsEmpty(&archiveFileInfo->file.compressInfoData))
+    while (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
     {
       /* get compressed block */
       Compress_getBlock(&archiveFileInfo->file.compressInfoData,
@@ -829,6 +830,10 @@ LOCAL Errors readDataBlock(ArchiveFileInfo *archiveFileInfo)
   else
   {
     Compress_flush(&archiveFileInfo->file.compressInfoData);
+    if (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) <= 0)
+    {
+      return ERROR_COMPRESS_EOF;
+    }
   }
 
   return ERROR_NONE;
@@ -923,6 +928,7 @@ Errors Archive_open(ArchiveInfo   *archiveInfo,
   archiveInfo->passwordMode            = passwordMode;
 
   archiveInfo->cryptPassword           = NULL;
+//  archiveInfo->cryptPublicKey          = NULL;
 
   archiveInfo->partNumber              = 0;
   archiveInfo->fileOpenFlag            = TRUE;
@@ -2735,9 +2741,11 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
         case FILE_TYPE_FILE:
           /* flush last blocks */
           Compress_flush(&archiveFileInfo->file.compressInfoData);
-          if (!archiveFileInfo->file.createdFlag || !Compress_checkBlockIsEmpty(&archiveFileInfo->file.compressInfoData))
+          if (   !archiveFileInfo->file.createdFlag
+              || (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
+             )
           {
-            while (!Compress_checkBlockIsEmpty(&archiveFileInfo->file.compressInfoData))
+            while (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
             {
               error = writeDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
               if (error != ERROR_NONE)
@@ -2952,7 +2960,7 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
     length -= deflatedBytess;
 
     /* check if block can be encrypted and written to file */
-    while (Compress_checkBlockIsFull(&archiveFileInfo->file.compressInfoData))
+    while (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_FULL) > 0)
     {
       error = writeDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
       if (error != ERROR_NONE)
@@ -2960,7 +2968,7 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo, const void *buffe
         return error;
       }
     }
-    assert(!Compress_checkBlockIsFull(&archiveFileInfo->file.compressInfoData));
+    assert(Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_FULL) == 0);
   }
 
   archiveFileInfo->file.bufferLength = 0;
@@ -2983,12 +2991,7 @@ Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulon
     /* fill decompressor with compressed data blocks */
     do
     {
-      error = Compress_available(&archiveFileInfo->file.compressInfoData,&n);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
+      n = Compress_getAvailableBytes(&archiveFileInfo->file.compressInfoData);
       if (n <= 0)
       {
         error = readDataBlock(archiveFileInfo);

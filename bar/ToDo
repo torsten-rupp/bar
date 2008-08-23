@@ -24,4 +24,4 @@ ToDo
 - support to access multiple bar servers
 - script to generate pem-keys
 - asymmetric encryption
-
+- barcontrol.tcl: store skip unreadable files

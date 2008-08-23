@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.32 $
+* $Revision: 1.33 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -48,7 +48,7 @@
 
 typedef struct SSHSocketNode
 {
-  NODE_HEADER(struct SSHSocketNode);
+  LIST_NODE_HEADER(struct SSHSocketNode);
 
   String       name;
   SocketHandle socketHandle;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/arrays.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -42,7 +42,7 @@ struct __Array
 #ifndef NDEBUG
   typedef struct DebugArrayNode
   {
-    NODE_HEADER(struct DebugArrayNode);
+    LIST_NODE_HEADER(struct DebugArrayNode);
 
     const char     *fileName;
     ulong          lineNb;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -599,12 +599,12 @@ Errors Compress_new(CompressInfo       *compressInfo,
   compressInfo->compressBufferSize   = blockLength;
 
   /* allocate buffers */
-  compressInfo->dataBuffer = malloc(blockLength);
+  compressInfo->dataBuffer = malloc(compressInfo->dataBufferSize);
   if (compressInfo->dataBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  compressInfo->compressBuffer = malloc(blockLength);
+  compressInfo->compressBuffer = malloc(compressInfo->compressBufferSize);
   if (compressInfo->compressBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -1141,7 +1141,7 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
   return length;
 }
 
-Errors Compress_available(CompressInfo *compressInfo, ulong *availableBytes)
+ulong Compress_getAvailableBytes(CompressInfo *compressInfo)
 {
   Errors error;
 
@@ -1151,11 +1151,11 @@ Errors Compress_available(CompressInfo *compressInfo, ulong *availableBytes)
   {
     case COMPRESS_MODE_DEFLATE:
       error = compressData(compressInfo);
-      if (error != ERROR_NONE) return error;
+      if (error != ERROR_NONE) return 0;
       break;
     case COMPRESS_MODE_INFLATE:
       error = decompressData(compressInfo);
-      if (error != ERROR_NONE) return error;
+      if (error != ERROR_NONE) return 0;
       break;
     #ifndef NDEBUG
       default:
@@ -1164,15 +1164,14 @@ Errors Compress_available(CompressInfo *compressInfo, ulong *availableBytes)
     #endif /* NDEBUG */
   }
 
-  /* data is avaialbe iff bufferIndex < bufferLength */
-  (*availableBytes) = compressInfo->dataBufferLength-compressInfo->dataBufferIndex;
-
-  return ERROR_NONE;
+  /* data is available iff bufferIndex < bufferLength */
+  return compressInfo->dataBufferLength-compressInfo->dataBufferIndex;
 }
 
-bool Compress_checkBlockIsFull(CompressInfo *compressInfo)
+uint Compress_getAvailableBlocks(CompressInfo *compressInfo, CompressBlockTypes blockType)
 {
   Errors error;
+  uint   blockCount;
 
   assert(compressInfo != NULL);
 
@@ -1180,38 +1179,11 @@ bool Compress_checkBlockIsFull(CompressInfo *compressInfo)
   {
     case COMPRESS_MODE_DEFLATE:
       error = compressData(compressInfo);
-      if (error != ERROR_NONE) return FALSE;
+      if (error != ERROR_NONE) return 0;
       break;
     case COMPRESS_MODE_INFLATE:
       error = decompressData(compressInfo);
-      if (error != ERROR_NONE) return FALSE;
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
-    
-  /* compress buffer is full iff compressBufferLength >= blockLength */
-  return (compressInfo->compressBufferLength >= compressInfo->blockLength);
-}
-
-bool Compress_checkBlockIsEmpty(CompressInfo *compressInfo)
-{
-  Errors error;
-
-  assert(compressInfo != NULL);
-
-  switch (compressInfo->compressMode)
-  {
-    case COMPRESS_MODE_DEFLATE:
-      error = compressData(compressInfo);
-      if (error != ERROR_NONE) return TRUE;
-      break;
-    case COMPRESS_MODE_INFLATE:
-      error = decompressData(compressInfo);
-      if (error != ERROR_NONE) return TRUE;
+      if (error != ERROR_NONE) return 0;
       break;
     #ifndef NDEBUG
       default:
@@ -1220,8 +1192,25 @@ bool Compress_checkBlockIsEmpty(CompressInfo *compressInfo)
     #endif /* NDEBUG */
   }
 
-  /* compress buffer is empty iff compressBufferIndex >= compressBufferLength */
-  return (compressInfo->compressBufferIndex >= compressInfo->compressBufferLength);
+  blockCount = 0;
+  switch (blockType)
+  {
+    case COMPRESS_BLOCK_TYPE_ANY:
+      /* block is available iff compressBufferLength >= 0 */
+      blockCount = (uint)((compressInfo->compressBufferLength-compressInfo->compressBufferIndex+compressInfo->blockLength-1)/compressInfo->blockLength);
+      break;
+    case COMPRESS_BLOCK_TYPE_FULL:
+      /* block is full iff compressBufferLength >= blockLength */
+      blockCount = (uint)((compressInfo->compressBufferLength-compressInfo->compressBufferIndex)/compressInfo->blockLength);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return blockCount;
 }
 
 #if 0
@@ -1248,7 +1237,7 @@ void Compress_getBlock(CompressInfo *compressInfo,
   assert(compressInfo != NULL);
   assert(compressInfo->compressBuffer != NULL);
 // ??? blocklength
-  assert(compressInfo->compressBufferLength <= compressInfo->blockLength);
+  assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
   assert(buffer != NULL);
   assert(bufferLength != NULL);
 
@@ -1271,7 +1260,7 @@ void Compress_putBlock(CompressInfo *compressInfo,
   assert(compressInfo != NULL);
   assert(compressInfo->compressBuffer != NULL);
   assert(buffer != NULL);
-  assert(bufferLength <= compressInfo->blockLength);
+  assert(bufferLength <= compressInfo->compressBufferSize);
 
   memcpy(compressInfo->compressBuffer,buffer,bufferLength);
   compressInfo->compressBufferIndex  = 0;

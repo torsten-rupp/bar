@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.53 $
+* $Revision: 1.54 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -532,7 +532,7 @@ LOCAL bool checkIsExcluded(PatternList *excludePatternList,
   assert(excludePatternList != NULL);
   assert(fileName != NULL);
 
-  return Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_BEGIN);
+  return Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
 }
 
 /***********************************************************************\
@@ -1353,7 +1353,7 @@ LOCAL Errors storeArchiveFile(String fileName,
 }
 
 /***********************************************************************\
-* Name   : storage
+* Name   : storageThread
 * Purpose: archive storage thread
 * Input  : createInfo - create info block
 * Output : -
@@ -1460,6 +1460,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
           retryCount++;
           if (retryCount > MAX_RETRIES) break;
 
+#if 1
           /* create storage file */
           error = Storage_create(&createInfo->storageFileHandle,
                                  storageMsg.destinationFileName,
@@ -1526,6 +1527,9 @@ LOCAL void storageThread(CreateInfo *createInfo)
 
           /* close storage file */
           Storage_close(&createInfo->storageFileHandle);
+#else
+  error = ERROR_NONE;
+#endif /* 0 */
 
           if (error == ERROR_NONE)
           {
@@ -1828,15 +1832,15 @@ Errors Command_create(const char                   *archiveFileName,
   }
 
   /* start threads */
-  if (!Thread_init(&createInfo.collectorSumThread,globalOptions.niceLevel,collectorSumThread,&createInfo))
+  if (!Thread_init(&createInfo.collectorSumThread,"BAR collector sum",globalOptions.niceLevel,collectorSumThread,&createInfo))
   {
     HALT_FATAL_ERROR("Cannot initialise collector sum thread!");
   }
-  if (!Thread_init(&createInfo.collectorThread,globalOptions.niceLevel,collectorThread,&createInfo))
+  if (!Thread_init(&createInfo.collectorThread,"BAR collector",globalOptions.niceLevel,collectorThread,&createInfo))
   {
     HALT_FATAL_ERROR("Cannot initialise collector thread!");
   }
-  if (!Thread_init(&createInfo.storageThread,globalOptions.niceLevel,storageThread,&createInfo))
+  if (!Thread_init(&createInfo.storageThread,"BAR storage",globalOptions.niceLevel,storageThread,&createInfo))
   {
     HALT_FATAL_ERROR("Cannot initialise storage thread!");
   }
@@ -2348,6 +2352,9 @@ Errors Command_create(const char                   *archiveFileName,
     Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
     String_delete(incrementalListFileName);
   }
+  Thread_done(&createInfo.collectorSumThread);
+  Thread_done(&createInfo.collectorThread);
+  Thread_done(&createInfo.storageThread);
   Semaphore_done(&createInfo.storageSemaphore);
   MsgQueue_done(&createInfo.storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
   MsgQueue_done(&createInfo.fileMsgQueue,(MsgQueueMsgFreeFunction)freeFileMsg,NULL);

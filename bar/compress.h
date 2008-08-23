@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/compress.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -33,8 +33,8 @@
 
 typedef enum
 {
-  COMPRESS_MODE_DEFLATE,
-  COMPRESS_MODE_INFLATE,
+  COMPRESS_MODE_DEFLATE,    // compress
+  COMPRESS_MODE_INFLATE,    // decompress
 } CompressModes;
 
 typedef enum
@@ -71,6 +71,12 @@ typedef enum
 
   COMPRESS_ALGORITHM_UNKNOWN=0xFFFF,
 } CompressAlgorithms;
+
+typedef enum
+{
+  COMPRESS_BLOCK_TYPE_ANY,                      // any blocks
+  COMPRESS_BLOCK_TYPE_FULL                      // full blocks (=block length) 
+} CompressBlockTypes;
 
 /***************************** Datatypes *******************************/
 
@@ -277,38 +283,28 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo);
 uint64 Compress_getOutputLength(CompressInfo *compressInfo);
 
 /***********************************************************************\
-* Name   : Compress_available
-* Purpose: get number of available bytes
+* Name   : Compress_getAvailableBytes
+* Purpose: get number of available bytes (decompressed bytes)
 * Input  : compressInfo - compress info block
-* Output : availableBytes - number of available bytes
-* Return : ERROR_NONE or error code
+* Output : 
+* Return : number of available bytes
 * Notes  : -
 \***********************************************************************/
 
-Errors Compress_available(CompressInfo *compressInfo, ulong *availableBytes);
+ulong Compress_getAvailableBytes(CompressInfo *compressInfo);
 
 /***********************************************************************\
-* Name   : Compress_checkBlockIsFull
-* Purpose: check if block is full
+* Name   : Compress_availableBlocks
+* Purpose: get number of available (full) blocks (compressed blocks)
 * Input  : compressInfo - compress info block
 * Output : -
-* Return : TRUE if block is full, FALSE otherwise
+* Return : number of available (full) blocks
 * Notes  : -
 \***********************************************************************/
 
-bool Compress_checkBlockIsFull(CompressInfo *compressInfo);
+uint Compress_getAvailableBlocks(CompressInfo *compressInfo, CompressBlockTypes blockType);
 
-/***********************************************************************\
-* Name   : Compress_checkBlockIsEmpty
-* Purpose: check if block is empty
-* Input  : compressInfo - compress info block
-* Output : -
-* Return : TRUE if block is empty, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool Compress_checkBlockIsEmpty(CompressInfo *compressInfo);
-
+#if 0
 /***********************************************************************\
 * Name   : Compress_checkEndOfBlock
 * Purpose: check end of block reached
@@ -319,6 +315,7 @@ bool Compress_checkBlockIsEmpty(CompressInfo *compressInfo);
 \***********************************************************************/
 
 bool Compress_checkEndOfBlock(CompressInfo *compressInfo);
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : Compress_getBlock

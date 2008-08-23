@@ -1,6 +1,10 @@
-2008-
+2008-08-18 0.08
+  * added public-key encryption
+
+2008-08-17 0.07b
   * added option --long-format
   * added date/time to -l
+  * fixed file filters "*" and "-! ..."
 
 2008-06-29 0.07a
   * fixed executing of external programs: handle signals
