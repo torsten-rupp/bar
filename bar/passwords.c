@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -34,6 +34,11 @@
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
+
+typedef struct
+{
+  ulong size;
+} MemoryHeader;
 
 /***************************** Variables *******************************/
 #ifndef HAVE_GCRYPT
@@ -74,15 +79,44 @@ void Password_doneAll(void)
 {
 }
 
+void *Password_allocSecure(ulong size)
+{
+  void *p;
+  #ifndef HAVE_GCRYPT
+    MemoryHeader *memoryHeader;
+  #endif
+
+  #ifdef HAVE_GCRYPT
+    p = gcry_malloc_secure(size);
+  #else /* not HAVE_GCRYPT */
+    memoryHeader = (MemoryHeader*)malloc(sizeof(MemoryHeader) + size);
+    memoryHeader->size = size;
+    p = (byte*)memoryHeader + sizeof(MemoryHeader);
+  #endif /* HAVE_GCRYPT */
+
+  return p;
+}
+
+void Password_freeSecure(void *p)
+{
+  #ifndef HAVE_GCRYPT
+    MemoryHeader *memoryHeader;
+  #endif
+
+  #ifdef HAVE_GCRYPT
+    gcry_free(p);
+  #else /* not HAVE_GCRYPT */
+    memoryHeader = (byte*)p - sizeof(MemoryHeader);
+    memset(memoryHeader,0,sizeof(memoryHeader) + memoryHeader->size);
+    free(memoryHeader);
+  #endif /* HAVE_GCRYPT */
+}
+
 void Password_init(Password *password)
 {
   assert(password != NULL);
 
-  #ifdef HAVE_GCRYPT
-    password->data = (char*)gcry_malloc_secure(MAX_PASSWORD_LENGTH+1);
-  #else /* not HAVE_GCRYPT */
-    password->data = (char*)malloc(MAX_PASSWORD_LENGTH+1);
-  #endif /* HAVE_GCRYPT */
+  password->data = Password_allocSecure(MAX_PASSWORD_LENGTH+1);
   if (password->data == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -93,13 +127,9 @@ void Password_init(Password *password)
 void Password_done(Password *password)
 {
   assert(password != NULL);
+  assert(password->data != NULL);
 
-  #ifdef HAVE_GCRYPT
-    gcry_free(password->data);
-  #else /* not HAVE_GCRYPT */
-    memset(password->data,0,sizeof(MAX_PASSWORD_LENGTH+1));
-    free(password->data);
-  #endif /* HAVE_GCRYPT */
+  Password_freeSecure(password->data);
 }
 
 Password *Password_new(void)
@@ -222,6 +252,30 @@ void Password_setCString(Password *password, const char *s)
   password->length = length;
 }
 
+void Password_setBuffer(Password *password, const void *buffer, uint length)
+{
+  #ifdef HAVE_GCRYPT
+  #else /* not HAVE_GCRYPT */
+    char *p;
+    uint z;
+  #endif /* HAVE_GCRYPT */
+
+  assert(password != NULL);
+
+  length = MIN(length,MAX_PASSWORD_LENGTH);
+  #ifdef HAVE_GCRYPT
+    memcpy(password->data,buffer,length);
+  #else /* not HAVE_GCRYPT */
+    p = (char*)buffer;
+    for (z = 0; z < length; z++)
+    {
+      password->data[z] = p[z]^obfuscator[z];
+    }
+  #endif /* HAVE_GCRYPT */
+  password->data[length] = '\0';
+  password->length = length;
+}
+
 void Password_appendChar(Password *password, char ch)
 {
   assert(password != NULL);
@@ -236,6 +290,22 @@ void Password_appendChar(Password *password, char ch)
     password->length++;
     password->data[password->length] = '\0';
   }
+}
+
+void Password_random(Password *password, uint length)
+{
+  assert(password != NULL);
+
+  password->length = MIN(length,MAX_PASSWORD_LENGTH);
+  #ifdef HAVE_GCRYPT
+    gcry_randomize((unsigned char*)password->data,password->length,GCRY_STRONG_RANDOM);
+  #else /* not HAVE_GCRYPT */
+    srandom((unsigned int)time(NULL));
+    for (z = 0; z < password->length; z++)
+    {
+      password->data[z] = (char)(random()%256)^obfuscator[z];
+    }
+  #endif /* HAVE_GCRYPT */
 }
 
 uint Password_length(const Password *password)

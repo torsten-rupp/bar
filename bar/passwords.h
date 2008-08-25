@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -27,7 +27,7 @@
 
 /***************************** Constants *******************************/
 
-#define MAX_PASSWORD_LENGTH 255
+#define MAX_PASSWORD_LENGTH 256
 
 /***************************** Datatypes *******************************/
 typedef struct
@@ -77,7 +77,48 @@ Errors Password_initAll(void);
 
 void Password_doneAll(void);
 
+/***********************************************************************\
+* Name   : Password_allocSecure
+* Purpose: allocate secure memory
+* Input  : size - size of memory block
+* Output : -
+* Return : secure memory or NULL iff insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+void *Password_allocSecure(ulong size);
+
+/***********************************************************************\
+* Name   : Password_freeSecure
+* Purpose: free secure memory
+* Input  : p - secure memory
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Password_freeSecure(void *p);
+
+/***********************************************************************\
+* Name   : Password_init
+* Purpose: initialize password
+* Input  : password - password variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Password_init(Password *password);
+
+/***********************************************************************\
+* Name   : Password_done
+* Purpose: deinitialize password
+* Input  : password - password
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Password_done(Password *password);
 
 /***********************************************************************\
@@ -138,6 +179,7 @@ void Password_clear(Password *password);
 void Password_set(Password *password, const Password *fromPassword);
 void Password_setString(Password *password, const String string);
 void Password_setCString(Password *password, const char *s);
+void Password_setBuffer(Password *password, const void *buffer, uint length);
 
 /***********************************************************************\
 * Name   : Password_appendChar
@@ -150,6 +192,17 @@ void Password_setCString(Password *password, const char *s);
 \***********************************************************************/
 
 void Password_appendChar(Password *password, char ch);
+
+/***********************************************************************\
+* Name   : Password_random
+* Purpose: set password to random value
+* Input  : length - length of password
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Password_random(Password *password, uint length);
 
 /***********************************************************************\
 * Name   : Password_length
