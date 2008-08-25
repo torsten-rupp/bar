@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.39 $
+* $Revision: 1.40 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -71,7 +71,7 @@ typedef enum
 
 typedef struct JobNode
 {
-  NODE_HEADER(struct JobNode);
+  LIST_NODE_HEADER(struct JobNode);
 
   String       fileName;                       // file name
   uint64       timeModified;                   // file modified date/time (timestamp)
@@ -195,7 +195,7 @@ typedef struct
 /* client node */
 typedef struct ClientNode
 {
-  NODE_HEADER(struct ClientNode);
+  LIST_NODE_HEADER(struct ClientNode);
 
   ClientInfo clientInfo;
   String     commandString;
@@ -1320,6 +1320,7 @@ LOCAL void jobThreadEntry(void)
     {
       case JOB_TYPE_BACKUP:
         /* create archive */
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
         logMessage(LOG_TYPE_ALWAYS,"start create '%s'",String_cString(jobNode->fileName));
         jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveName),
                                                     &jobNode->includePatternList,
@@ -1362,6 +1363,7 @@ LOCAL void jobThreadEntry(void)
       #endif /* NDEBUG */
     }
     logPostProcess();
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
 #endif /* SIMULATOR */
 
@@ -2878,7 +2880,6 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
   if (File_exists(name))
   {
     sendResult(clientInfo,id,TRUE,1,"job '%s' already exists",String_cString(arguments[1]));
-    File_deleteFileName(fileName);
     return;
   }
 
@@ -2891,7 +2892,6 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
   {
     sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
-    File_deleteFileName(fileName);
     return;
   }
 
@@ -3656,7 +3656,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   {
     HALT_FATAL_ERROR("Cannot initialise client command message queue!");
   }
-  if (!Thread_init(&clientInfo->network.thread,0,networkClientThread,clientInfo))
+  if (!Thread_init(&clientInfo->network.thread,"Client",0,networkClientThread,clientInfo))
   {
     HALT_FATAL_ERROR("Cannot initialise client thread!");
   }
@@ -3667,7 +3667,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
 }
 
 /***********************************************************************\
-* Name   : doneClient
+* Name   : doneNetworkClient
 * Purpose: deinitialize client
 * Input  : clientInfo - client info
 * Output : -
@@ -3675,7 +3675,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void doneClient(ClientInfo *clientInfo)
+LOCAL void doneNetworkClient(ClientInfo *clientInfo)
 {
   assert(clientInfo != NULL);
 
@@ -3692,6 +3692,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       /* free resources */
       MsgQueue_done(&clientInfo->network.commandMsgQueue,(MsgQueueMsgFreeFunction)freeCommandMsg,NULL);
       String_delete(clientInfo->network.name);
+      Thread_done(&clientInfo->network.thread);
       break;
     default:
       #ifndef NDEBUG
@@ -3718,7 +3719,7 @@ LOCAL void freeClientNode(ClientNode *clientNode)
 {
   assert(clientNode != NULL);
 
-  doneClient(&clientNode->clientInfo);
+  doneNetworkClient(&clientNode->clientInfo);
   String_delete(clientNode->commandString);
 }
 
@@ -3939,16 +3940,14 @@ Errors Server_run(uint             port,
   }
 
   /* start threads */
-  if (!Thread_init(&jobThread,globalOptions.niceLevel,jobThreadEntry,NULL))
+  if (!Thread_init(&jobThread,"BAR job",globalOptions.niceLevel,jobThreadEntry,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialise job thread!");
   }
-#if 1
-  if (!Thread_init(&schedulerThread,globalOptions.niceLevel,schedulerThreadEntry,NULL))
+  if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadEntry,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialise scheduler thread!");
   }
-#endif /* 0 */
 
   /* run server */
   clientName = String_new();
@@ -4096,6 +4095,8 @@ Errors Server_run(uint             port,
   if (tlsPort != 0) Network_doneServer(&serverTLSSocketHandle);
 
   /* free resources */
+  Thread_done(&schedulerThread);
+  Thread_done(&jobThread);
   List_done(&clientList,(ListNodeFreeFunction)freeClientNode,NULL);
   List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);
 
@@ -4160,7 +4161,7 @@ processCommand(&clientInfo,commandString);
   String_delete(commandString);
 
   /* free resources */
-  doneClient(&clientInfo);
+  doneNetworkClient(&clientInfo);
   File_close(&outputFileHandle);
   File_close(&inputFileHandle);
   List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/threads.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: thread functions
 * Systems: all
@@ -46,6 +46,7 @@ typedef struct
 * Name   : Thread_init
 * Purpose: init thread
 * Input  : thread        - thread variable
+*          name          - name
 *          niceLevel     - nice level or 0 for default level
 *          entryFunction - thread entry function
 *          userData      - thread user data
@@ -55,6 +56,7 @@ typedef struct
 \***********************************************************************/
 
 bool Thread_init(Thread     *thread,
+                 const char *name,
                  int        niceLevel,
                  const void *entryFunction,
                  void       *userData

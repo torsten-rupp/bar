@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/msgqueues.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
@@ -28,7 +28,7 @@
 /***************************** Datatypes *******************************/
 typedef struct MsgNode
 {
-  NODE_HEADER(struct MsgNode);
+  LIST_NODE_HEADER(struct MsgNode);
 
   ulong size;
   byte  data[0];

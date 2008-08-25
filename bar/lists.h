@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/lists.h,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -23,7 +23,7 @@
 
 /***************************** Datatypes *******************************/
 
-#define NODE_HEADER(type) \
+#define LIST_NODE_HEADER(type) \
   type *prev; \
   type *next
 
@@ -34,7 +34,7 @@
 
 typedef struct Node
 {
-  NODE_HEADER(struct Node);
+  LIST_NODE_HEADER(struct Node);
 } Node;
 
 typedef struct
@@ -59,6 +59,18 @@ typedef int(*ListNodeCompareFunction)(const void *node, void *userData);
 
 #define LIST_NEW_NODE(Type) (Type*)List_newNode(sizeof(Type))
 #define LIST_DELETE_NODE(node) List_deleteNode((Node*)node)
+
+#define LIST_DEFINE(type,define) \
+  typedef struct { define; } type; \
+  typedef struct type ## Node\
+  { \
+    LIST_NODE_HEADER(struct type ## Node); \
+    define; \
+  } type ## Node; \
+  typedef struct \
+  { \
+    LIST_HEADER(type ## Node); \
+  } type ## List
 
 /***************************** Forwards ********************************/
 

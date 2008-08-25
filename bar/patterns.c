@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
+#include <regex.h>
 #include <assert.h>
 
 #include "global.h"
@@ -48,7 +50,7 @@
 *          patternType - pattern type
 * Output : regexBegin - regular expression for matching begin
 *          regexEnd   - regular expression for matching end
-*          regexExcat - regular expression for exact matching
+*          regexExact - regular expression for exact matching
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/

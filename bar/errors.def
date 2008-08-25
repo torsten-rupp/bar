@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/errors.def,v $
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
@@ -56,6 +56,8 @@ ERROR ENCRYPT_FAIL                   "encrypt fail"
 ERROR DECRYPT_FAIL                   "decrypt fail"
 ERROR CREATE_KEY_FAIL                "create public/private key fail"
 ERROR INVALID_KEY                    "invalid key"
+ERROR NO_PUBLIC_KEY                  "no public key"
+ERROR NO_PRIVATE_KEY                 "no private key"
 ERROR KEY_ENCRYPT_FAIL               "key encryption fail"
 ERROR KEY_DECRYPT_FAIL               "key decryption fail"
 

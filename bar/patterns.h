@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -50,7 +50,7 @@ typedef enum
 
 typedef struct PatternNode
 {
-  NODE_HEADER(struct PatternNode);
+  LIST_NODE_HEADER(struct PatternNode);
 
   PatternTypes type;
   String       pattern;

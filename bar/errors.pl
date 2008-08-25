@@ -7,19 +7,21 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all
 #
 # ----------------------------------------------------------------------------
-# Exported Functions
+
+# syntax of error definition file
 #
-# ----------------------------------------------------------------------------
-# Function                       Purpose
-# ----------------------------------------------------------------------------
-#
-# ----------------------------------------------------------------------------
+# INCLUDE "<file>"
+# ERROR <name> "<text>"
+# ERROR <name>
+#   <code>
+# DEFAULT "<text>"
+# NONE "<text>"
 
 # ---------------------------- additional packages ---------------------------
 use English;
@@ -58,19 +60,25 @@ sub writeCFile($)
   }
 }
 
-# ------------------------------ main program  -------------------------------
-
-GetOptions("c=s" => \$cFileName,
-           "h=s" => \$hFileName,
-          );
-
-if ($cFileName ne "")
+sub writeHPrefix()
 {
-  open(CFILE_HANDLE,"> $cFileName");
-  print CFILE_HANDLE "#include <stdlib.h>\n";
-  print CFILE_HANDLE "#include <string.h>\n";
-  print CFILE_HANDLE "#include <errno.h>\n";
-  print CFILE_HANDLE "\n";
+  print HFILE_HANDLE "typedef enum\n";
+  print HFILE_HANDLE "{\n";
+  print HFILE_HANDLE "  /*   0 */ ".$PREFIX."NONE,\n";
+}
+
+sub writeHPostfix()
+{
+  print HFILE_HANDLE "  ".$PREFIX."UNKNOWN\n";
+  print HFILE_HANDLE "} Errors;\n";
+  print HFILE_HANDLE "\n";
+  print HFILE_HANDLE "const char *getErrorText(Errors error);\n";
+  print HFILE_HANDLE "\n";
+  print HFILE_HANDLE "#endif /* __ARCHIVE_FORMAT__ */\n";
+}
+
+sub writeCPrefix()
+{
   print CFILE_HANDLE "#include \"errors.h\"\n";
   print CFILE_HANDLE "\n";
   print CFILE_HANDLE "#define GET_ERROR_CODE(error) (((error) & 0x0000FFFF) >>  0)\n";
@@ -86,6 +94,33 @@ if ($cFileName ne "")
   print CFILE_HANDLE "  switch (GET_ERROR_CODE(error))\n";
   print CFILE_HANDLE "  {\n";
 }
+
+sub writeCPostfix()
+{
+  if ($defaultText ne "")
+  {
+    writeCFile("    default: return \"$defaultText\";\n");
+  }
+  print CFILE_HANDLE "  }\n";
+  print CFILE_HANDLE "\n";
+  print CFILE_HANDLE "  return errorText;\n";
+  print CFILE_HANDLE "}\n";
+}
+
+# ------------------------------ main program  -------------------------------
+
+GetOptions("c=s" => \$cFileName,
+           "h=s" => \$hFileName,
+          );
+
+if ($cFileName ne "")
+{
+  open(CFILE_HANDLE,"> $cFileName");
+  print CFILE_HANDLE "#include <stdlib.h>\n";
+  print CFILE_HANDLE "#include <string.h>\n";
+  print CFILE_HANDLE "#include <errno.h>\n";
+  print CFILE_HANDLE "\n";
+}
 if ($hFileName ne "")
 {
   open(HFILE_HANDLE,"> $hFileName");
@@ -94,32 +129,42 @@ if ($hFileName ne "")
   print HFILE_HANDLE "\n";
   print HFILE_HANDLE "#define ERROR(code,errno) (((errno) << 16) | ERROR_ ## code)\n";
   print HFILE_HANDLE "\n";
-  print HFILE_HANDLE "typedef enum\n";
-  print HFILE_HANDLE "{\n";
-  print HFILE_HANDLE "  /*   0 */ ".$PREFIX."NONE,\n";
+  writeHPrefix();
 }
 
 my @names;
 my $defaultText;
 my $line;
 my $lineNb=0;
+my $writeCPrefixFlag=0;
 while ($line=<STDIN>)
 {
   chop $line;
   $lineNb++;
-  if ($line =~ /^\s*#/) { next; }
+  if (($line =~ /^\s*$/) || ($line =~ /^\s*#/)) { next; }
 #print "$line\n";
 
   if    ($line =~ /^ERROR\s+(\w+)\s+"(.*)"\s*$/)
   {
     # error <name> <text>
-    writeHFile("  $PREFIX$1,\n");
-    writeCFile("    case $PREFIX$1: return \"$2\";\n");
+    my $name=$1;
+    my $text=$2;
+    writeHFile("  $PREFIX$name,\n");
+    if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
+    writeCFile("    case $PREFIX$name: return \"$text\";\n");
+  }
+  elsif ($line =~ /^INCLUDE\s+"(.*)"\s*$/)
+  {
+    # include "<file>"
+    my $file=$1;
+    writeCFile("#include \"$file\"\n");
   }
   elsif ($line =~ /^NONE\s+"(.*)"\s*$/)
   {
     # none <text>
-    writeCFile("    case ".$PREFIX."NONE: return \"$1\";\n");
+    my $text=$1;
+    if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
+    writeCFile("    case ".$PREFIX."NONE: return \"$text\";\n");
   }
   elsif ($line =~ /^DEFAULT\s+"(.*)"\s*$/)
   {
@@ -128,13 +173,9 @@ while ($line=<STDIN>)
   elsif ($line =~ /^ERROR\s+(\w+)\s*$/)
   {
     # error <name>
-    writeHFile("  $PREFIX$1,\n");
-    push(@names,$1);
-  }
-  elsif ($line =~ /^\s*$/)
-  {
-    # end of code
-    @names=();
+    my $name=$1;
+    writeHFile("  $PREFIX$name,\n");
+    push(@names,$name);
   }
   else
   {
@@ -145,43 +186,35 @@ while ($line=<STDIN>)
       exit 1;
     }
 
+    if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
     foreach my $z (@names)
     {
       writeCFile("    case $PREFIX$z:\n");
     }
-    writeCFile("    $line\n");
+    @names=();
+    writeCFile("      {\n");
+    writeCFile("      $line\n");
     while ($line=<STDIN>)
     {
       chop $line;
       $lineNb++;
       if ($line =~ /^\s*$/) { last; }
 
-      writeCFile("    $line\n");
+      writeCFile("      $line\n");
     }
+    writeCFile("      }\n");
     writeCFile("      break;\n");
   }
 }
 
 if ($cFileName ne "")
 {
-  if ($defaultText ne "")
-  {
-    writeCFile("    default: return \"$defaultText\";\n");
-  }
-  print CFILE_HANDLE "  }\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "  return errorText;\n";
-  print CFILE_HANDLE "}\n";
+  writeCPostfix();
   close(CFILE_HANDLE);
 }
 if ($hFileName ne "")
 {
-  print HFILE_HANDLE "  ".$PREFIX."UNKNOWN\n";
-  print HFILE_HANDLE "} Errors;\n";
-  print HFILE_HANDLE "\n";
-  print HFILE_HANDLE "const char *getErrorText(Errors error);\n";
-  print HFILE_HANDLE "\n";
-  print HFILE_HANDLE "#endif /* __ARCHIVE_FORMAT__ */\n";
+  writeHPostfix();
   close(HFILE_HANDLE);
 }
 

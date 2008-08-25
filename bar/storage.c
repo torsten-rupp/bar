@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/storage.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -2676,10 +2676,12 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
 
             /* get end time, transmission time */
             endTimestamp = Misc_getTimestamp();
-            assert(endTimestamp >= startTimestamp);
 
             /* limit used band width if requested */
-            limitBandWidth(&storageFileHandle->scp.bandWidth,n,endTimestamp-startTimestamp);
+            if (endTimestamp >= startTimestamp)
+            {
+              limitBandWidth(&storageFileHandle->scp.bandWidth,n,endTimestamp-startTimestamp);
+            }
           };
         }
       #else /* not HAVE_SSH2 */

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.32 $
+* $Revision: 1.33 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -90,7 +90,7 @@ struct __String
 #ifndef NDEBUG
   typedef struct DebugStringNode
   {
-    NODE_HEADER(struct DebugStringNode);
+    LIST_NODE_HEADER(struct DebugStringNode);
 
     const char      *fileName;
     ulong           lineNb;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/filefragmentlists.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver file fragment list functions
 * Systems: all
@@ -28,7 +28,7 @@
 
 typedef struct FragmentNode
 {
-  NODE_HEADER(struct FragmentNode);
+  LIST_NODE_HEADER(struct FragmentNode);
 
   uint64 offset;                        // fragment offset (0..n)
   uint64 length;                        // length of fragment
@@ -41,7 +41,7 @@ typedef struct
 
 typedef struct FileFragmentNode
 {
-  NODE_HEADER(struct FileFragmentNode);
+  LIST_NODE_HEADER(struct FileFragmentNode);
 
   String       fileName;                // fragment file name
   uint64       size;                    // size of file

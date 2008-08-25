@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/stringlists.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems : all
@@ -27,7 +27,7 @@
 
 typedef struct StringNode
 {
-  NODE_HEADER(struct StringNode);
+  LIST_NODE_HEADER(struct StringNode);
 
   String string;
 } StringNode;

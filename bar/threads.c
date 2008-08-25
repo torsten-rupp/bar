@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/threads.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: thread functions
 * Systems: all
@@ -28,6 +28,7 @@
 typedef struct
 {
   sem_t lock;
+  const char *name;
   int   niceLevel;
   void  (*entryFunction)(void*);
   void  *userData;
@@ -68,6 +69,7 @@ LOCAL void threadStart(ThreadStartInfo *startInfo)
   sem_post(&startInfo->lock);
 
   nice(niceLevel);
+fprintf(stderr,"%s,%d: %s: %d %d\n",__FILE__,__LINE__,startInfo->name,pthread_self(),getpid());
 
   assert(entryFunction != NULL);
   entryFunction(userData);
@@ -76,27 +78,47 @@ LOCAL void threadStart(ThreadStartInfo *startInfo)
 /*---------------------------------------------------------------------*/
 
 bool Thread_init(Thread     *thread,
+                 const char *name,
                  int        niceLevel,
                  const void *entryFunction,
                  void       *userData
                 )
 {
   ThreadStartInfo startInfo;
+  pthread_attr_t  threadAttributes;
 
   assert(thread != NULL);
+  assert(name != NULL);
+  assert(entryFunction != NULL);
 
   /* init thread info */
   sem_init(&startInfo.lock,0,0);
+startInfo.name = name;
   startInfo.niceLevel     = niceLevel;
   startInfo.entryFunction = entryFunction;
   startInfo.userData      = userData;
 
   /* start thread */
-  if (pthread_create(&thread->handle,NULL,(void*(*)(void*))threadStart,&startInfo) != 0)
+  pthread_attr_init(&threadAttributes);
+  #ifdef HAVE_PTHREAD_ATTR_SETNAME
+    if (name != NULL)
+    {
+      pthread_attr_setname(&threadAttributes,(char*)name);
+    }
+  #else /* HAVE_PTHREAD_ATTR_SETNAME */
+    UNUSED_VARIABLE(name);
+  #endif /* HAVE_PTHREAD_ATTR_SETNAME */
+
+  /* start thread */
+  if (pthread_create(&thread->handle,
+                     &threadAttributes,
+                     (void*(*)(void*))threadStart,
+                     &startInfo                   ) != 0)
   {
     sem_destroy(&startInfo.lock);
     return FALSE;
   }
+  pthread_attr_destroy(&threadAttributes);
 
   /* wait until thread started */
   sem_wait(&startInfo.lock);

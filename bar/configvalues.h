@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/configvalues.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: config file entry parser
 * Systems: all
@@ -337,7 +337,7 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
   CONFIG_VALUE_BOOLEAN_YESNO(name,NULL,offsetof(type,member))
 
-#define CONFIG_VALUE_ENUM(name,type,member,value) \
+#define CONFIG_VALUE_ENUM(name,variablePointer,offset,value) \
   { \
     name,\
     CONFIG_VALUE_TYPE_ENUM,\

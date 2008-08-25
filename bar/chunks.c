@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -477,12 +477,12 @@ LOCAL Errors writeDefinition(void       *userData,
 /*---------------------------------------------------------------------*/
 
 Errors Chunk_initAll(bool(*eof)(void *userData),
-                      Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
-                      Errors(*write)(void *userData, const void *buffer, ulong length),
-                      Errors(*tell)(void *userData, uint64 *offset),
-                      Errors(*seek)(void *userData, uint64 offset),
-                      uint64(*getSize)(void *userData)
-                     )
+                     Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
+                     Errors(*write)(void *userData, const void *buffer, ulong length),
+                     Errors(*tell)(void *userData, uint64 *offset),
+                     Errors(*seek)(void *userData, uint64 offset),
+                     uint64(*getSize)(void *userData)
+                    )
 {
   assert(eof != NULL);
   assert(read != NULL);
