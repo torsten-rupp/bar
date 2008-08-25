@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems: all
@@ -48,7 +48,13 @@ typedef enum
   CRYPT_ALGORITHM_UNKNOWN=65535,
 } CryptAlgorithms;
 
-#define DEFAULT_CRYPT_KEY_BITS 2048
+#define DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS 2048
+
+typedef enum
+{
+  CRYPT_TYPE_SYMMETRIC,
+  CRYPT_TYPE_ASYMMETRIC,
+} CryptTypes;
 
 /***************************** Datatypes *******************************/
 
@@ -316,13 +322,13 @@ Errors Crypt_setKeyData(CryptKey     *cryptKey,
 /***********************************************************************\
 * Name   : Crypt_keyEncrypt
 * Purpose: encrypt with public key
-* Input  : cryptKey                 - crypt key
-*          buffer                   - buffer with data
-*          bufferLength             - length of data
-*          encryptedBuffer          - buffer for encrypted data
-*          maxEncryptedBufferLength - max. length of encrypted data
-* Output : encryptedBuffer       - encrypted data
-*          encryptedBufferLength - length of encrypted data
+* Input  : cryptKey               - crypt key
+*          buffer                 - buffer with data
+*          bufferLength           - length of data
+*          encryptBuffer          - buffer for encrypted data
+*          maxEncryptBufferLength - max. length of encrypted data
+* Output : encryptBuffer       - encrypted data (allocated)
+*          encryptBufferLength - length of encrypted data
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -330,32 +336,48 @@ Errors Crypt_setKeyData(CryptKey     *cryptKey,
 Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
                         const void *buffer,
                         ulong      bufferLength,
-                        void       *encryptedBuffer,
-                        ulong      maxEncryptedBufferLength,
-                        ulong      *encryptedBufferLength
+                        ulong      maxEncryptBufferLength,
+                        void       *encryptBuffer,
+                        ulong      *encryptBufferLength
                        );
 
 /***********************************************************************\
 * Name   : Crypt_keyDecrypt
 * Purpose: decrypt with private key
-* Input  : cryptKey              - crypt key
-*          encryptedBuffer       - encrypted data
-*          encryptedBufferLength - length of encrypted data
-*          buffer                - buffer for data
-*          maxBufferLength       - max. length of buffer for data
-* Output : buffer       - data
+* Input  : cryptKey            - crypt key
+*          encryptBuffer       - encrypted data
+*          encryptBufferLength - length of encrypted data
+*          buffer              - buffer for data
+*          maxBufferLength     - max. length of buffer for data
+* Output : buffer       - data (allocated memory)
 *          bufferLength - length of data
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : free buffer after usage!
 \***********************************************************************/
 
 Errors Crypt_keyDecrypt(CryptKey   *cryptKey,
-                        const void *encryptedBuffer,
-                        ulong      encryptedBufferLength,
-                        void       *buffer,
+                        const void *encryptBuffer,
+                        ulong      encryptBufferLength,
                         ulong      maxBufferLength,
+                        void       *buffer,
                         ulong      *bufferLength
                        );
+
+Errors Crypt_getRandomEncryptKey(CryptKey *publicKey,
+                                 uint     bits,
+                                 Password *password,
+                                 uint     maxEncryptBufferLength,
+                                 void     *encryptBuffer,
+                                 uint     *encryptBufferLength
+                                );
+
+Errors Crypt_getDecryptKey(CryptKey   *privateKey,
+                           const void *encryptData,
+                           uint       encryptDataLength,
+                           Password   *password
+                          );
+
+                                 
 
 #ifdef __cplusplus
   }

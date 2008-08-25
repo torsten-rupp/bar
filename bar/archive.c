@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.c,v $
-* $Revision: 1.49 $
+* $Revision: 1.50 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -66,6 +66,7 @@ typedef struct
 
 /***************************** Variables *******************************/
 
+/* list with all known decrption passwords */
 LOCAL PasswordList decryptPasswordList;
 
 /****************************** Macros *********************************/
@@ -79,7 +80,7 @@ LOCAL PasswordList decryptPasswordList;
 #endif
 
 /***********************************************************************\
-* Name   : appendPassword
+* Name   : appendCryptPassword
 * Purpose: append password to password list
 * Input  : password - password
 * Output : -
@@ -87,7 +88,7 @@ LOCAL PasswordList decryptPasswordList;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendPassword(Password *password)
+LOCAL void appendCryptPassword(Password *password)
 {
   PasswordNode *passwordNode;
 
@@ -245,7 +246,7 @@ LOCAL const Password *getNextCryptPassword(PasswordHandle *passwordHandle)
     /* add to password list */
     if (password != NULL)
     {
-      appendPassword(password);
+      appendCryptPassword(password);
     }
 
     /* set flag: input done */
@@ -262,8 +263,9 @@ LOCAL const Password *getNextCryptPassword(PasswordHandle *passwordHandle)
 /***********************************************************************\
 * Name   : getFirstCryptPassword
 * Purpose: get first crypt password
-* Input  : fileName   - file name
-*          jobOptions - job options
+* Input  : fileName     - file name
+*          jobOptions   - job options
+*          passwordMode - password mode
 * Output : passwordHandle - intialized password handle
 * Return : password or NULL if no more passwords
 * Notes  : -
@@ -419,6 +421,36 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
   {
     return error;
   }
+
+#if 1
+  /* write encrypted key if asymmetric encryption enabled */
+  if (archiveInfo->cryptKey != NULL)
+  {
+    error = Chunk_create(&archiveInfo->chunkInfoKey,
+                         CHUNK_ID_KEY,
+                         CHUNK_DEFINITION_KEY,
+                         Chunk_getSize(CHUNK_DEFINITION_KEY,0,&archiveInfo->chunkKey),
+                         &archiveInfo->chunkKey
+                        );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Chunk_writeData(&archiveInfo->chunkInfoKey,
+                            archiveInfo->cryptKeyData,
+                            archiveInfo->cryptKeyDataLength
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Chunk_close(&archiveInfo->chunkInfoKey);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+#endif /* 0 */
 
   archiveInfo->fileOpenFlag = TRUE;
 
@@ -877,6 +909,9 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
                      )
 {
   Errors error;
+  void   *buffer;
+  bool   okFlag;
+  ulong  maxCryptKeyDataLength;
 
   assert(archiveInfo != NULL);
   assert(archiveNewFileFunction != NULL);
@@ -900,12 +935,79 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
   archiveInfo->passwordMode            = PASSWORD_MODE_DEFAULT;
 
   archiveInfo->cryptPassword           = NULL;
+  archiveInfo->cryptType               = jobOptions->cryptType;
+  archiveInfo->cryptKey                = jobOptions->cryptPublicKey;
+  archiveInfo->cryptKeyData            = NULL;
 
   archiveInfo->partNumber              = 0;
   archiveInfo->fileOpenFlag            = FALSE;
   archiveInfo->fileName                = String_new();
 
   archiveInfo->nextChunkHeaderReadFlag = FALSE;
+
+  /* init key (if asymmetric encryption used) */
+  if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+  {
+    /* check if public key available */
+    if (archiveInfo->cryptKey == NULL)
+    {
+      String_delete(archiveInfo->fileName);
+      return ERROR_NO_PUBLIC_KEY;
+    }
+
+    /* create chunk info for key */
+    error = Chunk_init(&archiveInfo->chunkInfoKey,
+                       NULL,
+                       &archiveInfo->fileHandle,
+                       0,
+                       NULL
+                      );
+    if (error != ERROR_NONE)
+    {
+      String_delete(archiveInfo->fileName);
+      return error;
+    }
+
+    /* create new random key for encryption */
+    archiveInfo->cryptPassword = Password_new();
+    if (archiveInfo->cryptPassword == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    maxCryptKeyDataLength = 2*MAX_PASSWORD_LENGTH;
+    okFlag = FALSE;
+    do
+    {
+      archiveInfo->cryptKeyData = malloc(maxCryptKeyDataLength);
+      if (archiveInfo->cryptKeyData == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      error = Crypt_getRandomEncryptKey(archiveInfo->cryptKey,
+                                        2048,
+                                        archiveInfo->cryptPassword,
+                                        maxCryptKeyDataLength,
+                                        archiveInfo->cryptKeyData,
+                                        &archiveInfo->cryptKeyDataLength
+                                       );
+      if (error != ERROR_NONE)
+      {
+        String_delete(archiveInfo->fileName);
+        return error;
+      }
+      if (archiveInfo->cryptKeyDataLength < maxCryptKeyDataLength)
+      {
+        okFlag = TRUE;
+      }
+      else
+      {
+        free(archiveInfo->cryptKeyData);
+        maxCryptKeyDataLength += 64;
+      }
+    }
+    while (!okFlag);
+//Password_debug(archiveInfo->cryptPassword);
+  }
 
   return ERROR_NONE;
 }
@@ -916,7 +1018,8 @@ Errors Archive_open(ArchiveInfo   *archiveInfo,
                     PasswordModes passwordMode
                    )
 {
-  Errors error;
+  ChunkHeader chunkHeader;
+  Errors      error;
 
   assert(archiveInfo != NULL);
   assert(archiveFileName != NULL);
@@ -928,7 +1031,9 @@ Errors Archive_open(ArchiveInfo   *archiveInfo,
   archiveInfo->passwordMode            = passwordMode;
 
   archiveInfo->cryptPassword           = NULL;
-//  archiveInfo->cryptPublicKey          = NULL;
+  archiveInfo->cryptType               = jobOptions->cryptType;
+  archiveInfo->cryptKey                = jobOptions->cryptPrivateKey;
+  archiveInfo->cryptKeyData            = NULL;
 
   archiveInfo->partNumber              = 0;
   archiveInfo->fileOpenFlag            = TRUE;
@@ -942,6 +1047,96 @@ Errors Archive_open(ArchiveInfo   *archiveInfo,
   {
     String_delete(archiveInfo->fileName);
     return error;
+  }
+
+  /* check if key chunk -> asymmetric encryption */
+  error = getNextChunkHeader(archiveInfo,&chunkHeader);
+  if (error != ERROR_NONE)
+  {
+    File_close(&archiveInfo->fileHandle);
+    String_delete(archiveInfo->fileName);
+    return error;
+  }
+  if (chunkHeader.id == CHUNK_ID_KEY)
+  {
+    /* check if private key */
+    if (archiveInfo->cryptKey == NULL)
+    {
+      File_close(&archiveInfo->fileHandle);
+      String_delete(archiveInfo->fileName);
+      return ERROR_NO_PUBLIC_KEY;
+    }
+
+    /* create chunk info for key */
+    error = Chunk_init(&archiveInfo->chunkInfoKey,
+                       NULL,
+                       &archiveInfo->fileHandle,
+                       0,
+                       NULL
+                      );
+    if (error != ERROR_NONE)
+    {
+      File_close(&archiveInfo->fileHandle);
+      String_delete(archiveInfo->fileName);
+      return error;
+    }
+
+    /* read key chunk */
+    error = Chunk_open(&archiveInfo->chunkInfoKey,
+                       &chunkHeader,
+                       CHUNK_ID_KEY,
+                       CHUNK_DEFINITION_KEY,
+                       Chunk_getSize(CHUNK_DEFINITION_KEY,0,NULL),
+                       &archiveInfo->chunkKey
+                      );
+    if (error != ERROR_NONE)
+    {
+      Chunk_done(&archiveInfo->chunkInfoKey);
+      File_close(&archiveInfo->fileHandle);
+      String_delete(archiveInfo->fileName);
+      return error;
+    }
+    archiveInfo->cryptKeyDataLength = chunkHeader.size-archiveInfo->chunkInfoKey.definitionSize;
+    archiveInfo->cryptKeyData = malloc(archiveInfo->cryptKeyDataLength);
+    if (archiveInfo->cryptKeyData == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    error = Chunk_readData(&archiveInfo->chunkInfoKey,
+                           archiveInfo->cryptKeyData,
+                           archiveInfo->cryptKeyDataLength
+                          );
+    if (error != ERROR_NONE)
+    {
+      free(archiveInfo->cryptKeyData);
+      Chunk_done(&archiveInfo->chunkInfoKey);
+      File_close(&archiveInfo->fileHandle);
+      String_delete(archiveInfo->fileName);
+      return error;
+    }
+
+    /* decrypt key */
+    archiveInfo->cryptPassword = Password_new();
+    error = Crypt_getDecryptKey(archiveInfo->cryptKey,
+                                archiveInfo->cryptKeyData,
+                                archiveInfo->cryptKeyDataLength,
+                                archiveInfo->cryptPassword
+                               );
+    if (error != ERROR_NONE)
+    {
+      Password_delete(archiveInfo->cryptPassword);
+      free(archiveInfo->cryptKeyData);
+      Chunk_done(&archiveInfo->chunkInfoKey);
+      File_close(&archiveInfo->fileHandle);
+      String_delete(archiveInfo->fileName);
+      return error;
+    }
+//Password_debug(archiveInfo->cryptPassword);
+    archiveInfo->cryptType = CRYPT_TYPE_ASYMMETRIC;
+  }
+  else
+  {
+    ungetNextChunkHeader(archiveInfo,&chunkHeader);
   }
 
   return ERROR_NONE;
@@ -1000,6 +1195,12 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
     closeArchiveFile(archiveInfo,TRUE);
   }
 
+  if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+  {
+    free(archiveInfo->cryptKeyData);
+    Chunk_done(&archiveInfo->chunkInfoKey);
+  }
+
   if (archiveInfo->cryptPassword  != NULL) Password_delete(archiveInfo->cryptPassword);
   if (archiveInfo->fileName != NULL) String_delete(archiveInfo->fileName);
 
@@ -1033,7 +1234,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
 
   /* init archive file info */
   archiveFileInfo->archiveInfo                         = archiveInfo;
-  archiveFileInfo->mode                                = FILE_MODE_WRITE;
+  archiveFileInfo->mode                                = ARCHIVE_FILE_MODE_WRITE;
 
   archiveFileInfo->cryptAlgorithm                      = archiveInfo->jobOptions->cryptAlgorithm;
   archiveFileInfo->blockLength                         = archiveInfo->blockLength;
@@ -1206,7 +1407,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
 
   /* init archive file info */
   archiveFileInfo->archiveInfo                                   = archiveInfo;
-  archiveFileInfo->mode                                          = FILE_MODE_WRITE;
+  archiveFileInfo->mode                                          = ARCHIVE_FILE_MODE_WRITE;
 
   archiveFileInfo->cryptAlgorithm                                = archiveInfo->jobOptions->cryptAlgorithm;
   archiveFileInfo->blockLength                                   = archiveInfo->blockLength;
@@ -1362,7 +1563,7 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
 
   /* init archive file info */
   archiveFileInfo->archiveInfo                         = archiveInfo;
-  archiveFileInfo->mode                                = FILE_MODE_WRITE;
+  archiveFileInfo->mode                                = ARCHIVE_FILE_MODE_WRITE;
 
   archiveFileInfo->cryptAlgorithm                      = archiveInfo->jobOptions->cryptAlgorithm;
   archiveFileInfo->blockLength                         = archiveInfo->blockLength;
@@ -1526,7 +1727,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo     *archiveInfo,
 
   /* init archive file info */
   archiveFileInfo->archiveInfo                               = archiveInfo;
-  archiveFileInfo->mode                                      = FILE_MODE_WRITE;
+  archiveFileInfo->mode                                      = ARCHIVE_FILE_MODE_WRITE;
 
   archiveFileInfo->cryptAlgorithm                            = archiveInfo->jobOptions->cryptAlgorithm;
   archiveFileInfo->blockLength                               = archiveInfo->blockLength;
@@ -1732,7 +1933,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
-  bool           decryptFlag;
+  bool           decryptedFlag;
   PasswordHandle passwordHandle;
   const Password *password;
   ChunkHeader    subChunkHeader;
@@ -1744,7 +1945,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 
   /* init archive file info */
   archiveFileInfo->archiveInfo       = archiveInfo;
-  archiveFileInfo->mode              = FILE_MODE_READ;
+  archiveFileInfo->mode              = ARCHIVE_FILE_MODE_READ;
   archiveFileInfo->fileType          = FILE_TYPE_FILE;
 
   archiveFileInfo->file.buffer       = NULL;
@@ -1838,20 +2039,28 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   Chunk_tell(&archiveFileInfo->file.chunkInfoFile,&index);
   if (archiveFileInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
-    password = getFirstCryptPassword(&passwordHandle,
-                                     archiveInfo->fileName,
-                                     archiveInfo->jobOptions,
-                                     archiveInfo->passwordMode
-                                    );
+    if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    {
+      assert(archiveInfo->cryptPassword != NULL);
+      password = archiveInfo->cryptPassword;
+    }
+    else
+    {
+      password = getFirstCryptPassword(&passwordHandle,
+                                       archiveInfo->fileName,
+                                       archiveInfo->jobOptions,
+                                       archiveInfo->passwordMode
+                                      );
+    }
   }
   else
   {
     password = NULL;
   }
-  decryptFlag        = FALSE;
+  decryptedFlag      = FALSE;
   foundFileEntryFlag = FALSE;
   foundFileDataFlag  = FALSE;
-  while (   !decryptFlag
+  while (   !decryptedFlag
          && ((archiveFileInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
         )
   {
@@ -2000,7 +2209,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 
     if (error == ERROR_NONE)
     {
-      decryptFlag = TRUE;
+      decryptedFlag = TRUE;
     }
     else
     {
@@ -2011,8 +2220,16 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
       Crypt_delete(&archiveFileInfo->file.cryptInfoFileData);
       Crypt_delete(&archiveFileInfo->file.cryptInfoFileEntry);
 
-      /* next password */
-      password = getNextCryptPassword(&passwordHandle);
+      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      {
+        /* no more passwords when asymmetric encryption used */
+        password = NULL;
+      }
+      else
+      {
+        /* next password */
+        password = getNextCryptPassword(&passwordHandle);
+      }
     }
   } /* while */
 
@@ -2020,7 +2237,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   {
     if (foundFileEntryFlag) String_delete(archiveFileInfo->file.chunkFileEntry.name);
 
-    if (decryptFlag)
+    if (decryptedFlag)
     {
       Chunk_done(&archiveFileInfo->file.chunkInfoFileData);
       Chunk_done(&archiveFileInfo->file.chunkInfoFileEntry);
@@ -2059,7 +2276,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
-  bool           decryptFlag;
+  bool           decryptedFlag;
   bool           foundDirectoryEntryFlag;
   PasswordHandle passwordHandle;
   const Password *password;
@@ -2071,7 +2288,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
 
   /* init archive file info */
   archiveFileInfo->archiveInfo = archiveInfo;
-  archiveFileInfo->mode        = FILE_MODE_READ;
+  archiveFileInfo->mode        = ARCHIVE_FILE_MODE_READ;
   archiveFileInfo->fileType    = FILE_TYPE_DIRECTORY;
 
   /* init file chunk */
@@ -2139,19 +2356,27 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   Chunk_tell(&archiveFileInfo->directory.chunkInfoDirectory,&index);
   if (archiveFileInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
-    password = getFirstCryptPassword(&passwordHandle,
-                                     archiveInfo->fileName,
-                                     archiveInfo->jobOptions,
-                                     archiveInfo->passwordMode
-                                    );
+    if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    {
+      assert(archiveInfo->cryptPassword != NULL);
+      password = archiveInfo->cryptPassword;
+    }
+    else
+    {
+      password = getFirstCryptPassword(&passwordHandle,
+                                       archiveInfo->fileName,
+                                       archiveInfo->jobOptions,
+                                       archiveInfo->passwordMode
+                                      );
+    }
   }
   else
   {
     password = NULL;
   }
-  decryptFlag             = FALSE;
+  decryptedFlag           = FALSE;
   foundDirectoryEntryFlag = FALSE;
-  while (   !decryptFlag
+  while (   !decryptedFlag
          && ((archiveFileInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
         )
   {
@@ -2240,7 +2465,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
 
     if (error == ERROR_NONE)
     {
-      decryptFlag = TRUE;
+      decryptedFlag = TRUE;
     }
     else
     {
@@ -2248,14 +2473,22 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
       Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
       Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
 
-      /* next password */
-      password = getNextCryptPassword(&passwordHandle);
+      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      {
+        /* no more passwords when asymmetric encryption used */
+        password = NULL;
+      }
+      else
+      {
+        /* next password */
+        password = getNextCryptPassword(&passwordHandle);
+      }
     }
   } /* while */
 
   if (!foundDirectoryEntryFlag)
   {
-    if (decryptFlag)
+    if (decryptedFlag)
     {
       Crypt_delete(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
       Chunk_done(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
@@ -2284,7 +2517,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
-  bool           decryptFlag;
+  bool           decryptedFlag;
   bool           foundLinkEntryFlag;
   PasswordHandle passwordHandle;
   const Password *password;
@@ -2296,7 +2529,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
 
   /* init archive file info */
   archiveFileInfo->archiveInfo = archiveInfo;
-  archiveFileInfo->mode        = FILE_MODE_READ;
+  archiveFileInfo->mode        = ARCHIVE_FILE_MODE_READ;
   archiveFileInfo->fileType    = FILE_TYPE_LINK;
 
   /* init file chunk */
@@ -2364,19 +2597,27 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   Chunk_tell(&archiveFileInfo->link.chunkInfoLink,&index);
   if (archiveFileInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
-    password = getFirstCryptPassword(&passwordHandle,
-                                     archiveInfo->fileName,
-                                     archiveInfo->jobOptions,
-                                     archiveInfo->passwordMode
-                                    );
+    if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    {
+      assert(archiveInfo->cryptPassword != NULL);
+      password = archiveInfo->cryptPassword;
+    }
+    else
+    {
+      password = getFirstCryptPassword(&passwordHandle,
+                                       archiveInfo->fileName,
+                                       archiveInfo->jobOptions,
+                                       archiveInfo->passwordMode
+                                      );
+    }
   }
   else
   {
     password = NULL;
   }
-  decryptFlag        = FALSE;
+  decryptedFlag      = FALSE;
   foundLinkEntryFlag = FALSE;
-  while (   !decryptFlag
+  while (   !decryptedFlag
          && ((archiveFileInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
         )
   {
@@ -2466,7 +2707,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
 
     if (error == ERROR_NONE)
     {
-      decryptFlag = TRUE;
+      decryptedFlag = TRUE;
     }
     else
     {
@@ -2474,14 +2715,22 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
       Chunk_done(&archiveFileInfo->link.chunkInfoLinkEntry);
       Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
 
-      /* next password */
-      password = getNextCryptPassword(&passwordHandle);
+      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      {
+        /* no more passwords when asymmetric encryption used */
+        password = NULL;
+      }
+      else
+      {
+        /* next password */
+        password = getNextCryptPassword(&passwordHandle);
+      }
     }
   } /* while */
 
   if (!foundLinkEntryFlag)
   {
-    if (decryptFlag)
+    if (decryptedFlag)
     {
       Chunk_done(&archiveFileInfo->link.chunkInfoLinkEntry);
       Crypt_delete(&archiveFileInfo->link.cryptInfoLinkEntry);
@@ -2509,7 +2758,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
-  bool           decryptFlag;
+  bool           decryptedFlag;
   bool           foundSpecialEntryFlag;
   PasswordHandle passwordHandle;
   const Password *password;
@@ -2521,7 +2770,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
 
   /* init archive file info */
   archiveFileInfo->archiveInfo = archiveInfo;
-  archiveFileInfo->mode        = FILE_MODE_READ;
+  archiveFileInfo->mode        = ARCHIVE_FILE_MODE_READ;
   archiveFileInfo->fileType    = FILE_TYPE_SPECIAL;
 
   /* init file chunk */
@@ -2589,19 +2838,27 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
   Chunk_tell(&archiveFileInfo->special.chunkInfoSpecial,&index);
   if (archiveFileInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
-    password = getFirstCryptPassword(&passwordHandle,
-                                     archiveInfo->fileName,
-                                     archiveInfo->jobOptions,
-                                     archiveInfo->passwordMode
-                                    );
+    if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    {
+      assert(archiveInfo->cryptPassword != NULL);
+      password = archiveInfo->cryptPassword;
+    }
+    else
+    {
+      password = getFirstCryptPassword(&passwordHandle,
+                                       archiveInfo->fileName,
+                                       archiveInfo->jobOptions,
+                                       archiveInfo->passwordMode
+                                      );
+    }
   }
   else
   {
     password = NULL;
   }
-  decryptFlag           = FALSE;
+  decryptedFlag         = FALSE;
   foundSpecialEntryFlag = FALSE;
-  while (   !decryptFlag
+  while (   !decryptedFlag
          && ((archiveFileInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
         )
   {
@@ -2693,7 +2950,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
 
     if (error == ERROR_NONE)
     {
-      decryptFlag = TRUE;
+      decryptedFlag = TRUE;
     }
     else
     {
@@ -2701,14 +2958,22 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
       Chunk_done(&archiveFileInfo->special.chunkInfoSpecialEntry);
       Crypt_delete(&archiveFileInfo->special.cryptInfoSpecialEntry);
 
-      /* next password */
-      password = getNextCryptPassword(&passwordHandle);
+      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      {
+        /* no more passwords when asymmetric encryption used */
+        password = NULL;
+      }
+      else
+      {
+        /* next password */
+        password = getNextCryptPassword(&passwordHandle);
+      }
     }
   } /* while */
 
   if (!foundSpecialEntryFlag)
   {
-    if (decryptFlag)
+    if (decryptedFlag)
     {
       Chunk_done(&archiveFileInfo->special.chunkInfoSpecialEntry);
       Crypt_delete(&archiveFileInfo->special.cryptInfoSpecialEntry);
@@ -2735,7 +3000,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
 
   switch (archiveFileInfo->mode)
   {
-    case FILE_MODE_WRITE:
+    case ARCHIVE_FILE_MODE_WRITE:
       switch (archiveFileInfo->fileType)
       {
         case FILE_TYPE_FILE:
@@ -2851,7 +3116,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           break; /* not reached */
       }
       break;
-    case FILE_MODE_READ:
+    case ARCHIVE_FILE_MODE_READ:
       switch (archiveFileInfo->fileType)
       {
         case FILE_TYPE_FILE:

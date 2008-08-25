@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -60,9 +60,14 @@ typedef struct
   void                   *archiveNewFileUserData;        // user data for new archive file call back function
   JobOptions             *jobOptions;
 
+  CryptTypes             cryptType;                      // crypt type
   PasswordModes          passwordMode;                   // password mode (PASSWORD_MODE_DEFAULT for using settings in jobOptions)
   Password               *cryptPassword;                 // cryption password
-//  PublicKey              publicKey;
+  CryptKey               *cryptKey;                      // public/private key for encryption/decryption of random key used for asymmetric encryption
+  ChunkInfo              chunkInfoKey;                   // chunk info block for key
+  ChunkKey               chunkKey;                       // key chunk
+  void                   *cryptKeyData;                  // encrypted random key used for asymmetric encryption
+  ulong                  cryptKeyDataLength;             // length of encrypted random key
 
   uint                   blockLength;                    /* block length for file entry/file
                                                             data (depend on used crypt
@@ -84,8 +89,8 @@ typedef struct
 
   enum
   {
-    FILE_MODE_READ,
-    FILE_MODE_WRITE,
+    ARCHIVE_FILE_MODE_READ,
+    ARCHIVE_FILE_MODE_WRITE,
   } mode;
 
   CryptAlgorithms    cryptAlgorithm;                 // crypt algorithm for entry

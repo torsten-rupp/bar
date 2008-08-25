@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.62 $
+* $Revision: 1.63 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -160,6 +160,7 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseIncludeExclude(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
+LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] =
 {
@@ -276,9 +277,10 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,0,globalOptions.compressMinFileSize,                    DEFAULT_COMPRESS_MIN_FILE_SIZE,0,INT_MAX,COMMAND_LINE_BYTES_UNITS, "minimal size of file for compression"                                     ),
 
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,0,jobOptions.cryptAlgorithm,                            CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
+  CMD_OPTION_ENUM         ("crypt-asymmetric",             'a',0,0,jobOptions.cryptType,                                 CRYPT_TYPE_SYMMETRIC,CRYPT_TYPE_ASYMMETRIC,                        "use asymetric encryption"                                                 ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&globalOptions.cryptPassword,                         NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
-  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,0,&globalOptions.cryptPublicKeyFileName,                NULL,cmdOptionParseString,NULL,                                    "public key for encryption","file name"                                    ),
-  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,0,&globalOptions.cryptPrivateKeyFileName,               NULL,cmdOptionParseString,NULL,                                    "private key for decryption","file name"                                   ),
+  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,0,&jobOptions.cryptPublicKey,                           NULL,cmdOptionParseCryptKey,NULL,                                  "public key for encryption","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,0,&jobOptions.cryptPrivateKey,                          NULL,cmdOptionParseCryptKey,NULL,                                  "private key for decryption","file name"                                   ),
 
   CMD_OPTION_SPECIAL      ("ftp-login-name",               0,  0,0,&ftpServer.loginName,                                 NULL,cmdOptionParseString,NULL,                                    "ftp login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,0,&ftpServer.password,                                  NULL,cmdOptionParsePassword,NULL,                                  "ftp password (use with care!)","password"                                 ),
@@ -356,6 +358,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value);
+LOCAL bool configValueParseCryptKey(void *userData, void *variable, const char *name, const char *value);
 
 LOCAL const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] =
 {
@@ -461,9 +464,10 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                  0,INT_MAX,CONFIG_VALUE_BYTES_UNITS),
 
   CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                          CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_VALUE_ENUM     ("crypt-asymmetric",             &jobOptions.cryptType,-1,                               CRYPT_TYPE_ASYMMETRIC),
   CONFIG_VALUE_SPECIAL  ("crypt-password",               &globalOptions.cryptPassword,-1,                        configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_STRING   ("crypt-public-key",             &globalOptions.cryptPublicKeyFileName,-1                ),
-  CONFIG_VALUE_STRING   ("crypt-private-key",            &globalOptions.cryptPrivateKeyFileName,-1               ),
+  CONFIG_VALUE_SPECIAL  ("crypt-public-key",             &jobOptions.cryptPublicKey,-1,                          configValueParseCryptKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL  ("crypt-private-key",            &jobOptions.cryptPrivateKey,-1,                         configValueParseCryptKey,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(FTPServer,loginName)         ),
   CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(FTPServer,password),         configValueParsePassword,NULL,NULL,NULL,NULL),
@@ -905,6 +909,10 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
 
 LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
 {
+  FileHandle fileHandle;
+  String     string;
+  Errors     error;
+
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -912,16 +920,32 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(userData);
 
-  if ((*(Password**)variable) != NULL)
+  if ((*(CryptKey**)variable) == NULL)
   {
-    Password_setCString(*(Password**)variable,value);
+    (*(CryptKey**)variable) = Crypt_newKey();
+  }
+
+  string = String_newCString(value);
+  if (File_exists(string))
+  {
+    error = File_open(&fileHandle,string,ARCHIVE_FILE_MODE_READ);
+    if (error != ERROR_NONE)
+    {
+      String_delete(string);
+      return FALSE;
+    }
+    File_readLine(&fileHandle,string);
+    File_close(&fileHandle);
+
+    error = Crypt_setKeyData(*(CryptKey**)variable,string);
   }
   else
   {
-    (*(Password**)variable) = Password_newCString(value);
+    error = Crypt_setKeyData(*(CryptKey**)variable,string);
   }
+  String_delete(string);
 
-  return TRUE;
+  return (error == ERROR_NONE);
 }
 
 /***********************************************************************\
@@ -944,6 +968,55 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
   StringList_appendCString(&configFileNameList,value);
 
   return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseCryptKey
+* Purpose: command line option call back for parsing crypt key
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseCryptKey(void *userData, void *variable, const char *name, const char *value)
+{
+  FileHandle fileHandle;
+  String     string;
+  Errors     error;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
+
+  if ((*(CryptKey**)variable) == NULL)
+  {
+    (*(CryptKey**)variable) = Crypt_newKey();
+  }
+
+  string = String_newCString(value);
+  if (File_exists(string))
+  {
+    error = File_open(&fileHandle,string,FILE_OPENMODE_READ);
+    if (error != ERROR_NONE)
+    {
+      String_delete(string);
+      return FALSE;
+    }
+    File_readLine(&fileHandle,string);
+    File_close(&fileHandle);
+
+    error = Crypt_setKeyData(*(CryptKey**)variable,string);
+  }
+  else
+  {
+    error = Crypt_setKeyData(*(CryptKey**)variable,string);
+  }
+  String_delete(string);
+
+  return (error == ERROR_NONE);
 }
 
 /***********************************************************************\
@@ -1410,8 +1483,8 @@ void copyJobOptions(const JobOptions *sourceJobOptions, JobOptions *destinationJ
   destinationJobOptions->incrementalListFileName      = String_duplicate(sourceJobOptions->incrementalListFileName);
   destinationJobOptions->directory                    = String_duplicate(sourceJobOptions->directory);
   destinationJobOptions->cryptPassword                = Password_duplicate(sourceJobOptions->cryptPassword);
-  destinationJobOptions->cryptPublicKeyFileName       = String_duplicate(sourceJobOptions->cryptPublicKeyFileName);
-  destinationJobOptions->cryptPrivateKeyFileName      = String_duplicate(sourceJobOptions->cryptPrivateKeyFileName);
+  destinationJobOptions->cryptPublicKey               = sourceJobOptions->cryptPublicKey;
+  destinationJobOptions->cryptPrivateKey              = sourceJobOptions->cryptPrivateKey;
   destinationJobOptions->ftpServer.loginName          = String_duplicate(sourceJobOptions->ftpServer.loginName);
   destinationJobOptions->ftpServer.password           = Password_duplicate(sourceJobOptions->ftpServer.password);
   destinationJobOptions->sshServer.loginName          = String_duplicate(sourceJobOptions->sshServer.loginName);
@@ -1431,8 +1504,8 @@ void freeJobOptions(JobOptions *jobOptions)
   String_delete(jobOptions->sshServer.loginName);
   Password_delete(jobOptions->ftpServer.password);
   String_delete(jobOptions->ftpServer.loginName);
-  String_delete(jobOptions->cryptPrivateKeyFileName);
-  String_delete(jobOptions->cryptPublicKeyFileName);
+//  String_delete(jobOptions->cryptPrivateKeyFileName);
+//  String_delete(jobOptions->cryptPublicKeyFileName);
   Password_delete(jobOptions->cryptPassword);
   String_delete(jobOptions->directory);
   String_delete(jobOptions->incrementalListFileName);
@@ -2350,7 +2423,7 @@ int main(int argc, const char *argv[])
           }
           else
           {
-            bits = DEFAULT_CRYPT_KEY_BITS;
+            bits = DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS;
           }
 
           /* generate new keys pair */
@@ -2383,7 +2456,7 @@ int main(int argc, const char *argv[])
             File_deleteFileName(fileName);
           }
           String_delete(s);
-
+#if 0
 {
   char s[200],c[2000],t[200];
   ulong n;
@@ -2397,8 +2470,7 @@ int main(int argc, const char *argv[])
 fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
 
 }
-
-
+#endif /* 0 */
           Crypt_doneKey(&privateKey);
           Crypt_doneKey(&publicKey);
         }

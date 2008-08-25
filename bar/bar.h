@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.42 $
+* $Revision: 1.43 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -198,8 +198,8 @@ typedef struct
   ulong                  compressMinFileSize;          // min. size of file for using compression
 
   Password               *cryptPassword;               // default password for encryption/decryption
-  String                 cryptPublicKeyFileName;       // default public key file name for encryption
-  String                 cryptPrivateKeyFileName;      // default private key file name for decryption
+//  CryptKey               *cryptPublicKey;              // default public key for encryption
+//  CryptKey               *cryptPrivateKey;             // default private key for decryption
 
   FTPServer              *ftpServer;                   // FTP server
   SSHServer              *sshServer;                   // SSH server
@@ -257,11 +257,12 @@ typedef struct
   PatternTypes        patternType;
 
   CompressAlgorithms  compressAlgorithm;
+  CryptTypes          cryptType;
   CryptAlgorithms     cryptAlgorithm;
   PasswordModes       cryptPasswordMode;
   Password            *cryptPassword;
-  String              cryptPublicKeyFileName;
-  String              cryptPrivateKeyFileName;
+  CryptKey            *cryptPublicKey;
+  CryptKey            *cryptPrivateKey;
 
   FTPServer           ftpServer;
   SSHServer           sshServer;
