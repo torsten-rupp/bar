@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -131,7 +131,7 @@ void Password_done(Password *password);
 \***********************************************************************/
 
 Password *Password_new(void);
-Password *Password_newCString(const char *s);
+//Password *Password_newCString(const char *s);
 
 /***********************************************************************\
 * Name   : Password_duplicate
@@ -196,7 +196,7 @@ void Password_appendChar(Password *password, char ch);
 /***********************************************************************\
 * Name   : Password_random
 * Purpose: set password to random value
-* Input  : length - length of password
+* Input  : length - length of password (bytes)
 * Output : -
 * Return : -
 * Notes  : -

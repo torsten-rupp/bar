@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems: all
@@ -49,9 +49,12 @@ typedef enum
 } CryptAlgorithms;
 
 #define DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS 2048
+#define MAX_RANDOM_KEY_BITS                512 // it seems libgcrypt have a bug: data blocks with >=1016 cannot be encrypted/decrypted without errors. Why?
 
 typedef enum
 {
+  CRYPT_TYPE_NONE,
+
   CRYPT_TYPE_SYMMETRIC,
   CRYPT_TYPE_ASYMMETRIC,
 } CryptTypes;
@@ -115,7 +118,7 @@ void Crypt_doneAll(void);
 * Purpose: get name of crypt algorithm
 * Input  : cryptAlgorithm - crypt algorithm
 * Output : -
-* Return : -
+* Return : algorithm name
 * Notes  : -
 \***********************************************************************/
 
@@ -133,6 +136,17 @@ const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm);
 CryptAlgorithms Crypt_getAlgorithm(const char *name);
 
 /***********************************************************************\
+* Name   : Crypt_getTypeName
+* Purpose: get name of crypt type
+* Input  : cryptType - crypt type
+* Output : -
+* Return : mode string
+* Notes  : -
+\***********************************************************************/
+
+const char *Crypt_getTypeName(CryptTypes cryptType);
+
+/***********************************************************************\
 * Name   : Crypt_randomize
 * Purpose: fill buffer with randomized data
 * Input  : buffer - buffer to fill with randomized data
@@ -143,6 +157,19 @@ CryptAlgorithms Crypt_getAlgorithm(const char *name);
 \***********************************************************************/
 
 void Crypt_randomize(byte *buffer, uint length);
+
+/***********************************************************************\
+* Name   : Crypt_getKeyLength
+* Purpose: get key length of crypt algorithm
+* Input  : -
+* Output : keyLength - key length (bits)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
+                          uint            *keyLength
+                         );
 
 /***********************************************************************\
 * Name   : Crypt_getBlockLength
@@ -266,6 +293,14 @@ void Crypt_doneKey(CryptKey *cryptKey);
 
 CryptKey *Crypt_newKey(void);
 
+Errors Crypt_readKeyFile(CryptKey     *cryptKey,
+                         const String fileName
+                        );
+
+Errors Crypt_writeKeyFile(CryptKey     *cryptKey,
+                          const String fileName
+                         );
+
 /***********************************************************************\
 * Name   : Crypt_createKeys
 * Purpose: create new public/private key pair
@@ -363,12 +398,12 @@ Errors Crypt_keyDecrypt(CryptKey   *cryptKey,
                         ulong      *bufferLength
                        );
 
-Errors Crypt_getRandomEncryptKey(CryptKey *publicKey,
-                                 uint     bits,
-                                 Password *password,
-                                 uint     maxEncryptBufferLength,
-                                 void     *encryptBuffer,
-                                 uint     *encryptBufferLength
+Errors Crypt_getRandomEncryptKey(CryptKey        *publicKey,
+                                 CryptAlgorithms cryptAlgorithm,
+                                 Password        *password,
+                                 uint            maxEncryptBufferLength,
+                                 void            *encryptBuffer,
+                                 uint            *encryptBufferLength
                                 );
 
 Errors Crypt_getDecryptKey(CryptKey   *privateKey,

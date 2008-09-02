@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.c,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -54,6 +54,11 @@ LOCAL const struct { const char *name; CryptAlgorithms cryptAlgorithm; } CRYPT_A
   {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128 },
   {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256 },
 };
+
+// PKCS1 encoded message buffer for RSA encryption/decryption
+#define PKCS1_ENCODED_MESSAGE_LENGTH         (512/8)
+#define PKCS1_RANDOM_KEY_LENGTH              (PKCS1_ENCODED_MESSAGE_LENGTH*8-(1+1+8+1)*8)
+#define PKCS1_ENCODED_MESSAGE_PADDING_LENGTH (PKCS1_ENCODED_MESSAGE_LENGTH-(PKCS1_RANDOM_KEY_LENGTH+7)/8-1-1-1)
 
 /***************************** Datatypes *******************************/
 
@@ -225,7 +230,7 @@ Errors Crypt_initAll(void)
     gcry_control(GCRYCTL_INITIALIZATION_FINISHED,0);
     gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM,    0);
     #ifndef NDEBUG
-      gcry_control(GCRYCTL_SET_DEBUG_FLAGS,1,0);
+//      gcry_control(GCRYCTL_SET_DEBUG_FLAGS,1,0);
     #endif
   #endif /* HAVE_GCRYPT */
 
@@ -239,7 +244,7 @@ void Crypt_doneAll(void)
 const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
 {
   int        z;
-  const char *s;
+  const char *algorithmName;
 
   z = 0;
   while (   (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
@@ -250,14 +255,14 @@ const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
   }
   if (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
   {
-    s = CRYPT_ALGORITHMS[z].name;
+    algorithmName = CRYPT_ALGORITHMS[z].name;
   }
   else
   {
-    s = "unknown";
+    algorithmName = "unknown";
   }
 
-  return s;
+  return algorithmName;
 }
 
 CryptAlgorithms Crypt_getAlgorithm(const char *name)
@@ -286,6 +291,25 @@ CryptAlgorithms Crypt_getAlgorithm(const char *name)
   return cryptAlgorithm;
 }
 
+const char *Crypt_getTypeName(CryptTypes cryptType)
+{
+  const char *typeName;
+
+  typeName = NULL;
+  switch (cryptType)
+  {
+    case CRYPT_TYPE_SYMMETRIC : typeName = "SYMMETRIC";  break;
+    case CRYPT_TYPE_ASYMMETRIC: typeName = "ASYMMETRIC"; break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return typeName;
+}
+
 void Crypt_randomize(byte *buffer, uint length)
 {
   assert(buffer != NULL);
@@ -298,11 +322,81 @@ void Crypt_randomize(byte *buffer, uint length)
   #endif /* HAVE_GCRYPT */
 }
 
+Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
+                          uint            *keyLength
+                         )
+{
+  assert(keyLength != NULL);
+
+  switch (cryptAlgorithm)
+  {
+    case CRYPT_ALGORITHM_NONE:
+      (*keyLength) = 0;
+      break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
+    case CRYPT_ALGORITHM_AES128:
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
+      #ifdef HAVE_GCRYPT
+        {
+          int          gcryptAlgorithm;
+          gcry_error_t gcryptError;
+          size_t       n;
+
+          gcryptAlgorithm = 0;
+          switch (cryptAlgorithm)
+          {
+            case CRYPT_ALGORITHM_3DES:       gcryptAlgorithm = GCRY_CIPHER_3DES;       break;
+            case CRYPT_ALGORITHM_CAST5:      gcryptAlgorithm = GCRY_CIPHER_CAST5;      break;
+            case CRYPT_ALGORITHM_BLOWFISH:   gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;   break;
+            case CRYPT_ALGORITHM_AES128:     gcryptAlgorithm = GCRY_CIPHER_AES;        break;
+            case CRYPT_ALGORITHM_AES192:     gcryptAlgorithm = GCRY_CIPHER_AES192;     break;
+            case CRYPT_ALGORITHM_AES256:     gcryptAlgorithm = GCRY_CIPHER_AES256;     break;
+            case CRYPT_ALGORITHM_TWOFISH128: gcryptAlgorithm = GCRY_CIPHER_TWOFISH128; break;
+            case CRYPT_ALGORITHM_TWOFISH256: gcryptAlgorithm = GCRY_CIPHER_TWOFISH;    break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break;
+          }
+          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                              GCRYCTL_GET_KEYLEN,
+                                              NULL,
+                                              &n
+                                             );
+          if (gcryptError != 0)
+          {
+            printError("Cannot detect block length of '%s' cipher (error: %s)\n",
+                       gcry_cipher_algo_name(gcryptAlgorithm),
+                       gpg_strerror(gcryptError)
+                      );
+            return ERROR_INIT_CIPHER;
+          }
+          (*keyLength) = n*8;
+        }
+      #else /* not HAVE_GCRYPT */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_GCRYPT */
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  return ERROR_NONE;
+}
+
 Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
                             uint            *blockLength
                            )
 {
-
   assert(blockLength != NULL);
 
   switch (cryptAlgorithm)
@@ -689,6 +783,7 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
       #ifdef HAVE_GCRYPT
+        assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
         gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
@@ -741,18 +836,19 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
       #ifdef HAVE_GCRYPT
-      assert((bufferLength%cryptInfo->blockLength) == 0);
+        assert(cryptInfo->blockLength > 0);
+        assert((bufferLength%cryptInfo->blockLength) == 0);
 
-      gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
-                                        buffer,
-                                        bufferLength,
-                                        NULL,
-                                        0
-                                       );
-      if (gcryptError != 0)
-      {
-        return ERROR_ENCRYPT_FAIL;
-      }
+        gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
+                                          buffer,
+                                          bufferLength,
+                                          NULL,
+                                          0
+                                         );
+        if (gcryptError != 0)
+        {
+          return ERROR_ENCRYPT_FAIL;
+        }
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(buffer);
         UNUSED_VARIABLE(bufferLength);
@@ -788,6 +884,91 @@ void Crypt_doneKey(CryptKey *cryptKey)
   #ifdef HAVE_GCRYPT
     if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
   #endif /* HAVE_GCRYPT */
+}
+
+Errors Crypt_readKeyFile(CryptKey     *cryptKey,
+                         const String dataOrfileName
+                        )
+{
+  String     data;
+  FileHandle fileHandle;
+  Errors     error;
+
+  if (File_exists(dataOrfileName))
+  {
+    data = String_new();
+
+    // read file contents
+    error = File_open(&fileHandle,dataOrfileName,FILE_OPENMODE_READ);
+    if (error != ERROR_NONE)
+    {
+      String_delete(data);
+      return error;
+    }
+    error = File_readLine(&fileHandle,data);
+    if (error != ERROR_NONE)
+    {
+      File_close(&fileHandle);
+      String_delete(data);
+      return error;
+    }
+    File_close(&fileHandle);
+
+    // set key data
+    error = Crypt_setKeyData(cryptKey,data);
+    if (error != ERROR_NONE)
+    {
+      String_delete(data);
+      return error;
+    }
+
+    // free resources */
+    String_delete(data);
+  }
+  else
+  {
+    // set key data
+    error = Crypt_setKeyData(cryptKey,dataOrfileName);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Crypt_writeKeyFile(CryptKey     *cryptKey,
+                          const String fileName
+                         )
+{
+  String     data;
+  FileHandle fileHandle;
+  Errors     error;
+
+  // get key data
+  data = Crypt_getKeyData(String_new(),cryptKey);
+
+  // write file
+  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+  if (error != ERROR_NONE)
+  {
+    String_delete(data);
+    return error;
+  }
+  error = File_writeLine(&fileHandle,data);
+  if (error != ERROR_NONE)
+  {
+    File_close(&fileHandle);
+    String_delete(data);
+    return error;
+  }
+  File_close(&fileHandle);
+
+  // free resources */
+  String_delete(data);
+
+  return ERROR_NONE;
 }
 
 CryptKey *Crypt_newKey(void)
@@ -958,15 +1139,15 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
   assert(encryptBuffer != NULL);
   assert(encryptBufferLength != NULL);
 
-fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
-gcry_sexp_dump(cryptKey->key);
-fprintf(stderr,"%s,%d: %d\n",__FILE__,__LINE__,bufferLength);
+//fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
+//gcry_sexp_dump(cryptKey->key);
+//fprintf(stderr,"%s,%d: %d\n",__FILE__,__LINE__,bufferLength);
 
   /* create mpi from data: push data bytes into mpi by shift+add */
   n = gcry_mpi_new(0);
   if (n == NULL)
   {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     return ERROR_KEY_ENCRYPT_FAIL;
   }
   p = (byte*)buffer;
@@ -975,17 +1156,14 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     gcry_mpi_mul_ui(n,n,256);
     gcry_mpi_add_ui(n,n,p[z]);
   }
-gcry_mpi_dump(n);fprintf(stderr,"\n");
+//gcry_mpi_dump(n);fprintf(stderr,"\n");
 
   /* create S-expression with data */
   sexpData = NULL;
-//  gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",(int)bufferLength,(char*)buffer);
-//  gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %m))",n);
   gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (value %m))",n);
-//  gcryptError = gcry_sexp_build(&sexpData,NULL,"%m",n);
   if (gcryptError != 0)
   {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     gcry_mpi_release(n);
     return ERROR_KEY_ENCRYPT_FAIL;
   }
@@ -996,7 +1174,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   gcryptError = gcry_pk_encrypt(&sexpEncryptData,sexpData,cryptKey->key);
   if (gcryptError != 0)
   {
-fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
+//fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
     gcry_sexp_release(sexpData);    
     gcry_mpi_release(n);
     return ERROR_KEY_ENCRYPT_FAIL;
@@ -1007,7 +1185,7 @@ fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(g
   sexpToken = gcry_sexp_find_token(sexpEncryptData,"a",0);
   if (sexpToken == NULL)
   {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     gcry_sexp_release(sexpEncryptData);
     gcry_sexp_release(sexpData);
     gcry_mpi_release(n);
@@ -1017,7 +1195,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   encryptData = gcry_sexp_nth_data(sexpToken,1,&encryptDataLength);
   if (encryptData == NULL)
   {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     gcry_sexp_release(sexpEncryptData);
     gcry_sexp_release(sexpData);
     gcry_mpi_release(n);
@@ -1089,21 +1267,21 @@ Errors Crypt_keyDecrypt(CryptKey   *cryptKey,
   return ERROR_NONE;
 }
 
-Errors Crypt_getRandomEncryptKey(CryptKey *publicKey,
-                                 uint     bits,
-                                 Password *password,
-                                 uint     maxEncryptBufferLength,
-                                 void     *encryptBuffer,
-                                 uint     *encryptBufferLength
+Errors Crypt_getRandomEncryptKey(CryptKey        *publicKey,
+                                 CryptAlgorithms cryptAlgorithm,
+                                 Password        *password,
+                                 uint            maxEncryptBufferLength,
+                                 void            *encryptBuffer,
+                                 uint            *encryptBufferLength
                                 )
 {
-  gcry_mpi_t   n;
-  bool         okFlag;
-  void         *buffer;
-  size_t       bufferLength,maxBufferLength;
+  gcry_sexp_t  sexpToken;
+  Errors       error;
+  uint         keyLength;
+  byte         *pkcs1EncodedMessage;
+  const byte   *p;
   gcry_sexp_t  sexpData;
   gcry_sexp_t  sexpEncryptData;
-  gcry_sexp_t  sexpToken;
   const char   *encryptData;
   size_t       encryptDataLength;
   gcry_error_t gcryptError;
@@ -1114,82 +1292,70 @@ Errors Crypt_getRandomEncryptKey(CryptKey *publicKey,
   assert(encryptBufferLength != NULL);
 
 //fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s,%d: public key\n",__FILE__,__LINE__);
 //gcry_sexp_dump(publicKey->key);
 
-  /* create random mpi from data: push data bytes into mpi by shift+add */
-  n = gcry_mpi_snew(bits);
-  if (n == NULL)
+  /* check if public key available */
+  sexpToken = gcry_sexp_find_token(publicKey->key,"public-key",0);
+  if (sexpToken == NULL)
   {
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+    return ERROR_NOT_A_PUBLIC_KEY;
+  }
+  gcry_sexp_release(sexpToken);
+
+  /* get key length */
+  error = Crypt_getKeyLength(cryptAlgorithm,&keyLength);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  assert(keyLength > 0);
+  if (keyLength > PKCS1_RANDOM_KEY_LENGTH)
+  {
+    return ERROR_INVALID_KEY_LENGTH;
+  }
+
+  /* create random password */
+  Password_random(password,(PKCS1_RANDOM_KEY_LENGTH+7)/8);
+
+  /* create padded encoded message block: format 0x00 0x02 PS 0x00 key; size 512bit */
+  pkcs1EncodedMessage = Password_allocSecure(PKCS1_ENCODED_MESSAGE_LENGTH);
+  if (pkcs1EncodedMessage == NULL)
+  {
     return ERROR_KEY_ENCRYPT_FAIL;
   }
-  gcry_mpi_randomize(n,bits,GCRY_STRONG_RANDOM);
-//gcry_mpi_dump(n);fprintf(stderr,"\n");
-
-  /* set password */
-  maxBufferLength = 512;
-  okFlag          = FALSE;
-  do
-  {
-    buffer = Password_allocSecure(maxBufferLength);
-    if (buffer == NULL)
-    {
-      gcry_mpi_release(n);
-      return ERROR_KEY_ENCRYPT_FAIL;
-    }
-    gcryptError = gcry_mpi_print(GCRYMPI_FMT_STD,
-                                 buffer,
-                                 maxBufferLength,
-                                 &bufferLength,
-                                 n
-                                );
-    if (gcryptError != 0)
-    {
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-      Password_freeSecure(buffer);
-      gcry_mpi_release(n);
-      return ERROR_KEY_ENCRYPT_FAIL;
-    }
-    if (bufferLength < maxBufferLength)
-    {
-      okFlag = TRUE;
-    }
-    else
-    {
-      Password_freeSecure(buffer);
-      maxBufferLength += 64;
-    }
-  }
-  while (!okFlag);
-  Password_setBuffer(password,buffer,bufferLength);
-  Password_freeSecure(buffer);
+  pkcs1EncodedMessage[0] = 0x00;
+  pkcs1EncodedMessage[1] = 0x02;
+  gcry_randomize((unsigned char*)&pkcs1EncodedMessage[1+1],PKCS1_ENCODED_MESSAGE_PADDING_LENGTH,GCRY_STRONG_RANDOM);
+  pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH] = 0x00;
+  p = Password_deploy(password);
+  memcpy(&pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH+1],p,(PKCS1_RANDOM_KEY_LENGTH+7)/8);
+  Password_undeploy(password);
 
   /* create S-expression with data */
-  sexpData = NULL;
-//  gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",(int)bufferLength,(char*)buffer);
+  gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",PKCS1_ENCODED_MESSAGE_LENGTH,(char*)pkcs1EncodedMessage);
 //  gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %m))",n);
-  gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (value %m))",n);
+//  gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (value %m))",n);
 //  gcryptError = gcry_sexp_build(&sexpData,NULL,"%m",n);
   if (gcryptError != 0)
   {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-    gcry_mpi_release(n);
+//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+    Password_freeSecure(pkcs1EncodedMessage);
     return ERROR_KEY_ENCRYPT_FAIL;
   }
-//fprintf(stderr,"%s,%d: --- plain data \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s,%d: --- randomkey plain data \n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpData);
 
   /* encrypt */
-  sexpEncryptData = NULL;
   gcryptError = gcry_pk_encrypt(&sexpEncryptData,sexpData,publicKey->key);
   if (gcryptError != 0)
   {
 //fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
     gcry_sexp_release(sexpData);    
-    gcry_mpi_release(n);
+    Password_freeSecure(pkcs1EncodedMessage);
     return ERROR_KEY_ENCRYPT_FAIL;
   }
-//fprintf(stderr,"%s,%d: --- encrypted data \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s,%d: --- randomkey encrypted data \n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpEncryptData);
 
   /* get encrypted data */
@@ -1198,7 +1364,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   {
     gcry_sexp_release(sexpEncryptData);
     gcry_sexp_release(sexpData);
-    gcry_mpi_release(n);
+    Password_freeSecure(pkcs1EncodedMessage);
     return ERROR_KEY_ENCRYPT_FAIL;
   }
 //gcry_sexp_dump(sexpToken);
@@ -1207,7 +1373,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   {
     gcry_sexp_release(sexpEncryptData);
     gcry_sexp_release(sexpData);
-    gcry_mpi_release(n);
+    Password_freeSecure(pkcs1EncodedMessage);
     return ERROR_KEY_ENCRYPT_FAIL;
   }
   (*encryptBufferLength) = MIN(encryptDataLength,maxEncryptBufferLength);
@@ -1217,7 +1383,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   /* free resources */
   gcry_sexp_release(sexpEncryptData);
   gcry_sexp_release(sexpData);
-  gcry_mpi_release(n);
+  Password_freeSecure(pkcs1EncodedMessage);
 
   return ERROR_NONE;
 }
@@ -1228,16 +1394,29 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
                            Password   *password
                           )
 {
+  gcry_sexp_t  sexpToken;
   gcry_sexp_t  sexpEncryptData;
   gcry_sexp_t  sexpData;
-  const char   *data;
+  byte         *pkcs1EncodedMessage;
+  const byte   *data;
   size_t       dataLength;
   gcry_error_t gcryptError;
 
   assert(privateKey != NULL);
   assert(encryptData != NULL);
   assert(password != NULL);
+
+//fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s,%d: private key\n",__FILE__,__LINE__);
 //gcry_sexp_dump(privateKey->key);
+
+  /* check if private key available */
+  sexpToken = gcry_sexp_find_token(privateKey->key,"private-key",0);
+  if (sexpToken == NULL)
+  {
+    return ERROR_NOT_A_PRIVATE_KEY;
+  }
+  gcry_sexp_release(sexpToken);
 
   /* create S-expression with encrypted data */
   gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptDataLength,encryptData);
@@ -1245,7 +1424,7 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
   {
     return ERROR_KEY_DECRYPT_FAIL;
   }
-//fprintf(stderr,"%s,%d: --- encrypted data \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s,%d: --- encrypted key data \n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpEncryptData);
 
   /* decrypt */
@@ -1255,9 +1434,15 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
     gcry_sexp_release(sexpEncryptData);    
     return ERROR_KEY_DECRYPT_FAIL;
   }
+//fprintf(stderr,"%s,%d: --- key data \n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpData);
 
   /* get decrypted data */
+  pkcs1EncodedMessage = Password_allocSecure(PKCS1_ENCODED_MESSAGE_LENGTH);
+  if (pkcs1EncodedMessage == NULL)
+  {
+    return ERROR_KEY_ENCRYPT_FAIL;
+  }
   data = gcry_sexp_nth_data(sexpData,0,&dataLength);
   if (data == NULL)
   {
@@ -1265,9 +1450,19 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
     gcry_sexp_release(sexpEncryptData);
     return ERROR_KEY_DECRYPT_FAIL;
   }
-  Password_setBuffer(password,data,dataLength);
+
+  /* MPI does not store leading 0 -> do padding with 0 for required length */
+  memmove(&pkcs1EncodedMessage[PKCS1_ENCODED_MESSAGE_LENGTH-dataLength],&data[0],dataLength);
+  memset(&pkcs1EncodedMessage[0],0,PKCS1_ENCODED_MESSAGE_LENGTH-dataLength);
+
+  /* decode messgae block, get key */
+  assert(pkcs1EncodedMessage[0]==0x00);
+  assert(pkcs1EncodedMessage[1]==0x02);
+  assert(pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH]==0x00);
+  Password_setBuffer(password,&pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH+1],(PKCS1_RANDOM_KEY_LENGTH+7)/8);
 
   /* free resources */
+  Password_freeSecure(pkcs1EncodedMessage);
   gcry_sexp_release(sexpData);
   gcry_sexp_release(sexpEncryptData);
 

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -35,10 +35,12 @@
 
 /***************************** Datatypes *******************************/
 
-typedef struct
-{
-  ulong size;
-} MemoryHeader;
+#ifndef HAVE_GCRYPT
+  typedef struct
+  {
+    ulong size;
+  } MemoryHeader;
+#endif
 
 /***************************** Variables *******************************/
 #ifndef HAVE_GCRYPT
@@ -142,16 +144,6 @@ Password *Password_new(void)
     HALT_INSUFFICIENT_MEMORY();
   }
   Password_init(password);
-
-  return password;
-}
-
-Password *Password_newCString(const char *s)
-{
-  Password *password;
-
-  password = Password_new();
-  Password_setCString(password,s);
 
   return password;
 }
@@ -554,6 +546,27 @@ bool Password_input(Password *password, const char *title)
 
   return okFlag;
 }
+
+#if 1
+void Password_dump(const char *text, Password *password)
+{
+  uint z;
+
+  assert(password != NULL);
+
+  fprintf(stderr,text);
+  for (z = 0; z < password->length; z++)
+  {
+    #ifdef HAVE_GCRYPT
+      fprintf(stderr,"%02x",(byte)password->data[z]);
+    #else /* not HAVE_GCRYPT */
+      fprintf(stderr,"%02x",(byte)(password->data[z]^obfuscator[z]));
+    #endif /* HAVE_GCRYPT */
+  }
+  fprintf(stderr,"\n");
+}
+#endif /* 0 */
+
 
 #ifdef __cplusplus
   }
