@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems : all
@@ -115,7 +115,7 @@ LOCAL Errors readDefinition(void      *userData,
 
   /* allocate buffer */
   bufferLength = ALIGN(definitionSize,alignment);
-  buffer = (byte*)malloc(bufferLength);
+  buffer = (byte*)calloc(bufferLength,1);
   if (buffer == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
@@ -332,7 +332,7 @@ LOCAL Errors writeDefinition(void       *userData,
 
   /* allocate buffer */
   bufferLength = ALIGN(definitionSize,alignment);
-  buffer = (byte*)malloc(bufferLength);
+  buffer = (byte*)calloc(bufferLength,1);
   if (buffer == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
@@ -713,12 +713,12 @@ Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index)
   return IO.seek(chunkInfo->userData,chunkInfo->offset + CHUNK_HEADER_SIZE + index);
 }
 
-Errors Chunk_open(ChunkInfo   *chunkInfo,
-                  ChunkHeader *chunkHeader,
-                  ChunkId     chunkId,
-                  const int   *definition,
-                  ulong       definitionSize,
-                  void        *data
+Errors Chunk_open(ChunkInfo         *chunkInfo,
+                  const ChunkHeader *chunkHeader,
+                  ChunkId           chunkId,
+                  const int         *definition,
+                  ulong             definitionSize,
+                  void              *data
                  )
 {
   Errors error;

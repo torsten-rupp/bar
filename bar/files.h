@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.h,v $
-* $Revision: 1.30 $
+* $Revision: 1.31 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -141,6 +141,17 @@ typedef struct
 \***********************************************************************/
 
 String File_newFileName(void);
+
+/***********************************************************************\
+* Name   : File_duplicateFileName
+* Purpose: duplicate file name
+* Input  : fromFileName - file name
+* Output : -
+* Return : new file name
+* Notes  : -
+\***********************************************************************/
+
+String File_duplicateFileName(const String fromFileName);
 
 /***********************************************************************\
 * Name   : File_deleteFileName

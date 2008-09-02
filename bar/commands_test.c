@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_test.c,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -150,6 +150,7 @@ Errors Command_test(StringList  *archiveFileNameList,
                                           &archiveFileInfo,
                                           NULL,
                                           NULL,
+                                          NULL,
                                           fileName,
                                           &fileInfo,
                                           &fragmentOffset,
@@ -242,6 +243,7 @@ Errors Command_test(StringList  *archiveFileNameList,
             error = Archive_readDirectoryEntry(&archiveInfo,
                                                &archiveFileInfo,
                                                NULL,
+                                               NULL,
                                                directoryName,
                                                &fileInfo
                                               );
@@ -288,6 +290,7 @@ Errors Command_test(StringList  *archiveFileNameList,
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
                                           &archiveFileInfo,
+                                          NULL,
                                           NULL,
                                           linkName,
                                           fileName,
@@ -336,6 +339,7 @@ Errors Command_test(StringList  *archiveFileNameList,
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveInfo,
                                              &archiveFileInfo,
+                                             NULL,
                                              NULL,
                                              fileName,
                                              &fileInfo

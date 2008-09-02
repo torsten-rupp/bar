@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/files.c,v $
-* $Revision: 1.38 $
+* $Revision: 1.39 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -50,6 +50,11 @@
 String File_newFileName(void)
 {
   return String_new();
+}
+
+String File_duplicateFileName(const String fromFileName)
+{
+  return String_duplicate(fromFileName);
 }
 
 void File_deleteFileName(String fileName)

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/patterns.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -67,6 +67,11 @@ LOCAL Errors compilePattern(const char   *pattern,
   int    regexFlags;
   ulong  z;
 
+  assert(pattern != NULL);
+  assert(regexBegin != NULL);
+  assert(regexEnd != NULL);
+  assert(regexExact != NULL);
+
   matchString = String_new();
   regexString = String_new();
 
@@ -81,23 +86,30 @@ LOCAL Errors compilePattern(const char   *pattern,
         {
           case '*':
             String_appendCString(matchString,".*");
+            z++;
             break;
           case '?':
             String_appendChar(matchString,'.');
+            z++;
             break;
           case '.':
             String_appendCString(matchString,"\\.");
+            z++;
             break;
           case '\\':
             String_appendChar(matchString,'\\');
             z++;
-            if (pattern[z] != '\0') String_appendChar(matchString,pattern[z]);
+            if (pattern[z] != '\0')
+            {
+              String_appendChar(matchString,pattern[z]);
+              z++;
+            }
             break;
           default:
             String_appendChar(matchString,pattern[z]);
+            z++;
             break;
         }
-        z++;
       }     
       break;
     case PATTERN_TYPE_REGEX:
@@ -211,6 +223,7 @@ LOCAL void freePatternNode(PatternNode *patternNode,
                           )
 {
   assert(patternNode != NULL);
+  assert(((PatternNode*)patternNode)->pattern != NULL);
 
   UNUSED_VARIABLE(userData);
 

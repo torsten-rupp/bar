@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_list.c,v $
-* $Revision: 1.33 $
+* $Revision: 1.34 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -138,6 +138,7 @@ LOCAL void printFooter(ulong fileCount)
 *          archiveFileSize   - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
 *          cryptAlgorithm    - used crypt algorithm
+*          cryptType         - crypt type; see CRYPT_TYPES
 *          fragmentOffset    - fragment offset (0..n-1)
 *          fragmentSize      - fragment length
 * Output : -
@@ -151,12 +152,14 @@ LOCAL void printFileInfo(const String       fileName,
                          uint64             archiveFileSize,
                          CompressAlgorithms compressAlgorithm,
                          CryptAlgorithms    cryptAlgorithm,
+                         CryptTypes         cryptType,
                          uint64             fragmentOffset,
                          uint64             fragmentSize
                         )
 {
   String dateTime;
   double ratio;
+  String cryptString;
 
   assert(fileName != NULL);
 
@@ -173,6 +176,7 @@ LOCAL void printFileInfo(const String       fileName,
 
   if (globalOptions.longFormatFlag)
   {
+    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
     printf("FILE %10llu %-25s %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
            fileSize,
            String_cString(dateTime),
@@ -180,9 +184,10 @@ LOCAL void printFileInfo(const String       fileName,
            (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset,
            Compress_getAlgorithmName(compressAlgorithm),
            ratio,
-           Crypt_getAlgorithmName(cryptAlgorithm),
+           String_cString(cryptString),
            String_cString(fileName)
           );
+    String_delete(cryptString);
   }
   else
   {
@@ -201,23 +206,29 @@ LOCAL void printFileInfo(const String       fileName,
 * Purpose: print link information
 * Input  : directoryName  - directory name
 *          cryptAlgorithm - used crypt algorithm
+*          cryptType      - crypt type; see CRYPT_TYPES
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 LOCAL void printDirectoryInfo(const String    directoryName,
-                              CryptAlgorithms cryptAlgorithm
+                              CryptAlgorithms cryptAlgorithm,
+                              CryptTypes      cryptType
                              )
 {
+  String cryptString;
+
   assert(directoryName != NULL);
 
   if (globalOptions.longFormatFlag)
   {
+    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
     printf("DIR                                                                                 %-10s %s\n",
-           Crypt_getAlgorithmName(cryptAlgorithm),
+           String_cString(cryptString),
            String_cString(directoryName)
           );
+    String_delete(cryptString);
   }
   else
   {
@@ -233,6 +244,7 @@ LOCAL void printDirectoryInfo(const String    directoryName,
 * Input  : linkName        - link name
 *          destinationName - name of referenced file
 *          cryptAlgorithm  - used crypt algorithm
+*          cryptType       - crypt type; see CRYPT_TYPES
 * Output : -
 * Return : -
 * Notes  : -
@@ -240,19 +252,24 @@ LOCAL void printDirectoryInfo(const String    directoryName,
 
 LOCAL void printLinkInfo(const String    linkName,
                          const String    destinationName,
-                         CryptAlgorithms cryptAlgorithm
+                         CryptAlgorithms cryptAlgorithm,
+                         CryptTypes      cryptType
                         )
 {
+  String cryptString;
+
   assert(linkName != NULL);
   assert(destinationName != NULL);
 
   if (globalOptions.longFormatFlag)
   {
+    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
     printf("LINK                                                                                %-10s %s -> %s\n",
-           Crypt_getAlgorithmName(cryptAlgorithm),
+           String_cString(cryptString),
            String_cString(linkName),
            String_cString(destinationName)
           );
+    String_delete(cryptString);
   }
   else
   {
@@ -268,6 +285,7 @@ LOCAL void printLinkInfo(const String    linkName,
 * Purpose: print special information
 * Input  : fileName        - file name
 *          cryptAlgorithm  - used crypt algorithm
+*          cryptType       - crypt type; see CRYPT_TYPES
 *          fileSpecialType - special file type
 *          major           - device major number
 *          minor           - device minor number
@@ -278,11 +296,14 @@ LOCAL void printLinkInfo(const String    linkName,
 
 LOCAL void printSpecialInfo(const String     fileName,
                             CryptAlgorithms  cryptAlgorithm,
+                            CryptTypes       cryptType,
                             FileSpecialTypes fileSpecialType,
                             ulong            major,
                             ulong            minor
                            )
 {
+  String cryptString;
+
   assert(fileName != NULL);
 
   switch (fileSpecialType)
@@ -290,12 +311,14 @@ LOCAL void printSpecialInfo(const String     fileName,
     case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
       if (globalOptions.longFormatFlag)
       {
+        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
         printf("CHAR                                                                                %-10s %s, %lu %lu\n",
-               Crypt_getAlgorithmName(cryptAlgorithm),
+               String_cString(cryptString),
                String_cString(fileName),
                major,
                minor
               );
+        String_delete(cryptString);
       }
       else
       {
@@ -307,12 +330,14 @@ LOCAL void printSpecialInfo(const String     fileName,
     case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
       if (globalOptions.longFormatFlag)
       {
+        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
         printf("BLOCK                                                                               %-10s %s, %lu %lu\n",
-               Crypt_getAlgorithmName(cryptAlgorithm),
+               String_cString(cryptString),
                String_cString(fileName),
                major,
                minor
               );
+        String_delete(cryptString);
       }
       else
       {
@@ -324,10 +349,12 @@ LOCAL void printSpecialInfo(const String     fileName,
     case FILE_SPECIAL_TYPE_FIFO:
       if (globalOptions.longFormatFlag)
       {
+        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
         printf("FIFO                                                                                %-10s %s\n",
-               Crypt_getAlgorithmName(cryptAlgorithm),
+               String_cString(cryptString),
                String_cString(fileName)
               );
+        String_delete(cryptString);
       }
       else
       {
@@ -339,10 +366,12 @@ LOCAL void printSpecialInfo(const String     fileName,
     case FILE_SPECIAL_TYPE_SOCKET:
       if (globalOptions.longFormatFlag)
       {
+        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
         printf("SOCKET                                                                              %-10s %s\n",
-               Crypt_getAlgorithmName(cryptAlgorithm),
+               String_cString(cryptString),
                String_cString(fileName)
               );
+        String_delete(cryptString);
       }
       else
       {
@@ -452,6 +481,7 @@ remoteBarFlag=FALSE;
                   ArchiveFileInfo    archiveFileInfo;
                   CompressAlgorithms compressAlgorithm;
                   CryptAlgorithms    cryptAlgorithm;
+                  CryptTypes         cryptType;
                   String             fileName;
                   FileInfo           fileInfo;
                   uint64             fragmentOffset,fragmentSize;
@@ -464,6 +494,7 @@ remoteBarFlag=FALSE;
                                                   &archiveFileInfo,
                                                   &compressAlgorithm,
                                                   &cryptAlgorithm,
+                                                  &cryptType,
                                                   fileName,
                                                   &fileInfo,
                                                   &fragmentOffset,
@@ -508,6 +539,7 @@ remoteBarFlag=FALSE;
                                   archiveFileInfo.file.chunkInfoFileData.size,
                                   compressAlgorithm,
                                   cryptAlgorithm,
+                                  cryptType,
                                   fragmentOffset,
                                   fragmentSize
                                  );
@@ -523,6 +555,7 @@ remoteBarFlag=FALSE;
                 {
                   String          directoryName;
                   CryptAlgorithms cryptAlgorithm;
+                  CryptTypes      cryptType;
                   FileInfo        fileInfo;
 
                   /* open archive lin */
@@ -532,6 +565,7 @@ remoteBarFlag=FALSE;
                     error = Archive_readDirectoryEntry(&archiveInfo,
                                                        &archiveFileInfo,
                                                        &cryptAlgorithm,
+                                                       &cryptType,
                                                        directoryName,
                                                        &fileInfo
                                                       );
@@ -569,7 +603,8 @@ remoteBarFlag=FALSE;
 
                     /* output file info */
                     printDirectoryInfo(directoryName,
-                                       cryptAlgorithm
+                                       cryptAlgorithm,
+                                       cryptType
                                       );
                     fileCount++;
                   }
@@ -582,6 +617,7 @@ remoteBarFlag=FALSE;
               case FILE_TYPE_LINK:
                 {
                   CryptAlgorithms cryptAlgorithm;
+                  CryptTypes      cryptType;
                   String          linkName;
                   String          fileName;
                   FileInfo        fileInfo;
@@ -594,6 +630,7 @@ remoteBarFlag=FALSE;
                     error = Archive_readLinkEntry(&archiveInfo,
                                                   &archiveFileInfo,
                                                   &cryptAlgorithm,
+                                                  &cryptType,
                                                   linkName,
                                                   fileName,
                                                   &fileInfo
@@ -634,7 +671,8 @@ remoteBarFlag=FALSE;
                     /* output file info */
                     printLinkInfo(linkName,
                                   fileName,
-                                  cryptAlgorithm
+                                  cryptAlgorithm,
+                                  cryptType
                                  );
                     fileCount++;
                   }
@@ -648,6 +686,7 @@ remoteBarFlag=FALSE;
               case FILE_TYPE_SPECIAL:
                 {
                   CryptAlgorithms cryptAlgorithm;
+                  CryptTypes      cryptType;
                   String          fileName;
                   FileInfo        fileInfo;
 
@@ -658,6 +697,7 @@ remoteBarFlag=FALSE;
                     error = Archive_readSpecialEntry(&archiveInfo,
                                                      &archiveFileInfo,
                                                      &cryptAlgorithm,
+                                                     &cryptType,
                                                      fileName,
                                                      &fileInfo
                                                     );
@@ -696,6 +736,7 @@ remoteBarFlag=FALSE;
                     /* output file info */
                     printSpecialInfo(fileName,
                                      cryptAlgorithm,
+                                     cryptType,
                                      fileInfo.specialType,
                                      fileInfo.major,
                                      fileInfo.minor
@@ -734,8 +775,9 @@ remoteBarFlag=FALSE;
           uint64               timeModified;
           uint64               archiveFileSize;
           uint64               fragmentOffset,fragmentLength;
-          CryptAlgorithms      compressAlgorithm;
+          CompressAlgorithms   compressAlgorithm;
           CryptAlgorithms      cryptAlgorithm;
+          CryptTypes           cryptType;
           int                  exitCode;
 
           /* parse storage string */
@@ -792,7 +834,7 @@ remoteBarFlag=FALSE;
 
 
           /* start remote BAR in batch mode */
-          String_format(String_clear(line),"%S --batch",globalOptions.remoteBARExecutable);
+          String_format(String_clear(line),"%s --batch",globalOptions.remoteBARExecutable);
           error = Network_execute(&networkExecuteHandle,
                                   &socketHandle,
                                   NETWORK_EXECUTE_IO_MASK_STDOUT|NETWORK_EXECUTE_IO_MASK_STDERR,
@@ -827,7 +869,7 @@ remoteBarFlag=FALSE;
               /* parse and output list */
               if      (String_parse(line,
                                     STRING_BEGIN,
-                                    "%d %d %y FILE %llu %llu %llu %llu %d %d %S",
+                                    "%d %d %y FILE %llu %llu %llu %llu %d %d %d %S",
                                     NULL,
                                     &id,
                                     &errorCode,
@@ -839,6 +881,7 @@ remoteBarFlag=FALSE;
                                     &fragmentLength,
                                     &compressAlgorithm,
                                     &cryptAlgorithm,
+                                    &cryptType,
                                     fileName
                                    )
                       )
@@ -860,6 +903,7 @@ remoteBarFlag=FALSE;
                                 archiveFileSize,
                                 compressAlgorithm,
                                 cryptAlgorithm,
+                                cryptType,
                                 fragmentOffset,
                                 fragmentLength
                                );
@@ -874,6 +918,7 @@ remoteBarFlag=FALSE;
                                     &errorCode,
                                     &completedFlag,
                                     &cryptAlgorithm,
+                                    &cryptType,
                                     directoryName
                                    )
                       )
@@ -890,7 +935,8 @@ remoteBarFlag=FALSE;
 
                   /* output file info */
                   printDirectoryInfo(directoryName,
-                                     cryptAlgorithm
+                                     cryptAlgorithm,
+                                     cryptType
                                     );
                   fileCount++;
                 }
@@ -903,6 +949,7 @@ remoteBarFlag=FALSE;
                                     &errorCode,
                                     &completedFlag,
                                     &cryptAlgorithm,
+                                    cryptType,
                                     linkName,
                                     fileName
                                    )
@@ -921,7 +968,8 @@ remoteBarFlag=FALSE;
                   /* output file info */
                   printLinkInfo(linkName,
                                 fileName,
-                                cryptAlgorithm
+                                cryptAlgorithm,
+                                cryptType
                                );
                   fileCount++;
                 }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_restore.c,v $
-* $Revision: 1.34 $
+* $Revision: 1.35 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -278,6 +278,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                                           &archiveFileInfo,
                                           NULL,
                                           NULL,
+                                          NULL,
                                           fileName,
                                           &fileInfo,
                                           &fragmentOffset,
@@ -526,6 +527,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
             error = Archive_readDirectoryEntry(&archiveInfo,
                                                &archiveFileInfo,
                                                NULL,
+                                               NULL,
                                                directoryName,
                                                &fileInfo
                                               );
@@ -639,6 +641,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
                                           &archiveFileInfo,
+                                          NULL,
                                           NULL,
                                           linkName,
                                           fileName,
@@ -761,6 +764,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveInfo,
                                              &archiveFileInfo,
+                                             NULL,
                                              NULL,
                                              fileName,
                                              &fileInfo

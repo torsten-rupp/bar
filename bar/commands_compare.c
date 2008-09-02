@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_compare.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive compare function
 * Systems : all
@@ -186,6 +186,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveFileInfo,
+                                          NULL,
                                           NULL,
                                           NULL,
                                           fileName,
@@ -400,6 +401,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
             error = Archive_readDirectoryEntry(&archiveInfo,
                                                &archiveFileInfo,
                                                NULL,
+                                               NULL,
                                                directoryName,
                                                &fileInfo
                                               );
@@ -493,6 +495,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
                                           &archiveFileInfo,
+                                          NULL,
                                           NULL,
                                           linkName,
                                           fileName,
@@ -631,6 +634,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveInfo,
                                              &archiveFileInfo,
+                                             NULL,
                                              NULL,
                                              fileName,
                                              &fileInfo

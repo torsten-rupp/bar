@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/chunks.h,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems : all
@@ -263,12 +263,12 @@ Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index);
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_open(ChunkInfo   *chunkInfo,
-                  ChunkHeader *chunkHeader,
-                  ChunkId     chunkId,
-                  const int   *definition,
-                  ulong       definitionSize,
-                  void        *data
+Errors Chunk_open(ChunkInfo         *chunkInfo,
+                  const ChunkHeader *chunkHeader,
+                  ChunkId           chunkId,
+                  const int         *definition,
+                  ulong             definitionSize,
+                  void              *data
                  );
 
 /***********************************************************************\
