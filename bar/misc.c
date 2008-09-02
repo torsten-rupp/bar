@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -609,6 +609,119 @@ void Misc_waitEnter(void)
 
   /* restore console settings */
   tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
+}
+
+/*---------------------------------------------------------------------*/
+
+void Misc_performanceFilterInit(PerformanceFilter *performanceFilter,
+                                uint              maxSeconds
+                               )
+{
+  uint z;
+
+  assert(performanceFilter != NULL);
+  assert(maxSeconds > 0);
+
+  performanceFilter->performanceValues = (PerformanceValue*)malloc(maxSeconds*sizeof(PerformanceValue));
+  if (performanceFilter->performanceValues == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  performanceFilter->performanceValues[0].timeStamp = Misc_getTimestamp()/1000L;
+  performanceFilter->performanceValues[0].value     = 0.0;
+  for (z = 1; z < maxSeconds; z++)
+  {
+    performanceFilter->performanceValues[z].timeStamp = 0;
+    performanceFilter->performanceValues[z].value     = 0.0;
+  }
+  performanceFilter->maxSeconds = maxSeconds;
+  performanceFilter->seconds    = 0;
+  performanceFilter->index      = 0;
+  performanceFilter->average    = 0;
+  performanceFilter->n          = 0;
+}
+
+void Misc_performanceFilterDone(PerformanceFilter *performanceFilter)
+{
+  assert(performanceFilter != NULL);
+  assert(performanceFilter->performanceValues != NULL);
+
+  free(performanceFilter->performanceValues);
+}
+
+void Misc_performanceFilterAdd(PerformanceFilter *performanceFilter,
+                               double            value
+                              )
+{
+  uint64 timeStamp;
+  double valueDelta;
+  uint64 timeStampDelta;
+  double average;
+
+  assert(performanceFilter != NULL);
+  assert(performanceFilter->performanceValues != NULL);
+  assert(performanceFilter->index < performanceFilter->maxSeconds);
+
+  timeStamp = Misc_getTimestamp()/1000L;
+
+  if (timeStamp > (performanceFilter->performanceValues[performanceFilter->index].timeStamp+1000))
+  {
+    /* calculate new average value */    
+    if (performanceFilter->seconds > 0)
+    {
+      valueDelta     = value-performanceFilter->performanceValues[performanceFilter->index].value;
+      timeStampDelta = timeStamp-performanceFilter->performanceValues[performanceFilter->index].timeStamp;
+      average = (valueDelta*1000)/(double)timeStampDelta;
+      if (performanceFilter->n > 0)
+      {
+        performanceFilter->average = average/(double)performanceFilter->n+((double)(performanceFilter->n-1)*performanceFilter->average)/(double)performanceFilter->n;
+      }
+      else
+      {
+        performanceFilter->average = average;
+      }
+      performanceFilter->n++;
+    }
+
+    /* move to next index in ring buffer */
+    performanceFilter->index = (performanceFilter->index+1)%performanceFilter->maxSeconds;
+    assert(performanceFilter->index < performanceFilter->maxSeconds);
+
+    /* store value */
+    performanceFilter->performanceValues[performanceFilter->index].timeStamp = timeStamp;
+    performanceFilter->performanceValues[performanceFilter->index].value     = value;
+    if (performanceFilter->seconds < performanceFilter->maxSeconds) performanceFilter->seconds++;
+  }
+}
+
+double Misc_performanceFilterGetValue(PerformanceFilter *performanceFilter,
+                                      uint              seconds
+                                     )
+{
+  uint   i0,i1;
+  double valueDelta;
+  uint64 timeStampDelta;
+
+  assert(performanceFilter != NULL);
+  assert(performanceFilter->performanceValues != NULL);
+  assert(seconds <= performanceFilter->maxSeconds);
+
+  seconds = MIN(seconds,performanceFilter->seconds);
+  i0 = (performanceFilter->index+(performanceFilter->maxSeconds-seconds))%performanceFilter->maxSeconds;
+  assert(i0 < performanceFilter->maxSeconds);
+  i1 = performanceFilter->index;
+  assert(i1 < performanceFilter->maxSeconds);
+
+  valueDelta     = performanceFilter->performanceValues[i1].value-performanceFilter->performanceValues[i0].value;
+  timeStampDelta = performanceFilter->performanceValues[i1].timeStamp-performanceFilter->performanceValues[i0].timeStamp;
+  return (timeStampDelta > 0)?(valueDelta*1000)/(double)timeStampDelta:0.0;
+}
+
+double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilter)
+{
+  assert(performanceFilter != NULL);
+
+  return performanceFilter->average;
 }
 
 #ifdef __cplusplus

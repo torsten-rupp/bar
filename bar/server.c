@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.40 $
+* $Revision: 1.41 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -101,30 +101,30 @@ typedef struct JobNode
   /* running info */
   struct
   {
-    Errors     error;                          // error code
-    uint64     startDateTime;                  // start time (timestamp)
-    ulong      estimatedRestTime;              // estimated rest running time [s]
-    ulong      doneFiles;                      // number of processed files
-    uint64     doneBytes;                      // sum of processed bytes
-    ulong      totalFiles;                     // number of total files
-    uint64     totalBytes;                     // sum of total bytes
-    ulong      skippedFiles;                   // number of skipped files
-    uint64     skippedBytes;                   // sum of skippped bytes
-    ulong      errorFiles;                     // number of files with errors
-    uint64     errorBytes;                     // sum of bytes of files with errors
-    double     filesPerSecond;                 // average processed files per second
-    double     bytesPerSecond;                 // average processed bytes per second
-    double     storageBytesPerSecond;          // average processed storage bytes per second
-    uint64     archiveBytes;                   // number of bytes stored in archive
-    double     compressionRatio;
-    String     fileName;                       // current file
-    uint64     fileDoneBytes;                  // current file bytes done
-    uint64     fileTotalBytes;                 // current file bytes total
-    String     storageName;                    // current storage file
-    uint64     storageDoneBytes;               // current storage file bytes done
-    uint64     storageTotalBytes;              // current storage file bytes total
-    uint       volumeNumber;                   // current volume number
-    double     volumeProgress;                 // current volume progress
+    Errors            error;                          // error code
+    uint64            startDateTime;                  // start time (timestamp)
+    ulong             estimatedRestTime;              // estimated rest running time [s]
+    ulong             doneFiles;                      // number of processed files
+    uint64            doneBytes;                      // sum of processed bytes
+    ulong             totalFiles;                     // number of total files
+    uint64            totalBytes;                     // sum of total bytes
+    ulong             skippedFiles;                   // number of skipped files
+    uint64            skippedBytes;                   // sum of skippped bytes
+    ulong             errorFiles;                     // number of files with errors
+    uint64            errorBytes;                     // sum of bytes of files with errors
+    PerformanceFilter filesPerSecond;                 // average processed files per second
+    PerformanceFilter bytesPerSecond;                 // average processed bytes per second
+    PerformanceFilter storageBytesPerSecond;          // average processed storage bytes per second
+    uint64            archiveBytes;                   // number of bytes stored in archive
+    double            compressionRatio;               // compression ratio: saved "space" [%]
+    String            fileName;                       // current file
+    uint64            fileDoneBytes;                  // current file bytes done
+    uint64            fileTotalBytes;                 // current file bytes total
+    String            storageName;                    // current storage file
+    uint64            storageDoneBytes;               // current storage file bytes done
+    uint64            storageTotalBytes;              // current storage file bytes total
+    uint              volumeNumber;                   // current volume number
+    double            volumeProgress;                 // current volume progress
   } runningInfo;
 } JobNode;
 
@@ -281,14 +281,22 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
   {"none",      CRYPT_ALGORITHM_NONE,     },
 
   #ifdef HAVE_GCRYPT
-    {"3DES",      CRYPT_ALGORITHM_3DES,     },
-    {"CAST5",     CRYPT_ALGORITHM_CAST5,    },
-    {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH, },
-    {"AES128",    CRYPT_ALGORITHM_AES128,   },
-    {"AES192",    CRYPT_ALGORITHM_AES192,   },
-    {"AES256",    CRYPT_ALGORITHM_AES256,   },
+    {"3DES",      CRYPT_ALGORITHM_3DES      },
+    {"CAST5",     CRYPT_ALGORITHM_CAST5     },
+    {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH  },
+    {"AES128",    CRYPT_ALGORITHM_AES128    },
+    {"AES192",    CRYPT_ALGORITHM_AES192    },
+    {"AES256",    CRYPT_ALGORITHM_AES256    },
     {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128},
     {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256},
+  #endif /* HAVE_GCRYPT */
+};
+
+LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] =
+{
+  #ifdef HAVE_GCRYPT
+    {"symmetric", CRYPT_TYPE_SYMMETRIC },
+    {"asymmetric",CRYPT_TYPE_ASYMMETRIC},
   #endif /* HAVE_GCRYPT */
 };
 
@@ -315,8 +323,10 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SELECT   ("compress-algorithm",     JobNode,jobOptions.compressAlgorithm,          CONFIG_VALUE_COMPRESS_ALGORITHMS),
 
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",        JobNode,jobOptions.cryptAlgorithm,             CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_STRUCT_VALUE_SELECT   ("crypt-type",             JobNode,jobOptions.cryptType,                  CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-password-mode",    JobNode,jobOptions.cryptPasswordMode,          CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",         JobNode,jobOptions.cryptPassword,              configValueParsePassword,NULL,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("crypt-public-key",       JobNode,jobOptions.cryptPublicKeyFileName      ),
 
   CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",         JobNode,jobOptions.ftpServer.loginName         ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",           JobNode,jobOptions.ftpServer.password,         configValueParsePassword,NULL,NULL,configValueFormatPassword,NULL),
@@ -436,52 +446,52 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   }
 
   /* init job node */
-  jobNode->fileName                          = String_duplicate(fileName);
-  jobNode->timeModified                      = 0LL;
+  jobNode->fileName                       = String_duplicate(fileName);
+  jobNode->timeModified                   = 0LL;
 
-  jobNode->type                              = jobType;
-  jobNode->name                              = File_getFileBaseName(File_newFileName(),fileName);
-  jobNode->archiveName                       = String_new();
+  jobNode->type                           = jobType;
+  jobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
+  jobNode->archiveName                    = String_new();
   Pattern_initList(&jobNode->includePatternList);
   Pattern_initList(&jobNode->excludePatternList);
   List_init(&jobNode->scheduleList);
   initJobOptions(&jobNode->jobOptions);
-  jobNode->modifiedFlag                      = FALSE;
+  jobNode->modifiedFlag                   = FALSE;
 
-  jobNode->lastExecutedDateTime              = 0LL;
-  jobNode->lastCheckDateTime                 = 0LL;
+  jobNode->lastExecutedDateTime           = 0LL;
+  jobNode->lastCheckDateTime              = 0LL;
 
-  jobNode->id                                = getNewJobId();
-  jobNode->state                             = JOB_STATE_NONE;
-  jobNode->archiveType                       = ARCHIVE_TYPE_NORMAL;
-  jobNode->requestedAbortFlag                = FALSE;
-  jobNode->requestedVolumeNumber             = 0;
-  jobNode->volumeNumber                      = 0;
+  jobNode->id                             = getNewJobId();
+  jobNode->state                          = JOB_STATE_NONE;
+  jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
+  jobNode->requestedAbortFlag             = FALSE;
+  jobNode->requestedVolumeNumber          = 0;
+  jobNode->volumeNumber                   = 0;
 
-  jobNode->runningInfo.error                 = ERROR_NONE;
-  jobNode->runningInfo.startDateTime         = 0LL;
-  jobNode->runningInfo.estimatedRestTime     = 0;
-  jobNode->runningInfo.doneFiles             = 0L;
-  jobNode->runningInfo.doneBytes             = 0LL;
-  jobNode->runningInfo.totalFiles            = 0L;
-  jobNode->runningInfo.totalBytes            = 0LL;
-  jobNode->runningInfo.skippedFiles          = 0L;
-  jobNode->runningInfo.skippedBytes          = 0LL;
-  jobNode->runningInfo.errorFiles            = 0L;
-  jobNode->runningInfo.errorBytes            = 0LL;
-  jobNode->runningInfo.filesPerSecond        = 0.0;
-  jobNode->runningInfo.bytesPerSecond        = 0.0;
-  jobNode->runningInfo.storageBytesPerSecond = 0.0;
-  jobNode->runningInfo.archiveBytes          = 0LL;
-  jobNode->runningInfo.compressionRatio      = 0.0;
-  jobNode->runningInfo.fileName              = String_new();
-  jobNode->runningInfo.fileDoneBytes         = 0LL;
-  jobNode->runningInfo.fileTotalBytes        = 0LL;
-  jobNode->runningInfo.storageName           = String_new();
-  jobNode->runningInfo.storageDoneBytes      = 0LL;
-  jobNode->runningInfo.storageTotalBytes     = 0LL;
-  jobNode->runningInfo.volumeNumber          = 0;
-  jobNode->runningInfo.volumeProgress        = 0.0;
+  jobNode->runningInfo.error              = ERROR_NONE;
+  jobNode->runningInfo.startDateTime      = 0LL;
+  jobNode->runningInfo.estimatedRestTime  = 0;
+  jobNode->runningInfo.doneFiles          = 0L;
+  jobNode->runningInfo.doneBytes          = 0LL;
+  jobNode->runningInfo.totalFiles         = 0L;
+  jobNode->runningInfo.totalBytes         = 0LL;
+  jobNode->runningInfo.skippedFiles       = 0L;
+  jobNode->runningInfo.skippedBytes       = 0LL;
+  jobNode->runningInfo.errorFiles         = 0L;
+  jobNode->runningInfo.errorBytes         = 0LL;
+  jobNode->runningInfo.archiveBytes       = 0LL;
+  jobNode->runningInfo.compressionRatio   = 0.0;
+  jobNode->runningInfo.fileName           = String_new();
+  jobNode->runningInfo.fileDoneBytes      = 0LL;
+  jobNode->runningInfo.fileTotalBytes     = 0LL;
+  jobNode->runningInfo.storageName        = String_new();
+  jobNode->runningInfo.storageDoneBytes   = 0LL;
+  jobNode->runningInfo.storageTotalBytes  = 0LL;
+  jobNode->runningInfo.volumeNumber       = 0;
+  jobNode->runningInfo.volumeProgress    = 0.0;
+  Misc_performanceFilterInit(&jobNode->runningInfo.filesPerSecond,       10*60);
+  Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecond,       10*60);
+  Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecond,10*60);
 
   return jobNode;
 }
@@ -501,6 +511,9 @@ LOCAL void freeJobNode(JobNode *jobNode)
 
   String_delete(jobNode->runningInfo.fileName);
   String_delete(jobNode->runningInfo.storageName);
+  Misc_performanceFilterDone(&jobNode->runningInfo.storageBytesPerSecond);
+  Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecond);
+  Misc_performanceFilterDone(&jobNode->runningInfo.filesPerSecond);
 
   List_done(&jobNode->scheduleList,NULL,NULL);
   Pattern_doneList(&jobNode->excludePatternList);
@@ -1078,14 +1091,11 @@ LOCAL void updateCreateStatus(JobNode                *jobNode,
                               const CreateStatusInfo *createStatusInfo
                              )
 {
-  uint64 elapsedTime;
   double filesPerSecond,bytesPerSecond,storageBytesPerSecond;
   ulong  restFiles;
   uint64 restBytes;
   uint64 restStorageBytes;
   ulong  estimatedRestTime;
-  double sum;
-  uint   n;
 
   assert(jobNode != NULL);
   assert(createStatusInfo != NULL);
@@ -1093,30 +1103,31 @@ LOCAL void updateCreateStatus(JobNode                *jobNode,
   assert(createStatusInfo->storageName != NULL);
 
   /* calculate estimated rest time */
-  elapsedTime = Misc_getCurrentDateTime()-jobNode->runningInfo.startDateTime;
-  filesPerSecond        = (elapsedTime > 0LL)?(double)createStatusInfo->doneFiles/(double)elapsedTime:0;
-  bytesPerSecond        = (elapsedTime > 0LL)?(double)createStatusInfo->doneBytes/(double)elapsedTime:0;
-  storageBytesPerSecond = (elapsedTime > 0LL)?(double)createStatusInfo->storageDoneBytes/(double)elapsedTime:0;
+  Misc_performanceFilterAdd(&jobNode->runningInfo.filesPerSecond,       createStatusInfo->doneFiles);
+  Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecond,       createStatusInfo->doneBytes);
+  Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecond,createStatusInfo->storageDoneBytes);
+  filesPerSecond        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.filesPerSecond       );
+  bytesPerSecond        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecond       );
+  storageBytesPerSecond = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecond);
 
   restFiles        = (createStatusInfo->totalFiles        > createStatusInfo->doneFiles       )?createStatusInfo->totalFiles       -createStatusInfo->doneFiles       :0L;
   restBytes        = (createStatusInfo->totalBytes        > createStatusInfo->doneBytes       )?createStatusInfo->totalBytes       -createStatusInfo->doneBytes       :0LL;
   restStorageBytes = (createStatusInfo->storageTotalBytes > createStatusInfo->storageDoneBytes)?createStatusInfo->storageTotalBytes-createStatusInfo->storageDoneBytes:0LL;
-  sum = 0; n = 0;
-  if (filesPerSecond        > 0) { sum += (double)restFiles/filesPerSecond;               n++; }
-  if (bytesPerSecond        > 0) { sum += (double)restBytes/bytesPerSecond;               n++; }
-  if (storageBytesPerSecond > 0) { sum += (double)restStorageBytes/storageBytesPerSecond; n++; }
-  estimatedRestTime = (n > 0)?(ulong)round(sum/n):0;
+  estimatedRestTime = 0;
+  if (filesPerSecond        > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)round((double)restFiles/filesPerSecond              )); }
+  if (bytesPerSecond        > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)round((double)restBytes/bytesPerSecond              )); }
+  if (storageBytesPerSecond > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)round((double)restStorageBytes/storageBytesPerSecond)); }
+
 /*
-fprintf(stderr,"%s,%d: createStatusInfo->doneFiles=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- elapsedTime=%lus filesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
+fprintf(stderr,"%s,%d: createStatusInfo->doneFiles=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- filesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
 createStatusInfo->doneFiles,
 createStatusInfo->doneBytes,
 jobNode->runningInfo.totalFiles,
 jobNode->runningInfo.totalBytes,
-elapsedTime,filesPerSecond,bytesPerSecond,estimatedRestTime);
+filesPerSecond,bytesPerSecond,estimatedRestTime);
 */
 
   jobNode->runningInfo.error                 = error;
-//  jobNode->runningInfo.error                 = error;
   jobNode->runningInfo.doneFiles             = createStatusInfo->doneFiles;
   jobNode->runningInfo.doneBytes             = createStatusInfo->doneBytes;
   jobNode->runningInfo.totalFiles            = createStatusInfo->totalFiles;
@@ -1125,9 +1136,6 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimatedRestTime);
   jobNode->runningInfo.skippedBytes          = createStatusInfo->skippedBytes;
   jobNode->runningInfo.errorFiles            = createStatusInfo->errorFiles;
   jobNode->runningInfo.errorBytes            = createStatusInfo->errorBytes;
-  jobNode->runningInfo.filesPerSecond        = filesPerSecond;
-  jobNode->runningInfo.bytesPerSecond        = bytesPerSecond;
-  jobNode->runningInfo.storageBytesPerSecond = storageBytesPerSecond;
   jobNode->runningInfo.archiveBytes          = createStatusInfo->archiveBytes;
   jobNode->runningInfo.compressionRatio      = createStatusInfo->compressionRatio;
   jobNode->runningInfo.estimatedRestTime     = estimatedRestTime;
@@ -1158,7 +1166,6 @@ LOCAL void updateRestoreStatus(JobNode                 *jobNode,
                                const RestoreStatusInfo *restoreStatusInfo
                               )
 {
-  ulong  elapsedTime;
   double filesPerSecond,bytesPerSecond,storageBytesPerSecond;
 
   assert(jobNode != NULL);
@@ -1167,18 +1174,20 @@ LOCAL void updateRestoreStatus(JobNode                 *jobNode,
   assert(restoreStatusInfo->storageName != NULL);
 
   /* calculate estimated rest time */
-  elapsedTime = Misc_getCurrentDateTime()-jobNode->runningInfo.startDateTime;
-  filesPerSecond        = (elapsedTime > 0)?(double)restoreStatusInfo->doneFiles/(double)elapsedTime:0;
-  bytesPerSecond        = (elapsedTime > 0)?(double)restoreStatusInfo->doneBytes/(double)elapsedTime:0;
-  storageBytesPerSecond = (elapsedTime > 0)?(double)restoreStatusInfo->storageDoneBytes/(double)elapsedTime:0;
+  Misc_performanceFilterAdd(&jobNode->runningInfo.filesPerSecond,       restoreStatusInfo->doneFiles);
+  Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecond,       restoreStatusInfo->doneBytes);
+  Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecond,restoreStatusInfo->storageDoneBytes);
+  filesPerSecond        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.filesPerSecond       );
+  bytesPerSecond        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecond       );
+  storageBytesPerSecond = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecond);
 
 /*
-fprintf(stderr,"%s,%d: restoreStatusInfo->doneFiles=%lu restoreStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- elapsedTime=%lus filesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
+fprintf(stderr,"%s,%d: restoreStatusInfo->doneFiles=%lu restoreStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- filesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
 restoreStatusInfo->doneFiles,
 restoreStatusInfo->doneBytes,
 jobNode->runningInfo.totalFiles,
 jobNode->runningInfo.totalBytes,
-elapsedTime,filesPerSecond,bytesPerSecond,estimatedRestTime);
+filesPerSecond,bytesPerSecond,estimatedRestTime);
 */
 
   jobNode->runningInfo.error                 = error;
@@ -1188,9 +1197,6 @@ elapsedTime,filesPerSecond,bytesPerSecond,estimatedRestTime);
   jobNode->runningInfo.skippedBytes          = restoreStatusInfo->skippedBytes;
   jobNode->runningInfo.errorFiles            = restoreStatusInfo->errorFiles;
   jobNode->runningInfo.errorBytes            = restoreStatusInfo->errorBytes;
-  jobNode->runningInfo.filesPerSecond        = filesPerSecond;
-  jobNode->runningInfo.bytesPerSecond        = bytesPerSecond;
-  jobNode->runningInfo.storageBytesPerSecond = storageBytesPerSecond;
   jobNode->runningInfo.archiveBytes          = 0LL;
   jobNode->runningInfo.compressionRatio      = 0.0;
   jobNode->runningInfo.estimatedRestTime     = 0;
@@ -1954,7 +1960,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   while (jobNode != NULL)
   {
     sendResult(clientInfo,id,FALSE,0,
-               "%u %'S %'s %s %llu %'s %'s %llu %lu",
+               "%u %'S %'s %s %llu %'s %'s %'s %llu %lu",
                jobNode->id,
                jobNode->name,
                getJobStateText(jobNode->state),
@@ -1962,6 +1968,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
                jobNode->jobOptions.archivePartSize,
                Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm),
                Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm),
+               Crypt_getTypeName(jobNode->jobOptions.cryptType),
                jobNode->lastExecutedDateTime,
                jobNode->runningInfo.estimatedRestTime
               );
@@ -2014,9 +2021,9 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
                jobNode->runningInfo.skippedBytes,
                jobNode->runningInfo.errorFiles,
                jobNode->runningInfo.errorBytes,
-               jobNode->runningInfo.filesPerSecond,
-               jobNode->runningInfo.bytesPerSecond,
-               jobNode->runningInfo.storageBytesPerSecond,
+               Misc_performanceFilterGetValue(&jobNode->runningInfo.filesPerSecond,       10),
+               Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecond,       10),
+               Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecond,60),
                jobNode->runningInfo.archiveBytes,
                jobNode->runningInfo.compressionRatio,
                jobNode->runningInfo.fileName,
@@ -3175,6 +3182,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           ArchiveFileInfo    archiveFileInfo;
           CompressAlgorithms compressAlgorithm;
           CryptAlgorithms    cryptAlgorithm;
+          CryptTypes         cryptType;
           String             fileName;
           FileInfo           fileInfo;
           uint64             fragmentOffset,fragmentSize;
@@ -3185,6 +3193,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                         &archiveFileInfo,
                                         &compressAlgorithm,
                                         &cryptAlgorithm,
+                                        &cryptType,
                                         fileName,
                                         &fileInfo,
                                         &fragmentOffset,
@@ -3203,13 +3212,14 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
              )
           {
             sendResult(clientInfo,id,FALSE,0,
-                       "FILE %llu %llu %llu %llu %d %d %'S",
+                       "FILE %llu %llu %llu %llu %d %d %d %'S",
                        fileInfo.size,
                        archiveFileInfo.file.chunkInfoFileData.size,
                        fragmentOffset,
                        fragmentSize,
                        compressAlgorithm,
                        cryptAlgorithm,
+                       cryptType,
                        fileName
                       );
           }
@@ -3222,6 +3232,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
       case FILE_TYPE_DIRECTORY:
         {
           CryptAlgorithms cryptAlgorithm;
+          CryptTypes      cryptType;
           String          directoryName;
           FileInfo        fileInfo;
 
@@ -3230,6 +3241,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           error = Archive_readDirectoryEntry(&archiveInfo,
                                              &archiveFileInfo,
                                              &cryptAlgorithm,
+                                             &cryptType,
                                              directoryName,
                                              &fileInfo
                                             );
@@ -3246,8 +3258,9 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
              )
           {
             sendResult(clientInfo,id,FALSE,0,
-                       "DIRECTORY %d %'S",
+                       "DIRECTORY %d %d %'S",
                        cryptAlgorithm,
+                       cryptType,
                        directoryName
                       );
           }
@@ -3260,6 +3273,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
       case FILE_TYPE_LINK:
         {
           CryptAlgorithms cryptAlgorithm;
+          CryptTypes      cryptType;
           String          linkName;
           String          fileName;
           FileInfo        fileInfo;
@@ -3270,6 +3284,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           error = Archive_readLinkEntry(&archiveInfo,
                                         &archiveFileInfo,
                                         &cryptAlgorithm,
+                                        &cryptType,
                                         linkName,
                                         fileName,
                                         &fileInfo
@@ -3288,8 +3303,9 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
              )
           {
             sendResult(clientInfo,id,FALSE,0,
-                       "LINK %d %'S %'S",
+                       "LINK %d %d %'S %'S",
                        cryptAlgorithm,
+                       cryptType,
                        linkName,
                        fileName
                       );

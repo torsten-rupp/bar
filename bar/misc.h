@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/misc.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -25,30 +25,6 @@
 
 /***************************** Constants *******************************/
 #define DEFAULT_DATE_TIME_FORMAT "%Y-%m-%d %H:%M:%S %Z"
-
-/***************************** Datatypes *******************************/
-/* text macro definitions */
-typedef enum
-{
-  TEXT_MACRO_TYPE_INT,
-  TEXT_MACRO_TYPE_INT64,
-  TEXT_MACRO_TYPE_CSTRING,
-  TEXT_MACRO_TYPE_STRING,
-} TextMacroTypes;
-
-typedef struct
-{
-  TextMacroTypes type;
-  const char     *name;
-  int            i;
-  int64          l;
-  const char     *s;
-  String         string;
-} TextMacro;
-
-typedef void(*ExecuteIOFunction)(void         *userData,
-                                 const String line
-                                );
 
 /* month, day names */
 typedef enum
@@ -77,6 +53,46 @@ typedef enum
   WEEKDAY_SAT = 5,
   WEEKDAY_SUN = 6,
 } WeekDays;
+
+/***************************** Datatypes *******************************/
+/* text macro definitions */
+typedef enum
+{
+  TEXT_MACRO_TYPE_INT,
+  TEXT_MACRO_TYPE_INT64,
+  TEXT_MACRO_TYPE_CSTRING,
+  TEXT_MACRO_TYPE_STRING,
+} TextMacroTypes;
+
+typedef struct
+{
+  TextMacroTypes type;
+  const char     *name;
+  int            i;
+  int64          l;
+  const char     *s;
+  String         string;
+} TextMacro;
+
+typedef void(*ExecuteIOFunction)(void         *userData,
+                                 const String line
+                                );
+
+typedef struct
+{
+  uint64 timeStamp;
+  double value;
+} PerformanceValue;
+
+typedef struct
+{
+  uint             maxSeconds;
+  uint             seconds;
+  uint             index;
+  PerformanceValue *performanceValues;
+  double           average;
+  ulong            n;
+} PerformanceFilter;
 
 /***************************** Variables *******************************/
 
@@ -261,6 +277,62 @@ Errors Misc_executeCommand(const char        *commandTemplate,
 \***********************************************************************/
 
 void Misc_waitEnter(void);
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Misc_performanceFilterInit
+* Purpose: initialise performance filter
+* Input  : performanceFilter - performance filter variable
+*          seconds           - filter time window size in seconds
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_performanceFilterInit(PerformanceFilter *performanceFilter,
+                                uint              maxSeconds
+                               );
+
+/***********************************************************************\
+* Name   : Misc_performanceFilterDone
+* Purpose: deinitialise performance filter
+* Input  : performanceFilter - performance filter variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_performanceFilterDone(PerformanceFilter *performanceFilter);
+
+/***********************************************************************\
+* Name   : Misc_performanceFilterAdd
+* Purpose: add filter value
+* Input  : performanceFilter - performance filter variable
+*          value             - value
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_performanceFilterAdd(PerformanceFilter *performanceFilter,
+                               double            value
+                              );
+
+/***********************************************************************\
+* Name   : Misc_performanceFilterGetValue
+* Purpose: get performance value
+* Input  : performanceFilter - performance filter variable
+* Output : -
+* Return : performance value in x/s or 0
+* Notes  : -
+\***********************************************************************/
+
+double Misc_performanceFilterGetValue(PerformanceFilter *performanceFilter,
+                                      uint              seconds
+                                     );
+
+double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilter);
 
 #ifdef __cplusplus
   }
