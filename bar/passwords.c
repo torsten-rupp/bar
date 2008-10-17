@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -108,7 +108,7 @@ void Password_freeSecure(void *p)
   #ifdef HAVE_GCRYPT
     gcry_free(p);
   #else /* not HAVE_GCRYPT */
-    memoryHeader = (byte*)p - sizeof(MemoryHeader);
+    memoryHeader = (MemoryHeader*)((byte*)p - sizeof(MemoryHeader));
     memset(memoryHeader,0,sizeof(memoryHeader) + memoryHeader->size);
     free(memoryHeader);
   #endif /* HAVE_GCRYPT */
@@ -286,6 +286,11 @@ void Password_appendChar(Password *password, char ch)
 
 void Password_random(Password *password, uint length)
 {
+  #ifdef HAVE_GCRYPT
+  #else /* not HAVE_GCRYPT */
+    int z;
+  #endif /* HAVE_GCRYPT */
+
   assert(password != NULL);
 
   password->length = MIN(length,MAX_PASSWORD_LENGTH);
@@ -420,7 +425,9 @@ void Password_undeploy(Password *password)
   }
 }
 
-bool Password_input(Password *password, const char *title)
+bool Password_input(Password   *password,
+                    const char *title
+                   )
 {
   bool okFlag;
 
@@ -440,7 +447,7 @@ bool Password_input(Password *password, const char *title)
     int        ch;
 
     sshAskPassword = getenv("SSH_ASKPASS");
-    if (sshAskPassword != NULL)
+    if ((sshAskPassword != NULL) && (strcmp(sshAskPassword,"") != 0))
     {
       /* open pipe to external password program */
       command = String_newCString(sshAskPassword);
@@ -547,7 +554,33 @@ bool Password_input(Password *password, const char *title)
   return okFlag;
 }
 
-#if 1
+bool Password_inputVerify(const Password *password,
+                          const char     *title
+                         )
+{
+  Password verifyPassword;
+  bool     equalFlag;
+
+  /* read passsword again */
+  Password_init(&verifyPassword);
+  if (!Password_input(&verifyPassword,title))
+  {
+    Password_done(&verifyPassword);
+    return FALSE;
+  }
+
+  /* verify password */
+  equalFlag = TRUE;
+  if (password->length != verifyPassword.length) equalFlag = FALSE;
+  if (memcmp(password->data,verifyPassword.data,password->length) != 0) equalFlag = FALSE;
+
+  /* free resources */
+  Password_done(&verifyPassword);
+
+  return equalFlag;
+}
+
+#if 0
 void Password_dump(const char *text, Password *password)
 {
   uint z;

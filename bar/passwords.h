@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/passwords.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -276,14 +276,32 @@ void Password_undeploy(Password *password);
 /***********************************************************************\
 * Name   : Password_inputStdin
 * Purpose: input password from stdin (without echo characters)
-* Input  : password - password
-*          title    - dialog title text
+* Input  : password   - password
+*          title      - dialog title text
+*          verifyFlag - TRUE for verification of password, FALSE
+*                       otherwise
 * Output : -
 * Return : TRUE if password read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Password_input(Password *password, const char *title);
+bool Password_input(Password   *password,
+                    const char *title
+                   );
+
+/***********************************************************************\
+* Name   : Password_inputVerify
+* Purpose: verify input of password
+* Input  : password - password to verify
+*          title      - dialog title text
+* Output : -
+* Return : TRUE if passwords equal, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Password_inputVerify(const Password *password,
+                          const char     *title
+                         );
 
 #ifdef __cplusplus
   }
