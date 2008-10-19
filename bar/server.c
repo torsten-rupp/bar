@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.41 $
+* $Revision: 1.42 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -102,7 +102,7 @@ typedef struct JobNode
   struct
   {
     Errors            error;                          // error code
-    uint64            startDateTime;                  // start time (timestamp)
+//    uint64            startDateTime;                  // start time (timestamp)
     ulong             estimatedRestTime;              // estimated rest running time [s]
     ulong             doneFiles;                      // number of processed files
     uint64            doneBytes;                      // sum of processed bytes
@@ -422,6 +422,42 @@ LOCAL uint getNewJobId(void)
 }
 
 /***********************************************************************\
+* Name   : resetJobRunningInfo
+* Purpose: reset job running info
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void resetJobRunningInfo(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  jobNode->runningInfo.error              = ERROR_NONE;
+//  jobNode->runningInfo.startDateTime      = 0LL;
+  jobNode->runningInfo.estimatedRestTime  = 0;
+  jobNode->runningInfo.doneFiles          = 0L;
+  jobNode->runningInfo.doneBytes          = 0LL;
+  jobNode->runningInfo.totalFiles         = 0L;
+  jobNode->runningInfo.totalBytes         = 0LL;
+  jobNode->runningInfo.skippedFiles       = 0L;
+  jobNode->runningInfo.skippedBytes       = 0LL;
+  jobNode->runningInfo.errorFiles         = 0L;
+  jobNode->runningInfo.errorBytes         = 0LL;
+  jobNode->runningInfo.archiveBytes       = 0LL;
+  jobNode->runningInfo.compressionRatio   = 0.0;
+  jobNode->runningInfo.fileName           = String_new();
+  jobNode->runningInfo.fileDoneBytes      = 0LL;
+  jobNode->runningInfo.fileTotalBytes     = 0LL;
+  jobNode->runningInfo.storageName        = String_new();
+  jobNode->runningInfo.storageDoneBytes   = 0LL;
+  jobNode->runningInfo.storageTotalBytes  = 0LL;
+  jobNode->runningInfo.volumeNumber       = 0;
+  jobNode->runningInfo.volumeProgress     = 0.0;
+}
+
+/***********************************************************************\
 * Name   : newJob
 * Purpose: create new job
 * Input  : jobType  - job type
@@ -468,30 +504,11 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   jobNode->requestedVolumeNumber          = 0;
   jobNode->volumeNumber                   = 0;
 
-  jobNode->runningInfo.error              = ERROR_NONE;
-  jobNode->runningInfo.startDateTime      = 0LL;
-  jobNode->runningInfo.estimatedRestTime  = 0;
-  jobNode->runningInfo.doneFiles          = 0L;
-  jobNode->runningInfo.doneBytes          = 0LL;
-  jobNode->runningInfo.totalFiles         = 0L;
-  jobNode->runningInfo.totalBytes         = 0LL;
-  jobNode->runningInfo.skippedFiles       = 0L;
-  jobNode->runningInfo.skippedBytes       = 0LL;
-  jobNode->runningInfo.errorFiles         = 0L;
-  jobNode->runningInfo.errorBytes         = 0LL;
-  jobNode->runningInfo.archiveBytes       = 0LL;
-  jobNode->runningInfo.compressionRatio   = 0.0;
-  jobNode->runningInfo.fileName           = String_new();
-  jobNode->runningInfo.fileDoneBytes      = 0LL;
-  jobNode->runningInfo.fileTotalBytes     = 0LL;
-  jobNode->runningInfo.storageName        = String_new();
-  jobNode->runningInfo.storageDoneBytes   = 0LL;
-  jobNode->runningInfo.storageTotalBytes  = 0LL;
-  jobNode->runningInfo.volumeNumber       = 0;
-  jobNode->runningInfo.volumeProgress    = 0.0;
   Misc_performanceFilterInit(&jobNode->runningInfo.filesPerSecond,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecond,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecond,10*60);
+
+  resetJobRunningInfo(jobNode);
 
   return jobNode;
 }
@@ -1288,7 +1305,7 @@ LOCAL void jobThreadEntry(void)
     if (quitFlag) break;
 
     /* run job */
-    jobNode->runningInfo.startDateTime = Misc_getCurrentDateTime();
+//    jobNode->runningInfo.startDateTime = Misc_getCurrentDateTime();
 #ifdef SIMULATOR
 {
   int z;
@@ -1326,7 +1343,6 @@ LOCAL void jobThreadEntry(void)
     {
       case JOB_TYPE_BACKUP:
         /* create archive */
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
         logMessage(LOG_TYPE_ALWAYS,"start create '%s'",String_cString(jobNode->fileName));
         jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveName),
                                                     &jobNode->includePatternList,
@@ -1369,7 +1385,6 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       #endif /* NDEBUG */
     }
     logPostProcess();
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
 #endif /* SIMULATOR */
 
@@ -1494,6 +1509,7 @@ LOCAL void schedulerThreadEntry(void)
         jobNode->state              = JOB_STATE_WAITING;
         jobNode->archiveType        = executeScheduleNode->archiveType;
         jobNode->requestedAbortFlag = FALSE;
+        resetJobRunningInfo(jobNode);
       }
 
       /* check next job */
@@ -3028,6 +3044,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
     jobNode->state              = JOB_STATE_WAITING;
     jobNode->archiveType        = archiveType;
     jobNode->requestedAbortFlag = FALSE;
+    resetJobRunningInfo(jobNode);
   }
 
   /* unlock */
@@ -3882,6 +3899,7 @@ Errors Server_run(uint             port,
                  )
 {
   Errors             error;
+  bool               serverFlag,serverTLSFlag;
   ServerSocketHandle serverSocketHandle,serverTLSSocketHandle;
   fd_set             selectSet;
   ClientNode         *clientNode;
@@ -3905,6 +3923,8 @@ Errors Server_run(uint             port,
   quitFlag                = FALSE;
 
   /* init server sockets */
+  serverFlag    = FALSE;
+  serverTLSFlag = FALSE;
   if (port != 0)
   {
     error = Network_initServer(&serverSocketHandle,
@@ -3916,15 +3936,20 @@ Errors Server_run(uint             port,
                               );
     if (error != ERROR_NONE)
     {
-      printError("Cannot initialize server at port %d (error: %s)!\n",
+      printError("Cannot initialize server at port %u (error: %s)!\n",
                  port,
                  getErrorText(error)
                 );
       return FALSE;
     }
     printInfo(1,"Started server on port %d\n",port);
+    serverFlag = TRUE;
   }
-  if (tlsPort != 0)
+  if (   (tlsPort != 0)
+      && File_existsCString(caFileName)
+      && File_existsCString(certFileName)
+      && File_existsCString(certFileName)
+     )
   {
     #ifdef HAVE_GNU_TLS
       error = Network_initServer(&serverTLSSocketHandle,
@@ -3936,14 +3961,15 @@ Errors Server_run(uint             port,
                                 );
       if (error != ERROR_NONE)
       {
-        printError("Cannot initialize TLS/SSL server at port %d (error: %s)!\n",
+        printError("Cannot initialize TLS/SSL server at port %u (error: %s)!\n",
                    tlsPort,
                    getErrorText(error)
                   );
         if (port != 0) Network_doneServer(&serverSocketHandle);
         return FALSE;
       }
-      printInfo(1,"Started TLS/SSL server on port %d\n",tlsPort);
+      printInfo(1,"Started TLS/SSL server on port %u\n",tlsPort);
+      serverTLSFlag = TRUE;
   #else /* not HAVE_GNU_TLS */
     UNUSED_VARIABLE(caFileName);
     UNUSED_VARIABLE(certFileName);
@@ -3971,8 +3997,8 @@ Errors Server_run(uint             port,
   {
     /* wait for command */
     FD_ZERO(&selectSet);
-    if (port    != 0) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
-    if (tlsPort != 0) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
+    if (serverFlag   ) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
+    if (serverTLSFlag) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
     clientNode = clientList.head;
     while (clientNode != NULL)
     {
@@ -3982,7 +4008,7 @@ Errors Server_run(uint             port,
     select(FD_SETSIZE,&selectSet,NULL,NULL,NULL);
 
     /* connect new clients */
-    if ((port != 0) && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
+    if (serverFlag && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
     {
       error = Network_accept(&socketHandle,
                              &serverSocketHandle,
@@ -4005,7 +4031,7 @@ Errors Server_run(uint             port,
                   );
       }
     }
-    if ((tlsPort != 0) && FD_ISSET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet))
+    if (serverTLSFlag && FD_ISSET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet))
     {
       error = Network_accept(&socketHandle,
                              &serverTLSSocketHandle,
@@ -4107,8 +4133,8 @@ Errors Server_run(uint             port,
   Thread_join(&jobThread);
 
   /* done server */
-  if (port    != 0) Network_doneServer(&serverSocketHandle);
-  if (tlsPort != 0) Network_doneServer(&serverTLSSocketHandle);
+  if (serverFlag   ) Network_doneServer(&serverSocketHandle);
+  if (serverTLSFlag) Network_doneServer(&serverTLSSocketHandle);
 
   /* free resources */
   Thread_done(&schedulerThread);
