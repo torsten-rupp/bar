@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/archive.h,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -62,17 +62,12 @@ typedef struct
 
   CryptTypes             cryptType;                      // crypt type
   PasswordModes          passwordMode;                   // password mode (PASSWORD_MODE_DEFAULT for using settings in jobOptions)
-  Password               *cryptPassword;                 // cryption password
-  CryptKey               *cryptKey;                      // public/private key for encryption/decryption of random key used for asymmetric encryption
-  ChunkInfo              chunkInfoKey;                   // chunk info block for key
-  ChunkKey               chunkKey;                       // key chunk
+  Password               *cryptPassword;                 // cryption password for encryption/decryption
+  CryptKey               cryptKey;                       // public/private key for encryption/decryption of random key used for asymmetric encryption
   void                   *cryptKeyData;                  // encrypted random key used for asymmetric encryption
-  ulong                  cryptKeyDataLength;             // length of encrypted random key
+  uint                   cryptKeyDataLength;             // length of encrypted random key
 
-  uint                   blockLength;                    /* block length for file entry/file
-                                                            data (depend on used crypt
-                                                            algorithm)
-                                                         */
+  uint                   blockLength;                    // block length for file entry/file data (depend on used crypt algorithm)
 
   uint                   partNumber;                     // file part number
   bool                   fileOpenFlag;                   // TRUE iff file is open
@@ -347,7 +342,8 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
 * Output : compressAlgorithm - used compression algorithm (can be NULL)
 *          fileName          - file name
 *          fileInfo          - file info
-*          cryptAlgorithm    - use crypt algorithm (can be NULL)
+*          cryptAlgorithm    - used crypt algorithm (can be NULL)
+*          cryptType         - used crypt type (can be NULL)
 *          fragmentOffset    - fragment offset (can be NULL)
 *          fragmentSize      - fragment size in bytes (can be NULL)
 * Return : ERROR_NONE or errorcode
@@ -358,6 +354,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                              ArchiveFileInfo    *archiveFileInfo,
                              CompressAlgorithms *compressAlgorithm,
                              CryptAlgorithms    *cryptAlgorithm,
+                             CryptTypes         *cryptType,
                              String             fileName,
                              FileInfo           *fileInfo,
                              uint64             *fragmentOffset,
@@ -369,7 +366,8 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 * Purpose: read file info from archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
-* Output : cryptAlgorithm - use crypt algorithm (can be NULL)
+* Output : cryptAlgorithm - used crypt algorithm (can be NULL)
+*          cryptType      - used crypt type (can be NULL)
 *          directoryName  - directory name
 *          fileInfo       - file info
 * Return : ERROR_NONE or errorcode
@@ -379,6 +377,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
                                   ArchiveFileInfo *archiveFileInfo,
                                   CryptAlgorithms *cryptAlgorithm,
+                                  CryptTypes      *cryptType,
                                   String          directoryName,
                                   FileInfo        *fileInfo
                                  );
@@ -388,7 +387,8 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
 * Purpose: read link info from archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
-* Output : cryptAlgorithm  - use crypt algorithm (can be NULL)
+* Output : cryptAlgorithm  - used crypt algorithm (can be NULL)
+*          cryptType       - used crypt type (can be NULL)
 *          linkName        - link name
 *          destinationName - name of referenced file
 *          fileInfo        - file info
@@ -399,6 +399,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
 Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
                              ArchiveFileInfo *archiveFileInfo,
                              CryptAlgorithms *cryptAlgorithm,
+                             CryptTypes      *cryptType,
                              String          linkName,
                              String          destinationName,
                              FileInfo        *fileInfo
@@ -409,7 +410,8 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
 * Purpose: read special device info from archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
-* Output : cryptAlgorithm - use crypt algorithm (can be NULL)
+* Output : cryptAlgorithm - used crypt algorithm (can be NULL)
+*          cryptType      - used crypt type (can be NULL)
 *          name           - link name
 *          fileInfo       - file info
 * Return : ERROR_NONE or errorcode
@@ -419,6 +421,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
 Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
                                 ArchiveFileInfo *archiveFileInfo,
                                 CryptAlgorithms *cryptAlgorithm,
+                                CryptTypes      *cryptType,
                                 String          specialName,
                                 FileInfo        *fileInfo
                                );
