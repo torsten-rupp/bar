@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.54 $
+* $Revision: 1.55 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -2342,9 +2342,12 @@ Errors Command_create(const char                   *archiveFileName,
   }
 
   /* output statics */
-  printInfo(0,"%lu file(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneFiles,createInfo.statusInfo.doneBytes);
-  printInfo(2,"%lu file(s) skipped\n",createInfo.statusInfo.skippedFiles);
-  printInfo(2,"%lu file(s) with errors\n",createInfo.statusInfo.errorFiles);
+  if (createInfo.failError == ERROR_NONE)
+  {
+    printInfo(0,"%lu file(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneFiles,createInfo.statusInfo.doneBytes);
+    printInfo(2,"%lu file(s) skipped\n",createInfo.statusInfo.skippedFiles);
+    printInfo(2,"%lu file(s) with errors\n",createInfo.statusInfo.errorFiles);
+  }
 
   /* free resources */
   if (storeIncrementalFileInfoFlag)

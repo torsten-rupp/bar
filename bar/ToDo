@@ -6,7 +6,6 @@ ToDo
 - support ssh-agent (extend libssh2?)
 - improve logfile
 - ssl server: check common name? 
-- improve calculation for estimated rest time
 - improve password quality checker
 - balloon help in barcontrol.tcl
 - novice/expert mode in barcontrol.tcl
@@ -19,9 +18,8 @@ ToDo
 - view needed archives for restore
 - ACL
 - send job from server to other server
-- asymmetric encryption
 - send-only ssh-login (possible?)
 - support to access multiple bar servers
 - script to generate pem-keys
-- asymmetric encryption
 - barcontrol.tcl: store skip unreadable files
+- support openssl key generator

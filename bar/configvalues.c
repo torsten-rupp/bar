@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/configvalues.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -455,7 +455,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         {
           if (variable != NULL)
           {
-            configVariable.enumeration = (int*)((byte*)variable+configValue->offset);
+            configVariable.enumeration = (uint*)((byte*)variable+configValue->offset);
             (*configVariable.enumeration) = configValue->enumValue.enumerationValue;
           }
           else
@@ -463,7 +463,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
             assert(configValue->variable.reference != NULL);
             if ((*configValue->variable.reference) != NULL)
             {
-              configVariable.enumeration = (int*)((byte*)(*configValue->variable.reference)+configValue->offset);
+              configVariable.enumeration = (uint*)((byte*)(*configValue->variable.reference)+configValue->offset);
               (*configVariable.enumeration) = configValue->enumValue.enumerationValue;
             }
           }
@@ -1192,12 +1192,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         {
           if (configValueFormat->variable != NULL)
           {
-            configVariable.enumeration = (int*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
+            configVariable.enumeration = (uint*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
           else
           {
             assert(configValueFormat->configValue->variable.reference != NULL);
-            configVariable.enumeration = (int*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
+            configVariable.enumeration = (uint*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
         }
         else

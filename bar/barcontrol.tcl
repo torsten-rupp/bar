@@ -5,7 +5,7 @@ exec tclsh "$0" "$@"
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol.tcl,v $
-# $Revision: 1.30 $
+# $Revision: 1.31 $
 # $Author: torsten $
 # Contents: Backup ARchiver frontend
 # Systems: all with TclTk+Tix
@@ -27,6 +27,7 @@ lappend auto_path $basePath
 lappend auto_path tcltk-lib
 lappend auto_path $env(HOME)/sources/tcl-lib
 lappend auto_path $env(HOME)/sources/tcltk-lib
+lappend auto_path tcl/scanx
 
 # load packages
 catch {package require tls}
@@ -67,8 +68,9 @@ if {[info exists tk_version]} \
 
 # ---------------------------- constants/variables ---------------------------
 
-set DEFAULT_PORT     38523
-set DEFAULT_TLS_PORT 38524
+set DEFAULT_PORT        38523
+set DEFAULT_TLS_PORT    38524
+set DEFAULT_TLS_CA_FILE "/etc/ssl/certs/bar-ca.pem"
 
 set TIMEDATE_FORMAT "%Y-%m-%d %H:%M:%S"
 
@@ -81,7 +83,7 @@ set barControlConfig(serverHostName)       "localhost"
 set barControlConfig(serverPort)           $DEFAULT_PORT
 set barControlConfig(serverPassword)       ""
 set barControlConfig(serverTLSPort)        $DEFAULT_TLS_PORT
-set barControlConfig(serverCAFileName)     "$env(HOME)/.bar/bar-ca.pem"
+set barControlConfig(serverCAFileName)     $DEFAULT_TLS_CA_FILE
 set barControlConfig(statusListUpdateTime) 5000
 set barControlConfig(statusUpdateTime)     1000
 
@@ -135,9 +137,11 @@ set barConfig(sshPublicKeyFileName)            ""
 set barConfig(sshPrivateKeyFileName)           ""
 set barConfig(compressAlgorithm)               ""
 set barConfig(cryptAlgorithm)                  "none"
+set barConfig(cryptType)                       "asymmetric"
 set barConfig(cryptPasswordMode)               "default"
 set barConfig(cryptPassword)                   ""
 set barConfig(cryptPasswordVerify)             ""
+set barConfig(cryptPublicKeyFileName)          ""
 set barConfig(destinationDirectoryName)        ""
 set barConfig(destinationStripCount)           0
 set barConfig(volumeSize)                      0
@@ -211,9 +215,11 @@ set selectedJob(archivePartSize)           0
 set selectedJob(incrementalListFileName)   ""
 set selectedJob(compressAlgorithm)         ""
 set selectedJob(cryptAlgorithm)            "none"
+set selectedJob(cryptType)                 "asymmetric"
 set selectedJob(cryptPasswordMode)         "default"
 set selectedJob(cryptPassword)             ""
 set selectedJob(cryptPasswordVerify)       ""
+set selectedJob(cryptPublicKeyFileName)    ""
 set selectedJob(sshPort)                   0
 set selectedJob(sshPublicKeyFileName)      ""
 set selectedJob(sshPrivateKeyFileName)     ""
@@ -775,19 +781,25 @@ proc addEnableDisableTrace { name conditionValueList action1 action2 } \
 # Purpose: add enable trace
 # Input  : name               - variable name
 #          conditionValueList - condition value
-#          widget             - widget to enable/disable
+#          args               - widgets to enable/disable
 # Output : -
 # Return : -
 # Notes  : -
 #***********************************************************************
 
-proc addEnableTrace { name conditionValueList widget } \
+proc addEnableTrace { name conditionValueList args } \
 {
-  addEnableDisableTrace $name $conditionValueList "$widget configure -state normal" "$widget configure -state disabled"
+  foreach widget $args \
+  {
+    addEnableDisableTrace $name $conditionValueList "$widget configure -state normal" "$widget configure -state disabled"
+  }
 }
-proc addDisableTrace { name conditionValue widget } \
+proc addDisableTrace { name conditionValueList args } \
 {
-  addEnableDisableTrace $name $conditionValueList "$widget configure -state disabled" "$widget configure -state normal"
+  foreach widget $args \
+  {
+    addEnableDisableTrace $name $conditionValueList "$widget configure -state disabled" "$widget configure -state normal"
+  }
 }
 
 #***********************************************************************
@@ -1121,7 +1133,7 @@ proc obfuscatePassword { password passwordObfuscator } \
 
 proc getPassword { title verifyFlag obfuscateFlag } \
 {
-  global guiMode
+  global guiMode passwordObfuscator
 
   if {!$guiMode} \
   {
@@ -1151,7 +1163,7 @@ proc getPassword { title verifyFlag obfuscateFlag } \
 
   if {$obfuscateFlag} \
   {
-    set password [obfuscatePassword $password]
+    set password [obfuscatePassword $password $passwordObfuscator]
   }
 
   return $password
@@ -2874,7 +2886,7 @@ proc updateStatusList { statusListWidget } \
   while {[BackupServer:readResult $commandId completeFlag errorCode result] && !$completeFlag} \
   {
 #puts "1: $result"
-    scanx $result "%d %S %S %s %d %S %S %d %d" \
+    scanx $result "%d %S %S %s %d %S %S %S %d %d" \
       id \
       name \
       state \
@@ -2882,6 +2894,7 @@ proc updateStatusList { statusListWidget } \
       archivePartSize \
       compressAlgorithm \
       cryptAlgorithm \
+      cryptType \
       lastExecutedDateTime \
       estimatedRestTime
 #puts "1: ok"
@@ -2899,7 +2912,7 @@ proc updateStatusList { statusListWidget } \
         $type \
         [expr {($archivePartSize > 0)?[formatByteSize $archivePartSize]:"-"}] \
         $compressAlgorithm \
-        $cryptAlgorithm \
+        "$cryptAlgorithm[expr {($cryptType == "ASYMMETRIC")?"*":""}]" \
         [expr {($lastExecutedDateTime > 0)?[clock format $lastExecutedDateTime -format "%Y-%m-%d %H:%M:%S"]:"-"}] \
         [format "%2d days %02d:%02d:%02d" $estimatedRestDays $estimatedRestHours $estimatedRestMinutes $estimatedRestSeconds] \
       ]
@@ -3178,9 +3191,11 @@ proc clearJob {} \
   set ::selectedJob(sshPrivateKeyFileName)     ""
   set ::selectedJob(compressAlgorithm)         ""
   set ::selectedJob(cryptAlgorithm)            "none"
+  set ::selectedJob(cryptType)                 "asymmetric"
   set ::selectedJob(cryptPasswordMode)         "default"
   set ::selectedJob(cryptPassword)             ""
   set ::selectedJob(cryptPasswordVerify)       ""
+  set ::selectedJob(cryptPublicKeyFileName)    ""
   set ::selectedJob(destinationDirectoryName)  ""
   set ::selectedJob(destinationStripCount)     0
   set ::selectedJob(volumeSize)                0
@@ -3284,9 +3299,14 @@ proc selectJob { id name } \
   }
   BackupServer:get $id "compress-algorithm" ::selectedJob(compressAlgorithm)
   BackupServer:get $id "crypt-algorithm" ::selectedJob(cryptAlgorithm)
+  BackupServer:get $id "crypt-type" ::selectedJob(cryptType)
   BackupServer:get $id "crypt-password-mode" ::selectedJob(cryptPasswordMode)
   set ::selectedJob(cryptPassword)       ""
   set ::selectedJob(cryptPasswordVerify) ""
+  BackupServer:get $id "crypt-public-key" "" \
+  {
+    scanx $result "%S" ::selectedJob(cryptPublicKeyFileName)
+  }
   BackupServer:get $id "ssh-port" ::selectedJob(sshPort)
   BackupServer:get $id "ssh-public-key" "" \
   {
@@ -4731,7 +4751,7 @@ while {$z<[llength $argv]} \
         printError "No a port number!"
         exit 1
       }
-      set barControlConfig(serverPort) $s
+      set barControlConfig(serverPort) [lindex $argv $z]
     }
     "^--tls-port=" - \
     "^--ssl-port=" \
@@ -4855,6 +4875,7 @@ if {![info exists tk_version] && !$guiMode} \
   # connect to server
   if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]} \
   {
+puts 1
     if {[catch {tls::init -cafile $barControlConfig(serverCAFileName)}]} \
     {
       printError "Cannot initialise TLS/SSL system"
@@ -5548,55 +5569,115 @@ if {0} {
     }
 }
 
-    label .jobs.storage.compressAlgorithmTitle -text "Compress:"
-    grid .jobs.storage.compressAlgorithmTitle -row 2 -column 0 -sticky "w" 
-    tk_optionMenu .jobs.storage.compressAlgorithm ::selectedJob(compressAlgorithm) \
-      "none" "zip0" "zip1" "zip2" "zip3" "zip4" "zip5" "zip6" "zip7" "zip8" "zip9" "bzip1" "bzip2" "bzip3" "bzip4" "bzip5" "bzip6" "bzip7" "bzip8" "bzip9"
-    grid .jobs.storage.compressAlgorithm -row 2 -column 1 -sticky "w" -padx 2p -pady 2p
-    addModifyTrace {::selectedJob(compressAlgorithm) } \
-    {
-      BackupServer:set $::selectedJob(id) "compress-algorithm" $::selectedJob(compressAlgorithm)
-    }
+    label .jobs.storage.compressTitle -text "Compress:"
+    grid .jobs.storage.compressTitle -row 2 -column 0 -sticky "w" 
+    frame .jobs.storage.compress
+      tk_optionMenu .jobs.storage.compress.algorithm ::selectedJob(compressAlgorithm) \
+        "none" "zip0" "zip1" "zip2" "zip3" "zip4" "zip5" "zip6" "zip7" "zip8" "zip9" "bzip1" "bzip2" "bzip3" "bzip4" "bzip5" "bzip6" "bzip7" "bzip8" "bzip9"
+      grid .jobs.storage.compress.algorithm -row 0 -column 0 -sticky "w" -padx 2p -pady 2p
+      addModifyTrace {::selectedJob(compressAlgorithm) } \
+      {
+        BackupServer:set $::selectedJob(id) "compress-algorithm" $::selectedJob(compressAlgorithm)
+      }
 
-    label .jobs.storage.cryptAlgorithmTitle -text "Crypt:"
-    grid .jobs.storage.cryptAlgorithmTitle -row 3 -column 0 -sticky "w" 
-    tk_optionMenu .jobs.storage.cryptAlgorithm ::selectedJob(cryptAlgorithm) \
-      "none" "3DES" "CAST5" "BLOWFISH" "AES128" "AES192" "AES256" "TWOFISH128" "TWOFISH256"
-    grid .jobs.storage.cryptAlgorithm -row 3 -column 1 -sticky "w" -padx 2p -pady 2p
-    addModifyTrace {::selectedJob(cryptAlgorithm) } \
-    {
-      BackupServer:set $::selectedJob(id) "crypt-algorithm" $::selectedJob(cryptAlgorithm)
-    }
+      grid columnconfigure .jobs.storage.compress { 1 } -weight 1
+    grid .jobs.storage.compress -row 2 -column 1 -sticky "we" -padx 2p -pady 2p
 
-    label .jobs.storage.cryptPasswordTitle -text "Password:"
-    grid .jobs.storage.cryptPasswordTitle -row 4 -column 0 -sticky "nw" 
-    frame .jobs.storage.cryptPassword
-      radiobutton .jobs.storage.cryptPassword.modeDefault -text "default" -variable ::selectedJob(cryptPasswordMode) -value "default"
-      grid .jobs.storage.cryptPassword.modeDefault -row 0 -column 1 -sticky "w"
-      radiobutton .jobs.storage.cryptPassword.modeAsk -text "ask" -variable ::selectedJob(cryptPasswordMode) -value "ask"
-      grid .jobs.storage.cryptPassword.modeAsk -row 0 -column 2 -sticky "w"
-      radiobutton .jobs.storage.cryptPassword.modeConfig -text "this" -variable ::selectedJob(cryptPasswordMode) -value "config"
-      grid .jobs.storage.cryptPassword.modeConfig -row 0 -column 3 -sticky "w"
-      entry .jobs.storage.cryptPassword.data1 -textvariable ::selectedJob(cryptPassword) -bg white -show "*"
-      grid .jobs.storage.cryptPassword.data1 -row 0 -column 4 -sticky "we"
-      entry .jobs.storage.cryptPassword.data2 -textvariable ::selectedJob(cryptPasswordVerify) -bg white -show "*"
-      grid .jobs.storage.cryptPassword.data2 -row 1 -column 4 -sticky "we"
+    label .jobs.storage.cryptTitle -text "Crypt:"
+    grid .jobs.storage.cryptTitle -row 3 -column 0 -sticky "nw" -pady 11
+    frame .jobs.storage.crypt
+      tk_optionMenu .jobs.storage.crypt.algorithm ::selectedJob(cryptAlgorithm) \
+        "none" "3DES" "CAST5" "BLOWFISH" "AES128" "AES192" "AES256" "TWOFISH128" "TWOFISH256"
+      grid .jobs.storage.crypt.algorithm -row 0 -column 0 -sticky "nw" -padx 2p -pady 2p
+      addModifyTrace {::selectedJob(cryptAlgorithm) } \
+      {
+        BackupServer:set $::selectedJob(id) "crypt-algorithm" $::selectedJob(cryptAlgorithm)
+      }
 
-      grid columnconfigure .jobs.storage.cryptPassword { 4 } -weight 1
-    grid .jobs.storage.cryptPassword -row 4 -column 1 -sticky "we" -padx 2p -pady 2p
-    addEnableTrace ::selectedJob(cryptPasswordMode) "config" .jobs.storage.cryptPassword.data1
-    addEnableTrace ::selectedJob(cryptPasswordMode) "config" .jobs.storage.cryptPassword.data2
-    addModifyTrace {::selectedJob(cryptPasswordMode) } \
-    {
-      BackupServer:set $::selectedJob(id) "crypt-password-mode" $::selectedJob(cryptPasswordMode)
-    }
-    addModifyTrace {::selectedJob(cryptPassword) } \
-    {
-      BackupServer:set $::selectedJob(id) "crypt-password" $::selectedJob(cryptPassword)
-    }
+      frame .jobs.storage.crypt.mode
+        radiobutton .jobs.storage.crypt.mode.symmetric -text "symmetric" -variable ::selectedJob(cryptType) -value "symmetric"
+        grid .jobs.storage.crypt.mode.symmetric -row 0 -column 0 -sticky "w" 
+        radiobutton .jobs.storage.crypt.mode.asymmetric -text "asymmetric" -variable ::selectedJob(cryptType) -value "asymmetric"
+        grid .jobs.storage.crypt.mode.asymmetric -row 0 -column 1 -sticky "w" 
+      grid .jobs.storage.crypt.mode -row 0 -column 1 -sticky "w" 
+      addDisableTrace ::selectedJob(cryptAlgorithm) "none" .jobs.storage.crypt.mode.symmetric
+      addDisableTrace ::selectedJob(cryptAlgorithm) "none" .jobs.storage.crypt.mode.asymmetric
+      addModifyTrace {::selectedJob(cryptType) } \
+      {
+        BackupServer:set $::selectedJob(id) "crypt-type" $::selectedJob(cryptType)
+      }
+
+      frame .jobs.storage.crypt.password
+        label .jobs.storage.crypt.password.title -text "Password:"
+        grid .jobs.storage.crypt.password.title -row 0 -column 0 -sticky "nw" 
+        radiobutton .jobs.storage.crypt.password.modeDefault -text "default" -variable ::selectedJob(cryptPasswordMode) -value "default"
+        grid .jobs.storage.crypt.password.modeDefault -row 0 -column 1 -sticky "w"
+        radiobutton .jobs.storage.crypt.password.modeAsk -text "ask" -variable ::selectedJob(cryptPasswordMode) -value "ask"
+        grid .jobs.storage.crypt.password.modeAsk -row 0 -column 2 -sticky "w"
+        radiobutton .jobs.storage.crypt.password.modeConfig -text "this" -variable ::selectedJob(cryptPasswordMode) -value "config"
+        grid .jobs.storage.crypt.password.modeConfig -row 0 -column 3 -sticky "w"
+        entry .jobs.storage.crypt.password.data1 -textvariable ::selectedJob(cryptPassword) -bg white -show "*"
+        grid .jobs.storage.crypt.password.data1 -row 0 -column 4 -sticky "we"
+        entry .jobs.storage.crypt.password.data2 -textvariable ::selectedJob(cryptPasswordVerify) -bg white -show "*"
+        grid .jobs.storage.crypt.password.data2 -row 1 -column 4 -sticky "we"
+
+        grid columnconfigure .jobs.storage.crypt.password { 4 } -weight 1
+      addEnableTrace ::selectedJob(cryptPasswordMode) "config" .jobs.storage.crypt.password.data1
+      addEnableTrace ::selectedJob(cryptPasswordMode) "config" .jobs.storage.crypt.password.data2
+      addModifyTrace {::selectedJob(cryptPasswordMode) } \
+      {
+        BackupServer:set $::selectedJob(id) "crypt-password-mode" $::selectedJob(cryptPasswordMode)
+      }
+      addModifyTrace {::selectedJob(cryptPassword) } \
+      {
+        BackupServer:set $::selectedJob(id) "crypt-password" $::selectedJob(cryptPassword)
+      }
+
+      frame .jobs.storage.crypt.publicKey
+        label .jobs.storage.crypt.publicKey.title -text "Public key:"
+        grid .jobs.storage.crypt.publicKey.title -row 0 -column 0 -sticky "w" 
+
+        entry .jobs.storage.crypt.publicKey.fileName -textvariable ::selectedJob(cryptPublicKeyFileName) -bg white
+        grid .jobs.storage.crypt.publicKey.fileName -row 0 -column 1 -sticky "we" 
+
+        button .jobs.storage.crypt.publicKey.edit -image $images(folder) -command \
+        "
+          set fileName \[Dialog:fileSelector \"Public key file\" \$::selectedJob(cryptPublicKeyFileName) {{\"*.public\" \"public key\"} {\"*\" \"all\"}}\]
+          if {\$fileName != \"\"} \
+          {
+            set ::selectedJob(cryptPublicKeyFileName) \$fileName
+          }
+        "
+        grid .jobs.storage.crypt.publicKey.edit -row 0 -column 2 -sticky "w" 
+
+        grid columnconfigure .jobs.storage.crypt.publicKey { 1 } -weight 1
+
+      addModifyTrace {::selectedJob(cryptType)} \
+      {
+        if {$::selectedJob(cryptType)=="symmetric"} \
+        {
+          grid .jobs.storage.crypt.password -row 1 -column 1 -sticky "we" -padx 2p -pady 2p
+        } \
+        else \
+        {
+          grid forget .jobs.storage.crypt.password
+        }
+
+        if {$::selectedJob(cryptType) == "asymmetric"} \
+        {
+          grid .jobs.storage.crypt.publicKey -row 1 -column 1 -sticky "we" -padx 2p -pady 2p
+        } \
+        else \
+        {
+          grid forget .jobs.storage.crypt.publicKey
+        }
+      }
+
+      grid columnconfigure .jobs.storage.crypt { 1 } -weight 1
+    grid .jobs.storage.crypt -row 3 -column 1 -sticky "we" -padx 2p -pady 2p
 
     label .jobs.storage.modeTitle -text "Mode:"
-    grid .jobs.storage.modeTitle -row 5 -column 0 -sticky "nw" 
+    grid .jobs.storage.modeTitle -row 5 -column 0 -sticky "nw" -pady 6
     frame .jobs.storage.mode
       radiobutton .jobs.storage.mode.normal -text "normal" -variable ::selectedJob(archiveType) -value "normal"
       grid .jobs.storage.mode.normal -row 0 -column 0 -sticky "w"
@@ -5654,7 +5735,7 @@ if {0} {
     }
 
     label .jobs.storage.destinationTitle -text "Destination:"
-    grid .jobs.storage.destinationTitle -row 7 -column 0 -sticky "nw" 
+    grid .jobs.storage.destinationTitle -row 7 -column 0 -sticky "nw" -pady 4
     frame .jobs.storage.destination
       frame .jobs.storage.destination.type
         radiobutton .jobs.storage.destination.type.fileSystem -text "File system" -variable ::selectedJob(storageType) -value "filesystem"
@@ -6560,28 +6641,38 @@ if {$debugFlag} \
 }
 
 # connect to server
-if     {($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]} \
+set connectFlag 0
+if {!$connectFlag && ($barControlConfig(serverTLSPort) != 0) && ![catch {tls::init -version}]} \
 {
-  if {[catch {tls::init -cafile $barControlConfig(serverCAFileName)}]} \
+  if {[file isfile $barControlConfig(serverCAFileName)] && [file readable $barControlConfig(serverCAFileName)]} \
   {
-    printError "Cannot initialise TLS/SSL system"
-    exit 1
-  }
-  if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverTLSPort) $barControlConfig(serverPassword) 1]} \
+    if {[catch {tls::init -cafile $barControlConfig(serverCAFileName)}]} \
+    {
+      printError "Cannot initialise TLS/SSL system"
+      exit 1
+    }
+    if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverTLSPort) $barControlConfig(serverPassword) 1]} \
+    {
+      printError "Cannot connect to TLS/SSL server '$barControlConfig(serverHostName):$barControlConfig(serverTLSPort)'!"
+      exit 1
+    }
+    set connectFlag 1
+  } \
+  else \
   {
-    printError "Cannot connect to TLS/SSL server '$barControlConfig(serverHostName):$barControlConfig(serverTLSPort)'!"
-    exit 1
+    printWarning "TLS/SSL certificate '$barControlConfig(serverCAFileName)' cannot be read!"
   }
-} \
-elseif {$barControlConfig(serverPort) != 0} \
+}
+if {!$connectFlag && ($barControlConfig(serverPort) != 0)} \
 {
   if {![BackupServer:connect $barControlConfig(serverHostName) $barControlConfig(serverPort) $barControlConfig(serverPassword) 0]} \
   {
     printError "Cannot connect to server '$barControlConfig(serverHostName):$barControlConfig(serverPort)'!"
     exit 1
   }
-} \
-else  \
+  set connectFlag 1
+}
+if {!$connectFlag} \
 {
   printError "Cannot connect to server '$barControlConfig(serverHostName)'!"
   exit 1

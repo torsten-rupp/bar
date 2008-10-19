@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.63 $
+* $Revision: 1.64 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -97,6 +97,7 @@ typedef enum
   COMMAND_RESTORE,
 
   COMMAND_GENERATE_KEYS,
+  COMMAND_NEW_KEY_PASSWORD,
 
   COMMAND_UNKNOWN,
 } Commands;
@@ -104,8 +105,12 @@ typedef enum
 /***************************** Variables *******************************/
 GlobalOptions globalOptions;
 
-LOCAL JobOptions    jobOptions;
 LOCAL Commands      command;
+
+LOCAL String        keyFileName;
+LOCAL uint          keyBits;
+
+LOCAL JobOptions    jobOptions;
 LOCAL const char    *archiveFileName;
 LOCAL PatternList   includePatternList;
 LOCAL PatternList   excludePatternList;
@@ -160,7 +165,6 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseIncludeExclude(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] =
 {
@@ -245,120 +249,124 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM         ("create",                       'c',0,0,command,                                              COMMAND_LIST,COMMAND_CREATE,                                       "create new archive"                                                       ),
-  CMD_OPTION_ENUM         ("list",                         'l',0,0,command,                                              COMMAND_LIST,COMMAND_LIST,                                         "list contents of archive"                                                 ),
-  CMD_OPTION_ENUM         ("test",                         't',0,0,command,                                              COMMAND_LIST,COMMAND_TEST,                                         "test contents of archive"                                                 ),
-  CMD_OPTION_ENUM         ("compare",                      'd',0,0,command,                                              COMMAND_LIST,COMMAND_COMPARE,                                      "compare contents of archive with files"                                   ),
-  CMD_OPTION_ENUM         ("extract",                      'x',0,0,command,                                              COMMAND_LIST,COMMAND_RESTORE,                                      "restore archive"                                                          ),
-  CMD_OPTION_ENUM         ("generate-keys",                0  ,0,0,command,                                              COMMAND_LIST,COMMAND_GENERATE_KEYS,                                "generate new public/private key pair"                                     ),
+  CMD_OPTION_ENUM         ("create",                       'c',0,0,command,                                   COMMAND_LIST,COMMAND_CREATE,                                       "create new archive"                                                       ),
+  CMD_OPTION_ENUM         ("list",                         'l',0,0,command,                                   COMMAND_LIST,COMMAND_LIST,                                         "list contents of archive"                                                 ),
+  CMD_OPTION_ENUM         ("test",                         't',0,0,command,                                   COMMAND_LIST,COMMAND_TEST,                                         "test contents of archive"                                                 ),
+  CMD_OPTION_ENUM         ("compare",                      'd',0,0,command,                                   COMMAND_LIST,COMMAND_COMPARE,                                      "compare contents of archive with files"                                   ),
+  CMD_OPTION_ENUM         ("extract",                      'x',0,0,command,                                   COMMAND_LIST,COMMAND_RESTORE,                                      "restore archive"                                                          ),
+  CMD_OPTION_ENUM         ("generate-keys",                0,  0,0,command,                                   COMMAND_LIST,COMMAND_GENERATE_KEYS,                                "generate new public/private key pair"                                     ),
+//  CMD_OPTION_ENUM         ("new-key-password",             0,  0,0,command,                                   COMMAND_LIST,COMMAND_NEW_KEY_PASSWORD,                           "set new private key password"                                           ),
+//  CMD_OPTION_SPECIAL      ("generate-keys",                0,  0,0,&keyFileName,                              NULL,cmdOptionParseString,NULL,                                    "generate new public/private key pair","file name"                         ),
+  CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,0,keyBits,                                   DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS,
+                                                                                                              MIN_ASYMMETRIC_CRYPT_KEY_BITS,
+                                                                                                              MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,             "key bits"                                                                 ),
 
-  CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                                 NULL,cmdOptionParseConfigFile,NULL,                                "configuration file","file name"                                           ),
+  CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                      NULL,cmdOptionParseConfigFile,NULL,                                "configuration file","file name"                                           ),
 
-  CMD_OPTION_INTEGER64    ("archive-part-size",            's',1,0,jobOptions.archivePartSize,                           0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "approximated archive part size"                                           ),
-  CMD_OPTION_SPECIAL      ("tmp-directory",                0,  1,0,&globalOptions.tmpDirectory,                          DEFAULT_TMP_DIRECTORY,cmdOptionParseString,NULL,                   "temporary directory","path"                                               ),
-  CMD_OPTION_INTEGER64    ("max-tmp-size",                 0,  1,0,globalOptions.maxTmpSize,                             0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "max. size of temporary files"                                             ),
+  CMD_OPTION_INTEGER64    ("archive-part-size",            's',0,0,jobOptions.archivePartSize,                0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "approximated archive part size"                                           ),
+  CMD_OPTION_SPECIAL      ("tmp-directory",                0,  1,0,&globalOptions.tmpDirectory,               DEFAULT_TMP_DIRECTORY,cmdOptionParseString,NULL,                   "temporary directory","path"                                               ),
+  CMD_OPTION_INTEGER64    ("max-tmp-size",                 0,  1,0,globalOptions.maxTmpSize,                  0,0,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                        "max. size of temporary files"                                             ),
 
-  CMD_OPTION_ENUM         ("full",                         'f',0,0,jobOptions.archiveType,                               ARCHIVE_TYPE_NORMAL,ARCHIVE_TYPE_FULL,                             "create full archive and incremental list file"                            ),
-  CMD_OPTION_ENUM         ("incremental",                  'i',0,0,jobOptions.archiveType,                               ARCHIVE_TYPE_NORMAL,ARCHIVE_TYPE_INCREMENTAL,                      "create incremental archive"                                               ),
-  CMD_OPTION_SPECIAL      ("incremental-list-file",        0,  1,0,&jobOptions.incrementalListFileName,                  NULL,cmdOptionParseString,NULL,                                    "incremental list file name (implies --create-incremental-list","file name"),
+  CMD_OPTION_ENUM         ("full",                         'f',0,0,jobOptions.archiveType,                    ARCHIVE_TYPE_NORMAL,ARCHIVE_TYPE_FULL,                             "create full archive and incremental list file"                            ),
+  CMD_OPTION_ENUM         ("incremental",                  'i',0,0,jobOptions.archiveType,                    ARCHIVE_TYPE_NORMAL,ARCHIVE_TYPE_INCREMENTAL,                      "create incremental archive"                                               ),
+  CMD_OPTION_SPECIAL      ("incremental-list-file",        0,  1,0,&jobOptions.incrementalListFileName,       NULL,cmdOptionParseString,NULL,                                    "incremental list file name (implies --create-incremental-list","file name"),
 
-  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,0,jobOptions.directoryStripCount,                       0,0,INT_MAX,NULL,                                                  "number of directories to strip on extract"                                ),
-  CMD_OPTION_SPECIAL      ("directory",                    0,  0,0,&jobOptions.directory   ,                             NULL,cmdOptionParseString,NULL,                                    "directory to restore files","path"                                        ),
-  CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,globalOptions.niceLevel,                              0,0,19,NULL,                                                       "general nice level of processes/threads"                                  ),
+  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,0,jobOptions.directoryStripCount,            0,0,INT_MAX,NULL,                                                  "number of directories to strip on extract"                                ),
+  CMD_OPTION_SPECIAL      ("directory",                    0,  0,0,&jobOptions.directory   ,                  NULL,cmdOptionParseString,NULL,                                    "directory to restore files","path"                                        ),
+  CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,globalOptions.niceLevel,                   0,0,19,NULL,                                                       "general nice level of processes/threads"                                  ),
 
-  CMD_OPTION_INTEGER      ("max-band-width",               0,  1,0,globalOptions.maxBandWidth,                           0,0,INT_MAX,COMMAND_LINE_BITS_UNITS,                               "max. network band width to use"                                           ),
+  CMD_OPTION_INTEGER      ("max-band-width",               0,  1,0,globalOptions.maxBandWidth,                0,0,INT_MAX,COMMAND_LINE_BITS_UNITS,                               "max. network band width to use"                                           ),
 
-  CMD_OPTION_SELECT       ("pattern-type",                 0,  1,0,jobOptions.patternType,                               PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPES,              "select pattern type"                                                      ),
+  CMD_OPTION_SELECT       ("pattern-type",                 0,  1,0,jobOptions.patternType,                    PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPES,              "select pattern type"                                                      ),
 
-  CMD_OPTION_SPECIAL      ("include",                      '#',0,1,&includePatternList,                                  NULL,cmdOptionParseIncludeExclude,NULL,                            "include pattern","pattern"                                                ),
-  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,1,&excludePatternList,                                  NULL,cmdOptionParseIncludeExclude,NULL,                            "exclude pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("include",                      '#',0,1,&includePatternList,                       NULL,cmdOptionParseIncludeExclude,NULL,                            "include pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,1,&excludePatternList,                       NULL,cmdOptionParseIncludeExclude,NULL,                            "exclude pattern","pattern"                                                ),
 
-  CMD_OPTION_SELECT       ("compress-algorithm",           'z',0,0,jobOptions.compressAlgorithm,                         COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,  "select compress algorithm to use"                                         ),
-  CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,0,globalOptions.compressMinFileSize,                    DEFAULT_COMPRESS_MIN_FILE_SIZE,0,INT_MAX,COMMAND_LINE_BYTES_UNITS, "minimal size of file for compression"                                     ),
+  CMD_OPTION_SELECT       ("compress-algorithm",           'z',0,0,jobOptions.compressAlgorithm,              COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,  "select compress algorithm to use"                                         ),
+  CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,0,globalOptions.compressMinFileSize,         DEFAULT_COMPRESS_MIN_FILE_SIZE,0,INT_MAX,COMMAND_LINE_BYTES_UNITS, "minimal size of file for compression"                                     ),
 
-  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,0,jobOptions.cryptAlgorithm,                            CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
-  CMD_OPTION_ENUM         ("crypt-asymmetric",             'a',0,0,jobOptions.cryptType,                                 CRYPT_TYPE_SYMMETRIC,CRYPT_TYPE_ASYMMETRIC,                        "use asymetric encryption"                                                 ),
-  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&globalOptions.cryptPassword,                         NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
-  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,0,&jobOptions.cryptPublicKey,                           NULL,cmdOptionParseCryptKey,NULL,                                  "public key for encryption","file name"                                    ),
-  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,0,&jobOptions.cryptPrivateKey,                          NULL,cmdOptionParseCryptKey,NULL,                                  "private key for decryption","file name"                                   ),
+  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,0,jobOptions.cryptAlgorithm,                 CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
+  CMD_OPTION_ENUM         ("crypt-asymmetric",             'a',0,0,jobOptions.cryptType,                      CRYPT_TYPE_SYMMETRIC,CRYPT_TYPE_ASYMMETRIC,                        "use asymetric encryption"                                                 ),
+  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&globalOptions.cryptPassword,              NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
+  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,0,&jobOptions.cryptPublicKeyFileName,        NULL,cmdOptionParseString,NULL,                                    "public key for encryption","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,0,&jobOptions.cryptPrivateKeyFileName,       NULL,cmdOptionParseString,NULL,                                    "private key for decryption","file name"                                   ),
 
-  CMD_OPTION_SPECIAL      ("ftp-login-name",               0,  0,0,&ftpServer.loginName,                                 NULL,cmdOptionParseString,NULL,                                    "ftp login name","name"                                                    ),
-  CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,0,&ftpServer.password,                                  NULL,cmdOptionParsePassword,NULL,                                  "ftp password (use with care!)","password"                                 ),
+  CMD_OPTION_SPECIAL      ("ftp-login-name",               0,  0,0,&ftpServer.loginName,                      NULL,cmdOptionParseString,NULL,                                    "ftp login name","name"                                                    ),
+  CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,0,&ftpServer.password,                       NULL,cmdOptionParsePassword,NULL,                                  "ftp password (use with care!)","password"                                 ),
 
-  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,0,sshServer.port,                                       0,0,65535,NULL,                                                    "ssh port"                                                                 ),
-  CMD_OPTION_SPECIAL      ("ssh-login-name",               0,  0,0,&sshServer.loginName,                                 NULL,cmdOptionParseString,NULL,                                    "ssh login name","name"                                                    ),
-  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,0,&sshServer.password,                                  NULL,cmdOptionParsePassword,NULL,                                  "ssh password (use with care!)","password"                                 ),
-  CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,0,&sshServer.publicKeyFileName,                         NULL,cmdOptionParseString,NULL,                                    "ssh public key file name","file name"                                     ),
-  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,0,&sshServer.privateKeyFileName,                        NULL,cmdOptionParseString,NULL,                                    "ssh privat key file name","file name"                                     ),
+  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,0,sshServer.port,                            0,0,65535,NULL,                                                    "ssh port"                                                                 ),
+  CMD_OPTION_SPECIAL      ("ssh-login-name",               0,  0,0,&sshServer.loginName,                      NULL,cmdOptionParseString,NULL,                                    "ssh login name","name"                                                    ),
+  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,0,&sshServer.password,                       NULL,cmdOptionParsePassword,NULL,                                  "ssh password (use with care!)","password"                                 ),
+  CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,0,&sshServer.publicKeyFileName,              NULL,cmdOptionParseString,NULL,                                    "ssh public key file name","file name"                                     ),
+  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,0,&sshServer.privateKeyFileName,             NULL,cmdOptionParseString,NULL,                                    "ssh privat key file name","file name"                                     ),
 
-  CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                           FALSE,                                                             "run in daemon mode"                                                       ),
-  CMD_OPTION_INTEGER      ("server-port",                  0,  1,0,serverPort,                                           DEFAULT_SERVER_PORT,0,65535,NULL,                                  "server port"                                                              ),
-  CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,0,serverTLSPort,                                        DEFAULT_TLS_SERVER_PORT,0,65535,NULL,                              "TLS (SSL) server port"                                                    ),
-  CMD_OPTION_STRING       ("server-ca-file",               0,  1,0,serverCAFileName,                                     DEFAULT_TLS_SERVER_CA_FILE,                                        "TLS (SSL) server certificate authority file (CA file)","file name"        ),
-  CMD_OPTION_STRING       ("server-cert-file",             0,  1,0,serverCertFileName,                                   DEFAULT_TLS_SERVER_CERTIFICATE_FILE,                               "TLS (SSL) server certificate file","file name"                            ),
-  CMD_OPTION_STRING       ("server-key-file",              0,  1,0,serverKeyFileName,                                    DEFAULT_TLS_SERVER_KEY_FILE,                                       "TLS (SSL) server key file","file name"                                    ),
-  CMD_OPTION_SPECIAL      ("server-password",              0,  1,0,&serverPassword,                                      NULL,cmdOptionParsePassword,NULL,                                  "server password (use with care!)","password"                              ),
-  CMD_OPTION_STRING       ("job-directory",                0,  1,0,serverJobDirectory,                                   DEFAULT_JOB_DIRECTORY,                                             "server job directory","path name"                                         ),
+  CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                FALSE,                                                             "run in daemon mode"                                                       ),
+  CMD_OPTION_INTEGER      ("server-port",                  0,  1,0,serverPort,                                DEFAULT_SERVER_PORT,0,65535,NULL,                                  "server port"                                                              ),
+  CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,0,serverTLSPort,                             DEFAULT_TLS_SERVER_PORT,0,65535,NULL,                              "TLS (SSL) server port"                                                    ),
+  CMD_OPTION_STRING       ("server-ca-file",               0,  1,0,serverCAFileName,                          DEFAULT_TLS_SERVER_CA_FILE,                                        "TLS (SSL) server certificate authority file (CA file)","file name"        ),
+  CMD_OPTION_STRING       ("server-cert-file",             0,  1,0,serverCertFileName,                        DEFAULT_TLS_SERVER_CERTIFICATE_FILE,                               "TLS (SSL) server certificate file","file name"                            ),
+  CMD_OPTION_STRING       ("server-key-file",              0,  1,0,serverKeyFileName,                         DEFAULT_TLS_SERVER_KEY_FILE,                                       "TLS (SSL) server key file","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("server-password",              0,  1,0,&serverPassword,                           NULL,cmdOptionParsePassword,NULL,                                  "server password (use with care!)","password"                              ),
+  CMD_OPTION_STRING       ("job-directory",                0,  1,0,serverJobDirectory,                        DEFAULT_JOB_DIRECTORY,                                             "server job directory","path name"                                         ),
 
-  CMD_OPTION_BOOLEAN      ("batch",                        0,  2,0,batchFlag,                                            FALSE,                                                             "run in batch mode"                                                        ),
-  CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,0,&globalOptions.remoteBARExecutable,                   DEFAULT_REMOTE_BAR_EXECUTABLE,cmdOptionParseString,NULL,           "remote BAR executable","file name"                                        ),
+  CMD_OPTION_BOOLEAN      ("batch",                        0,  2,0,batchFlag,                                 FALSE,                                                             "run in batch mode"                                                        ),
+  CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,0,&globalOptions.remoteBARExecutable,        DEFAULT_REMOTE_BAR_EXECUTABLE,cmdOptionParseString,NULL,           "remote BAR executable","file name"                                        ),
 
-  CMD_OPTION_SPECIAL      ("dvd-request-volume-command",   0,  1,0,&globalOptions.dvd.requestVolumeCommand,              NULL,cmdOptionParseString,NULL,                                    "request new DVD volume command","command"                                 ),
-  CMD_OPTION_SPECIAL      ("dvd-unload-volume-command",    0,  1,0,&globalOptions.dvd.unloadVolumeCommand,               DVD_UNLOAD_VOLUME_COMMAND,cmdOptionParseString,NULL,               "unload DVD volume command","command"                                      ),
-  CMD_OPTION_SPECIAL      ("dvd-load-volume-command",      0,  1,0,&globalOptions.dvd.loadVolumeCommand,                 DVD_LOAD_VOLUME_COMMAND,cmdOptionParseString,NULL,                 "load DVD volume command","command"                                        ),
-  CMD_OPTION_INTEGER64    ("dvd-volume-size",              0,  1,0,globalOptions.dvd.volumeSize,                         0LL,0LL,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                    "DVD volume size"                                                          ),
-  CMD_OPTION_SPECIAL      ("dvd-image-pre-command",        0,  1,0,&globalOptions.dvd.imagePreProcessCommand,            NULL,cmdOptionParseString,NULL,                                    "make DVD image pre-process command","command"                             ),
-  CMD_OPTION_SPECIAL      ("dvd-image-post-command",       0,  1,0,&globalOptions.dvd.imagePostProcessCommand,           NULL,cmdOptionParseString,NULL,                                    "make DVD image post-process command","command"                            ),
-  CMD_OPTION_SPECIAL      ("dvd-image-command",            0,  1,0,&globalOptions.dvd.imageCommand,                      DVD_IMAGE_COMMAND,cmdOptionParseString,NULL,                       "make DVD image command","command"                                         ),
-  CMD_OPTION_SPECIAL      ("dvd-ecc-pre-command",          0,  1,0,&globalOptions.dvd.eccPreProcessCommand,              NULL,cmdOptionParseString,NULL,                                    "make DVD error-correction codes pre-process command","command"            ),
-  CMD_OPTION_SPECIAL      ("dvd-ecc-post-command",         0,  1,0,&globalOptions.dvd.eccPostProcessCommand,             NULL,cmdOptionParseString,NULL,                                    "make DVD error-correction codes post-process command","command"           ),
-  CMD_OPTION_SPECIAL      ("dvd-ecc-command",              0,  1,0,&globalOptions.dvd.eccCommand,                        DVD_ECC_COMMAND,cmdOptionParseString,NULL,                         "make DVD error-correction codes command","command"                        ),
-  CMD_OPTION_SPECIAL      ("dvd-write-pre-command",        0,  1,0,&globalOptions.dvd.writePreProcessCommand,            NULL,cmdOptionParseString,NULL,                                    "write DVD pre-process command","command"                                  ),
-  CMD_OPTION_SPECIAL      ("dvd-write-post-command",       0,  1,0,&globalOptions.dvd.writePostProcessCommand,           NULL,cmdOptionParseString,NULL,                                    "write DVD post-process command","command"                                 ),
-  CMD_OPTION_SPECIAL      ("dvd-write-command",            0,  1,0,&globalOptions.dvd.writeCommand,                      DVD_WRITE_COMMAND,cmdOptionParseString,NULL,                       "write DVD command","command"                                              ),
-  CMD_OPTION_SPECIAL      ("dvd-write-command",            0,  1,0,&globalOptions.dvd.writeImageCommand,                 DVD_WRITE_IMAGE_COMMAND,cmdOptionParseString,NULL,                 "write DVD image command","command"                                        ),
+  CMD_OPTION_SPECIAL      ("dvd-request-volume-command",   0,  1,0,&globalOptions.dvd.requestVolumeCommand,   NULL,cmdOptionParseString,NULL,                                    "request new DVD volume command","command"                                 ),
+  CMD_OPTION_SPECIAL      ("dvd-unload-volume-command",    0,  1,0,&globalOptions.dvd.unloadVolumeCommand,    DVD_UNLOAD_VOLUME_COMMAND,cmdOptionParseString,NULL,               "unload DVD volume command","command"                                      ),
+  CMD_OPTION_SPECIAL      ("dvd-load-volume-command",      0,  1,0,&globalOptions.dvd.loadVolumeCommand,      DVD_LOAD_VOLUME_COMMAND,cmdOptionParseString,NULL,                 "load DVD volume command","command"                                        ),
+  CMD_OPTION_INTEGER64    ("dvd-volume-size",              0,  1,0,globalOptions.dvd.volumeSize,              0LL,0LL,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                    "DVD volume size"                                                          ),
+  CMD_OPTION_SPECIAL      ("dvd-image-pre-command",        0,  1,0,&globalOptions.dvd.imagePreProcessCommand, NULL,cmdOptionParseString,NULL,                                    "make DVD image pre-process command","command"                             ),
+  CMD_OPTION_SPECIAL      ("dvd-image-post-command",       0,  1,0,&globalOptions.dvd.imagePostProcessCommand,NULL,cmdOptionParseString,NULL,                                    "make DVD image post-process command","command"                            ),
+  CMD_OPTION_SPECIAL      ("dvd-image-command",            0,  1,0,&globalOptions.dvd.imageCommand,           DVD_IMAGE_COMMAND,cmdOptionParseString,NULL,                       "make DVD image command","command"                                         ),
+  CMD_OPTION_SPECIAL      ("dvd-ecc-pre-command",          0,  1,0,&globalOptions.dvd.eccPreProcessCommand,   NULL,cmdOptionParseString,NULL,                                    "make DVD error-correction codes pre-process command","command"            ),
+  CMD_OPTION_SPECIAL      ("dvd-ecc-post-command",         0,  1,0,&globalOptions.dvd.eccPostProcessCommand,  NULL,cmdOptionParseString,NULL,                                    "make DVD error-correction codes post-process command","command"           ),
+  CMD_OPTION_SPECIAL      ("dvd-ecc-command",              0,  1,0,&globalOptions.dvd.eccCommand,             DVD_ECC_COMMAND,cmdOptionParseString,NULL,                         "make DVD error-correction codes command","command"                        ),
+  CMD_OPTION_SPECIAL      ("dvd-write-pre-command",        0,  1,0,&globalOptions.dvd.writePreProcessCommand, NULL,cmdOptionParseString,NULL,                                    "write DVD pre-process command","command"                                  ),
+  CMD_OPTION_SPECIAL      ("dvd-write-post-command",       0,  1,0,&globalOptions.dvd.writePostProcessCommand,NULL,cmdOptionParseString,NULL,                                    "write DVD post-process command","command"                                 ),
+  CMD_OPTION_SPECIAL      ("dvd-write-command",            0,  1,0,&globalOptions.dvd.writeCommand,           DVD_WRITE_COMMAND,cmdOptionParseString,NULL,                       "write DVD command","command"                                              ),
+  CMD_OPTION_SPECIAL      ("dvd-write-command",            0,  1,0,&globalOptions.dvd.writeImageCommand,      DVD_WRITE_IMAGE_COMMAND,cmdOptionParseString,NULL,                 "write DVD image command","command"                                        ),
 
-  CMD_OPTION_SPECIAL      ("device",                       0,  1,0,&globalOptions.defaultDeviceName,                     DEFAULT_DEVICE_NAME,cmdOptionParseString,NULL,                     "default device","device name"                                             ),
-  CMD_OPTION_SPECIAL      ("device-request-volume-command",0,  1,0,&device.requestVolumeCommand,                         NULL,cmdOptionParseString,NULL,                                    "request new volume command","command"                                     ),
-  CMD_OPTION_SPECIAL      ("device-unload-volume-command", 0,  1,0,&device.unloadVolumeCommand,                          NULL,cmdOptionParseString,NULL,                                    "unload volume command","command"                                          ),
-  CMD_OPTION_SPECIAL      ("device-load-volume-command",   0,  1,0,&device.loadVolumeCommand,                            NULL,cmdOptionParseString,NULL,                                    "load volume command","command"                                            ),
-  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,0,device.volumeSize,                                    0LL,0LL,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                    "volume size"                                                              ),
-  CMD_OPTION_SPECIAL      ("device-image-pre-command",     0,  1,0,&device.imagePreProcessCommand,                       NULL,cmdOptionParseString,NULL,                                    "make image pre-process command","command"                                 ),
-  CMD_OPTION_SPECIAL      ("device-image-post-command",    0,  1,0,&device.imagePostProcessCommand,                      NULL,cmdOptionParseString,NULL,                                    "make image post-process command","command"                                ),
-  CMD_OPTION_SPECIAL      ("device-image-command",         0,  1,0,&device.imageCommand,                                 NULL,cmdOptionParseString,NULL,                                    "make image command","command"                                             ),
-  CMD_OPTION_SPECIAL      ("device-ecc-pre-command",       0,  1,0,&device.eccPreProcessCommand,                         NULL,cmdOptionParseString,NULL,                                    "make error-correction codes pre-process command","command"                ),
-  CMD_OPTION_SPECIAL      ("device-ecc-post-command",      0,  1,0,&device.eccPostProcessCommand,                        NULL,cmdOptionParseString,NULL,                                    "make error-correction codes post-process command","command"               ),
-  CMD_OPTION_SPECIAL      ("device-ecc-command",           0,  1,0,&device.eccCommand,                                   NULL,cmdOptionParseString,NULL,                                    "make error-correction codes command","command"                            ),
-  CMD_OPTION_SPECIAL      ("device-write-pre-command",     0,  1,0,&device.writePreProcessCommand,                       NULL,cmdOptionParseString,NULL,                                    "write device pre-process command","command"                               ),
-  CMD_OPTION_SPECIAL      ("device-write-post-command",    0,  1,0,&device.writePostProcessCommand,                      NULL,cmdOptionParseString,NULL,                                    "write device post-process command","command"                              ),
-  CMD_OPTION_SPECIAL      ("device-write-command",         0,  1,0,&device.writeCommand,                                 NULL,cmdOptionParseString,NULL,                                    "write device command","command"                                           ),
+  CMD_OPTION_SPECIAL      ("device",                       0,  1,0,&globalOptions.defaultDeviceName,          DEFAULT_DEVICE_NAME,cmdOptionParseString,NULL,                     "default device","device name"                                             ),
+  CMD_OPTION_SPECIAL      ("device-request-volume-command",0,  1,0,&device.requestVolumeCommand,              NULL,cmdOptionParseString,NULL,                                    "request new volume command","command"                                     ),
+  CMD_OPTION_SPECIAL      ("device-unload-volume-command", 0,  1,0,&device.unloadVolumeCommand,               NULL,cmdOptionParseString,NULL,                                    "unload volume command","command"                                          ),
+  CMD_OPTION_SPECIAL      ("device-load-volume-command",   0,  1,0,&device.loadVolumeCommand,                 NULL,cmdOptionParseString,NULL,                                    "load volume command","command"                                            ),
+  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,0,device.volumeSize,                         0LL,0LL,LONG_LONG_MAX,COMMAND_LINE_BYTES_UNITS,                    "volume size"                                                              ),
+  CMD_OPTION_SPECIAL      ("device-image-pre-command",     0,  1,0,&device.imagePreProcessCommand,            NULL,cmdOptionParseString,NULL,                                    "make image pre-process command","command"                                 ),
+  CMD_OPTION_SPECIAL      ("device-image-post-command",    0,  1,0,&device.imagePostProcessCommand,           NULL,cmdOptionParseString,NULL,                                    "make image post-process command","command"                                ),
+  CMD_OPTION_SPECIAL      ("device-image-command",         0,  1,0,&device.imageCommand,                      NULL,cmdOptionParseString,NULL,                                    "make image command","command"                                             ),
+  CMD_OPTION_SPECIAL      ("device-ecc-pre-command",       0,  1,0,&device.eccPreProcessCommand,              NULL,cmdOptionParseString,NULL,                                    "make error-correction codes pre-process command","command"                ),
+  CMD_OPTION_SPECIAL      ("device-ecc-post-command",      0,  1,0,&device.eccPostProcessCommand,             NULL,cmdOptionParseString,NULL,                                    "make error-correction codes post-process command","command"               ),
+  CMD_OPTION_SPECIAL      ("device-ecc-command",           0,  1,0,&device.eccCommand,                        NULL,cmdOptionParseString,NULL,                                    "make error-correction codes command","command"                            ),
+  CMD_OPTION_SPECIAL      ("device-write-pre-command",     0,  1,0,&device.writePreProcessCommand,            NULL,cmdOptionParseString,NULL,                                    "write device pre-process command","command"                               ),
+  CMD_OPTION_SPECIAL      ("device-write-post-command",    0,  1,0,&device.writePostProcessCommand,           NULL,cmdOptionParseString,NULL,                                    "write device post-process command","command"                              ),
+  CMD_OPTION_SPECIAL      ("device-write-command",         0,  1,0,&device.writeCommand,                      NULL,cmdOptionParseString,NULL,                                    "write device command","command"                                           ),
 
-  CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,0,jobOptions.errorCorrectionCodesFlag,                  FALSE,                                                             "add error-correction codes with 'dvdisaster' tool"                        ),
+  CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,0,jobOptions.errorCorrectionCodesFlag,       FALSE,                                                             "add error-correction codes with 'dvdisaster' tool"                        ),
 
-  CMD_OPTION_SET          ("log",                          0,  1,0,logTypes,                                             0,COMMAND_LINE_OPTIONS_LOG_TYPES,                                  "log types"                                                                ),
-  CMD_OPTION_STRING       ("log-file",                     0,  1,0,logFileName       ,                                   NULL,                                                              "log file name","file name"                                                ),
-  CMD_OPTION_STRING       ("log-post-command",             0,  1,0,logPostCommand,                                       NULL,                                                              "log file post-process command","command"                                  ),
+  CMD_OPTION_SET          ("log",                          0,  1,0,logTypes,                                  0,COMMAND_LINE_OPTIONS_LOG_TYPES,                                  "log types"                                                                ),
+  CMD_OPTION_STRING       ("log-file",                     0,  1,0,logFileName       ,                        NULL,                                                              "log file name","file name"                                                ),
+  CMD_OPTION_STRING       ("log-post-command",             0,  1,0,logPostCommand,                            NULL,                                                              "log file post-process command","command"                                  ),
 
-  CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,0,jobOptions.skipUnreadableFlag,                        TRUE,                                                              "skip unreadable files"                                                    ),
-  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      0,  0,0,jobOptions.overwriteArchiveFilesFlag,                 FALSE,                                                             "overwrite existing archive files"                                         ),
-  CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,0,jobOptions.overwriteFilesFlag,                        FALSE,                                                             "overwrite existing files"                                                 ),
-  CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,0,jobOptions.waitFirstVolumeFlag,                       FALSE,                                                             "wait for first volume"                                                    ),
-  CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,0,jobOptions.noStorageFlag,                             FALSE,                                                             "do not store archives (skip storage)"                                     ),
-  CMD_OPTION_BOOLEAN      ("no-bar-on-dvd",                0,  1,0,jobOptions.noBAROnDVDFlag,                            FALSE,                                                             "do not store a copy of BAR on DVDs"                                       ),
-  CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,0,jobOptions.stopOnErrorFlag,                           FALSE,                                                             "immediately stop on error"                                                ),
-  CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,                    FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
-  CMD_OPTION_BOOLEAN      ("long-format",                  0,  0,0,globalOptions.longFormatFlag,                         FALSE,                                                             "list in long format"                                                      ),
-  CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                              FALSE,                                                             "surpress any output"                                                      ),
-  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                           1,0,3,NULL,                                                        "verbosity level"                                                          ),
+  CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,0,jobOptions.skipUnreadableFlag,             TRUE,                                                              "skip unreadable files"                                                    ),
+  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      0,  0,0,jobOptions.overwriteArchiveFilesFlag,      FALSE,                                                             "overwrite existing archive files"                                         ),
+  CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,0,jobOptions.overwriteFilesFlag,             FALSE,                                                             "overwrite existing files"                                                 ),
+  CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,0,jobOptions.waitFirstVolumeFlag,            FALSE,                                                             "wait for first volume"                                                    ),
+  CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,0,jobOptions.noStorageFlag,                  FALSE,                                                             "do not store archives (skip storage)"                                     ),
+  CMD_OPTION_BOOLEAN      ("no-bar-on-dvd",                0,  1,0,jobOptions.noBAROnDVDFlag,                 FALSE,                                                             "do not store a copy of BAR on DVDs"                                       ),
+  CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,0,jobOptions.stopOnErrorFlag,                FALSE,                                                             "immediately stop on error"                                                ),
+  CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,         FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
+  CMD_OPTION_BOOLEAN      ("long-format",                  0,  0,0,globalOptions.longFormatFlag,              FALSE,                                                             "list in long format"                                                      ),
+  CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                   FALSE,                                                             "surpress any output"                                                      ),
+  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                1,0,3,NULL,                                                        "verbosity level"                                                          ),
 
-  CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                          FALSE,                                                             "output version"                                                           ),
-  CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                             FALSE,                                                             "output this help"                                                         ),
-  CMD_OPTION_BOOLEAN      ("xhelp",                        0,  0,0,xhelpFlag,                                            FALSE,                                                             "output help to extended options"                                          ),
-  CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                                     FALSE,                                                             "output help to internal options"                                          ),
+  CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                               FALSE,                                                             "output version"                                                           ),
+  CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                  FALSE,                                                             "output this help"                                                         ),
+  CMD_OPTION_BOOLEAN      ("xhelp",                        0,  0,0,xhelpFlag,                                 FALSE,                                                             "output help to extended options"                                          ),
+  CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                          FALSE,                                                             "output help to internal options"                                          ),
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value);
-LOCAL bool configValueParseCryptKey(void *userData, void *variable, const char *name, const char *value);
 
 LOCAL const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] =
 {
@@ -423,6 +431,14 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
   #endif /* HAVE_GCRYPT */
 };
 
+LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] =
+{
+  #ifdef HAVE_GCRYPT
+    {"symmetric", CRYPT_TYPE_SYMMETRIC },
+    {"asymmetric",CRYPT_TYPE_ASYMMETRIC},
+  #endif /* HAVE_GCRYPT */
+};
+
 LOCAL const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
 {
   {"none",      LOG_TYPE_NONE              },
@@ -464,10 +480,10 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                  0,INT_MAX,CONFIG_VALUE_BYTES_UNITS),
 
   CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                          CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_VALUE_ENUM     ("crypt-asymmetric",             &jobOptions.cryptType,-1,                               CRYPT_TYPE_ASYMMETRIC),
+  CONFIG_VALUE_SELECT   ("crypt-type",                   &jobOptions.cryptType,-1,                               CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SPECIAL  ("crypt-password",               &globalOptions.cryptPassword,-1,                        configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL  ("crypt-public-key",             &jobOptions.cryptPublicKey,-1,                          configValueParseCryptKey,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL  ("crypt-private-key",            &jobOptions.cryptPrivateKey,-1,                         configValueParseCryptKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_STRING   ("crypt-public-key",             &jobOptions.cryptPublicKeyFileName,-1                   ),
+  CONFIG_VALUE_STRING   ("crypt-private-key",            &jobOptions.cryptPrivateKeyFileName,-1                  ),
 
   CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(FTPServer,loginName)         ),
   CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(FTPServer,password),         configValueParsePassword,NULL,NULL,NULL,NULL),
@@ -596,7 +612,8 @@ LOCAL void output(FILE *file, bool saveRestoreFlag, const String string)
 /***********************************************************************\
 * Name   : readConfigFile
 * Purpose: read configuration from file
-* Input  : fileName - file name
+* Input  : fileName      - file name
+*          printInfoFlag - TRUE for output info, FALSE otherwise
 * Output : -
 * Return : TRUE iff configuration read, FALSE otherwise (error)
 * Notes  : -
@@ -886,66 +903,13 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(userData);
 
-  if ((*(Password**)variable) != NULL)
+  if ((*(Password**)variable) == NULL)
   {
-    Password_setCString(*(Password**)variable,value);
+    (*(Password**)variable) = Password_new();
   }
-  else
-  {
-    (*(Password**)variable) = Password_newCString(value);
-  }
+  Password_setCString(*(Password**)variable,value);
 
   return TRUE;
-}
-
-/***********************************************************************\
-* Name   : cmdOptionParseCryptKey
-* Purpose: command line option call back for parsing public key
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
-{
-  FileHandle fileHandle;
-  String     string;
-  Errors     error;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(userData);
-
-  if ((*(CryptKey**)variable) == NULL)
-  {
-    (*(CryptKey**)variable) = Crypt_newKey();
-  }
-
-  string = String_newCString(value);
-  if (File_exists(string))
-  {
-    error = File_open(&fileHandle,string,ARCHIVE_FILE_MODE_READ);
-    if (error != ERROR_NONE)
-    {
-      String_delete(string);
-      return FALSE;
-    }
-    File_readLine(&fileHandle,string);
-    File_close(&fileHandle);
-
-    error = Crypt_setKeyData(*(CryptKey**)variable,string);
-  }
-  else
-  {
-    error = Crypt_setKeyData(*(CryptKey**)variable,string);
-  }
-  String_delete(string);
-
-  return (error == ERROR_NONE);
 }
 
 /***********************************************************************\
@@ -971,58 +935,10 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
 }
 
 /***********************************************************************\
-* Name   : configValueParseCryptKey
-* Purpose: command line option call back for parsing crypt key
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseCryptKey(void *userData, void *variable, const char *name, const char *value)
-{
-  FileHandle fileHandle;
-  String     string;
-  Errors     error;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(userData);
-
-  if ((*(CryptKey**)variable) == NULL)
-  {
-    (*(CryptKey**)variable) = Crypt_newKey();
-  }
-
-  string = String_newCString(value);
-  if (File_exists(string))
-  {
-    error = File_open(&fileHandle,string,FILE_OPENMODE_READ);
-    if (error != ERROR_NONE)
-    {
-      String_delete(string);
-      return FALSE;
-    }
-    File_readLine(&fileHandle,string);
-    File_close(&fileHandle);
-
-    error = Crypt_setKeyData(*(CryptKey**)variable,string);
-  }
-  else
-  {
-    error = Crypt_setKeyData(*(CryptKey**)variable,string);
-  }
-  String_delete(string);
-
-  return (error == ERROR_NONE);
-}
-
-/***********************************************************************\
 * Name       : printUsage
 * Purpose    : print "usage" help
-* Input      : -
+* Input      : programName - program name
+*              level       - help level (0..1)
 * Output     : -
 * Return     : -
 * Side-effect: unknown
@@ -1033,7 +949,8 @@ LOCAL void printUsage(const char *programName, uint level)
 {
   assert(programName != NULL);
 
-  printf("Usage: %s [<options>] [--] <archive name>|scp:<name>@<host name>:<archive name>... [<files>...]\n",programName);
+  printf("Usage: %s [<options>] [--] <archive name> [<files>...]\n",programName);
+  printf("       %s [<options>] [--] <key file name>\n",programName);
   printf("\n");
   CmdOption_printHelp(stdout,
                       COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
@@ -1279,6 +1196,7 @@ LOCAL void doneAll(void)
   String_delete(outputLine);
   String_delete(tmpLogFileName);
   StringList_done(&configFileNameList);
+  String_delete(keyFileName);
 
   /* deinitialise modules */
   Server_doneAll();
@@ -1389,16 +1307,19 @@ void printConsole(const char *format, ...)
 
 void printWarning(const char *text, ...)
 {
-  String  line;
   va_list arguments;
+  String  line;
 
   assert(text != NULL);
 
-  line = String_new();
+  /* output log line */
+  va_start(arguments,text);
+  vlogMessage(LOG_TYPE_WARNING,"Warning: ",text,arguments);
+  va_end(arguments);
 
   /* format line */
   va_start(arguments,text);
-  vlogMessage(LOG_TYPE_WARNING,"Warning: ",text,arguments);
+  line = String_new();
   String_appendCString(line,"Warning: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
@@ -1411,16 +1332,19 @@ void printWarning(const char *text, ...)
 
 void printError(const char *text, ...)
 {
-  String  line;
   va_list arguments;
+  String  line;
 
   assert(text != NULL);
 
-  line = String_new();
+  /* output log line */
+  va_start(arguments,text);
+  vlogMessage(LOG_TYPE_ERROR,"ERROR: ",text,arguments);
+  va_end(arguments);
 
   /* format line */
   va_start(arguments,text);
-  vlogMessage(LOG_TYPE_ERROR,"ERROR: ",text,arguments);
+  line = String_new();
   String_appendCString(line,"ERROR: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
@@ -1483,8 +1407,8 @@ void copyJobOptions(const JobOptions *sourceJobOptions, JobOptions *destinationJ
   destinationJobOptions->incrementalListFileName      = String_duplicate(sourceJobOptions->incrementalListFileName);
   destinationJobOptions->directory                    = String_duplicate(sourceJobOptions->directory);
   destinationJobOptions->cryptPassword                = Password_duplicate(sourceJobOptions->cryptPassword);
-  destinationJobOptions->cryptPublicKey               = sourceJobOptions->cryptPublicKey;
-  destinationJobOptions->cryptPrivateKey              = sourceJobOptions->cryptPrivateKey;
+  destinationJobOptions->cryptPublicKeyFileName       = String_duplicate(sourceJobOptions->cryptPublicKeyFileName);
+  destinationJobOptions->cryptPrivateKeyFileName      = String_duplicate(sourceJobOptions->cryptPrivateKeyFileName);
   destinationJobOptions->ftpServer.loginName          = String_duplicate(sourceJobOptions->ftpServer.loginName);
   destinationJobOptions->ftpServer.password           = Password_duplicate(sourceJobOptions->ftpServer.password);
   destinationJobOptions->sshServer.loginName          = String_duplicate(sourceJobOptions->sshServer.loginName);
@@ -1504,8 +1428,8 @@ void freeJobOptions(JobOptions *jobOptions)
   String_delete(jobOptions->sshServer.loginName);
   Password_delete(jobOptions->ftpServer.password);
   String_delete(jobOptions->ftpServer.loginName);
-//  String_delete(jobOptions->cryptPrivateKeyFileName);
-//  String_delete(jobOptions->cryptPublicKeyFileName);
+  String_delete(jobOptions->cryptPrivateKeyFileName);
+  String_delete(jobOptions->cryptPublicKeyFileName);
   Password_delete(jobOptions->cryptPassword);
   String_delete(jobOptions->directory);
   String_delete(jobOptions->incrementalListFileName);
@@ -1586,27 +1510,33 @@ void getDevice(const String     name,
   device->writeCommand            = (jobOptions->device.writeCommand            != NULL)?jobOptions->device.writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :globalOptions.defaultDevice.writeCommand           );
 }
 
-Password *inputCryptPassword(const String fileName,
-                             bool         weakCheckFlag
-                            )
+Errors inputCryptPassword(Password     *password,
+                          const String fileName,
+                          bool         validateFlag,
+                          bool         weakCheckFlag
+                         )
 {
-  Password *password;
-  String   title;
+  String title;
 
-  /* allocate password */
-  password = Password_new();
-  if (password == NULL)
-  {
-    return NULL;
-  }
+  /* initialise variables */
+  title = String_new();
 
   /* input password */
-  title = String_format(String_new(),"Crypt password for '%S'",fileName);
+  String_format(String_clear(title),"Crypt password for '%S'",fileName);
   if (!Password_input(password,String_cString(title)) || (Password_length(password) <= 0))
   {
     String_delete(title);
-    Password_delete(password);
-    return NULL;
+    return ERROR_NO_CRYPT_PASSWORD;
+  }
+  if (validateFlag)
+  {
+    String_format(String_clear(title),"Verify password for '%S'",fileName);
+    if (!Password_inputVerify(password,String_cString(title)))
+    {
+      printError("Passwords are not equal!\n");
+      String_delete(title);
+      return ERROR_PASSWORDS_MISMATCH;
+    }
   }
   String_delete(title);
 
@@ -1619,7 +1549,7 @@ Password *inputCryptPassword(const String fileName,
     }
   }
 
-  return password;
+  return ERROR_NONE;
 }
 
 bool configValueParseIncludeExclude(void *userData, void *variable, const char *name, const char *value)
@@ -1710,14 +1640,11 @@ bool configValueParsePassword(void *userData, void *variable, const char *name, 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
 
-  if ((*(Password**)variable) != NULL)
+  if ((*(Password**)variable) == NULL)
   {
-    Password_setCString(*(Password**)variable,value);
+    (*(Password**)variable) = Password_new();
   }
-  else
-  {
-    (*(Password**)variable) = Password_newCString(value);
-  }
+  Password_setCString(*(Password**)variable,value);
 
   return TRUE;
 }
@@ -1767,9 +1694,9 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseScheduleNumber(const String s, uint *n)
+LOCAL bool parseScheduleNumber(const String s, int *n)
 {
-  ulong nextIndex;
+  long nextIndex;
 
   assert(s != NULL);
   assert(n != NULL);
@@ -1797,10 +1724,10 @@ LOCAL bool parseScheduleNumber(const String s, uint *n)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseScheduleMonth(const String s, uint *month)
+LOCAL bool parseScheduleMonth(const String s, int *month)
 {
   String name;
-  ulong  nextIndex;
+  long   nextIndex;
 
   assert(s != NULL);
   assert(month != NULL);
@@ -1844,7 +1771,7 @@ LOCAL bool parseScheduleMonth(const String s, uint *month)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseScheduleWeekDay(const String s, uint *weekday)
+LOCAL bool parseScheduleWeekDay(const String s, int *weekday)
 {
   String name;
 
@@ -2307,8 +2234,7 @@ int main(int argc, const char *argv[])
     {
       case COMMAND_CREATE:
         {
-          int    z;
-          Errors error;
+          int z;
 
           /* get archive file name */
           if (argc <= 1)
@@ -2402,77 +2328,110 @@ int main(int argc, const char *argv[])
         break;
       case COMMAND_GENERATE_KEYS:
         {
-          const char *publicKeyFileName;
-          uint       bits;
+          /* generate new key pair */
+          const char *keyFileName;
+          Password   cryptPassword;
           CryptKey   publicKey,privateKey;
-          String     fileName;
-          FileHandle fileHandle;
-          String     s;
+          String     publicKeyFileName,privateKeyFileName;
 
-          /* get key file name, type, bits */
+          /* get key file name */
           if (argc <= 1)
           {
             printError("No key file name given!\n");
+            printUsage(argv[0],0);
             error = ERROR_INVALID_ARGUMENT;
             break;
           }
-          publicKeyFileName = argv[1];
-          if (argc > 2)
+          keyFileName = argv[1];
+
+          /* initialise variables */
+          publicKeyFileName  = File_newFileName();
+          privateKeyFileName = File_newFileName();
+
+          /* get file names of keys */
+          File_setFileNameCString(publicKeyFileName,keyFileName);
+          String_appendCString(publicKeyFileName,".public");
+          File_setFileNameCString(privateKeyFileName,keyFileName);
+          String_appendCString(privateKeyFileName,".private");
+
+          /* check if key files already exists */
+          if (File_exists(publicKeyFileName))
           {
-            bits = atol(argv[3]);
+            printError("Public key file '%s' already exists!\n",String_cString(publicKeyFileName));
+            File_deleteFileName(privateKeyFileName);
+            File_deleteFileName(publicKeyFileName);
+            break;
           }
-          else
+          if (File_exists(privateKeyFileName))
           {
-            bits = DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS;
+            printError("Private key file '%s' already exists!\n",String_cString(privateKeyFileName));
+            File_deleteFileName(privateKeyFileName);
+            File_deleteFileName(publicKeyFileName);
+            break;
+          }
+
+          /* input crypt password for private key encryption */
+          Password_init(&cryptPassword);
+          error = inputCryptPassword(&cryptPassword,privateKeyFileName,TRUE,FALSE);
+          if (error != ERROR_NONE)
+          {
+            Password_done(&cryptPassword);
+            File_deleteFileName(privateKeyFileName);
+            File_deleteFileName(publicKeyFileName);
+            break;
           }
 
           /* generate new keys pair */
           Crypt_initKey(&publicKey);
           Crypt_initKey(&privateKey);
-          s = String_new();
-          error = Crypt_createKeys(&publicKey,&privateKey,bits);
+          error = Crypt_createKeys(&publicKey,&privateKey,keyBits);
           if (error == ERROR_NONE)
           {
-            fileName = File_setFileNameCString(File_newFileName(),publicKeyFileName);
-            String_appendCString(fileName,".public");
-            error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
-            if (error == ERROR_NONE)
+            error = Crypt_writeKeyFile(&publicKey,publicKeyFileName,NULL);
+            if (error != ERROR_NONE)
             {
-              Crypt_getKeyData(s,&publicKey);
-              File_writeLine(&fileHandle,s);
-              File_close(&fileHandle);
+              printError("Cannot write public key file!\n");
+              Crypt_doneKey(&privateKey);
+              Crypt_doneKey(&publicKey);
+              Password_done(&cryptPassword);
+              File_deleteFileName(privateKeyFileName);
+              File_deleteFileName(publicKeyFileName);
+              break;
             }
-            File_deleteFileName(fileName);
 
-            fileName = File_setFileNameCString(File_newFileName(),publicKeyFileName);
-            String_appendCString(fileName,".private");
-            error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
-            if (error == ERROR_NONE)
+            error = Crypt_writeKeyFile(&privateKey,privateKeyFileName,&cryptPassword);
+            if (error != ERROR_NONE)
             {
-              Crypt_getKeyData(s,&privateKey);
-              File_writeLine(&fileHandle,s);
-              File_close(&fileHandle);
+              printError("Cannot write private key file!\n");
+              Crypt_doneKey(&privateKey);
+              Crypt_doneKey(&publicKey);
+              Password_done(&cryptPassword);
+              File_deleteFileName(privateKeyFileName);
+              File_deleteFileName(publicKeyFileName);
+              break;
             }
-            File_deleteFileName(fileName);
           }
-          String_delete(s);
-#if 0
-{
-  char s[200],c[2000],t[200];
-  ulong n;
+      #if 0
+      {
+        char s[200],c[2000],t[200];
+        ulong n;
 
-  strcpy(s,"Hello World");
+        strcpy(s,"Hello World");
 
-  Crypt_keyEncrypt(&publicKey,s,200,c,2000,&n);
+        Crypt_keyEncrypt(&publicKey,s,200,c,2000,&n);
 
-  Crypt_keyDecrypt(&privateKey,c,n,t,200,&n);
+        Crypt_keyDecrypt(&privateKey,c,n,t,200,&n);
 
-fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
+      fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
 
-}
-#endif /* 0 */
+      }
+      #endif /* 0 */
+          /* free resources */
           Crypt_doneKey(&privateKey);
           Crypt_doneKey(&publicKey);
+          Password_done(&cryptPassword);
+          File_deleteFileName(privateKeyFileName);
+          File_deleteFileName(publicKeyFileName);
         }
         break;
       default:

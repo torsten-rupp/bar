@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.11 $
+dnl $Revision: 1.12 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -323,8 +323,10 @@ fi
 if test $ENABLE_TLS = "yes"; then
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     AC_SEARCH_LIBS(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
+    AC_SEARCH_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
   else
     AC_SEARCH_LIBS(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
+    AC_SEARCH_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;STATIC_LIBRARIES="$STATIC_LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
   fi
 fi
 

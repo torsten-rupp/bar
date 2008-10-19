@@ -5,6 +5,7 @@ BAR - BAckup Archiver
 * can split archive files into pieces
 * compress of data with zlib or bzip2 algorithms
 * encryption with gcrypt algrithms (AES,TWOFISH etc.)
+* asymmetric encryption with RSA
 * fast file format: can find and extract single files
   without decompressing/decryption of the whole archive
 * direct copy of archives to remote computer via FTP or
@@ -84,14 +85,25 @@ make install
 
 For encryption the algorithms of the gcrypt library are
 used. The BAR archive files are not encrypted in a single
-block, instead each file is encrypted. The archive file
-structure is readable (an BAR archive is organized in
+block, instead each stored file is encrypted. The archive
+file structure is readable (an BAR archive is organized in
 "chunks"; see archiv_format.def if you are interested in
-details), thus everybody can detect e. g. how many files
-are stored in the archive, but nobody except the owner of
-the passphrase used for encryption can read the contents of
-the files nor the file meta data, e. g. file names (as long
-as the used encryption algorithm is not broken by someone).
+details), thus everybody can detect e. g. how many files are
+stored in the archive, but nobody except the owner of the
+passphrase used for encryption can read the contents of the
+files nor the file meta data, e. g. file names (as long as
+the used encryption algorithm is not broken by someone).
+
+For asymmetric encryption a pair of keys with hybrit
+encryption is used: the file meta data and file data is
+encrypted with a symmetric algorithmis, e. g. AES or Twofish.
+The key for symmetric encryption is chosen from random data,
+encrypted asymmetric with the public key and stored in
+the BAR archive files, too. Those archives can only be
+read when the private key is available to decrypt the
+symmetric key. With asymmetric encryption BAR archives
+can be created without knowledge of the password needed
+for decryption.
 
 --- DVD
 
@@ -132,6 +144,19 @@ barcontrol.tcl connect to a running BAR-server either via
 TLS or a plain socket connection. barcontrol.tcl can edit
 jobs on a server, display the current status of jobs and
 start or stop jobs.
+
+To use barcontrol.tcl the BAR server daemon have to be
+startet first. Either enter
+
+  bar --daemon
+
+or use the start-script 'barserver' from /etc/init.d.
+When the server is running, start barcontrol.tclwith
+
+  barcontrol.tcl
+
+Please note that for a TLS connection the TSL keys and
+cerificate files have to be available.
 
 Install TclTk TLS package:
 

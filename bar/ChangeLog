@@ -1,5 +1,13 @@
-2008-08-18 0.08
-  * added public-key encryption
+2008-09-23 0.08a
+  * fixed double usage of va_args variable
+  * fixed problems with 64bit
+  * fixed typing error in bar.cfg (thanx to Matthias)
+
+2008-09-08 0.08
+  * added asymmetric encryption with public-key
+  * improved estimation of files/s, bytes/s, stored bytes/s and rest time
+  * fixed input of password via SSH_ASKPASS
+  * fixed exitcode on create archive
 
 2008-08-17 0.07b
   * added option --long-format

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/crypt.h,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchive crypt functions
 * Systems: all
@@ -48,8 +48,9 @@ typedef enum
   CRYPT_ALGORITHM_UNKNOWN=65535,
 } CryptAlgorithms;
 
+#define MIN_ASYMMETRIC_CRYPT_KEY_BITS 1024
+#define MAX_ASYMMETRIC_CRYPT_KEY_BITS 3072
 #define DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS 2048
-#define MAX_RANDOM_KEY_BITS                512 // it seems libgcrypt have a bug: data blocks with >=1016 cannot be encrypted/decrypted without errors. Why?
 
 typedef enum
 {
@@ -195,10 +196,10 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_new(CryptInfo       *cryptInfo,
-                 CryptAlgorithms cryptAlgorithm,
-                 const Password  *password
-                );
+Errors Crypt_init(CryptInfo       *cryptInfo,
+                  CryptAlgorithms cryptAlgorithm,
+                  const Password  *password
+                 );
 
 /***********************************************************************\
 * Name   : Crypt_delete
@@ -209,7 +210,7 @@ Errors Crypt_new(CryptInfo       *cryptInfo,
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_delete(CryptInfo *cryptInfo);
+void Crypt_done(CryptInfo *cryptInfo);
 
 /***********************************************************************\
 * Name   : Crypt_reset
@@ -293,12 +294,35 @@ void Crypt_doneKey(CryptKey *cryptKey);
 
 CryptKey *Crypt_newKey(void);
 
-Errors Crypt_readKeyFile(CryptKey     *cryptKey,
-                         const String fileName
+/***********************************************************************\
+* Name   : Crypt_readKeyFile
+* Purpose: read key from file
+* Input  : fileName - file name
+*          password - password for decryption key
+* Output : cryptKey - crypt key
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_readKeyFile(CryptKey       *cryptKey,
+                         const String   fileName,
+                         const Password *password
                         );
 
-Errors Crypt_writeKeyFile(CryptKey     *cryptKey,
-                          const String fileName
+/***********************************************************************\
+* Name   : Crypt_writeKeyFile
+* Purpose: write key to file
+* Input  : cryptKey - crypt key
+*          fileName - file name
+*          password - password for encryption key
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
+                          const String   fileName,
+                          const Password *password
                          );
 
 /***********************************************************************\
@@ -317,44 +341,6 @@ Errors Crypt_createKeys(CryptKey *publicKey,
                        );
 
 /***********************************************************************\
-* Name   : PublicKey_delete
-* Purpose: delete public/private key
-* Input  : cryptKey - crypt key
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Crypt_deleteKey(CryptKey *cryptKey);
-
-/***********************************************************************\
-* Name   : Crypt_getKeyData
-* Purpose: get public/private key data as string
-* Input  : string   - string variable
-*          cryptKey - crypt key
-* Output : -
-* Return : string with key data
-* Notes  : -
-\***********************************************************************/
-
-String Crypt_getKeyData(String         string,
-                        const CryptKey *cryptKey
-                       );
-/***********************************************************************\
-* Name   : Crypt_setKeyData
-* Purpose: set public/private key data from string
-* Input  : cryptKey - crypt key
-*          string   - string with key data
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Crypt_setKeyData(CryptKey     *cryptKey,
-                        const String string
-                       );
-
-/***********************************************************************\
 * Name   : Crypt_keyEncrypt
 * Purpose: encrypt with public key
 * Input  : cryptKey               - crypt key
@@ -365,7 +351,8 @@ Errors Crypt_setKeyData(CryptKey     *cryptKey,
 * Output : encryptBuffer       - encrypted data (allocated)
 *          encryptBufferLength - length of encrypted data
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : if encryptBufferLength==maxEncryptBufferLength buffer was to
+*          small!
 \***********************************************************************/
 
 Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
@@ -387,7 +374,7 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
 * Output : buffer       - data (allocated memory)
 *          bufferLength - length of data
 * Return : ERROR_NONE or error code
-* Notes  : free buffer after usage!
+* Notes  : if bufferLength==maxBufferLength buffer was to small!
 \***********************************************************************/
 
 Errors Crypt_keyDecrypt(CryptKey   *cryptKey,
@@ -398,6 +385,22 @@ Errors Crypt_keyDecrypt(CryptKey   *cryptKey,
                         ulong      *bufferLength
                        );
 
+/***********************************************************************\
+* Name   : Crypt_getRandomEncryptKey
+* Purpose: get random encryption key
+* Input  : publicKey              - public key for encryption of random
+*                                   key
+*          cryptAlgorithm         - used symmetric crypt algorithm
+*          encryptBuffer          - buffer for encrypted random key
+*          maxEncryptBufferLength - max. length of encryption buffer
+* Output : password            - created random password
+*          encryptBuffer       - encrypted random key
+*          encryptBufferLength - length of encrypted random key
+* Return : ERROR_NONE or error code
+* Notes  : if encryptBufferLength==maxEncryptBufferLength buffer was to
+*          small!
+\***********************************************************************/
+
 Errors Crypt_getRandomEncryptKey(CryptKey        *publicKey,
                                  CryptAlgorithms cryptAlgorithm,
                                  Password        *password,
@@ -405,6 +408,17 @@ Errors Crypt_getRandomEncryptKey(CryptKey        *publicKey,
                                  void            *encryptBuffer,
                                  uint            *encryptBufferLength
                                 );
+
+/***********************************************************************\
+* Name   : Crypt_getDecryptKey
+* Purpose: get decryption key
+* Input  : privateKey        - private key to decrypt key
+*          encryptData       - encrypted random key
+*          encryptDataLength - length of encrypted random key
+* Output : password - decryption password
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 Errors Crypt_getDecryptKey(CryptKey   *privateKey,
                            const void *encryptData,

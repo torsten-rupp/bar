@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.43 $
+* $Revision: 1.44 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -198,8 +198,8 @@ typedef struct
   ulong                  compressMinFileSize;          // min. size of file for using compression
 
   Password               *cryptPassword;               // default password for encryption/decryption
-//  CryptKey               *cryptPublicKey;              // default public key for encryption
-//  CryptKey               *cryptPrivateKey;             // default private key for decryption
+//  String   publicKeyFileName;           // public key file name (ssh,scp,sftp)
+//  String   privateKeyFileName;          // private key file name (ssh,scp,sftp)
 
   FTPServer              *ftpServer;                   // FTP server
   SSHServer              *sshServer;                   // SSH server
@@ -261,8 +261,8 @@ typedef struct
   CryptAlgorithms     cryptAlgorithm;
   PasswordModes       cryptPasswordMode;
   Password            *cryptPassword;
-  CryptKey            *cryptPublicKey;
-  CryptKey            *cryptPrivateKey;
+  String              cryptPublicKeyFileName;
+  String              cryptPrivateKeyFileName;
 
   FTPServer           ftpServer;
   SSHServer           sshServer;
@@ -490,18 +490,22 @@ void getDevice(const String     name,
 /***********************************************************************\
 * Name   : inputCryptPassword
 * Purpose: input crypt password
-* Input  : fileName      - file name
+* Input  : password      - crypt password variable
+*          fileName      - file name
+*          validateFlag  - TRUE to validate input, FALSE otherwise
 *          weakCheckFlag - TRUE for weak password checking, FALSE
 *                          otherwise (print warning if password seems to
 *                          be a weak password)
-* Output : -
-* Return : crypt password or NULL if input password fail/aborted
+* Output : password - crypt password
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Password *inputCryptPassword(const String fileName,
-                             bool         weakCheckFlag
-                            );
+Errors inputCryptPassword(Password     *password,
+                          const String fileName,
+                          bool         validateFlag,
+                          bool         weakCheckFlag
+                         );
 
 /***********************************************************************\
 * Name   : configValueParseIncludeExclude
