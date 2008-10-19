@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.28 $
+# $Revision: 1.29 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -54,7 +54,7 @@ TAR        = tar
 #------------------------ specific variables/settings ------------------------
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 08
+VERSION_MINOR = 08a
 
 CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
@@ -133,6 +133,7 @@ OTHER_SOURCES        = errors.pl \
                        valgrind.supp \
                        barcontrol.tcl \
                        bar.cfg \
+                       bar-keygen.in \
 
 INTERMEDIATE         = errors.c \
                        errors.h \
@@ -143,6 +144,8 @@ TLS_FILES            = bar-key.pem \
                        bar-ca.pem \
                        bar-server-key.pem \
                        bar-server-cert.pem \
+
+SCRIPTS              = scripts/barserver \
 
 TARGETS              = bar \
                        bar-keygen \
@@ -246,6 +249,14 @@ bar-server-cert.pem: bar-server-key.pem
           --outfile $@ \
           1>/dev/null 2>/dev/null
 
+bar.jks: bar-key.pem
+	keytool \
+          -import \
+          -trustcacerts \
+          -noprompt \
+          -file bar-key.pem \
+          -keystore $@
+
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
 	$(LD) $(LD_FLAGS) -o $@ $^ -lc -lpthread
@@ -269,7 +280,7 @@ install:
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)"
-	if test ! -f "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; then $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(CONFIG_DIR)"; else echo "$(DESTDIR)$(CONFIG_DIR)/bar.cfg NOT installed - file already exists!"; fi
+	if test ! -f "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; then $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(CONFIG_DIR)"; else echo "$(DESTDIR)$(CONFIG_DIR)/bar.cfg NOT installed - file already exists\!"; fi
 	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)/jobs"
 	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)/certs"
@@ -277,6 +288,7 @@ install:
 	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(TLS_DIR)/certs"
 	$(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"
 	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(TLS_DIR)/private"
+	if test ! -f /etc/init.d/barserver; then $(INSTALL) -m 600 scripts/barserver /etc/init.d/barserver; else echo "/etc/init.d/barserver NOT installed - file already exists\!"; fi
 	$(MAKE) -C tcl/scanx install
 	$(MAKE) -C tcl/mclistbox install
 
@@ -288,6 +300,7 @@ uninstall:
           $(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-ca.pem"; \
           $(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-server-cert.pem"; \
           $(RMF) "$(DESTDIR)$(TLS_DIR)/private/bar-server-key.pem"; \
+          $(RMF) "/etc/init.d/barserver"; \
         fi
 
 # run server
@@ -308,37 +321,64 @@ barserver_ssl: bar $(TLS_FILES)
 # do test
 .PHONY: test test1 test2 test3 test4 test_all
 test:
-	@$(MAKE) QUIET=1 -s test1 test2 test3 test4 test_all
+	@$(MAKE) QUIET=1 -s test1 test2 test3 test4 test5 test_all
 
 test1: bar
 	@$(ECHO_NO_LF) "Test 1: basic..."
-	$(MAKE) BAR_FILE="test" OPTIONS="--compress-algorithm=none --crypt-algorithm=none" standard_test
+	$(MAKE) \
+          BAR_FILE="test" \
+          OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
+          standard_test
 	@$(ECHO) "ok"
 
 test2 test_compress: bar
 	@$(ECHO_NO_LF) "Test 2: compress..."
 	for compress in $(COMPRESS_NAMES); do \
-          $(MAKE) BAR_FILE="test" OPTIONS="--compress-algorithm=$$compress" standard_test; \
+          $(MAKE) \
+            BAR_FILE="test" \
+            OPTIONS="--compress-algorithm=$$compress" \
+            standard_test; \
         done
 	@$(ECHO) "ok"
 
 test3 test_crypt: bar
 	@$(ECHO_NO_LF) "Test 3: crypt..."
 	for crypt in $(CRYPT_NAMES); do \
-          $(MAKE) BAR_FILE="test-###" OPTIONS="--crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" standard_test; \
+          $(MAKE) \
+            BAR_FILE="test-###" \
+            OPTIONS="--crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
+            standard_test; \
         done
 	@$(ECHO) "ok"
 
-test4 test_split: bar
+test4 test_asymmetric_crypt: bar
+	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
+	$(RM) test/key.*; SSH_ASKPASS= ./bar --generate-keys test/key < /dev/null
+	for crypt in $(CRYPT_NAMES); do \
+          $(MAKE) \
+            BAR_FILE="test-###" \
+            OPTIONS="--crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private" \
+            standard_test; \
+        done
+	@$(ECHO) "ok"
+
+test5 test_split: bar
 	@$(ECHO_NO_LF) "Test 4: split..."
-	$(MAKE) BAR_FILE="test-###" OPTIONS="-s 100000" standard_test
+	$(MAKE) \
+          BAR_FILE="test-###" \
+          OPTIONS="-s 100000" \
+          standard_test
 	@$(ECHO) "ok"
 
 test_all: bar
 	@$(ECHO_NO_LF) "Test all..."
+	@$(RM) test/key.*; SSH_ASKPASS= ./bar --generate-keys test/key < /dev/null
 	for compress in $(COMPRESS_NAMES); do \
           for crypt in $(CRYPT_NAMES); do \
-            $(MAKE) BAR_FILE=test-### OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) -s 100000" standard_test; \
+            $(MAKE) \
+              BAR_FILE=test-### \
+              OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private -s 100000" \
+              standard_test; \
             rc=$$?; \
             if test $$rc -ne 0; then \
               exit 1; \
@@ -471,6 +511,9 @@ $(DISTRIBUTION_NAME).tar.bz2:
 	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/ssl
 	$(INSTALL) ssl/*.tmpl $(DISTRIBUTION_NAME)/ssl
+	#
+	$(INSTALL) -d $(DISTRIBUTION_NAME)/scripts
+	$(INSTALL) $(SCRIPTS) $(DISTRIBUTION_NAME)/scripts
 	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/tcl/scanx
 	$(INSTALL) tcl/scanx/*.in tcl/scanx/*.m4 tcl/scanx/*.c tcl/scanx/*.tcl tcl/scanx/configure tcl/scanx/install-sh $(DISTRIBUTION_NAME)/tcl/scanx
