@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/network.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -814,10 +814,10 @@ Errors Network_accept(SocketHandle             *socketHandle,
         }
 
         gnutls_certificate_server_set_request(socketHandle->gnuTLS.session,GNUTLS_CERT_REQUEST);
-      //  gnutls_certificate_server_set_request(socketHandle->gnuTLS.session,GNUTLS_CERT_REQUIRE);
+//        gnutls_certificate_server_set_request(socketHandle->gnuTLS.session,GNUTLS_CERT_REQUIRE);
 
         gnutls_dh_set_prime_bits(socketHandle->gnuTLS.session,DH_BITS);
-        gnutls_transport_set_ptr(socketHandle->gnuTLS.session,(gnutls_transport_ptr_t)socketHandle->handle);
+        gnutls_transport_set_ptr(socketHandle->gnuTLS.session,(gnutls_transport_ptr_t)(long)socketHandle->handle);
 
         /* do handshake */
         result = gnutls_handshake(socketHandle->gnuTLS.session);

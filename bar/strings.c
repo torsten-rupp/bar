@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.33 $
+* $Revision: 1.34 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -505,7 +505,7 @@ LOCAL void formatString(struct __String *string,
           {
             case FORMAT_LENGTH_TYPE_INTEGER:
               {
-                data.ui = va_arg(arguments,int);
+                data.ui = va_arg(arguments,unsigned int);
                 length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ui);
                 if (length < sizeof(buffer))
                 {
@@ -522,7 +522,7 @@ LOCAL void formatString(struct __String *string,
               break;
             case FORMAT_LENGTH_TYPE_LONG:
               {
-                data.ul = va_arg(arguments,long);
+                data.ul = va_arg(arguments,unsigned long);
                 length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ul);
                 if (length < sizeof(buffer))
                 {
@@ -540,7 +540,7 @@ LOCAL void formatString(struct __String *string,
             case FORMAT_LENGTH_TYPE_LONGLONG:
               {
                 #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
-                  data.ull = va_arg(arguments,long long);
+                  data.ull = va_arg(arguments,unsigned long long);
                   length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ull);
                   if (length < sizeof(buffer))
                   {
@@ -684,33 +684,6 @@ LOCAL void formatString(struct __String *string,
           break;
 #if 0
 still not implemented
-        case 'U':
-          /* UTF8 string (as reference+index) */
-          {
-            jamaica_ref   stringReference;
-            jamaica_int32 stringIndex;
-            jamaica_int32 n;
-            jamaica_int32 i;
-
-            stringReference = va_arg(arguments,jamaica_ref);
-            stringIndex     = va_arg(arguments,jamaica_int32);
-
-            bufferCount = 0;
-            if (vm != NULL)
-            {
-              n = utf8String_Length(vm,stringReference,stringIndex);
-              for (i=0;i<n;i++)
-              {
-                OUTPUT_CHAR(buffer,bufferCount,(char)utf8String_CharAt(vm,stringReference,stringIndex,i));
-              }
-            }
-            else
-            {
-              bufferCount=TARGET_NATIVE_MISC_FORMAT_STRING2(buffer,sizeof(buffer),"%p:%ld",stringReference,stringIndex);
-              assert(bufferCount<sizeof(buffer));
-            }
-          }
-          break;
         case 'b':
           /* binaray value */
           switch (formatToken.lengthType)
@@ -742,13 +715,13 @@ still not implemented
               break;
             #ifndef NDEBUG
               default:
-                JAMAICA_HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
                 break; /* not reached */
             #endif /* NDEBUG */
           }
           bufferCount = 0;
           FLUSH_OUTPUT();
-JAMAICA_HALT_NOT_YET_IMPLEMENTED();
+HALT_NOT_YET_IMPLEMENTED();
           break;
 #endif /* 0 */
         case 'y':
@@ -1195,33 +1168,6 @@ LOCAL bool parseString(const struct __String *string,
           break;
 #if 0
 still not implemented
-        case 'U':
-          /* UTF8 string (as reference+index) */
-          {
-            jamaica_ref   stringReference;
-            jamaica_int32 stringIndex;
-            jamaica_int32 n;
-            jamaica_int32 i;
-
-            stringReference = va_arg(arguments,jamaica_ref);
-            stringIndex     = va_arg(arguments,jamaica_int32);
-
-            bufferCount = 0;
-            if (vm != NULL)
-            {
-              n = utf8String_Length(vm,stringReference,stringIndex);
-              for (i=0;i<n;i++)
-              {
-                OUTPUT_CHAR(buffer,bufferCount,(char)utf8String_CharAt(vm,stringReference,stringIndex,i));
-              }
-            }
-            else
-            {
-              bufferCount=TARGET_NATIVE_MISC_FORMAT_STRING2(buffer,sizeof(buffer),"%p:%ld",stringReference,stringIndex);
-              assert(bufferCount<sizeof(buffer));
-            }
-          }
-          break;
         case 'b':
           /* binaray value */
           switch (formatToken.lengthType)
@@ -1253,13 +1199,13 @@ still not implemented
               break;
             #ifndef NDEBUG
               default:
-                JAMAICA_HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
                 break; /* not reached */
             #endif /* NDEBUG */
           }
           bufferCount = 0;
           FLUSH_OUTPUT();
-JAMAICA_HALT_NOT_YET_IMPLEMENTED();
+HALT_NOT_YET_IMPLEMENTED();
           break;
 #endif /* 0 */
         case 'y':
@@ -3128,6 +3074,7 @@ bool String_match(const String string, ulong index, const char *pattern, String 
       z++;
     }
     while (subPattern != NULL);
+    va_end(arguments);
   }
 
   /* free resources */
