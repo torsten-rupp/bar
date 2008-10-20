@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile,v $
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -16,9 +16,9 @@ JAVA        = java
 JAVA_FLAGS  = -enableassertions
 
 JAVAC       = javac
-JAVAC_FLAGS =
+JAVAC_FLAGS = -g
 
-CLASSPATH = .:/usr/local/swt/swt.jar
+CLASSPATH = classes:/usr/local/swt/swt.jar
 
 #---------------------------------- commands----------------------------------
 
@@ -40,14 +40,17 @@ TAR        = tar
 
 #---------------------------------- rules ------------------------------------
 
-%.class:%.java
-	$(JAVAC) $(JAVAC_FLAGS) -classpath $(CLASSPATH) -d . $*.java
+classes/%.class:%.java
+	$(INSTALL) -d classes
+	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) *.java
 
 #--------------------------------- objects -----------------------------------
 
 SOURCES        = BARControl.java \
+                 StringParser.java \
 
-OBJECTS        = BARControl.class
+OBJECTS        = classes/BARControl.class \
+                 classes/StringParser.class \
 
 TARGETS        = barcontrol \
 
@@ -58,6 +61,7 @@ all: $(TARGETS)
 
 clean:
 	$(RMF) $(OBJECTS)
+	$(RMF) classes/*.class
 
 distclean: clean
 
@@ -65,7 +69,7 @@ distclean: clean
 barcontrol: $(OBJECTS)
 
 # run
-run: BARControl.class
+run: $(OBJECTS)
 	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl
 
 # end of file

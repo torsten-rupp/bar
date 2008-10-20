@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/BARControl.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents:
 * Systems :
@@ -9,23 +9,26 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.lang.Double;
+import java.lang.Integer;
 import java.lang.Long;
 import java.lang.String;
 import java.lang.System;
-import java.util.LinkedList;
-import java.util.ArrayList;
-
 import java.net.Socket;
-import javax.net.ssl.SSLSocketFactory;
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedList;
 import javax.net.ssl.SSLSocket;
-import java.io.InputStreamReader;
-import java.io.InputStream;
-import java.io.BufferedReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.BufferedWriter;
-import java.io.PrintWriter;
-import java.io.IOException;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -33,6 +36,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Widget;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -58,6 +62,78 @@ enum BARVariableTypes
   DOUBLE,
   STRING,
 };
+
+class BARVariable
+{
+  private BARVariableTypes type;
+  private long             n;
+  private double           d;
+  private String           s;
+
+  BARVariable(long n)
+  {
+    this.type = BARVariableTypes.LONG;
+    this.n    = n;
+  }
+  BARVariable(double d)
+  {
+    this.type = BARVariableTypes.DOUBLE;
+    this.d    = d;
+  }
+  BARVariable(String s)
+  {
+    this.type = BARVariableTypes.STRING;
+    this.s    = s;
+  }
+
+  BARVariableTypes getType()
+  {
+    return type;
+  }
+
+  long getLong()
+  {
+    assert type == BARVariableTypes.LONG;
+
+    return n;
+  }
+
+  double getDouble()
+  {
+    assert type == BARVariableTypes.DOUBLE;
+
+    return d;
+  }
+
+  String getString()
+  {
+    assert type == BARVariableTypes.STRING;
+
+    return s;
+  }
+
+  void set(long n)
+  {
+    assert type == BARVariableTypes.LONG;
+
+    this.n = n;
+    Widgets.modified(this);
+  }
+  void set(double d)
+  {
+    assert type == BARVariableTypes.DOUBLE;
+
+    this.d = d;
+    Widgets.modified(this);
+  }
+  void set(String s)
+  {
+    assert type == BARVariableTypes.STRING;
+
+    this.s = s;
+    Widgets.modified(this);
+  }
+}
 
 class BARServer
 {
@@ -146,20 +222,19 @@ System.err.println("BARControl.java"+", "+682+": "+sessionId);
     // authorize
     try
     {
-      String line;
-
       byte authorizeData[] = new byte[sessionId.length];
       for (int z = 0; z < sessionId.length; z++)
       {
         authorizeData[z] = (byte)(((z < serverPassword.length())?(int)serverPassword.charAt(z):0)^(int)sessionId[z]);
       }
       commandId++;
-      line = Long.toString(commandId)+" AUTHORIZE "+encodeHex(authorizeData);
-      output.println(line);
+      String command = Long.toString(commandId)+" AUTHORIZE "+encodeHex(authorizeData);
+      output.println(command);
       output.flush();
+System.err.println("BARControl.java"+", "+230+": auto command "+command);
 
-      line = input.readLine();
-      String data[] = line.split(" ",4);
+      String result = input.readLine();
+      String data[] = result.split(" ",4);
       assert data.length >= 3;
       if (   (Integer.parseInt(data[0]) != commandId)
           || (Integer.parseInt(data[1]) != 1)
@@ -209,7 +284,7 @@ System.err.println("BARControl.java"+", "+682+": "+sessionId);
     {
       while (!endFlag && (line = input.readLine()) != null)
       {
-  System.err.println("BARControl.java"+", "+701+": "+line);
+//  System.err.println("BARControl.java"+", "+701+": "+line);
 
         String data[] = line.split(" ",4);
         assert data.length >= 3;
@@ -234,73 +309,6 @@ System.err.println("BARControl.java"+", "+682+": "+sessionId);
     }
 
     return errorCode;
-  }
-}
-
-class BARVariable
-{
-  private BARVariableTypes type;
-  private long             n;
-  private double           d;
-  private String           s;
-
-  BARVariable(long n)
-  {
-    this.type = BARVariableTypes.LONG;
-    this.n    = n;
-  }
-  BARVariable(double d)
-  {
-    this.type = BARVariableTypes.DOUBLE;
-    this.d    = d;
-  }
-  BARVariable(String s)
-  {
-    this.type = BARVariableTypes.STRING;
-    this.s    = s;
-  }
-
-  long getLong()
-  {
-    assert type == BARVariableTypes.LONG;
-
-    return n;
-  }
-
-  double getDouble()
-  {
-    assert type == BARVariableTypes.DOUBLE;
-
-    return d;
-  }
-
-  String getString()
-  {
-    assert type == BARVariableTypes.STRING;
-
-    return s;
-  }
-
-  void set(long n)
-  {
-    assert type == BARVariableTypes.LONG;
-
-    this.n = n;
-    Widgets.modified(this);
-  }
-  void set(double d)
-  {
-    assert type == BARVariableTypes.DOUBLE;
-
-    this.d = d;
-    Widgets.modified(this);
-  }
-  void set(String s)
-  {
-    assert type == BARVariableTypes.STRING;
-
-    this.s = s;
-    Widgets.modified(this);
   }
 }
 
@@ -579,11 +587,13 @@ class BARTable
     Widgets.pack(table,Widgets.FILL|Widgets.EXPAND,0);
   }
 
-  void addColumn(String title)
+  void addColumn(String title, int style, int width, boolean resizable)
   {
-    TableColumn tableColumn = new TableColumn(table,SWT.NONE);
+    TableColumn tableColumn = new TableColumn(table,style);
     tableColumn.setText(title);
-    tableColumn.pack();
+    tableColumn.setWidth(width);
+    tableColumn.setResizable(resizable);
+    if (width <= 0) tableColumn.pack();
   }
 }
 
@@ -633,6 +643,8 @@ class BARTab
 
 class BARTabStatus extends BARTab
 {
+  BARTable    list;
+
   BARVariable doneFiles    = new BARVariable(0);
   BARVariable storedFiles  = new BARVariable(0);
   BARVariable skippedFiles = new BARVariable(0);
@@ -644,20 +656,20 @@ class BARTabStatus extends BARTab
   {
     super(tabFolder,"Status",1);
 
-    BARTable     list;
     BARGroup     selected;
     BARComposite composite;
     Object       widget;
 
     list = Widgets.addTable(tab,0,null);
-    list.addColumn("Name");
-    list.addColumn("State");
-    list.addColumn("Type");
-    list.addColumn("Part size");
-    list.addColumn("Compress");
-    list.addColumn("Crypt");
-    list.addColumn("Last executed");
-    list.addColumn("Estimated time");
+    list.addColumn("#",             SWT.RIGHT, 30,false);
+    list.addColumn("Name",          SWT.LEFT, 100,true );
+    list.addColumn("State",         SWT.LEFT,  60,true );
+    list.addColumn("Type",          SWT.LEFT,   0,true );
+    list.addColumn("Part size",     SWT.RIGHT,  0,true );
+    list.addColumn("Compress",      SWT.LEFT,   0,true );
+    list.addColumn("Crypt",         SWT.LEFT,  80,true );
+    list.addColumn("Last executed", SWT.LEFT, 180,true );
+    list.addColumn("Estimated time",SWT.LEFT, 120,true );
 
     selected = Widgets.addGroup(tab,0,"Selected ''",7,Widgets.FILL_X|Widgets.EXPAND_X);
     Widgets.addLabel(selected,0,"Done:");
@@ -728,14 +740,99 @@ class BARTabStatus extends BARTab
     Widgets.addButton(composite,0,"Volume",null);
   }
 
+  private int getTableItemIndex(TableItem tableItems[], int id)
+  {
+    for (int z = 0; z < tableItems.length; z++)
+    {
+      if ((Integer)tableItems[z].getData() == id) return z;
+    }
+
+    return -1;
+  }
+
+  private String formatByteSize(long n)
+  {
+    if      (n > 1024*1024*1024) return String.format("%.1fG",(double)n/(1024*1024*1024));
+    else if (n >      1024*1024) return String.format("%.1fM",(double)n/(     1024*1024));
+    else if (n >           1024) return String.format("%.1fK",(double)n/(          1024));
+    else                         return String.format("%d"   ,n                         );
+  }
+
+  private void updateJobList(BARServer barServer)
+  {
+    if (!list.table.isDisposed())
+    {
+      // get job list
+      ArrayList<String> result = new ArrayList<String>();
+      int errorCode = barServer.executeCommand("JOB_LIST",result);
+
+      // update job list
+      TableItem tableItems[] = list.table.getItems();
+      boolean tableItemFlags[] = new boolean[tableItems.length];
+      for (String line : result)
+      {
+        Object data[] = new Object[10];
+        if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+        {
+//  System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[1]);
+          int    id                   = (Integer)data[0];
+          String name                 = (String )data[1];
+          String state                = (String )data[2];
+          String type                 = (String )data[3];
+          int    archivePartSize      = (Integer)data[4];
+          String compressAlgorithm    = (String )data[5];
+          String cryptAlgorithm       = (String )data[6];
+          String cryptType            = (String )data[7];
+          long   lastExecutedDateTime = (Long   )data[8];
+          long   estimatedRestTime    = (Long   )data[9];
+
+          long   estimatedRestDays    = estimatedRestTime/(24*60*60);
+          long   estimatedRestHours   = estimatedRestTime%(24*60*60)/(60*60);
+          long   estimatedRestMinutes = estimatedRestTime%(60*60   )/(60   );
+          long   estimatedRestSeconds = estimatedRestTime%(60      );
+
+          /* get/create table item */
+          int index = getTableItemIndex(tableItems,id);
+          TableItem tableItem;
+          if (index >= 0)
+          {
+            tableItem = tableItems[index];
+            tableItemFlags[index] = true;
+          }
+          else
+          {
+            tableItem = new TableItem(list.table,SWT.NONE);
+          }
+
+          /* init table item */
+          tableItem.setData(id);
+          tableItem.setText(0,Integer.toString(id));
+          tableItem.setText(1,name);
+          tableItem.setText(2,state);
+          tableItem.setText(3,type);
+          tableItem.setText(4,formatByteSize(archivePartSize));
+          tableItem.setText(5,compressAlgorithm);
+          tableItem.setText(5,cryptAlgorithm+(cryptType.equals("ASYMMETRIC")?"*":""));
+          tableItem.setText(7,DateFormat.getDateTimeInstance().format(new Date(lastExecutedDateTime*1000)));
+          tableItem.setText(8,String.format("%2d days %02d:%02d:%02d",estimatedRestDays,estimatedRestHours,estimatedRestMinutes,estimatedRestSeconds));
+        }
+      }
+      for (int z = 0; z < tableItems.length; z++)
+      {
+        if (!tableItemFlags[z]) list.table.remove(z);
+      }
+    }
+  }
+
+  private void updateJobInfo(BARServer barServer)
+  {
+  }
+
   void update(BARServer barServer)
   {
     // update job list
-    ArrayList<String> result = new ArrayList<String>();
-    int errorCode = barServer.executeCommand("JOB_LIST",result);
-System.err.println("BARControl.java"+", "+822+": "+errorCode+": "+result.toString());
-
-    // update selected job info
+    updateJobList(barServer);
+    updateJobInfo(barServer);
   }
 }
 
@@ -754,7 +851,13 @@ class BARTabStatusUpdate extends Thread
   {
     for (;;)
     {
-      barTabStatus.update(barServer);
+      barTabStatus.tab.composite.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          barTabStatus.update(barServer);
+        }
+      });
 
       try { Thread.sleep(1000); } catch (InterruptedException exception) {};
     }
@@ -850,7 +953,7 @@ barTabStatus.storedFiles.set(1);
     new BARTabStatusUpdate(barServer,barTabStatus).start();
 
     // set window size, manage window
-    shell.setSize(800,600);
+    shell.setSize(800,800);
     shell.open();
 
     // SWT event loop
