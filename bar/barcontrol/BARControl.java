@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/BARControl.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents:
 * Systems :
@@ -672,6 +672,10 @@ class BARTabStatus
   Composite   tab;
   Table       jobList;
   Group       selectedJob;
+  Button      buttonStart;
+  Button      buttonAbort;
+  Button      buttonPause;
+  Button      buttonVolume;
 
   BARVariable doneFiles             = new BARVariable(0);
   BARVariable doneBytes             = new BARVariable(0);
@@ -700,7 +704,42 @@ class BARTabStatus
 
   int         selectedJobId         = 0;
 
-  BARTabStatus(TabFolder tabFolder)
+  class TabStatusUpdateThread extends Thread
+  {
+    private BARServer    barServer;
+    private BARTabStatus barTabStatus;
+
+    TabStatusUpdateThread(BARServer barServer, BARTabStatus barTabStatus)
+    {
+      this.barServer    = barServer;
+      this.barTabStatus = barTabStatus;
+    }
+
+    public void run()
+    {
+      for (;;)
+      {
+        try
+        {
+          barTabStatus.tab.getDisplay().syncExec(new Runnable()
+          {
+            public void run()
+            {
+              barTabStatus.update(barServer);
+            }
+          });
+        }
+        catch (org.eclipse.swt.SWTException exception)
+        {
+          // ignore SWT exceptions
+        }
+
+        try { Thread.sleep(1000); } catch (InterruptedException exception) {};
+      }
+    }
+  }
+
+  BARTabStatus(BARServer barServer, TabFolder tabFolder)
   {
     Group     group;
     Composite composite;
@@ -727,12 +766,15 @@ class BARTabStatus
         BARTabStatus barTabStatus = (BARTabStatus)event.widget.getData();
 
         barTabStatus.selectedJobId = (Integer)event.item.getData();
-System.err.println("BARControl.java"+", "+692+": selectedJobId="+barTabStatus.selectedJobId);
 
         TableItem tableItems[] = jobList.getItems();
-System.err.println("BARControl.java"+", "+728+": "+tableItems[barTabStatus.selectedJobId]);
         int index = getTableItemIndex(tableItems,barTabStatus.selectedJobId);
         barTabStatus.selectedJob.setText("Selected '"+tableItems[index].getText(1)+"'");
+
+        barTabStatus.buttonStart.setEnabled(true);
+//        barTabStatus.buttonAbort.setEnabled(true);
+//        barTabStatus.buttonPause.setEnabled(true);
+//        barTabStatus.buttonVolume.setEnabled(true);
       }
     });
     Widgets.layout(jobList,0,0,TableLayoutData.FILL|TableLayoutData.EXPAND);
@@ -1016,14 +1058,18 @@ System.err.println("BARControl.java"+", "+728+": "+tableItems[barTabStatus.selec
     // buttons
     composite = Widgets.newComposite(tab);
     Widgets.layout(composite,2,0,TableLayoutData.FILL_X|TableLayoutData.EXPAND_X|TableLayoutData.CENTER_Y);
-    widget = Widgets.newButton(composite,null,"Start");
-    Widgets.layout(widget,0,0,TableLayoutData.DEFAULT);
-    widget = Widgets.newButton(composite,null,"Abort");
-    Widgets.layout(widget,0,1,TableLayoutData.DEFAULT);
-    widget = Widgets.newButton(composite,null,"Pause");
-    Widgets.layout(widget,0,2,TableLayoutData.DEFAULT);
-    widget = Widgets.newButton(composite,null,"Volume");
-    Widgets.layout(widget,0,3,TableLayoutData.DEFAULT);
+    buttonStart = Widgets.newButton(composite,null,"Start");
+    Widgets.layout(buttonStart,0,0,TableLayoutData.DEFAULT);
+    buttonStart.setEnabled(false);
+    buttonAbort = Widgets.newButton(composite,null,"Abort");
+    Widgets.layout(buttonAbort,0,1,TableLayoutData.DEFAULT);
+    buttonAbort.setEnabled(false);
+    buttonPause = Widgets.newButton(composite,null,"Pause");
+    Widgets.layout(buttonPause,0,2,TableLayoutData.DEFAULT);
+    buttonPause.setEnabled(false);
+    buttonVolume = Widgets.newButton(composite,null,"Volume");
+    Widgets.layout(buttonVolume,0,3,TableLayoutData.DEFAULT);
+    buttonVolume.setEnabled(false);
     widget = Widgets.newButton(composite,null,"Quit");
     Widgets.layout(widget,0,4,TableLayoutData.RIGHT|TableLayoutData.EXPAND_X|TableLayoutData.CENTER_Y);
     widget.addListener(SWT.Selection,new Listener()
@@ -1033,6 +1079,13 @@ System.err.println("BARControl.java"+", "+728+": "+tableItems[barTabStatus.selec
         shell.close();
       }
     });
+
+    // start status update thread
+if (true) {
+    TabStatusUpdateThread tabStatusUpdateThread = new TabStatusUpdateThread(barServer,this);
+    tabStatusUpdateThread.setDaemon(true);
+    tabStatusUpdateThread.start();
+}
   }
 
   private int getTableItemIndex(TableItem tableItems[], int id)
@@ -1189,7 +1242,6 @@ System.err.println("BARControl.java"+", "+891+": result="+result[0]);
       */
       if (StringParser.parse(result[0],"%S %S %ld %ld %ld %ld %ld %ld %ld %ld %f %f %f %ld %f %S %ld %ld %S %ld %ld %ld %f %d",data,StringParser.QUOTE_CHARS))
       {
-System.err.println("BARControl.java"+", "+924+": "+data[19]);
          doneFiles.set            ((Long  )data[ 2]);
          doneBytes.set            ((Long  )data[ 3]);
          storedBytes.set          ((Long  )data[20]);
@@ -1227,88 +1279,24 @@ System.err.println("BARControl.java"+", "+924+": "+data[19]);
   }
 }
 
-class TabStatusUpdateThread extends Thread
+class BARTabJobs
 {
-  private BARServer    barServer;
-  private BARTabStatus barTabStatus;
+  final Shell shell;
+  Composite   tab;
 
-  TabStatusUpdateThread(BARServer barServer, BARTabStatus barTabStatus)
+  BARTabJobs(BARServer barServer, TabFolder tabFolder)
   {
-    this.barServer    = barServer;
-    this.barTabStatus = barTabStatus;
-  }
+    // get shell
+    shell = tabFolder.getShell();
 
-  public void run()
-  {
-    for (;;)
-    {
-      try
-      {
-        barTabStatus.tab.getDisplay().syncExec(new Runnable()
-        {
-          public void run()
-          {
-            barTabStatus.update(barServer);
-          }
-        });
-      }
-      catch (org.eclipse.swt.SWTException exception)
-      {
-        // ignore SWT exceptions
-      }
-
-      try { Thread.sleep(1000); } catch (InterruptedException exception) {};
-    }
-  }
-}
-
-class BARTabJobs // extends BARTab
-{
-  BARTabJobs(TabFolder tabFolder)
-  {
-//    super(tabFolder,"Jobs",2);
-
-/*
-    Widgets.addButton(tab,0,null,"0",new SelectionAdapter()
-    {
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-System.out.println("x0");
-      }
-    });
-    Widgets.addButton(tab,0,null,"1",null);
-    Widgets.addButton(tab,0,null,"2",new SelectionAdapter()
-    {
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-System.out.println("x2");
-      }
-    });
-    Widgets.addButton(tab,0,null,"3",null);
-    widget = Widgets.addLabel(tab,0,"check");
-    Widgets.pack(widget,Widgets.CENTER_Y,0);
-    Widgets.addCheckbox(tab,0,null,"4",null);
-    widget = Widgets.addLabel(tab,0,"text");
-    Widgets.pack(widget,Widgets.CENTER_Y,0);
-    Widgets.addText(tab,0,null,null);
-
-    Widgets.addButton(tab,0,null,"0",new SelectionAdapter()
-    {
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-System.out.println("x0");
-      }
-    });
-    Widgets.addButton(tab,0,null,"1",null);
-    Widgets.addButton(tab,0,null,"2",new SelectionAdapter()
-    {
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-System.out.println("x2");
-      }
-    });
-    Widgets.addButton(tab,0,null,"3",null);
-*/
+    // create tab
+    tab = Widgets.newTab(tabFolder,"Jobs");
+    tab.setLayout(new TableLayout(new double[]{1.0,0.0,0.0},
+                                  null,
+                                  2
+                                 )
+                );
+    Widgets.layout(tab,0,0,TableLayoutData.FILL|TableLayoutData.EXPAND);
   }
 }
 
@@ -1347,21 +1335,13 @@ String password = "y7G7EGj2";
     TabFolder tabFolder = new TabFolder(sashForm,SWT.NONE);
     tabFolder.setLayoutData(new TableLayoutData(1,0,TableLayoutData.FILL|TableLayoutData.EXPAND));
 
-    BARTabStatus barTabStatus = new BARTabStatus(tabFolder);
-    BARTabJobs   barTabJobs   = new BARTabJobs  (tabFolder);
+    BARTabStatus barTabStatus = new BARTabStatus(barServer,tabFolder);
+    BARTabJobs   barTabJobs   = new BARTabJobs  (barServer,tabFolder);
 /*
 
 //barTabStatus.doneFiles.set(100000000);
 //barTabStatus.storedFiles.set(1);
 */
-
-if (true) {
-    // start status update thread
-    TabStatusUpdateThread tabStatusUpdateThread = new TabStatusUpdateThread(barServer,barTabStatus);
-    tabStatusUpdateThread.setDaemon(true);
-    tabStatusUpdateThread.start();
-}
-
     // set window size, manage window
     shell.setSize(800,600);
     shell.open();
