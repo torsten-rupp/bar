@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/StringParser.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -430,6 +430,7 @@ class StringParser
               /* get data */
               buffer = new StringBuffer();
               while (   (index < string.length())
+                     && (formatIndex < format.length())
                      && (formatToken.blankFlag || !Character.isSpaceChar((string.charAt(index))))
                      && (string.charAt(index) != format.charAt(formatIndex))
                     )
@@ -514,6 +515,7 @@ class StringParser
               /* get data */
               buffer = new StringBuffer();
               while (   (index < string.length())
+                     && (formatIndex < format.length())
                      && (formatToken.blankFlag || !Character.isSpaceChar(string.charAt(index)))
                      && (string.charAt(index) != format.charAt(formatIndex))
                     )

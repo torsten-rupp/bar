@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile,v $
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -48,9 +48,13 @@ classes/%.class:%.java
 
 SOURCES        = BARControl.java \
                  StringParser.java \
+                 TableLayout.java \
+                 TableLayoutData.java \
 
 OBJECTS        = classes/BARControl.class \
                  classes/StringParser.class \
+                 classes/TableLayout.class \
+                 classes/TableLayoutData.class \
 
 TARGETS        = barcontrol \
 
