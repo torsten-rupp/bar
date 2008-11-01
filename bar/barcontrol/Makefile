@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile,v $
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -40,7 +40,7 @@ TAR        = tar
 
 #---------------------------------- rules ------------------------------------
 
-classes/%.class:%.java
+classes/%.class:%.java Images.java
 	$(INSTALL) -d classes
 	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) *.java
 
@@ -50,11 +50,17 @@ SOURCES        = BARControl.java \
                  StringParser.java \
                  TableLayout.java \
                  TableLayoutData.java \
+                 \
+                 ImagesToClass.java \
 
 OBJECTS        = classes/BARControl.class \
                  classes/StringParser.class \
                  classes/TableLayout.class \
                  classes/TableLayoutData.class \
+                 \
+                 classes/ImagesToClass.class \
+                 \
+                 classes/Images.class \
 
 TARGETS        = barcontrol \
 
@@ -65,9 +71,15 @@ all: $(TARGETS)
 
 clean:
 	$(RMF) $(OBJECTS)
+	$(RMF) Images.java
 	$(RMF) classes/*.class
 
 distclean: clean
+
+# create images class
+Images.java: ImagesToClass.java $(wildcard images/*.gif)
+	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) ImagesToClass.java
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) ImagesToClass $(wildcard images/*.gif) > $@
 
 # create BARControl
 barcontrol: $(OBJECTS)

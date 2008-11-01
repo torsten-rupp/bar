@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.29 $
+# $Revision: 1.30 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -254,7 +254,7 @@ bar.jks: bar-key.pem
           -import \
           -trustcacerts \
           -noprompt \
-          -file bar-key.pem \
+          -file bar-ca.pem \
           -keystore $@
 
 # create destroyer (for testing only!)

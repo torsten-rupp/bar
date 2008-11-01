@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/StringParser.java,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -223,13 +223,16 @@ class StringParser
   private static char getQuoteChar(String string, int index, FormatToken formatToken, String stringQuotes)
   {
     char stringQuote = '\0';
-    if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string.charAt(index)))
+    if (index < string.length())
     {
-      stringQuote = formatToken.quoteChar;
-    }
-    if ((stringQuote == '\0') && (stringQuotes != null) && (stringQuotes.indexOf(string.charAt(index)) >= 0))
-    {
-      stringQuote = stringQuotes.charAt(stringQuotes.indexOf(string.charAt(index)));
+      if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string.charAt(index)))
+      {
+        stringQuote = formatToken.quoteChar;
+      }
+      if ((stringQuote == '\0') && (stringQuotes != null) && (stringQuotes.indexOf(string.charAt(index)) >= 0))
+      {
+        stringQuote = stringQuotes.charAt(stringQuotes.indexOf(string.charAt(index)));
+      }
     }
 
     return stringQuote;
@@ -515,9 +518,8 @@ class StringParser
               /* get data */
               buffer = new StringBuffer();
               while (   (index < string.length())
-                     && (formatIndex < format.length())
                      && (formatToken.blankFlag || !Character.isSpaceChar(string.charAt(index)))
-                     && (string.charAt(index) != format.charAt(formatIndex))
+                     && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
                 if (string.charAt(index) == '\\')
@@ -649,7 +651,7 @@ class StringParser
         }
         else
         {
-          if ((index > string.length()) || (string.charAt(index) != format.charAt(formatIndex)))
+          if ((index >= string.length()) || (string.charAt(index) != format.charAt(formatIndex)))
           {
             return false;
           }
@@ -665,6 +667,44 @@ class StringParser
   public static boolean parse(String string, String format, Object arguments[])
   {
     return parse(string,format,arguments,null);
+  }
+
+  public static String escape(String string)
+  {
+    StringBuffer buffer = new StringBuffer();
+
+    for (int index = 0; index < string.length(); index++)
+    {
+      char ch = string.charAt(index);
+
+      if      (ch == '\'')
+      {
+        buffer.append("\\");
+        buffer.append('\'');
+      }
+      else if (ch == '\\')
+      {
+        buffer.append("\\\\");
+      }
+      else
+      {
+        buffer.append(ch);
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  public static String unescape(String string)
+  {
+    if (string.startsWith("'") && string.endsWith("'"))
+    {
+      return string.substring(1,string.length()-2);
+    }
+    else
+    {
+      return string;
+    }
   }
 }
 
