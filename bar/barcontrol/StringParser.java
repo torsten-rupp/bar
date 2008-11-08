@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/StringParser.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -433,9 +433,8 @@ class StringParser
               /* get data */
               buffer = new StringBuffer();
               while (   (index < string.length())
-                     && (formatIndex < format.length())
                      && (formatToken.blankFlag || !Character.isSpaceChar((string.charAt(index))))
-                     && (string.charAt(index) != format.charAt(formatIndex))
+                     && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
                 if (string.charAt(index) == '\\')
@@ -500,7 +499,7 @@ class StringParser
                   }
                   else
                   {
-                    if (buffer.length() < (formatToken.width-1))
+                    if ((formatToken.width == 0) || (buffer.length() < (formatToken.width-1)))
                     {
                       buffer.append(string.charAt(index));
                     }
@@ -691,6 +690,7 @@ class StringParser
         buffer.append(ch);
       }
     }
+    if (buffer.length() == 0) buffer.append("''");
 
     return buffer.toString();
   }
@@ -699,7 +699,7 @@ class StringParser
   {
     if (string.startsWith("'") && string.endsWith("'"))
     {
-      return string.substring(1,string.length()-2);
+      return string.substring(1,string.length()-1);
     }
     else
     {
