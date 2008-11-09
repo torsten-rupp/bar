@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/BARControl.java,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents:
 * Systems :
@@ -39,20 +39,22 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.events.ModifyEvent;
-import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.events.VerifyListener;
+import org.eclipse.swt.graphics.FontMetrics;
+import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
-import org.eclipse.swt.graphics.GC;
-import org.eclipse.swt.graphics.FontMetrics;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
@@ -60,12 +62,16 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
 //import org.eclipse.swt.widgets.ProgressBar;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Table;
@@ -657,11 +663,40 @@ class Dialogs
     return open(parentShell,title,SWT.DEFAULT,SWT.DEFAULT);
   }
 
+  /** close a dialog
+   * @param dialog dialog shell
+   */
+  static void close(Shell dialog, Object returnValue)
+  {
+    dialog.setData(returnValue);
+    dialog.close();
+  }
+
+  /** close a dialog
+   * @param dialog dialog shell
+   */
+  static void close(Shell dialog)
+  {
+    close(dialog,null);
+  }
+
   /** run dialog
    * @param dialog dialog shell
    */
-  static void run(Shell dialog)
+  static Object run(Shell dialog)
   {
+    final Object[] result = new Object[1];
+
+    dialog.addListener(SWT.Close,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        Shell widget = (Shell)event.widget;
+
+        result[0] = widget.getData();
+      }
+    });
+
     dialog.pack();
     dialog.open();
     Display display = dialog.getParent().getDisplay();
@@ -669,6 +704,78 @@ class Dialogs
     {
       if (!display.readAndDispatch()) display.sleep();
     }
+
+    return result[0];
+  }
+
+  /** info dialog
+   * @param parentShell parent shell
+   * @param message info message
+   */
+  static void info(Shell parentShell, String title, Image image, String message)
+  {
+    TableLayout     tableLayout;
+    TableLayoutData tableLayoutData;
+    Composite       composite;
+    Label           label;
+    Button          button;
+
+    final Shell shell = open(parentShell,title,200,70);
+    shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+
+    /* message */
+    composite = new Composite(shell,SWT.NONE);
+    tableLayout = new TableLayout(null,new double[]{1,0},4);
+    composite.setLayout(tableLayout);
+    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+    {
+      label = new Label(composite,SWT.LEFT);
+      label.setImage(image);
+      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,0));
+
+      label = new Label(composite,SWT.LEFT|SWT.WRAP);
+      label.setText(message);
+      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0));
+    }
+
+    /* buttons */
+    composite = new Composite(shell,SWT.NONE);
+    composite.setLayout(new TableLayout());
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    {
+      button = new Button(composite,SWT.CENTER);
+      button.setText("Close");
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.DEFAULT|TableLayoutData.EXPAND_X));
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+
+          shell.close();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    run(shell);
+  }
+
+  /** info dialog
+   * @param parentShell parent shell
+   * @param message info message
+   */
+  static void info(Shell parentShell, String title, String message)
+  {
+    PaletteData paletteData = new PaletteData(0xFF0000,0x00FF00,0x0000FF);
+    ImageData imageData = new ImageData(Images.info.width,Images.info.height,Images.info.depth,paletteData,1,Images.info.data);
+    imageData.alphaData = Images.info.alphas;
+    imageData.alpha = -1;
+    Image image = new Image(parentShell.getDisplay(),imageData);
+
+    info(parentShell,title,image,message);
   }
 
   /** error dialog
@@ -714,7 +821,7 @@ class Dialogs
     {
       button = new Button(composite,SWT.CENTER);
       button.setText("Close");
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0));
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.DEFAULT|TableLayoutData.EXPAND_X));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -913,6 +1020,53 @@ class Dialogs
     run(shell);
 
     return result[0];
+  }
+
+  private static String file(Shell parentShell, int type, String title, String fileName, String[] fileExtensions)
+  {
+    FileDialog dialog = new FileDialog(parentShell,type);
+    dialog.setText(title);
+    if (fileName != null)
+    {
+      dialog.setFilterPath(new File(fileName).getParent());
+      dialog.setFileName(new File(fileName).getName());
+    }
+    dialog.setOverwrite(false);
+    if (fileExtensions != null)
+    {
+      assert (fileExtensions.length % 2) == 0;
+
+      String[] fileExtensionNames = new String[fileExtensions.length/2];
+      for (int z = 0; z < fileExtensions.length/2; z++)
+      {
+        fileExtensionNames[z] = fileExtensions[z*2+0]+" ("+fileExtensions[z*2+1]+")";
+      }
+      String[] fileExtensionPatterns = new String[(fileExtensions.length+1)/2];
+      for (int z = 0; z < fileExtensions.length/2; z++)
+      {
+        fileExtensionPatterns[z] = fileExtensions[z*2+1];
+      }
+      dialog.setFilterNames(fileExtensionNames);
+      dialog.setFilterExtensions(fileExtensionPatterns);
+    }
+
+    return dialog.open();  
+  }
+
+  static String fileOpen(Shell parentShell, String title, String fileName, String[] fileExtensions)
+  {
+    return file(parentShell,SWT.OPEN,title,fileName,fileExtensions);
+  }
+
+  static String fileSave(Shell parentShell, String title, String fileName, String[] fileExtensions)
+  {
+    return file(parentShell,SWT.SAVE,title,fileName,fileExtensions);
+  }
+
+  static String path(Shell parentShell, String title, String pathName)
+  {
+//    return file(parentShell,SWT.SAVE,title,fileName,fileExtensions);
+return null;
   }
 }
 
@@ -1162,6 +1316,33 @@ class Widgets
     return size;
   }
 
+  static String acceleratorToText(int accelerator)
+  {
+    StringBuffer text = new StringBuffer();
+
+    if (accelerator != 0)
+    {
+      if ((accelerator & SWT.MOD1) == SWT.CTRL) text.append("Ctrl+");
+      if ((accelerator & SWT.MOD2) == SWT.ALT ) text.append("Alt+");
+
+      if      ((accelerator & SWT.KEY_MASK) == SWT.F1 ) text.append("F1");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F2 ) text.append("F2");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F3 ) text.append("F3");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F4 ) text.append("F4");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F5 ) text.append("F5");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F6 ) text.append("F6");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F7 ) text.append("F7");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F8 ) text.append("F8");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F9 ) text.append("F9");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F10) text.append("F10");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F11) text.append("F11");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F12) text.append("F12");
+      else                                              text.append((char)(accelerator & SWT.KEY_MASK));
+    }
+
+    return text.toString();
+  }
+
   static void setVisible(Control control, boolean visibleFlag)
   {
     TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
@@ -1299,6 +1480,16 @@ class Widgets
     return combo;
   }
 
+  static Spinner newSpinner(Composite composite, Object data)
+  {
+    Spinner spinner;
+
+    spinner = new Spinner(composite,SWT.READ_ONLY);
+    spinner.setData(data);
+
+    return spinner;
+  }
+
   static Table newTable(Composite composite, Object data)
   {
     Table table;
@@ -1323,6 +1514,64 @@ class Widgets
     return tableColumn;
   }
 
+  /** sort table column
+   * @param table table
+   * @param tableColumn table column to sort by
+   * @param comparator table data comparator
+   */
+  static void sortTableColumn(Table table, TableColumn tableColumn, Comparator comparator)
+  {
+    TableItem[] tableItems = table.getItems();
+
+    /* get sorting direction */
+    int sortDirection = table.getSortDirection();
+    if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
+    if (table.getSortColumn() == tableColumn)
+    {
+      switch (sortDirection)
+      {
+        case SWT.UP:   sortDirection = SWT.DOWN; break;
+        case SWT.DOWN: sortDirection = SWT.UP;   break;
+      }
+    }
+
+    /* sort column */
+    for (int i = 1; i < tableItems.length; i++)
+    {
+      boolean sortedFlag = false;
+      for (int j = 0; (j < i) && !sortedFlag; j++)
+      {
+        switch (sortDirection)
+        {
+          case SWT.UP:   sortedFlag = (comparator.compare(tableItems[i].getData(),tableItems[j].getData()) < 0); break;
+          case SWT.DOWN: sortedFlag = (comparator.compare(tableItems[i].getData(),tableItems[j].getData()) > 0); break;
+        }
+        if (sortedFlag)
+        {
+          /* save data */
+          Object   data = tableItems[i].getData();
+          String[] texts = new String[table.getColumnCount()];
+          for (int z = 0; z < table.getColumnCount(); z++)
+          {
+            texts[z] = tableItems[i].getText(z);
+          }
+
+          /* discard item */
+          tableItems[i].dispose();
+
+          /* create new item */
+          TableItem tableItem = new TableItem(table,SWT.NONE,j);
+          tableItem.setData(data);
+          tableItem.setText(texts);
+
+          tableItems = table.getItems();
+        }
+      }
+    }
+    table.setSortColumn(tableColumn);
+    table.setSortDirection(sortDirection);
+  }
+
   static ProgressBar newProgressBar(Composite composite, Object variable)
   {
     ProgressBar progressBar;
@@ -1345,13 +1594,15 @@ class Widgets
     return tree;
   }
 
-  static void addTreeColumn(Tree tree, String title, int style, int width, boolean resizable)
+  static TreeColumn addTreeColumn(Tree tree, String title, int style, int width, boolean resizable)
   {
     TreeColumn treeColumn = new TreeColumn(tree,style);
     treeColumn.setText(title);
     treeColumn.setWidth(width);
     treeColumn.setResizable(resizable);
     if (width <= 0) treeColumn.pack();
+
+    return treeColumn;
   }
 
   static TreeItem addTreeItem(Tree tree, int index, Object data, boolean folderFlag)
@@ -1384,6 +1635,172 @@ class Widgets
   static TreeItem addTreeItem(TreeItem parentTreeItem, String name, Object data, boolean folderFlag)
   {
     return addTreeItem(parentTreeItem,0,data,folderFlag);
+  }
+
+/*
+static int rr = 0;
+static String indent(int n)
+{
+  String s="";
+
+  while (n>0) { s=s+"  "; n--; }
+  return s;
+}
+private static void printSubTree(int n, TreeItem parentTreeItem)
+{
+  System.out.println(indent(n)+parentTreeItem+" ("+parentTreeItem.hashCode()+") count="+parentTreeItem.getItemCount()+" expanded="+parentTreeItem.getExpanded());
+  for (TreeItem treeItem : parentTreeItem.getItems())
+  {
+    printSubTree(n+1,treeItem);
+  }
+}
+private static void printTree(Tree tree)
+{
+  for (TreeItem treeItem : tree.getItems())
+  {
+    printSubTree(0,treeItem);
+  }
+}
+*/
+
+  private static TreeItem recreateTreeItem(Tree tree, TreeItem parentTreeItem, TreeItem treeItem, int index)
+  {
+    /* save data */
+    Object   data = treeItem.getData();
+    String[] texts = new String[tree.getColumnCount()];
+    for (int z = 0; z < tree.getColumnCount(); z++)
+    {
+      texts[z] = treeItem.getText(z);
+    }
+    Image image = treeItem.getImage();
+
+    /* recreate item */
+    TreeItem newTreeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
+    newTreeItem.setData(data);
+    newTreeItem.setText(texts);
+    newTreeItem.setImage(image);
+    for (TreeItem subTreeItem : treeItem.getItems())
+    {
+      recreateTreeItem(tree,newTreeItem,subTreeItem);
+    }
+
+    /* discard old item */
+    treeItem.dispose();
+
+    return newTreeItem;
+  }
+
+  private static TreeItem recreateTreeItem(Tree tree, TreeItem parentTreeItem, TreeItem treeItem)
+  {
+    return recreateTreeItem(tree,parentTreeItem,treeItem,parentTreeItem.getItemCount());
+  }
+
+  private static void sortSubTreeColumn(Tree tree, TreeItem treeItem, int sortDirection, Comparator comparator)
+  {
+//rr++;
+
+//System.err.println(indent(rr)+"A "+treeItem+" "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
+    for (TreeItem subTreeItem : treeItem.getItems())
+    {
+      sortSubTreeColumn(tree,subTreeItem,sortDirection,comparator);
+    }
+//System.err.println(indent(rr)+"B "+treeItem+" ("+treeItem.hashCode()+") "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
+    
+    /* sort sub-tree */
+//boolean xx = treeItem.getExpanded();
+    TreeItem[] subTreeItems = treeItem.getItems();
+    for (int i = 0; i < subTreeItems.length; i++)
+    {     
+      boolean sortedFlag = false;
+      for (int j = 0; (j <= i) && !sortedFlag; j++)
+      {
+        switch (sortDirection)
+        {
+          case SWT.UP:   sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),treeItem.getItem(j).getData()) < 0); break;
+          case SWT.DOWN: sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),treeItem.getItem(j).getData()) > 0); break;
+        }
+        if (sortedFlag)
+        {
+          recreateTreeItem(tree,treeItem,subTreeItems[i],j);
+        }
+      }
+    }
+//treeItem.setExpanded(xx);
+
+//rr--;
+  }
+
+   private static void getExpandedDiretories(HashSet expandedDirectories, TreeItem treeItem)
+   {
+     if (treeItem.getExpanded()) expandedDirectories.add(treeItem.getData());
+     for (TreeItem subTreeItem : treeItem.getItems())
+     {
+       getExpandedDiretories(expandedDirectories,subTreeItem);
+     }
+   }  
+
+   private static void rexpandDiretories(HashSet expandedDirectories, TreeItem treeItem)
+   {
+     treeItem.setExpanded(expandedDirectories.contains(treeItem.getData()));
+     for (TreeItem subTreeItem : treeItem.getItems())
+     {
+       rexpandDiretories(expandedDirectories,subTreeItem);
+     }
+   }  
+
+  /** sort tree column
+   * @param tree tree
+   * @param tableColumn table column to sort by
+   * @param comparator table data comparator
+   */
+  static void sortTreeColumn(Tree tree, TreeColumn treeColumn, Comparator comparator)
+  {
+    TreeItem[] treeItems = tree.getItems();
+
+    /* get sorting direction */
+    int sortDirection = tree.getSortDirection();
+    if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
+    if (tree.getSortColumn() == treeColumn)
+    {
+      switch (sortDirection)
+      {
+        case SWT.UP:   sortDirection = SWT.DOWN; break;
+        case SWT.DOWN: sortDirection = SWT.UP;   break;
+      }
+    }
+
+    /* save expanded sub-trees.
+       Note: sub-tree cannot be expanded when either no children exist or the
+       parent is not expanded. Because for sort the tree entries they are copied
+       (recreated) the state of the expanded sub-trees are stored here and will
+       late be restored when the complete new tree is created.
+    */
+    HashSet expandedDirectories = new HashSet();
+    for (TreeItem treeItem : tree.getItems())
+    {
+      getExpandedDiretories(expandedDirectories,treeItem);
+    }
+//System.err.println("BARControl.java"+", "+1627+": "+expandedDirectories.toString());
+
+    /* sort column */
+//System.err.println("1 ---------------");
+//printTree(tree);
+    for (TreeItem treeItem : tree.getItems())
+    {
+      sortSubTreeColumn(tree,treeItem,sortDirection,comparator);
+    }
+
+    /* restore expanded sub-trees */
+    for (TreeItem treeItem : tree.getItems())
+    {
+      rexpandDiretories(expandedDirectories,treeItem);
+    }
+
+    /* set column sort indicators */
+    tree.setSortColumn(treeColumn);
+    tree.setSortDirection(sortDirection);
+//System.err.println("2 ---------------");
+//printTree(tree);
   }
 
 /*
@@ -1447,6 +1864,67 @@ class Widgets
     return composite;
   }
 
+  static void showTab(TabFolder tabFolder, Composite composite)
+  {
+    for (TabItem tabItem : tabFolder.getItems())
+    {
+      if (tabItem.getControl() == composite)
+      {
+        tabFolder.setSelection(tabItem);
+        break;
+      }
+    }
+  }
+
+  static Menu newMenuBar(Shell shell)
+  {
+    Menu menu = new Menu(shell,SWT.BAR);
+    shell.setMenuBar(menu);
+
+    return menu;
+  }
+
+  static Menu addMenu(Menu menu, String text)
+  {
+    MenuItem menuItem = new MenuItem(menu,SWT.CASCADE);
+    menuItem.setText(text);
+    Menu subMenu = new Menu(menu.getShell(),SWT.DROP_DOWN);
+    menuItem.setMenu(subMenu);
+
+    return subMenu;
+  }
+
+  static MenuItem addMenuItem(Menu menu, String text, int accelerator)
+  {
+    if (accelerator != 0)
+    {
+      char key = (char)(accelerator & SWT.KEY_MASK);
+      int index = text.indexOf(key);
+      if (index >= 0)
+      {
+        text = text.substring(0,index)+'&'+text.substring(index);
+      }
+      text = text+"\t"+acceleratorToText(accelerator);
+    }
+    MenuItem menuItem = new MenuItem(menu,SWT.DROP_DOWN);
+    menuItem.setText(text);
+    if (accelerator != 0) menuItem.setAccelerator(accelerator);
+
+    return menuItem;
+  }
+
+  static MenuItem addMenuItem(Menu menu, String text)
+  {
+    return addMenuItem(menu,text,0);
+  }
+
+  static MenuItem addMenuSeparator(Menu menu)
+  {
+    MenuItem menuItem = new MenuItem(menu,SWT.SEPARATOR);
+
+    return menuItem;
+  }
+
   //-----------------------------------------------------------------------
 
   static Composite newComposite(Composite composite, int style)
@@ -1492,6 +1970,33 @@ class Widgets
         widgetListener.modified();
       }
     }
+  }
+
+  static void notify(Control control, int type, Widget widget, Widget item)
+  {
+    if (control.isEnabled())
+    {
+      Event event = new Event();
+      event.widget = widget;
+      event.item   = item;
+      control.notifyListeners(type,event);
+System.err.println("BARControl.java"+", "+1923+": ");
+    }
+  }
+
+  static void notify(Control control, int type, Widget widget)
+  {
+    notify(control,type,widget,null);
+  }
+
+  static void notify(Control control, int type)
+  {
+    notify(control,type,control,null);
+  }
+
+  static void notify(Control control)
+  {
+    notify(control,SWT.Selection,control,null);
   }
 }
 
@@ -1569,6 +2074,166 @@ class TabStatus
     PAUSE,
   };
 
+  /** job data
+   */
+  class JobData
+  {
+    int    id;
+    String name;
+    String state;
+    String type;
+    long   archivePartSize;
+    String compressAlgorithm;
+    String cryptAlgorithm;
+    String cryptType;
+    long   lastExecutedDateTime;
+    long   estimatedRestTime;
+
+    JobData(int id, String name, String state, String type, long archivePartSize, String compressAlgorithm, String cryptAlgorithm, String cryptType, long lastExecutedDateTime, long estimtedRestTime)
+    {
+      this.id                   = id;
+      this.name                 = name;
+      this.state                = state;
+      this.type                 = type;
+      this.archivePartSize      = archivePartSize;
+      this.compressAlgorithm    = compressAlgorithm;
+      this.cryptAlgorithm       = cryptAlgorithm;
+      this.cryptType            = cryptType;
+      this.lastExecutedDateTime = lastExecutedDateTime;
+      this.estimatedRestTime    = estimatedRestTime;
+    }
+
+    int getId()
+    {
+      return id;
+    }
+
+    String getName()
+    {
+      return name;
+    }
+
+    String getState()
+    {
+      return state;
+    }
+
+    String getType()
+    {
+      return type;
+    }
+
+    long getArchivePartSize()
+    {
+      return archivePartSize;
+    }
+
+    String getCompressAlgorithm()
+    {
+      return compressAlgorithm;
+    }
+
+    String getCryptAlgorithm()
+    {
+      return cryptAlgorithm+(cryptType.equals("ASYMMETRIC")?"*":"");
+    }
+
+    String formatLastExecutedDateTime()
+    {
+      return DateFormat.getDateTimeInstance().format(new Date(lastExecutedDateTime*1000));
+    }
+
+    String formatEstimatedRestTime()
+    {
+      long   estimatedRestDays    = estimatedRestTime/(24*60*60);
+      long   estimatedRestHours   = estimatedRestTime%(24*60*60)/(60*60);
+      long   estimatedRestMinutes = estimatedRestTime%(60*60   )/(60   );
+      long   estimatedRestSeconds = estimatedRestTime%(60      );
+
+      return String.format("%2d days %02d:%02d:%02d",estimatedRestDays,estimatedRestHours,estimatedRestMinutes,estimatedRestSeconds);
+    }
+
+    public String toString()
+    {
+      return "Job {"+id+", "+name+", "+state+", "+type+"}";
+    }
+  };
+
+  /** job data comparator
+   */
+  class JobDataComparator implements Comparator<JobData>
+  {
+    /* Note: enum in inner classes are not possible in Java, thus use the old way... */
+    private final static int SORTMODE_NAME                   = 0;
+    private final static int SORTMODE_STATE                  = 1;
+    private final static int SORTMODE_TYPE                   = 2;
+    private final static int SORTMODE_PARTSIZE               = 3;
+    private final static int SORTMODE_COMPRESS               = 4;
+    private final static int SORTMODE_CRYPT                  = 5;
+    private final static int SORTMODE_LAST_EXECUTED_DATETIME = 6;
+    private final static int SORTMODE_ESTIMATED_TIME         = 7;
+
+    private int sortMode;
+
+    /** create job data comparator
+     * @param table job table
+     */
+    JobDataComparator(Table table)
+    {
+      TableColumn sortColumn = table.getSortColumn();
+
+      if      (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_STATE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_PARTSIZE;
+      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_COMPRESS;
+      else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_CRYPT;
+      else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
+      else if (table.getColumn(8) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
+      else                                       sortMode = SORTMODE_NAME;
+    }
+
+    /** compare job data
+     * @param jobData1, jobData2 file tree data to compare
+     * @return -1 iff jobData1 < jobData2,
+                0 iff jobData1 = jobData2, 
+                1 iff jobData1 > jobData2
+     */
+    public int compare(JobData jobData1, JobData jobData2)
+    {
+      switch (sortMode)
+      {
+        case SORTMODE_NAME:
+          return jobData1.name.compareTo(jobData2.name);
+        case SORTMODE_STATE:
+          return jobData1.state.compareTo(jobData2.state);
+        case SORTMODE_TYPE:
+          return jobData1.type.compareTo(jobData2.type);
+        case SORTMODE_PARTSIZE:
+          if      (jobData1.archivePartSize < jobData2.archivePartSize) return -1;
+          else if (jobData1.archivePartSize > jobData2.archivePartSize) return  1;
+          else                                                          return  0;
+        case SORTMODE_COMPRESS:
+          return jobData1.compressAlgorithm.compareTo(jobData2.compressAlgorithm);
+        case SORTMODE_CRYPT:
+          String crypt1 = jobData1.cryptAlgorithm+(jobData1.cryptType.equals("ASYMMETRIC")?"*":"");
+          String crypt2 = jobData2.cryptAlgorithm+(jobData2.cryptType.equals("ASYMMETRIC")?"*":"");
+
+          return crypt1.compareTo(crypt2);
+        case SORTMODE_LAST_EXECUTED_DATETIME:
+          if      (jobData1.lastExecutedDateTime < jobData2.lastExecutedDateTime) return -1;
+          else if (jobData1.lastExecutedDateTime > jobData2.lastExecutedDateTime) return  1;
+          else                                                                    return  0;
+        case SORTMODE_ESTIMATED_TIME:
+          if      (jobData1.estimatedRestTime < jobData2.estimatedRestTime) return -1;
+          else if (jobData1.estimatedRestTime > jobData2.estimatedRestTime) return  1;
+          else                                                              return  0;
+        default:
+          return 0;
+      }
+    }
+  }
+
   final Shell shell;
 
   // widgets
@@ -1579,6 +2244,7 @@ class TabStatus
   Button      widgetButtonAbort;
   Button      widgetButtonTogglePause;
   Button      widgetButtonVolume;
+  Button      widgetButtonQuit;
 
   // BAR variables
   BARVariable doneFiles             = new BARVariable(0);
@@ -1607,10 +2273,9 @@ class TabStatus
   BARVariable message               = new BARVariable("");
 
   // variables
-  private String selectedJobName = null;
-  private int    selectedJobId   = 0;
-
-  private States status          = States.RUNNING;
+  private HashMap<String,JobData> jobList = new HashMap<String,JobData> ();
+  private JobData selectedJobData         = null;
+  private States  status                  = States.RUNNING;
 
 boolean xxx=false;
 
@@ -1654,7 +2319,7 @@ boolean xxx=false;
     }
   }
 
-  TabStatus(TabFolder parentTabFolder)
+  TabStatus(TabFolder parentTabFolder, int accelerator)
   {
     TableColumn tableColumn;
     Group       group;
@@ -1667,7 +2332,7 @@ boolean xxx=false;
     shell = parentTabFolder.getShell();
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,"Status");
+    widgetTab = Widgets.addTab(parentTabFolder,"Status"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
     widgetTab.setLayout(new TableLayout(new double[]{1,0,0},
                                         null,
                                         2
@@ -1682,20 +2347,12 @@ boolean xxx=false;
     {
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Table widget = (Table)selectionEvent.widget;
+        Table     widget    = (Table)selectionEvent.widget;
         TabStatus tabStatus = (TabStatus)widget.getData();
 
-        int selectedJobId = (Integer)selectionEvent.item.getData();
+        selectedJobData = (JobData)selectionEvent.item.getData();
 
-        synchronized(widgetJobList)
-        {
-          TableItem tableItems[] = widgetJobList.getItems();
-          int index = getTableItemIndex(tableItems,selectedJobId);
-          tabStatus.widgetSelectedJob.setText("Selected '"+tableItems[index].getText(1)+"'");
-
-          tabStatus.selectedJobName = tableItems[index].getText(1);
-          tabStatus.selectedJobId   = selectedJobId;
-        }
+        tabStatus.widgetSelectedJob.setText("Selected '"+selectedJobData.name+"'");
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
@@ -1705,66 +2362,12 @@ boolean xxx=false;
     {
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        TableColumn widget = (TableColumn)selectionEvent.widget;
-        int n = (Integer)widget.getData();
+        TableColumn       tableColumn = (TableColumn)selectionEvent.widget;
+        JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList);
 
-        synchronized(widgetJobList)
+        synchronized(jobList)
         {
-          TableItem[] items = widgetJobList.getItems();
-
-          /* get sorting direction */
-          int sortDirection = widgetJobList.getSortDirection();
-          if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
-          if (widgetJobList.getSortColumn() == widget)
-          {
-            switch (sortDirection)
-            {
-              case SWT.UP:   sortDirection = SWT.DOWN; break;
-              case SWT.DOWN: sortDirection = SWT.UP;   break;
-            }
-          }
-
-          /* sort column */
-          Collator collator = Collator.getInstance(Locale.getDefault());
-          for (int i = 1; i < items.length; i++)
-          {
-            boolean sortedFlag = false;
-            for (int j = 0; (j < i) && !sortedFlag; j++)
-            {
-              switch (sortDirection)
-              {
-                case SWT.UP:   sortedFlag = (collator.compare(items[i].getText(n),items[j].getText(n)) < 0); break;
-                case SWT.DOWN: sortedFlag = (collator.compare(items[i].getText(n),items[j].getText(n)) > 0); break;
-              }
-              if (sortedFlag)
-              {
-                /* save data */
-                Object   data = items[i].getData();
-                String[] texts = {items[i].getText(0),
-                                  items[i].getText(1),
-                                  items[i].getText(2),
-                                  items[i].getText(3),
-                                  items[i].getText(4),
-                                  items[i].getText(5),
-                                  items[i].getText(6),
-                                  items[i].getText(7),
-                                  items[i].getText(8)
-                                 };
-
-                /* discard item */
-                items[i].dispose();
-
-                /* create new item */
-                TableItem item = new TableItem(widgetJobList,SWT.NONE,j);
-                item.setData(data);
-                item.setText(texts);
-
-                items = widgetJobList.getItems();
-              }
-            }
-          }
-          widgetJobList.setSortColumn(widget);
-          widgetJobList.setSortDirection(sortDirection);
+          Widgets.sortTableColumn(widgetJobList,tableColumn,jobDataComparator);
         }
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2159,9 +2762,9 @@ boolean xxx=false;
         }
       });
 
-      button = Widgets.newButton(composite,null,"Quit");
-      Widgets.layout(button,0,4,TableLayoutData.E|TableLayoutData.EXPAND_X);
-      button.addSelectionListener(new SelectionListener()
+      widgetButtonQuit = Widgets.newButton(composite,null,"Quit");
+      Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E|TableLayoutData.EXPAND_X);
+      widgetButtonQuit.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
@@ -2181,21 +2784,6 @@ if (true) {
     tabStatusUpdateThread.setDaemon(true);
     tabStatusUpdateThread.start();
 }
-  }
-
-  /** get index of item in job list
-   * @param tableItems table items
-   * @param id id to find
-   * @return index
-   */
-  private int getTableItemIndex(TableItem tableItems[], int id)
-  {
-    for (int z = 0; z < tableItems.length; z++)
-    {
-      if ((Integer)tableItems[z].getData() == id) return z;
-    }
-
-    return -1;
   }
 
   /** getProgress
@@ -2228,6 +2816,41 @@ if (true) {
 //widgetButtonTogglePause.getParent().layout();
   }
 
+  /** find index of table item for job
+   * @param tableItems table items
+   * @param id job id to find
+   * @return table item or null if not found
+   */
+  private int getTableItemIndex(TableItem[] tableItems, int id)
+  {
+    for (int z = 0; z < tableItems.length; z++)
+    {
+      if (((JobData)tableItems[z].getData()).id == id) return z;
+    }
+
+    return -1;
+  }
+
+  /** find index for insert of job data in sorted job table
+   * @param jobData job data
+   * @return index in job table
+   */
+  private int findJobListIndex(JobData jobData)
+  {
+    TableItem         tableItems[] = widgetJobList.getItems();
+    JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList);
+
+    int index = 0;
+    while (   (index < tableItems.length)
+           && (jobDataComparator.compare(jobData,(JobData)tableItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
+
   /** update job list
    */
   private void updateJobList()
@@ -2240,10 +2863,11 @@ if (true) {
       if (errorCode != 0) return;
 
       // update job list
-      synchronized(widgetJobList)
+      synchronized(jobList)
       {
-        TableItem tableItems[] = widgetJobList.getItems();
-        boolean tableItemFlags[] = new boolean[tableItems.length];
+        jobList.clear();
+        TableItem[] tableItems     = widgetJobList.getItems();
+        boolean[]   tableItemFlags = new boolean[tableItems.length];
         for (String line : result)
         {
           Object data[] = new Object[10];
@@ -2259,7 +2883,7 @@ if (true) {
              <lastExecutedDateTime>
              <estimatedRestTime>
           */
-  //System.err.println("BARControl.java"+", "+1357+": "+line);
+//System.err.println("BARControl.java"+", "+1357+": "+line);
           if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
           {
   //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
@@ -2281,30 +2905,31 @@ if (true) {
             long   estimatedRestSeconds = estimatedRestTime%(60      );
 
             /* get/create table item */
-            int index = getTableItemIndex(tableItems,id);
             TableItem tableItem;
+            JobData   jobData = new JobData(id,name,state,type,archivePartSize,compressAlgorithm,cryptAlgorithm,cryptType,lastExecutedDateTime,estimatedRestTime);;
+            int index = getTableItemIndex(tableItems,id);
             if (index >= 0)
             {
               tableItem = tableItems[index];
               tableItemFlags[index] = true;
-  //System.err.println("BARControl.java"+", "+2266+": id="+id+" index="+index+" "+tableItem.getText(1));
+  //System.err.println("BARControl.java"+", "+2266+": id="+id+" index="+index+" "+tableItem.getText(1));              
             }
             else
             {
-              tableItem = new TableItem(widgetJobList,SWT.NONE);
+              tableItem = new TableItem(widgetJobList,SWT.NONE,findJobListIndex(jobData));
             }
+            tableItem.setData(jobData);
 
-            /* init table item */
-            tableItem.setData(id);
-            tableItem.setText(0,Integer.toString(id));
-            tableItem.setText(1,name);
-            tableItem.setText(2,(status != States.PAUSE)?state:"pause");
-            tableItem.setText(3,type);
-            tableItem.setText(4,Units.formatByteSize(archivePartSize));
-            tableItem.setText(5,compressAlgorithm);
-            tableItem.setText(6,cryptAlgorithm+(cryptType.equals("ASYMMETRIC")?"*":""));
-            tableItem.setText(7,DateFormat.getDateTimeInstance().format(new Date(lastExecutedDateTime*1000)));
-            tableItem.setText(8,String.format("%2d days %02d:%02d:%02d",estimatedRestDays,estimatedRestHours,estimatedRestMinutes,estimatedRestSeconds));
+            jobList.put(name,jobData);
+            tableItem.setText(0,Integer.toString(jobData.getId()));
+            tableItem.setText(1,jobData.getName());
+            tableItem.setText(2,(status != States.PAUSE)?jobData.getState():"pause");
+            tableItem.setText(3,jobData.getType());
+            tableItem.setText(4,Units.formatByteSize(jobData.getArchivePartSize()));
+            tableItem.setText(5,jobData.getCompressAlgorithm());
+            tableItem.setText(6,jobData.getCryptAlgorithm());
+            tableItem.setText(7,jobData.formatLastExecutedDateTime());
+            tableItem.setText(8,jobData.formatEstimatedRestTime());
           }
         }
         for (int z = 0; z < tableItems.length; z++)
@@ -2315,17 +2940,15 @@ if (true) {
     }
   }
 
-  /** 
-   * @param 
-   * @return 
+  /** update job information
    */
   private void updateJobInfo()
   {
-    if (selectedJobId > 0)
+    if (selectedJobData != null)
     {
       // get job info
       String result[] = new String[1];
-      int errorCode = BARServer.executeCommand(String.format("JOB_INFO %d",selectedJobId),result);
+      int errorCode = BARServer.executeCommand(String.format("JOB_INFO %d",selectedJobData.id),result);
       if (errorCode != 0) return;
 
       // update job info
@@ -2408,16 +3031,15 @@ if (true) {
    */
   private void jobStart()
   {
-    assert selectedJobName != null;
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
-    switch (Dialogs.select(shell,"Start job","Start job '"+selectedJobName+"'?",new String[]{"Full","Incremental","Cancel"}))
+    switch (Dialogs.select(shell,"Start job","Start job '"+selectedJobData.name+"'?",new String[]{"Full","Incremental","Cancel"}))
     {
       case 0:
-        BARServer.executeCommand("JOB_START "+selectedJobId+" full");
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" full");
         break;
       case 1:
-        BARServer.executeCommand("JOB_START "+selectedJobId+" incremental");
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
         break;
       case 2:
         break;
@@ -2428,10 +3050,9 @@ if (true) {
    */
   private void jobAbort()
   {
-    assert selectedJobName != null;
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
-    BARServer.executeCommand("JOB_ABORT "+selectedJobId);
+    BARServer.executeCommand("JOB_ABORT "+selectedJobData.id);
   }
 
   /** toggle pause all jobs
@@ -2472,15 +3093,251 @@ class TabJobs
    */
   class FileTreeData
   {
-    FileTypes type;
     String    name;
+    FileTypes type;
+    long      size;
+    long      datetime;
+    String    title;
 
-    FileTreeData(FileTypes type, String name)
+    FileTreeData(String name, FileTypes type, long size, long datetime, String title)
     {
-      this.type = type;
-      this.name = name;
+      this.name     = name;
+      this.type     = type;
+      this.size     = size;
+      this.datetime = datetime;
+      this.title    = title;
+    }
+
+    FileTreeData(String name, FileTypes type, long datetime, String title)
+    {
+      this.name     = name;
+      this.type     = type;
+      this.size     = 0;
+      this.datetime = datetime;
+      this.title    = title;
+    }
+
+    FileTreeData(String name, FileTypes type, String title)
+    {
+      this.name     = name;
+      this.type     = type;
+      this.size     = 0;
+      this.datetime = 0;
+      this.title    = title;
+    }
+
+    public String toString()
+    {
+      return "File {"+name+", "+type+", "+size+" bytes, datetime="+datetime+", title="+title+"}";
     }
   };
+
+  /** file data comparator
+   */
+  class FileTreeDataComparator implements Comparator<FileTreeData>
+  {
+    /* Note: enum in inner classes are not possible in Java, thus use the old way... */
+    private final static int SORTMODE_NAME     = 0;
+    private final static int SORTMODE_TYPE     = 1;
+    private final static int SORTMODE_SIZE     = 2;
+    private final static int SORTMODE_DATETIME = 3;
+
+    private int sortMode;
+
+    /** create file data comparator
+     * @param tree file tree
+     */
+    FileTreeDataComparator(Tree tree)
+    {
+      TreeColumn sortColumn = tree.getSortColumn();
+
+      if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
+      else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (tree.getColumn(2) == sortColumn) sortMode = SORTMODE_SIZE;
+      else if (tree.getColumn(3) == sortColumn) sortMode = SORTMODE_DATETIME;
+      else                                      sortMode = SORTMODE_NAME;
+    }
+
+    /** compare file tree data without take care about type
+     * @param fileTreeData1, fileTreeData2 file tree data to compare
+     * @return -1 iff fileTreeData1 < fileTreeData2,
+                0 iff fileTreeData1 = fileTreeData2, 
+                1 iff fileTreeData1 > fileTreeData2
+     */
+    private int compareWithoutType(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
+    {
+      switch (sortMode)
+      {
+        case SORTMODE_NAME:
+          return fileTreeData1.title.compareTo(fileTreeData2.title);
+        case SORTMODE_TYPE:
+          return fileTreeData1.type.compareTo(fileTreeData2.type);
+        case SORTMODE_SIZE:
+          if      (fileTreeData1.size < fileTreeData2.size) return -1;
+          else if (fileTreeData1.size > fileTreeData2.size) return  1;
+          else                                              return  0;
+        case SORTMODE_DATETIME:
+          if      (fileTreeData1.datetime < fileTreeData2.datetime) return -1;
+          else if (fileTreeData1.datetime > fileTreeData2.datetime) return  1;
+          else                                                      return  0;
+        default:
+          return 0;
+      }
+    }
+
+    /** compare file tree data
+     * @param fileTreeData1, fileTreeData2 file tree data to compare
+     * @return -1 iff fileTreeData1 < fileTreeData2,
+                0 iff fileTreeData1 = fileTreeData2, 
+                1 iff fileTreeData1 > fileTreeData2
+     */
+    public int compare(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
+    {
+//System.err.println("BARControl.java"+", "+2734+": file1="+fileTreeData1+" file=2"+fileTreeData2+" "+sortMode);
+      if (fileTreeData1.type == FileTypes.DIRECTORY)
+      {
+        if (fileTreeData2.type == FileTypes.DIRECTORY)
+        {
+          return compareWithoutType(fileTreeData1,fileTreeData2);
+        }
+        else
+        {
+          return -1;
+        }
+      }
+      else
+      {
+        if (fileTreeData2.type == FileTypes.DIRECTORY)
+        {
+          return 1;
+        }
+        else
+        {
+          return compareWithoutType(fileTreeData1,fileTreeData2);
+        }
+      }
+    }
+
+    public String toString()
+    {
+      return "FileComparator {"+sortMode+"}";
+    }
+  }
+
+  /** schedule data
+   */
+  class ScheduleData
+  {
+    final static String ANY          = "*";
+    final static String DEFAULT_TYPE = "*";
+
+    String year,month,day,weekDay;
+    String hour,minute;
+    String type;
+
+    ScheduleData()
+    {
+      this.year    = ScheduleData.ANY;
+      this.month   = ScheduleData.ANY;
+      this.day     = ScheduleData.ANY;
+      this.weekDay = ScheduleData.ANY;
+      this.hour    = ScheduleData.ANY;
+      this.minute  = ScheduleData.ANY;
+      this.type    = ScheduleData.DEFAULT_TYPE;
+    }
+
+    ScheduleData(String year, String month, String day, String weekDay, String hour, String minute, String type)
+    {
+      this.year    = year;
+      this.month   = month;
+      this.day     = day;
+      this.weekDay = weekDay;
+      this.hour    = hour;
+      this.minute  = minute;
+      this.type    = type;
+    }
+
+    String getDate()
+    {
+      return String.format("%s-%s-%s",year,month,day);
+    }
+
+    String getWeekDay()
+    {
+      return weekDay;
+    }
+
+    String getTime()
+    {
+      return String.format("%s:%s",hour,minute);
+    }
+
+    String getType()
+    {
+      return type;
+    }
+
+    public String toString()
+    {
+      return "File {"+getDate()+", "+getWeekDay()+", "+getTime()+", "+getType()+"}";
+    }
+  };
+
+  /** schedule data comparator
+   */
+  class ScheduleDataComparator implements Comparator<ScheduleData>
+  {
+    /* Note: enum in inner classes are not possible in Java, thus use the old way... */
+    private final static int SORTMODE_DATE    = 0;
+    private final static int SORTMODE_WEEKDAY = 1;
+    private final static int SORTMODE_TIME    = 2;
+    private final static int SORTMODE_TYPE    = 3;
+
+    private int sortMode;
+
+    /** create schedule data comparator
+     * @param table schedule table
+     */
+    ScheduleDataComparator(Table table)
+    {
+      TableColumn sortColumn = table.getSortColumn();
+
+      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_DATE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_WEEKDAY;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TIME;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_TYPE;
+      else                                       sortMode = SORTMODE_DATE;
+    }
+
+    /** compare schedule data
+     * @param scheduleData1, scheduleData2 file tree data to compare
+     * @return -1 iff scheduleData1 < scheduleData2,
+                0 iff scheduleData1 = scheduleData2, 
+                1 iff scheduleData1 > scheduleData2
+     */
+    public int compare(ScheduleData scheduleData1, ScheduleData scheduleData2)
+    {
+      switch (sortMode)
+      {
+        case SORTMODE_DATE:
+          String date1 = scheduleData1.year+"-"+scheduleData1.month+"-"+scheduleData1.day;
+          String date2 = scheduleData2.year+"-"+scheduleData2.month+"-"+scheduleData2.day;
+
+          return date1.compareTo(date2);
+        case SORTMODE_WEEKDAY:
+          return scheduleData1.weekDay.compareTo(scheduleData2.weekDay);
+        case SORTMODE_TIME:
+          String time1 = scheduleData1.hour+":"+scheduleData1.minute;
+          String time2 = scheduleData2.hour+":"+scheduleData2.minute;
+
+          return time1.compareTo(time2);
+        case SORTMODE_TYPE:
+          return scheduleData1.type.compareTo(scheduleData2.type);
+        default:
+          return 0;
+      }
+    }
+  }
 
   final Shell shell;
 
@@ -2498,7 +3355,7 @@ class TabJobs
   // widgets
   Composite   widgetTab;
   Combo       widgetJobList;
-  Tree        widgetFilesTree;
+  Tree        widgetFileTree;
   List        widgetIncludedPatterns;
   List        widgetExcludedPatterns;
   Combo       widgetArchivePartSize;
@@ -2531,13 +3388,14 @@ class TabJobs
   BARVariable ecc                     = new BARVariable(false);
 
   // variables
-  private HashMap<String,Integer> jobIds           = new HashMap<String,Integer>();
-  private String                  selectedJobName  = null;
-  private int                     selectedJobId    = 0;
-  private HashSet<String>         includedPatterns = new HashSet<String>();
-  private HashSet<String>         excludedPatterns = new HashSet<String>();
+  private HashMap<String,Integer>  jobIds           = new HashMap<String,Integer>();
+  private String                   selectedJobName  = null;
+  private int                      selectedJobId    = 0;
+  private HashSet<String>          includedPatterns = new HashSet<String>();
+  private HashSet<String>          excludedPatterns = new HashSet<String>();
+  private LinkedList<ScheduleData> scheduleList     = new LinkedList<ScheduleData>();
 
-  TabJobs(TabFolder parentTabFolder)
+  TabJobs(TabFolder parentTabFolder, int accelerator)
   {
     Display     display;
     ImageData   imageData;
@@ -2548,6 +3406,7 @@ class TabJobs
     Label       label;
     Button      button;
     Combo       combo;
+    TreeColumn  treeColumn;
     TreeItem    treeItem;
     Text        text;
     TableColumn tableColumn;
@@ -2599,7 +3458,7 @@ class TabJobs
     imageLinkExcluded = new Image(display,imageData);
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,"Jobs");
+    widgetTab = Widgets.addTab(parentTabFolder,"Jobs"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
     widgetTab.setLayout(new TableLayout(new double[]{0,1,0},
                                         null,
                                         2
@@ -2627,7 +3486,7 @@ class TabJobs
           {
             selectedJobName = widgetJobList.getItem(index);
             selectedJobId   = jobIds.get(selectedJobName);
-            updateJobData();
+            update();
           }
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2698,12 +3557,33 @@ class TabJobs
       Widgets.layout(tab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
       {
         // file tree
-        widgetFilesTree = Widgets.newTree(tab,null);
-        Widgets.layout(widgetFilesTree,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
-        Widgets.addTreeColumn(widgetFilesTree,"Name",    SWT.LEFT, 500,true);
-        Widgets.addTreeColumn(widgetFilesTree,"Type",    SWT.LEFT,  50,false);
-        Widgets.addTreeColumn(widgetFilesTree,"Size",    SWT.RIGHT,100,false);
-        Widgets.addTreeColumn(widgetFilesTree,"Modified",SWT.LEFT, 100,false);
+        widgetFileTree = Widgets.newTree(tab,null);
+        Widgets.layout(widgetFileTree,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
+        SelectionListener filesTreeColumnSelectionListener = new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            TreeColumn             treeColumn = (TreeColumn)selectionEvent.widget;
+            FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
+System.err.println("BARControl.java"+", "+3092+": "+fileTreeDataComparator);
+
+            synchronized(scheduleList)
+            {
+              Widgets.sortTreeColumn(widgetFileTree,treeColumn,fileTreeDataComparator);
+            }
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        };
+        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Name",    SWT.LEFT, 500,true);
+        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
+        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Type",    SWT.LEFT,  50,false);
+        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
+        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Size",    SWT.RIGHT,100,false);
+        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
+        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Modified",SWT.LEFT, 100,false);
+        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE);
@@ -2717,7 +3597,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
 
-              for (TreeItem treeItem : widgetFilesTree.getSelection())
+              for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
                 patternDelete(PatternTypes.INCLUDE,fileTreeData.name);
@@ -2746,7 +3626,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
 
-              for (TreeItem treeItem : widgetFilesTree.getSelection())
+              for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
                 patternNew(PatternTypes.INCLUDE,fileTreeData.name);
@@ -2775,7 +3655,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
 
-              for (TreeItem treeItem : widgetFilesTree.getSelection())
+              for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
                 patternDelete(PatternTypes.INCLUDE,fileTreeData.name);
@@ -2798,7 +3678,6 @@ class TabJobs
         }
       }
 
-//BARServer.debug=true;
       tab = Widgets.addTab(tabFolder,"Filters");
       Widgets.layout(tab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
       {
@@ -2822,7 +3701,6 @@ class TabJobs
               if (selectedJobId > 0)
               {
                 patternNew(PatternTypes.INCLUDE);
-                updatePatternList(PatternTypes.INCLUDE);
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2840,7 +3718,6 @@ class TabJobs
               if (selectedJobId > 0)
               {
                 patternDelete(PatternTypes.INCLUDE);
-                updatePatternList(PatternTypes.INCLUDE);
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2869,7 +3746,6 @@ class TabJobs
               if (selectedJobId > 0)
               {
                 patternNew(PatternTypes.EXCLUDE);
-                updatePatternList(PatternTypes.EXCLUDE);
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2887,7 +3763,6 @@ class TabJobs
               if (selectedJobId > 0)
               {
                 patternDelete(PatternTypes.EXCLUDE);
-                updatePatternList(PatternTypes.EXCLUDE);
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3248,7 +4123,17 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-System.err.println("BARControl.java"+", "+2608+": ");
+              String fileName = Dialogs.fileSave(shell,
+                                                 "Select incremental file",
+                                                 incrementalListFileName.getString(),
+                                                 new String[]{"BAR incremental data","*.bid",
+                                                              "All files","*",
+                                                             }
+                                                );
+              if (fileName != null)
+              {
+                incrementalListFileName.set(fileName);
+              }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -4111,81 +4996,23 @@ throw new Error("NYI");
         // list
         widgetScheduleList = Widgets.newTable(tab,this);
         Widgets.layout(widgetScheduleList,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
-        button.addSelectionListener(new SelectionListener()
+        widgetScheduleList.addListener(SWT.MouseDoubleClick,new Listener()
         {
-          public void widgetSelected(SelectionEvent selectionEvent)
+          public void handleEvent(final Event event)
           {
-            Button widget = (Button)selectionEvent.widget;
-System.err.println("BARControl.java"+", "+3110+": ");
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
+            scheduleEdit();
           }
         });
         SelectionListener scheduleListColumnSelectionListener = new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            TableColumn widget = (TableColumn)selectionEvent.widget;
-            int         n      = (Integer)widget.getData();
+            TableColumn            tableColumn = (TableColumn)selectionEvent.widget;
+            ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleList);
 
-            synchronized(widgetScheduleList)
+            synchronized(scheduleList)
             {
-              TableItem[] items = widgetScheduleList.getItems();
-
-              /* get sorting direction */
-              int sortDirection = widgetScheduleList.getSortDirection();
-              if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
-              if (widgetScheduleList.getSortColumn() == widget)
-              {
-                switch (sortDirection)
-                {
-                  case SWT.UP:   sortDirection = SWT.DOWN; break;
-                  case SWT.DOWN: sortDirection = SWT.UP;   break;
-                }
-              }
-
-              /* sort column */
-              Collator collator = Collator.getInstance(Locale.getDefault());
-              for (int i = 1; i < items.length; i++)
-              {
-                boolean sortedFlag = false;
-                for (int j = 0; (j < i) && !sortedFlag; j++)
-                {
-                  switch (sortDirection)
-                  {
-                    case SWT.UP:   sortedFlag = (collator.compare(items[i].getText(n),items[j].getText(n)) < 0); break;
-                    case SWT.DOWN: sortedFlag = (collator.compare(items[i].getText(n),items[j].getText(n)) > 0); break;
-                  }
-                  if (sortedFlag)
-                  {
-                    /* save data */
-                    Object   data = items[i].getData();
-                    String[] texts = {items[i].getText(0),
-                                      items[i].getText(1),
-                                      items[i].getText(2),
-                                      items[i].getText(3),
-                                      items[i].getText(4),
-                                      items[i].getText(5),
-                                      items[i].getText(6),
-                                      items[i].getText(7),
-                                      items[i].getText(8)
-                                     };
-
-                    /* discard item */
-                    items[i].dispose();
-
-                    /* create new item */
-                    TableItem item = new TableItem(widgetScheduleList,SWT.NONE,j);
-                    item.setData(data);
-                    item.setText(texts);
-
-                    items = widgetScheduleList.getItems();
-                  }
-                }
-              }
-              widgetScheduleList.setSortColumn(widget);
-              widgetScheduleList.setSortDirection(sortDirection);
+              Widgets.sortTableColumn(widgetScheduleList,tableColumn,scheduleDataComparator);
             }
           }
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4213,6 +5040,8 @@ System.err.println("BARControl.java"+", "+3110+": ");
             {
               Button widget = (Button)selectionEvent.widget;
 System.err.println("BARControl.java"+", "+3133+": ");
+
+              scheduleNew();
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -4226,6 +5055,8 @@ System.err.println("BARControl.java"+", "+3133+": ");
             {
               Button widget = (Button)selectionEvent.widget;
 System.err.println("BARControl.java"+", "+3148+": ");
+
+              scheduleEdit();
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -4239,6 +5070,8 @@ System.err.println("BARControl.java"+", "+3148+": ");
             {
               Button widget = (Button)selectionEvent.widget;
 System.err.println("BARControl.java"+", "+3159+": ");
+
+              scheduleDelete();
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -4256,9 +5089,142 @@ System.err.println("BARControl.java"+", "+3159+": ");
 //selectedJobName = "database";
 selectedJobName = "x2";
 selectedJobId = jobIds.get(selectedJobName);
-updateJobData();
-    updateScheduleList();    
+update();
   }
+
+  /** add root devices
+   */
+  private void addRootDevices()
+  {
+  
+    TreeItem treeItem = Widgets.addTreeItem(widgetFileTree,new FileTreeData("/",FileTypes.DIRECTORY,"/"),true);
+    treeItem.setText("/");
+    treeItem.setImage(imageDirectory);
+    widgetFileTree.addListener(SWT.Expand,new Listener()
+    {
+      public void handleEvent(final Event event)
+      {
+        final TreeItem treeItem = (TreeItem)event.item;
+        updateFileList(treeItem);
+      }
+    });
+    widgetFileTree.addListener(SWT.Collapse,new Listener()
+    {
+      public void handleEvent(final Event event)
+      {
+        final TreeItem treeItem = (TreeItem)event.item;
+        treeItem.removeAll();
+        new TreeItem(treeItem,SWT.NONE);
+      }
+    });
+    widgetFileTree.addListener(SWT.MouseDoubleClick,new Listener()
+    {
+      public void handleEvent(final Event event)
+      {
+        TreeItem treeItem = widgetFileTree.getItem(new Point(event.x,event.y));
+        if (treeItem != null)
+        {
+          Event treeEvent = new Event();
+          treeEvent.item = treeItem;
+          if (treeItem.getExpanded())
+          {
+            widgetFileTree.notifyListeners(SWT.Collapse,treeEvent);
+            treeItem.setExpanded(false);
+          }
+          else
+          {
+            widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
+            treeItem.setExpanded(true);
+          }
+        }
+      }
+    });
+  }
+
+  private String getArchiveName()
+  {
+    if      (storageType.equals("ftp"))
+      return String.format("ftp:%s@%s:%s",storageLoginName,storageHostName,storageFileName);
+    else if (storageType.equals("scp"))
+      return String.format("scp:%s@%s:%s",storageLoginName,storageHostName,storageFileName);
+    else if (storageType.equals("sftp"))
+      return String.format("sftp:%s@%s:%s",storageLoginName,storageHostName,storageFileName);
+    else if (storageType.equals("dvd"))
+      return String.format("dvd:%s:%s",storageDeviceName,storageFileName);
+    else if (storageType.equals("device"))
+      return String.format("device:%s:%s",storageDeviceName,storageFileName);
+    else
+      return storageFileName.toString();
+  }
+
+  private void parseArchiveName(String archiveName)
+  {
+    Object[] data = new Object[3];
+
+    if      (StringParser.parse(archiveName,"ftp:%s@%s:%s",data,StringParser.QUOTE_CHARS))
+    {
+      storageType.set      ("ftp");
+      storageLoginName.set ((String)data[0]);
+      storageHostName.set  ((String)data[1]);
+      storageDeviceName.set("");
+      storageFileName.set  ((String)data[2]);
+    }
+    else if (StringParser.parse(archiveName,"scp:%s@%s:%s",data,StringParser.QUOTE_CHARS))
+    {
+      storageType.set      ("scp");
+      storageLoginName.set ((String)data[0]);
+      storageHostName.set  ((String)data[1]);
+      storageDeviceName.set("");
+      storageFileName.set  ((String)data[2]);
+    }
+    else if (StringParser.parse(archiveName,"sftp:%s@%s:%s",data,StringParser.QUOTE_CHARS))
+    {
+      storageType.set      ("sftp");
+      storageLoginName.set ((String)data[0]);
+      storageHostName.set  ((String)data[1]);
+      storageDeviceName.set("");
+      storageFileName.set  ((String)data[2]);
+    }
+    else if (StringParser.parse(archiveName,"dvd:%s:%s",data,StringParser.QUOTE_CHARS))
+    {
+      storageType.set      ("dvd");
+      storageLoginName.set ("");
+      storageHostName.set  ("");
+      storageDeviceName.set((String)data[0]);
+      storageFileName.set  ((String)data[1]);
+    }
+    else if (StringParser.parse(archiveName,"dvd:%s",data,StringParser.QUOTE_CHARS))
+    {
+      storageType.set      ("dvd");
+      storageFileName.set  ("");
+      storageLoginName.set ("");
+      storageDeviceName.set("");
+      storageFileName.set  ((String)data[0]);
+    }
+    else if (StringParser.parse(archiveName,"device:%s:%s",data,StringParser.QUOTE_CHARS))
+    {
+      storageType.set      ("device");
+      storageLoginName.set ("");
+      storageHostName.set  ("");
+      storageDeviceName.set((String)data[0]);
+      storageFileName.set  ((String)data[1]);
+    }
+    else
+    {
+      storageType.set      ("filesystem");
+      storageLoginName.set ("");
+      storageHostName.set  ("");
+      storageDeviceName.set("");
+      storageFileName.set  (archiveName);
+    }
+  }
+
+  private String getStorageFileName(String archiveName)
+  {
+return archiveName;
+  }
+
+  //-----------------------------------------------------------------------
 
   /** find index for insert of tree item in sort list of tree items
    * @param treeItem tree item
@@ -4266,31 +5232,17 @@ updateJobData();
    * @param data data of tree item to insert
    * @return index in tree item
    */
-  private int findFilesTreeIndex(TreeItem treeItem, String name, FileTreeData fileTreeData)
+  private int findFilesTreeIndex(TreeItem treeItem, FileTreeData fileTreeData)
   {
-    TreeItem subItems[] = treeItem.getItems();
+    TreeItem               subTreeItems[] = treeItem.getItems();
+    FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
 
     int index = 0;
-    if (fileTreeData.type == FileTypes.DIRECTORY)
+    while (   (index < subTreeItems.length)
+           && (fileTreeDataComparator.compare(fileTreeData,(FileTreeData)subTreeItems[index].getData()) > 0)
+          )
     {
-      while (   (index < subItems.length)
-             && (((FileTreeData)subItems[index].getData()).type == FileTypes.DIRECTORY)
-             && (subItems[index].getText().compareTo(name) < 0)
-            )
-      {
-        index++;
-      }
-    }
-    else
-    {
-      while (   (index < subItems.length)
-             && (   (((FileTreeData)subItems[index].getData()).type == FileTypes.DIRECTORY)
-                 || (subItems[index].getText().compareTo(name) < 0)
-                )
-            )
-      {
-        index++;
-      }
+      index++;
     }
 
     return index;
@@ -4303,11 +5255,9 @@ updateJobData();
   {
     FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
     TreeItem     subTreeItem;
-    int          index;
 
     ArrayList<String> result = new ArrayList<String>();
-    int errorCode = BARServer.executeCommand("FILE_LIST "+StringParser.escape(fileTreeData.name),result);
-    if (errorCode != 0) return;
+    BARServer.executeCommand("FILE_LIST "+StringParser.escape(fileTreeData.name),result);
 
     treeItem.removeAll();
     for (String line : result)
@@ -4322,11 +5272,11 @@ updateJobData();
              date/time
              name
         */
-        long   size      = (Long  )data[0];
-        long   timestamp = (Long  )data[1];
-        String name      = (String)data[2];
+        long   size     = (Long  )data[0];
+        long   datetime = (Long  )data[1];
+        String name     = (String)data[2];
 
-        fileTreeData = new FileTreeData(FileTypes.FILE,name);
+        fileTreeData = new FileTreeData(name,FileTypes.FILE,size,datetime,new File(name).getName());
 
         Image image;
         if      (includedPatterns.contains(name))
@@ -4336,13 +5286,11 @@ updateJobData();
         else
           image = imageFile;
 
-        String title = new File(name).getName();
-        index = findFilesTreeIndex(treeItem,title,fileTreeData);
-        subTreeItem = Widgets.addTreeItem(treeItem,index,fileTreeData,false);
-        subTreeItem.setText(0,title);
+        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+        subTreeItem.setText(0,fileTreeData.title);
         subTreeItem.setText(1,"FILE");
         subTreeItem.setText(2,Long.toString(size));
-        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(timestamp*1000)));
+        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(datetime*1000)));
         subTreeItem.setImage(image);
       }
       else if (StringParser.parse(line,"DIRECTORY %ld %ld %S",data,StringParser.QUOTE_CHARS))
@@ -4353,11 +5301,11 @@ updateJobData();
              date/time
              name
         */
-        long   size      = (Long  )data[0];
-        long   timestamp = (Long  )data[1];
-        String name      = (String)data[2];
+        long   size     = (Long  )data[0];
+        long   datetime = (Long  )data[1];
+        String name     = (String)data[2];
 
-        fileTreeData = new FileTreeData(FileTypes.DIRECTORY,name);
+        fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,new File(name).getName());
 
         Image image;
         if      (includedPatterns.contains(name))
@@ -4367,12 +5315,10 @@ updateJobData();
         else
           image = imageDirectory;
 
-        String title = new File(name).getName();
-        index = findFilesTreeIndex(treeItem,title,fileTreeData);
-        subTreeItem = Widgets.addTreeItem(treeItem,index,fileTreeData,true);
-        subTreeItem.setText(0,title);
+        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
+        subTreeItem.setText(0,fileTreeData.title);
         subTreeItem.setText(1,"DIR");
-        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(timestamp*1000)));
+        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(datetime*1000)));
         subTreeItem.setImage(image);
       }
       else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
@@ -4382,10 +5328,10 @@ updateJobData();
              date/time
              name
         */
-        long   timestamp = (Long  )data[0];
-        String name      = (String)data[1];
+        long   datetime = (Long  )data[0];
+        String name     = (String)data[1];
 
-        fileTreeData = new FileTreeData(FileTypes.LINK,name);
+        fileTreeData = new FileTreeData(name,FileTypes.LINK,0,datetime,new File(name).getName());
 
         Image image;
         if      (includedPatterns.contains(name))
@@ -4396,12 +5342,10 @@ updateJobData();
           image = imageLink;
 
 
-        String title = new File(name).getName();
-        index = findFilesTreeIndex(treeItem,title,fileTreeData);
-        subTreeItem = Widgets.addTreeItem(treeItem,index,fileTreeData,false);
-        subTreeItem.setText(0,title);
+        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+        subTreeItem.setText(0,fileTreeData.title);
         subTreeItem.setText(1,"LINK");
-        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(timestamp*1000)));
+        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(datetime*1000)));
         subTreeItem.setImage(image);
       }
       else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
@@ -4411,16 +5355,15 @@ updateJobData();
              date/time
              name
         */
-        long   timestamp = (Long  )data[0];
-        String name      = (String)data[1];
+        long   datetime = (Long  )data[0];
+        String name     = (String)data[1];
 
-        fileTreeData = new FileTreeData(FileTypes.SPECIAL,name);
+        fileTreeData = new FileTreeData(name,FileTypes.SPECIAL,0,datetime,name);
 
-        index = findFilesTreeIndex(treeItem,name,fileTreeData);
-        subTreeItem = Widgets.addTreeItem(treeItem,index,fileTreeData,false);
-        subTreeItem.setText(0,name);
+        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+        subTreeItem.setText(0,fileTreeData.title);
         subTreeItem.setText(1,"SPECIAL");
-        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(timestamp*1000)));
+        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(datetime*1000)));
       }
       else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
       {
@@ -4430,11 +5373,10 @@ updateJobData();
         */
         String name = (String)data[0];
 
-        fileTreeData = new FileTreeData(FileTypes.DEVICE,name);
+        fileTreeData = new FileTreeData(name,FileTypes.DEVICE,name);
 
-        index = findFilesTreeIndex(treeItem,name,fileTreeData);
-        subTreeItem = Widgets.addTreeItem(treeItem,index,fileTreeData,false);
-        subTreeItem.setText(0,name);
+        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+        subTreeItem.setText(0,fileTreeData.title);
         subTreeItem.setText(1,"DEVICE");
       }
       else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
@@ -4445,74 +5387,25 @@ updateJobData();
         */
         String name = (String)data[0];
 
-        fileTreeData = new FileTreeData(FileTypes.SOCKET,name);
+        fileTreeData = new FileTreeData(name,FileTypes.SOCKET,name);
 
-        index = findFilesTreeIndex(treeItem,name,fileTreeData);
-        subTreeItem = Widgets.addTreeItem(treeItem,index,fileTreeData,false);
-        subTreeItem.setText(0,name);
+        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+        subTreeItem.setText(0,fileTreeData.title);
         subTreeItem.setText(1,"SOCKET");
       }
     }
   }  
 
-  /** add root devices
-   */
-  private void addRootDevices()
-  {
-  
-    TreeItem treeItem = Widgets.addTreeItem(widgetFilesTree,new FileTreeData(FileTypes.DIRECTORY,"/"),true);
-    treeItem.setText("/");
-    treeItem.setImage(imageDirectory);
-    widgetFilesTree.addListener(SWT.Expand,new Listener()
-    {
-      public void handleEvent (final Event event)
-      {
-        final TreeItem treeItem = (TreeItem)event.item;
-        updateFileList(treeItem);
-        if (treeItem.getItemCount() == 0) new TreeItem(treeItem,SWT.NONE);
-      }
-    });
-    widgetFilesTree.addListener(SWT.Collapse,new Listener()
-    {
-      public void handleEvent (final Event event)
-      {
-        final TreeItem treeItem = (TreeItem)event.item;
-        treeItem.removeAll();
-        new TreeItem(treeItem,SWT.NONE);
-      }
-    });
-    widgetFilesTree.addListener(SWT.MouseDoubleClick,new Listener()
-    {
-      public void handleEvent(final Event event)
-      {
-        TreeItem treeItem = widgetFilesTree.getItem(new Point(event.x,event.y));
-        if (treeItem != null)
-        {
-          Event treeEvent = new Event();
-          treeEvent.item = treeItem;
-          if (treeItem.getExpanded())
-          {
-            widgetFilesTree.notifyListeners(SWT.Collapse,treeEvent);
-            treeItem.setExpanded(false);
-          }
-          else
-          {
-            widgetFilesTree.notifyListeners(SWT.Expand,treeEvent);
-            treeItem.setExpanded(true);
-          }
-        }
-      }
-    });
-  }
+  //-----------------------------------------------------------------------
 
-  /** find index for insert of name in sort list job list
+  /** find index for insert of job in sort list job list
    * @param jobs jobs
    * @param name name to insert
    * @return index in list
    */
-  private int findJobsIndex(Combo jobs, String name)
+  private int findJobListIndex(String name)
   {
-    String names[] = jobs.getItems();
+    String names[] = widgetJobList.getItems();
 
     int index = 0;
     while (   (index < names.length)
@@ -4531,12 +5424,11 @@ updateJobData();
   {
     // get job list
     ArrayList<String> result = new ArrayList<String>();
-    int errorCode = BARServer.executeCommand("JOB_LIST",result);
-    if (errorCode != 0) return;
+    BARServer.executeCommand("JOB_LIST",result);
 
     // update job list
-    widgetJobList.removeAll();
     jobIds.clear();
+    widgetJobList.removeAll();
     for (String line : result)
     {
       Object data[] = new Object[10];
@@ -4560,270 +5452,14 @@ updateJobData();
         int    id   = (Integer)data[0];
         String name = (String )data[1];
 
-        int index = findJobsIndex(widgetJobList,name);
+        int index = findJobListIndex(name);
         widgetJobList.add(name,index);
         jobIds.put(name,id);
       }
     }
   }
 
-  private String getArchiveName()
-  {
-    if      (storageType.equals("ftp"))
-      return String.format("ftp:%s@%s:%s",storageLoginName,storageHostName,storageFileName);
-    else if (storageType.equals("scp"))
-      return String.format("scp:%s@%s:%s",storageLoginName,storageHostName,storageFileName);
-    else if (storageType.equals("sftp"))
-      return String.format("sftp:%s@%s:%s",storageLoginName,storageHostName,storageFileName);
-    else if (storageType.equals("dvd"))
-      return String.format("dvd:%s:%s",storageDeviceName,storageFileName);
-    else if (storageType.equals("device"))
-      return String.format("device:%s:%s",storageDeviceName,storageFileName);
-    else
-      return storageFileName.toString();
-  }
-
-  private void parseArchiveName(String archiveName)
-  {
-    Object[] data = new Object[3];
-
-System.err.println("BARControl.java"+", "+3065+": "+archiveName);
-    if      (StringParser.parse(archiveName,"ftp:%s@%s:%s",data,StringParser.QUOTE_CHARS))
-    {
-      storageType.set      ("ftp");
-      storageLoginName.set ((String)data[0]);
-      storageHostName.set  ((String)data[1]);
-      storageDeviceName.set("");
-      storageFileName.set  ((String)data[2]);
-System.err.println("BARControl.java"+", "+3073+": ");
-    }
-    else if (StringParser.parse(archiveName,"scp:%s@%s:%s",data,StringParser.QUOTE_CHARS))
-    {
-System.err.println("BARControl.java"+", "+3118+": "+(String)data[0]+"-"+(String)data[1]+"-"+(String)data[2]);
-      storageType.set      ("scp");
-      storageLoginName.set ((String)data[0]);
-      storageHostName.set  ((String)data[1]);
-      storageDeviceName.set("");
-      storageFileName.set  ((String)data[2]);
-System.err.println("BARControl.java"+", "+3082+": ");
-    }
-    else if (StringParser.parse(archiveName,"sftp:%s@%s:%s",data,StringParser.QUOTE_CHARS))
-    {
-      storageType.set      ("sftp");
-      storageLoginName.set ((String)data[0]);
-      storageHostName.set  ((String)data[1]);
-      storageDeviceName.set("");
-      storageFileName.set  ((String)data[2]);
-System.err.println("BARControl.java"+", "+3091+": ");
-    }
-    else if (StringParser.parse(archiveName,"dvd:%s:%s",data,StringParser.QUOTE_CHARS))
-    {
-      storageType.set      ("dvd");
-      storageLoginName.set ("");
-      storageHostName.set  ("");
-      storageDeviceName.set((String)data[0]);
-      storageFileName.set  ((String)data[1]);
-System.err.println("BARControl.java"+", "+3100+": ");
-    }
-    else if (StringParser.parse(archiveName,"dvd:%s",data,StringParser.QUOTE_CHARS))
-    {
-      storageType.set      ("dvd");
-      storageFileName.set  ("");
-      storageLoginName.set ("");
-      storageDeviceName.set("");
-      storageFileName.set  ((String)data[0]);
-System.err.println("BARControl.java"+", "+3109+": ");
-    }
-    else if (StringParser.parse(archiveName,"device:%s:%s",data,StringParser.QUOTE_CHARS))
-    {
-      storageType.set      ("device");
-      storageLoginName.set ("");
-      storageHostName.set  ("");
-      storageDeviceName.set((String)data[0]);
-      storageFileName.set  ((String)data[1]);
-System.err.println("BARControl.java"+", "+3118+": ");
-    }
-    else
-    {
-      storageType.set      ("filesystem");
-      storageLoginName.set ("");
-      storageHostName.set  ("");
-      storageDeviceName.set("");
-      storageFileName.set  (archiveName);
-System.err.println("BARControl.java"+", "+3127+": ");
-    }
-  }
-
-  private String getStorageFileName(String archiveName)
-  {
-return archiveName;
-  }
-
-  private void clearJobData()
-  {
-    widgetIncludedPatterns.removeAll();
-    widgetExcludedPatterns.removeAll();
-  }
-
-  /** update job data
-   * @param name name of job
-   */
-  private void updateJobData()
-  {
-    ArrayList<String> result = new ArrayList<String>();
-    Object[]          data;
-
-    // clear
-    clearJobData();
-
-    if (selectedJobId > 0)
-    {
-System.err.println("BARControl.java"+", "+2594+": "+selectedJobId);
-      // get job data
-      skipUnreadable.set(BARServer.getBoolean(selectedJobId,"skip-unreadable"));
-      overwriteFiles.set(BARServer.getBoolean(selectedJobId,"overwrite-files"));
-
-      parseArchiveName(BARServer.getString(selectedJobId,"archive-name"));
-      archiveType.set(BARServer.getString(selectedJobId,"archive-type"));
-      archivePartSize.set(Units.parseByteSize(BARServer.getString(selectedJobId,"archive-part-size")));
-      archivePartSizeFlag.set(archivePartSize.getLong() > 0);
-      compressAlgorithm.set(BARServer.getString(selectedJobId,"compress-algorithm"));
-      cryptAlgorithm.set(BARServer.getString(selectedJobId,"crypt-algorithm"));
-      cryptType.set(BARServer.getString(selectedJobId,"crypt-type"));
-      incrementalListFileName.set(BARServer.getString(selectedJobId,"incremental-list-file"));
-      overwriteArchiveFiles.set(BARServer.getBoolean(selectedJobId,"overwrite-archive-files"));
-      sshPublicKeyFileName.set(BARServer.getString(selectedJobId,"ssh-public-key"));
-      sshPrivateKeyFileName.set(BARServer.getString(selectedJobId,"ssh-private-key"));
-/* NYI ???
-      maxBandWidth.set(Units.parseByteSize(BARServer.getString(jobId,"max-band-width")));
-      maxBandWidthFlag.set(maxBandWidth.getLong() > 0);
-*/
-      volumeSize.set(Units.parseByteSize(BARServer.getString(selectedJobId,"volume-size")));
-      ecc.set(BARServer.getBoolean(selectedJobId,"ecc"));
-
-      updatePatternList(PatternTypes.INCLUDE);
-      updatePatternList(PatternTypes.EXCLUDE);
-    }
-  }
-
-  /** find index for insert of name in sort list job list
-   * @param list list
-   * @param pattern pattern to insert
-   * @return index in list
-   */
-  private int findPatternsIndex(List list, String pattern)
-  {
-    String patterns[] = list.getItems();
-
-    int index = 0;
-    while (   (index < patterns.length)
-           && (patterns[index].compareTo(pattern) < 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
-  }
-
-  /** 
-   * @param 
-   * @return 
-   */
-  private void updatePatternList(PatternTypes patternType)
-  {
-    assert selectedJobId != 0;
-
-    ArrayList<String> result = new ArrayList<String>();
-    switch (patternType)
-    {
-      case INCLUDE:
-        BARServer.executeCommand("INCLUDE_PATTERNS_LIST "+selectedJobId,result);
-        break;
-      case EXCLUDE:
-        BARServer.executeCommand("EXCLUDE_PATTERNS_LIST "+selectedJobId,result);
-        break;
-    }
-
-    switch (patternType)
-    {
-      case INCLUDE:
-        includedPatterns.clear();
-        break;
-      case EXCLUDE:
-        excludedPatterns.clear();
-        break;
-    }
-
-    for (String line : result)
-    {
-      Object[] data = new Object[2];
-      if (StringParser.parse(line,"%s %S",data,StringParser.QUOTE_CHARS))
-      {
-        /* get data */
-        String type    = (String)data[0];
-        String pattern = (String)data[1];
-
-        if (!pattern.equals(""))
-        {
-          switch (patternType)
-          {
-            case INCLUDE:
-              includedPatterns.add(pattern);
-              widgetIncludedPatterns.add(pattern,findPatternsIndex(widgetIncludedPatterns,pattern));
-              break;
-            case EXCLUDE:
-              excludedPatterns.add(pattern);
-              widgetExcludedPatterns.add(pattern,findPatternsIndex(widgetExcludedPatterns,pattern));
-              break;
-          }
-        }
-      }
-    }
-  }
-
-  /** update schedule list
-   */
-  private void updateScheduleList()
-  {
-    // get job list
-    ArrayList<String> result = new ArrayList<String>();
-    int errorCode = BARServer.executeCommand("SCHEDULE_LIST "+selectedJobId,result);
-    if (errorCode != 0) return;
-
-    // update job list
-    widgetScheduleList.removeAll();
-    for (String line : result)
-    {
-      Object data[] = new Object[4];
-      /* format:
-         <date>
-         <weekDay>
-         <time>
-         <type>
-      */
-//System.err.println("BARControl.java"+", "+1357+": "+line);
-      if (StringParser.parse(line,"%S %S %S %S",data,StringParser.QUOTE_CHARS))
-      {
-//System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
-        /* get data */
-        String date    = (String)data[0];
-        String weekDay = (String)data[1];
-        String time    = (String)data[2];
-        String type    = (String)data[3];
-
-        if (!date.equals("") && !weekDay.equals("") && !time.equals("") && !type.equals(""))
-        {
-          /* add table item */
-          TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE);
-          tableItem.setText(0,date);
-          tableItem.setText(1,weekDay);
-          tableItem.setText(2,time);
-          tableItem.setText(3,type);
-        }
-      }
-    }
-  }
+  //-----------------------------------------------------------------------
 
   /** add a new job
    */
@@ -4848,6 +5484,7 @@ System.err.println("BARControl.java"+", "+2594+": "+selectedJobId);
       Widgets.layout(widgetJobName,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     }
 
+    /* buttons */
     composite = Widgets.newComposite(dialog,SWT.NONE);
     Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     {
@@ -4933,6 +5570,7 @@ throw new Error("NYI");
       Widgets.layout(widgetNewJobName,1,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     }
 
+    /* buttons */
     composite = Widgets.newComposite(dialog,SWT.NONE);
     Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     {
@@ -5000,51 +5638,89 @@ System.err.println("BARControl.java"+", "+3905+": "+newJobName);
     }
   }
 
-  /** add new include/exclude pattern
-   * @param patternType pattern type
-   * @param pattern pattern to add to included/exclude list
+  //-----------------------------------------------------------------------
+
+  /** find index for insert of name in sort list job list
+   * @param list list
+   * @param pattern pattern to insert
+   * @return index in list
    */
-  private void patternNew(final PatternTypes patternType, String pattern)
+  private int findPatternsIndex(List list, String pattern)
+  {
+    String patterns[] = list.getItems();
+
+    int index = 0;
+    while (   (index < patterns.length)
+           && (pattern.compareTo(patterns[index]) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
+
+  /** update pattern list
+   * @param patternType pattern type
+   */
+  private void updatePatternList(PatternTypes patternType)
   {
     assert selectedJobId != 0;
 
-BARServer.debug=true;
+    ArrayList<String> result = new ArrayList<String>();
     switch (patternType)
     {
       case INCLUDE:
-        {
-          BARServer.executeCommand("INCLUDE_PATTERNS_ADD "+selectedJobId+" GLOB "+StringParser.escape(pattern));
-
-          includedPatterns.add(pattern);
-
-          widgetIncludedPatterns.removeAll();
-          for (String s : includedPatterns)
-          {
-            widgetIncludedPatterns.add(s,findPatternsIndex(widgetIncludedPatterns,s));
-          }
-        }
+        BARServer.executeCommand("INCLUDE_PATTERNS_LIST "+selectedJobId,result);
         break;
       case EXCLUDE:
-        {
-          BARServer.executeCommand("EXCLUDE_PATTERNS_ADD "+selectedJobId+" GLOB "+StringParser.escape(pattern));
-
-          excludedPatterns.add(pattern);
-
-          widgetExcludedPatterns.removeAll();
-          for (String s : excludedPatterns)
-          {
-            widgetExcludedPatterns.add(s,findPatternsIndex(widgetIncludedPatterns,s));
-          }
-        }
+        BARServer.executeCommand("EXCLUDE_PATTERNS_LIST "+selectedJobId,result);
         break;
     }
-BARServer.debug=false;
+
+    switch (patternType)
+    {
+      case INCLUDE:
+        includedPatterns.clear();
+        widgetIncludedPatterns.removeAll();
+        break;
+      case EXCLUDE:
+        excludedPatterns.clear();
+        widgetExcludedPatterns.removeAll();
+        break;
+    }
+
+    for (String line : result)
+    {
+      Object[] data = new Object[2];
+      if (StringParser.parse(line,"%s %S",data,StringParser.QUOTE_CHARS))
+      {
+        /* get data */
+        String type    = (String)data[0];
+        String pattern = (String)data[1];
+
+        if (!pattern.equals(""))
+        {
+          switch (patternType)
+          {
+            case INCLUDE:
+              includedPatterns.add(pattern);
+              widgetIncludedPatterns.add(pattern,findPatternsIndex(widgetIncludedPatterns,pattern));
+              break;
+            case EXCLUDE:
+              excludedPatterns.add(pattern);
+              widgetExcludedPatterns.add(pattern,findPatternsIndex(widgetExcludedPatterns,pattern));
+              break;
+          }
+        }
+      }
+    }
   }
 
   /** add new include/exclude pattern
    * @param patternType pattern type
    */
-  private void patternNew(final PatternTypes patternType)
+  private boolean patternEdit(final PatternTypes patternType, final String pattern[], String title, String buttonText)
   {
     Composite composite;
     Label     label;
@@ -5053,16 +5729,6 @@ BARServer.debug=false;
     assert selectedJobId != 0;
 
     /* create dialog */
-    String title = null;
-    switch (patternType)
-    {
-      case INCLUDE:
-        title = "New include pattern";
-        break;
-      case EXCLUDE:
-        title = "New exclude pattern";
-        break;
-    }
     final Shell  dialog = Dialogs.open(shell,title,300,70);
 
     /* create widgets */
@@ -5078,10 +5744,11 @@ BARServer.debug=false;
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     }
 
+    /* buttons */
     composite = Widgets.newComposite(dialog,SWT.NONE);
     Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     {
-      widgetAdd = Widgets.newButton(composite,null,"Add");
+      widgetAdd = Widgets.newButton(composite,null,buttonText);
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,null,"Cancel");
@@ -5091,7 +5758,8 @@ BARServer.debug=false;
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-          widget.getShell().close();
+
+          Dialogs.close(dialog,false);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -5116,19 +5784,70 @@ throw new Error("NYI");
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
-        String newPattern = widgetPattern.getText();
-        if (!newPattern.equals(""))
-        {
-          patternNew(patternType,newPattern);
-        }
-        widget.getShell().close();
+
+        pattern[0] = widgetPattern.getText();
+        Dialogs.close(dialog,true);
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
       }
     });
 
-    Dialogs.run(dialog);
+    return (Boolean)Dialogs.run(dialog);
+  }
+
+  /** add new include/exclude pattern
+   * @param patternType pattern type
+   * @param pattern pattern to add to included/exclude list
+   */
+  private void patternNew(PatternTypes patternType, String pattern)
+  {
+    assert selectedJobId != 0;
+
+    switch (patternType)
+    {
+      case INCLUDE:
+        {
+          BARServer.executeCommand("INCLUDE_PATTERNS_ADD "+selectedJobId+" GLOB "+StringParser.escape(pattern));
+
+          includedPatterns.add(pattern);
+          widgetIncludedPatterns.add(pattern,findPatternsIndex(widgetIncludedPatterns,pattern));
+        }
+        break;
+      case EXCLUDE:
+        {
+          BARServer.executeCommand("EXCLUDE_PATTERNS_ADD "+selectedJobId+" GLOB "+StringParser.escape(pattern));
+
+          excludedPatterns.add(pattern);
+          widgetExcludedPatterns.add(pattern,findPatternsIndex(widgetIncludedPatterns,pattern));
+        }
+        break;
+    }
+  }
+
+  /** add new include/exclude pattern
+   * @param patternType pattern type
+   * @param pattern pattern to add to included/exclude list
+   */
+  private void patternNew(PatternTypes patternType)
+  {
+    assert selectedJobId != 0;
+
+    String title = null;
+    switch (patternType)
+    {
+      case INCLUDE:
+        title = "New include pattern";
+        break;
+      case EXCLUDE:
+        title = "New exclude pattern";
+        break;
+    }
+    String[] pattern = new String[1];
+    if (patternEdit(patternType,pattern,title,"Add"))
+    {
+      patternNew(patternType,pattern[0]);
+    }
   }
 
   /** delete include/exclude pattern
@@ -5139,7 +5858,6 @@ throw new Error("NYI");
   {
     assert selectedJobId != 0;
 
-BARServer.debug=true;
     switch (patternType)
     {
       case INCLUDE:
@@ -5169,7 +5887,6 @@ BARServer.debug=true;
         }
         break;
     }
-BARServer.debug=false;
   }
 
   /** delete selected include/exclude pattern
@@ -5198,6 +5915,371 @@ BARServer.debug=false;
       patternDelete(patternType,pattern);
     }
   }
+
+  //-----------------------------------------------------------------------
+
+  /** find index for insert of schedule data in sorted schedule table
+   * @param scheduleData schedule data
+   * @return index in schedule table
+   */
+  private int findScheduleListIndex(ScheduleData scheduleData)
+  {
+    TableItem              tableItems[] = widgetScheduleList.getItems();
+    ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleList);
+
+    int index = 0;
+    while (   (index < tableItems.length)
+           && (scheduleDataComparator.compare(scheduleData,(ScheduleData)tableItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
+
+  /** update schedule list
+   */
+  private void updateScheduleList()
+  {
+    // get schedule list
+    ArrayList<String> result = new ArrayList<String>();
+    BARServer.executeCommand("SCHEDULE_LIST "+selectedJobId,result);
+
+    // update schedule list
+    synchronized(scheduleList)
+    {
+      scheduleList.clear();
+      widgetScheduleList.removeAll();
+      for (String line : result)
+      {
+        Object data[] = new Object[7];
+        /* format:
+           <date>
+           <weekDay>
+           <time>
+           <type>
+        */
+//System.err.println("BARControl.java"+", "+1357+": "+line);
+        if (StringParser.parse(line,"%S-%S-%S %S %S:%S %S",data,StringParser.QUOTE_CHARS))
+        {
+//System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
+          /* get data */
+          String year    = (String)data[0];
+          String month   = (String)data[1];
+          String day     = (String)data[2];
+          String weekDay = (String)data[3];
+          String hour    = (String)data[4];
+          String minute  = (String)data[5];
+          String type    = (String)data[6];
+
+          ScheduleData scheduleData = new ScheduleData(year,month,day,weekDay,hour,minute,type);
+
+          scheduleList.add(scheduleData);
+          TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
+          tableItem.setData(scheduleData);
+          tableItem.setText(0,String.format("%s-%s-%s",scheduleData.year,scheduleData.month,scheduleData.day));
+          tableItem.setText(1,scheduleData.weekDay);
+          tableItem.setText(2,String.format("%s:%s",scheduleData.hour,scheduleData.minute));
+          tableItem.setText(3,scheduleData.type);
+        }
+      }
+    }
+  }
+
+  /** edit schedule data
+   * @param scheduleData schedule data
+   * @param title title text
+   * @param buttonText button text
+   * @return true if edit OK, false otherwise
+   */
+  private boolean scheduleEdit(final ScheduleData scheduleData, String title, String buttonText)
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+    Composite subComposite;
+
+    assert selectedJobId != 0;
+
+    /* create dialog */
+    final Shell dialog = Dialogs.open(shell,title,300,70);
+
+    /* create widgets */
+    final Combo  widgetYear,widgetMonth,widgetDay,widgetWeekDay;
+    final Combo  widgetHour,widgetMinute;
+    final Button widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental;
+    final Button widgetAdd;
+    composite = Widgets.newComposite(dialog,SWT.NONE);
+    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    {
+      label = Widgets.newLabel(composite,"Date:");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+      {
+        widgetYear = Widgets.newOptionMenu(subComposite,null);
+        widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015"});
+        widgetYear.setText(scheduleData.year);
+        Widgets.layout(widgetYear,0,0,TableLayoutData.W);
+
+        widgetMonth = Widgets.newOptionMenu(subComposite,null);
+        widgetMonth.setItems(new String[]{"*","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
+        widgetMonth.setText(scheduleData.month);
+        Widgets.layout(widgetMonth,0,1,TableLayoutData.W);
+
+        widgetDay = Widgets.newOptionMenu(subComposite,null);
+        widgetDay.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
+        widgetDay.setText(scheduleData.day);
+        Widgets.layout(widgetDay,0,2,TableLayoutData.W);
+
+        widgetWeekDay = Widgets.newOptionMenu(subComposite,null);
+        widgetWeekDay.setItems(new String[]{"*","Mon","Tue","Wed","Thu","Fri","Sat","Sun"});
+        widgetWeekDay.setText(scheduleData.weekDay);
+        Widgets.layout(widgetWeekDay,0,3,TableLayoutData.W);
+      }
+
+      label = Widgets.newLabel(composite,"Time:");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+      {
+        widgetHour = Widgets.newOptionMenu(subComposite,null);
+        widgetHour.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
+        widgetHour.setText(scheduleData.hour);
+        Widgets.layout(widgetHour,0,0,TableLayoutData.W);
+
+        widgetMinute = Widgets.newOptionMenu(subComposite,null);
+        widgetMinute.setItems(new String[]{"*","0","5","10","15","20","30","35","40","45","50","55"});
+        widgetMinute.setText(scheduleData.minute);
+        Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
+      }
+
+      label = Widgets.newLabel(composite,"Type:");
+      Widgets.layout(label,2,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+      {
+        widgetTypeDefault = Widgets.newRadio(subComposite,null,"*");
+        Widgets.layout(widgetTypeDefault,0,0,TableLayoutData.W);
+        widgetTypeDefault.setSelection(scheduleData.type.equals("*"));
+
+        widgetTypeNormal = Widgets.newRadio(subComposite,null,"normal");
+        Widgets.layout(widgetTypeNormal,0,1,TableLayoutData.W);
+        widgetTypeNormal.setSelection(scheduleData.type.equals("normal"));
+
+        widgetTypeFull = Widgets.newRadio(subComposite,null,"full");
+        Widgets.layout(widgetTypeFull,0,2,TableLayoutData.W);
+        widgetTypeFull.setSelection(scheduleData.type.equals("full"));
+
+        widgetTypeIncremental = Widgets.newRadio(subComposite,null,"incremental");
+        Widgets.layout(widgetTypeIncremental,0,3,TableLayoutData.W);
+        widgetTypeIncremental.setSelection(scheduleData.type.equals("incremental"));
+      }
+    }
+
+    /* buttons */
+    composite = Widgets.newComposite(dialog,SWT.NONE);
+    Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    {
+      widgetAdd = Widgets.newButton(composite,null,buttonText);
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,null,"Cancel");
+      Widgets.layout(button,0,1,TableLayoutData.E|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+
+          Dialogs.close(dialog,false);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    /* add selection listeners */
+/*
+    widgetPattern.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetAdd.forceFocus();
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+    });
+*/
+    widgetAdd.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget = (Button)selectionEvent.widget;
+
+        scheduleData.year    = widgetYear.getText();
+        scheduleData.month   = widgetMonth.getText();
+        scheduleData.day     = widgetDay.getText();
+        scheduleData.weekDay = widgetWeekDay.getText();
+        scheduleData.hour    = widgetHour.getText();
+        scheduleData.minute  = widgetMinute.getText();
+        if      (widgetTypeNormal.getSelection())      scheduleData.type = "normal";
+        else if (widgetTypeFull.getSelection())        scheduleData.type = "full";
+        else if (widgetTypeIncremental.getSelection()) scheduleData.type = "incremental";
+        else                                           scheduleData.type = "*";
+
+        Dialogs.close(dialog,true);
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+
+    return (Boolean)Dialogs.run(dialog);
+  }
+
+  /** create new schedule entry
+   */
+  private void scheduleNew()
+  {
+    assert selectedJobId != 0;
+
+    ScheduleData scheduleData = new ScheduleData();
+    if (scheduleEdit(scheduleData,"New schedule","Add"))
+    {
+      BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+scheduleData.getDate()+" "+scheduleData.getWeekDay()+" "+scheduleData.getTime()+" "+scheduleData.getType());
+
+      scheduleList.add(scheduleData);
+      TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
+      tableItem.setData(scheduleData);
+      tableItem.setText(0,scheduleData.getDate()   );
+      tableItem.setText(1,scheduleData.getWeekDay());
+      tableItem.setText(2,scheduleData.getTime()   );
+      tableItem.setText(3,scheduleData.getType()   );   
+    }
+  }
+
+  /** edit schedule entry
+   */
+  private void scheduleEdit()
+  {
+    assert selectedJobId != 0;
+
+    int index = widgetScheduleList.getSelectionIndex();
+    if (index >= 0)
+    {
+      TableItem tableItem = widgetScheduleList.getItem(index);
+
+      ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+      if (scheduleEdit(scheduleData,"Edit schedule","Save"))
+      {
+        scheduleList.add(scheduleData);
+
+        BARServer.executeCommand("SCHEDULE_CLEAR "+selectedJobId);
+        for (ScheduleData data : scheduleList)
+        {
+          BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+data.getDate()+" "+data.getWeekDay()+" "+data.getTime()+" "+data.getType());
+        }
+        
+        tableItem.dispose();
+        tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
+        tableItem.setData(scheduleData);
+        tableItem.setText(0,scheduleData.getDate()   );
+        tableItem.setText(1,scheduleData.getWeekDay());
+        tableItem.setText(2,scheduleData.getTime()   );
+        tableItem.setText(3,scheduleData.getType()   );   
+      }
+    }
+  }
+
+  /** delete schedule entry
+   */
+  private void scheduleDelete()
+  {
+    assert selectedJobId != 0;
+
+    int index = widgetScheduleList.getSelectionIndex();
+    if (index >= 0)
+    {
+      TableItem tableItem = widgetScheduleList.getItem(index);
+
+      ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+
+      scheduleList.remove(scheduleData);
+
+      BARServer.executeCommand("SCHEDULE_CLEAR "+selectedJobId);
+      for (ScheduleData data : scheduleList)
+      {
+        BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+data.getDate()+" "+data.getWeekDay()+" "+data.getTime()+" "+data.getType());
+      }
+
+      tableItem.dispose();
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
+  private void clearJobData()
+  {
+// NYI: rest?
+    widgetIncludedPatterns.removeAll();
+    widgetExcludedPatterns.removeAll();
+  }
+
+  /** update job data
+   * @param name name of job
+   */
+  private void updateJobData()
+  {
+    ArrayList<String> result = new ArrayList<String>();
+    Object[]          data;
+
+    // clear
+    clearJobData();
+
+    if (selectedJobId > 0)
+    {
+      // get job data
+      skipUnreadable.set(BARServer.getBoolean(selectedJobId,"skip-unreadable"));
+      overwriteFiles.set(BARServer.getBoolean(selectedJobId,"overwrite-files"));
+
+      parseArchiveName(BARServer.getString(selectedJobId,"archive-name"));
+      archiveType.set(BARServer.getString(selectedJobId,"archive-type"));
+      archivePartSize.set(Units.parseByteSize(BARServer.getString(selectedJobId,"archive-part-size")));
+      archivePartSizeFlag.set(archivePartSize.getLong() > 0);
+      compressAlgorithm.set(BARServer.getString(selectedJobId,"compress-algorithm"));
+      cryptAlgorithm.set(BARServer.getString(selectedJobId,"crypt-algorithm"));
+      cryptType.set(BARServer.getString(selectedJobId,"crypt-type"));
+      incrementalListFileName.set(BARServer.getString(selectedJobId,"incremental-list-file"));
+      overwriteArchiveFiles.set(BARServer.getBoolean(selectedJobId,"overwrite-archive-files"));
+      sshPublicKeyFileName.set(BARServer.getString(selectedJobId,"ssh-public-key"));
+      sshPrivateKeyFileName.set(BARServer.getString(selectedJobId,"ssh-private-key"));
+/* NYI ???
+      maxBandWidth.set(Units.parseByteSize(BARServer.getString(jobId,"max-band-width")));
+      maxBandWidthFlag.set(maxBandWidth.getLong() > 0);
+*/
+      volumeSize.set(Units.parseByteSize(BARServer.getString(selectedJobId,"volume-size")));
+      ecc.set(BARServer.getBoolean(selectedJobId,"ecc"));
+
+      updatePatternList(PatternTypes.INCLUDE);
+      updatePatternList(PatternTypes.EXCLUDE);
+    }
+  }
+
+  /** update all data
+   */
+  private void update()
+  {
+    updateJobData();
+    updateScheduleList();
+  }
 }
 
 public class BARControl
@@ -5209,40 +6291,151 @@ public class BARControl
   final static int    DEFAULT_TLS_PORT = 38524;
 
   // --------------------------- variables --------------------------------
-  private String hostname = DEFAULT_HOSTNAME;
-  private int    port     = DEFAULT_PORT;
-  private int    tlsPort  = DEFAULT_TLS_PORT;
+  private String    hostname = DEFAULT_HOSTNAME;
+  private int       port     = DEFAULT_PORT;
+  private int       tlsPort  = DEFAULT_TLS_PORT;
+
+  private Display   display;
+  private Shell     shell;
+  private TabFolder tabFolder;
+  private TabStatus tabStatus;
+  private TabJobs   tabJobs;
 
   // ------------------------ native functions ----------------------------
 
   // ---------------------------- methods ---------------------------------
 
-  BARControl(String[] args)
+  /** create main window
+   */
+  private void createWindow()
   {
-    // connect to server
-String password = "y7G7EGj2";
-//    BARServer barServer = new BARServer(hostname,port,tlsPort,password);
-
-    BARServer.connect(hostname,port,tlsPort,password);
-
-    // open main window
-    Display display = new Display();
-//    final Shell shell = new Shell(display);
-    Shell shell = new Shell(display);
+    display = new Display();
+    shell = new Shell(display);
     shell.setLayout(new TableLayout());
+  }
 
+  /** create tabs
+   */
+  private void createTabs()
+  {
     // create resizable tab (with help of sashForm)
     SashForm sashForm = new SashForm(shell,SWT.NONE);
     sashForm.setLayout(new TableLayout());
     Widgets.layout(sashForm,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
-    TabFolder tabFolder = new TabFolder(sashForm,SWT.NONE);
+    tabFolder = new TabFolder(sashForm,SWT.NONE);
     tabFolder.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND));
+    tabStatus = new TabStatus(tabFolder,SWT.F1);
+    tabJobs   = new TabJobs  (tabFolder,SWT.F2);
 
-    TabStatus tabStatus = new TabStatus(tabFolder);
-    TabJobs   tabJobs   = new TabJobs  (tabFolder);
+    // add tab listener
+    display.addFilter(SWT.KeyDown,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        switch (event.keyCode)
+        {
+          case SWT.F1:
+        System.out.println(event);
+            Widgets.showTab(tabFolder,tabStatus.widgetTab);
+            event.doit = false;
+            break;
+          case SWT.F2:
+            Widgets.showTab(tabFolder,tabJobs.widgetTab);
+            event.doit = false;
+            break;
+          default:
+            break;
+        }
+      }
+    });
+  }
 
+  /** create menu
+   */
+  private void createMenu()
+  {
+    Menu     menuBar;
+    Menu     menu;
+    MenuItem menuItem;
+
+    // create menu
+    menuBar = Widgets.newMenuBar(shell);
+    menu = Widgets.addMenu(menuBar,"Program");
+    menuItem = Widgets.addMenuItem(menu,"Start",SWT.CTRL+'S');
+    menuItem.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        MenuItem widget = (MenuItem)selectionEvent.widget;
+
+        Widgets.notify(tabStatus.widgetButtonStart);
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+    menuItem = Widgets.addMenuItem(menu,"Abort",SWT.CTRL+'A');
+    menuItem.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        MenuItem widget = (MenuItem)selectionEvent.widget;
+
+        Widgets.notify(tabStatus.widgetButtonAbort);
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+    menuItem = Widgets.addMenuItem(menu,"Toggle pause/continue",SWT.CTRL+'P');
+    menuItem.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        MenuItem widget = (MenuItem)selectionEvent.widget;
+
+        Widgets.notify(tabStatus.widgetButtonTogglePause);
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+    Widgets.addMenuSeparator(menu);
+    menuItem = Widgets.addMenuItem(menu,"Quit",SWT.CTRL+'Q');
+    menuItem.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        MenuItem widget = (MenuItem)selectionEvent.widget;
+
+        Widgets.notify(tabStatus.widgetButtonQuit);
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+    menu = Widgets.addMenu(menuBar,"Help");
+    menuItem = Widgets.addMenuItem(menu,"About");
+    menuItem.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        MenuItem widget = (MenuItem)selectionEvent.widget;
+
+        Dialogs.info(shell,"About","BAR control.\n\nWritten by Torsten Rupp.\n\nThanx to Matthias Albert.");
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+  }
+
+  /** run application
+   */
+  private void run()
+  {
     // set window size, manage window
-    shell.setSize(800,600);
+    shell.setSize(800,800);
     shell.open();
 
     // SWT event loop
@@ -5253,6 +6446,25 @@ String password = "y7G7EGj2";
         display.sleep();
       }
     }
+  }
+
+
+  BARControl(String[] args)
+  {
+    // connect to server
+String password = "y7G7EGj2";
+    BARServer.connect(hostname,port,tlsPort,password);
+
+    // open main window
+    createWindow();
+    createTabs();
+    createMenu();
+
+    // run
+    run();
+
+    // disconnect
+    BARServer.disconnect();
   }
 
   public static void main(String[] args)
