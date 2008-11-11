@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile,v $
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -17,6 +17,7 @@ JAVA_FLAGS  = -enableassertions
 
 JAVAC       = javac
 JAVAC_FLAGS = -g
+# -Xlint
 
 CLASSPATH = classes:/usr/local/swt/swt.jar
 
@@ -40,7 +41,7 @@ TAR        = tar
 
 #---------------------------------- rules ------------------------------------
 
-classes/%.class:%.java Images.java
+classes/%.class:%.java
 	$(INSTALL) -d classes
 	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) *.java
 
@@ -57,10 +58,9 @@ OBJECTS        = classes/BARControl.class \
                  classes/StringParser.class \
                  classes/TableLayout.class \
                  classes/TableLayoutData.class \
-                 \
-                 classes/ImagesToClass.class \
-                 \
-                 classes/Images.class \
+
+#                 classes/ImagesToClass.class \
+#                 classes/ImagesData.class \
 
 TARGETS        = barcontrol \
 
@@ -77,9 +77,9 @@ clean:
 distclean: clean
 
 # create images class
-Images.java: ImagesToClass.java $(wildcard images/*.gif)
-	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) ImagesToClass.java
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) ImagesToClass $(wildcard images/*.gif) > $@
+#ImagesData.java: ImagesToClass.java $(wildcard images/*.gif)
+#	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) ImagesToClass.java
+#	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) ImagesToClass $(wildcard images/*.gif) > $@
 
 # create BARControl
 barcontrol: $(OBJECTS)
