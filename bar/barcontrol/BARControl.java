@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/BARControl.java,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents:
 * Systems :
@@ -29,6 +29,7 @@ import java.lang.Integer;
 import java.lang.Long;
 import java.lang.String;
 import java.lang.System;
+import java.lang.NumberFormatException;
 import java.net.Socket;
 import java.text.DateFormat;
 import java.text.Collator;
@@ -379,6 +380,21 @@ class BARVariable
   }
 }
 
+/** communication error
+ */
+class CommunicationError extends Error
+{
+  /** create new communication error
+   * @param message message
+   */
+  CommunicationError(String message)
+  {
+    super(message);
+  }
+}
+
+/** BAR server
+ */
 class BARServer
 {
   private static Socket             socket;
@@ -389,28 +405,12 @@ class BARServer
 
   static boolean debug = false;
 
-  private static byte[] decodeHex(String s)
-  {
-    byte data[] = new byte[s.length()/2];
-    for (int z = 0; z < s.length()/2; z++)
-    {
-      data[z] = (byte)Integer.parseInt(s.substring(z*2,z*2+2),16);
-    }
-
-    return data;
-  }
-
-  private static String encodeHex(byte data[])
-  {
-    StringBuffer stringBuffer = new StringBuffer(data.length*2);
-    for (int z = 0; z < data.length; z++)
-    {
-      stringBuffer.append(String.format("%02x",(int)data[z] & 0xFF));
-    }
-
-    return stringBuffer.toString();
-  }
-
+  /** connect to BAR server
+   * @param hostname host name
+   * @param port port number or 0
+   * @param tlsPort TLS port number of 0
+   * @param serverPassword server password
+   */
   static void connect(String hostname, int port, int tlsPort, String serverPassword)
   {
     commandId = 0;
@@ -462,7 +462,7 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
     }
     catch (IOException exception)
     {
-      throw new Error("read session id");
+      throw new Error("Network error (error: "+exception.getMessage()+")");
     }
 //System.err.print("BARControl.java"+", "+682+": sessionId=");for (byte b : sessionId) { System.err.print(String.format("%02x",b & 0xFF)); }; System.err.println();
 
@@ -488,15 +488,39 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
           || (Integer.parseInt(data[2]) != 0)
          )
       {
-        throw new Error("authorize fail");
+        throw new CommunicationError("Authorization fail");
       }
     }
     catch (IOException exception)
     {
-      throw new Error("authorize fail");
+      throw new CommunicationError("Network error (error: "+exception.getMessage()+")");
+    }
+
+    // get version
+    try
+    {
+      String line;
+
+      output.println("VERSION"); output.flush();
+      line = input.readLine();
+      assert line != null;
+      String data[] = line.split(" ",4);
+      assert data.length >= 3;
+      if (   (Integer.parseInt(data[1]) != 1)
+          || (Integer.parseInt(data[2]) != 0)
+         )
+      {
+        throw new CommunicationError("Cannot connect to '"+hostname+"' (error: "+data[3]+")");
+      }
+    }
+    catch (IOException exception)
+    {
+      throw new CommunicationError("Network error (error: "+exception.getMessage()+")");
     }
   }
 
+  /** disconnect from BAR server
+   */
   static void disconnect()
   {
     try
@@ -511,6 +535,11 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
     }
   }
 
+  /** execute command
+   * @param command command to send to BAR server
+   * @param result result (String[] or ArrayList)
+   * @return 0 or error code
+   */
   static synchronized int executeCommand(String command, Object result)
   {
     String  line;
@@ -520,9 +549,8 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
     // send command
     commandId++;
     line = String.format("%d %s",commandId,command);
-    output.println(line);
-    if (debug) System.err.println("Server: sent '"+line+"'");
-    output.flush();
+    output.println(line); output.flush();
+    if (debug) System.err.println("Network: sent '"+line+"'");
 
     // read buffer lines from list
 //???
@@ -551,18 +579,21 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
     {
       while (!completedFlag && (line = input.readLine()) != null)
       {
-        if (debug) System.err.println("Server: received '"+line+"'");
+        if (debug) System.err.println("Network: received '"+line+"'");
 
         // line format: <id> <error code> <completed> <data>
         String data[] = line.split(" ",4);
-        assert data.length == 4;
+        if (data.length < 4)
+        {
+          throw new CommunicationError("malformed command result '"+line+"'");
+        }
         if (Integer.parseInt(data[0]) == commandId)
         {
           // check if completed
           if (Integer.parseInt(data[1]) != 0)
           {
             errorCode = Integer.parseInt(data[2]);
-            if (errorCode != 0) throw new Error("communication error: "+errorCode+" "+data[3]);
+            if (errorCode != 0) throw new CommunicationError("command fail with error "+errorCode+": "+data[3]);
             completedFlag = true;
           }
 
@@ -588,17 +619,26 @@ System.err.println("BARControl.java"+", "+505+": "+commandId+"::"+line);
     }
     catch (IOException exception)
     {
-      throw new Error("execute command fail");
+      throw new CommunicationError("Command fail (error: "+exception.getMessage()+")");
     }
 
     return errorCode;
   }
 
+  /** execute command
+   * @param command command to send to BAR server
+   * @return 0 or error code
+   */
   static int executeCommand(String command)
   {
     return executeCommand(command,null);
   }
 
+  /** get boolean value from BAR server
+   * @param jobId job id
+   * @param name name of value
+   * @return value
+   */
   static boolean getBoolean(int jobId, String name)
   {
     String[] result = new String[1];
@@ -609,14 +649,11 @@ System.err.println("BARControl.java"+", "+505+": "+commandId+"::"+line);
            || result[0].equals("1");
   }
 
-  static int getInt(int jobId, String name)
-  {
-    String[] result = new String[1];
-
-    executeCommand("OPTION_GET "+jobId+" "+name,result);
-    return Integer.parseInt(result[0]);
-  }
-
+  /** get long value from BAR server
+   * @param jobId job id
+   * @param name name of value
+   * @return value
+   */
   static long getLong(int jobId, String name)
   {
     String[] result = new String[1];
@@ -625,6 +662,11 @@ System.err.println("BARControl.java"+", "+505+": "+commandId+"::"+line);
     return Long.parseLong(result[0]);
   }
 
+  /** get string value from BAR server
+   * @param jobId job id
+   * @param name name of value
+   * @return value
+   */
   static String getString(int jobId, String name)
   {
     String[] result = new String[1];
@@ -633,19 +675,66 @@ System.err.println("BARControl.java"+", "+505+": "+commandId+"::"+line);
     return StringParser.unescape(result[0]);
   }
 
+  /** set boolean value on BAR server
+   * @param jobId job id
+   * @param name name of value
+   * @param b value
+   */
   static void set(int jobId, String name, boolean b)
   {
     executeCommand("OPTION_SET "+jobId+" "+name+" "+(b?"yes":"no"));
   }
 
+  /** set long value on BAR server
+   * @param jobId job id
+   * @param name name of value
+   * @param n value
+   */
   static void set(int jobId, String name, long n)
   {
     executeCommand("OPTION_SET "+jobId+" "+name+" "+n);
   }
 
+  /** set string value on BAR server
+   * @param jobId job id
+   * @param name name of value
+   * @param s value
+   */
   static void set(int jobId, String name, String s)
   {
     executeCommand("OPTION_SET "+jobId+" "+name+" "+StringParser.escape(s));
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** decode hex string
+   * @param s hex string
+   * @return bytes
+   */
+  private static byte[] decodeHex(String s)
+  {
+    byte data[] = new byte[s.length()/2];
+    for (int z = 0; z < s.length()/2; z++)
+    {
+      data[z] = (byte)Integer.parseInt(s.substring(z*2,z*2+2),16);
+    }
+
+    return data;
+  }
+
+  /** encode hex string
+   * @param data bytes
+   * @return hex string
+   */
+  private static String encodeHex(byte data[])
+  {
+    StringBuffer stringBuffer = new StringBuffer(data.length*2);
+    for (int z = 0; z < data.length; z++)
+    {
+      stringBuffer.append(String.format("%02x",(int)data[z] & 0xFF));
+    }
+
+    return stringBuffer.toString();
   }
 }
 
@@ -664,11 +753,21 @@ class Dialogs
    */
   static Shell open(Shell parentShell, String title, int minWidth, int minHeight, double[] rowWeights, double[] columnWeights)
   {
+    int             x,y;
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
 
+    // get location for dialog (keep 16 pixel away form right/bottom)
+    Display display = parentShell.getDisplay();
+    Point cursorPoint = display.getCursorLocation();
+    Rectangle bounds = display.getBounds();
+    x = Math.min(Math.max(cursorPoint.x-minWidth /2,0),bounds.width -minWidth -16);
+    y = Math.min(Math.max(cursorPoint.y-minHeight/2,0),bounds.height-minHeight-16);
+
+    // create dialog
     final Shell shell = new Shell(parentShell,SWT.DIALOG_TRIM|SWT.RESIZE|SWT.APPLICATION_MODAL);
     shell.setText(title);
+    shell.setLocation(x,y);
     tableLayout = new TableLayout(rowWeights,columnWeights,4);
     tableLayout.minWidth  = minWidth;
     tableLayout.minHeight = minHeight;
@@ -880,6 +979,7 @@ class Dialogs
    * @param message confirmation message
    * @param yesText yes-text
    * @param noText no-text
+   * @return value
    */
   static boolean confirm(Shell parentShell, String title, String message, String yesText, String noText)
   {
@@ -960,6 +1060,7 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param message confirmation message
+   * @return value
    */
   static boolean confirm(Shell parentShell, String title, String message)
   {
@@ -971,6 +1072,7 @@ class Dialogs
    * @param title title string
    * @param message confirmation message
    * @param texts array with texts
+   * @return selection index (0..n-1)
    */
   static int select(Shell parentShell, String title, String message, String[] texts)
   {
@@ -1047,6 +1149,108 @@ class Dialogs
     run(shell);
 
     return result[0];
+  }
+
+  /** password dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text
+   * @param okText OK button text
+   * @param CancelText cancel button text
+   * @return password or null on cancel
+   */
+  static String password(Shell parentShell, String title, String text, String okText, String cancelText)
+  {
+    TableLayout     tableLayout;
+    TableLayoutData tableLayoutData;
+    Composite       composite;
+    Label           label;
+    Button          button;
+
+    final String[] result = new String[1];
+
+    final Shell shell = open(parentShell,title,250,70);
+    shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+
+    // password
+    final Text widgetText;
+    composite = new Composite(shell,SWT.NONE);
+    tableLayout = new TableLayout(null,new double[]{1,0},4);
+    composite.setLayout(tableLayout);
+    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    {
+      label = new Label(composite,SWT.LEFT);
+      label.setText(text);
+      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
+
+      widgetText = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+      widgetText.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    }
+
+    // buttons
+    composite = new Composite(shell,SWT.NONE);
+    composite.setLayout(new TableLayout());
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    {
+      button = new Button(composite,SWT.CENTER);
+      button.setText(okText);
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+
+          result[0] = widgetText.getText();
+          shell.close();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      button = new Button(composite,SWT.CENTER);
+      button.setText(cancelText);
+      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+
+          result[0] = null;
+          shell.close();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    run(shell);
+
+    return result[0];
+  }
+
+  /** password dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text
+   * @return password or null on cancel
+   */
+  static String password(Shell parentShell, String title, String text)
+  {
+    return password(parentShell,title,text,"OK","Cancel");
+  }
+
+  /** password dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @return password or null on cancel
+   */
+  static String password(Shell parentShell, String title)
+  {
+    return password(parentShell,title,"Password:");
   }
 
   /** open a file dialog
@@ -2068,7 +2272,6 @@ private static void printTree(Tree tree)
       event.widget = widget;
       event.item   = item;
       control.notifyListeners(type,event);
-System.err.println("BARControl.java"+", "+1923+": ");
     }
   }
 
@@ -2191,54 +2394,6 @@ class TabStatus
       this.cryptType            = cryptType;
       this.lastExecutedDateTime = lastExecutedDateTime;
       this.estimatedRestTime    = estimatedRestTime;
-    }
-
-    /** get id of job data
-     * @return job id
-     */
-    int getId()
-    {
-      return id;
-    }
-
-    /** get job name
-     * @return job name
-     */
-    String getName()
-    {
-      return name;
-    }
-
-    /** get job state
-     * @return state
-     */
-    String getState()
-    {
-      return state;
-    }
-
-    /** get job type
-     * @return job type
-     */
-    String getType()
-    {
-      return type;
-    }
-
-    /** get job archive part size
-     * @return archive part size (bytes)
-     */
-    long getArchivePartSize()
-    {
-      return archivePartSize;
-    }
-
-    /** get job compress algorithm
-     * @return compress algorithm
-     */
-    String getCompressAlgorithm()
-    {
-      return compressAlgorithm;
     }
 
     /** get job crypt algorithm (including "*" for asymmetric)
@@ -3046,12 +3201,12 @@ boolean xxx=false;
             tableItem.setData(jobData);
 
             jobList.put(name,jobData);
-            tableItem.setText(0,Integer.toString(jobData.getId()));
-            tableItem.setText(1,jobData.getName());
-            tableItem.setText(2,(status != States.PAUSE)?jobData.getState():"pause");
-            tableItem.setText(3,jobData.getType());
-            tableItem.setText(4,Units.formatByteSize(jobData.getArchivePartSize()));
-            tableItem.setText(5,jobData.getCompressAlgorithm());
+            tableItem.setText(0,Integer.toString(jobData.id));
+            tableItem.setText(1,jobData.name);
+            tableItem.setText(2,(status != States.PAUSE)?jobData.state:"pause");
+            tableItem.setText(3,jobData.type);
+            tableItem.setText(4,Units.formatByteSize(jobData.archivePartSize));
+            tableItem.setText(5,jobData.compressAlgorithm);
             tableItem.setText(6,jobData.getCryptAlgorithm());
             tableItem.setText(7,jobData.formatLastExecutedDateTime());
             tableItem.setText(8,jobData.formatEstimatedRestTime());
@@ -3353,58 +3508,168 @@ class TabJobs
    */
   class ScheduleData
   {
-    final static String ANY          = "*";
-    final static String DEFAULT_TYPE = "*";
+    final static int ANY = -1;
 
-    String year,month,day,weekDay;
-    String hour,minute;
-    String type;
+    int     year,month,day;
+    String  weekDay;
+    int     hour,minute;
+    boolean enabled;
+    String  type;
 
     ScheduleData()
     {
       this.year    = ScheduleData.ANY;
       this.month   = ScheduleData.ANY;
       this.day     = ScheduleData.ANY;
-      this.weekDay = ScheduleData.ANY;
+      this.weekDay = "*";
       this.hour    = ScheduleData.ANY;
       this.minute  = ScheduleData.ANY;
-      this.type    = ScheduleData.DEFAULT_TYPE;
+      this.enabled = false;
+      this.type    = "*";
     }
 
-    ScheduleData(String year, String month, String day, String weekDay, String hour, String minute, String type)
+    ScheduleData(String year, String month, String day, String weekDay, String hour, String minute, boolean enabled, String type)
     {
-      this.year    = year;
-      this.month   = month;
-      this.day     = day;
-      this.weekDay = weekDay;
-      this.hour    = hour;
-      this.minute  = minute;
-      this.type    = type;
+      setDate(year,month,day);
+      this.weekDay = getValidString(weekDay,new String[]{"*","Mon","Tue","Wed","Thu","Fri","Sat","Sun"},"*");
+      setTime(hour,minute);
+      this.enabled = enabled;
+      this.type    = getValidString(type,new String[]{"*","full","incremental"},"*");;
+    }
+
+    String getYear()
+    {
+      assert (year == ANY) || (year >= 1);
+
+      return (year != ANY)?Integer.toString(year):"*";
+    }
+
+    String getMonth()
+    {
+      assert (month == ANY) || ((month >= 1) && (month <= 12));
+
+      switch (month)
+      {
+        case ANY: return "*";
+        case 1:   return "Jan";
+        case 2:   return "Feb";
+        case 3:   return "Mar";
+        case 4:   return "Arp";
+        case 5:   return "May";
+        case 6:   return "Jun";
+        case 7:   return "Jul";
+        case 8:   return "Aug";
+        case 9:   return "Sep";
+        case 10:  return "Oct";
+        case 11:  return "Nov";
+        case 12:  return "Dec";
+        default:  return "*";
+      }
+    }
+
+    String getDay()
+    {
+      assert (day == ANY) || ((day >= 1) && (day <= 31));
+
+      return (day != ANY)?Integer.toString(day):"*";
     }
 
     String getDate()
     {
-      return String.format("%s-%s-%s",year,month,day);
+      StringBuffer date = new StringBuffer();
+
+      date.append(getYear());
+      date.append('-');
+      date.append(getMonth());
+      date.append('-');
+      date.append(getDay());
+
+      return date.toString();
     }
 
-    String getWeekDay()
+    String getHour()
     {
-      return weekDay;
+      assert (hour   == ANY) || ((hour   >= 0) && (hour   <= 23));
+
+      return (hour != ANY)?Integer.toString(hour):"*";
+    }
+
+    String getMinute()
+    {
+      assert (minute == ANY) || ((minute >= 0) && (minute <= 59));
+
+      return (minute != ANY)?Integer.toString(minute):"*";
     }
 
     String getTime()
     {
-      return String.format("%s:%s",hour,minute);
+      StringBuffer time = new StringBuffer();
+
+      time.append(getHour());
+      time.append(':');
+      time.append(getMinute());
+
+      return time.toString();
     }
 
-    String getType()
+    String getEnabled()
     {
-      return type;
+      return enabled?"yes":"no";
+    }
+
+    void setDate(String year, String month, String day)
+    {
+      this.year = !year.equals("*")?Integer.parseInt(year):ANY;
+      if      (month.equals("*")) this.month = ANY;
+      else if (month.toLowerCase().equals("jan")) this.month =  1;
+      else if (month.toLowerCase().equals("feb")) this.month =  2;
+      else if (month.toLowerCase().equals("mar")) this.month =  3;
+      else if (month.toLowerCase().equals("arp")) this.month =  4;
+      else if (month.toLowerCase().equals("may")) this.month =  5;
+      else if (month.toLowerCase().equals("jun")) this.month =  6;
+      else if (month.toLowerCase().equals("jul")) this.month =  7;
+      else if (month.toLowerCase().equals("aug")) this.month =  8;
+      else if (month.toLowerCase().equals("sep")) this.month =  9;
+      else if (month.toLowerCase().equals("oct")) this.month = 10;
+      else if (month.toLowerCase().equals("nov")) this.month = 11;
+      else if (month.toLowerCase().equals("dec")) this.month = 12;
+      else
+      {
+        try
+        {
+          this.month = Integer.parseInt(month);
+        }
+        catch (NumberFormatException exception)
+        {
+          this.month = ANY;
+        }
+      }
+      this.day = !day.equals("*")?Integer.parseInt(day):ANY;
+    }
+
+    void setTime(String hour, String minute)
+    {
+      this.hour   = !hour.equals  ("*")?Integer.parseInt(hour  ):ANY;
+      this.minute = !minute.equals("*")?Integer.parseInt(minute):ANY;
     }
 
     public String toString()
     {
-      return "File {"+getDate()+", "+getWeekDay()+", "+getTime()+", "+getType()+"}";
+      return "File {"+getDate()+", "+weekDay+", "+getTime()+", "+enabled+", "+type+"}";
+    }
+
+    /** 
+     * @param 
+     * @return 
+     */
+    private String getValidString(String string, String[] validStrings, String defaultString)
+    {
+      for (String validString : validStrings)
+      {
+        if (validString.equals(string)) return validString;
+      }
+
+      return defaultString;
     }
   };
 
@@ -3661,7 +3926,6 @@ class TabJobs
           {
             TreeColumn             treeColumn = (TreeColumn)selectionEvent.widget;
             FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
-System.err.println("BARControl.java"+", "+3092+": "+fileTreeDataComparator);
 
             synchronized(scheduleList)
             {
@@ -4284,7 +4548,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-System.err.println("BARControl.java"+", "+4265+": ");
 
               storageFileNameEdit();
             }
@@ -5134,7 +5397,9 @@ throw new Error("NYI");
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleList,2,"Time",     SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,3,"Type",     SWT.LEFT,  0,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,3,"Enabled",  SWT.LEFT,  0,false);
+        tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,4,"Type",     SWT.LEFT,  0,true );
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
 
         // buttons
@@ -5148,7 +5413,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-System.err.println("BARControl.java"+", "+3133+": ");
 
               scheduleNew();
             }
@@ -5163,7 +5427,6 @@ System.err.println("BARControl.java"+", "+3133+": ");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-System.err.println("BARControl.java"+", "+3148+": ");
 
               scheduleEdit();
             }
@@ -5178,7 +5441,6 @@ System.err.println("BARControl.java"+", "+3148+": ");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-System.err.println("BARControl.java"+", "+3159+": ");
 
               scheduleDelete();
             }
@@ -5195,7 +5457,7 @@ System.err.println("BARControl.java"+", "+3159+": ");
 
     // update data
     updateJobList();
-selectJob("x2");
+//selectJob("x2");
   }
 
   /** select job
@@ -5745,7 +6007,6 @@ throw new Error("NYI");
       {
         Button widget = (Button)selectionEvent.widget;
         String newJobName = widgetNewJobName.getText();
-System.err.println("BARControl.java"+", "+3905+": "+newJobName);
         if (!newJobName.equals(""))
         {
           BARServer.executeCommand("JOB_RENAME "+selectedJobId+" "+StringParser.escape(newJobName));
@@ -6942,35 +7203,38 @@ void storageFileNameEdit()
       widgetScheduleList.removeAll();
       for (String line : result)
       {
-        Object data[] = new Object[7];
+        Object data[] = new Object[8];
         /* format:
-           <date>
+           <date y-m-d>
            <weekDay>
-           <time>
+           <time h:m>
+           <enabled>
            <type>
         */
 //System.err.println("BARControl.java"+", "+1357+": "+line);
-        if (StringParser.parse(line,"%S-%S-%S %S %S:%S %S",data,StringParser.QUOTE_CHARS))
+        if (StringParser.parse(line,"%S-%S-%S %S %S:%S %y %S",data,StringParser.QUOTE_CHARS))
         {
 //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
           // get data
-          String year    = (String)data[0];
-          String month   = (String)data[1];
-          String day     = (String)data[2];
-          String weekDay = (String)data[3];
-          String hour    = (String)data[4];
-          String minute  = (String)data[5];
-          String type    = (String)data[6];
+          String  year    = (String)data[0];
+          String  month   = (String)data[1];
+          String  day     = (String)data[2];
+          String  weekDay = (String)data[3];
+          String  hour    = (String)data[4];
+          String  minute  = (String)data[5];
+          boolean enabled = (Boolean)data[6];
+          String  type    = (String)data[7];
 
-          ScheduleData scheduleData = new ScheduleData(year,month,day,weekDay,hour,minute,type);
+          ScheduleData scheduleData = new ScheduleData(year,month,day,weekDay,hour,minute,enabled,type);
 
           scheduleList.add(scheduleData);
           TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
           tableItem.setData(scheduleData);
-          tableItem.setText(0,String.format("%s-%s-%s",scheduleData.year,scheduleData.month,scheduleData.day));
+          tableItem.setText(0,scheduleData.getDate());
           tableItem.setText(1,scheduleData.weekDay);
-          tableItem.setText(2,String.format("%s:%s",scheduleData.hour,scheduleData.minute));
-          tableItem.setText(3,scheduleData.type);
+          tableItem.setText(2,scheduleData.getTime());
+          tableItem.setText(3,scheduleData.getEnabled());
+          tableItem.setText(4,scheduleData.type);
         }
       }
     }
@@ -6997,7 +7261,7 @@ void storageFileNameEdit()
     // create widgets
     final Combo  widgetYear,widgetMonth,widgetDay,widgetWeekDay;
     final Combo  widgetHour,widgetMinute;
-    final Button widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental;
+    final Button widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetEnabled;
     final Button widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE);
     Widgets.layout(composite,0,0,TableLayoutData.WE);
@@ -7010,17 +7274,18 @@ void storageFileNameEdit()
       {
         widgetYear = Widgets.newOptionMenu(subComposite,null);
         widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015"});
-        widgetYear.setText(scheduleData.year);
+        widgetYear.setText(scheduleData.getYear());
+        if (widgetYear.getText().equals("")) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);
 
         widgetMonth = Widgets.newOptionMenu(subComposite,null);
         widgetMonth.setItems(new String[]{"*","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
-        widgetMonth.setText(scheduleData.month);
+        widgetMonth.setText(scheduleData.getMonth());
         Widgets.layout(widgetMonth,0,1,TableLayoutData.W);
 
         widgetDay = Widgets.newOptionMenu(subComposite,null);
         widgetDay.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
-        widgetDay.setText(scheduleData.day);
+        widgetDay.setText(scheduleData.getDay());
         Widgets.layout(widgetDay,0,2,TableLayoutData.W);
 
         widgetWeekDay = Widgets.newOptionMenu(subComposite,null);
@@ -7037,12 +7302,12 @@ void storageFileNameEdit()
       {
         widgetHour = Widgets.newOptionMenu(subComposite,null);
         widgetHour.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
-        widgetHour.setText(scheduleData.hour);
+        widgetHour.setText(scheduleData.getHour());
         Widgets.layout(widgetHour,0,0,TableLayoutData.W);
 
         widgetMinute = Widgets.newOptionMenu(subComposite,null);
         widgetMinute.setItems(new String[]{"*","0","5","10","15","20","30","35","40","45","50","55"});
-        widgetMinute.setText(scheduleData.minute);
+        widgetMinute.setText(scheduleData.getMinute());
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
       }
 
@@ -7067,6 +7332,17 @@ void storageFileNameEdit()
         widgetTypeIncremental = Widgets.newRadio(subComposite,null,"incremental");
         Widgets.layout(widgetTypeIncremental,0,3,TableLayoutData.W);
         widgetTypeIncremental.setSelection(scheduleData.type.equals("incremental"));
+      }
+
+      label = Widgets.newLabel(composite,"Options:");
+      Widgets.layout(label,3,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(subComposite,3,1,TableLayoutData.WE);
+      {
+        widgetEnabled = Widgets.newCheckbox(subComposite,null,"enabled");
+        Widgets.layout(widgetEnabled,0,0,TableLayoutData.W);
+        widgetEnabled.setSelection(scheduleData.enabled);
       }
     }
 
@@ -7113,12 +7389,10 @@ throw new Error("NYI");
       {
         Button widget = (Button)selectionEvent.widget;
 
-        scheduleData.year    = widgetYear.getText();
-        scheduleData.month   = widgetMonth.getText();
-        scheduleData.day     = widgetDay.getText();
+        scheduleData.setDate(widgetYear.getText(),widgetMonth.getText(),widgetDay.getText());
         scheduleData.weekDay = widgetWeekDay.getText();
-        scheduleData.hour    = widgetHour.getText();
-        scheduleData.minute  = widgetMinute.getText();
+        scheduleData.setTime(widgetHour.getText(),widgetMinute.getText());
+        scheduleData.enabled = widgetEnabled.getSelection();
         if      (widgetTypeNormal.getSelection())      scheduleData.type = "normal";
         else if (widgetTypeFull.getSelection())        scheduleData.type = "full";
         else if (widgetTypeIncremental.getSelection()) scheduleData.type = "incremental";
@@ -7143,15 +7417,16 @@ throw new Error("NYI");
     ScheduleData scheduleData = new ScheduleData();
     if (scheduleEdit(scheduleData,"New schedule","Add"))
     {
-      BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+scheduleData.getDate()+" "+scheduleData.getWeekDay()+" "+scheduleData.getTime()+" "+scheduleData.getType());
+      BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+scheduleData.getDate()+" "+scheduleData.weekDay+" "+scheduleData.getTime()+" "+scheduleData.getEnabled()+" "+scheduleData.type);
 
       scheduleList.add(scheduleData);
       TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
       tableItem.setData(scheduleData);
-      tableItem.setText(0,scheduleData.getDate()   );
-      tableItem.setText(1,scheduleData.getWeekDay());
-      tableItem.setText(2,scheduleData.getTime()   );
-      tableItem.setText(3,scheduleData.getType()   );   
+      tableItem.setText(0,scheduleData.getDate());
+      tableItem.setText(1,scheduleData.weekDay);
+      tableItem.setText(2,scheduleData.getTime());
+      tableItem.setText(3,scheduleData.getEnabled());
+      tableItem.setText(3,scheduleData.type);   
     }
   }
 
@@ -7169,21 +7444,20 @@ throw new Error("NYI");
       ScheduleData scheduleData = (ScheduleData)tableItem.getData();
       if (scheduleEdit(scheduleData,"Edit schedule","Save"))
       {
-        scheduleList.add(scheduleData);
-
         BARServer.executeCommand("SCHEDULE_CLEAR "+selectedJobId);
         for (ScheduleData data : scheduleList)
         {
-          BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+data.getDate()+" "+data.getWeekDay()+" "+data.getTime()+" "+data.getType());
+          BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+data.getDate()+" "+data.weekDay+" "+data.getTime()+" "+data.getEnabled()+" "+data.type);
         }
         
         tableItem.dispose();
         tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
         tableItem.setData(scheduleData);
-        tableItem.setText(0,scheduleData.getDate()   );
-        tableItem.setText(1,scheduleData.getWeekDay());
-        tableItem.setText(2,scheduleData.getTime()   );
-        tableItem.setText(3,scheduleData.getType()   );   
+        tableItem.setText(0,scheduleData.getDate());
+        tableItem.setText(1,scheduleData.weekDay);
+        tableItem.setText(2,scheduleData.getTime());
+        tableItem.setText(3,scheduleData.getEnabled());   
+        tableItem.setText(4,scheduleData.type);   
       }
     }
   }
@@ -7206,7 +7480,7 @@ throw new Error("NYI");
       BARServer.executeCommand("SCHEDULE_CLEAR "+selectedJobId);
       for (ScheduleData data : scheduleList)
       {
-        BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+data.getDate()+" "+data.getWeekDay()+" "+data.getTime()+" "+data.getType());
+        BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+data.getDate()+" "+data.weekDay+" "+data.getTime()+" "+data.getEnabled()+" "+data.type);
       }
 
       tableItem.dispose();
@@ -7298,7 +7572,6 @@ public class BARControl
    */
   private void createWindow()
   {
-    display = new Display();
     shell = new Shell(display);
     shell.setLayout(new TableLayout());
   }
@@ -7439,25 +7712,49 @@ public class BARControl
     }
   }
 
-
   BARControl(String[] args)
   {
-    // connect to server
-String password = "y7G7EGj2";
-    BARServer.connect(hostname,port,tlsPort,password);
+    try
+    {
+      display = new Display();
 
-    // open main window
-    createWindow();
-    createTabs();
-    createMenu();
-//tabJobs.storageFileNameEdit();
-//System.exit(0);
+      // connect to server
+      String password = Dialogs.password(new Shell(display),"BAR server password","Password:","Login","Cancel");
+      if (password == null)
+      {
+        System.exit(0);
+      }
+      BARServer.connect(hostname,port,tlsPort,password);
 
-    // run
-    run();
+      // open main window
+      createWindow();
+      createTabs();
+      createMenu();
 
-    // disconnect
-    BARServer.disconnect();
+      // run
+      run();
+
+      // disconnect
+      BARServer.disconnect();
+    }
+    catch (CommunicationError communicationError)
+    {
+      System.err.println("ERROR communication: "+communicationError.getMessage());
+    }
+    catch (AssertionError assertionError)
+    {
+      System.err.println("INTERNAL ERROR: "+assertionError.toString());
+      for (StackTraceElement stackTraceElement : assertionError.getStackTrace())
+      {
+        System.err.println("  "+stackTraceElement);
+      }
+      System.err.println("");
+      System.err.println("Please report this assertion error to torsten.rupp@gmx.net.");
+    }
+    catch (Error error)
+    {
+      System.err.println("ERROR: "+error.getMessage()+" "+error);
+    }
   }
 
   public static void main(String[] args)
