@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/BARControl.java,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents:
 * Systems :
@@ -17,7 +17,12 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.lang.Double;
 import java.lang.Exception;
 import java.lang.Integer;
@@ -39,8 +44,23 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.dnd.ByteArrayTransfer;
+import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.dnd.TransferData;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DragSource;
+import org.eclipse.swt.dnd.DragSourceEvent;
+import org.eclipse.swt.dnd.DragSourceListener;
+import org.eclipse.swt.dnd.DropTarget;
+import org.eclipse.swt.dnd.DropTargetAdapter;
+import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseMoveListener;
+import org.eclipse.swt.events.MouseTrackListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -48,6 +68,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.events.VerifyListener;
+import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.FontMetrics;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
@@ -57,9 +78,11 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.FileDialog;
@@ -207,7 +230,6 @@ class ProgressBar extends Canvas
     gc.dispose();
 
     redraw();
-
   }
 }
 
@@ -536,7 +558,7 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
         assert data.length == 4;
         if (Integer.parseInt(data[0]) == commandId)
         {
-          /* check if completed */
+          // check if completed
           if (Integer.parseInt(data[1]) != 0)
           {
             errorCode = Integer.parseInt(data[2]);
@@ -546,7 +568,7 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
 
           if (result != null)
           {
-            /* store data */
+            // store data
             if      (result instanceof ArrayList)
             {
               ((ArrayList<String>)result).add(data[3]);
@@ -636,21 +658,35 @@ class Dialogs
    * @param title title string
    * @param minWidth minimal width
    * @param minHeight minimal height
+   * @param rowWeights row weights or null
+   * @param columnWeights column weights or null
    * @return dialog shell
    */
-  static Shell open(Shell parentShell, String title, int minWidth, int minHeight)
+  static Shell open(Shell parentShell, String title, int minWidth, int minHeight, double[] rowWeights, double[] columnWeights)
   {
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
 
     final Shell shell = new Shell(parentShell,SWT.DIALOG_TRIM|SWT.RESIZE|SWT.APPLICATION_MODAL);
     shell.setText(title);
-    tableLayout = new TableLayout(new double[]{1,0},null,4);
+    tableLayout = new TableLayout(rowWeights,columnWeights,4);
     tableLayout.minWidth  = minWidth;
     tableLayout.minHeight = minHeight;
     shell.setLayout(tableLayout);
 
     return shell;
+  }
+
+  /** open a new dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param minWidth minimal width
+   * @param minHeight minimal height
+   * @return dialog shell
+   */
+  static Shell open(Shell parentShell, String title, int minWidth, int minHeight)
+  {
+    return open(parentShell,title,minWidth,minHeight,new double[]{1,0},null);
   }
 
   /** open a new dialog
@@ -723,7 +759,7 @@ class Dialogs
     final Shell shell = open(parentShell,title,200,70);
     shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
-    /* message */
+    // message
     composite = new Composite(shell,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
@@ -738,7 +774,7 @@ class Dialogs
       label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0));
     }
 
-    /* buttons */
+    // buttons
     composite = new Composite(shell,SWT.NONE);
     composite.setLayout(new TableLayout());
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
@@ -769,11 +805,14 @@ class Dialogs
    */
   static void info(Shell parentShell, String title, String message)
   {
+/*
     PaletteData paletteData = new PaletteData(0xFF0000,0x00FF00,0x0000FF);
     ImageData imageData = new ImageData(Images.info.width,Images.info.height,Images.info.depth,paletteData,1,Images.info.data);
     imageData.alphaData = Images.info.alphas;
     imageData.alpha = -1;
     Image image = new Image(parentShell.getDisplay(),imageData);
+*/
+    Image image = new Image(parentShell.getDisplay(),"images/info.gif");
 
     info(parentShell,title,image,message);
   }
@@ -793,13 +832,9 @@ class Dialogs
     final Shell shell = open(parentShell,"Error",200,70);
     shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
-    PaletteData paletteData = new PaletteData(0xFF0000,0x00FF00,0x0000FF);
-    ImageData imageData = new ImageData(Images.error.width,Images.error.height,Images.error.depth,paletteData,1,Images.error.data);
-    imageData.alphaData = Images.error.alphas;
-    imageData.alpha = -1;
-    Image image = new Image(shell.getDisplay(),imageData);
+    Image image = new Image(shell.getDisplay(),"images/error.gif");
 
-    /* message */
+    // message
     composite = new Composite(shell,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
@@ -814,7 +849,7 @@ class Dialogs
       label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0));
     }
 
-    /* buttons */
+    // buttons
     composite = new Composite(shell,SWT.NONE);
     composite.setLayout(new TableLayout());
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
@@ -859,13 +894,9 @@ class Dialogs
     final Shell shell = open(parentShell,title,200,70);
     shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
-    PaletteData paletteData = new PaletteData(0xFF0000,0x00FF00,0x0000FF);
-    ImageData imageData = new ImageData(Images.question.width,Images.question.height,Images.question.depth,paletteData,1,Images.question.data);
-    imageData.alphaData = Images.question.alphas;
-    imageData.alpha = -1;
-    Image image = new Image(shell.getDisplay(),imageData);
+    Image image = new Image(shell.getDisplay(),"images/question.gif");
 
-    /* message */
+    // message
     composite = new Composite(shell,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
@@ -880,7 +911,7 @@ class Dialogs
       label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE));
     }
 
-    /* buttons */
+    // buttons
     composite = new Composite(shell,SWT.NONE);
     composite.setLayout(new TableLayout());
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
@@ -956,13 +987,9 @@ class Dialogs
 //    shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND));
     shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
-    PaletteData paletteData = new PaletteData(0xFF0000,0x00FF00,0x0000FF);
-    ImageData imageData = new ImageData(Images.question.width,Images.question.height,Images.question.depth,paletteData,1,Images.question.data);
-    imageData.alphaData = Images.question.alphas;
-    imageData.alpha = -1;
-    Image image = new Image(shell.getDisplay(),imageData);
+    Image image = new Image(shell.getDisplay(),"images/question.gif");
 
-    /* message */
+    // message
     composite = new Composite(shell,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
@@ -979,7 +1006,7 @@ class Dialogs
       label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE));
     }
 
-    /* buttons */
+    // buttons
     composite = new Composite(shell,SWT.NONE);
     composite.setLayout(new TableLayout());
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
@@ -1022,6 +1049,14 @@ class Dialogs
     return result[0];
   }
 
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type SWT.OPEN or SWT.SAVE
+   * @param title title text
+   * @param fileName fileName or null
+   * @param fileExtensions array with {name,pattern} or null
+   * @return file name or null
+   */
   private static String file(Shell parentShell, int type, String title, String fileName, String[] fileExtensions)
   {
     FileDialog dialog = new FileDialog(parentShell,type);
@@ -1053,20 +1088,46 @@ class Dialogs
     return dialog.open();  
   }
 
+  /** file dialog for open file
+   * @param parentShell parent shell
+   * @param title title text
+   * @param fileName fileName or null
+   * @param fileExtensions array with {name,pattern} or null
+   * @return file name or null
+   */
   static String fileOpen(Shell parentShell, String title, String fileName, String[] fileExtensions)
   {
     return file(parentShell,SWT.OPEN,title,fileName,fileExtensions);
   }
 
+  /** file dialog for save file
+   * @param parentShell parent shell
+   * @param title title text
+   * @param fileName fileName or null
+   * @param fileExtensions array with {name,pattern} or null
+   * @return file name or null
+   */
   static String fileSave(Shell parentShell, String title, String fileName, String[] fileExtensions)
   {
     return file(parentShell,SWT.SAVE,title,fileName,fileExtensions);
   }
 
-  static String path(Shell parentShell, String title, String pathName)
+  /** directory dialog
+   * @param parentShell parent shell
+   * @param title title text
+   * @param pathName path name or null
+   * @return directory name or null
+   */
+  static String directory(Shell parentShell, String title, String pathName)
   {
-//    return file(parentShell,SWT.SAVE,title,fileName,fileExtensions);
-return null;
+    DirectoryDialog dialog = new DirectoryDialog(parentShell);
+    dialog.setText(title);
+    if (pathName != null)
+    {
+      dialog.setFilterPath(pathName);
+    }
+
+    return dialog.open();  
   }
 }
 
@@ -1351,14 +1412,34 @@ class Widgets
     control.getParent().layout();
   }
 
-  static Label newLabel(Composite composite, String text)
+  static Label newLabel(Composite composite, String text, int style)
   {
     Label label;
 
-    label = new Label(composite,SWT.LEFT);
+    label = new Label(composite,style);
     label.setText(text);
 
     return label;
+  }
+
+  static Label newLabel(Composite composite, Image image, int style)
+  {
+    Label label;
+
+    label = new Label(composite,style);
+    label.setImage(image);
+
+    return label;
+  }
+
+  static Label newLabel(Composite composite, String text)
+  {
+    return newLabel(composite,text,SWT.LEFT);
+  }
+
+  static Label newLabel(Composite composite, Image image)
+  {
+    return newLabel(composite,image,SWT.LEFT);
   }
 
   static Label newLabel(Composite composite)
@@ -1523,7 +1604,7 @@ class Widgets
   {
     TableItem[] tableItems = table.getItems();
 
-    /* get sorting direction */
+    // get sorting direction
     int sortDirection = table.getSortDirection();
     if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
     if (table.getSortColumn() == tableColumn)
@@ -1535,7 +1616,7 @@ class Widgets
       }
     }
 
-    /* sort column */
+    // sort column
     for (int i = 1; i < tableItems.length; i++)
     {
       boolean sortedFlag = false;
@@ -1548,7 +1629,7 @@ class Widgets
         }
         if (sortedFlag)
         {
-          /* save data */
+          // save data
           Object   data = tableItems[i].getData();
           String[] texts = new String[table.getColumnCount()];
           for (int z = 0; z < table.getColumnCount(); z++)
@@ -1556,10 +1637,10 @@ class Widgets
             texts[z] = tableItems[i].getText(z);
           }
 
-          /* discard item */
+          // discard item
           tableItems[i].dispose();
 
-          /* create new item */
+          // create new item
           TableItem tableItem = new TableItem(table,SWT.NONE,j);
           tableItem.setData(data);
           tableItem.setText(texts);
@@ -1665,7 +1746,7 @@ private static void printTree(Tree tree)
 
   private static TreeItem recreateTreeItem(Tree tree, TreeItem parentTreeItem, TreeItem treeItem, int index)
   {
-    /* save data */
+    // save data
     Object   data = treeItem.getData();
     String[] texts = new String[tree.getColumnCount()];
     for (int z = 0; z < tree.getColumnCount(); z++)
@@ -1674,7 +1755,7 @@ private static void printTree(Tree tree)
     }
     Image image = treeItem.getImage();
 
-    /* recreate item */
+    // recreate item
     TreeItem newTreeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
     newTreeItem.setData(data);
     newTreeItem.setText(texts);
@@ -1684,7 +1765,7 @@ private static void printTree(Tree tree)
       recreateTreeItem(tree,newTreeItem,subTreeItem);
     }
 
-    /* discard old item */
+    // discard old item
     treeItem.dispose();
 
     return newTreeItem;
@@ -1706,7 +1787,7 @@ private static void printTree(Tree tree)
     }
 //System.err.println(indent(rr)+"B "+treeItem+" ("+treeItem.hashCode()+") "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
     
-    /* sort sub-tree */
+    // sort sub-tree
 //boolean xx = treeItem.getExpanded();
     TreeItem[] subTreeItems = treeItem.getItems();
     for (int i = 0; i < subTreeItems.length; i++)
@@ -1757,7 +1838,7 @@ private static void printTree(Tree tree)
   {
     TreeItem[] treeItems = tree.getItems();
 
-    /* get sorting direction */
+    // get sorting direction
     int sortDirection = tree.getSortDirection();
     if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
     if (tree.getSortColumn() == treeColumn)
@@ -1769,12 +1850,11 @@ private static void printTree(Tree tree)
       }
     }
 
-    /* save expanded sub-trees.
-       Note: sub-tree cannot be expanded when either no children exist or the
-       parent is not expanded. Because for sort the tree entries they are copied
-       (recreated) the state of the expanded sub-trees are stored here and will
-       late be restored when the complete new tree is created.
-    */
+    // save expanded sub-trees.
+    // Note: sub-tree cannot be expanded when either no children exist or the
+    // parent is not expanded. Because for sort the tree entries they are copied
+    // (recreated) the state of the expanded sub-trees are stored here and will
+    // late be restored when the complete new tree is created.
     HashSet expandedDirectories = new HashSet();
     for (TreeItem treeItem : tree.getItems())
     {
@@ -1782,7 +1862,7 @@ private static void printTree(Tree tree)
     }
 //System.err.println("BARControl.java"+", "+1627+": "+expandedDirectories.toString());
 
-    /* sort column */
+    // sort column
 //System.err.println("1 ---------------");
 //printTree(tree);
     for (TreeItem treeItem : tree.getItems())
@@ -1790,13 +1870,13 @@ private static void printTree(Tree tree)
       sortSubTreeColumn(tree,treeItem,sortDirection,comparator);
     }
 
-    /* restore expanded sub-trees */
+    // restore expanded sub-trees
     for (TreeItem treeItem : tree.getItems())
     {
       rexpandDiretories(expandedDirectories,treeItem);
     }
 
-    /* set column sort indicators */
+    // set column sort indicators
     tree.setSortColumn(treeColumn);
     tree.setSortDirection(sortDirection);
 //System.err.println("2 ---------------");
@@ -1874,6 +1954,14 @@ private static void printTree(Tree tree)
         break;
       }
     }
+  }
+
+  static Canvas newCanvas(Composite composite, int style)
+  {    
+    Canvas canvas = new Canvas(composite,style);
+//    canvas.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE|TableLayoutData.EXPAND));
+
+    return canvas;
   }
 
   static Menu newMenuBar(Shell shell)
@@ -2089,6 +2177,8 @@ class TabStatus
     long   lastExecutedDateTime;
     long   estimatedRestTime;
 
+    /** create job data
+     */
     JobData(int id, String name, String state, String type, long archivePartSize, String compressAlgorithm, String cryptAlgorithm, String cryptType, long lastExecutedDateTime, long estimtedRestTime)
     {
       this.id                   = id;
@@ -2103,46 +2193,73 @@ class TabStatus
       this.estimatedRestTime    = estimatedRestTime;
     }
 
+    /** get id of job data
+     * @return job id
+     */
     int getId()
     {
       return id;
     }
 
+    /** get job name
+     * @return job name
+     */
     String getName()
     {
       return name;
     }
 
+    /** get job state
+     * @return state
+     */
     String getState()
     {
       return state;
     }
 
+    /** get job type
+     * @return job type
+     */
     String getType()
     {
       return type;
     }
 
+    /** get job archive part size
+     * @return archive part size (bytes)
+     */
     long getArchivePartSize()
     {
       return archivePartSize;
     }
 
+    /** get job compress algorithm
+     * @return compress algorithm
+     */
     String getCompressAlgorithm()
     {
       return compressAlgorithm;
     }
 
+    /** get job crypt algorithm (including "*" for asymmetric)
+     * @return crypt algorithm
+     */
     String getCryptAlgorithm()
     {
       return cryptAlgorithm+(cryptType.equals("ASYMMETRIC")?"*":"");
     }
 
+    /** format last executed date/time
+     * @return date/time string
+     */
     String formatLastExecutedDateTime()
     {
       return DateFormat.getDateTimeInstance().format(new Date(lastExecutedDateTime*1000));
     }
 
+    /** format estimated rest time
+     * @return estimated rest time string
+     */
     String formatEstimatedRestTime()
     {
       long   estimatedRestDays    = estimatedRestTime/(24*60*60);
@@ -2163,7 +2280,7 @@ class TabStatus
    */
   class JobDataComparator implements Comparator<JobData>
   {
-    /* Note: enum in inner classes are not possible in Java, thus use the old way... */
+    // Note: enum in inner classes are not possible in Java, thus use the old way...
     private final static int SORTMODE_NAME                   = 0;
     private final static int SORTMODE_STATE                  = 1;
     private final static int SORTMODE_TYPE                   = 2;
@@ -2234,7 +2351,9 @@ class TabStatus
     }
   }
 
-  final Shell shell;
+  // global variable references
+  Shell       shell;
+  TabJobs     tabJobs;
 
   // widgets
   Composite   widgetTab;
@@ -2351,8 +2470,9 @@ boolean xxx=false;
         TabStatus tabStatus = (TabStatus)widget.getData();
 
         selectedJobData = (JobData)selectionEvent.item.getData();
+        if (tabJobs != null) tabJobs.selectJob(selectedJobData.name);
 
-        tabStatus.widgetSelectedJob.setText("Selected '"+selectedJobData.name+"'");
+        widgetSelectedJob.setText("Selected '"+selectedJobData.name+"'");
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
@@ -2779,11 +2899,16 @@ boolean xxx=false;
     }
 
     // start status update thread
-if (true) {
     TabStatusUpdateThread tabStatusUpdateThread = new TabStatusUpdateThread(this);
     tabStatusUpdateThread.setDaemon(true);
     tabStatusUpdateThread.start();
-}
+  }
+
+  //-----------------------------------------------------------------------
+
+  void setTabJobs(TabJobs tabJobs)
+  {
+    this.tabJobs = tabJobs;
   }
 
   /** getProgress
@@ -2887,7 +3012,7 @@ if (true) {
           if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
           {
   //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
-            /* get data */
+            // get data
             int    id                   = (Integer)data[0];
             String name                 = (String )data[1];
             String state                = (String )data[2];
@@ -2904,7 +3029,7 @@ if (true) {
             long   estimatedRestMinutes = estimatedRestTime%(60*60   )/(60   );
             long   estimatedRestSeconds = estimatedRestTime%(60      );
 
-            /* get/create table item */
+            // get/create table item
             TableItem tableItem;
             JobData   jobData = new JobData(id,name,state,type,archivePartSize,compressAlgorithm,cryptAlgorithm,cryptType,lastExecutedDateTime,estimatedRestTime);;
             int index = getTableItemIndex(tableItems,id);
@@ -3136,7 +3261,7 @@ class TabJobs
    */
   class FileTreeDataComparator implements Comparator<FileTreeData>
   {
-    /* Note: enum in inner classes are not possible in Java, thus use the old way... */
+    // Note: enum in inner classes are not possible in Java, thus use the old way...
     private final static int SORTMODE_NAME     = 0;
     private final static int SORTMODE_TYPE     = 1;
     private final static int SORTMODE_SIZE     = 2;
@@ -3287,7 +3412,7 @@ class TabJobs
    */
   class ScheduleDataComparator implements Comparator<ScheduleData>
   {
-    /* Note: enum in inner classes are not possible in Java, thus use the old way... */
+    // Note: enum in inner classes are not possible in Java, thus use the old way...
     private final static int SORTMODE_DATE    = 0;
     private final static int SORTMODE_WEEKDAY = 1;
     private final static int SORTMODE_TIME    = 2;
@@ -3339,7 +3464,9 @@ class TabJobs
     }
   }
 
-  final Shell shell;
+  // global variable references
+  Shell       shell;
+  TabStatus   tabStatus;
 
   // images
   Image       imageDirectory;
@@ -3388,17 +3515,16 @@ class TabJobs
   BARVariable ecc                     = new BARVariable(false);
 
   // variables
-  private HashMap<String,Integer>  jobIds           = new HashMap<String,Integer>();
-  private String                   selectedJobName  = null;
-  private int                      selectedJobId    = 0;
-  private HashSet<String>          includedPatterns = new HashSet<String>();
-  private HashSet<String>          excludedPatterns = new HashSet<String>();
-  private LinkedList<ScheduleData> scheduleList     = new LinkedList<ScheduleData>();
+  private     HashMap<String,Integer>  jobIds           = new HashMap<String,Integer>();
+  private     String                   selectedJobName  = null;
+  private     int                      selectedJobId    = 0;
+  private     HashSet<String>          includedPatterns = new HashSet<String>();
+  private     HashSet<String>          excludedPatterns = new HashSet<String>();
+  private     LinkedList<ScheduleData> scheduleList     = new LinkedList<ScheduleData>();
 
   TabJobs(TabFolder parentTabFolder, int accelerator)
   {
     Display     display;
-    ImageData   imageData;
     TabFolder   tabFolder;
     Composite   tab;
     Group       group;
@@ -3415,47 +3541,17 @@ class TabJobs
     shell = parentTabFolder.getShell();
     display = shell.getDisplay();
 
-    /* create images */
-    PaletteData paletteData = new PaletteData(0xFF0000,0x00FF00,0x0000FF);
+    imageDirectory = new Image(display,"images/directory.gif");
+    imageDirectoryIncluded = new Image(display,"images/directory.gif");
+    imageDirectoryExcluded = new Image(display,"images/directory.gif");
 
-    imageData = new ImageData(Images.directory.width,Images.directory.height,Images.directory.depth,paletteData,1,Images.directory.data);
-    imageData.alphaData = Images.directory.alphas;
-    imageData.alpha = -1;
-    imageDirectory = new Image(display,imageData);
-    imageData = new ImageData(Images.directoryIncluded.width,Images.directoryIncluded.height,Images.directoryIncluded.depth,paletteData,1,Images.directoryIncluded.data);
-    imageData.alphaData = Images.directoryIncluded.alphas;
-    imageData.alpha = -1;
-    imageDirectoryIncluded = new Image(display,imageData);
-    imageData = new ImageData(Images.directoryExcluded.width,Images.directoryExcluded.height,Images.directoryExcluded.depth,paletteData,1,Images.directoryExcluded.data);
-    imageData.alphaData = Images.directoryExcluded.alphas;
-    imageData.alpha = -1;
-    imageDirectoryExcluded = new Image(display,imageData);
+    imageFile = new Image(display,"images/file.gif");
+    imageFileIncluded = new Image(display,"images/fileIncluded.gif");
+    imageFileExcluded = new Image(display,"images/fileExcluded.gif");
 
-    imageData = new ImageData(Images.file.width,Images.file.height,Images.file.depth,paletteData,1,Images.file.data);
-    imageData.alphaData = Images.file.alphas;
-    imageData.alpha = -1;
-    imageFile = new Image(display,imageData);
-    imageData = new ImageData(Images.fileIncluded.width,Images.fileIncluded.height,Images.fileIncluded.depth,paletteData,1,Images.fileIncluded.data);
-    imageData.alphaData = Images.fileIncluded.alphas;
-    imageData.alpha = -1;
-    imageFileIncluded = new Image(display,imageData);
-    imageData = new ImageData(Images.fileExcluded.width,Images.fileExcluded.height,Images.fileExcluded.depth,paletteData,1,Images.fileExcluded.data);
-    imageData.alphaData = Images.fileExcluded.alphas;
-    imageData.alpha = -1;
-    imageFileExcluded = new Image(display,imageData);
-
-    imageData = new ImageData(Images.link.width,Images.link.height,Images.link.depth,paletteData,1,Images.link.data);
-    imageData.alphaData = Images.link.alphas;
-    imageData.alpha = -1;
-    imageLink = new Image(display,imageData);
-    imageData = new ImageData(Images.linkIncluded.width,Images.linkIncluded.height,Images.linkIncluded.depth,paletteData,1,Images.linkIncluded.data);
-    imageData.alphaData = Images.linkIncluded.alphas;
-    imageData.alpha = -1;
-    imageLinkIncluded = new Image(display,imageData);
-    imageData = new ImageData(Images.linkExcluded.width,Images.linkExcluded.height,Images.linkExcluded.depth,paletteData,1,Images.linkExcluded.data);
-    imageData.alphaData = Images.linkExcluded.alphas;
-    imageData.alpha = -1;
-    imageLinkExcluded = new Image(display,imageData);
+    imageLink = new Image(display,"images/link.gif");
+    imageLinkIncluded = new Image(display,"images/linkIncluded.gif");
+    imageLinkExcluded = new Image(display,"images/linkExcluded.gif");
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,"Jobs"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
@@ -4183,6 +4279,19 @@ throw new Error("NYI");
 
           button = Widgets.newButton(composite,null,imageDirectory);
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+System.err.println("BARControl.java"+", "+4265+": ");
+
+              storageFileNameEdit();
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
         }
 
         // destination
@@ -5086,10 +5195,38 @@ System.err.println("BARControl.java"+", "+3159+": ");
 
     // update data
     updateJobList();
-//selectedJobName = "database";
-selectedJobName = "x2";
-selectedJobId = jobIds.get(selectedJobName);
-update();
+selectJob("x2");
+  }
+
+  /** select job
+   * @param name job name
+   */
+  void selectJob(String name)
+  {
+    synchronized(widgetJobList)
+    {
+      int index = 0;
+      while (   (index < widgetJobList.getItemCount())
+             && !name.equals(widgetJobList.getItem(index))
+            )
+      {
+        index++;
+      }
+      if (index < widgetJobList.getItemCount())
+      {
+        selectedJobName = name;
+        selectedJobId   = jobIds.get(name);
+        widgetJobList.select(index);
+        update();
+      }
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
+  void setTabStatus(TabStatus tabStatus)
+  {
+    this.tabStatus = tabStatus;
   }
 
   /** add root devices
@@ -5217,11 +5354,6 @@ update();
       storageDeviceName.set("");
       storageFileName.set  (archiveName);
     }
-  }
-
-  private String getStorageFileName(String archiveName)
-  {
-return archiveName;
   }
 
   //-----------------------------------------------------------------------
@@ -5427,34 +5559,37 @@ return archiveName;
     BARServer.executeCommand("JOB_LIST",result);
 
     // update job list
-    jobIds.clear();
-    widgetJobList.removeAll();
-    for (String line : result)
+    synchronized(widgetJobList)
     {
-      Object data[] = new Object[10];
-      /* format:
-         <id>
-         <name>
-         <state>
-         <type>
-         <archivePartSize>
-         <compressAlgorithm>
-         <cryptAlgorithm>
-         <cryptTyp>
-         <lastExecutedDateTime>
-         <estimatedRestTime>
-      */
-//System.err.println("BARControl.java"+", "+1357+": "+line);
-      if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+      jobIds.clear();
+      widgetJobList.removeAll();
+      for (String line : result)
       {
-//System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
-        /* get data */
-        int    id   = (Integer)data[0];
-        String name = (String )data[1];
+        Object data[] = new Object[10];
+        /* format:
+           <id>
+           <name>
+           <state>
+           <type>
+           <archivePartSize>
+           <compressAlgorithm>
+           <cryptAlgorithm>
+           <cryptTyp>
+           <lastExecutedDateTime>
+           <estimatedRestTime>
+        */
+  //System.err.println("BARControl.java"+", "+1357+": "+line);
+        if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+        {
+  //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
+          // get data
+          int    id   = (Integer)data[0];
+          String name = (String )data[1];
 
-        int index = findJobListIndex(name);
-        widgetJobList.add(name,index);
-        jobIds.put(name,id);
+          int index = findJobListIndex(name);
+          widgetJobList.add(name,index);
+          jobIds.put(name,id);
+        }
       }
     }
   }
@@ -5471,7 +5606,7 @@ return archiveName;
 
     final Shell  dialog = Dialogs.open(shell,"New job",300,70);
 
-    /* create widgets */
+    // create widgets
     final Text   widgetJobName;
     final Button widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE);
@@ -5484,7 +5619,7 @@ return archiveName;
       Widgets.layout(widgetJobName,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     }
 
-    /* buttons */
+    // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE);
     Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     {
@@ -5506,7 +5641,7 @@ return archiveName;
       });
     }
 
-    /* add selection listeners */
+    // add selection listeners
     widgetJobName.addSelectionListener(new SelectionListener()
     {
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5551,7 +5686,7 @@ throw new Error("NYI");
 
     final Shell  dialog = Dialogs.open(shell,"Rename job",300,70);
 
-    /* create widgets */
+    // create widgets
     final Text   widgetNewJobName;
     final Button widgetRename;
     composite = Widgets.newComposite(dialog,SWT.NONE);
@@ -5570,7 +5705,7 @@ throw new Error("NYI");
       Widgets.layout(widgetNewJobName,1,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     }
 
-    /* buttons */
+    // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE);
     Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     {
@@ -5592,7 +5727,7 @@ throw new Error("NYI");
       });
     }
 
-    /* add selection listeners */
+    // add selection listeners
     widgetNewJobName.addSelectionListener(new SelectionListener()
     {
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5695,7 +5830,7 @@ System.err.println("BARControl.java"+", "+3905+": "+newJobName);
       Object[] data = new Object[2];
       if (StringParser.parse(line,"%s %S",data,StringParser.QUOTE_CHARS))
       {
-        /* get data */
+        // get data
         String type    = (String)data[0];
         String pattern = (String)data[1];
 
@@ -5728,10 +5863,10 @@ System.err.println("BARControl.java"+", "+3905+": "+newJobName);
 
     assert selectedJobId != 0;
 
-    /* create dialog */
+    // create dialog
     final Shell  dialog = Dialogs.open(shell,title,300,70);
 
-    /* create widgets */
+    // create widgets
     final Text   widgetPattern;
     final Button widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE);
@@ -5744,7 +5879,7 @@ System.err.println("BARControl.java"+", "+3905+": "+newJobName);
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     }
 
-    /* buttons */
+    // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE);
     Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     {
@@ -5767,7 +5902,7 @@ System.err.println("BARControl.java"+", "+3905+": "+newJobName);
       });
     }
 
-    /* add selection listeners */
+    // add selection listeners
     widgetPattern.addSelectionListener(new SelectionListener()
     {
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5918,6 +6053,860 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
+  /** storage name part data
+   */
+  class StorageNamePart implements Serializable
+  {
+    String    string;
+    Rectangle bounds;
+
+    /** create name part
+     * @param string string or null
+     */
+    StorageNamePart(String string)
+    {
+      this.string = string;
+      this.bounds = new Rectangle(0,0,0,0);
+    }
+
+    /** write storage name part object to object stream
+     * Note: must be implented because Java serializaion API cannot write
+     *       inner classes without writing outer classes, too!
+     * @param out stream
+     */
+    private void writeObject(java.io.ObjectOutputStream out)
+      throws IOException
+    {
+      out.writeObject(string);
+      out.writeObject(bounds);
+    }
+
+    /** read storage name part object from object stream
+     * Note: must be implented because Java serializaion API cannot read
+     *       inner classes without reading outer classes, too!
+     * @param in stream
+     * @return 
+     */
+    private void readObject(java.io.ObjectInputStream in)
+      throws IOException, ClassNotFoundException
+    {
+      string = (String)in.readObject();
+      bounds = (Rectangle)in.readObject();
+    }
+
+    public String toString()
+    {
+      return "Part {string="+string+", "+bounds+"}";
+    }
+  }
+
+  /** storage name part transfer class (required for drag&drop)
+   */
+  static class StorageNamePartTransfer extends ByteArrayTransfer
+  {
+    private static final String NAME = "StorageNamePart";
+    private static final int    ID   = registerType(NAME);
+
+    private static StorageNamePartTransfer instance = new StorageNamePartTransfer();
+
+    public static StorageNamePartTransfer getInstance()
+    {
+      return instance;
+    }
+
+    public void javaToNative(Object object, TransferData transferData)
+    {
+      if (!validate(object) || !isSupportedType(transferData))
+      {
+        DND.error(DND.ERROR_INVALID_DATA);
+      }
+
+      StorageNamePart storageNamePart = (StorageNamePart)object;
+      try
+      {
+        // write data to a byte array and then ask super to convert to pMedium
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        ObjectOutputStream outputStream = new ObjectOutputStream(byteArrayOutputStream);
+        outputStream.writeObject(storageNamePart);
+        byte[] buffer = byteArrayOutputStream.toByteArray();
+        outputStream.close();
+
+        // call super to convert to pMedium
+        super.javaToNative(buffer,transferData);
+      }
+      catch (IOException exception)
+      {
+        // do nothing
+      }
+   }
+
+   public Object nativeToJava (TransferData transferData)
+   {
+     if (isSupportedType(transferData))
+     {
+       byte[] buffer = (byte[])super.nativeToJava(transferData);
+       if (buffer == null) return null;
+
+       StorageNamePart storageNamePart = null;
+       try
+       {
+         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream (buffer);
+         ObjectInputStream inputStream = new ObjectInputStream(byteArrayInputStream);
+         storageNamePart = (StorageNamePart)inputStream.readObject();
+         inputStream.close ();
+       }
+       catch (java.lang.ClassNotFoundException exception)
+       {
+         return null;
+       }
+       catch (IOException exception)
+       {
+         return null;
+       }
+
+       return storageNamePart;
+     }
+
+     return null;
+    }
+
+    protected String[] getTypeNames()
+    {
+      return new String[]{NAME};
+    }
+
+    protected int[] getTypeIds()
+    {
+      return new int[]{ID};
+    }
+
+    protected boolean validate(Object object)
+    {
+      return (object != null && (object instanceof StorageNamePart));
+    }
+  }
+
+  /** storage name editor
+   */
+  class StorageFileNameEditor
+  {
+    // global variables
+    final Display display;
+
+    // colors
+    final Color   textForegroundColor;
+    final Color   textBackgroundColor;
+    final Color   textHighlightColor;
+    final Color   separatorForegroundColor;
+    final Color   separatorBackgroundColor;
+    final Color   separatorHighlightColor;
+
+    // widgets
+    final Canvas  widgetFileName;
+    final Label   widgetExample;
+    final Text    widgetText;
+
+    // variables
+    LinkedList<StorageNamePart> storageNamePartList = new LinkedList<StorageNamePart>();
+    StorageNamePart             selectedNamePart    = null;
+    StorageNamePart             highlightedNamePart = null;
+
+    /** create name part editor
+     * @param parentComposite parent composite
+     */
+    StorageFileNameEditor(Composite parentComposite, String fileName)
+    {
+      Composite  composite;
+      Label      label;
+      DragSource dragSource;
+      DropTarget dropTarget;
+
+      display = parentComposite.getDisplay();
+
+      textForegroundColor      = display.getSystemColor(SWT.COLOR_BLACK);
+      textBackgroundColor      = display.getSystemColor(SWT.COLOR_GRAY);
+      textHighlightColor       = new Color(null,0xFA,0x0A,0x0A);
+      separatorForegroundColor = textForegroundColor;
+      separatorBackgroundColor = new Color(null,0xAD,0xD8,0xE6);
+      separatorHighlightColor  = textHighlightColor;
+
+      composite = Widgets.newComposite(parentComposite,SWT.NONE);
+      Widgets.layout(composite,0,0,TableLayoutData.WE);
+      {
+        label = Widgets.newLabel(composite,"File name:");
+        Widgets.layout(label,0,0,TableLayoutData.WE);
+
+        widgetFileName = Widgets.newCanvas(composite,SWT.BORDER);
+        widgetFileName.setBackground(composite.getDisplay().getSystemColor(SWT.COLOR_WHITE));
+        Widgets.layout(widgetFileName,0,1,TableLayoutData.WE|TableLayoutData.EXPAND,0,0,SWT.DEFAULT,24);
+        widgetFileName.addMouseTrackListener(new MouseTrackListener()
+        {
+          public void mouseEnter(MouseEvent mouseEvent)
+          {
+          }
+          public void mouseExit(MouseEvent mouseEvent)
+          {
+            clearHighlight();
+          }
+          public void mouseHover(MouseEvent mouseEvent)
+          {
+          }
+        });
+        // Note: needed, because MouseTrackListener.hover() has a delay
+        widgetFileName.addMouseMoveListener(new MouseMoveListener()
+        {
+          public void mouseMove(MouseEvent mouseEvent)
+          {
+            Point point = new Point(mouseEvent.x,mouseEvent.y);
+            setHighlight(point);
+          }
+        });
+        widgetFileName.addKeyListener(new KeyListener()
+        {
+          public void keyPressed(KeyEvent keyEvent)
+          {
+//System.err.println("BARControl.java"+", "+6268+": "+selectedNamePart+" "+highlightedNamePart);
+            if ((highlightedNamePart != null) && (highlightedNamePart.string != null) && ((keyEvent.keyCode == SWT.DEL) || (keyEvent.keyCode == SWT.BS)))
+            {
+              remPart(highlightedNamePart);
+            }
+          }
+          public void keyReleased(KeyEvent keyEvent)
+          {
+          }
+        });
+        dragSource = new DragSource(widgetFileName,DND.DROP_MOVE);
+        dragSource.setTransfer(new Transfer[]{StorageNamePartTransfer.getInstance()});
+        dragSource.addDragListener(new DragSourceListener()
+        {
+          public void dragStart(DragSourceEvent dragSourceEvent)
+          {
+            Point point = new Point(dragSourceEvent.x,dragSourceEvent.y);
+            StorageNamePart storageNamePart = getPart(point);
+            if ((storageNamePart != null) && (storageNamePart.string != null))
+            {
+              selectedNamePart = storageNamePart;
+            }
+            else
+            {
+              dragSourceEvent.doit = false;
+            }
+          }
+          public void dragSetData(DragSourceEvent dragSourceEvent)
+          {
+            dragSourceEvent.data = selectedNamePart;
+          }
+          public void dragFinished(DragSourceEvent dragSourceEvent)
+          {
+//System.err.println("BARControl.java"+", "+6261+": "+dragSourceEvent.data+" "+dragSourceEvent.doit+" "+dragSourceEvent.detail+" "+selectedNamePart);
+            if (dragSourceEvent.detail == DND.DROP_MOVE)
+            {
+              remPart(selectedNamePart);
+            }
+            selectedNamePart = null;
+            widgetFileName.redraw();
+          }
+        });
+        dropTarget = new DropTarget(widgetFileName,DND.DROP_MOVE|DND.DROP_COPY);
+        dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance(),StorageNamePartTransfer.getInstance()});
+	dropTarget.addDropListener(new DropTargetAdapter()
+        {
+          public void dragLeave(DropTargetEvent dropTargetEvent)
+          {
+            clearHighlight();
+          }
+          public void dragOver(DropTargetEvent dropTargetEvent)
+          {
+            Point point = display.map(shell,widgetFileName,dropTargetEvent.x,dropTargetEvent.y);
+            setHighlight(point);
+          }
+          public void drop(DropTargetEvent dropTargetEvent)
+          {
+            if (dropTargetEvent.data != null)
+            {
+//System.err.println("BARControl.java"+", "+6128+": "+dropTargetEvent+" "+dropTargetEvent.item+" "+dropTargetEvent.x+" "+dropTargetEvent.y);
+              Point point = display.map(shell,widgetFileName,dropTargetEvent.x,dropTargetEvent.y);
+              synchronized(storageNamePartList)
+              {
+                // find part to replace
+                int index = 0;
+                while ((index < storageNamePartList.size()) && !storageNamePartList.get(index).bounds.contains(point))
+                {
+                  index++;
+                }
+
+                // replace/insert part
+                addPart(index,(String)dropTargetEvent.data);
+              }
+            }
+            else
+            {
+              dropTargetEvent.detail = DND.DROP_NONE;
+            }
+          }
+	});
+        widgetFileName.addPaintListener(new PaintListener()
+        {
+          public void paintControl(PaintEvent paintEvent)
+          {
+            redraw(paintEvent);
+          }
+        }); 
+
+        label = Widgets.newLabel(composite,new Image(display,"images/trashcan.gif"),SWT.BORDER);
+        Widgets.layout(label,0,2,TableLayoutData.DEFAULT);
+        dropTarget = new DropTarget(label,DND.DROP_MOVE);
+        dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance(),StorageNamePartTransfer.getInstance()});
+	dropTarget.addDropListener(new DropTargetAdapter()
+        {
+          public void dragLeave(DropTargetEvent dropTargetEvent)
+          {
+          }
+          public void dragOver(DropTargetEvent dropTargetEvent)
+          {
+//System.err.println("BARControl.java"+", "+6353+": "+dropTargetEvent);
+          }
+          public void drop(DropTargetEvent dropTargetEvent)
+          {
+//System.err.println("BARControl.java"+", "+6350+": "+dropTargetEvent.data+" "+dropTargetEvent.currentDataType);
+            if (dropTargetEvent.data != null)
+            {
+              if      (dropTargetEvent.data instanceof String)
+              {
+                // ignored
+              }
+              else if (dropTargetEvent.data instanceof StorageNamePart)
+              {
+                // OK
+              }
+              else
+              {
+                dropTargetEvent.detail = DND.DROP_NONE;
+              }
+            }
+            else
+            {
+              dropTargetEvent.detail = DND.DROP_NONE;
+            }
+          }
+	});
+
+        label = Widgets.newLabel(composite,"Example:");
+        Widgets.layout(label,1,0,TableLayoutData.W);
+
+        widgetExample = Widgets.newView(composite);
+        Widgets.layout(widgetExample,1,1,TableLayoutData.WE,0,2);
+      }
+
+      composite = Widgets.newComposite(parentComposite,SWT.NONE);
+      Widgets.layout(composite,1,0,TableLayoutData.NSWE);
+      {
+        // column 1
+        addDragAndDrop(composite,"-","text '-'",                          0, 0);
+        addDragAndDrop(composite,".bar","text '.bar'",                    1, 0);
+        widgetText = Widgets.newText(composite,null);
+        addDragAndDrop(composite,"Text",widgetText,                       2, 0);
+
+        addDragAndDrop(composite,"#","part number 1 digit",              4, 0);
+        addDragAndDrop(composite,"##","part number 2 digits",            5, 0);
+        addDragAndDrop(composite,"###","part number 3 digits",           6, 0);
+        addDragAndDrop(composite,"####","part number 4 digits",          7, 0);
+
+        addDragAndDrop(composite,"%type","archive type: full,incremental",9, 0);
+        addDragAndDrop(composite,"%last","'-last' if last archive part",  10,0);
+
+        // column 2
+        addDragAndDrop(composite,"%d","day 01..31",                  0, 1);
+        addDragAndDrop(composite,"%j","day of year 001..366",        1, 1);
+        addDragAndDrop(composite,"%m","month 01..12",                2, 1);
+        addDragAndDrop(composite,"%b","month name",                  3, 1);
+        addDragAndDrop(composite,"%B","full month name",             4, 1);
+        addDragAndDrop(composite,"%H","hour 00..23",                 5, 1);
+        addDragAndDrop(composite,"%I","hour 00..12",                 6, 1);
+        addDragAndDrop(composite,"%M","minute 00..59",               7, 1);
+        addDragAndDrop(composite,"%p","'AM' or 'PM'",                8, 1);
+        addDragAndDrop(composite,"%P","'am' or 'pm'",                9, 1);
+        addDragAndDrop(composite,"%a","week day name",               10,1);
+        addDragAndDrop(composite,"%A","full week day name",          11,1);
+        addDragAndDrop(composite,"%u","day of week 1..7",            12,1);
+        addDragAndDrop(composite,"%w","day of week 0..6",            13,1);
+        addDragAndDrop(composite,"%U","week number 1..52",           14,1);
+        addDragAndDrop(composite,"%C","century two digits",          15,1);
+        addDragAndDrop(composite,"%Y","year four digits",            16,1);
+        addDragAndDrop(composite,"%S","seconds since 1.1.1970 00:00",17,1);
+        addDragAndDrop(composite,"%Z","time-zone abbreviation",      18,1);
+
+        // column 3
+        addDragAndDrop(composite,"%%","%",                           0, 2);
+        addDragAndDrop(composite,"%#","#",                           1, 2);
+      }
+
+      // set name
+      setFileName(fileName);
+    }
+
+    /** set file name
+     * @param file name
+     */
+    void setFileName(String fileName)
+    {
+      synchronized(storageNamePartList)
+      {
+        // clear existing list
+        storageNamePartList.clear();
+
+        // parse file name
+        storageNamePartList.add(new StorageNamePart(null));
+        int z = 0;
+        while (z < fileName.length())
+        {
+          StringBuffer part;
+
+          // get next text part
+          part = new StringBuffer();
+          while ((z < fileName.length()) && (fileName.charAt(z) != '%'))
+          {
+            part.append(fileName.charAt(z)); z++;
+          }
+          storageNamePartList.add(new StorageNamePart(part.toString()));
+          storageNamePartList.add(new StorageNamePart(null));
+
+          if ((z < fileName.length()) && (fileName.charAt(z) == '%'))
+          {
+            // add next variable part
+            part = new StringBuffer();
+            part.append('%'); z++;
+            if ((z < fileName.length()) && (fileName.charAt(z) == '%'))
+            {
+              part.append('%'); z++;
+            }
+            else
+            {
+              while ((z < fileName.length()) && (Character.isLetterOrDigit(fileName.charAt(z))))
+              {
+                part.append(fileName.charAt(z)); z++;
+              }
+            }
+            storageNamePartList.add(new StorageNamePart(part.toString()));
+            storageNamePartList.add(new StorageNamePart(null));
+          }
+        }
+      }
+
+      // redraw
+      widgetFileName.redraw();
+      updateExample();
+    }
+
+    /** get file name
+     * @return file name
+     */
+    String getFileName()
+    {
+      StringBuffer fileName = new StringBuffer();
+      for (StorageNamePart storageNamePart : storageNamePartList)
+      {
+        if (storageNamePart.string != null)
+        {
+          fileName.append(storageNamePart.string);
+        }
+      }
+
+      return fileName.toString();
+    }
+
+    //-----------------------------------------------------------------------
+
+    /** add part
+     * @param composite composite to add into
+     * @param text text to show
+     * @param description of part
+     * @param row,column row/column
+     */
+    private void addDragAndDrop(Composite composite, String text, String description, int row, int column)
+    {
+      Label label;
+
+      label = Widgets.newLabel(composite,text,SWT.LEFT|SWT.BORDER);
+      label.setBackground(composite.getDisplay().getSystemColor(SWT.COLOR_GRAY));
+      label.setData(text);
+      Widgets.layout(label,row,column*2+0,TableLayoutData.W);
+      DragSource dragSource = new DragSource(label,DND.DROP_MOVE|DND.DROP_COPY);
+      dragSource.setTransfer(new Transfer[]{TextTransfer.getInstance()});
+      dragSource.addDragListener(new DragSourceListener()
+      {
+        public void dragStart(DragSourceEvent dragSourceEvent)
+        {
+        }
+        public void dragSetData(DragSourceEvent dragSourceEvent)
+        {
+          Control control = ((DragSource)dragSourceEvent.widget).getControl();
+          dragSourceEvent.data = (String)control.getData();
+        }
+        public void dragFinished(DragSourceEvent dragSourceEvent)
+        {
+        }
+      });
+
+      label = Widgets.newLabel(composite,description,SWT.LEFT|SWT.BORDER);
+      Widgets.layout(label,row,column*2+1,TableLayoutData.W);
+    }
+
+    /** add part
+     * @param composite composite to add into
+     * @param text text to show
+     * @param control control to add
+     * @param row,column row/column
+     */
+    private void addDragAndDrop(Composite composite, String text, Control control, int row, int column)
+    {
+      Label label;
+
+      label = Widgets.newLabel(composite,text,SWT.LEFT|SWT.BORDER);
+      label.setBackground(composite.getDisplay().getSystemColor(SWT.COLOR_GRAY));
+      label.setData(control);
+      Widgets.layout(label,row,column*2+0,TableLayoutData.W);
+      DragSource dragSource = new DragSource(label,DND.DROP_MOVE|DND.DROP_COPY);
+      dragSource.setTransfer(new Transfer[]{TextTransfer.getInstance()});
+      dragSource.addDragListener(new DragSourceListener()
+      {
+        public void dragStart(DragSourceEvent dragSourceEvent)
+        {
+          Control control = ((DragSource)dragSourceEvent.widget).getControl();
+          Widget widget = (Widget)control.getData();
+          if (widget instanceof Text)
+          {
+            String text = ((Text)widget).getText();
+            if ((text == null) || (text.length() == 0)) dragSourceEvent.doit = false;
+          }
+        }
+        public void dragSetData(DragSourceEvent dragSourceEvent)
+        {
+          Control control = ((DragSource)dragSourceEvent.widget).getControl();
+          Widget widget = (Widget)control.getData();
+          if (widget instanceof Text)
+          {
+            dragSourceEvent.data = ((Text)widget).getText();
+            if (dragSourceEvent.data.equals("")) dragSourceEvent.doit = false;
+          }
+        }
+        public void dragFinished(DragSourceEvent dragSourceEvent)
+        {
+        }
+      });
+
+      Widgets.layout(control,row,column*2+1,TableLayoutData.WE);
+    }
+
+    private void addPart(int index, String string)
+    {
+      boolean redrawFlag = false;
+
+      synchronized(storageNamePartList)
+      {
+        if (index < storageNamePartList.size())
+        {
+          if (storageNamePartList.get(index).string != null)
+          {
+            // replace
+            storageNamePartList.get(index).string = string;
+          }
+          else
+          {
+            // insert
+            storageNamePartList.add(index+1,new StorageNamePart(string));
+            storageNamePartList.add(index+2,new StorageNamePart(null));
+          }
+          redrawFlag = true;
+        }
+      }
+
+      if (redrawFlag)
+      {
+        widgetFileName.redraw();
+        updateExample();
+      }
+    }
+
+    private void remPart(StorageNamePart storageNamePart)
+    {
+      boolean redrawFlag = false;
+
+      synchronized(storageNamePartList)
+      {
+        // find part to delete
+        int index = 0;
+        while ((index < storageNamePartList.size()) && (storageNamePartList.get(index) != storageNamePart))
+        {
+          index++;
+        }
+
+        // delete part and separator
+        if (index < storageNamePartList.size())
+        {
+          storageNamePartList.remove(index);
+          if ((index < storageNamePartList.size()) && (storageNamePartList.get(index).string == null))
+          {
+            storageNamePartList.remove(index);
+          }
+          redrawFlag = true;
+        }
+      }
+
+      if (redrawFlag)
+      {
+        widgetFileName.redraw();
+        updateExample();
+      }
+    }
+
+    /** redraw part widget content
+     * @param paintEvent paint event
+     */
+    private void redraw(PaintEvent paintEvent)
+    {
+      GC        gc         = paintEvent.gc;
+      Rectangle clientArea = widgetFileName.getClientArea();
+      Color     color;
+
+      int x = 0;
+      synchronized(storageNamePartList)
+      {
+        for (StorageNamePart storageNamePart : storageNamePartList)
+        {
+          if (storageNamePart.string != null)
+          {
+            Point size = Widgets.getTextSize(widgetFileName,storageNamePart.string);
+            if   ((storageNamePart == highlightedNamePart) || (storageNamePart == selectedNamePart)) color = textHighlightColor;
+            else                                                                                     color = textBackgroundColor;
+            gc.setBackground(color);
+            gc.setForeground(textForegroundColor);
+            gc.drawString(storageNamePart.string,x,0);
+            storageNamePart.bounds = new Rectangle(x,0,size.x,clientArea.height);
+            x += size.x;
+          }
+          else
+          {
+            if      (storageNamePart == highlightedNamePart) color = separatorHighlightColor;
+            else                                             color = separatorBackgroundColor;
+            gc.setBackground(color);
+            gc.fillRectangle(x,0,8,clientArea.height-1);
+            gc.setForeground(separatorForegroundColor);
+            gc.drawRectangle(x,0,8,clientArea.height-1);
+            storageNamePart.bounds = new Rectangle(x,0,8,clientArea.height);
+            x += 8+1;
+          }
+        }
+      }
+    }
+
+    /** update example line
+     * @param 
+     * @return 
+     */
+    private void updateExample()
+    {
+      StringBuffer exampleName = new StringBuffer();
+
+      synchronized(storageNamePartList)
+      {
+        for (StorageNamePart storageNamePart : storageNamePartList)
+        {
+          if (storageNamePart.string != null)
+          {
+            if      (storageNamePart.string.equals("#"))
+              exampleName.append("1");
+            else if (storageNamePart.string.equals("##"))
+              exampleName.append("12");
+            else if (storageNamePart.string.equals("###"))
+              exampleName.append("123");
+            else if (storageNamePart.string.equals("####"))
+              exampleName.append("1234");
+            else if (storageNamePart.string.equals("%type"))
+              exampleName.append("full");
+            else if (storageNamePart.string.equals("%last"))
+              exampleName.append("-last");
+            else if (storageNamePart.string.equals("%d"))
+              exampleName.append("24");
+            else if (storageNamePart.string.equals("%j"))
+              exampleName.append("354");
+            else if (storageNamePart.string.equals("%m"))
+              exampleName.append("12");
+            else if (storageNamePart.string.equals("%b"))
+              exampleName.append("Dec");
+            else if (storageNamePart.string.equals("%B"))
+              exampleName.append("December");
+            else if (storageNamePart.string.equals("%H"))
+              exampleName.append("23");
+            else if (storageNamePart.string.equals("%I"))
+              exampleName.append("11");
+            else if (storageNamePart.string.equals("%M"))
+              exampleName.append("55");
+            else if (storageNamePart.string.equals("%p"))
+              exampleName.append("PM");
+            else if (storageNamePart.string.equals("%P"))
+              exampleName.append("pm");
+            else if (storageNamePart.string.equals("%a"))
+              exampleName.append("Mon");
+            else if (storageNamePart.string.equals("%A"))
+              exampleName.append("Monday");
+            else if (storageNamePart.string.equals("%u"))
+              exampleName.append("1");
+            else if (storageNamePart.string.equals("%w"))
+              exampleName.append("0");
+            else if (storageNamePart.string.equals("%U"))
+              exampleName.append("51");
+            else if (storageNamePart.string.equals("%C"))
+              exampleName.append("07");
+            else if (storageNamePart.string.equals("%Y"))
+              exampleName.append("2007");
+            else if (storageNamePart.string.equals("%S"))
+              exampleName.append("1198598100");
+            else if (storageNamePart.string.equals("%Z"))
+              exampleName.append("JST");
+            else if (storageNamePart.string.equals("%%"))
+              exampleName.append("%");
+            else if (storageNamePart.string.equals("%#"))
+              exampleName.append("#");
+            else
+              exampleName.append(storageNamePart.string);
+          }
+        }
+      }
+      widgetExample.setText(exampleName.toString());
+    }
+
+  /** find part at location x,y
+   * @param point location
+   * @return part or null
+   */
+    private StorageNamePart getPart(Point point)
+    {
+      synchronized(storageNamePartList)
+      {
+        for (StorageNamePart storageNamePart : storageNamePartList)
+        {
+          if (storageNamePart.bounds.contains(point))
+          {
+            return storageNamePart;
+          }
+        }
+      }
+
+      return null;
+    }
+
+    /** clear part highlighting
+     */
+    private void clearHighlight()
+    {
+      if (highlightedNamePart != null)
+      {
+        highlightedNamePart = null;
+        widgetFileName.redraw();
+      }
+    }
+
+    /** set highlighting of part
+     * @param point mouse position
+     */
+    private void setHighlight(Point point)
+    {
+      boolean redrawFlag = false;
+
+      synchronized(storageNamePartList)
+      {
+        // find part to highlight
+        StorageNamePart storageNamePart = getPart(point);
+
+        // clear previous highlighting
+        if ((highlightedNamePart != null) && (storageNamePart != highlightedNamePart))
+        {
+          highlightedNamePart = null;
+          redrawFlag = true;
+        }
+
+        // highlight part
+        if (storageNamePart != null)
+        {
+          highlightedNamePart = storageNamePart;
+          redrawFlag = true;
+        }
+      }
+
+      if (redrawFlag) widgetFileName.redraw();
+    }
+  };
+
+  /** edit storage file name
+   */
+//  private void storageFileNameEdit()
+void storageFileNameEdit()
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+    Composite subComposite;
+
+    assert selectedJobId != 0;
+
+    // create dialog
+    final Shell dialog = Dialogs.open(shell,
+                                      "Edit storage file name",
+                                      SWT.DEFAULT,SWT.DEFAULT,
+                                      new double[]{0,1,0},null
+                                     );
+
+    // create widgets
+    final StorageFileNameEditor storageFileNameEditor;
+    final Button                widgetSave;
+    composite = Widgets.newComposite(dialog,SWT.NONE);
+    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    storageFileNameEditor = new StorageFileNameEditor(composite,storageFileName.getString());
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE);
+    Widgets.layout(composite,2,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    {
+      widgetSave = Widgets.newButton(composite,null,"Save");
+      Widgets.layout(widgetSave,0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,null,"Cancel");
+      Widgets.layout(button,0,1,TableLayoutData.E|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+
+          Dialogs.close(dialog,false);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    // add selection listeners
+    widgetSave.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget = (Button)selectionEvent.widget;
+
+        storageFileName.set(storageFileNameEditor.getFileName());
+        Dialogs.close(dialog,true);
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+
+    Dialogs.run(dialog);
+  }
+
+  //-----------------------------------------------------------------------
+
   /** find index for insert of schedule data in sorted schedule table
    * @param scheduleData schedule data
    * @return index in schedule table
@@ -5964,7 +6953,7 @@ throw new Error("NYI");
         if (StringParser.parse(line,"%S-%S-%S %S %S:%S %S",data,StringParser.QUOTE_CHARS))
         {
 //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
-          /* get data */
+          // get data
           String year    = (String)data[0];
           String month   = (String)data[1];
           String day     = (String)data[2];
@@ -6002,10 +6991,10 @@ throw new Error("NYI");
 
     assert selectedJobId != 0;
 
-    /* create dialog */
+    // create dialog
     final Shell dialog = Dialogs.open(shell,title,300,70);
 
-    /* create widgets */
+    // create widgets
     final Combo  widgetYear,widgetMonth,widgetDay,widgetWeekDay;
     final Combo  widgetHour,widgetMinute;
     final Button widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental;
@@ -6081,7 +7070,7 @@ throw new Error("NYI");
       }
     }
 
-    /* buttons */
+    // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE);
     Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     {
@@ -6104,7 +7093,7 @@ throw new Error("NYI");
       });
     }
 
-    /* add selection listeners */
+    // add selection listeners
 /*
     widgetPattern.addSelectionListener(new SelectionListener()
     {
@@ -6326,6 +7315,8 @@ public class BARControl
     tabFolder.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND));
     tabStatus = new TabStatus(tabFolder,SWT.F1);
     tabJobs   = new TabJobs  (tabFolder,SWT.F2);
+    tabStatus.setTabJobs(tabJobs);
+    tabJobs.setTabStatus(tabStatus);
 
     // add tab listener
     display.addFilter(SWT.KeyDown,new Listener()
@@ -6459,6 +7450,8 @@ String password = "y7G7EGj2";
     createWindow();
     createTabs();
     createMenu();
+//tabJobs.storageFileNameEdit();
+//System.exit(0);
 
     // run
     run();
