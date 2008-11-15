@@ -1,0 +1,82 @@
+/* config.h.in.  Generated from configure.in by autoheader.  */
+
+
+#ifndef __CONFIG__
+#define __CONFIG__
+
+
+
+
+#ifndef offsetof
+  #define offsetof(type,member) ((size_t)&((type*)0)->member)
+#endif /* offsetof */
+
+
+
+/* configuration directory */
+#undef CONFIG_DIR
+
+/* bzip2 installed */
+#undef HAVE_BZ2
+
+/* Define to 1 if you have the `fseeko' function. */
+#undef HAVE_FSEEKO
+
+/* Define to 1 if you have the `ftello' function. */
+#undef HAVE_FTELLO
+
+/* FTP installed */
+#undef HAVE_FTP
+
+/* gcrypt installed */
+#undef HAVE_GCRYPT
+
+/* GNU TLS installed */
+#undef HAVE_GNU_TLS
+
+/* GPG error installed */
+#undef HAVE_GPG_ERROR
+
+/* defined if long long data type available */
+#undef HAVE_LONG_LONG
+
+/* Define to 1 if you have the `pthread_attr_setname' function. */
+#undef HAVE_PTHREAD_ATTR_SETNAME
+
+/* SSH2 installed */
+#undef HAVE_SSH2
+
+/* SSH2 libssh2_channel_send_keepalive */
+#undef HAVE_SSH2_CHANNEL_SEND_KEEPALIVE
+
+/* TASN.1 installed */
+#undef HAVE_TASN1
+
+/* z installed */
+#undef HAVE_Z
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* TLS directory */
+#undef TLS_DIR
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
+
+#endif /* __CONFIG__ */

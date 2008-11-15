@@ -1,0 +1,332 @@
+#!/bin/sh
+
+# ----------------------------------------------------------------------------
+#
+# $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
+# $Revision: 1.1 $
+# $Author: torsten $
+# Contents: generate BAR server keys (PEM files)
+# Systems: Unix
+#			   
+# ----------------------------------------------------------------------------
+
+# --------------------------------- constants --------------------------------
+# get program name
+PROGRAM_NAME=`basename $0`
+
+CERTTOOL="certtool"
+
+# shell commands/tools
+CAT="cat"
+CD="cd"
+CHMOD="chmod"
+CP="cp"
+ECHO="echo"
+ECHO_NO_LF="echo"
+MKDIR="mkdir"
+MKTEMP="mktemp"
+MV="mv"
+PRINTF="printf --"
+RMF="rm -f"
+RMRF="rm -rf"
+SED="sed"
+
+# directories
+TLS_DIR="@TLS_DIR@"
+
+# exit codes
+EXITCODE_OK=0
+EXITCODE_FAILURE=1
+
+EXITCODE_INVALID_ARGUMENT=5
+EXITCODE_CREATE_TEMPORARY_DIRECTORY=6
+
+EXITCODE_INTERNAL_ERROR=126
+
+EXITCODE_UNKNOWN=127
+
+# --------------------------- environment variables --------------------------
+
+# --------------------------------- variables --------------------------------
+
+# flags
+quietFlag=0
+debugFlag=0
+
+# ---------------------------------- functions -------------------------------
+
+#***********************************************************************
+# Name       : print, println
+# Purpose    : print text to stdout
+# Input      : text - text
+# Return     : -
+# Notes      : -
+#***********************************************************************
+
+print()
+{
+  local text="$@"
+
+  if test $quietFlag -ne 1; then
+    $ECHO -n "$text"
+  fi
+}
+println()
+{
+  local text="$@"
+
+  if test $quietFlag -ne 1; then
+    $ECHO "$text"
+  fi
+}
+
+#***********************************************************************
+# Name       : printStderr
+# Purpose    : print text on stderr (with LF)
+# Input      : -
+# Return     : -
+# Notes      : -
+#***********************************************************************
+
+printStderr()
+{
+  local text="$@"
+
+  $ECHO >&2 "$text"
+}
+
+#***********************************************************************
+# Name       : printError
+# Purpose    : print error text with prefix "ERROR:" (with LF)
+# Input      : -
+# Return     : -
+# Notes      : -
+#***********************************************************************
+
+printError()
+{
+  local text="$@"
+
+  $ECHO >&2 "ERROR: $text"
+}
+
+#***********************************************************************
+# Name       : printWarning
+# Purpose    : print warning text with prefix "warning:" (with LF)
+# Input      : -
+# Return     : -
+# Notes      : -
+#***********************************************************************
+
+printWarning()
+{
+  local text="$@"
+
+  $ECHO >&2 "warning: $text"
+}
+
+#***********************************************************************
+# Name       : catStdout, catStderr
+# Purpose    : output file on stdout, stderr
+# Input      : fileName - file name
+# Return     : -
+# Notes      : -
+#***********************************************************************
+
+catStdout()
+{
+  local fileName="$1"; shift
+
+  $CAT "$fileName"
+}
+catStderr()
+{
+  local fileName="$1"; shift
+
+  $CAT 1>&2 "$fileName"
+}
+
+#***********************************************************************
+# Name       : internalError
+# Purpose    : print internal error text with prefix "INTERNAL ERROR:" and stop
+# Input      : -
+# Return     : -
+# Notes      : -
+#***********************************************************************
+
+internalError()
+{
+  local text="$@"
+
+  $ECHO >&2 "INTERNAL ERROR: $text"
+  exit $EXITCODE_INTERNAL_ERROR
+}
+
+#***********************************************************************
+# Name       : countLines
+# Purpose    : count number of lines in file
+# Input      : fileName - file name
+# Return     : number of lines in file
+# Notes      : -
+#***********************************************************************
+
+countLines()
+{
+  local fileName="$@"
+
+  $WC -l $fileName | $AWK '{print $1 }'
+}
+
+#***********************************************************************
+# Name       : catErrorlog
+# Purpose    : output shortend error-log (either complete log if not
+#              longer than MAX_ERROR_LINES or MAX_ERROR_LINES_HEAD
+#              from the start and MAX_ERROR_LINES_TAIL from end of the
+#              file)
+# Input      : fileName - log file name
+# Return     : -
+# Notes      : -
+#***********************************************************************
+
+catErrorlog()
+{
+  local fileName="$1"; shift
+
+  if test `countLines $fileName` -gt $MAX_ERROR_LINES; then
+    $HEAD -$MAX_ERROR_LINES_HEAD $fileName
+    $ECHO "[...]"
+    $TAIL -$MAX_ERROR_LINES_TAIL $fileName
+  else
+    $TAIL -$MAX_ERROR_LINES $fileName
+  fi
+}
+
+# ----------------------------------------------------------------------------
+
+# print usage-help
+printUsage()
+{
+  $CAT << EOT
+Usage: $PROGRAM_NAME [...] [--]...
+
+Options: 
+         -h|--help               - print this help
+EOT
+}
+
+# ------------------------------------ main ----------------------------------
+
+# get arguments
+n=0
+while test $# != 0; do
+  case $1 in
+    -h | --help)
+      printUsage
+      exit $EXITCODE_OK
+      ;;
+    -x=* | --xxx=*)
+      XXX=`$ECHO "$1" | $SED 's/^[^=]*=\(.*\)$/\1/g'`
+      shift
+      ;;
+    -x | --xxx)
+      XXX=$2
+      shift
+      shift
+      ;;
+    --quiet=*)
+      quietFlag=`$ECHO "$1" | sed 's/^[^=]*=\(.*\)$/\1/g'`
+      shift
+      ;;
+    --quiet)
+      quietFlag=1
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      printError "unknown option '$1'"
+      printUsage
+      exit $EXITCODE_INVALID_ARGUMENT
+      ;;
+    *)
+      case $n in
+        0)
+          n=1
+          ;;
+        1)
+          n=2
+          ;;
+        *)
+          ;;
+      esac
+      shift
+      ;;
+  esac
+done
+while test $# != 0; do
+  case $n in
+    0)
+      n=1
+      ;;
+    1)
+      n=2
+      ;;
+    *)
+      ;;
+  esac
+  shift
+done
+
+# check arguments
+## exit $EXITCODE_INVALID_ARGUMENT
+
+# run main
+
+# create temporary directory
+tmpDir=`$MKTEMP -d /tmp/bar-keygen-XXXXXX`
+if test -z "$tmpDir"; then
+  exit $EXITCODE_CREATE_TEMPORARY_DIRECTORY
+fi
+
+# create template files
+$ECHO $TEMPLATE_CA > $tmpDir/ca.tmpl
+$ECHO $TEMPLATE_CLIENT > $tmpDir/client.tmpl
+$ECHO $TEMPLATE_SERVER > $tmpDir/server.tmpl
+
+# create bar-key.pem
+$CERTTOOL \
+  --generate-privkey \
+  --outfile $TLS_DIR/private/bar-key.pem \
+  1>/dev/null 2>/dev/null
+
+# create bar-ca.pem
+$CERTTOOL \
+  --generate-self-signed \
+  --template $tmpDir/ca.tmpl \
+  --load-privkey $TLS_DIR/private/bar-key.pem \
+  --outfile $TLS_DIR/certs/bar-ca.pem \
+  1>/dev/null 2>/dev/null
+
+# create bar-server-key.pem
+$CERTTOOL \
+  --generate-privkey \
+  --outfile $TLS_DIR/private/bar-server-key.pem \
+  1>/dev/null 2>/dev/null
+
+# create bar-server-cert.pem
+$CERTTOOL \
+  --generate-certificate \
+  --template $tmpDir/server.tmpl \
+  --load-privkey $TLS_DIR/private/bar-server-key.pem \
+  --load-ca-certificate $TLS_DIR/certs/bar-ca.pem \
+  --load-ca-privkey $TLS_DIR/private/bar-key.pem \
+  --outfile $TLS_DIR/certs/bar-server-cert.pem \
+  1>/dev/null 2>/dev/null
+
+# free resources
+echo $RMRF $tmpDir 2>/dev/null
+
+exit $EXITCODE_OK
+# end of file
