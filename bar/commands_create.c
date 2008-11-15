@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/commands_create.c,v $
-* $Revision: 1.55 $
+* $Revision: 1.56 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -640,19 +640,20 @@ LOCAL String formatArchiveFileName(String       fileName,
                                    ArchiveTypes archiveType
                                   )
 {
-  TextMacro  textMacros[2];
+  TextMacro textMacros[2];
 
-  struct tm  tmStruct;
-  long       i;
-  char       format[4];
-  char       buffer[256];
-  size_t     length;
-  long       i0,i1;
-  ulong      divisor;           
-  ulong      n;
-  int        d;
+  bool      partNumberFlag;
+  struct tm tmStruct;
+  long      i,j;
+  char      format[4];
+  char      buffer[256];
+  size_t    length;
+  ulong     divisor;
+  ulong     n;
+  int       z;
+  int       d;
 
-  /* expand macros */
+  /* expand named macros */
   switch (archiveType)
   {
     case ARCHIVE_TYPE_NORMAL:      TEXT_MACRO_CSTRING(textMacros[0],"%type","normal");      break;
@@ -668,84 +669,94 @@ LOCAL String formatArchiveFileName(String       fileName,
   TEXT_MACRO_CSTRING(textMacros[1],"%last",lastPartFlag?"-last":"");
   Misc_expandMacros(fileName,templateFileName,textMacros,SIZE_OF_ARRAY(textMacros));
 
-  /* expand time macros */
+  /* expand time macros, part number */
   localtime_r(&time,&tmStruct);
+  partNumberFlag = FALSE;
   i = 0;
-  while ((i = String_findChar(fileName,i,'%')) >= 0)
+  while (i < String_length(fileName))
   {
-    if ((i+1) < String_length(fileName))
+    switch (String_index(fileName,i))
     {
-      switch (String_index(fileName,i+1))
-      {
-        case 'E':
-        case 'O':
-          format[0] = '%';
-          format[1] = String_index(fileName,i+1);
-          format[2] = String_index(fileName,i+2);
-          format[3] = '\0';
+      case '%':
+        if ((i+1) < String_length(fileName))
+        {
+          switch (String_index(fileName,i+1))
+          {
+            case 'E':
+            case 'O':
+              format[0] = '%';
+              format[1] = String_index(fileName,i+1);
+              format[2] = String_index(fileName,i+2);
+              format[3] = '\0';
 
-          length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
+              length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
 
-          String_remove(fileName,i,3);
-          String_insertBuffer(fileName,i,buffer,length);
-          i += length;
-          break;
-        case '%':
-          String_remove(fileName,i,1);
-          i += 1;
-          break;
-        default:
-          format[0] = '%';
-          format[1] = String_index(fileName,i+1);
-          format[2] = '\0';
+              String_remove(fileName,i,3);
+              String_insertBuffer(fileName,i,buffer,length);
+              i += length;
+              break;
+            case '%':
+              String_remove(fileName,i,1);
+              i += 1;
+              break;
+            case '#':
+              String_remove(fileName,i,1);
+              i += 1;
+              break;
+            default:
+              format[0] = '%';
+              format[1] = String_index(fileName,i+1);
+              format[2] = '\0';
 
-          length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
+              length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
 
-          String_remove(fileName,i,2);
-          String_insertBuffer(fileName,i,buffer,length);
-          i += length;
-          break;
-      }
+              String_remove(fileName,i,2);
+              String_insertBuffer(fileName,i,buffer,length);
+              i += length;
+              break;
+          }
+        }
+        else
+        {
+         i += 1;
+        }      
+        break;
+      case '#':
+        /* find #...# and get max. divisor for part number */
+        divisor = 1;
+        j = i+1;
+        while ((j < String_length(fileName) && String_index(fileName,j) == '#'))
+        {
+          j++;
+          if (divisor < 1000000000) divisor*=10;
+        }
+
+        /* replace #...# by part number */     
+        n = partNumber;
+        z = 0;
+        while (divisor > 0)
+        {
+          d = n/divisor; n = n%divisor; divisor = divisor/10;
+          if (z < sizeof(buffer)-1)
+          {
+            buffer[z] = '0'+d; z++;
+          }
+        }
+        buffer[z] = '\0';
+        String_replaceCString(fileName,i,j-i,buffer);
+
+        partNumberFlag = TRUE;
+
+        i = j+1;
+        break;
+      default:
+        i += 1;
+        break;
     }
-    else
-    {
-     i += 1;
-    }      
   }
-
-  /* expand part number */
-  if (partNumber >= 0)
+  if (!partNumberFlag)
   {
-    i0 = String_findChar(fileName,STRING_BEGIN,'#');
-    if (i0 >= 0)
-    {
-      /* find #...# and get max. divisor for part number */
-      divisor = 1;
-      i1 = i0+1;
-      while ((i1 < String_length(fileName) && String_index(fileName,i1) == '#'))
-      {
-        i1++;
-        if (divisor < 1000000000) divisor*=10;
-      }
-
-      /* replace #...# by part number */     
-      n = partNumber;
-      i = 0;
-      while (divisor > 0)
-      {
-        d = n/divisor; n = n%divisor; divisor = divisor/10;
-        assert(i < sizeof(buffer));
-        buffer[i] = '0'+d; i++;
-      }
-      assert(i < sizeof(buffer));
-      buffer[i] = '\0';
-      String_replaceCString(fileName,i0,i1-i0,buffer);
-    }
-    else
-    {
-      /* append to end of file name */
-      String_format(fileName,".%06d",partNumber);
-    }
+    String_format(fileName,".%06d",partNumber);
   }
 
   return fileName;
