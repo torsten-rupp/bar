@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.h,v $
-* $Revision: 1.44 $
+* $Revision: 1.45 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -235,6 +235,7 @@ typedef struct ScheduleNode
   int          minute;
   int          weekDay;
   ArchiveTypes archiveType;
+  bool         enabled;
 } ScheduleNode;
 
 typedef struct
@@ -329,7 +330,7 @@ const char *getErrorText(Errors error);
 * Name   : vprintInfo, printInfo
 * Purpose: output info
 * Input  : verboseLevel - verbosity level
-*          prefix    - prefix text
+*          prefix       - prefix text
 *          format       - format string (like printf)
 *          arguments    - arguments
 *          ...          - optional arguments (like printf)

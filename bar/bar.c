@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar.c,v $
-* $Revision: 1.64 $
+* $Revision: 1.65 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1839,6 +1839,7 @@ ScheduleNode *parseSchedule(const String s)
   ScheduleNode *scheduleNode;
   bool         errorFlag;
   String       s0,s1,s2;
+  bool         b;
   ulong        nextIndex;
 
   assert(s != NULL);
@@ -1856,9 +1857,9 @@ ScheduleNode *parseSchedule(const String s)
   scheduleNode->minute      = SCHEDULE_ANY;
   scheduleNode->weekDay     = SCHEDULE_ANY;
   scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
-//  scheduleNode->comment     = String_new();
+  scheduleNode->enabled     = FALSE;
 
-  /* parse schedule: date, weekday, time, type, comment */
+  /* parse schedule: date, weekday, time, type, enabled */
   errorFlag = FALSE;
   s0 = String_new();
   s1 = String_new();
@@ -1889,6 +1890,14 @@ ScheduleNode *parseSchedule(const String s)
   {
     errorFlag = TRUE;
   }
+  if (String_parse(s,nextIndex,"%y",&nextIndex,&b))
+  {
+    scheduleNode->enabled = b;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
   if (nextIndex != STRING_END)
   {
     if (String_parse(s,nextIndex,"%S",&nextIndex,s0))
@@ -1902,7 +1911,6 @@ ScheduleNode *parseSchedule(const String s)
 
   if (errorFlag || (nextIndex != STRING_END))
   {
-//    String_delete(scheduleNode->comment);
     LIST_DELETE_NODE(scheduleNode);
     return NULL;
   }
@@ -2028,6 +2036,8 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
     {
       String_appendCString(line,"*");
     }
+    String_appendChar(line,' ');
+    String_format(line,"%y",scheduleNode->enabled);
     String_appendChar(line,' ');
     switch (scheduleNode->archiveType)
     {
