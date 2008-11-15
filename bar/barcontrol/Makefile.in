@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -71,6 +71,8 @@ OTHER_SOURCES  = jar.txt \
 OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).class) \
 
 INTERMEDIATE   = barcontrol.jar \
+                 barcontrol-linux.jar \
+                 barcontrol-windows.jar
 
 TARGETS        = barcontrol \
                  $(if $(LAUNCH4J),barcontrol.exe,barcontrol.bat) \
