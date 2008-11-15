@@ -40,11 +40,17 @@
 /* defined if long long data type available */
 #undef HAVE_LONG_LONG
 
+/* Define to 1 if you have the `pthread_attr_setname' function. */
+#undef HAVE_PTHREAD_ATTR_SETNAME
+
 /* SSH2 installed */
 #undef HAVE_SSH2
 
 /* SSH2 libssh2_channel_send_keepalive */
 #undef HAVE_SSH2_CHANNEL_SEND_KEEPALIVE
+
+/* TASN.1 installed */
+#undef HAVE_TASN1
 
 /* z installed */
 #undef HAVE_Z

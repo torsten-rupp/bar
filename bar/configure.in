@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.12 $
+dnl $Revision: 1.13 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -131,6 +131,17 @@ AC_SUBST(LIBRARY_PATHS)
 AC_SUBST(LIBRARIES)
 AC_SUBST(STATIC_LIBRARIES)
 
+AC_SUBST(JAVA)
+AC_SUBST(JAVAC)
+AC_SUBST(JAR)
+
+AC_SUBST(JAVA_FLAGS)
+AC_SUBST(JAVAC_FLAGS)
+
+AC_SUBST(SWT_DIR)
+
+AC_SUBST(LAUNCH4J_DIR)
+
 dnl ----------------------- initialize variables -----------------------
 
 CC_FLAGS=""
@@ -168,6 +179,16 @@ AC_ARG_WITH(
   AC_HELP_STRING([--with-tls-dir=<path>],[TLS/SLL configuration and certificate directory (default: /etc/ssl)]),
   [TLS_DIR=$withval],
   [TLS_DIR=/etc/ssl]
+)
+AC_ARG_WITH(
+  swt-dir,
+  AC_HELP_STRING([--with-swt-dir=<path>],[SWT directory]),
+  [SWT_DIR=$withval]
+)
+AC_ARG_WITH(
+  launch4j-dir,
+  AC_HELP_STRING([--with-launch4j-dir=<path>],[launch4j directory]),
+  [LAUNCH4J_DIR=$withval]
 )
 
 dnl ------------------- --enable/--disable options ---------------------
@@ -242,6 +263,19 @@ if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
+
+AC_PATH_PROGS(JAVA,java)
+AC_PATH_PROGS(JAVAC,javac)
+AC_PATH_PROGS(JAR,jar)
+AC_PATH_PROGS(LAUNCH4J,launch4j)
+
+JAVA_FLAGS=""
+if test "$ENABLE_DEBUG" = "yes"; then
+  JAVA_FLAGS="-enableassertions"
+fi
+if test "$ENABLE_DEBUG" = "yes"; then
+  JAVAC_FLAGS="-g"
+fi
 
 dnl -------------- headers/functions/definitions/libraries -------------
 
@@ -330,6 +364,18 @@ if test $ENABLE_TLS = "yes"; then
   fi
 fi
 
+if test -z "$SWT_DIR"; then
+  AC_MSG_CHECKING([for SWT])
+  if   test -f /usr/local/swt/swt.jar; then
+    SWT_DIR=/usr/local/swt
+  elif test -f /usr/swt/swt.jar; then
+    SWT_DIR=/usr/swt
+  else
+    AC_MSG_ERROR([No swt.jar found. Please specify SWT directory with --with-swt-dir=<path>.])
+  fi
+  AC_MSG_RESULT($SWT_DIR)
+fi
+
 dnl -------------------------------- misc ------------------------------
 
 AC_DEFINE_UNQUOTED(CONFIG_DIR,"$CONFIG_DIR",[configuration directory])
@@ -373,6 +419,7 @@ else
 fi
 
 AC_CONFIG_FILES(Makefile)
+AC_CONFIG_FILES(barcontrol/Makefile)
 
 AC_CONFIG_COMMANDS(TCL,
                    [
