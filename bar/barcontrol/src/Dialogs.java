@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Dialogs.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -11,6 +11,8 @@
 /****************************** Imports ********************************/
 import java.io.File;
 
+import org.eclipse.swt.events.TraverseEvent;
+import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.GC;
@@ -45,27 +47,18 @@ class Dialogs
    */
   static Shell open(Shell parentShell, String title, int minWidth, int minHeight, double[] rowWeights, double[] columnWeights)
   {
-    int             x,y;
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
 
-    // get location for dialog (keep 16 pixel away form right/bottom)
-    Display display = parentShell.getDisplay();
-    Point cursorPoint = display.getCursorLocation();
-    Rectangle bounds = display.getBounds();
-    x = Math.min(Math.max(cursorPoint.x-minWidth /2,0),bounds.width -minWidth -16);
-    y = Math.min(Math.max(cursorPoint.y-minHeight/2,0),bounds.height-minHeight-16);
-
     // create dialog
-    final Shell shell = new Shell(parentShell,SWT.DIALOG_TRIM|SWT.RESIZE|SWT.APPLICATION_MODAL);
-    shell.setText(title);
-    shell.setLocation(x,y);
+    final Shell dialog = new Shell(parentShell,SWT.DIALOG_TRIM|SWT.RESIZE|SWT.APPLICATION_MODAL);
+    dialog.setText(title);
     tableLayout = new TableLayout(rowWeights,columnWeights,4);
     tableLayout.minWidth  = minWidth;
     tableLayout.minHeight = minHeight;
-    shell.setLayout(tableLayout);
+    dialog.setLayout(tableLayout);
 
-    return shell;
+    return dialog;
   }
 
   /** open a new dialog
@@ -109,11 +102,31 @@ class Dialogs
 
   /** run dialog
    * @param dialog dialog shell
+   * @param escapeKeyReturnValue value to return on ESC key
    */
-  static Object run(Shell dialog)
+  static Object run(final Shell dialog, final Object escapeKeyReturnValue)
   {
+    int x,y;
+
+    Display display = dialog.getParent().getDisplay();
+
     final Object[] result = new Object[1];
 
+    // add escape key handler
+    dialog.addTraverseListener(new TraverseListener()
+    {
+      public void keyTraversed(TraverseEvent traverseEvent)
+      {
+        Shell widget = (Shell)traverseEvent.widget;
+
+        if (traverseEvent.detail == SWT.TRAVERSE_ESCAPE)
+        {
+          widget.setData(escapeKeyReturnValue);
+        }
+      }
+    });
+
+    // close handler to get result
     dialog.addListener(SWT.Close,new Listener()
     {
       public void handleEvent(Event event)
@@ -123,16 +136,33 @@ class Dialogs
         result[0] = widget.getData();
       }
     });
-
+    // pack
     dialog.pack();
+
+    // get location for dialog (keep 16 pixel away form right/bottom)
+    Point cursorPoint = display.getCursorLocation();
+    Rectangle displayBounds = display.getBounds();
+    Rectangle bounds = dialog.getBounds();
+    x = Math.min(Math.max(cursorPoint.x-bounds.width /2,0),displayBounds.width -bounds.width -16);
+    y = Math.min(Math.max(cursorPoint.y-bounds.height/2,0),displayBounds.height-bounds.height-64);
+    dialog.setLocation(x,y);
+
+    // run dialog
     dialog.open();
-    Display display = dialog.getParent().getDisplay();
     while (!dialog.isDisposed())
     {
       if (!display.readAndDispatch()) display.sleep();
     }
 
     return result[0];
+  }
+
+  /** run dialog
+   * @param dialog dialog shell
+   */
+  static Object run(Shell dialog)
+  {
+    return run(dialog,null);
   }
 
   /** info dialog
@@ -147,39 +177,39 @@ class Dialogs
     Label           label;
     Button          button;
 
-    final Shell shell = open(parentShell,title,200,70);
-    shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+    final Shell dialog = open(parentShell,title,200,70);
+    dialog.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
     // message
-    composite = new Composite(shell,SWT.NONE);
+    composite = new Composite(dialog,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
     {
       label = new Label(composite,SWT.LEFT);
       label.setImage(image);
-      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,0));
+      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,10,10));
 
       label = new Label(composite,SWT.LEFT|SWT.WRAP);
       label.setText(message);
-      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0));
+      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4,4));
     }
 
     // buttons
-    composite = new Composite(shell,SWT.NONE);
+    composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout());
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4));
     {
       button = new Button(composite,SWT.CENTER);
       button.setText("Close");
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.DEFAULT|TableLayoutData.EXPAND_X));
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.DEFAULT|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
 
-          shell.close();
+          close(dialog);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -187,7 +217,7 @@ class Dialogs
       });
     }
 
-    run(shell);
+    run(dialog);
   }
 
   /** info dialog
@@ -196,14 +226,7 @@ class Dialogs
    */
   static void info(Shell parentShell, String title, String message)
   {
-/*
-    PaletteData paletteData = new PaletteData(0xFF0000,0x00FF00,0x0000FF);
-    ImageData imageData = new ImageData(Images.info.width,Images.info.height,Images.info.depth,paletteData,1,Images.info.data);
-    imageData.alphaData = Images.info.alphas;
-    imageData.alpha = -1;
-    Image image = new Image(parentShell.getDisplay(),imageData);
-*/
-    Image image = new Image(parentShell.getDisplay(),"images/info.gif");
+    Image image = Widgets.loadImage(parentShell.getDisplay(),"info.gif");
 
     info(parentShell,title,image,message);
   }
@@ -220,41 +243,41 @@ class Dialogs
     Label           label;
     Button          button;
 
-    final Shell shell = open(parentShell,"Error",200,70);
-    shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+    final Shell dialog = open(parentShell,"Error",200,70);
+    dialog.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
-    Image image = new Image(shell.getDisplay(),"images/error.gif");
+    Image image = Widgets.loadImage(parentShell.getDisplay(),"error.gif");
 
     // message
-    composite = new Composite(shell,SWT.NONE);
+    composite = new Composite(dialog,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
     {
       label = new Label(composite,SWT.LEFT);
       label.setImage(image);
-      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,0));
+      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,10,10));
 
       label = new Label(composite,SWT.LEFT|SWT.WRAP);
       label.setText(message);
-      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0));
+      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4,4));
     }
 
     // buttons
-    composite = new Composite(shell,SWT.NONE);
+    composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout());
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4));
     {
       button = new Button(composite,SWT.CENTER);
       button.setText("Close");
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.DEFAULT|TableLayoutData.EXPAND_X));
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.DEFAULT|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
 
-          shell.close();
+          close(dialog);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -262,18 +285,19 @@ class Dialogs
       });
     }
 
-    run(shell);
+    run(dialog);
   }
 
   /** confirmation dialog
    * @param parentShell parent shell
    * @param title title string
+   * @param image image to show
    * @param message confirmation message
    * @param yesText yes-text
    * @param noText no-text
    * @return value
    */
-  static boolean confirm(Shell parentShell, String title, String message, String yesText, String noText)
+  static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText, String noText)
   {
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
@@ -283,30 +307,28 @@ class Dialogs
 
     final boolean[] result = new boolean[1];
 
-    final Shell shell = open(parentShell,title,200,70);
-    shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
-
-    Image image = new Image(shell.getDisplay(),"images/question.gif");
+    final Shell dialog = open(parentShell,title,200,70);
+    dialog.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
     // message
-    composite = new Composite(shell,SWT.NONE);
+    composite = new Composite(dialog,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
     {
       label = new Label(composite,SWT.LEFT);
       label.setImage(image);
-      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,0));
+      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,10,10));
 
       label = new Label(composite,SWT.LEFT|SWT.WRAP);
       label.setText(message);
-      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE));
+      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4,4));
     }
 
     // buttons
-    composite = new Composite(shell,SWT.NONE);
+    composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout());
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4));
     {
       button = new Button(composite,SWT.CENTER);
       button.setText(yesText);
@@ -317,8 +339,7 @@ class Dialogs
         {
           Button widget = (Button)selectionEvent.widget;
 
-          result[0] = true;
-          shell.close();
+          close(dialog,true);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -334,8 +355,7 @@ class Dialogs
         {
           Button widget = (Button)selectionEvent.widget;
 
-          result[0] = false;
-          shell.close();
+          close(dialog,false);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -343,9 +363,22 @@ class Dialogs
       });
     }
 
-    run(shell);
+    return (Boolean)run(dialog,false);
+  }
 
-    return result[0];
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  static boolean confirm(Shell parentShell, String title, String message, String yesText, String noText)
+  {
+    Image image = Widgets.loadImage(parentShell.getDisplay(),"question.gif");
+
+    return confirm(parentShell,title,image,message,yesText,noText);
   }
 
   /** confirmation dialog
@@ -359,14 +392,30 @@ class Dialogs
     return confirm(parentShell,title,message,"Yes","No");
   }
 
+  /** confirmation error dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  static boolean confirmError(Shell parentShell, String title, String message, String yesText, String noText)
+  {
+    Image image = Widgets.loadImage(parentShell.getDisplay(),"error.gif");
+
+    return confirm(parentShell,title,image,message,yesText,noText);
+  }
+
   /** multiple select dialog
    * @param parentShell parent shell
    * @param title title string
    * @param message confirmation message
    * @param texts array with texts
+   * @param defaultValue default value
    * @return selection index (0..n-1)
    */
-  static int select(Shell parentShell, String title, String message, String[] texts)
+  static int select(Shell parentShell, String title, String message, String[] texts, int defaultValue)
   {
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
@@ -376,15 +425,13 @@ class Dialogs
 
     final int[] result = new int[1];
 
-//    final Shell shell = open(parentShell,title,200,SWT.DEFAULT);
-    final Shell shell = open(parentShell,title);
-//    shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND));
-    shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+    final Shell dialog = open(parentShell,title);
+    dialog.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
-    Image image = new Image(shell.getDisplay(),"images/question.gif");
+    Image image = Widgets.loadImage(parentShell.getDisplay(),"question.gif");
 
     // message
-    composite = new Composite(shell,SWT.NONE);
+    composite = new Composite(dialog,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
 //    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND));
@@ -392,18 +439,19 @@ class Dialogs
     {
       label = new Label(composite,SWT.LEFT);
       label.setImage(image);
-      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,0));
+      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,10,10));
 
       label = new Label(composite,SWT.LEFT|SWT.WRAP);
       label.setText(message);
 //      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE|TableLayoutData.EXPAND));
-      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE));
+      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4,4));
     }
 
     // buttons
-    composite = new Composite(shell,SWT.NONE);
+    composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout());
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+//    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4));
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.DEFAULT,0,0,4,4));
     {
       int textWidth = 0;
       GC gc = new GC(composite);
@@ -419,15 +467,14 @@ class Dialogs
         button = new Button(composite,SWT.CENTER);
         button.setText(text);
         button.setData(n);
-        button.setLayoutData(new TableLayoutData(0,n,TableLayoutData.EXPAND_X,0,0,0,0,textWidth,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,n,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,0,0,textWidth,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
 
-            result[0] = ((Integer)widget.getData()).intValue();
-            shell.close();
+            close(dialog,widget.getData());
           }
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
@@ -438,9 +485,7 @@ class Dialogs
       }
     }
 
-    run(shell);
-
-    return result[0];
+    return (Integer)run(dialog,defaultValue);
   }
 
   /** password dialog
@@ -461,12 +506,13 @@ class Dialogs
 
     final String[] result = new String[1];
 
-    final Shell shell = open(parentShell,title,250,70);
-    shell.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+    final Shell dialog = open(parentShell,title,250,SWT.DEFAULT);
+    dialog.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
     // password
-    final Text widgetText;
-    composite = new Composite(shell,SWT.NONE);
+    final Text   widgetText;
+    final Button widgetOkButton;
+    composite = new Composite(dialog,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
@@ -480,21 +526,20 @@ class Dialogs
     }
 
     // buttons
-    composite = new Composite(shell,SWT.NONE);
+    composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout());
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
     {
-      button = new Button(composite,SWT.CENTER);
-      button.setText(okText);
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
-      button.addSelectionListener(new SelectionListener()
+      widgetOkButton = new Button(composite,SWT.CENTER);
+      widgetOkButton.setText(okText);
+      widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
+      widgetOkButton.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
 
-          result[0] = widgetText.getText();
-          shell.close();
+          close(dialog,widgetText.getText());
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -510,8 +555,7 @@ class Dialogs
         {
           Button widget = (Button)selectionEvent.widget;
 
-          result[0] = null;
-          shell.close();
+          close(dialog,null);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -519,9 +563,21 @@ class Dialogs
       });
     }
 
-    run(shell);
+    // install handlers
+    widgetText.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        Text widget = (Text)selectionEvent.widget;
 
-    return result[0];
+        widgetOkButton.forceFocus();
+      }
+    });
+
+    return (String)run(dialog,null);
   }
 
   /** password dialog

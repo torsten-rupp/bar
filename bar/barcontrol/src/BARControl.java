@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -9,50 +9,24 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
-import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.events.PaintEvent;
-import org.eclipse.swt.events.PaintListener;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
 import java.io.Serializable;
-import java.lang.Double;
-import java.lang.Exception;
-import java.lang.Integer;
-import java.lang.Long;
-import java.lang.String;
-import java.lang.System;
-import java.lang.NumberFormatException;
-import java.net.Socket;
-import java.text.DateFormat;
-import java.text.Collator;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.Locale;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
 
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
-import org.eclipse.swt.dnd.Transfer;
-import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
 import org.eclipse.swt.dnd.DragSourceEvent;
@@ -62,36 +36,33 @@ import org.eclipse.swt.dnd.DropTargetAdapter;
 import org.eclipse.swt.dnd.DropTargetEvent;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.dnd.TransferData;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.events.MouseTrackListener;
-import org.eclipse.swt.events.ModifyEvent;
-import org.eclipse.swt.events.ModifyListener;
-import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.events.VerifyEvent;
-import org.eclipse.swt.events.VerifyListener;
-import org.eclipse.swt.graphics.Cursor;
-import org.eclipse.swt.graphics.FontMetrics;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
@@ -99,9 +70,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
-import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
@@ -113,6 +82,8 @@ import org.eclipse.swt.widgets.Widget;
 
 /****************************** Classes ********************************/
 
+/** BAR variable types
+ */
 enum BARVariableTypes
 {
   BOOLEAN,
@@ -122,6 +93,8 @@ enum BARVariableTypes
   ENUMERATION,
 };
 
+/** BAR variables
+ */
 class BARVariable
 {
   private BARVariableTypes type;
@@ -259,6 +232,8 @@ class BARVariable
   }
 }
 
+/** widget listener
+ */
 class WidgetListener
 {
   private BARVariable variable;
@@ -432,6 +407,8 @@ class WidgetListener
   }
 }
 
+/** units
+ */
 class Units
 {
   public static String getByteSize(double n)
@@ -498,6 +475,8 @@ class Units
   }
 }
 
+/** tab status
+ */
 class TabStatus
 {
   enum States
@@ -521,9 +500,11 @@ class TabStatus
     long   lastExecutedDateTime;
     long   estimatedRestTime;
 
+    private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     /** create job data
      */
-    JobData(int id, String name, String state, String type, long archivePartSize, String compressAlgorithm, String cryptAlgorithm, String cryptType, long lastExecutedDateTime, long estimtedRestTime)
+    JobData(int id, String name, String state, String type, long archivePartSize, String compressAlgorithm, String cryptAlgorithm, String cryptType, long lastExecutedDateTime, long estimatedRestTime)
     {
       this.id                   = id;
       this.name                 = name;
@@ -550,7 +531,14 @@ class TabStatus
      */
     String formatLastExecutedDateTime()
     {
-      return DateFormat.getDateTimeInstance().format(new Date(lastExecutedDateTime*1000));
+      if (lastExecutedDateTime > 0)
+      {
+        return simpleDateFormat.format(new Date(lastExecutedDateTime*1000));
+      }
+      else
+      {
+        return "-";
+      }
     }
 
     /** format estimated rest time
@@ -563,7 +551,12 @@ class TabStatus
       long   estimatedRestMinutes = estimatedRestTime%(60*60   )/(60   );
       long   estimatedRestSeconds = estimatedRestTime%(60      );
 
-      return String.format("%2d days %02d:%02d:%02d",estimatedRestDays,estimatedRestHours,estimatedRestMinutes,estimatedRestSeconds);
+      return String.format("%2d days %02d:%02d:%02d",
+                           estimatedRestDays,
+                           estimatedRestHours,
+                           estimatedRestMinutes,
+                           estimatedRestSeconds
+                          );
     }
 
     public String toString()
@@ -587,6 +580,23 @@ class TabStatus
     private final static int SORTMODE_ESTIMATED_TIME         = 7;
 
     private int sortMode;
+
+    /** create job data comparator
+     * @param table job table
+     * @param sortColumn sorting column
+     */
+    JobDataComparator(Table table, TableColumn sortColumn)
+    {
+      if      (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_STATE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_PARTSIZE;
+      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_COMPRESS;
+      else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_CRYPT;
+      else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
+      else if (table.getColumn(8) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
+      else                                       sortMode = SORTMODE_NAME;
+    }
 
     /** create job data comparator
      * @param table job table
@@ -779,7 +789,7 @@ boolean xxx=false;
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         TableColumn       tableColumn = (TableColumn)selectionEvent.widget;
-        JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList);
+        JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList,tableColumn);
 
         synchronized(jobList)
         {
@@ -800,11 +810,11 @@ boolean xxx=false;
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn = Widgets.addTableColumn(widgetJobList,4,"Part size",     SWT.RIGHT,  0,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,5,"Compress",      SWT.LEFT,  100,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,5,"Compress",      SWT.LEFT,  80,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,6,"Crypt",         SWT.LEFT,  80,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,6,"Crypt",         SWT.LEFT,  70,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,7,"Last executed", SWT.LEFT, 180,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,7,"Last executed", SWT.LEFT, 150,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn = Widgets.addTableColumn(widgetJobList,8,"Estimated time",SWT.LEFT, 120,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
@@ -1113,11 +1123,11 @@ boolean xxx=false;
     }
 
     // buttons
-    composite = Widgets.newComposite(widgetTab,SWT.NONE);
+    composite = Widgets.newComposite(widgetTab,SWT.NONE,4);
     Widgets.layout(composite,2,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
     {
       widgetButtonStart = Widgets.newButton(composite,null,"Start");
-      Widgets.layout(widgetButtonStart,0,0,TableLayoutData.DEFAULT);
+      Widgets.layout(widgetButtonStart,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonStart.setEnabled(false);
       widgetButtonStart.addSelectionListener(new SelectionListener()
       {
@@ -1133,7 +1143,7 @@ boolean xxx=false;
       });
 
       widgetButtonAbort = Widgets.newButton(composite,null,"Abort");
-      Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.DEFAULT);
+      Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonAbort.setEnabled(false);
       widgetButtonAbort.addSelectionListener(new SelectionListener()
       {
@@ -1149,7 +1159,7 @@ boolean xxx=false;
       });
 
       widgetButtonTogglePause = Widgets.newButton(composite,null,"Continue");
-      Widgets.layout(widgetButtonTogglePause,0,2,TableLayoutData.DEFAULT); // how to calculate correct max. width? ,0,0,Widgets.getTextSize(widgetButtonTogglePause,new String[]{"Pause","Continue"}));
+      Widgets.layout(widgetButtonTogglePause,0,2,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT); // how to calculate correct max. width? ,0,0,Widgets.getTextSize(widgetButtonTogglePause,new String[]{"Pause","Continue"}));
       widgetButtonTogglePause.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -1164,7 +1174,7 @@ boolean xxx=false;
       });
 
       widgetButtonVolume = Widgets.newButton(composite,null,"Volume");
-      Widgets.layout(widgetButtonVolume,0,3,TableLayoutData.DEFAULT);
+      Widgets.layout(widgetButtonVolume,0,3,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonVolume.setEnabled(false);
       widgetButtonVolume.addSelectionListener(new SelectionListener()
       {
@@ -1179,7 +1189,7 @@ boolean xxx=false;
       });
 
       widgetButtonQuit = Widgets.newButton(composite,null,"Quit");
-      Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E|TableLayoutData.EXPAND_X);
+      Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonQuit.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -1234,7 +1244,6 @@ boolean xxx=false;
       status = States.RUNNING;
       widgetButtonTogglePause.setText("Pause");
     }
-//widgetButtonTogglePause.getParent().layout();
   }
 
   /** find index of table item for job
@@ -1283,7 +1292,7 @@ boolean xxx=false;
       int errorCode = BARServer.executeCommand("JOB_LIST",result);
       if (errorCode != 0) return;
 
-      // update job list
+      // update entries in job list
       synchronized(jobList)
       {
         jobList.clear();
@@ -1307,7 +1316,7 @@ boolean xxx=false;
 //System.err.println("BARControl.java"+", "+1357+": "+line);
           if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
           {
-  //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
+//System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[9]);
             // get data
             int    id                   = (Integer)data[0];
             String name                 = (String )data[1];
@@ -1320,20 +1329,24 @@ boolean xxx=false;
             long   lastExecutedDateTime = (Long   )data[8];
             long   estimatedRestTime    = (Long   )data[9];
 
-            long   estimatedRestDays    = estimatedRestTime/(24*60*60);
-            long   estimatedRestHours   = estimatedRestTime%(24*60*60)/(60*60);
-            long   estimatedRestMinutes = estimatedRestTime%(60*60   )/(60   );
-            long   estimatedRestSeconds = estimatedRestTime%(60      );
-
             // get/create table item
             TableItem tableItem;
-            JobData   jobData = new JobData(id,name,state,type,archivePartSize,compressAlgorithm,cryptAlgorithm,cryptType,lastExecutedDateTime,estimatedRestTime);;
+            JobData   jobData = new JobData(id,
+                                            name,
+                                            state,
+                                            type,
+                                            archivePartSize,
+                                            compressAlgorithm,
+                                            cryptAlgorithm,
+                                            cryptType,
+                                            lastExecutedDateTime,
+                                            estimatedRestTime
+                                           );
             int index = getTableItemIndex(tableItems,id);
             if (index >= 0)
             {
               tableItem = tableItems[index];
               tableItemFlags[index] = true;
-  //System.err.println("BARControl.java"+", "+2266+": id="+id+" index="+index+" "+tableItem.getText(1));              
             }
             else
             {
@@ -1353,6 +1366,8 @@ boolean xxx=false;
             tableItem.setText(8,jobData.formatEstimatedRestTime());
           }
         }
+
+        // remove not existing entries
         for (int z = 0; z < tableItems.length; z++)
         {
           if (!tableItemFlags[z]) widgetJobList.remove(z);
@@ -1444,7 +1459,6 @@ boolean xxx=false;
     // update job list
     updateStatus();
     updateJobList();
-//if (!xxx) { updateJobList(); xxx=true; }
     updateJobInfo();
   }
 
@@ -1454,7 +1468,7 @@ boolean xxx=false;
   {
     assert selectedJobData != null;
 
-    switch (Dialogs.select(shell,"Start job","Start job '"+selectedJobData.name+"'?",new String[]{"Full","Incremental","Cancel"}))
+    switch (Dialogs.select(shell,"Confirmation","Start job '"+selectedJobData.name+"'?",new String[]{"Full","Incremental","Cancel"},2))
     {
       case 0:
         BARServer.executeCommand("JOB_START "+selectedJobData.id+" full");
@@ -1488,6 +1502,8 @@ boolean xxx=false;
   }
 }
 
+/** tab jobs
+ */
 class TabJobs
 {
   /** pattern types
@@ -1822,9 +1838,26 @@ class TabJobs
     private final static int SORTMODE_DATE    = 0;
     private final static int SORTMODE_WEEKDAY = 1;
     private final static int SORTMODE_TIME    = 2;
-    private final static int SORTMODE_TYPE    = 3;
+    private final static int SORTMODE_ENABLED = 3;
+    private final static int SORTMODE_TYPE    = 4;
 
     private int sortMode;
+
+    private final String[] weekDays = new String[]{"mon","tue","wed","thu","fri","sat","sun"};
+
+    /** create schedule data comparator
+     * @param table schedule table
+     * @param sortColumn sorting column
+     */
+    ScheduleDataComparator(Table table, TableColumn sortColumn)
+    {
+      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_DATE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_WEEKDAY;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TIME;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_ENABLED;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_TYPE;
+      else                                       sortMode = SORTMODE_DATE;
+    }
 
     /** create schedule data comparator
      * @param table schedule table
@@ -1836,10 +1869,10 @@ class TabJobs
       if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_DATE;
       else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_WEEKDAY;
       else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TIME;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_ENABLED;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_TYPE;
       else                                       sortMode = SORTMODE_DATE;
     }
-
     /** compare schedule data
      * @param scheduleData1, scheduleData2 file tree data to compare
      * @return -1 iff scheduleData1 < scheduleData2,
@@ -1856,37 +1889,66 @@ class TabJobs
 
           return date1.compareTo(date2);
         case SORTMODE_WEEKDAY:
-          return scheduleData1.weekDay.compareTo(scheduleData2.weekDay);
+          int index1 = indexOfWeekDay(scheduleData1.weekDay.toLowerCase());
+          int index2 = indexOfWeekDay(scheduleData2.weekDay.toLowerCase());
+
+          if      (index1 < index2) return -1;
+          else if (index1 > index2) return  1;
+          else                      return  0;
         case SORTMODE_TIME:
           String time1 = scheduleData1.hour+":"+scheduleData1.minute;
           String time2 = scheduleData2.hour+":"+scheduleData2.minute;
 
           return time1.compareTo(time2);
+        case SORTMODE_ENABLED:
+          if      (scheduleData1.enabled && !scheduleData2.enabled) return -1;
+          else if (!scheduleData1.enabled && scheduleData2.enabled) return  1;
+          else                                                      return  0;
         case SORTMODE_TYPE:
           return scheduleData1.type.compareTo(scheduleData2.type);
         default:
           return 0;
       }
     }
+
+    /** get index of week day
+     * @param weekDay week day
+     * @return index
+     */
+    private int indexOfWeekDay(String weekDay)
+    {
+      int index = 0;
+      while ((index < weekDays.length) && !weekDays[index].equals(weekDay))
+      {
+        index++;
+      }
+
+      return index;
+    }
   }
+
+  // colors
+  private final Color COLOR_WHITE;
+  private final Color COLOR_MODIFIED;
+
+  // images
+  private final Image IMAGE_DIRECTORY;
+  private final Image IMAGE_DIRECTORY_INCLUDED;
+  private final Image IMAGE_DIRECTORY_EXCLUDED;
+  private final Image IMAGE_FILE;
+  private final Image IMAGE_FILE_INCLUDED;
+  private final Image IMAGE_FILE_EXCLUDED;
+  private final Image IMAGE_LINK;
+  private final Image IMAGE_LINK_INCLUDED;
+  private final Image IMAGE_LINK_EXCLUDED;
 
   // global variable references
   Shell       shell;
   TabStatus   tabStatus;
 
-  // images
-  Image       imageDirectory;
-  Image       imageDirectoryIncluded;
-  Image       imageDirectoryExcluded;
-  Image       imageFile;
-  Image       imageFileIncluded;
-  Image       imageFileExcluded;
-  Image       imageLink;
-  Image       imageLinkIncluded;
-  Image       imageLinkExcluded;
-
   // widgets
   Composite   widgetTab;
+  TabFolder   widgetTabFolder;
   Combo       widgetJobList;
   Tree        widgetFileTree;
   List        widgetIncludedPatterns;
@@ -1928,10 +1990,11 @@ class TabJobs
   private     HashSet<String>          excludedPatterns = new HashSet<String>();
   private     LinkedList<ScheduleData> scheduleList     = new LinkedList<ScheduleData>();
 
+  private     SimpleDateFormat         simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
   TabJobs(TabFolder parentTabFolder, int accelerator)
   {
     Display     display;
-    TabFolder   tabFolder;
     Composite   tab;
     Group       group;
     Composite   composite,subComposite;
@@ -1947,17 +2010,20 @@ class TabJobs
     shell = parentTabFolder.getShell();
     display = shell.getDisplay();
 
-    imageDirectory = new Image(display,"images/directory.gif");
-    imageDirectoryIncluded = new Image(display,"images/directory.gif");
-    imageDirectoryExcluded = new Image(display,"images/directory.gif");
+    // get colors
+    COLOR_WHITE    = shell.getDisplay().getSystemColor(SWT.COLOR_WHITE);
+    COLOR_MODIFIED = new Color(null,0xFF,0xA0,0xA0);
 
-    imageFile = new Image(display,"images/file.gif");
-    imageFileIncluded = new Image(display,"images/fileIncluded.gif");
-    imageFileExcluded = new Image(display,"images/fileExcluded.gif");
-
-    imageLink = new Image(display,"images/link.gif");
-    imageLinkIncluded = new Image(display,"images/linkIncluded.gif");
-    imageLinkExcluded = new Image(display,"images/linkExcluded.gif");
+    // get images
+    IMAGE_DIRECTORY          = Widgets.loadImage(display,"directory.gif");
+    IMAGE_DIRECTORY_INCLUDED = Widgets.loadImage(display,"directoryIncluded.gif");
+    IMAGE_DIRECTORY_EXCLUDED = Widgets.loadImage(display,"directoryExcluded.gif");
+    IMAGE_FILE               = Widgets.loadImage(display,"file.gif");
+    IMAGE_FILE_INCLUDED      = Widgets.loadImage(display,"fileIncluded.gif");
+    IMAGE_FILE_EXCLUDED      = Widgets.loadImage(display,"fileExcluded.gif");
+    IMAGE_LINK               = Widgets.loadImage(display,"link.gif");
+    IMAGE_LINK_INCLUDED      = Widgets.loadImage(display,"linkIncluded.gif");
+    IMAGE_LINK_EXCLUDED      = Widgets.loadImage(display,"linkExcluded.gif");
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,"Jobs"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
@@ -1988,6 +2054,7 @@ class TabJobs
           {
             selectedJobName = widgetJobList.getItem(index);
             selectedJobId   = jobIds.get(selectedJobName);
+            Widgets.setEnabled(widgetTabFolder,true);
             update();
           }
         }
@@ -2005,7 +2072,6 @@ class TabJobs
           Button widget = (Button)selectionEvent.widget;
 
           jobNew();
-          updateJobList();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -2023,7 +2089,6 @@ class TabJobs
           if (selectedJobId > 0)
           {
             jobRename();
-            updateJobList();
           }
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2042,7 +2107,6 @@ class TabJobs
           if (selectedJobId > 0)
           {
             jobDelete();
-            updateJobList();
           }
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2052,10 +2116,10 @@ class TabJobs
     }
 
     // sub-tabs
-    tabFolder = Widgets.newTabFolder(widgetTab);
-    Widgets.layout(tabFolder,1,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
+    widgetTabFolder = Widgets.newTabFolder(widgetTab);
+    Widgets.layout(widgetTabFolder,1,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
     {
-      tab = Widgets.addTab(tabFolder,"Files");
+      tab = Widgets.addTab(widgetTabFolder,"Files");
       Widgets.layout(tab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
       {
         // file tree
@@ -2087,7 +2151,7 @@ class TabJobs
         treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
 
         // buttons
-        composite = Widgets.newComposite(tab,SWT.NONE);
+        composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
         {
           button = Widgets.newButton(composite,null,"*");
@@ -2105,12 +2169,12 @@ class TabJobs
                 patternDelete(PatternTypes.EXCLUDE,fileTreeData.name);
                 switch (fileTreeData.type)
                 {
-                  case FILE:      treeItem.setImage(imageFile);      break;
-                  case DIRECTORY: treeItem.setImage(imageDirectory); break;
-                  case LINK:      treeItem.setImage(imageLink);      break;
-                  case SPECIAL:   treeItem.setImage(imageFile);      break;
-                  case DEVICE:    treeItem.setImage(imageFile);      break;
-                  case SOCKET:    treeItem.setImage(imageFile);      break;
+                  case FILE:      treeItem.setImage(IMAGE_FILE);      break;
+                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY); break;
+                  case LINK:      treeItem.setImage(IMAGE_LINK);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE);      break;
+                  case DEVICE:    treeItem.setImage(IMAGE_FILE);      break;
+                  case SOCKET:    treeItem.setImage(IMAGE_FILE);      break;
                 }
               }
             }
@@ -2134,12 +2198,12 @@ class TabJobs
                 patternDelete(PatternTypes.EXCLUDE,fileTreeData.name);
                 switch (fileTreeData.type)
                 {
-                  case FILE:      treeItem.setImage(imageFileIncluded);      break;
-                  case DIRECTORY: treeItem.setImage(imageDirectoryIncluded); break;
-                  case LINK:      treeItem.setImage(imageLinkIncluded);      break;
-                  case SPECIAL:   treeItem.setImage(imageFileIncluded);      break;
-                  case DEVICE:    treeItem.setImage(imageFileIncluded);      break;
-                  case SOCKET:    treeItem.setImage(imageFileIncluded);      break;
+                  case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_INCLUDED); break;
+                  case LINK:      treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case DEVICE:    treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case SOCKET:    treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
                 }
               }
             }
@@ -2163,12 +2227,12 @@ class TabJobs
                 patternNew(PatternTypes.EXCLUDE,fileTreeData.name);
                 switch (fileTreeData.type)
                 {
-                  case FILE:      treeItem.setImage(imageFileExcluded);      break;
-                  case DIRECTORY: treeItem.setImage(imageDirectoryExcluded); break;
-                  case LINK:      treeItem.setImage(imageLinkExcluded);      break;
-                  case SPECIAL:   treeItem.setImage(imageFileExcluded);      break;
-                  case DEVICE:    treeItem.setImage(imageFileExcluded);      break;
-                  case SOCKET:    treeItem.setImage(imageFileExcluded);      break;
+                  case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                  case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case DEVICE:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case SOCKET:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                 }
               }
             }
@@ -2179,7 +2243,7 @@ class TabJobs
         }
       }
 
-      tab = Widgets.addTab(tabFolder,"Filters");
+      tab = Widgets.addTab(widgetTabFolder,"Filters");
       Widgets.layout(tab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
       {
         // included list
@@ -2189,7 +2253,7 @@ class TabJobs
         Widgets.layout(widgetIncludedPatterns,0,1,TableLayoutData.NSWE|TableLayoutData.EXPAND);
 
         // buttons
-        composite = Widgets.newComposite(tab,SWT.NONE);
+        composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
         {
           button = Widgets.newButton(composite,null,"Add");
@@ -2234,7 +2298,7 @@ class TabJobs
         Widgets.layout(widgetExcludedPatterns,2,1,TableLayoutData.NSWE|TableLayoutData.EXPAND);
 
         // buttons
-        composite = Widgets.newComposite(tab,SWT.NONE);
+        composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,3,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
         {
           button = Widgets.newButton(composite,null,"Add");
@@ -2298,7 +2362,7 @@ class TabJobs
         }
       }
 
-      tab = Widgets.addTab(tabFolder,"Storage");
+      tab = Widgets.addTab(widgetTabFolder,"Storage");
       Widgets.layout(tab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
       {
         // part size
@@ -2362,42 +2426,64 @@ class TabJobs
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-               Combo widget = (Combo)modifyEvent.widget;
-               Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-               try
-               {
-                 long n = Units.parseByteSize(widget.getText());
-                 if (archivePartSize.getLong() == n) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-               }
-               catch (NumberFormatException exception)
-               {
-               }
-               widget.setForeground(color);
+              Combo widget = (Combo)modifyEvent.widget;
+              Color color = COLOR_MODIFIED;
+              try
+              {
+                long n = Units.parseByteSize(widget.getText());
+                if (archivePartSize.getLong() == n) color = COLOR_WHITE;
+              }
+              catch (NumberFormatException exception)
+              {
+              }
+              widget.setBackground(color);
             }
           });
           widgetArchivePartSize.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-               Combo widget = (Combo)selectionEvent.widget;
-               String s = widget.getText();
-               try
-               {
-                 long n = Units.parseByteSize(s);
-                 archivePartSize.set(n);
-                 BARServer.set(selectedJobId,"archive-part-size",n);
-               }
-               catch (NumberFormatException exception)
-               {
-                 Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
-               }
+              Combo widget = (Combo)selectionEvent.widget;
+              String s = widget.getText();
+              try
+              {
+                long n = Units.parseByteSize(s);
+                archivePartSize.set(n);
+                BARServer.set(selectedJobId,"archive-part-size",n);
+              }
+              catch (NumberFormatException exception)
+              {
+                Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
+              }
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-               Combo widget = (Combo)selectionEvent.widget;
-               long n = Units.parseByteSize(widget.getText());
-               archivePartSize.set(n);
-               BARServer.set(selectedJobId,"archive-part-size",n);
+              Combo widget = (Combo)selectionEvent.widget;
+              long n = Units.parseByteSize(widget.getText());
+              archivePartSize.set(n);
+              BARServer.set(selectedJobId,"archive-part-size",n);
+            }
+          });
+          widgetArchivePartSize.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Combo widget = (Combo)focusEvent.widget;
+              String s = widget.getText();
+              try
+              {
+                long n = Units.parseByteSize(s);
+                archivePartSize.set(n);
+                BARServer.set(selectedJobId,"archive-part-size",n);
+              }
+              catch (NumberFormatException exception)
+              {
+                Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
+                widget.forceFocus();
+              }
             }
           });
           Widgets.addModifyListener(new WidgetListener(widgetArchivePartSize,archivePartSize)
@@ -2588,36 +2674,49 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-               Text widget = (Text)modifyEvent.widget;
-               Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-               try
-               {
-                 String s = widget.getText();
-                 if (incrementalListFileName.getString().equals(s)) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-               }
-               catch (NumberFormatException exception)
-               {
-               }
-               widget.setForeground(color);
+              Text widget = (Text)modifyEvent.widget;
+              Color color = COLOR_MODIFIED;
+              try
+              {
+                String s = widget.getText();
+                if (incrementalListFileName.getString().equals(s)) color = COLOR_WHITE;
+              }
+              catch (NumberFormatException exception)
+              {
+              }
+              widget.setBackground(color);
             }
           });
           text.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-               Text widget = (Text)selectionEvent.widget;
-               String string = widget.getText();
-               incrementalListFileName.set(string);
-               BARServer.set(selectedJobId,"incremental-list-file",StringParser.escape(string));
+              Text widget = (Text)selectionEvent.widget;
+              String string = widget.getText();
+              incrementalListFileName.set(string);
+              BARServer.set(selectedJobId,"incremental-list-file",string);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
 throw new Error("NYI");
             }
           });
+          text.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Text widget = (Text)focusEvent.widget;
+              String string = widget.getText();
+              incrementalListFileName.set(string);
+              BARServer.set(selectedJobId,"incremental-list-file",string);
+            }
+          });
           Widgets.addModifyListener(new WidgetListener(text,incrementalListFileName));
 
-          button = Widgets.newButton(composite,null,imageDirectory);
+          button = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
           Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2654,35 +2753,47 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-               Text widget = (Text)modifyEvent.widget;
-               Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-               try
-               {
-                 String s = widget.getText();
-                 if (storageFileName.getString().equals(s)) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-               }
-               catch (NumberFormatException exception)
-               {
-               }
-               widget.setForeground(color);
+              Text widget = (Text)modifyEvent.widget;
+              Color color = COLOR_MODIFIED;
+              try
+              {
+                String s = widget.getText();
+                if (storageFileName.getString().equals(s)) color = COLOR_WHITE;
+              }
+              catch (NumberFormatException exception)
+              {
+              }
+              widget.setBackground(color);
             }
           });
           text.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-               Text widget = (Text)selectionEvent.widget;
-               storageFileName.set(widget.getText());
-               BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+              Text widget = (Text)selectionEvent.widget;
+              storageFileName.set(widget.getText());
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
 throw new Error("NYI");
             }
           });
+          text.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Text widget = (Text)focusEvent.widget;
+              storageFileName.set(widget.getText());
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+            }
+          });
           Widgets.addModifyListener(new WidgetListener(text,storageFileName));
 
-          button = Widgets.newButton(composite,null,imageDirectory);
+          button = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2690,7 +2801,10 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
 
-              storageFileNameEdit();
+              if (selectedJobId != 0)
+              {
+                storageFileNameEdit();
+              }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2713,7 +2827,7 @@ throw new Error("NYI");
               Button widget = (Button)selectionEvent.widget;
 
               storageType.set("filesystem");
-              BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2736,7 +2850,7 @@ throw new Error("NYI");
               Button widget = (Button)selectionEvent.widget;
 
               storageType.set("ftp");
-              BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2759,7 +2873,7 @@ throw new Error("NYI");
               Button widget = (Button)selectionEvent.widget;
 
               storageType.set("scp");
-              BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2782,7 +2896,7 @@ throw new Error("NYI");
               Button widget = (Button)selectionEvent.widget;
 
               storageType.set("sftp");
-              BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2805,7 +2919,7 @@ throw new Error("NYI");
               Button widget = (Button)selectionEvent.widget;
 
               storageType.set("dvd");
-              BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2828,7 +2942,7 @@ throw new Error("NYI");
               Button widget = (Button)selectionEvent.widget;
 
               storageType.set("device");
-              BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2900,30 +3014,42 @@ throw new Error("NYI");
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                 Text widget = (Text)modifyEvent.widget;
-                 Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-                 try
-                 {
-                   String s = widget.getText();
-                   if (storageLoginName.getString().equals(s)) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-                 }
-                 catch (NumberFormatException exception)
-                 {
-                 }
-                 widget.setForeground(color);
+                Text widget = (Text)modifyEvent.widget;
+                Color color = COLOR_MODIFIED;
+                try
+                {
+                  String s = widget.getText();
+                  if (storageLoginName.getString().equals(s)) color = COLOR_WHITE;
+                }
+                catch (NumberFormatException exception)
+                {
+                }
+                widget.setBackground(color);
               }
             });
             text.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                 Text widget = (Text)selectionEvent.widget;
-                 storageLoginName.set(widget.getText());
-                 BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+                Text widget = (Text)selectionEvent.widget;
+                storageLoginName.set(widget.getText());
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
   throw new Error("NYI");
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageLoginName.set(widget.getText());
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageLoginName));
@@ -2937,30 +3063,42 @@ throw new Error("NYI");
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                 Text widget = (Text)modifyEvent.widget;
-                 Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-                 try
-                 {
-                   String s = widget.getText();
-                   if (storageHostName.getString().equals(s)) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-                 }
-                 catch (NumberFormatException exception)
-                 {
-                 }
-                 widget.setForeground(color);
+                Text widget = (Text)modifyEvent.widget;
+                Color color = COLOR_MODIFIED;
+                try
+                {
+                  String s = widget.getText();
+                  if (storageHostName.getString().equals(s)) color = COLOR_WHITE;
+                }
+                catch (NumberFormatException exception)
+                {
+                }
+                widget.setBackground(color);
               }
             });
             text.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                 Text widget = (Text)selectionEvent.widget;
-                 storageHostName.set(widget.getText());
-                 BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+                Text widget = (Text)selectionEvent.widget;
+                storageHostName.set(widget.getText());
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
   throw new Error("NYI");
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageHostName.set(widget.getText());
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageHostName));
@@ -3053,30 +3191,42 @@ throw new Error("NYI");
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                 Text widget = (Text)modifyEvent.widget;
-                 Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-                 try
-                 {
-                   String s = widget.getText();
-                   if (storageLoginName.getString().equals(s)) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-                 }
-                 catch (NumberFormatException exception)
-                 {
-                 }
-                 widget.setForeground(color);
+                Text widget = (Text)modifyEvent.widget;
+                Color color = COLOR_MODIFIED;
+                try
+                {
+                  String s = widget.getText();
+                  if (storageLoginName.getString().equals(s)) color = COLOR_WHITE;
+                }
+                catch (NumberFormatException exception)
+                {
+                }
+                widget.setBackground(color);
               }
             });
             text.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                 Text widget = (Text)selectionEvent.widget;
-                 storageLoginName.set(widget.getText());
-                 BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+                Text widget = (Text)selectionEvent.widget;
+                storageLoginName.set(widget.getText());
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
   throw new Error("NYI");
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageLoginName.set(widget.getText());
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageLoginName));
@@ -3090,30 +3240,42 @@ throw new Error("NYI");
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                 Text widget = (Text)modifyEvent.widget;
-                 Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-                 try
-                 {
-                   String s = widget.getText();
-                   if (storageHostName.getString().equals(s)) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-                 }
-                 catch (NumberFormatException exception)
-                 {
-                 }
-                 widget.setForeground(color);
+                Text widget = (Text)modifyEvent.widget;
+                Color color = COLOR_MODIFIED;
+                try
+                {
+                  String s = widget.getText();
+                  if (storageHostName.getString().equals(s)) color = COLOR_WHITE;
+                }
+                catch (NumberFormatException exception)
+                {
+                }
+                widget.setBackground(color);
               }
             });
             text.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                 Text widget = (Text)selectionEvent.widget;
-                 storageHostName.set(widget.getText());
-                 BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+                Text widget = (Text)selectionEvent.widget;
+                storageHostName.set(widget.getText());
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
   throw new Error("NYI");
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageHostName.set(widget.getText());
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageHostName));
@@ -3127,31 +3289,46 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-               Text widget = (Text)modifyEvent.widget;
-               Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-               try
-               {
-                 String s = widget.getText();
-                 if (sshPublicKeyFileName.getString().equals(s)) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-               }
-               catch (NumberFormatException exception)
-               {
-               }
-               widget.setForeground(color);
+              Text widget = (Text)modifyEvent.widget;
+              Color color = COLOR_MODIFIED;
+              try
+              {
+                String s = widget.getText();
+                if (sshPublicKeyFileName.getString().equals(s)) color = COLOR_WHITE;
+              }
+              catch (NumberFormatException exception)
+              {
+              }
+              widget.setBackground(color);
             }
           });
           text.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-               Text widget = (Text)selectionEvent.widget;
-               String string = widget.getText();
-               sshPublicKeyFileName.set(string);
-               BARServer.set(selectedJobId,"ssh-public-key",StringParser.escape(string));
+System.err.println("BARControl.java"+", "+3309+": ");
+              Text widget = (Text)selectionEvent.widget;
+              String string = widget.getText();
+              sshPublicKeyFileName.set(string);
+              BARServer.set(selectedJobId,"ssh-public-key",string);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
 throw new Error("NYI");
+            }
+          });
+          text.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+System.err.println("BARControl.java"+", "+3326+": ");
+              Text widget = (Text)focusEvent.widget;
+              String string = widget.getText();
+              sshPublicKeyFileName.set(string);
+              BARServer.set(selectedJobId,"ssh-public-key",string);
             }
           });
           Widgets.addModifyListener(new WidgetListener(text,sshPublicKeyFileName));
@@ -3164,31 +3341,44 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-               Text widget = (Text)modifyEvent.widget;
-               Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-               try
-               {
-                 String s = widget.getText();
-                 if (sshPrivateKeyFileName.getString().equals(s)) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-               }
-               catch (NumberFormatException exception)
-               {
-               }
-               widget.setForeground(color);
+              Text widget = (Text)modifyEvent.widget;
+              Color color = COLOR_MODIFIED;
+              try
+              {
+                String s = widget.getText();
+                if (sshPrivateKeyFileName.getString().equals(s)) color = COLOR_WHITE;
+              }
+              catch (NumberFormatException exception)
+              {
+              }
+              widget.setBackground(color);
             }
           });
           text.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-               Text widget = (Text)selectionEvent.widget;
-               String string = widget.getText();
-               sshPrivateKeyFileName.set(string);
-               BARServer.set(selectedJobId,"ssh-private-key",StringParser.escape(string));
+              Text widget = (Text)selectionEvent.widget;
+              String string = widget.getText();
+              sshPrivateKeyFileName.set(string);
+              BARServer.set(selectedJobId,"ssh-private-key",string);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
 throw new Error("NYI");
+            }
+          });
+          text.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Text widget = (Text)focusEvent.widget;
+              String string = widget.getText();
+              sshPrivateKeyFileName.set(string);
+              BARServer.set(selectedJobId,"ssh-private-key",string);
             }
           });
           Widgets.addModifyListener(new WidgetListener(text,sshPrivateKeyFileName));
@@ -3276,30 +3466,42 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-               Text widget = (Text)modifyEvent.widget;
-               Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-               try
-               {
-                 String s = widget.getText();
-                 if (storageDeviceName.getString().equals(s)) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-               }
-               catch (NumberFormatException exception)
-               {
-               }
-               widget.setForeground(color);
+              Text widget = (Text)modifyEvent.widget;
+              Color color = COLOR_MODIFIED;
+              try
+              {
+                String s = widget.getText();
+                if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
+              }
+              catch (NumberFormatException exception)
+              {
+              }
+              widget.setBackground(color);
             }
           });
           text.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-               Text widget = (Text)selectionEvent.widget;
-               storageDeviceName.set(widget.getText());
-               BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+              Text widget = (Text)selectionEvent.widget;
+              storageDeviceName.set(widget.getText());
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
 throw new Error("NYI");
+            }
+          });
+          text.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Text widget = (Text)focusEvent.widget;
+              storageDeviceName.set(widget.getText());
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetListener(text,storageDeviceName));
@@ -3316,42 +3518,64 @@ throw new Error("NYI");
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                 Combo widget = (Combo)modifyEvent.widget;
-                 Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-                 try
-                 {
-                   long n = Units.parseByteSize(widget.getText());
-                   if (volumeSize.getLong() == n) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-                 }
-                 catch (NumberFormatException exception)
-                 {
-                 }
-                 widget.setForeground(color);
+                Combo widget = (Combo)modifyEvent.widget;
+                Color color = COLOR_MODIFIED;
+                try
+                {
+                  long n = Units.parseByteSize(widget.getText());
+                  if (volumeSize.getLong() == n) color = COLOR_WHITE;
+                }
+                catch (NumberFormatException exception)
+                {
+                }
+                widget.setBackground(color);
               }
             });
             combo.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                 Combo widget = (Combo)selectionEvent.widget;
-                 String s = widget.getText();
-                 try
-                 {
-                   long n = Units.parseByteSize(s);
-                   volumeSize.set(n);
-                   BARServer.set(selectedJobId,"volume-size",n);
-                 }
-                 catch (NumberFormatException exception)
-                 {
-                   Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
-                 }
+                Combo widget = (Combo)selectionEvent.widget;
+                String s = widget.getText();
+                try
+                {
+                  long n = Units.parseByteSize(s);
+                  volumeSize.set(n);
+                  BARServer.set(selectedJobId,"volume-size",n);
+                }
+                catch (NumberFormatException exception)
+                {
+                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
+                }
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                 Combo widget = (Combo)selectionEvent.widget;
-                 long n = Units.parseByteSize(widget.getText());
-                 volumeSize.set(n);
-                 BARServer.set(selectedJobId,"volume-size",n);
+                Combo widget = (Combo)selectionEvent.widget;
+                long n = Units.parseByteSize(widget.getText());
+                volumeSize.set(n);
+                BARServer.set(selectedJobId,"volume-size",n);
+              }
+            });
+            combo.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Combo widget = (Combo)focusEvent.widget;
+                String s = widget.getText();
+                try
+                {
+                  long n = Units.parseByteSize(s);
+                  volumeSize.set(n);
+                  BARServer.set(selectedJobId,"volume-size",n);
+                }
+                catch (NumberFormatException exception)
+                {
+                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
+                  widget.forceFocus();
+                }
               }
             });
             Widgets.addModifyListener(new WidgetListener(combo,volumeSize)
@@ -3411,30 +3635,42 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-               Text widget = (Text)modifyEvent.widget;
-               Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-               try
-               {
-                 String s = widget.getText();
-                 if (storageDeviceName.getString().equals(s)) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-               }
-               catch (NumberFormatException exception)
-               {
-               }
-               widget.setForeground(color);
+              Text widget = (Text)modifyEvent.widget;
+              Color color = COLOR_MODIFIED;
+              try
+              {
+                String s = widget.getText();
+                if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
+              }
+              catch (NumberFormatException exception)
+              {
+              }
+              widget.setBackground(color);
             }
           });
           text.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-               Text widget = (Text)selectionEvent.widget;
-               storageDeviceName.set(widget.getText());
-               BARServer.set(selectedJobId,"archive-name",StringParser.escape(getArchiveName()));
+              Text widget = (Text)selectionEvent.widget;
+              storageDeviceName.set(widget.getText());
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
 throw new Error("NYI");
+            }
+          });
+          text.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Text widget = (Text)focusEvent.widget;
+              storageDeviceName.set(widget.getText());
+              BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetListener(text,storageDeviceName));
@@ -3451,42 +3687,64 @@ throw new Error("NYI");
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                 Combo widget = (Combo)modifyEvent.widget;
-                 Color color = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-                 try
-                 {
-                   long n = Units.parseByteSize(widget.getText());
-                   if (volumeSize.getLong() == n) color = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-                 }
-                 catch (NumberFormatException exception)
-                 {
-                 }
-                 widget.setForeground(color);
+                Combo widget = (Combo)modifyEvent.widget;
+                Color color = COLOR_MODIFIED;
+                try
+                {
+                  long n = Units.parseByteSize(widget.getText());
+                  if (volumeSize.getLong() == n) color = COLOR_WHITE;
+                }
+                catch (NumberFormatException exception)
+                {
+                }
+                widget.setBackground(color);
               }
             });
             combo.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                 Combo widget = (Combo)selectionEvent.widget;
-                 String s = widget.getText();
-                 try
-                 {
-                   long n = Units.parseByteSize(s);
-                   volumeSize.set(n);
-                   BARServer.set(selectedJobId,"volume-size",n);
-                 }
-                 catch (NumberFormatException exception)
-                 {
-                   Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
-                 }
+                Combo widget = (Combo)selectionEvent.widget;
+                String s = widget.getText();
+                try
+                {
+                  long n = Units.parseByteSize(s);
+                  volumeSize.set(n);
+                  BARServer.set(selectedJobId,"volume-size",n);
+                }
+                catch (NumberFormatException exception)
+                {
+                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
+                }
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                 Combo widget = (Combo)selectionEvent.widget;
-                 long n = Units.parseByteSize(widget.getText());
-                 volumeSize.set(n);
-                 BARServer.set(selectedJobId,"volume-size",n);
+                Combo widget = (Combo)selectionEvent.widget;
+                long n = Units.parseByteSize(widget.getText());
+                volumeSize.set(n);
+                BARServer.set(selectedJobId,"volume-size",n);
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Combo widget = (Combo)focusEvent.widget;
+                String s = widget.getText();
+                try
+                {
+                  long n = Units.parseByteSize(s);
+                  volumeSize.set(n);
+                  BARServer.set(selectedJobId,"volume-size",n);
+                }
+                catch (NumberFormatException exception)
+                {
+                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
+                  widget.forceFocus();
+                }
               }
             });
             Widgets.addModifyListener(new WidgetListener(combo,volumeSize)
@@ -3503,7 +3761,7 @@ throw new Error("NYI");
         }
       }
 
-      tab = Widgets.addTab(tabFolder,"Schedule");
+      tab = Widgets.addTab(widgetTabFolder,"Schedule");
       Widgets.layout(tab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
       {
         // list
@@ -3521,7 +3779,7 @@ throw new Error("NYI");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             TableColumn            tableColumn = (TableColumn)selectionEvent.widget;
-            ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleList);
+            ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleList,tableColumn);
 
             synchronized(scheduleList)
             {
@@ -3544,7 +3802,7 @@ throw new Error("NYI");
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
 
         // buttons
-        composite = Widgets.newComposite(tab,SWT.NONE);
+        composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
         {
           button = Widgets.newButton(composite,null,"Add");
@@ -3592,6 +3850,7 @@ throw new Error("NYI");
         }
       }
     }
+    Widgets.setEnabled(widgetTabFolder,false);
 
     // add root devices
     addRootDevices();
@@ -3620,6 +3879,7 @@ throw new Error("NYI");
         selectedJobName = name;
         selectedJobId   = jobIds.get(name);
         widgetJobList.select(index);
+        Widgets.setEnabled(widgetTabFolder,true);
         update();
       }
     }
@@ -3639,7 +3899,7 @@ throw new Error("NYI");
   
     TreeItem treeItem = Widgets.addTreeItem(widgetFileTree,new FileTreeData("/",FileTypes.DIRECTORY,"/"),true);
     treeItem.setText("/");
-    treeItem.setImage(imageDirectory);
+    treeItem.setImage(IMAGE_DIRECTORY);
     widgetFileTree.addListener(SWT.Expand,new Listener()
     {
       public void handleEvent(final Event event)
@@ -3815,17 +4075,17 @@ throw new Error("NYI");
 
         Image image;
         if      (includedPatterns.contains(name))
-          image = imageFileIncluded;
+          image = IMAGE_FILE_INCLUDED;
         else if (excludedPatterns.contains(name))
-          image = imageFileExcluded;
+          image = IMAGE_FILE_EXCLUDED;
         else
-          image = imageFile;
+          image = IMAGE_FILE;
 
         subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
         subTreeItem.setText(0,fileTreeData.title);
         subTreeItem.setText(1,"FILE");
         subTreeItem.setText(2,Long.toString(size));
-        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(datetime*1000)));
+        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
         subTreeItem.setImage(image);
       }
       else if (StringParser.parse(line,"DIRECTORY %ld %ld %S",data,StringParser.QUOTE_CHARS))
@@ -3844,16 +4104,16 @@ throw new Error("NYI");
 
         Image image;
         if      (includedPatterns.contains(name))
-          image = imageDirectoryIncluded;
+          image = IMAGE_DIRECTORY_INCLUDED;
         else if (excludedPatterns.contains(name))
-          image = imageDirectoryExcluded;
+          image = IMAGE_DIRECTORY_EXCLUDED;
         else
-          image = imageDirectory;
+          image = IMAGE_DIRECTORY;
 
         subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
         subTreeItem.setText(0,fileTreeData.title);
         subTreeItem.setText(1,"DIR");
-        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(datetime*1000)));
+        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
         subTreeItem.setImage(image);
       }
       else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
@@ -3870,17 +4130,17 @@ throw new Error("NYI");
 
         Image image;
         if      (includedPatterns.contains(name))
-          image = imageLinkIncluded;
+          image = IMAGE_LINK_INCLUDED;
         else if (excludedPatterns.contains(name))
-          image = imageLinkExcluded;
+          image = IMAGE_LINK_EXCLUDED;
         else
-          image = imageLink;
+          image = IMAGE_LINK;
 
 
         subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
         subTreeItem.setText(0,fileTreeData.title);
         subTreeItem.setText(1,"LINK");
-        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(datetime*1000)));
+        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
         subTreeItem.setImage(image);
       }
       else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
@@ -3898,7 +4158,7 @@ throw new Error("NYI");
         subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
         subTreeItem.setText(0,fileTreeData.title);
         subTreeItem.setText(1,"SPECIAL");
-        subTreeItem.setText(3,DateFormat.getDateTimeInstance().format(new Date(datetime*1000)));
+        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
       }
       else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
       {
@@ -4007,13 +4267,13 @@ throw new Error("NYI");
     Label     label;
     Button    button;
 
-    final Shell  dialog = Dialogs.open(shell,"New job",300,70);
+    final Shell  dialog = Dialogs.open(shell,"New job",300,SWT.DEFAULT);
 
     // create widgets
     final Text   widgetJobName;
     final Button widgetAdd;
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    Widgets.layout(composite,0,0,TableLayoutData.WE|TableLayoutData.EXPAND);
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4);
     {
       label = Widgets.newLabel(composite,"Name:");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -4023,8 +4283,8 @@ throw new Error("NYI");
     }
 
     // buttons
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4);
     {
       widgetAdd = Widgets.newButton(composite,null,"Add");
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
@@ -4065,6 +4325,7 @@ throw new Error("NYI");
         if (!jobName.equals(""))
         {
           BARServer.executeCommand("JOB_NEW "+StringParser.escape(jobName));
+          updateJobList();
         }
         widget.getShell().close();
       }
@@ -4087,13 +4348,13 @@ throw new Error("NYI");
     assert selectedJobName != null;
     assert selectedJobId != 0;
 
-    final Shell  dialog = Dialogs.open(shell,"Rename job",300,70);
+    final Shell  dialog = Dialogs.open(shell,"Rename job",300,SWT.DEFAULT);
 
     // create widgets
     final Text   widgetNewJobName;
     final Button widgetRename;
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    Widgets.layout(composite,0,0,TableLayoutData.WE|TableLayoutData.EXPAND);
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4);
     {
       label = Widgets.newLabel(composite,"Old name:");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -4109,8 +4370,8 @@ throw new Error("NYI");
     }
 
     // buttons
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4);
     {
       widgetRename = Widgets.newButton(composite,null,"Rename");
       Widgets.layout(widgetRename,0,0,TableLayoutData.W);
@@ -4151,6 +4412,7 @@ throw new Error("NYI");
         if (!newJobName.equals(""))
         {
           BARServer.executeCommand("JOB_RENAME "+selectedJobId+" "+StringParser.escape(newJobName));
+          updateJobList();
         }
         widget.getShell().close();
       }
@@ -4172,6 +4434,9 @@ throw new Error("NYI");
     if (Dialogs.confirm(shell,"Delete job","Delete job '"+selectedJobName+"'?"))
     {
       BARServer.executeCommand("JOB_DELETE "+selectedJobId);
+      updateJobList();
+      Widgets.setEnabled(widgetTabFolder,false);
+      clear();
     }
   }
 
@@ -4271,8 +4536,8 @@ throw new Error("NYI");
     // create widgets
     final Text   widgetPattern;
     final Button widgetAdd;
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    Widgets.layout(composite,0,0,TableLayoutData.WE|TableLayoutData.EXPAND);
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4);
     {
       label = Widgets.newLabel(composite,"Pattern:");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -4282,8 +4547,8 @@ throw new Error("NYI");
     }
 
     // buttons
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4);
     {
       widgetAdd = Widgets.newButton(composite,null,buttonText);
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
@@ -4755,7 +5020,7 @@ throw new Error("NYI");
           }
         }); 
 
-        label = Widgets.newLabel(composite,new Image(display,"images/trashcan.gif"),SWT.BORDER);
+        label = Widgets.newLabel(composite,Widgets.loadImage(display,"trashcan.gif"),SWT.BORDER);
         Widgets.layout(label,0,2,TableLayoutData.DEFAULT);
         dropTarget = new DropTarget(label,DND.DROP_MOVE);
         dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance(),StorageNamePartTransfer.getInstance()});
@@ -5262,13 +5527,13 @@ void storageFileNameEdit()
     // create widgets
     final StorageFileNameEditor storageFileNameEditor;
     final Button                widgetSave;
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4,4);
     storageFileNameEditor = new StorageFileNameEditor(composite,storageFileName.getString());
 
     // buttons
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    Widgets.layout(composite,2,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    Widgets.layout(composite,2,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4);
     {
       widgetSave = Widgets.newButton(composite,null,"Save");
       Widgets.layout(widgetSave,0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
@@ -5327,6 +5592,17 @@ void storageFileNameEdit()
     }
 
     return index;
+  }
+
+  /** clear schedule list
+   */
+  private void clearScheduleList()
+  {
+    synchronized(scheduleList)
+    {
+      scheduleList.clear();
+      widgetScheduleList.removeAll();
+    }
   }
 
   /** update schedule list
@@ -5404,8 +5680,8 @@ void storageFileNameEdit()
     final Combo  widgetHour,widgetMinute;
     final Button widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetEnabled;
     final Button widgetAdd;
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4,4);
     {
       label = Widgets.newLabel(composite,"Date:");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -5488,8 +5764,8 @@ void storageFileNameEdit()
     }
 
     // buttons
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4);
     {
       widgetAdd = Widgets.newButton(composite,null,buttonText);
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
@@ -5677,6 +5953,14 @@ throw new Error("NYI");
     }
   }
 
+  /** clear all data
+   */
+  private void clear()
+  {
+    clearJobData();
+    clearScheduleList();
+  }
+
   /** update all data
    */
   private void update()
@@ -5688,16 +5972,28 @@ throw new Error("NYI");
 
 public class BARControl
 {
+  class LoginData
+  {
+    String serverName;
+    String password;
+
+    LoginData(String serverName)
+    {
+      this.serverName = serverName;
+      this.password   = null;
+    }
+  }
+
   // --------------------------- constants --------------------------------
 
-  final static String DEFAULT_HOSTNAME = "localhost";
-  final static int    DEFAULT_PORT     = 38523;
-  final static int    DEFAULT_TLS_PORT = 38524;
+  final static String DEFAULT_SERVER_NAME     = "localhost";
+  final static int    DEFAULT_SERVER_PORT     = 38523;
+  final static int    DEFAULT_SERVER_TLS_PORT = 38524;
 
   // --------------------------- variables --------------------------------
-  private String    hostname = DEFAULT_HOSTNAME;
-  private int       port     = DEFAULT_PORT;
-  private int       tlsPort  = DEFAULT_TLS_PORT;
+  private String    serverName    = DEFAULT_SERVER_NAME;
+  private int       serverPort    = DEFAULT_SERVER_PORT;
+  private int       serverTLSPort = DEFAULT_SERVER_TLS_PORT;
 
   private Display   display;
   private Shell     shell;
@@ -5709,11 +6005,212 @@ public class BARControl
 
   // ---------------------------- methods ---------------------------------
 
+  private void parseArguments(String[] args)
+  {
+    // parse arguments
+    int z = 0;
+    while (z < args.length)
+    {
+      if      (args[z].startsWith("-p=") || args[z].startsWith("--port="))
+      {
+        String value = args[z].substring(args[z].indexOf('=')+1);
+        try
+        {
+          serverPort = Integer.parseInt(value);
+        }
+        catch (NumberFormatException exception)
+        {
+          throw new Error("Invalid value '"+value+"' for option --port (error: "+exception.getMessage()+")!");          
+        }
+        z += 1;
+      }
+      else if (args[z].equals("-p") || args[z].equals("--port"))
+      {
+        if ((z+1) >= args.length)
+        {
+          throw new Error("Expected value for option --port!");
+        }
+        try
+        {
+          serverPort = Integer.parseInt(args[z+1]);
+        }
+        catch (NumberFormatException exception)
+        {
+          throw new Error("Invalid value '"+args[z+1]+"' for option --port (error: "+exception.getMessage()+")!");          
+        }
+        z += 2;
+      }
+      else if (args[z].startsWith("--tls-port="))
+      {
+        String value = args[z].substring(args[z].indexOf('=')+1);
+        try
+        {
+          serverTLSPort = Integer.parseInt(value);
+        }
+        catch (NumberFormatException exception)
+        {
+          throw new Error("Invalid value '"+value+"' for option --tls-port (error: "+exception.getMessage()+")!");          
+        }
+        z += 1;
+      }
+      else if (args[z].equals("--tls-port"))
+      {
+        if ((z+1) >= args.length)
+        {
+          throw new Error("Expected value for option --tls-port!");
+        }
+        try
+        {
+          serverTLSPort = Integer.parseInt(args[z+1]);
+        }
+        catch (NumberFormatException exception)
+        {
+          throw new Error("Invalid value '"+args[z+1]+"' for option --tls-port (error: "+exception.getMessage()+")!");          
+        }
+        z += 2;
+      }
+      else if (args[z].equals("--"))
+      {
+        z += 1;
+        break;
+      }
+      else if (args[z].startsWith("--"))
+      {
+        throw new Error("Unknown option '"+args[z]+"'!");
+      }
+      else
+      {
+        serverName = args[z];
+        z += 1;
+      }
+    }
+
+    // check arguments
+    if ((serverTLSPort == 0) && (serverPort == 0))
+    {
+      throw new Error("Cannot connect to server. No server ports specified!");
+    }
+    /// ??? host name scheck
+  }
+
+  /** server/password dialog
+   * @param loginData server login data 
+   * @return true iff login data ok, false otherwise
+   */
+  private boolean getLoginData(final LoginData loginData)
+  {
+    TableLayout     tableLayout;
+    TableLayoutData tableLayoutData;
+    Composite       composite;
+    Label           label;
+    Button          button;
+
+    final Shell dialog = Dialogs.open(new Shell(),"Login BAR server",250,SWT.DEFAULT);
+
+    // password
+    final Text   widgetServerName;
+    final Text   widgetPassword;
+    final Button widgetLoginButton;
+    composite = new Composite(dialog,SWT.NONE);
+    tableLayout = new TableLayout(null,new double[]{1,0},4);
+    composite.setLayout(tableLayout);
+    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    {
+      label = new Label(composite,SWT.LEFT);
+      label.setText("Server:");
+      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
+
+      widgetServerName = new Text(composite,SWT.LEFT|SWT.BORDER);
+      widgetServerName.setText(loginData.serverName);
+      widgetServerName.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+
+      label = new Label(composite,SWT.LEFT);
+      label.setText("Password:");
+      label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
+
+      widgetPassword = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+      widgetPassword.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    }
+
+    // buttons
+    composite = new Composite(dialog,SWT.NONE);
+    composite.setLayout(new TableLayout());
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    {
+      widgetLoginButton = new Button(composite,SWT.CENTER);
+      widgetLoginButton.setText("Login");
+      widgetLoginButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
+      widgetLoginButton.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+
+          loginData.serverName = widgetServerName.getText();
+          loginData.password   = widgetPassword.getText();
+          Dialogs.close(dialog,true);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      button = new Button(composite,SWT.CENTER);
+      button.setText("Cancel");
+      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+
+          Dialogs.close(dialog,false);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    // install handlers
+    widgetServerName.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        Text widget = (Text)selectionEvent.widget;
+
+        widgetPassword.forceFocus();
+      }
+    });
+    widgetPassword.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        Text widget = (Text)selectionEvent.widget;
+
+        widgetLoginButton.forceFocus();
+      }
+    });
+
+    if ((loginData.serverName != null) && (loginData.serverName.length() != 0)) widgetPassword.forceFocus();
+
+    Boolean result = (Boolean)Dialogs.run(dialog);
+
+    return (result != null)?result:false;
+  }
+
   /** create main window
    */
   private void createWindow()
   {
     shell = new Shell(display);
+    shell.setText("BAR control");
     shell.setLayout(new TableLayout());
   }
 
@@ -5840,7 +6337,7 @@ public class BARControl
   private void run()
   {
     // set window size, manage window
-    shell.setSize(800,800);
+    shell.setSize(800,600+5*(Widgets.getTextHeight(shell)+4));
     shell.open();
 
     // SWT event loop
@@ -5857,15 +6354,39 @@ public class BARControl
   {
     try
     {
+      // parse arguments
+      parseArguments(args);
+
+      // init display
       display = new Display();
 
       // connect to server
-      String password = Dialogs.password(new Shell(display),"BAR server password","Password:","Login","Cancel");
-      if (password == null)
+      LoginData loginData = new LoginData(serverName);
+      boolean connectOkFlag = false;
+      do
       {
-        System.exit(0);
+if (false) {
+        if (!getLoginData(loginData))
+        {
+          System.exit(0);
+        }
+} else {
+loginData.password="y7G7EGj2";
+}
+        try
+        {
+          BARServer.connect(loginData.serverName,serverPort,serverTLSPort,loginData.password);
+          connectOkFlag = true;
+        }
+        catch (ConnectionError error)
+        {
+          if (!Dialogs.confirmError(new Shell(),"Connection fail","Error: "+error.getMessage(),"Try again","Cancel"))
+          {
+            System.exit(1);
+          }
+        }
       }
-      BARServer.connect(hostname,port,tlsPort,password);
+      while (!connectOkFlag);
 
       // open main window
       createWindow();
@@ -5894,8 +6415,14 @@ public class BARControl
     }
     catch (Error error)
     {
-      System.err.println("ERROR: "+error.getMessage()+" "+error);
+      System.err.println("ERROR: "+error.getMessage()+error);
     }
+catch (org.eclipse.swt.SWTException exception)
+{
+System.err.println("BARControl.java"+", "+6220+": "+exception);
+System.err.println("BARControl.java"+", "+6220+": "+exception.getMessage());
+exception.printStackTrace();
+}
   }
 
   public static void main(String[] args)

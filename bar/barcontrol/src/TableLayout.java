@@ -63,6 +63,28 @@ public class TableLayout extends Layout
   public TableLayout()
   {
     super();
+
+    this.rowWeights    = null;
+    this.columnWeights = null;
+    this.marginTop     = 0;
+    this.marginBottom  = 0;
+    this.marginLeft    = 0;
+    this.marginRight   = 0;
+  }
+
+  /** create table layout
+   * @param margin margin size
+   */
+  public TableLayout(int margin)
+  {
+    super();
+
+    this.rowWeights    = null;
+    this.columnWeights = null;
+    this.marginTop     = margin;
+    this.marginBottom  = margin;
+    this.marginLeft    = margin;
+    this.marginRight   = margin;
   }
 
   /** create table layout

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -9,9 +9,12 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import java.io.File;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Comparator;
 
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.graphics.GC;
@@ -23,6 +26,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
@@ -48,10 +52,16 @@ class Widgets
 {
   //-----------------------------------------------------------------------
 
+  /** list of widgets listeners
+   */
   private static LinkedList<WidgetListener> listenersList = new LinkedList<WidgetListener>();
 
   //-----------------------------------------------------------------------
 
+  /** layout widget
+   * @param 
+   * @return 
+   */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height)
   {
     TableLayoutData tableLayoutData = new TableLayoutData(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height);
@@ -60,36 +70,79 @@ class Widgets
     control.setLayoutData(tableLayoutData);
   }
 
+  /** layout widget
+   * @param 
+   * @return 
+   */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, Point size)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,padX,padY,size.x,size.y);
   }
 
+  /** layout widget
+   * @param 
+   * @return 
+   */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, Point pad, Point size)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,pad.x,pad.y,size.x,size.y);
   }
 
+  /** layout widget
+   * @param 
+   * @return 
+   */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int width, int height)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,0,0,width,height);
   }
 
+  /** layout widget
+   * @param 
+   * @return 
+   */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, Point size)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,size.x,size.y);
   }
 
+  /** layout widget
+   * @param 
+   * @return 
+   */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,0,0,SWT.DEFAULT,SWT.DEFAULT);
   }
 
+  /** layout widget
+   * @param 
+   * @return 
+   */
   static void layout(Control control, int row, int column, int style)
   {
     layout(control,row,column,style,0,0);
   }
 
+  /** get text height
+   * @param control control
+   * @return height of text
+   */
+  static int getTextHeight(Control control)
+  {
+    int height;
+
+    GC gc = new GC(control);
+    height = gc.getFontMetrics().getHeight();
+    gc.dispose();
+
+    return height;
+  }
+
+  /** get text size
+   * @param control control
+   * @return size of text
+   */
   static Point getTextSize(Control control, String text)
   {
     Point size;
@@ -101,6 +154,10 @@ class Widgets
     return size;
   }
 
+  /** get max. text size
+   * @param control control
+   * @return max. size of all texts
+   */
   static Point getTextSize(Control control, String[] texts)
   {
     Point size;
@@ -117,6 +174,35 @@ class Widgets
     return size;
   }
 
+  /** load image from jar or directory "images"
+   * @param fileName image file name
+   * @return image
+   */
+  static Image loadImage(Display display, String fileName)
+  {
+    // try to load from jar file
+    try
+    {
+      InputStream inputStream = display.getClass().getClassLoader().getResourceAsStream("images/"+fileName);
+      Image image = new Image(display,inputStream);
+      inputStream.close();
+
+      return image;
+    }
+    catch (Exception exception)
+    {
+//System.err.println("Widgets.java"+", "+147+": "+exception);
+      // ignored
+    }
+
+    // try to load from file
+    return new Image(display,"images"+File.separator+fileName);
+  }
+
+  /** get accelerator text
+   * @param accelerator SWT accelerator
+   * @return accelerator text
+   */
   static String acceleratorToText(int accelerator)
   {
     StringBuffer text = new StringBuffer();
@@ -144,6 +230,19 @@ class Widgets
     return text.toString();
   }
 
+  /** set enabled
+   * @param control control to enable/disable
+   * @param enableFlag true to enable, false to disable
+   */
+  static void setEnabled(Control control, boolean enableFlag)
+  {
+    control.setEnabled(enableFlag);
+  }
+
+  /** set visible
+   * @param control control to make visible/invisible
+   * @param visibleFlag true to make visible, false to make invisible
+   */
   static void setVisible(Control control, boolean visibleFlag)
   {
     TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
@@ -152,6 +251,12 @@ class Widgets
     control.getParent().layout();
   }
 
+  /** create new label
+   * @param composite composite
+   * @param text label text
+   * @param style label style
+   * @return new label
+   */
   static Label newLabel(Composite composite, String text, int style)
   {
     Label label;
@@ -162,6 +267,10 @@ class Widgets
     return label;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Label newLabel(Composite composite, Image image, int style)
   {
     Label label;
@@ -172,21 +281,37 @@ class Widgets
     return label;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Label newLabel(Composite composite, String text)
   {
     return newLabel(composite,text,SWT.LEFT);
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Label newLabel(Composite composite, Image image)
   {
     return newLabel(composite,image,SWT.LEFT);
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Label newLabel(Composite composite)
   {
     return newLabel(composite,"");
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Label newView(Composite composite)
   {
     Label label;
@@ -197,6 +322,10 @@ class Widgets
     return label;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Label newNumberView(Composite composite)
   {
     Label label;
@@ -207,6 +336,10 @@ class Widgets
     return label;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Label newStringView(Composite composite)
   {
     Label label;
@@ -217,6 +350,10 @@ class Widgets
     return label;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Button newButton(Composite composite, Object data, String text)
   {
     Button button;
@@ -228,6 +365,10 @@ class Widgets
     return button;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Button newButton(Composite composite, Object data, Image image)
   {
     Button button;
@@ -239,6 +380,10 @@ class Widgets
     return button;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Button newCheckbox(Composite composite, Object data, String text)
   {
     Button button;
@@ -250,6 +395,10 @@ class Widgets
     return button;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Button newRadio(Composite composite, Object data, String text)
   {
     Button button;
@@ -261,6 +410,10 @@ class Widgets
     return button;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Text newText(Composite composite, Object data)
   {
     Text text;
@@ -271,6 +424,10 @@ class Widgets
     return text;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static List newList(Composite composite, Object data)
   {
     List list;
@@ -281,6 +438,10 @@ class Widgets
     return list;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Combo newCombo(Composite composite, Object data)
   {
     Combo combo;
@@ -291,6 +452,10 @@ class Widgets
     return combo;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Combo newOptionMenu(Composite composite, Object data)
   {
     Combo combo;
@@ -301,6 +466,10 @@ class Widgets
     return combo;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Spinner newSpinner(Composite composite, Object data)
   {
     Spinner spinner;
@@ -311,6 +480,10 @@ class Widgets
     return spinner;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Table newTable(Composite composite, Object data)
   {
     Table table;
@@ -323,6 +496,10 @@ class Widgets
     return table;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static TableColumn addTableColumn(Table table, int columnNb, String title, int style, int width, boolean resizable)
   {
     TableColumn tableColumn = new TableColumn(table,style);
@@ -393,6 +570,10 @@ class Widgets
     table.setSortDirection(sortDirection);
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static ProgressBar newProgressBar(Composite composite, Object variable)
   {
     ProgressBar progressBar;
@@ -405,6 +586,10 @@ class Widgets
     return progressBar;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Tree newTree(Composite composite, Object variable)
   {
     Tree tree;
@@ -415,6 +600,10 @@ class Widgets
     return tree;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static TreeColumn addTreeColumn(Tree tree, String title, int style, int width, boolean resizable)
   {
     TreeColumn treeColumn = new TreeColumn(tree,style);
@@ -426,6 +615,10 @@ class Widgets
     return treeColumn;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static TreeItem addTreeItem(Tree tree, int index, Object data, boolean folderFlag)
   {
     TreeItem treeItem;
@@ -437,11 +630,19 @@ class Widgets
     return treeItem;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static TreeItem addTreeItem(Tree tree, Object data, boolean folderFlag)
   {
     return addTreeItem(tree,0,data,folderFlag);
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static TreeItem addTreeItem(TreeItem parentTreeItem, int index, Object data, boolean folderFlag)
   {
     TreeItem treeItem;
@@ -453,6 +654,10 @@ class Widgets
     return treeItem;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static TreeItem addTreeItem(TreeItem parentTreeItem, String name, Object data, boolean folderFlag)
   {
     return addTreeItem(parentTreeItem,0,data,folderFlag);
@@ -484,6 +689,10 @@ private static void printTree(Tree tree)
 }
 */
 
+  /** 
+   * @param 
+   * @return 
+   */
   private static TreeItem recreateTreeItem(Tree tree, TreeItem parentTreeItem, TreeItem treeItem, int index)
   {
     // save data
@@ -511,6 +720,10 @@ private static void printTree(Tree tree)
     return newTreeItem;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   private static TreeItem recreateTreeItem(Tree tree, TreeItem parentTreeItem, TreeItem treeItem)
   {
     return recreateTreeItem(tree,parentTreeItem,treeItem,parentTreeItem.getItemCount());
@@ -551,6 +764,10 @@ private static void printTree(Tree tree)
 //rr--;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
    private static void getExpandedDiretories(HashSet expandedDirectories, TreeItem treeItem)
    {
      if (treeItem.getExpanded()) expandedDirectories.add(treeItem.getData());
@@ -560,6 +777,10 @@ private static void printTree(Tree tree)
      }
    }  
 
+  /** 
+   * @param 
+   * @return 
+   */
    private static void rexpandDiretories(HashSet expandedDirectories, TreeItem treeItem)
    {
      treeItem.setExpanded(expandedDirectories.contains(treeItem.getData()));
@@ -637,6 +858,10 @@ private static void printTree(Tree tree)
   }
 */
 
+  /** 
+   * @param 
+   * @return 
+   */
   static SashForm newSashForm(Composite composite)
   {    
     SashForm sashForm = new SashForm(composite,SWT.NONE);
@@ -646,6 +871,10 @@ private static void printTree(Tree tree)
     return sashForm;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static TabFolder newTabFolder(Composite composite)
   {    
     TabFolder tabFolder = new TabFolder(composite,SWT.NONE);
@@ -668,6 +897,10 @@ private static void printTree(Tree tree)
   }
 */
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Composite addTab(TabFolder tabFolder, String title)
   {
     TabItem tabItem = new TabItem(tabFolder,SWT.NONE);
@@ -684,6 +917,10 @@ private static void printTree(Tree tree)
     return composite;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static void showTab(TabFolder tabFolder, Composite composite)
   {
     for (TabItem tabItem : tabFolder.getItems())
@@ -696,6 +933,10 @@ private static void printTree(Tree tree)
     }
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Canvas newCanvas(Composite composite, int style)
   {    
     Canvas canvas = new Canvas(composite,style);
@@ -704,6 +945,10 @@ private static void printTree(Tree tree)
     return canvas;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Menu newMenuBar(Shell shell)
   {
     Menu menu = new Menu(shell,SWT.BAR);
@@ -712,6 +957,10 @@ private static void printTree(Tree tree)
     return menu;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static Menu addMenu(Menu menu, String text)
   {
     MenuItem menuItem = new MenuItem(menu,SWT.CASCADE);
@@ -722,6 +971,10 @@ private static void printTree(Tree tree)
     return subMenu;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static MenuItem addMenuItem(Menu menu, String text, int accelerator)
   {
     if (accelerator != 0)
@@ -741,11 +994,19 @@ private static void printTree(Tree tree)
     return menuItem;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static MenuItem addMenuItem(Menu menu, String text)
   {
     return addMenuItem(menu,text,0);
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static MenuItem addMenuSeparator(Menu menu)
   {
     MenuItem menuItem = new MenuItem(menu,SWT.SEPARATOR);
@@ -755,40 +1016,70 @@ private static void printTree(Tree tree)
 
   //-----------------------------------------------------------------------
 
-  static Composite newComposite(Composite composite, int style)
+  /** 
+   * @param 
+   * @return 
+   */
+  static Composite newComposite(Composite composite, int style, int margin)
   {
     Composite childComposite;
 
     childComposite = new Composite(composite,style);
-    TableLayout tableLayout = new TableLayout();
+    TableLayout tableLayout = new TableLayout(margin);
     childComposite.setLayout(tableLayout);
 
     return childComposite;
   }
 
-  static Group newGroup(Composite composite, String title, int style)
+  /** 
+   * @param 
+   * @return 
+   */
+  static Composite newComposite(Composite composite, int style)
+  {
+    return newComposite(composite,style,0);
+  }
+
+  /** 
+   * @param 
+   * @return 
+   */
+  static Group newGroup(Composite composite, String title, int style, int margin)
   {
     Group group;
 
     group = new Group(composite,style);
     group.setText(title);
-    TableLayout tableLayout = new TableLayout();
-    tableLayout.marginTop    = 4;
-    tableLayout.marginBottom = 4;
-    tableLayout.marginLeft   = 4;
-    tableLayout.marginRight  = 4;
+    TableLayout tableLayout = new TableLayout(margin);
     group.setLayout(tableLayout);
 
     return group;
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
+  static Group newGroup(Composite composite, String title, int style)
+  {
+    return newGroup(composite,title,style,0);
+  }
+
   //-----------------------------------------------------------------------
 
+  /** 
+   * @param 
+   * @return 
+   */
   static void addModifyListener(WidgetListener widgetListener)
   {
     listenersList.add(widgetListener);
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static void modified(Object variable)
   {
     for (WidgetListener widgetListener : listenersList)
@@ -800,6 +1091,10 @@ private static void printTree(Tree tree)
     }
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static void notify(Control control, int type, Widget widget, Widget item)
   {
     if (control.isEnabled())
@@ -811,16 +1106,28 @@ private static void printTree(Tree tree)
     }
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static void notify(Control control, int type, Widget widget)
   {
     notify(control,type,widget,null);
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static void notify(Control control, int type)
   {
     notify(control,type,control,null);
   }
 
+  /** 
+   * @param 
+   * @return 
+   */
   static void notify(Control control)
   {
     notify(control,SWT.Selection,control,null);

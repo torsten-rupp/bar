@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -9,19 +9,37 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
-import java.util.ArrayList;
-import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.PrintWriter;
-import java.io.OutputStreamWriter;
 import java.io.InputStreamReader;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.net.NoRouteToHostException;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import java.util.LinkedList;
-import java.net.Socket;
 
 /****************************** Classes ********************************/
+
+/** Connection error
+ */
+class ConnectionError extends Error
+{
+  /** create new communication error
+   * @param message message
+   */
+  ConnectionError(String message)
+  {
+    super(message);
+  }
+}
 
 /** communication error
  */
@@ -40,8 +58,10 @@ class CommunicationError extends Error
  */
 class BARServer
 {
+  private static String             javaSSLKeyFileName = "bar.jks";
+
   private static Socket             socket;
-  private static PrintWriter        output;
+  private static BufferedWriter     output;
   private static BufferedReader     input;
   private static long               commandId;
   private static LinkedList<String> lines;
@@ -56,12 +76,19 @@ class BARServer
    */
   static void connect(String hostname, int port, int tlsPort, String serverPassword)
   {
+    final int TIMEOUT = 20;
+
+    assert hostname != null;
+    assert (port != 0) || (tlsPort != 0);
+
     commandId = 0;
 
     // connect to server
-    if (tlsPort != 0)
+    socket = null;
+    String errorMessage = null;
+    if ((socket == null) && (tlsPort != 0))
     {
-System.setProperty("javax.net.ssl.trustStore","bar.jks");
+System.setProperty("javax.net.ssl.trustStore",javaSSLKeyFileName);
       SSLSocket sslSocket;
 
       try
@@ -69,25 +96,71 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
         SSLSocketFactory sslSocketFactory;
 
         sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
-        sslSocket        = (SSLSocket)sslSocketFactory.createSocket("localhost",38524);
+        sslSocket        = (SSLSocket)sslSocketFactory.createSocket(hostname,tlsPort);
         sslSocket.startHandshake();
 
-        socket = sslSocket;
         input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
-        output = new PrintWriter(new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream())));
+        output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+
+        socket = sslSocket;
+      }
+      catch (SocketTimeoutException exception)
+      {
+        errorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+      }
+      catch (ConnectException exception)
+      {
+        errorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+      }
+      catch (NoRouteToHostException exception)
+      {
+        errorMessage = "host '"+hostname+"' unreachable (no route to host)";
+      }
+      catch (UnknownHostException exception)
+      {
+        errorMessage = "unknown host '"+hostname+"'";
       }
       catch (Exception exception)
       {
         exception.printStackTrace();
+        errorMessage = exception.getMessage();
       }
     }
-    else if (port != 0)
+    if ((socket == null) && (port != 0))
     {
-      socket = null;
+      try
+      {
+        socket = new Socket(hostname,port);
+
+        input  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+      }
+      catch (SocketTimeoutException exception)
+      {
+        errorMessage = exception.getMessage();
+      }
+      catch (ConnectException exception)
+      {
+        errorMessage = exception.getMessage();
+      }
+      catch (NoRouteToHostException exception)
+      {
+        errorMessage = "host '"+hostname+"' unreachable (no route to host)";
+      }
+      catch (UnknownHostException exception)
+      {
+        errorMessage = "unknown host '"+hostname+"'";
+      }
+      catch (Exception exception)
+      {
+        exception.printStackTrace();
+        errorMessage = exception.getMessage();
+      }
     }
-    else
+    if (socket == null)
     {
-      
+      if   ((tlsPort != 0) || (port!= 0)) throw new ConnectionError(errorMessage);
+      else                                throw new ConnectionError("no server ports specified");
     }
 
     // read session id
@@ -119,11 +192,14 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
       }
       commandId++;
       String command = Long.toString(commandId)+" AUTHORIZE "+encodeHex(authorizeData);
-      output.println(command);
-      output.flush();
+      output.write(command); output.write('\n'); output.flush();
 //System.err.println("BARControl.java"+", "+230+": auto command "+command);
 
       String result = input.readLine();
+      if (result == null)
+      {
+        throw new CommunicationError("No result from server");
+      }
       String data[] = result.split(" ",4);
       assert data.length >= 3;
       if (   (Integer.parseInt(data[0]) != commandId)
@@ -144,7 +220,7 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
     {
       String line;
 
-      output.println("VERSION"); output.flush();
+      output.write("VERSION"); output.write('\n'); output.flush();
       line = input.readLine();
       assert line != null;
       String data[] = line.split(" ",4);
@@ -192,7 +268,14 @@ System.setProperty("javax.net.ssl.trustStore","bar.jks");
     // send command
     commandId++;
     line = String.format("%d %s",commandId,command);
-    output.println(line); output.flush();
+    try
+    {
+      output.write(line); output.write('\n'); output.flush();
+    }
+    catch (IOException exception)
+    {
+      throw new CommunicationError("i/o error (error: "+exception.getMessage()+")");
+    }
     if (debug) System.err.println("Network: sent '"+line+"'");
 
     // read buffer lines from list
@@ -325,7 +408,9 @@ System.err.println("BARControl.java"+", "+505+": "+commandId+"::"+line);
    */
   static void set(int jobId, String name, boolean b)
   {
+debug=true;
     executeCommand("OPTION_SET "+jobId+" "+name+" "+(b?"yes":"no"));
+debug=false;
   }
 
   /** set long value on BAR server
@@ -335,7 +420,9 @@ System.err.println("BARControl.java"+", "+505+": "+commandId+"::"+line);
    */
   static void set(int jobId, String name, long n)
   {
+debug=true;
     executeCommand("OPTION_SET "+jobId+" "+name+" "+n);
+debug=false;
   }
 
   /** set string value on BAR server
@@ -345,7 +432,9 @@ System.err.println("BARControl.java"+", "+505+": "+commandId+"::"+line);
    */
   static void set(int jobId, String name, String s)
   {
+debug=true;
     executeCommand("OPTION_SET "+jobId+" "+name+" "+StringParser.escape(s));
+debug=false;
   }
 
   //-----------------------------------------------------------------------
