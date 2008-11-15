@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/server.c,v $
-* $Revision: 1.42 $
+* $Revision: 1.43 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -1483,6 +1483,7 @@ LOCAL void schedulerThreadEntry(void)
                 && ((scheduleNode->hour    == SCHEDULE_ANY) || (scheduleNode->hour    == hour   ))
                 && ((scheduleNode->minute  == SCHEDULE_ANY) || (scheduleNode->minute  == minute ))
                 && ((scheduleNode->weekDay == SCHEDULE_ANY) || (scheduleNode->weekDay == weekDay))
+                && scheduleNode->enabled
                )
             {
               executeScheduleNode = scheduleNode;
@@ -1735,11 +1736,18 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
   if (serverPassword != NULL)
   {
     z = 0;
-    while ((z < Password_length(serverPassword)) && okFlag)
+    while ((z < SESSION_ID_LENGTH) && okFlag)
     {
       n0 = (char)(strtoul(String_subCString(s,arguments[0],z*2,2),NULL,16) & 0xFF);
       n1 = clientInfo->sessionId[z];
-      okFlag = (Password_getChar(serverPassword,z) == (n0^n1));
+      if (z < Password_length(serverPassword))
+      {
+        okFlag = (Password_getChar(serverPassword,z) == (n0^n1));
+      }
+      else
+      {
+        okFlag = (n0 == n1);
+      }
       z++;
     }
   }
@@ -2489,6 +2497,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
       String_appendCString(line,"*");
     }
     String_appendChar(line,' ');
+    String_format(line,"%y",scheduleNode->enabled);
+    String_appendChar(line,' ');
     switch (scheduleNode->archiveType)
     {
       case ARCHIVE_TYPE_NORMAL     : String_appendCString(line,"normal"     ); break;
@@ -2721,7 +2731,7 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
   name = arguments[1];
   if (argumentCount < 3)
   {
-    sendResult(clientInfo,id,TRUE,1,"expected config value for '%S'",arguments[0]);
+    sendResult(clientInfo,id,TRUE,1,"expected config value for '%S'",arguments[1]);
     return;
   }
   value = arguments[2];
@@ -3464,6 +3474,12 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
 
   assert(commandMsg != NULL);
 
+  /* initialize variables */
+  commandMsg->serverCommandFunction = 0;
+  commandMsg->authorizationState    = 0;
+  commandMsg->id                    = 0;
+  commandMsg->arguments             = NULL;
+
   /* initialize tokenizer */
   String_initTokenizer(&stringTokenizer,string,STRING_WHITE_SPACES,STRING_QUOTES,TRUE);
 
@@ -3822,14 +3838,24 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
   #endif /* SERVER_DEBUG */
   if (String_equalsCString(command,"VERSION"))
   {
-    /* version info */
-    sendResult(clientInfo,0,TRUE,0,"%d %d\n",PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR);
+    /* check authorization */
+    if (clientInfo->authorizationState == AUTHORIZATION_STATE_OK)
+    {
+      /* version info */
+      sendResult(clientInfo,0,TRUE,0,"%d %d",PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR);
+    }
+    else
+    {
+      /* authorization failure -> mark for disconnect */
+      sendResult(clientInfo,0,TRUE,1,"authorization failure");
+      clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
+    }
   }
   #ifndef NDEBUG
     else if (String_equalsCString(command,"QUIT"))
     {
       quitFlag = TRUE;
-      sendResult(clientInfo,0,TRUE,0,"ok\n");
+      sendResult(clientInfo,0,TRUE,0,"ok");
     }
   #endif /* not NDEBUG */
   else
@@ -3837,7 +3863,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
     /* parse command */
     if (!parseCommand(&commandMsg,command))
     {
-      sendResult(clientInfo,0,TRUE,1,"parse error");
+      sendResult(clientInfo,commandMsg.id,TRUE,1,"parse error");
       return;
     }
 
