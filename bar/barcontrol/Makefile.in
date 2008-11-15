@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
-# $Source: /home/torsten/cvs/bar/barcontrol/Makefile,v $
-# $Revision: 1.6 $
+# $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
+# $Revision: 1.1 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -12,16 +12,16 @@
 
 #--------------------------------- tool chain --------------------------------
 
-JAVA         = /usr/local/bin/java
-JAVA_FLAGS   = -enableassertions
+JAVA         = @JAVA@
+JAVA_FLAGS   = @JAVA_FLAGS@
 
-JAVAC        = /usr/local/bin/javac
-JAVAC_FLAGS  = -g
+JAVAC        = @JAVAC@
+JAVAC_FLAGS  = @JAVAC_FLAGS@
 # -Xlint
 
-JAR          = /usr/bin/jar
+JAR          = @JAR@
 
-SWT_DIR      = /usr/local/swt
+SWT_DIR      = @SWT_DIR@
 SWT_JAR      = $(SWT_DIR)/swt.jar
 
 LAUNCH4J_DIR = @LAUNCH4J_DIR@
@@ -37,9 +37,9 @@ CP         = cp
 DIFF       = diff
 ECHO       = echo
 ECHO_NO_LF = echo -n
-INSTALL    = /usr/bin/install -c
+INSTALL    = @INSTALL@
 MKDIR      = mkdir
-PERL       = /usr/bin/perl
+PERL       = @PERL@
 RMDIR      = rmdir
 RMF        = rm -f
 RMRF       = rm -rf
@@ -66,6 +66,8 @@ SOURCES        = src/BARControl.java \
                  src/Dialogs.java \
                  src/StringParser.java \
 
+OTHER_SOURCES  = jar.txt \
+
 OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).class) \
 
 INTERMEDIATE   = barcontrol.jar \
@@ -84,10 +86,7 @@ clean:
 	$(RMF) classes/*.class
 	$(RMF) $(TARGETS)
 
-#	$(RMF) tmp/Images.java
-
 distclean: clean
-	$(RMRF) classes
 	$(RMRF) tmp
 
 .PHONE: jars
@@ -142,7 +141,33 @@ endif
 run: $(OBJECTS)
 	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl
 
+# run with jar file
 runjar: barcontrol
 	./barcontrol
+
+# copy distribution files
+.PHONY: dist
+dist:
+	$(INSTALL) -d $(DIRECTORY)/barcontrol
+	$(INSTALL) -d $(DIRECTORY)/barcontrol/src
+	$(INSTALL) -m 664 \
+                   Makefile.in \
+                   barcontrol.cfg \
+                   $(DIRECTORY)/barcontrol
+	$(INSTALL) -m 664 \
+                   $(sort $(SOURCES)) \
+                   $(DIRECTORY)/barcontrol/src
+	$(INSTALL) -d $(DIRECTORY)/barcontrol/classes
+	$(INSTALL) -m 664 \
+                   $(sort $(OTHER_SOURCES)) \
+                   $(DIRECTORY)/barcontrol
+	$(INSTALL) -d $(DIRECTORY)/barcontrol/images
+	$(INSTALL) -m 664 \
+                   images/*.gif \
+                   $(DIRECTORY)/barcontrol/images
+	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars
+	$(INSTALL) -m 664 \
+                   jars/*.jar \
+                   $(DIRECTORY)/barcontrol/jars
 
 # end of file

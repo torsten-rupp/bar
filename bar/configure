@@ -272,8 +272,8 @@ PACKAGE_STRING=
 PACKAGE_BUGREPORT=
 
 ac_unique_file="."
-ac_unique_file="bar.c"
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os INSTALL_DIR INSTALL_BIN_DIR CONFIG_DIR TLS_DIR CC LD STRIP CC_FLAGS CC_WARN_FLAGS CC_OPTIMIZE CC_DEFINES CC_INCLUDES LD_FLAGS LIBRARY_PATHS LIBRARIES STATIC_LIBRARIES JAVA JAVAC JAR LAUNCH4J JAVA_FLAGS JAVAC_FLAGS SWT_DIR PERL INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT LIBOBJS LTLIBOBJS'
+ac_unique_file="bar/bar.c"
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os PLATFORM INSTALL_DIR INSTALL_BIN_DIR CONFIG_DIR TLS_DIR CC LD STRIP CC_FLAGS CC_WARN_FLAGS CC_OPTIMIZE CC_DEFINES CC_INCLUDES LD_FLAGS LIBRARY_PATHS LIBRARIES STATIC_LIBRARIES JAVA JAVAC JAR JAVA_FLAGS JAVAC_FLAGS SWT_DIR LAUNCH4J_DIR PERL INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LAUNCH4J CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -821,8 +821,8 @@ Optional Packages:
   --with-tls-dir=<path>   TLS/SLL configuration and certificate directory
                           (default: /etc/ssl)
   --with-swt-dir=<path>   SWT directory
-  --with-launch4j=<program>
-                          launch4j program and parameters
+  --with-launch4j-dir=<path>
+                          launch4j directory
 
 Some influential environment variables:
   CC          C compiler command
@@ -1368,23 +1368,6 @@ host_os=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\3/'`
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 CC_FLAGS=""
 CC_DEFINES=""
 CC_OPTIMIZE=""
@@ -1403,6 +1386,26 @@ ENABLE_FTP="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 
+
+case "$host_os" in
+  linux-*)
+    PLATFORM=Linux
+    ;;
+  mingw*)
+    PLATFORM=Windows
+    ;;
+  sunos | solaris*)
+    PLATFORM=Solaris
+    ;;
+  windows*)
+    PLATFORM=Windows
+    ;;
+  *)
+    { { echo "$as_me:$LINENO: error: unknown host operation system '$host_os'. Please specify host as (cpu-vendor-os or cpu-os). Supported host operating systems: $host_supported_os" >&5
+echo "$as_me: error: unknown host operation system '$host_os'. Please specify host as (cpu-vendor-os or cpu-os). Supported host operating systems: $host_supported_os" >&2;}
+   { (exit 1); exit 1; }; }
+    ;;
+esac
 
 
 
@@ -1432,10 +1435,10 @@ if test "${with_swt_dir+set}" = set; then
 
 fi;
 
-# Check whether --with-launch4j or --without-launch4j was given.
-if test "${with_launch4j+set}" = set; then
-  withval="$with_launch4j"
-  LAUNCH4J=$withval
+# Check whether --with-launch4j-dir or --without-launch4j-dir was given.
+if test "${with_launch4j_dir+set}" = set; then
+  withval="$with_launch4j_dir"
+  LAUNCH4J_DIR=$withval
 
 fi;
 
@@ -6323,7 +6326,7 @@ _ACEOF
 
 
 
-          ac_config_headers="$ac_config_headers config.h"
+          ac_config_headers="$ac_config_headers bar/config.h"
 
 
 
@@ -6353,10 +6356,9 @@ fi
 
           ac_config_files="$ac_config_files Makefile"
 
+          ac_config_files="$ac_config_files bar/Makefile"
+
           ac_config_files="$ac_config_files barcontrol/Makefile"
-
-
-          ac_config_commands="$ac_config_commands TCL"
 
 
           ac_config_commands="$ac_config_commands BUILD_NOTE"
@@ -6909,10 +6911,10 @@ do
   case "$ac_config_target" in
   # Handling of arguments.
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+  "bar/Makefile" ) CONFIG_FILES="$CONFIG_FILES bar/Makefile" ;;
   "barcontrol/Makefile" ) CONFIG_FILES="$CONFIG_FILES barcontrol/Makefile" ;;
-  "TCL" ) CONFIG_COMMANDS="$CONFIG_COMMANDS TCL" ;;
   "BUILD_NOTE" ) CONFIG_COMMANDS="$CONFIG_COMMANDS BUILD_NOTE" ;;
-  "config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
+  "bar/config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS bar/config.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
    { (exit 1); exit 1; }; };;
@@ -7006,6 +7008,7 @@ s,@host@,$host,;t t
 s,@host_cpu@,$host_cpu,;t t
 s,@host_vendor@,$host_vendor,;t t
 s,@host_os@,$host_os,;t t
+s,@PLATFORM@,$PLATFORM,;t t
 s,@INSTALL_DIR@,$INSTALL_DIR,;t t
 s,@INSTALL_BIN_DIR@,$INSTALL_BIN_DIR,;t t
 s,@CONFIG_DIR@,$CONFIG_DIR,;t t
@@ -7025,14 +7028,15 @@ s,@STATIC_LIBRARIES@,$STATIC_LIBRARIES,;t t
 s,@JAVA@,$JAVA,;t t
 s,@JAVAC@,$JAVAC,;t t
 s,@JAR@,$JAR,;t t
-s,@LAUNCH4J@,$LAUNCH4J,;t t
 s,@JAVA_FLAGS@,$JAVA_FLAGS,;t t
 s,@JAVAC_FLAGS@,$JAVAC_FLAGS,;t t
 s,@SWT_DIR@,$SWT_DIR,;t t
+s,@LAUNCH4J_DIR@,$LAUNCH4J_DIR,;t t
 s,@PERL@,$PERL,;t t
 s,@INSTALL_PROGRAM@,$INSTALL_PROGRAM,;t t
 s,@INSTALL_SCRIPT@,$INSTALL_SCRIPT,;t t
 s,@INSTALL_DATA@,$INSTALL_DATA,;t t
+s,@LAUNCH4J@,$LAUNCH4J,;t t
 s,@CFLAGS@,$CFLAGS,;t t
 s,@LDFLAGS@,$LDFLAGS,;t t
 s,@CPPFLAGS@,$CPPFLAGS,;t t
@@ -7616,10 +7620,6 @@ esac
   { echo "$as_me:$LINENO: executing $ac_dest commands" >&5
 echo "$as_me: executing $ac_dest commands" >&6;}
   case $ac_dest in
-    TCL )
-                    (cd tcl/scanx; ./configure)
-
-                   ;;
     BUILD_NOTE ) echo "";
                     echo "Configuration:";
                     echo "  debug version    : `if test $ENABLE_DEBUG = "yes"; then echo yes; else echo no; fi`";

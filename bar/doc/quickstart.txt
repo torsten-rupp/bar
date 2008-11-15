@@ -11,6 +11,10 @@ Execute the following commands:
 
 2) --- Typical usage of BAR --------------------------------
 
+Get help:
+
+  bar --help
+
 Create an archive:
 
   bar -c home.bar /home
@@ -35,6 +39,10 @@ Restore contents of an archive:
 
 Note: The example commands are formated with "\" to avoid
       to long lines.
+
+Get extended help:
+
+  bar --xhelp
 
 Create an archive with compression, encryption:
 
