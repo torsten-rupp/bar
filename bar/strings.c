@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/strings.c,v $
-* $Revision: 1.34 $
+* $Revision: 1.35 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -122,7 +122,13 @@ struct __String
       { \
         if (((ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data) != (string)->checkSum) \
         { \
-          HALT_INTERNAL_ERROR("Invalid string %p!",string); \
+          HALT_INTERNAL_ERROR("Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!",\
+                              (string)->checkSum,\
+                              string,\
+                              (ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data,\
+                              (string)->length,\
+                              (string)->maxLength\
+                             ); \
         } \
       } \
     } while (0)
@@ -642,7 +648,6 @@ LOCAL void formatString(struct __String *string,
             UPDATE_VALID(string);
           }
           break;
-
         case 'S':
           data.string = (struct __String*)va_arg(arguments,void*);
           assert(string != NULL);
@@ -992,7 +997,7 @@ LOCAL bool parseString(const struct __String *string,
               index++;
               if (index < string->length)
               {
-                if (z < formatToken.width-1)
+                if ((formatToken.width == 0) || (z < formatToken.width-1))
                 {
                   if (value.s != NULL) value.s[z] = string->data[index];
                   z++;
@@ -1022,7 +1027,7 @@ LOCAL bool parseString(const struct __String *string,
                       index++;
                       if (index < string->length)
                       {
-                        if (z < (formatToken.width-1))
+                        if ((formatToken.width == 0) || (z < formatToken.width-1))
                         {
                           if (value.s != NULL) value.s[z] = string->data[index];
                           z++;
@@ -1081,6 +1086,7 @@ LOCAL bool parseString(const struct __String *string,
           z = 0;
           while (   (index < string->length)
                  && (formatToken.blankFlag || !isspace(string->data[index]))
+// NUL in string here a problem?
                  && (string->data[index] != (*format))
                 )
           {
