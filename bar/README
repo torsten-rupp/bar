@@ -15,7 +15,7 @@ BAR - BAckup Archiver
   for including functions of dvdisaster)
 * daemon-mode with control over plain and TSL network
   connection
-* nice graphical frontend (written in TclTk)
+* nice graphical frontend (written in Java+SWT)
 
 --- Requirements
 
@@ -32,8 +32,9 @@ BAR - BAckup Archiver
 * perl (only for compiling)
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
   eject (optional)
-* TclTk and additional packages for graphical frontend
-  (see below)
+* Java for graphical frontend (see below)
+* SWT (optional)
+* ANT and launch4j (optional)
 
 --- Installation
 
@@ -129,49 +130,74 @@ settings of BAR to create an DVD:
 
 --- Graphical frontend
 
-barcontrol.tcl is a graphical user interface for BAR. It is
-written in TclTk. To use the graphical user interface a
-TclTk-interpreter (wish) is needed. Additionally the
-following TclTk extension packages are required:
+barcontrol is a graphical user interface for BAR. It is
+written in Java with SWT (Note: the former version used
+TclTk). To run the graphical user interface a Java
+runtime environment V1.5 (JDK5) or newer is required.
+To start the graphical user interface type in
 
-* Tix (widget extension for Tk)
-* tls (SSL/TLS extension for Tcl)
-* scanx (provided with BAR)
-* mclistbox (a copy is provided with BAR; thanks to
-  Bryan Oakley for writing mclistbox)
+  java -jar barcontrol-linux.jar
 
-barcontrol.tcl connect to a running BAR-server either via
-TLS or a plain socket connection. barcontrol.tcl can edit
+resp. (if jar is packed with launch4j into an .exe)
+
+  barcontrol.exe
+
+resp.
+
+  java -jar barcontrol-windows.jar
+
+
+barcontrol ask for BAR server and the login password
+and then connect to the running BAR server either via
+TLS or a plain socket connection. barcontrol can edit
 jobs on a server, display the current status of jobs and
 start or stop jobs.
 
-To use barcontrol.tcl the BAR server daemon have to be
+To use barcontrol the BAR server daemon have to be
 startet first. Either enter
 
   bar --daemon
 
 or use the start-script 'barserver' from /etc/init.d.
-When the server is running, start barcontrol.tclwith
-
-  barcontrol.tcl
 
 Please note that for a TLS connection the TSL keys and
 cerificate files have to be available.
 
-Install TclTk TLS package:
+Install Java, SWT, launch4j:
 
-* Download http://downloads.sourceforge.net/tls/tls1.5.0-src.tar.gz
-* If not alread installed, install OpenSSL package
-* Extract, configure, compile and install:
-  tar xzf tls1.5.0-src.tar.gz
-  cd tls1.5
-  ./configure --with-ssl-dir=/usr
-  make
-  make install
+* Download Java JRE V1.5 (JRE5) from http://www.sun.com
+* Install Java
+
+In case you do not want to use the included SWT 3.4
+in barcontrol-linux.jar or barcontrol-windows.jar and
+use instead barcontrol.jar SWT have to be installed:
+
+* Download SWT from http://www.eclipse.org/swt
+* Install SWT to some directory
+
+To start barcontrol with the installed SWT you have to
+specify the path to the swt.jar file, e. g.
+
+  java -classpath /usr/local/swt/swt.jar:barcontrol.jar BARControl
+
+If a single executable file should be created the
+barcontrol jar file can be wrapped with launch4j:
+
+* Download launch4j from http://launch4j.sourceforge.net
+* Install
+
+Note: call configure with
+
+  --with-launchj4-dir=<path>
 
 --- License
 
 BAR and all files are under the GPL version 2.
+
+BARControl is using SWT. SWT is under the "Eclipse Public License"
+which can be found here:
+
+  http://www.eclipse.org/org/documents/epl-v10.php
 
 --- Contact
 

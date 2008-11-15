@@ -1,3 +1,7 @@
+2008-10-11 0.09
+  * implemented a Java frontend! This replaces the TclTk frontend - please enjoy!
+  * fixed bug in server password authorization: password was not checked until end
+
 2008-09-23 0.08a
   * fixed double usage of va_args variable
   * fixed problems with 64bit
