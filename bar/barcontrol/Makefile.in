@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -87,6 +87,7 @@ clean:
 	$(RMF) $(TARGETS)
 
 distclean: clean
+	$(RMF) Makefile
 	$(RMRF) tmp
 
 .PHONE: jars
