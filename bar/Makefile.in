@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.31 $
+# $Revision: 1.32 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -10,30 +10,13 @@
 
 #------------------------------------ paths ----------------------------------
 
+PLATFORM        = @PLATFORM@
 INSTALL_DIR     = @INSTALL_DIR@
 INSTALL_BIN_DIR = @INSTALL_BIN_DIR@
 CONFIG_DIR      = @CONFIG_DIR@
 TLS_DIR         = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
-
-CC                  = @CC@
-CC_FLAGS            = @CC_FLAGS@ -g
-CC_WARN_FLAGS       = -Wall -Wpointer-arith -Wunused-label -Wunused-parameter -Wunused-variable -Wmissing-prototypes -Wmissing-declarations
-CC_OPTIMIZE         = @CC_OPTIMIZE@
-CC_DEFINES          = @CC_DEFINES@ _LONG_LONG
-# -D_LONG_LONG
-CC_INCLUDES         = @CC_INCLUDES@
-ifdef WERROR
-  CC_FLAGS += -Werror
-endif
-
-LD                  = @CC@
-LD_FLAGS            = @LD_FLAGS@
-LD_LIBRARY_PATHS    = @LIBRARY_PATHS@
-LD_LIBRARIES        = @LIBRARIES@ pthread c m
-LD_STATIC_LIBRARIES = @STATIC_LIBRARIES@
-LD_STATIC_PREFIX    = -Wl,-static
 
 #---------------------------------- commands----------------------------------
 
@@ -68,156 +51,55 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 #---------------------------------- rules ------------------------------------
 
-# disable implicit rule for *.y -> *.c
-%.c:%.y
-
-%.o:%.c
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(for z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
-
-%:%.o
-	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
-          $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z) \
-          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z))
-
 #--------------------------------- objects -----------------------------------
 
-BAR_SOURCES          = bar.c \
-                       errors.c \
-                       commands_create.c \
-                       commands_list.c \
-                       commands_test.c \
-                       commands_compare.c \
-                       commands_restore.c \
-                       files.c \
-                       archive.c \
-                       archive_format.c \
-                       chunks.c \
-                       patterns.c \
-                       compress.c \
-                       crypt.c \
-                       passwords.c \
-                       misc.c \
-                       storage.c \
-                       network.c \
-                       server.c \
-                       \
-                       global.c \
-                       cmdoptions.c \
-                       configvalues.c \
-                       lists.c \
-                       strings.c \
-                       stringlists.c \
-                       threads.c \
-                       msgqueues.c \
-                       semaphores.c \
-                       filefragmentlists.c \
-                       arrays.c \
-                       dictionaries.c \
+TARGETS              = bar/bar \
+                       bar/bar-keygen \
+                       barcontrol/barcontrol
 
-BAR_OBJECTS          = $(foreach z,$(BAR_SOURCES),$(subst .c,.o,$z)) \
-                       errors.o \
-                       archive_format.o
-
-DESTROYER_SOURCES    = destroyer.c \
-                       global.c \
-                       cmdoptions.c \
-                       lists.c \
-                       strings.c \
-
-DESTROYER_OBJECTS    = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
-
-OTHER_SOURCES        = errors.pl \
-                       errors.def \
-                       archive_format.pl \
-                       archive_format.def \
-                       valgrind.supp \
-                       barcontrol.tcl \
-                       bar.cfg \
-                       bar-keygen.in \
-
-INTERMEDIATE         = errors.c \
-                       errors.h \
-                       archive_format.c \
-                       archive_format.h \
-
-TLS_FILES            = bar-key.pem \
+KEY_FILES            = bar-key.pem \
                        bar-ca.pem \
                        bar-server-key.pem \
                        bar-server-cert.pem \
+                       bar.jks \
 
 SCRIPTS              = scripts/barserver \
 
-TARGETS              = bar \
-                       bar-keygen \
-                       destroyer \
-
 #------------------------------ dependencies ---------------------------------
 
-.PHONY: all clean distclean depend
-all: $(TARGETS) cert barcontrol.tcl
+.PHONY: all clean distclean
+all: $(TARGETS) keys
 
 clean:
-	$(RMF) $(BAR_OBJECTS)
-	$(RMF) $(DESTROYER_OBJECTS)
-	$(RMF) $(INTERMEDIATE)
-	$(RMF) $(TARGETS)
-	$(RMF) $(TLS_FILES)
+	$(MAKE) -C bar clean
+	$(MAKE) -C barcontrol clean
 	$(RMRF) $(DISTRIBUTION_NAME)
 	$(RMF) $(DISTRIBUTION_NAME).tgz
-	$(MAKE) -C tcl/scanx clean
 
 distclean: clean
-	$(RMF) Makefile Makefile.depend
-	$(RMF) config.h
+	$(MAKE) -C bar distclean
+	$(MAKE) -C barcontrol distclean
 	$(RMF) config.status
 	$(RMF) config.log
-	$(MAKE) -C tcl/scanx distclean
 
-depend: Makefile.depend
+# create bar
+bar/bar:
+	$(MAKE) -C bar bar
 
-# create dependencies
-Makefile.depend: $(BAR_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
-	$(ECHO) > Makefile.depend
-	for z in $(BAR_SOURCES) $(DESTROYER_SOURCES); do \
-          $(CC) -MM >> Makefile.depend $$z; \
-        done;
+# create bar-keygen
+bar/bar-keygen:
+	$(MAKE) -C bar bar-keygen
 
-# create BAR
-bar@EXEEXT@: $(BAR_OBJECTS)
-
-CA.TEMPL=123
-
-# create bar-keygen script
-bar-keygen: bar-keygen.in
-	$(CAT) bar-keygen.in | \
-        ( \
-          while IFS="" read -r line; do \
-            line=$${line//\@DESTDIR\@/$(DESTDIR)}; \
-            line=$${line//\@TLS_DIR\@/$(TLS_DIR)}; \
-            line=$${line//\@CA.TEMPL\@/$(CA.TEMPL)}; \
-            $(ECHO) "$$line"; \
-          done; \
-        ) > $@
-	$(CHMOD) 775 $@
-
-# error definition
-errors.h: errors.def
-	$(PERL) errors.pl < $^ -h $@
-errors.c: errors.def
-	$(PERL) errors.pl < $^ -c $@
-
-# archive format definition
-archive_format.h: archive_format.def
-	$(PERL) archive_format.pl < $^ -h $@
-archive_format.c: archive_format.def
-	$(PERL) archive_format.pl < $^ -c $@
+# create barcontrol
+barcontrol/barcontrol:
+	$(MAKE) -C barcontrol barcontrol
 
 # create SSL certificates
-.PHONY: cert clean_cert
-cert: $(TLS_FILES)
+.PHONY: keys clean_keys
+keys: $(KEY_FILES)
 
-clean_cert:
-	$(RMF) $(TLS_FILES)
+clean_keys:
+	$(RMF) $(KEY_FILES)
 
 bar-key.pem:
 	certtool \
@@ -249,38 +131,45 @@ bar-server-cert.pem: bar-server-key.pem
           --outfile $@ \
           1>/dev/null 2>/dev/null
 
+# create Java SSL key
 bar.jks: bar-key.pem
+	$(RMF) $@
 	keytool \
           -import \
           -trustcacerts \
+          -keypass not_needed \
+          -storepass not_needed \
           -noprompt \
           -file bar-ca.pem \
           -keystore $@
 
-# create destroyer (for testing only!)
-destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
-	$(LD) $(LD_FLAGS) -o $@ $^ -lc -lpthread
-
-# create BAR frontend
-barcontrol.tcl: tcl/scanx/libscanx.so tcl/scanx/pkgIndex.tcl
-
-tcl/scanx/libscanx.so: tcl/scanx/scanx.c
-	$(MAKE) -C tcl/scanx $(@F)
-tcl/scanx/pkgIndex.tcl:
-	$(MAKE) -C tcl/scanx $(@F)
-
-# documentation
+# create documentation
 .PHONY: doc
 doc: doc/bar.7
 
 # install/uninstall
 .PHONY: install uninstall
-install:
+install: \
+  bar/bar \
+  $(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
+  $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol.bat barcontrol-windows.jar)) \
+  $(KEY_FILES) \
+  $(SCRIPTS)
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) $(if $(findstring $(PLATFORM),Linux),\
+                        barcontrol/barcontrol \
+                        barcontrol-linux.jar \
+                    ) "$(DESTDIR)$(INSTALL_BIN_DIR)" \
+	$(INSTALL) $(if $(findstring $(PLATFORM),Windows),\
+                        $(if $(LAUNCH4J),barcontrol/barcontrol.exe,\
+                                         barcontrol.bat barcontrol-windows.jar \
+                         ) \
+                    ) "$(DESTDIR)$(INSTALL_BIN_DIR)" \
 	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)"
 	if test ! -f "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; then $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(CONFIG_DIR)"; else echo "$(DESTDIR)$(CONFIG_DIR)/bar.cfg NOT installed - file already exists\!"; fi
+	$(INSTALL) bar.jks "$(DESTDIR)$(CONFIG_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)/jobs"
 	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)/certs"
@@ -289,247 +178,89 @@ install:
 	$(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"
 	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(TLS_DIR)/private"
 	if test ! -f /etc/init.d/barserver; then $(INSTALL) -m 600 scripts/barserver /etc/init.d/barserver; else echo "/etc/init.d/barserver NOT installed - file already exists\!"; fi
-	$(MAKE) -C tcl/scanx install
-	$(MAKE) -C tcl/mclistbox install
 
 uninstall:
 	@read -n 1 -p "Really uninstall? [y/N] " s; \
         if test "$s" = "y" -o "$s" = "Y"; then \
           $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
           $(RMF) "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; \
           $(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-ca.pem"; \
           $(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-server-cert.pem"; \
           $(RMF) "$(DESTDIR)$(TLS_DIR)/private/bar-server-key.pem"; \
+          $(RMF) "$(DESTDIR)$(CONFIG_DIR)/bar.jks"; \
           $(RMF) "/etc/init.d/barserver"; \
         fi
 
 # run server
 .PHONY: barserver barserver_ssl
-barserver: bar
-	nice ./bar \
-          --daemon \
-          --job-directory jobs
+barserver:
+	@$(MAKE) -C bar barserver
 
-barserver_ssl: bar $(TLS_FILES)
-	nice ./bar \
-          --daemon \
-          --job-directory jobs \
-          --server-ca-file=bar-ca.pem \
-          --server-cert-file=bar-server-cert.pem \
-          --server-key-file=bar-server-key.pem
+barserver_ssl:
+	@$(MAKE) -C bar barserver_ssl
 
 # do test
-.PHONY: test test1 test2 test3 test4 test_all
+.PHONY: test
 test:
-	@$(MAKE) QUIET=1 -s test1 test2 test3 test4 test5 test_all
-
-test1: bar
-	@$(ECHO_NO_LF) "Test 1: basic..."
-	$(MAKE) \
-          BAR_FILE="test" \
-          OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
-          standard_test
-	@$(ECHO) "ok"
-
-test2 test_compress: bar
-	@$(ECHO_NO_LF) "Test 2: compress..."
-	for compress in $(COMPRESS_NAMES); do \
-          $(MAKE) \
-            BAR_FILE="test" \
-            OPTIONS="--compress-algorithm=$$compress" \
-            standard_test; \
-        done
-	@$(ECHO) "ok"
-
-test3 test_crypt: bar
-	@$(ECHO_NO_LF) "Test 3: crypt..."
-	for crypt in $(CRYPT_NAMES); do \
-          $(MAKE) \
-            BAR_FILE="test-###" \
-            OPTIONS="--crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
-            standard_test; \
-        done
-	@$(ECHO) "ok"
-
-test4 test_asymmetric_crypt: bar
-	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
-	$(RM) test/key.*; SSH_ASKPASS= ./bar --generate-keys test/key < /dev/null
-	for crypt in $(CRYPT_NAMES); do \
-          $(MAKE) \
-            BAR_FILE="test-###" \
-            OPTIONS="--crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private" \
-            standard_test; \
-        done
-	@$(ECHO) "ok"
-
-test5 test_split: bar
-	@$(ECHO_NO_LF) "Test 4: split..."
-	$(MAKE) \
-          BAR_FILE="test-###" \
-          OPTIONS="-s 100000" \
-          standard_test
-	@$(ECHO) "ok"
-
-test_all: bar
-	@$(ECHO_NO_LF) "Test all..."
-	@$(RM) test/key.*; SSH_ASKPASS= ./bar --generate-keys test/key < /dev/null
-	for compress in $(COMPRESS_NAMES); do \
-          for crypt in $(CRYPT_NAMES); do \
-            $(MAKE) \
-              BAR_FILE=test-### \
-              OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private -s 100000" \
-              standard_test; \
-            rc=$$?; \
-            if test $$rc -ne 0; then \
-              exit 1; \
-            fi; \
-          done; \
-        done
-	@$(ECHO) "ok"
-
-.PHONY: standard_test
-standard_test: bar
-	$(RMRF) test/*.bar test/*.bid test/new test/restore
-	./bar -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
-	./bar -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -x test/test*.bar $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r -x unreadable.txt -x circular-link.dat -x fifo test/data test/restore/test/data
-	#
-	$(RMRF) test/*.bar test/*.bid test/new test/restore
-	./bar -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
-	$(MKDIR) test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
-	./bar -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
-	./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -x test/test*.bar $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
-
-.PHONY: standard_test_destroy
-standard_test_destroy: bar destroyer
-	$(RMRF) test/*.bar test/*.bid test/restore
-	./bar -c test/$(BAR_FILE).bar test/data/zero1024.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
-	./destroyer test/test.bar m:0 > test/test.bar_destroyed
-	./bar -l test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -t test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -d test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	./bar -x test/test.bar_destroyed $(OPTIONS) --directory test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
+	@$(MAKE) -C bar test
 
 .PHONY: memcheck memcheck1
-memcheck: bar
-	$(MAKE) VALGRIND_OPTIONS="--leak-check=summary" $(if $(CHECK),memcheck$(CHECK),memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6 memcheck7)
+memcheck:
+	@$(MAKE) -C bar memcheck
 
 .PHONY: memcheck_extended
-memcheck_extended: bar
-	$(MAKE) VALGRIND_OPTIONS="--leak-check=full" $(if $(CHECK),memcheck$(CHECK),memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6 memcheck7)
+memcheck_extended:
+	@$(MAKE) -C bar memcheck_extended
 
-.PHONY: memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6 memcheck7
-memcheck1: bar
-	valgrind \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          ./bar --help > /dev/null
-memcheck2: bar
-	valgrind \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          ./bar -c test/test.bar test/data/zero1024.dat $(OPTIONS) --overwrite-archive-files > /dev/null
-memcheck3: bar
-	valgrind \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          ./bar -l test/test*.bar $(OPTIONS) > /dev/null
-memcheck4: bar
-	valgrind \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          ./bar -t test/test*.bar $(OPTIONS) > /dev/null
-memcheck5: bar
-	valgrind \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          ./bar -d test/test*.bar $(OPTIONS) > /dev/null
-memcheck6: bar
-	valgrind \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          ./bar -x test/test*.bar $(OPTIONS) --directory test/restore > /dev/null
-memcheck7: bar
-	valgrind \
-          --leak-resolution=high \
-          --track-fds=yes \
-          --suppressions=valgrind.supp \
-          $(VALGRIND_OPTIONS) \
-          ./bar \
-            --daemon \
-            --job-directory jobs \
-            --server-ca-file=bar-ca.pem \
-            --server-cert-file=bar-server-cert.pem \
-            --server-key-file=bar-server-key.pem
-
+# create distribution
 .PHONY: dist $(DISTRIBUTION_NAME).tar.bz2
 dist: $(DISTRIBUTION_NAME).tar.bz2
 
 $(DISTRIBUTION_NAME).tar.bz2:
 	$(INSTALL) -d $(DISTRIBUTION_NAME)
-	$(CP) \
-          $(sort $(BAR_SOURCES) \
-                 $(patsubst %.c,%.h,$(BAR_SOURCES)) \
-                 $(DESTROYER_SOURCES) \
-                 $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
-                 $(OTHER_SOURCES) \
-                 barcontrol.tcl \
-                 configure \
-                 configure.in \
-                 Makefile.in \
-                 config.h.in \
-                 bar.cfg \
-                 barcontrol.cfg \
-                 ToDo \
-                 README \
-                 ChangeLog \
-          ) \
-          $(DISTRIBUTION_NAME)
+	$(INSTALL) -m 775 \
+                   configure \
+                   $(DISTRIBUTION_NAME)
+	$(INSTALL) -m 664 \
+                   configure.in \
+                   Makefile.in \
+                   ToDo \
+                   README \
+                   ChangeLog \
+                   $(DISTRIBUTION_NAME)
+	$(MAKE) -C bar dist DIRECTORY="../$(DISTRIBUTION_NAME)"
+	$(MAKE) -C barcontrol dist DIRECTORY="../$(DISTRIBUTION_NAME)"
 	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/bin
-	$(INSTALL) bin/config.guess bin/config.sub bin/install-sh $(DISTRIBUTION_NAME)/bin
-	#
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/bitmaps
-	$(INSTALL) bitmaps/*.gif $(DISTRIBUTION_NAME)/bitmaps
+	$(INSTALL) -m 664 \
+                   bin/config.guess \
+                   bin/config.sub bin/install-sh \
+                   $(DISTRIBUTION_NAME)/bin
 	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/ssl
-	$(INSTALL) ssl/*.tmpl $(DISTRIBUTION_NAME)/ssl
+	$(INSTALL) -m 664 \
+                   ssl/*.tmpl \
+                   $(DISTRIBUTION_NAME)/ssl
 	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/scripts
-	$(INSTALL) $(SCRIPTS) $(DISTRIBUTION_NAME)/scripts
-	#
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/tcl/scanx
-	$(INSTALL) tcl/scanx/*.in tcl/scanx/*.m4 tcl/scanx/*.c tcl/scanx/*.tcl tcl/scanx/configure tcl/scanx/install-sh $(DISTRIBUTION_NAME)/tcl/scanx
-	#
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/tcl/mclistbox
-	$(INSTALL) tcl/mclistbox/*.tcl tcl/mclistbox/mclistbox-*.tar.gz tcl/mclistbox/Makefile $(DISTRIBUTION_NAME)/tcl/mclistbox
+	$(INSTALL) -m 664 \
+                   $(SCRIPTS) \
+                   $(DISTRIBUTION_NAME)/scripts
 	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/misc
-	$(INSTALL) misc/*.patch $(DISTRIBUTION_NAME)/misc
+	$(INSTALL) -m 664 \
+                   misc/*.patch \
+                   $(DISTRIBUTION_NAME)/misc
 	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/doc
-	$(INSTALL) doc/*.txt $(DISTRIBUTION_NAME)/doc
+	$(INSTALL) -m 664 \
+                   doc/*.txt \
+                   $(DISTRIBUTION_NAME)/doc
 	#
 	$(TAR) cjf $@ $(DISTRIBUTION_NAME)
 	$(RMRF) $(DISTRIBUTION_NAME)
-
--include Makefile.depend
 
 # end of file
