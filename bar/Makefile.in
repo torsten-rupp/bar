@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.35 $
+# $Revision: 1.36 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -80,6 +80,7 @@ distclean: clean
 	$(MAKE) -C bar distclean
 	$(MAKE) -C barcontrol distclean
 	$(RMF) Makefile
+	$(RMF) src/Config.java
 	$(RMF) config.status
 	$(RMF) config.log
 

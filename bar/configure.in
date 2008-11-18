@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.14 $
+dnl $Revision: 1.15 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -404,7 +404,6 @@ AC_DEFINE_UNQUOTED(TLS_DIR,   "$TLS_DIR",   [TLS directory])
 dnl ------------ autoheader: top/bottom include for config.h -----------
 
 AC_CONFIG_HEADERS(bar/config.h)
-dnl AC_CONFIG_HEADERS(bar/config.h)
 
 dnl no AC_DEFINE should occur after this line!
 
@@ -442,6 +441,7 @@ fi
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(bar/Makefile)
 AC_CONFIG_FILES(barcontrol/Makefile)
+AC_CONFIG_FILES(barcontrol/src/Config.java)
 
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";

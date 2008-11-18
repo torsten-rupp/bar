@@ -6360,6 +6360,8 @@ fi
 
           ac_config_files="$ac_config_files barcontrol/Makefile"
 
+          ac_config_files="$ac_config_files barcontrol/src/Config.java"
+
 
           ac_config_commands="$ac_config_commands BUILD_NOTE"
 
@@ -6913,6 +6915,7 @@ do
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
   "bar/Makefile" ) CONFIG_FILES="$CONFIG_FILES bar/Makefile" ;;
   "barcontrol/Makefile" ) CONFIG_FILES="$CONFIG_FILES barcontrol/Makefile" ;;
+  "barcontrol/src/Config.java" ) CONFIG_FILES="$CONFIG_FILES barcontrol/src/Config.java" ;;
   "BUILD_NOTE" ) CONFIG_COMMANDS="$CONFIG_COMMANDS BUILD_NOTE" ;;
   "bar/config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS bar/config.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5

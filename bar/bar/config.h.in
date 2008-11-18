@@ -1,4 +1,4 @@
-/* config.h.in.  Generated from configure.in by autoheader.  */
+/* bar/config.h.in.  Generated from configure.in by autoheader.  */
 
 
 #ifndef __CONFIG__
