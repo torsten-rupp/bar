@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -11,10 +11,12 @@
 /****************************** Imports ********************************/
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.lang.RuntimeException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
@@ -58,7 +60,7 @@ class CommunicationError extends Error
  */
 class BARServer
 {
-  private static String             javaSSLKeyFileName = "bar.jks";
+  private static String             JAVA_SSL_KEY_FILE_NAME = "bar.jks";
 
   private static Socket             socket;
   private static BufferedWriter     output;
@@ -88,42 +90,62 @@ class BARServer
     String errorMessage = null;
     if ((socket == null) && (tlsPort != 0))
     {
-System.setProperty("javax.net.ssl.trustStore",javaSSLKeyFileName);
-      SSLSocket sslSocket;
+      // get all possible bar.jks file names
+      String[] javaSSLKeyFileNames = new String[]
+      {
+        JAVA_SSL_KEY_FILE_NAME,
+        System.getProperty("user.home")+File.separator+".bar"+File.separator+JAVA_SSL_KEY_FILE_NAME,
+        Config.CONFIG_DIR+File.separator+JAVA_SSL_KEY_FILE_NAME
+      };
 
-      try
+      // try to connect with key
+      for (String javaSSLKeyFileName : javaSSLKeyFileNames)
       {
-        SSLSocketFactory sslSocketFactory;
+        File file = new File(javaSSLKeyFileName);
+        if (file.exists() && file.isFile())
+        {
+          System.setProperty("javax.net.ssl.trustStore",javaSSLKeyFileName);
+          try
+          {
+            SSLSocket        sslSocket;
+            SSLSocketFactory sslSocketFactory;
 
-        sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
-        sslSocket        = (SSLSocket)sslSocketFactory.createSocket(hostname,tlsPort);
-        sslSocket.startHandshake();
+            sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
+            sslSocket        = (SSLSocket)sslSocketFactory.createSocket(hostname,tlsPort);
+            sslSocket.startHandshake();
 
-        input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
-        output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+            input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+            output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
 
-        socket = sslSocket;
-      }
-      catch (SocketTimeoutException exception)
-      {
-        errorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
-      }
-      catch (ConnectException exception)
-      {
-        errorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
-      }
-      catch (NoRouteToHostException exception)
-      {
-        errorMessage = "host '"+hostname+"' unreachable (no route to host)";
-      }
-      catch (UnknownHostException exception)
-      {
-        errorMessage = "unknown host '"+hostname+"'";
-      }
-      catch (Exception exception)
-      {
-        exception.printStackTrace();
-        errorMessage = exception.getMessage();
+            socket = sslSocket;
+            break;
+          }
+          catch (SocketTimeoutException exception)
+          {
+            errorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+          }
+          catch (ConnectException exception)
+          {
+            errorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+          }
+          catch (NoRouteToHostException exception)
+          {
+            errorMessage = "host '"+hostname+"' unreachable (no route to host)";
+          }
+          catch (UnknownHostException exception)
+          {
+            errorMessage = "unknown host '"+hostname+"'";
+          }
+          catch (RuntimeException exception)
+          {
+            errorMessage = exception.getMessage();
+          }
+          catch (Exception exception)
+          {
+    //        exception.printStackTrace();
+            errorMessage = exception.getMessage();
+          }
+        }
       }
     }
     if ((socket == null) && (port != 0))
@@ -153,7 +175,7 @@ System.setProperty("javax.net.ssl.trustStore",javaSSLKeyFileName);
       }
       catch (Exception exception)
       {
-        exception.printStackTrace();
+//        exception.printStackTrace();
         errorMessage = exception.getMessage();
       }
     }
