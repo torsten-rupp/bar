@@ -1,0 +1,28 @@
+/***********************************************************************\
+*
+* $Source: /home/torsten/cvs/bar/barcontrol/src/Config.java.in,v $
+* $Revision: 1.1 $
+* $Author: torsten $
+* Contents: Java configuration file
+* Systems: all
+*
+\***********************************************************************/
+
+/****************************** Imports ********************************/
+
+/****************************** Classes ********************************/
+
+public class Config
+{
+  // --------------------------- constants --------------------------------
+  public final static String INSTALL_DIR = "@INSTALL_DIR@";
+  public final static String CONFIG_DIR  = "@CONFIG_DIR@";
+
+  // --------------------------- variables --------------------------------
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
+}
+
+/* end of file */

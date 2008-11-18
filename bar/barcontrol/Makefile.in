@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -69,7 +69,7 @@ SOURCES        = src/BARControl.java \
 OTHER_SOURCES  = jar.txt \
 
 OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).class) \
-                 classes/Config.classs \
+                 classes/Config.class \
 
 INTERMEDIATE   = barcontrol.jar \
                  barcontrol-linux.jar \
