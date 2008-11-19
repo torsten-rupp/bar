@@ -1,14 +1,22 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
 #			   
 # ----------------------------------------------------------------------------
 
+#---------------------------------- settings ---------------------------------
+
+ENABLE_DEBUG = @ENABLE_DEBUG@
+ENABLE_GUI   = @ENABLE_GUI@
+
 #------------------------------------ paths ----------------------------------
+
+SWT_DIR      = @SWT_DIR@
+LAUNCH4J_DIR = @LAUNCH4J_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
@@ -21,10 +29,7 @@ JAVAC_FLAGS  = @JAVAC_FLAGS@
 
 JAR          = @JAR@
 
-SWT_DIR      = @SWT_DIR@
 SWT_JAR      = $(SWT_DIR)/swt.jar
-
-LAUNCH4J_DIR = @LAUNCH4J_DIR@
 
 CLASSPATH    = classes:$(SWT_JAR)
 
@@ -52,7 +57,15 @@ UNZIP      = unzip
 
 classes/%.class:src/%.java
 	$(INSTALL) -d classes
+ifneq ($(JAVAC),)
+ifneq ($(SWT_DIR),)
 	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) src/*.java
+else
+	@$(ECHO) "ERROR: no swt.jar - cannot compile Java sources"
+endif
+else
+	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
+endif
 
 #--------------------------------- objects -----------------------------------
 
@@ -98,14 +111,19 @@ jars: barcontrol.jar barcontrol-linux.jar barcontrol-windows.jar
 
 # create jars
 barcontrol.jar: jar.txt $(OBJECTS) images/*.gif
+ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
 	$(CP) images/*.gif tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
+else
+	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
+endif
 
 barcontrol-linux.jar: jar.txt $(OBJECTS) images/*.gif jars/swt-3.4-linux.jar
+ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../jars/swt-3.4-linux.jar 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
@@ -113,8 +131,12 @@ barcontrol-linux.jar: jar.txt $(OBJECTS) images/*.gif jars/swt-3.4-linux.jar
 	$(CP) images/*.gif tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
+else
+	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
+endif
 
 barcontrol-windows.jar: jar.txt $(OBJECTS) images/*.gif jars/swt-3.4-windows.jar
+ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../jars/swt-3.4-windows.jar 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
@@ -122,13 +144,20 @@ barcontrol-windows.jar: jar.txt $(OBJECTS) images/*.gif jars/swt-3.4-windows.jar
 	$(CP) images/*.gif tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
+else
+	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
+endif
 
 # create Unix start script
-barcontrol: barcontrol-linux.jar
-	@$(ECHO) >$@  "#!/bin/sh"
-	@$(ECHO) >>$@ ""
-	@$(ECHO) >>$@ "java -jar barcontrol-linux.jar \"$$@\""
-	@$(CHMOD) 775 $@
+barcontrol: barcontrol.in barcontrol-linux.jar
+	$(CAT) barcontrol.in | \
+        ( \
+          while IFS="" read line; do \
+            line=$${line//\@JAVA\@/$(JAVA)}; \
+            $(ECHO) $$line; \
+          done; \
+        ) > $@
+	$(CHMOD) 775 $@
 
 ifneq ($(LAUNCH4J),)
 # create Windows executable
@@ -136,18 +165,32 @@ barcontrol.exe: barcontrol-windows.jar
 	$(LAUNCH4J) barcontrol.xml
 else
 # create Windows start script
-barcontrol.bat: barcontrol-windows.jar
-	@$(ECHO) >>$@ "java -classpath swt.jar\;barcontrol.jar BARControl %*"
-	@$(CHMOD) 775 $@
+barcontrol.bat: barcontrol.bat.in barcontrol-windows.jar
+	$(CAT) barcontrol.bat.in | \
+        ( \
+          while IFS="" read line; do \
+            line=$${line//\@JAVA\@/$(JAVA)}; \
+            $(ECHO) $$line; \
+          done; \
+        ) > $@
+	$(CHMOD) 775 $@
 endif
 
 # run
 run: $(OBJECTS)
+ifneq ($(JAVA),)
 	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl
+else
+	@$(ECHO) "ERROR: no 'java' commadn - cannot execute BARControl"
+endif
 
 # run with jar file
+ifneq ($(JAVA),)
 runjar: barcontrol
 	./barcontrol
+else
+	@$(ECHO) "ERROR: no 'java' commadn - cannot execute BARControl"
+endif
 
 # copy distribution files
 .PHONY: dist

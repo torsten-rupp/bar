@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.15 $
+dnl $Revision: 1.16 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -110,6 +110,9 @@ dnl AC_PRESERVE_HELP_ORDER
 
 dnl ----------------------- substitute settings ------------------------
 
+AC_SUBST(ENABLE_DEBUG)                      dnl "yes" for debug version, "no" otherwise
+AC_SUBST(ENABLE_GUI)                        dnl "yes" to build GUI, "no" otherwise
+
 AC_SUBST(PLATFORM)                          dnl platform
 
 AC_SUBST(INSTALL_DIR)                       dnl installation directory
@@ -141,8 +144,10 @@ AC_SUBST(JAVA_FLAGS)                        dnl java flags
 AC_SUBST(JAVAC_FLAGS)                       dnl java compiler flags
 
 AC_SUBST(SWT_DIR)                           dnl SWT directory
-
 AC_SUBST(LAUNCH4J_DIR)                      dnl launch4j directory
+
+AC_SUBST(CERTOOL)                           dnl GNU TLS certtool
+AC_SUBST(KEYTOOL)                           dnl Java keytool
 
 dnl ----------------------- initialize variables -----------------------
 
@@ -163,6 +168,7 @@ ENABLE_GCRYPT="yes"
 ENABLE_FTP="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
+ENABLE_GUI="yes"
 
 dnl ---------------------------- check system --------------------------
 
@@ -248,6 +254,11 @@ AC_ARG_ENABLE(
   AC_HELP_STRING([--disable-tls],[disable TLS support]),
   [ENABLE_TLS=$enableval]
 )
+AC_ARG_ENABLE(
+  gui,
+  AC_HELP_STRING([--disable-gui],[disable GUI support (barcontrol)]),
+  [ENABLE_GUI=$enableval]
+)
 
 if test $ENABLE_TLS = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
   AC_MSG_WARN([gcrypt no enabled, disabled TLS support.])
@@ -284,18 +295,35 @@ if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
 fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
 
-AC_PATH_PROGS(JAVA,java)
-AC_PATH_PROGS(JAVAC,javac)
-AC_PATH_PROGS(JAR,jar)
-AC_PATH_PROGS(LAUNCH4J,launch4j)
+if test "$ENABLE_GUI" = "yes"; then
+  AC_PATH_PROGS(JAVA,java)
+  if test -z "$JAVA"; then
+    AC_MSG_WARN([No 'java' command found in path - cannot execute GUI])
+    ENABLE_GUI="no"
+  fi
+  AC_PATH_PROGS(JAVAC,javac)
+  if test -z "$JAVAC"; then
+    AC_MSG_WARN([No 'javac' command found in path - cannot compile GUI])
+    ENABLE_GUI="no"
+  fi
+  AC_PATH_PROGS(JAR,jar)
+  if test -z "$JAVAC"; then
+    AC_MSG_WARN([No 'jar' command found in path - cannot compile GUI])
+    ENABLE_GUI="no"
+  fi
+  AC_PATH_PROGS(LAUNCH4J,launch4j)
 
-JAVA_FLAGS=""
-if test "$ENABLE_DEBUG" = "yes"; then
-  JAVA_FLAGS="-enableassertions"
+  JAVA_FLAGS=""
+  if test "$ENABLE_DEBUG" = "yes"; then
+    JAVA_FLAGS="-enableassertions"
+  fi
+  if test "$ENABLE_DEBUG" = "yes"; then
+    JAVAC_FLAGS="-g"
+  fi
 fi
-if test "$ENABLE_DEBUG" = "yes"; then
-  JAVAC_FLAGS="-g"
-fi
+
+AC_PATH_PROGS(CERTTOOL,certtool)
+AC_PATH_PROGS(KEYTOOL,keytool)
 
 dnl -------------- headers/functions/definitions/libraries -------------
 
@@ -321,11 +349,6 @@ done
 AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
 AC_SYS_LARGEFILE
 dnl AC_CHECK_LARGEFILE_DEFINES
-AC_CHECK_PTHREAD_DEFINES
-AC_CHECK_FUNCS(pthread_attr_setname,pthread.h,,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
-
-AC_CHECK_FUNCS(fseeko,,AC_ERROR([function fseeko() is not available]))
-AC_CHECK_FUNCS(ftello,,AC_ERROR([function ftello() is not available]))
 
 AC_SEARCH_LIBS(round,m,,AC_ERROR([m library not found]))
 AC_SEARCH_LIBS(pthread_create,pthread,,AC_ERROR([pthread library not found]))
@@ -384,16 +407,30 @@ if test $ENABLE_TLS = "yes"; then
   fi
 fi
 
-if test -z "$SWT_DIR"; then
-  AC_MSG_CHECKING([for SWT])
-  if   test -f /usr/local/swt/swt.jar; then
-    SWT_DIR=/usr/local/swt
-  elif test -f /usr/swt/swt.jar; then
-    SWT_DIR=/usr/swt
-  else
-    AC_MSG_ERROR([No swt.jar found. Please specify SWT directory with --with-swt-dir=<path>.])
+AC_CHECK_PTHREAD_DEFINES
+AC_CHECK_FUNCS(pthread_attr_setname,pthread.h,,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
+
+AC_CHECK_FUNCS(fseeko,,AC_ERROR([function fseeko() is not available]))
+AC_CHECK_FUNCS(ftello,,AC_ERROR([function ftello() is not available]))
+
+AC_CHECK_FUNCS(zlibVersion,,AC_ERROR([function zlibVersion() is not available in zlib.h]))
+
+
+if test $ENABLE_GUI = "yes"; then
+  if test -z "$SWT_DIR"; then
+    AC_MSG_CHECKING([for SWT])
+    if   test -f /usr/local/swt/swt.jar; then
+      SWT_DIR=/usr/local/swt
+    elif test -f /usr/swt/swt.jar; then
+      SWT_DIR=/usr/swt
+    else
+      AC_MSG_RESULT([none])
+      AC_MSG_ERROR([No swt.jar found. Please specify SWT directory with --with-swt-dir=<path> or disable GUI support with --disable-gui.])
+    fi
+    AC_MSG_RESULT($SWT_DIR)
   fi
-  AC_MSG_RESULT($SWT_DIR)
+else
+  SWT_DIR=""
 fi
 
 dnl -------------------------------- misc ------------------------------
@@ -446,13 +483,15 @@ AC_CONFIG_FILES(barcontrol/src/Config.java)
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";
                     echo "Configuration:";
-                    echo "  debug version    : `if test $ENABLE_DEBUG = "yes"; then echo yes; else echo no; fi`";
-                    echo "  dynamic linked   : `if test $ENABLE_LINK_DYNAMIC = "yes"; then echo yes; else echo no; fi`";
+                    echo "  debug version    : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  dynamic linked   : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  bzip2 compression: `if test $HAVE_BZ2; then echo yes; else echo no; fi`";
                     echo "  crypto support   : `if test $HAVE_GCRYPT; then echo yes; else echo no; fi`";
                     echo "  FTP support      : `if test $HAVE_FTP; then echo yes; else echo no; fi`";
                     echo "  SCP/SFTP support : `if test $HAVE_SSH2; then echo yes; else echo no; fi`";
                     echo "  TLS/SSL server   : `if test $HAVE_GNU_TLS; then echo yes; else echo no; fi`";
+                    echo "  GUI support      : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  SWT directory    : $SWT_DIR"
                     echo ""
                     echo "  Install directory: $INSTALL_DIR"
                     echo "  Binary directory : $INSTALL_BIN_DIR"
@@ -466,6 +505,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_FTP=$HAVE_FTP
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
+                   ENABLE_GUI=$ENABLE_GUI
+                   SWT_DIR="$SWT_DIR"
                    INSTALL_DIR="$INSTALL_DIR"
                    INSTALL_BIN_DIR="$INSTALL_BIN_DIR"
                    CONFIG_DIR="$CONFIG_DIR"

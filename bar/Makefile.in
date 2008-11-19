@@ -1,12 +1,17 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.36 $
+# $Revision: 1.37 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
 #			   
 # ----------------------------------------------------------------------------
+
+#---------------------------------- settings ---------------------------------
+
+ENABLE_DEBUG    = @ENABLE_DEBUG@
+ENABLE_GUI      = @ENABLE_GUI@
 
 #------------------------------------ paths ----------------------------------
 
@@ -17,6 +22,9 @@ CONFIG_DIR      = @CONFIG_DIR@
 TLS_DIR         = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
+
+CERTTOOL = @CERTTOOL@
+KEYTOOL  = @KEYTOOL@
 
 #---------------------------------- commands----------------------------------
 
@@ -55,7 +63,7 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 TARGETS              = bar/bar \
                        bar/bar-keygen \
-                       barcontrol/barcontrol
+                       $(if $(findstring $(ENABLE_GUI),yes),barcontrol/barcontrol) \
 
 KEY_FILES            = bar-key.pem \
                        bar-ca.pem \
@@ -72,29 +80,40 @@ all: $(TARGETS) keys
 
 clean: clean_keys
 	$(MAKE) -C bar clean
+ifeq ($(ENABLE_GUI),yes)
 	$(MAKE) -C barcontrol clean
+endif
 	$(RMRF) $(DISTRIBUTION_NAME)
 	$(RMF) $(DISTRIBUTION_NAME).tgz
 
 distclean: clean
 	$(MAKE) -C bar distclean
+ifeq ($(ENABLE_GUI),yes)
 	$(MAKE) -C barcontrol distclean
+endif
 	$(RMF) Makefile
 	$(RMF) src/Config.java
 	$(RMF) config.status
 	$(RMF) config.log
 
 # create bar
-bar/bar:
+.PHONY: bar
+bar bar/bar:
 	$(MAKE) -C bar bar
 
 # create bar-keygen
-bar/bar-keygen:
+.PHONY: bar-keygen
+bar-keygen bar/bar-keygen:
 	$(MAKE) -C bar bar-keygen
 
 # create barcontrol
-barcontrol/barcontrol:
+.PHONY: barcontrol
+barcontrol barcontrol/barcontrol:
+ifeq ($(ENABLE_GUI),yes)
 	$(MAKE) -C barcontrol barcontrol
+else
+	@$(ECHO) "ERROR: GUI components not configured - cannot be built."
+endif
 
 # create SSL certificates
 .PHONY: keys clean_keys
@@ -104,27 +123,34 @@ clean_keys:
 	$(RMF) $(KEY_FILES)
 
 bar-key.pem:
-	certtool \
+ifneq ($(CERTTOOL),)
+	$(CERTTOOL) \
           --generate-privkey \
           --outfile $@ \
           1>/dev/null 2>/dev/null
+endif
 
 bar-ca.pem: bar-key.pem
-	certtool \
+ifneq ($(CERTTOOL),)
+	$(CERTTOOL) \
           --generate-self-signed \
           --template ssl/ca.tmpl \
           --load-privkey bar-key.pem \
           --outfile $@ \
           1>/dev/null 2>/dev/null
+endif
 
 bar-server-key.pem:
-	certtool \
+ifneq ($(CERTTOOL),)
+	$(CERTTOOL) \
           --generate-privkey \
           --outfile $@ \
           1>/dev/null 2>/dev/null
+endif
 
 bar-server-cert.pem: bar-server-key.pem
-	certtool \
+ifneq ($(CERTTOOL),)
+	$(CERTTOOL) \
           --generate-certificate \
           --template ssl/server.tmpl \
           --load-privkey bar-server-key.pem \
@@ -132,11 +158,13 @@ bar-server-cert.pem: bar-server-key.pem
           --load-ca-privkey bar-key.pem \
           --outfile $@ \
           1>/dev/null 2>/dev/null
+endif
 
 # create Java SSL key
 bar.jks: bar-key.pem
+ifneq ($(KEYTOOL),)
 	$(RMF) $@
-	keytool \
+	$(KEYTOOL) \
           -import \
           -trustcacerts \
           -keypass not_needed \
@@ -144,6 +172,7 @@ bar.jks: bar-key.pem
           -noprompt \
           -file bar-ca.pem \
           -keystore $@
+endif
 
 # create documentation
 .PHONY: doc
@@ -160,6 +189,7 @@ install: \
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+ifeq ($(ENABLE_GUI),yes)
 	$(INSTALL) $(if $(findstring $(PLATFORM),Linux),\
                         barcontrol/barcontrol \
                         barcontrol-linux.jar \
@@ -168,10 +198,13 @@ install: \
                         $(if $(LAUNCH4J),barcontrol/barcontrol.exe,\
                                          barcontrol.bat barcontrol-windows.jar \
                          ) \
-                    ) "$(DESTDIR)$(INSTALL_BIN_DIR)" \
+                    ) "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
 	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)"
 	if test ! -f "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; then $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(CONFIG_DIR)"; else echo "$(DESTDIR)$(CONFIG_DIR)/bar.cfg NOT installed - file already exists\!"; fi
+ifeq ($(ENABLE_GUI),yes)
 	$(INSTALL) bar.jks "$(DESTDIR)$(CONFIG_DIR)"
+endif
 	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)/jobs"
 	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)/certs"
@@ -185,14 +218,16 @@ uninstall:
 	@read -n 1 -p "Really uninstall? [y/N] " s; \
         if test "$s" = "y" -o "$s" = "Y"; then \
           $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
+          $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
+                                                      "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
+                                                      "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
+          ) \
           $(RMF) "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; \
           $(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-ca.pem"; \
           $(RMF) "$(DESTDIR)$(TLS_DIR)/certs/bar-server-cert.pem"; \
           $(RMF) "$(DESTDIR)$(TLS_DIR)/private/bar-server-key.pem"; \
-          $(RMF) "$(DESTDIR)$(CONFIG_DIR)/bar.jks"; \
+          $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(CONFIG_DIR)/bar.jks"; \
+          ) \
           $(RMF) "/etc/init.d/barserver"; \
         fi
 
@@ -205,9 +240,21 @@ barserver_ssl:
 	@$(MAKE) -C bar barserver_ssl
 
 # do test
-.PHONY: test
+.PHONY: test test1 test2 test3 test4 test5 testall
 test:
 	@$(MAKE) -C bar test
+test1:
+	@$(MAKE) -C bar test1
+test2:
+	@$(MAKE) -C bar test2
+test3:
+	@$(MAKE) -C bar test3
+test4:
+	@$(MAKE) -C bar test4
+test5:
+	@$(MAKE) -C bar test5
+test_all:
+	@$(MAKE) -C bar test_all
 
 .PHONY: memcheck memcheck1
 memcheck:

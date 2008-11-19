@@ -1,0 +1,6 @@
+#!/bin/sh
+
+@JAVA@ -jar `dirname $0`/barcontrol-linux.jar "$@"
+rc=$?
+
+exit $rc
