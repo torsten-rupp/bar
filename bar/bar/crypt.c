@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/crypt.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -87,6 +87,7 @@ typedef struct
   GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif /* HAVE_GCRYPT */
 
+#ifdef HAVE_GCRYPT
 /***********************************************************************\
 * Name   : base64Encode
 * Purpose: encode base64
@@ -142,7 +143,9 @@ LOCAL String base64Encode(String s, const byte *data, uint length)
 
   return s;
 }
+#endif /* HAVE_GCRYPT */
 
+#ifdef HAVE_GCRYPT
 /***********************************************************************\
 * Name   : base64Decode
 * Purpose: decode base64
@@ -219,6 +222,7 @@ LOCAL uint base64Decode(byte *data, uint maxLength, const String s)
 
   return length;
 }
+#endif /* HAVE_GCRYPT */
 
 /*---------------------------------------------------------------------*/
 
@@ -900,7 +904,7 @@ LOCAL Errors getKeyData(const CryptKey *cryptKey,
   #ifdef HAVE_GCRYPT
     uint        blockLength;
     gcry_sexp_t sexpToken;
-    char        *data; 
+    char        *data;
     size_t      dataLength;
     uint         fileCryptKeyLength;
     FileCryptKey *fileCryptKey;
@@ -962,19 +966,19 @@ LOCAL Errors getKeyData(const CryptKey *cryptKey,
       error = Crypt_init(&cryptInfo,SECRET_KEY_CRYPT_ALGORITHM,password);
       if (error != ERROR_NONE)
       {
-	Password_freeSecure(fileCryptKey);
-	gcry_sexp_release(sexpToken);
-	return error;
+        Password_freeSecure(fileCryptKey);
+        gcry_sexp_release(sexpToken);
+        return error;
       }
 
       /* encrypt */
       error = Crypt_encrypt(&cryptInfo,data,ALIGN(dataLength,blockLength));
       if (error != ERROR_NONE)
       {
-	Crypt_done(&cryptInfo);
-	Password_freeSecure(fileCryptKey);
-	gcry_sexp_release(sexpToken);
-	return error;
+        Crypt_done(&cryptInfo);
+        Password_freeSecure(fileCryptKey);
+        gcry_sexp_release(sexpToken);
+        return error;
       }
 
       /* done crypt */
@@ -1027,7 +1031,7 @@ LOCAL Errors setKeyData(CryptKey       *cryptKey,
     uint         blockLength;
     uint         fileCryptKeyLength;
     FileCryptKey *fileCryptKey;
-    char         *data; 
+    char         *data;
     size_t       dataLength;
     CryptInfo    cryptInfo;
     Errors       error;
@@ -1078,17 +1082,17 @@ LOCAL Errors setKeyData(CryptKey       *cryptKey,
       error = Crypt_init(&cryptInfo,SECRET_KEY_CRYPT_ALGORITHM,password);
       if (error != ERROR_NONE)
       {
-	Password_freeSecure(fileCryptKey);
-	return error;
+        Password_freeSecure(fileCryptKey);
+        return error;
       }
 
       /* encrypt */
       error = Crypt_decrypt(&cryptInfo,data,ALIGN(dataLength,blockLength));
       if (error != ERROR_NONE)
       {
-	Crypt_done(&cryptInfo);
-	Password_freeSecure(fileCryptKey);
-	return error;
+        Crypt_done(&cryptInfo);
+        Password_freeSecure(fileCryptKey);
+        return error;
       }
 
       /* done crypt */
@@ -1143,6 +1147,8 @@ void Crypt_doneKey(CryptKey *cryptKey)
 
   #ifdef HAVE_GCRYPT
     if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptKey);
   #endif /* HAVE_GCRYPT */
 }
 
@@ -1215,7 +1221,7 @@ Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
   {
     String_delete(data);
     return error;
-  }  
+  }
 
   // write file
   error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
@@ -1261,10 +1267,10 @@ Errors Crypt_createKeys(CryptKey *publicCryptKey,
 
     /* create key parameters */
     description = String_format(String_new(),"(genkey (rsa (nbits 4:%d)))",bits);
-    gcryptError = gcry_sexp_new(&sexpKeyParameters, 
-                        	String_cString(description),
-                        	0,
-                        	1
+    gcryptError = gcry_sexp_new(&sexpKeyParameters,
+                                String_cString(description),
+                                0,
+                                1
                                );
     if (gcryptError != 0)
     {
@@ -1361,7 +1367,7 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
     if (gcryptError != 0)
     {
   //fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
-      gcry_sexp_release(sexpData);    
+      gcry_sexp_release(sexpData);
       gcry_mpi_release(n);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
@@ -1443,7 +1449,7 @@ Errors Crypt_keyDecrypt(CryptKey   *cryptKey,
     gcryptError = gcry_pk_decrypt(&sexpData,sexpEncryptData,cryptKey->key);
     if (gcryptError != 0)
     {
-      gcry_sexp_release(sexpEncryptData);    
+      gcry_sexp_release(sexpEncryptData);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
   //gcry_sexp_dump(sexpData);
@@ -1563,7 +1569,7 @@ Errors Crypt_getRandomEncryptKey(CryptKey        *publicKey,
     if (gcryptError != 0)
     {
   //fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
-      gcry_sexp_release(sexpData);    
+      gcry_sexp_release(sexpData);
       Password_freeSecure(pkcs1EncodedMessage);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
@@ -1664,7 +1670,7 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
     gcryptError = gcry_pk_decrypt(&sexpData,sexpEncryptData,privateKey->key);
     if (gcryptError != 0)
     {
-      gcry_sexp_release(sexpEncryptData);    
+      gcry_sexp_release(sexpEncryptData);
       return ERROR_KEY_DECRYPT_FAIL;
     }
   //fprintf(stderr,"%s,%d: --- key data \n",__FILE__,__LINE__);
@@ -1698,8 +1704,8 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
 
     /* decode message block, get key */
     if (   (pkcs1EncodedMessage[0] != 0x00)
-	|| (pkcs1EncodedMessage[1] != 0x02)
-	|| (pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH] != 0x00)
+        || (pkcs1EncodedMessage[1] != 0x02)
+        || (pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH] != 0x00)
        )
     {
       gcry_sexp_release(sexpData);
