@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -6365,14 +6365,10 @@ public class BARControl
       boolean connectOkFlag = false;
       do
       {
-if (false) {
         if (!getLoginData(loginData))
         {
           System.exit(0);
         }
-} else {
-loginData.password="y7G7EGj2";
-}
         try
         {
           BARServer.connect(loginData.serverName,serverPort,serverTLSPort,loginData.password);
@@ -6399,6 +6395,10 @@ loginData.password="y7G7EGj2";
       // disconnect
       BARServer.disconnect();
     }
+    catch (org.eclipse.swt.SWTException exception)
+    {
+      System.err.println("ERROR: "+exception.getCause());
+    }
     catch (CommunicationError communicationError)
     {
       System.err.println("ERROR communication: "+communicationError.getMessage());
@@ -6417,12 +6417,6 @@ loginData.password="y7G7EGj2";
     {
       System.err.println("ERROR: "+error.getMessage()+error);
     }
-catch (org.eclipse.swt.SWTException exception)
-{
-System.err.println("BARControl.java"+", "+6220+": "+exception);
-System.err.println("BARControl.java"+", "+6220+": "+exception.getMessage());
-exception.printStackTrace();
-}
   }
 
   public static void main(String[] args)

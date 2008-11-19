@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.37 $
+# $Revision: 1.38 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -79,17 +79,17 @@ SCRIPTS              = scripts/barserver \
 all: $(TARGETS) keys
 
 clean: clean_keys
-	$(MAKE) -C bar clean
+	-$(MAKE) -C bar clean
 ifeq ($(ENABLE_GUI),yes)
-	$(MAKE) -C barcontrol clean
+	-$(MAKE) -C barcontrol clean
 endif
 	$(RMRF) $(DISTRIBUTION_NAME)
 	$(RMF) $(DISTRIBUTION_NAME).tgz
 
 distclean: clean
-	$(MAKE) -C bar distclean
+	-$(MAKE) -C bar distclean
 ifeq ($(ENABLE_GUI),yes)
-	$(MAKE) -C barcontrol distclean
+	-$(MAKE) -C barcontrol distclean
 endif
 	$(RMF) Makefile
 	$(RMF) src/Config.java
