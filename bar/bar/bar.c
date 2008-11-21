@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -256,7 +256,6 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("extract",                      'x',0,0,command,                                   COMMAND_LIST,COMMAND_RESTORE,                                      "restore archive"                                                          ),
   CMD_OPTION_ENUM         ("generate-keys",                0,  0,0,command,                                   COMMAND_LIST,COMMAND_GENERATE_KEYS,                                "generate new public/private key pair"                                     ),
 //  CMD_OPTION_ENUM         ("new-key-password",             0,  0,0,command,                                   COMMAND_LIST,COMMAND_NEW_KEY_PASSWORD,                           "set new private key password"                                           ),
-//  CMD_OPTION_SPECIAL      ("generate-keys",                0,  0,0,&keyFileName,                              NULL,cmdOptionParseString,NULL,                                    "generate new public/private key pair","file name"                         ),
   CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,0,keyBits,                                   DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS,
                                                                                                               MIN_ASYMMETRIC_CRYPT_KEY_BITS,
                                                                                                               MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,             "key bits"                                                                 ),
@@ -1518,6 +1517,9 @@ Errors inputCryptPassword(Password     *password,
 {
   String title;
 
+  assert(password != NULL);
+  assert(fileName != NULL);
+
   /* initialise variables */
   title = String_new();
 
@@ -2385,6 +2387,7 @@ int main(int argc, const char *argv[])
           error = inputCryptPassword(&cryptPassword,privateKeyFileName,TRUE,FALSE);
           if (error != ERROR_NONE)
           {
+            printError("No password given for private key!\n");
             Password_done(&cryptPassword);
             File_deleteFileName(privateKeyFileName);
             File_deleteFileName(publicKeyFileName);
