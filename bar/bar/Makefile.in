@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -146,7 +146,7 @@ TARGETS              = bar \
 #------------------------------ dependencies ---------------------------------
 
 .PHONY: all clean distclean depend
-all: $(TARGETS) cert barcontrol.tcl
+all: $(TARGETS)
 
 clean:
 	$(RMF) $(BAR_OBJECTS)
@@ -251,7 +251,7 @@ test3 test_crypt: bar
 
 test4 test_asymmetric_crypt: bar
 	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
-	$(RM) test/key.*; SSH_ASKPASS= ./bar --generate-keys test/key < /dev/null
+	$(RM) test/key.*; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
             BAR_FILE="test-###" \
