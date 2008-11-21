@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -621,12 +621,13 @@ LOCAL bool getNextFile(MsgQueue  *fileMsgQueue,
 /***********************************************************************\
 * Name   : formatArchiveFileName
 * Purpose: get archive file name
-* Input  : archiveType      - archive type
-*          fileName         - file name variable
+* Input  : fileName         - file name variable
 *          templateFileName - template file name
-*          partNumber       - part number
+*          partNumber       - part number (>=0 for parts, -1 for single
+*                             archive)
+*          lastPartFlag     - TRUE iff last part
 *          time             - time
-*          jobOptions       - job options
+*          archiveType      - archive type
 * Output : -
 * Return : formated file name
 * Notes  : -
@@ -754,7 +755,7 @@ LOCAL String formatArchiveFileName(String       fileName,
         break;
     }
   }
-  if (!partNumberFlag)
+  if ((partNumber >= 0) && !partNumberFlag)
   {
     String_format(fileName,".%06d",partNumber);
   }
