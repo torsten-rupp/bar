@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/passwords.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -60,7 +60,7 @@ typedef struct
 * Purpose: initialize secure password functions
 * Input  : -
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -168,12 +168,17 @@ void Password_clear(Password *password);
 
 /***********************************************************************\
 * Name   : Passwort_set, Password_setCString
-* Purpose: set password from C-string
+* Purpose: set password
 * Input  : password - password
-*          s        - C-string
+*          fromPassword - set from password
+*          string       - string
+*          s            - C-string
+*          buffer       - buffer
+*          length       - length of buffer
 * Output : -
 * Return : -
-* Notes  : avoid usage of this functions, because 's' is insecure!
+* Notes  : avoid usage of functions Password_setCString and
+*          Password_setBuffer, because data is insecure!
 \***********************************************************************/
 
 void Password_set(Password *password, const Password *fromPassword);
@@ -196,7 +201,8 @@ void Password_appendChar(Password *password, char ch);
 /***********************************************************************\
 * Name   : Password_random
 * Purpose: set password to random value
-* Input  : length - length of password (bytes)
+* Input  : password - password
+*          length   - length of password (bytes)
 * Output : -
 * Return : -
 * Notes  : -
@@ -276,10 +282,8 @@ void Password_undeploy(Password *password);
 /***********************************************************************\
 * Name   : Password_inputStdin
 * Purpose: input password from stdin (without echo characters)
-* Input  : password   - password
-*          title      - dialog title text
-*          verifyFlag - TRUE for verification of password, FALSE
-*                       otherwise
+* Input  : password - password
+*          title    - dialog title text
 * Output : -
 * Return : TRUE if password read, FALSE otherwise
 * Notes  : -
@@ -293,7 +297,7 @@ bool Password_input(Password   *password,
 * Name   : Password_inputVerify
 * Purpose: verify input of password
 * Input  : password - password to verify
-*          title      - dialog title text
+*          title    - dialog title text
 * Output : -
 * Return : TRUE if passwords equal, FALSE otherwise
 * Notes  : -

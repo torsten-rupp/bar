@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/passwords.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -19,6 +19,8 @@
 #endif /* HAVE_GCRYPT */
 #include <termios.h>
 #include <unistd.h>        
+#include <sys/ioctl.h>
+#include <errno.h>
 #include <assert.h>
 
 #include "global.h"
@@ -500,53 +502,87 @@ bool Password_input(Password   *password,
   /* input via console */
   if (!okFlag)
   {
+    int            n;
     struct termios oldTermioSettings;
     struct termios termioSettings;
     bool           eolFlag;
     char           ch;
 
-    /* save current console settings */
-    if (tcgetattr(STDIN_FILENO,&oldTermioSettings) != 0)
+    if (isatty(STDIN_FILENO) == 1)
     {
-      return FALSE;
-    }
-
-    /* disable echo */
-    memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
-    termioSettings.c_lflag &= ~ECHO;
-    if (tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings) != 0)
-    {
-      return FALSE;
-    }
-
-    /* input password */
-    if (title != NULL)
-    {
-      fprintf(stderr,"%s: ",title);fflush(stderr);
-    }
-    eolFlag = FALSE;
-    do
-    {
-      read(STDIN_FILENO,&ch,1);
-      switch (ch)
+      if (title != NULL)
       {
-        case '\n':
-        case '\r':
-          eolFlag = TRUE;
-          break;
-        default:
-          Password_appendChar(password,ch);
-          break;
+        fprintf(stderr,"%s: ",title);fflush(stderr);
+      }
+
+      /* save current console settings */
+      if (tcgetattr(STDIN_FILENO,&oldTermioSettings) != 0)
+      {
+fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,errno,strerror(errno));
+        return FALSE;
+      }
+
+      /* disable echo */
+      memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
+      termioSettings.c_lflag &= ~ECHO;
+      if (tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings) != 0)
+      {
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+        return FALSE;
+      }
+
+      /* input password */
+      eolFlag = FALSE;
+      do
+      {
+        read(STDIN_FILENO,&ch,1);
+        switch (ch)
+        {
+          case '\r':
+            break;
+          case '\n':
+            eolFlag = TRUE;
+            break;
+          default:
+            Password_appendChar(password,ch);
+            break;
+        }
+      }
+      while (!eolFlag);
+
+      /* restore console settings */
+      tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
+
+      if (title != NULL)
+      {
+        printf("\n");
       }
     }
-    while (!eolFlag);
-    if (title != NULL)
+    else
     {
-      printf("\n");
+      /* read data from non-interactive input */
+      eolFlag = FALSE;
+      do
+      {
+        ioctl(STDIN_FILENO,FIONREAD,(char*)&n);
+        if (n > 0)
+        {
+          read(STDIN_FILENO,&ch,1);
+          switch (ch)
+          {
+            case '\r':
+              break;
+            case '\n':
+              eolFlag = TRUE;
+              break;
+            default:
+              Password_appendChar(password,ch);
+              break;
+          }
+        }
+      }
+      while (!eolFlag && (n > 0));
     }
-
-    /* restore console settings */
-    tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
 
     okFlag = TRUE;
   }
