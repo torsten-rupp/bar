@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -430,9 +430,7 @@ System.err.println("BARControl.java"+", "+505+": "+commandId+"::"+line);
    */
   static void set(int jobId, String name, boolean b)
   {
-debug=true;
     executeCommand("OPTION_SET "+jobId+" "+name+" "+(b?"yes":"no"));
-debug=false;
   }
 
   /** set long value on BAR server
@@ -442,9 +440,7 @@ debug=false;
    */
   static void set(int jobId, String name, long n)
   {
-debug=true;
     executeCommand("OPTION_SET "+jobId+" "+name+" "+n);
-debug=false;
   }
 
   /** set string value on BAR server
@@ -454,9 +450,7 @@ debug=false;
    */
   static void set(int jobId, String name, String s)
   {
-debug=true;
     executeCommand("OPTION_SET "+jobId+" "+name+" "+StringParser.escape(s));
-debug=false;
   }
 
   //-----------------------------------------------------------------------

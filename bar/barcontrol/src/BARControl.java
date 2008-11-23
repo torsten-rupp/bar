@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -1954,6 +1954,8 @@ class TabJobs
   List        widgetIncludedPatterns;
   List        widgetExcludedPatterns;
   Combo       widgetArchivePartSize;
+  Text        widgetCryptPublicKeyFileName;
+  Button      widgetCryptPublicKeyFileNameSelect;
   Combo       widgetFTPMaxBandWidth;
   Combo       widgetSCPSFTPMaxBandWidth;
   Table       widgetScheduleList;
@@ -1968,6 +1970,7 @@ class TabJobs
   BARVariable compressAlgorithm       = new BARVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9"});
   BARVariable cryptAlgorithm          = new BARVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
   BARVariable cryptType               = new BARVariable(new String[]{"","symmetric","asymmetric"});
+  BARVariable cryptPublicKeyFileName  = new BARVariable("");
   BARVariable incrementalListFileName = new BARVariable("");
   BARVariable storageType             = new BARVariable(new String[]{"filesystem","ftp","scp","sftp","dvd","device"});
   BARVariable storageFileName         = new BARVariable("");
@@ -2523,7 +2526,7 @@ throw new Error("NYI");
 
         // crypt
         label = Widgets.newLabel(tab,"Crypt:");
-        Widgets.layout(label,2,0,TableLayoutData.W);
+        Widgets.layout(label,2,0,TableLayoutData.NW);
         composite = Widgets.newComposite(tab,SWT.NONE);
         Widgets.layout(composite,2,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
         {
@@ -2545,8 +2548,39 @@ throw new Error("NYI");
             }
           });
           Widgets.addModifyListener(new WidgetListener(combo,cryptAlgorithm));
+        }
 
+        composite = Widgets.newComposite(tab,SWT.NONE);
+        Widgets.layout(composite,3,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+        {
           button = Widgets.newRadio(composite,null,"symmetric");
+          Widgets.layout(button,0,0,TableLayoutData.W);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+
+              Widgets.setEnabled(widgetCryptPublicKeyFileName,false);
+              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,false);
+              cryptType.set("symmetric");
+              BARServer.set(selectedJobId,"crypt-type","symmetric");
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+          Widgets.addModifyListener(new WidgetListener(button,cryptType)
+          {
+            public void modified(Control control, BARVariable cryptType)
+            {
+              Widgets.setEnabled(widgetCryptPublicKeyFileName,false);
+              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,false);
+              ((Button)control).setSelection(cryptType.equals("symmetric"));
+            }
+          });
+
+          button = Widgets.newRadio(composite,null,"asymmetric");
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2554,8 +2588,10 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
 
-               cryptType.set("symmetric");
-               BARServer.set(selectedJobId,"crypt-type","symmetric");
+              Widgets.setEnabled(widgetCryptPublicKeyFileName,true);
+              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,true);
+              cryptType.set("asymmetric");
+              BARServer.set(selectedJobId,"crypt-type","asymmetric");
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2565,39 +2601,91 @@ throw new Error("NYI");
           {
             public void modified(Control control, BARVariable cryptType)
             {
-              ((Button)control).setSelection(cryptType.equals("symmetric"));
+              Widgets.setEnabled(widgetCryptPublicKeyFileName,true);
+              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,true);
+              ((Button)control).setSelection(cryptType.equals("asymmetric"));
             }
           });
 
-          button = Widgets.newRadio(composite,null,"asymmetric");
-          Widgets.layout(button,0,2,TableLayoutData.W);
-          button.addSelectionListener(new SelectionListener()
+          widgetCryptPublicKeyFileName = Widgets.newText(composite,null);
+          Widgets.layout(widgetCryptPublicKeyFileName,0,2,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+          widgetCryptPublicKeyFileName.addModifyListener(new ModifyListener()
+          {
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Text widget = (Text)modifyEvent.widget;
+              Color color = COLOR_MODIFIED;
+              try
+              {
+                String s = widget.getText();
+                if (cryptPublicKeyFileName.getString().equals(s)) color = COLOR_WHITE;
+              }
+              catch (NumberFormatException exception)
+              {
+              }
+              widget.setBackground(color);
+            }
+          });
+          widgetCryptPublicKeyFileName.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              Text widget = (Text)selectionEvent.widget;
+              String string = widget.getText();
+              cryptPublicKeyFileName.set(string);
+              BARServer.set(selectedJobId,"crypt-public-key",string);
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+throw new Error("NYI");
+            }
+          });
+          widgetCryptPublicKeyFileName.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Text widget = (Text)focusEvent.widget;
+              String string = widget.getText();
+              cryptPublicKeyFileName.set(string);
+              BARServer.set(selectedJobId,"crypt-public-key",string);
+            }
+          });
+          Widgets.addModifyListener(new WidgetListener(widgetCryptPublicKeyFileName,cryptPublicKeyFileName));
+
+          widgetCryptPublicKeyFileNameSelect = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
+          Widgets.layout(widgetCryptPublicKeyFileNameSelect,0,3,TableLayoutData.DEFAULT);
+          widgetCryptPublicKeyFileNameSelect.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
-               cryptType.set("asymmetric");
-               BARServer.set(selectedJobId,"crypt-type","asymmetric");
+              String fileName = Dialogs.fileSave(shell,
+                                                 "Select public key file",
+                                                 cryptPublicKeyFileName.getString(),
+                                                 new String[]{"Public key","*.public",
+                                                              "All files","*",
+                                                             }
+                                                );
+              if (fileName != null)
+              {
+                cryptPublicKeyFileName.set(fileName);
+                BARServer.set(selectedJobId,"crypt-public-key",fileName);
+              }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-            }
-          });
-          Widgets.addModifyListener(new WidgetListener(button,cryptType)
-          {
-            public void modified(Control control, BARVariable cryptType)
-            {
-              ((Button)control).setSelection(cryptType.equals("asymmetric"));
             }
           });
         }
 
         // archive type
         label = Widgets.newLabel(tab,"Mode:");
-        Widgets.layout(label,3,0,TableLayoutData.W);
+        Widgets.layout(label,4,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab,SWT.NONE);
-        Widgets.layout(composite,3,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+        Widgets.layout(composite,4,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
         {
           button = Widgets.newRadio(composite,null,"normal");
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -2743,9 +2831,9 @@ throw new Error("NYI");
 
         // file name
         label = Widgets.newLabel(tab,"File name:");
-        Widgets.layout(label,4,0,TableLayoutData.W);
+        Widgets.layout(label,5,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab,SWT.NONE);
-        Widgets.layout(composite,4,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+        Widgets.layout(composite,5,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
         {
           text = Widgets.newText(composite,null);
           Widgets.layout(text,0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
@@ -2804,6 +2892,7 @@ throw new Error("NYI");
               if (selectedJobId != 0)
               {
                 storageFileNameEdit();
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2814,9 +2903,9 @@ throw new Error("NYI");
 
         // destination
         label = Widgets.newLabel(tab,"Destination:");
-        Widgets.layout(label,5,0,TableLayoutData.W);
+        Widgets.layout(label,6,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab,SWT.NONE);
-        Widgets.layout(composite,5,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+        Widgets.layout(composite,6,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
         {
           button = Widgets.newRadio(composite,null,"File system");
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -2959,7 +3048,7 @@ throw new Error("NYI");
 
         // destination file system
         composite = Widgets.newComposite(tab,SWT.BORDER);
-        Widgets.layout(composite,6,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
+        Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, BARVariable variable)
@@ -2990,7 +3079,7 @@ throw new Error("NYI");
 
         // destiniation ftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
-        Widgets.layout(composite,6,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
+        Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, BARVariable variable)
@@ -3167,7 +3256,7 @@ throw new Error("NYI");
 
         // destination scp/sftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
-        Widgets.layout(composite,6,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
+        Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, BARVariable variable)
@@ -3448,7 +3537,7 @@ throw new Error("NYI");
 
         // destination dvd
         composite = Widgets.newComposite(tab,SWT.BORDER);
-        Widgets.layout(composite,6,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
+        Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, BARVariable variable)
@@ -3617,7 +3706,7 @@ throw new Error("NYI");
 
         // destination device 
         composite = Widgets.newComposite(tab,SWT.BORDER);
-        Widgets.layout(composite,6,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
+        Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, BARVariable variable)
@@ -4237,7 +4326,7 @@ throw new Error("NYI");
            <archivePartSize>
            <compressAlgorithm>
            <cryptAlgorithm>
-           <cryptTyp>
+           <cryptType>
            <lastExecutedDateTime>
            <estimatedRestTime>
         */
@@ -4984,15 +5073,14 @@ throw new Error("NYI");
           }
           public void dragOver(DropTargetEvent dropTargetEvent)
           {
-            Point point = display.map(shell,widgetFileName,dropTargetEvent.x,dropTargetEvent.y);
+            Point point = display.map(null,widgetFileName,dropTargetEvent.x,dropTargetEvent.y);
             setHighlight(point);
           }
           public void drop(DropTargetEvent dropTargetEvent)
           {
             if (dropTargetEvent.data != null)
             {
-//System.err.println("BARControl.java"+", "+6128+": "+dropTargetEvent+" "+dropTargetEvent.item+" "+dropTargetEvent.x+" "+dropTargetEvent.y);
-              Point point = display.map(shell,widgetFileName,dropTargetEvent.x,dropTargetEvent.y);
+              Point point = display.map(null,widgetFileName,dropTargetEvent.x,dropTargetEvent.y);
               synchronized(storageNamePartList)
               {
                 // find part to replace
@@ -5284,8 +5372,14 @@ throw new Error("NYI");
             storageNamePartList.add(index+1,new StorageNamePart(string));
             storageNamePartList.add(index+2,new StorageNamePart(null));
           }
-          redrawFlag = true;
         }
+        else
+        {
+          // add
+          storageNamePartList.add(new StorageNamePart(string));
+          storageNamePartList.add(new StorageNamePart(null));
+        }
+        redrawFlag = true;
       }
 
       if (redrawFlag)
@@ -5528,7 +5622,7 @@ void storageFileNameEdit()
     final StorageFileNameEditor storageFileNameEditor;
     final Button                widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE);
     storageFileNameEditor = new StorageFileNameEditor(composite,storageFileName.getString());
 
     // buttons
@@ -5937,6 +6031,7 @@ throw new Error("NYI");
       compressAlgorithm.set(BARServer.getString(selectedJobId,"compress-algorithm"));
       cryptAlgorithm.set(BARServer.getString(selectedJobId,"crypt-algorithm"));
       cryptType.set(BARServer.getString(selectedJobId,"crypt-type"));
+      cryptPublicKeyFileName.set(BARServer.getString(selectedJobId,"crypt-public-key"));
       incrementalListFileName.set(BARServer.getString(selectedJobId,"incremental-list-file"));
       overwriteArchiveFiles.set(BARServer.getBoolean(selectedJobId,"overwrite-archive-files"));
       sshPublicKeyFileName.set(BARServer.getString(selectedJobId,"ssh-public-key"));
