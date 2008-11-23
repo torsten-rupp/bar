@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1247,29 +1247,32 @@ void vlogMessage(ulong logType, const char *prefix, const char *text, va_list ar
 
   assert(text != NULL);
 
-  if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
+  if ((tmpLogFile != NULL) || (logFile != NULL))
   {
-    dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),NULL);
-
-    if (tmpLogFile != NULL)
+    if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
     {
-      /* append to temporary log file */
-      fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
-      if (prefix != NULL) fprintf(tmpLogFile,prefix);
-      vfprintf(tmpLogFile,text,arguments);
-      fprintf(tmpLogFile,"\n");
-    }
+      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),NULL);
 
-    if (logFile != NULL)
-    {
-      /* append to log file */
-      fprintf(logFile,"%s> ",String_cString(dateTime));
-      if (prefix != NULL) fprintf(logFile,prefix);
-      vfprintf(logFile,text,arguments);
-      fprintf(logFile,"\n");
-    }
+      if (tmpLogFile != NULL)
+      {
+        /* append to temporary log file */
+        fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
+        if (prefix != NULL) fprintf(tmpLogFile,prefix);
+        vfprintf(tmpLogFile,text,arguments);
+        fprintf(tmpLogFile,"\n");
+      }
 
-    String_delete(dateTime);
+      if (logFile != NULL)
+      {
+        /* append to log file */
+        fprintf(logFile,"%s> ",String_cString(dateTime));
+        if (prefix != NULL) fprintf(logFile,prefix);
+        vfprintf(logFile,text,arguments);
+        fprintf(logFile,"\n");
+      }
+
+      String_delete(dateTime);
+    }
   }
 }
 
@@ -1348,7 +1351,7 @@ void printError(const char *text, ...)
   String_vformat(line,text,arguments);
   va_end(arguments);
 
-  /* output */
+  /* output console */
   output(stderr,TRUE,line);
 
   String_delete(line);

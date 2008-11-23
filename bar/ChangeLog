@@ -1,6 +1,24 @@
-2008-10-11 0.09
-  * implemented a Java frontend! This replaces the TclTk frontend - please enjoy!
-  * fixed bug in server password authorization: password was not checked until end
+2008-11-22 0.09b
+  * fixed drag+drop in archive name editor
+  * added crypt public key field in storage tab
+  * addec CRC to public/private-key to avoid SigSegV in gcrypt-library
+    when key is invalid. Sorry this also mean the key data format
+    changed, thus you have to generate a new public/private key pair.
+    Note: you cannot open old archives with the new keys!
+
+2008-11-21 0.09a
+  * small fixes in make files
+  * fixes archive name generator: do not add part number of splitting
+    of archive is not enabled
+  * passwords can now also be read from a non-terminal input, e. g.
+    a redirected file
+  * fixed test
+
+2008-11-18 0.09
+  * implemented a Java frontend! This replaces the TclTk frontend -
+    please enjoy!
+  * fixed bug in server password authorization: password was not
+    checked until end
 
 2008-09-23 0.08a
   * fixed double usage of va_args variable
@@ -9,7 +27,8 @@
 
 2008-09-08 0.08
   * added asymmetric encryption with public-key
-  * improved estimation of files/s, bytes/s, stored bytes/s and rest time
+  * improved estimation of files/s, bytes/s, stored bytes/s and rest
+    time
   * fixed input of password via SSH_ASKPASS
   * fixed exitcode on create archive
 
@@ -100,7 +119,8 @@
   * fixed messages printed on console
   * replaced --enable-static-link by --enable-dynamic-link in
     configure and made static linkage to the default
-  * added store/restore of special devices (character, block, fifo, socket)
+  * added store/restore of special devices (character, block, fifo,
+    socket)
   * fixed some small problems in restore
   * by the way: by accident BAR got his crucial test! I crashed
     my system partition and I could restore it with BAR!

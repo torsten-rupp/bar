@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/crypt.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -18,6 +18,7 @@
 #ifdef HAVE_GCRYPT
   #include <gcrypt.h>
 #endif /* HAVE_GCRYPT */
+#include <zlib.h>
 #include <netinet/in.h>
 #include <errno.h>
 #include <assert.h>
@@ -38,7 +39,7 @@
 
 /***************************** Constants *******************************/
 
-#define MAX_KEY_SIZE 2048                 // max. size of a key in bits
+#define MAX_KEY_SIZE 2048               // max. size of a key in bits
 
 #define BLOCK_LENGTH_CRYPT_NONE 4       // block size if no encryption
 
@@ -67,8 +68,9 @@ LOCAL const struct { const char *name; CryptAlgorithms cryptAlgorithm; } CRYPT_A
 
 typedef struct
 {
-  uint dataLength;
-  byte data[0];
+  uint32 crc;
+  uint   dataLength;
+  byte   data[0];
 } FileCryptKey;
 
 /***************************** Variables *******************************/
@@ -153,12 +155,20 @@ LOCAL String base64Encode(String s, const byte *data, uint length)
 *          maxLength - max. length of data
 *          s         - base64 string
 * Output : -
-* Return : length of decoded data
+* Return : length of decoded data or -1 on error
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint base64Decode(byte *data, uint maxLength, const String s)
+LOCAL int base64Decode(byte *data, uint maxLength, const String s)
 {
+  #define VALID_BASE64_CHAR(ch) (   (((ch) >= 'A') && ((ch) <= 'Z')) \
+                                 || (((ch) >= 'a') && ((ch) <= 'z')) \
+                                 || (((ch) >= '0') && ((ch) <= '9')) \
+                                 || ((ch) == '+') \
+                                 || ((ch) == '/') \
+                                 || ((ch) == '=') \
+                                )
+
   const byte BASE64_DECODING_TABLE[] =
   {
     0,0,0,0,0,0,0,0,
@@ -197,6 +207,7 @@ LOCAL uint base64Decode(byte *data, uint maxLength, const String s)
 
   uint length;
   uint z;
+  char x0,x1,x2,x3;
   uint i0,i1,i2,i3;
   char b0,b1,b2;
 
@@ -204,10 +215,15 @@ LOCAL uint base64Decode(byte *data, uint maxLength, const String s)
   z = 0;
   while (z < String_length(s))
   {
-    i0 = ((z+0) < String_length(s))?BASE64_DECODING_TABLE[(byte)String_index(s,z+0)]:0;
-    i1 = ((z+1) < String_length(s))?BASE64_DECODING_TABLE[(byte)String_index(s,z+1)]:0;
-    i2 = ((z+2) < String_length(s))?BASE64_DECODING_TABLE[(byte)String_index(s,z+2)]:0;
-    i3 = ((z+3) < String_length(s))?BASE64_DECODING_TABLE[(byte)String_index(s,z+3)]:0;
+    x0 = String_index(s,z+0); if (!VALID_BASE64_CHAR(x0)) return -1;
+    x1 = String_index(s,z+1); if (!VALID_BASE64_CHAR(x1)) return -1;
+    x2 = String_index(s,z+2); if (!VALID_BASE64_CHAR(x2)) return -1;
+    x3 = String_index(s,z+3); if (!VALID_BASE64_CHAR(x3)) return -1;
+
+    i0 = ((z+0) < String_length(s))?BASE64_DECODING_TABLE[(byte)x0]:0;
+    i1 = ((z+1) < String_length(s))?BASE64_DECODING_TABLE[(byte)x1]:0;
+    i2 = ((z+2) < String_length(s))?BASE64_DECODING_TABLE[(byte)x2]:0;
+    i3 = ((z+3) < String_length(s))?BASE64_DECODING_TABLE[(byte)x3]:0;
 
     b0 = (char)((i0 << 2) | ((i1 & 0x30) >> 4));
     b1 = (char)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
@@ -221,6 +237,8 @@ LOCAL uint base64Decode(byte *data, uint maxLength, const String s)
   }
 
   return length;
+
+  #undef VALID_BASE64_CHAR
 }
 #endif /* HAVE_GCRYPT */
 
@@ -902,14 +920,13 @@ LOCAL Errors getKeyData(const CryptKey *cryptKey,
                        )
 {
   #ifdef HAVE_GCRYPT
-    uint        blockLength;
-    gcry_sexp_t sexpToken;
-    char        *data;
-    size_t      dataLength;
+    uint         blockLength;
+    gcry_sexp_t  sexpToken;
+    size_t       dataLength;
     uint         fileCryptKeyLength;
     FileCryptKey *fileCryptKey;
-    CryptInfo   cryptInfo;
-    Errors      error;
+    CryptInfo    cryptInfo;
+    Errors       error;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
@@ -946,18 +963,17 @@ LOCAL Errors getKeyData(const CryptKey *cryptKey,
     }
     memset(fileCryptKey,0,fileCryptKeyLength);
     fileCryptKey->dataLength = htons(dataLength);
-    data = (char*)fileCryptKey->data;
 
     /* get key data */
-    gcry_sexp_sprint(sexpToken,GCRYSEXP_FMT_ADVANCED,data,dataLength);
-  #if 0
-  {
-  int z;
-  byte *p=data;
-  printf("raw data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
-  p++;
-  }
-  #endif /* 0 */
+    gcry_sexp_sprint(sexpToken,GCRYSEXP_FMT_ADVANCED,(char*)fileCryptKey->data,dataLength);
+    #if 0
+    {
+    int z;
+    byte *p=fileCryptKey->data;
+    printf("raw data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
+    p++;
+    }
+    #endif /* 0 */
 
     /* encrypt key */
     if (password != NULL)
@@ -972,7 +988,7 @@ LOCAL Errors getKeyData(const CryptKey *cryptKey,
       }
 
       /* encrypt */
-      error = Crypt_encrypt(&cryptInfo,data,ALIGN(dataLength,blockLength));
+      error = Crypt_encrypt(&cryptInfo,(char*)fileCryptKey->data,ALIGN(dataLength,blockLength));
       if (error != ERROR_NONE)
       {
         Crypt_done(&cryptInfo);
@@ -984,14 +1000,17 @@ LOCAL Errors getKeyData(const CryptKey *cryptKey,
       /* done crypt */
       Crypt_done(&cryptInfo);
     }
-  #if 0
-  {
-  int z;
-  byte *p=data;
-  printf("cryp@t data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
-  p++;
-  }
-  #endif /* 0 */
+    #if 0
+    {
+    int z;
+    byte *p=fileCryptKey->data;
+    printf("cryp@t data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
+    p++;
+    }
+    #endif /* 0 */
+
+    /* calculate CRC */
+    fileCryptKey->crc = htonl(crc32(crc32(0,Z_NULL,0),fileCryptKey->data,dataLength));
 
     /* encode base64 */
     String_clear(string);
@@ -1033,6 +1052,7 @@ LOCAL Errors setKeyData(CryptKey       *cryptKey,
     FileCryptKey *fileCryptKey;
     char         *data;
     size_t       dataLength;
+    uint32       crc;
     CryptInfo    cryptInfo;
     Errors       error;
     gcry_error_t gcryptError;
@@ -1060,20 +1080,30 @@ LOCAL Errors setKeyData(CryptKey       *cryptKey,
     data = (char*)fileCryptKey->data;
 
     /* decode base64 */
-    base64Decode((byte*)fileCryptKey,fileCryptKeyLength,string);
+    if (base64Decode((byte*)fileCryptKey,fileCryptKeyLength,string) == -1)
+    {
+      return ERROR_INVALID_KEY;
+    }
   //fprintf(stderr,"%s,%d: datalength=%d fileCryptKeyLength=%d\n",__FILE__,__LINE__,ntohs(fileCryptKey->dataLength),fileCryptKeyLength);
 
     /* get data length */
     dataLength = ntohs(fileCryptKey->dataLength);
 
-  #if 0
-  {
-  int z;
-  byte *p=data;
-  printf("cry data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
-  p++;
-  }
-  #endif /* 0 */
+    /* check key CRC */
+    crc = crc32(crc32(0,Z_NULL,0),fileCryptKey->data,dataLength);
+    if (crc != ntohl(fileCryptKey->crc))
+    {
+      return ERROR_INVALID_KEY;
+    }
+
+    #if 0
+    {
+    int z;
+    byte *p=data;
+    printf("cry data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
+    p++;
+    }
+    #endif /* 0 */
 
     /* decrypt key */
     if (password != NULL)
@@ -1098,18 +1128,21 @@ LOCAL Errors setKeyData(CryptKey       *cryptKey,
       /* done crypt */
       Crypt_done(&cryptInfo);
     }
-  #if 0
-  {
-  int z;
-  byte *p=data;
-  printf("decryp data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
-  p++;
-  }
-  #endif /* 0 */
+    #if 0
+    {
+    int z;
+    byte *p=data;
+    printf("decryp data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
+    p++;
+    }
+    #endif /* 0 */
 
     /* create S-expression with key */
-  assert(cryptKey->key==NULL);
-    if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
+    if (cryptKey->key != NULL)
+    {
+      gcry_sexp_release(cryptKey->key);
+      cryptKey->key = NULL;
+    }
     gcryptError = gcry_sexp_new(&cryptKey->key,data,dataLength,1);
     if (gcryptError != 0)
     {
