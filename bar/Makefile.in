@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.39 $
+# $Revision: 1.40 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -45,7 +45,7 @@ TAR        = tar
 #------------------------ specific variables/settings ------------------------
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 09a
+VERSION_MINOR = 09b
 
 CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9

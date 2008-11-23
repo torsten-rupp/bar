@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -78,6 +78,7 @@ SOURCES        = src/BARControl.java \
                  src/Widgets.java \
                  src/Dialogs.java \
                  src/StringParser.java \
+                 src/Dprintf.java \
 
 OTHER_SOURCES  = jar.txt \
 
@@ -104,6 +105,7 @@ clean:
 
 distclean: clean
 	$(RMF) Makefile
+	$(RMF) src/Config.java
 	$(RMRF) tmp
 
 .PHONE: jars

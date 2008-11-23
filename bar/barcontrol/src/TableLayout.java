@@ -161,6 +161,7 @@ public class TableLayout extends Layout
     if (maxHeight != SWT.DEFAULT) height = Math.min(height,maxHeight);
 if (debug) System.err.println("computeSize: composite="+composite+" width="+width+" height="+height+" #children="+children.length);
 if (debug) for (int i=0;i<children.length;i++) System.err.println("  "+children[i]+" "+children[i].computeSize(SWT.DEFAULT,SWT.DEFAULT,true));
+//Dprintf.dprintf("compu com=%s w=%d h=%d\n",composite,marginLeft+width+marginRight,marginTop+height+marginBottom);
     return new Point(marginLeft+width+marginRight,marginTop+height+marginBottom);
   }
 
