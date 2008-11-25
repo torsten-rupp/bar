@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -223,7 +223,10 @@ class BARServer
         throw new CommunicationError("No result from server");
       }
       String data[] = result.split(" ",4);
-      assert data.length >= 3;
+      if (data.length < 3)
+      {
+        throw new CommunicationError("Invalid response from server");
+      }
       if (   (Integer.parseInt(data[0]) != commandId)
           || (Integer.parseInt(data[1]) != 1)
           || (Integer.parseInt(data[2]) != 0)
@@ -240,13 +243,19 @@ class BARServer
     // get version
     try
     {
-      String line;
+      String result;
 
       output.write("VERSION"); output.write('\n'); output.flush();
-      line = input.readLine();
-      assert line != null;
-      String data[] = line.split(" ",4);
-      assert data.length >= 3;
+      result = input.readLine();
+      if (result == null)
+      {
+        throw new CommunicationError("No result from server");
+      }
+      String data[] = result.split(" ",4);
+      if (data.length < 3)
+      {
+        throw new CommunicationError("Invalid response from server");
+      }
       if (   (Integer.parseInt(data[1]) != 1)
           || (Integer.parseInt(data[2]) != 0)
          )
