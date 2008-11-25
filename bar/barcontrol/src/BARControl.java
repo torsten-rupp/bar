@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -12,6 +12,8 @@
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileReader;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -6071,16 +6073,67 @@ public class BARControl
   {
     String serverName;
     String password;
+    int    port;
+    int    tlsPort;
 
-    LoginData(String serverName)
+    LoginData(String serverName, int port, int tlsPort)
     {
       this.serverName = serverName;
       this.password   = null;
+      this.port       = port;
+      this.tlsPort    = tlsPort;
+
+      /* read $HOME/.bar/.barcontrol.cfg */
+      File barControlConfig = new File(System.getProperty("user.home")+File.separator+".bar"+File.separator+"barcontrol.cfg");
+      if (barControlConfig.exists())
+      {
+        BufferedReader input = null;
+        try
+        {
+          input = new BufferedReader(new FileReader(barControlConfig));
+          String line;
+          while ((line = input.readLine()) != null)
+          {
+            Object[] data = new Object[1];
+
+            if      (StringParser.parse(line,"server = %S",data,StringParser.QUOTE_CHARS))
+            {
+              serverName = (String)data[0];
+            }
+            else if (StringParser.parse(line,"server-password = %S",data,StringParser.QUOTE_CHARS))
+            {
+              password = (String)data[0];
+            }
+            else if (StringParser.parse(line,"server-port = %d",data,StringParser.QUOTE_CHARS))
+            {
+              port = (Integer)data[0];
+            }
+            else if (StringParser.parse(line,"server-tls-port = %d",data,StringParser.QUOTE_CHARS))
+            {
+              tlsPort = (Integer)data[0];
+            }
+//else {  System.err.println("BARControl.java"+", "+6090+": "+line); }
+          }
+          input.close();
+        }
+        catch (IOException exception)
+        {
+        }
+        finally
+        {
+          try
+          {
+            if (input != null) input.close();
+          }
+          catch (IOException exception)
+          {
+          }
+        }
+      }
     }
   }
 
   // --------------------------- constants --------------------------------
-
   final static String DEFAULT_SERVER_NAME     = "localhost";
   final static int    DEFAULT_SERVER_PORT     = 38523;
   final static int    DEFAULT_SERVER_TLS_PORT = 38524;
@@ -6100,13 +6153,34 @@ public class BARControl
 
   // ---------------------------- methods ---------------------------------
 
+  /** print program usage
+   * @param 
+   * @return 
+   */
+  private void printUsage()
+  {
+    System.out.println("barcontrol usage: <options> --");
+    System.out.println("");
+    System.out.println("Options: -p|--port=<n>  - server port");
+    System.out.println("         --tls-port=<n> - TLS server port");
+    System.out.println("         -h|--help      - print this help");
+  }
+
+  /** parse arguments
+   * @param args arguments
+   */
   private void parseArguments(String[] args)
   {
     // parse arguments
     int z = 0;
     while (z < args.length)
     {
-      if      (args[z].startsWith("-p=") || args[z].startsWith("--port="))
+      if      (args[z].startsWith("-h") || args[z].startsWith("--help"))
+      {
+        printUsage();
+        System.exit(0);
+      }
+      else if (args[z].startsWith("-p=") || args[z].startsWith("--port="))
       {
         String value = args[z].substring(args[z].indexOf('=')+1);
         try
@@ -6179,13 +6253,6 @@ public class BARControl
         z += 1;
       }
     }
-
-    // check arguments
-    if ((serverTLSPort == 0) && (serverPort == 0))
-    {
-      throw new Error("Cannot connect to server. No server ports specified!");
-    }
-    /// ??? host name scheck
   }
 
   /** server/password dialog
@@ -6224,6 +6291,8 @@ public class BARControl
       label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
 
       widgetPassword = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+      widgetPassword.setText(loginData.password);
+//      widgetPassword.setSelection(0,loginData.password.length());
       widgetPassword.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE|TableLayoutData.EXPAND_X));
     }
 
@@ -6456,17 +6525,25 @@ public class BARControl
       display = new Display();
 
       // connect to server
-      LoginData loginData = new LoginData(serverName);
+      LoginData loginData = new LoginData(serverName,serverPort,serverTLSPort);
       boolean connectOkFlag = false;
       do
       {
+        // get login data
         if (!getLoginData(loginData))
         {
           System.exit(0);
         }
+        if ((loginData.port == 0) && (loginData.tlsPort == 0))
+        {
+          throw new Error("Cannot connect to server. No server ports specified!");
+        }
+/// ??? host name scheck
+
+        // connect to server
         try
         {
-          BARServer.connect(loginData.serverName,serverPort,serverTLSPort,loginData.password);
+          BARServer.connect(loginData.serverName,loginData.port,loginData.tlsPort,loginData.password);
           connectOkFlag = true;
         }
         catch (ConnectionError error)
@@ -6478,6 +6555,7 @@ public class BARControl
         }
       }
       while (!connectOkFlag);
+
 
       // open main window
       createWindow();
@@ -6510,7 +6588,7 @@ public class BARControl
     }
     catch (Error error)
     {
-      System.err.println("ERROR: "+error.getMessage()+error);
+      System.err.println("ERROR: "+error.getMessage());
     }
   }
 
