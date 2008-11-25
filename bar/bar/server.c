@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -352,7 +352,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
 /***************************** Variables *******************************/
 LOCAL const Password   *serverPassword;
-LOCAL const char       *serverJobDirectory;
+LOCAL const char       *serverJobsDirectory;
 LOCAL const JobOptions *serverDefaultJobOptions;
 LOCAL JobList          jobList;
 LOCAL Thread           jobThread;
@@ -832,13 +832,13 @@ LOCAL bool readJobFile(JobNode *jobNode)
 /***********************************************************************\
 * Name   : rereadJobFiles
 * Purpose: re-read job files
-* Input  : jobDirectory - job directory
+* Input  : jobsDirectory - jobs directory
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors rereadJobFiles(const char *jobDirectory)
+LOCAL Errors rereadJobFiles(const char *jobsDirectory)
 {
   Errors          error;
   DirectoryHandle directoryHandle;
@@ -846,13 +846,13 @@ LOCAL Errors rereadJobFiles(const char *jobDirectory)
   String          baseName;
   JobNode         *jobNode,*deleteJobNode;
 
-  assert(jobDirectory != NULL);
+  assert(jobsDirectory != NULL);
 
   /* init variables */
   fileName = File_newFileName();
 
   /* add new/update jobs */
-  File_setFileNameCString(fileName,jobDirectory);
+  File_setFileNameCString(fileName,jobsDirectory);
   error = File_openDirectory(&directoryHandle,fileName);
   if (error != ERROR_NONE)
   {
@@ -908,7 +908,7 @@ LOCAL Errors rereadJobFiles(const char *jobDirectory)
   {
     if (jobNode->state == JOB_STATE_NONE)
     {
-      File_setFileNameCString(fileName,jobDirectory);
+      File_setFileNameCString(fileName,jobsDirectory);
       File_appendFileName(fileName,jobNode->name);
       if (File_isFileReadable(fileName))
       {
@@ -1443,7 +1443,7 @@ LOCAL void schedulerThreadEntry(void)
     Semaphore_unlock(&jobList.lock);
 
     /* re-read config files */
-    rereadJobFiles(serverJobDirectory);
+    rereadJobFiles(serverJobsDirectory);
 
     /* trigger jobs */
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
@@ -2844,7 +2844,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
     sendResult(clientInfo,id,TRUE,1,"expected name");
     return;
   }
-  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobDirectory),arguments[0]);
+  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),arguments[0]);
   if (File_exists(fileName))
   {
     sendResult(clientInfo,id,TRUE,1,"job '%s' already exists",String_cString(arguments[0]));
@@ -2929,7 +2929,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
   }
 
   /* rename job */
-  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobDirectory),name);
+  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
   error = File_rename(jobNode->fileName,fileName);
   if (error != ERROR_NONE)
   {
@@ -2941,7 +2941,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
   File_deleteFileName(fileName);
 
   /* store new file name */
-  File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobDirectory),name);
+  File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobsDirectory),name);
   String_set(jobNode->name,name);
 
   /* unlock */
@@ -3920,7 +3920,7 @@ Errors Server_run(uint             port,
                   const char       *certFileName,
                   const char       *keyFileName,
                   const Password   *password,
-                  const char       *jobDirectory,
+                  const char       *jobsDirectory,
                   const JobOptions *defaultJobOptions
                  )
 {
@@ -3937,11 +3937,14 @@ Errors Server_run(uint             port,
   ulong              z;
   ClientNode         *deleteClientNode;
 
-  assert((port != 0) || (tlsPort != 0));
+  if (Password_empty(password))
+  {
+    printWarning("No server password set - start without any password!\n",caFileName);
+  }
 
   /* initialise variables */
   serverPassword          = password;
-  serverJobDirectory      = jobDirectory;
+  serverJobsDirectory     = jobsDirectory;
   serverDefaultJobOptions = defaultJobOptions;
   List_init(&jobList);
   List_init(&clientList);
@@ -3966,45 +3969,65 @@ Errors Server_run(uint             port,
                  port,
                  getErrorText(error)
                 );
-      return FALSE;
+      return error;
     }
     printInfo(1,"Started server on port %d\n",port);
     serverFlag = TRUE;
   }
-  if (   (tlsPort != 0)
-      && File_existsCString(caFileName)
-      && File_existsCString(certFileName)
-      && File_existsCString(certFileName)
-     )
+  if (tlsPort != 0)
   {
-    #ifdef HAVE_GNU_TLS
-      error = Network_initServer(&serverTLSSocketHandle,
-                                 tlsPort,
-                                 SERVER_TYPE_TLS,
-                                 caFileName,
-                                 certFileName,
-                                 keyFileName
-                                );
-      if (error != ERROR_NONE)
-      {
-        printError("Cannot initialize TLS/SSL server at port %u (error: %s)!\n",
-                   tlsPort,
-                   getErrorText(error)
-                  );
-        if (port != 0) Network_doneServer(&serverSocketHandle);
-        return FALSE;
-      }
-      printInfo(1,"Started TLS/SSL server on port %u\n",tlsPort);
-      serverTLSFlag = TRUE;
-  #else /* not HAVE_GNU_TLS */
-    UNUSED_VARIABLE(caFileName);
-    UNUSED_VARIABLE(certFileName);
-    UNUSED_VARIABLE(keyFileName);
+    if (   File_existsCString(caFileName)
+        && File_existsCString(certFileName)
+        && File_existsCString(keyFileName)
+       )
+    {
+      #ifdef HAVE_GNU_TLS
+        error = Network_initServer(&serverTLSSocketHandle,
+                                   tlsPort,
+                                   SERVER_TYPE_TLS,
+                                   caFileName,
+                                   certFileName,
+                                   keyFileName
+                                  );
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot initialize TLS/SSL server at port %u (error: %s)!\n",
+                     tlsPort,
+                     getErrorText(error)
+                    );
+          if (port != 0) Network_doneServer(&serverSocketHandle);
+          return FALSE;
+        }
+        printInfo(1,"Started TLS/SSL server on port %u\n",tlsPort);
+        serverTLSFlag = TRUE;
+      #else /* not HAVE_GNU_TLS */
+        UNUSED_VARIABLE(caFileName);
+        UNUSED_VARIABLE(certFileName);
+        UNUSED_VARIABLE(keyFileName);
 
-    printError("TLS/SSL server is not supported!\n");
-    Network_doneServer(&serverSocketHandle);
-    return ERROR_FUNCTION_NOT_SUPPORTED;
-  #endif /* HAVE_GNU_TLS */
+        printError("TLS/SSL server is not supported!\n");
+        Network_doneServer(&serverSocketHandle);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_GNU_TLS */
+    }
+    else
+    {
+      if (!File_existsCString(caFileName)) printWarning("No certificate authority file '%s' (bar-ca.pem file) - TLS server not started.\n",caFileName);
+      if (!File_existsCString(certFileName)) printWarning("No certificate file '%s' (bar-server-cert.pem file) - TLS server not started.\n",certFileName);
+      if (!File_existsCString(keyFileName)) printWarning("No key file '%s' (bar-server-key.pem file) - TLS server not started.\n",keyFileName);
+    }
+  }
+  if (!serverFlag && !serverTLSFlag)
+  {
+    if ((port == 0) && (tlsPort == 0))
+    {
+      printError("Cannot start any server (error: no port numbers specified)!\n");
+    }
+    else
+    {
+      printError("Cannot start any server!\n");
+    }
+    return ERROR_INVALID_ARGUMENT;
   }
 
   /* start threads */

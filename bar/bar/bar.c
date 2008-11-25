@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -70,7 +70,7 @@
   #define DEFAULT_TLS_SERVER_CERTIFICATE_FILE ""
   #define DEFAULT_TLS_SERVER_KEY_FILE         ""
 #endif /* HAVE_GNU_TLS */
-#define DEFAULT_JOB_DIRECTORY          CONFIG_DIR "/jobs"
+#define DEFAULT_JOBS_DIRECTORY         CONFIG_DIR "/jobs"
 #define DEFAULT_DEVICE_NAME            "/dev/dvd"
 
 #define DEFAULT_REMOTE_BAR_EXECUTABLE "/usr/local/bin/bar"
@@ -130,7 +130,7 @@ LOCAL const char    *serverCAFileName;
 LOCAL const char    *serverCertFileName;
 LOCAL const char    *serverKeyFileName;
 LOCAL Password      *serverPassword;
-LOCAL const char    *serverJobDirectory;
+LOCAL const char    *serverJobsDirectory;
 
 LOCAL ulong         logTypes;
 LOCAL const char    *logFileName;
@@ -306,7 +306,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("server-cert-file",             0,  1,0,serverCertFileName,                        DEFAULT_TLS_SERVER_CERTIFICATE_FILE,                               "TLS (SSL) server certificate file","file name"                            ),
   CMD_OPTION_STRING       ("server-key-file",              0,  1,0,serverKeyFileName,                         DEFAULT_TLS_SERVER_KEY_FILE,                                       "TLS (SSL) server key file","file name"                                    ),
   CMD_OPTION_SPECIAL      ("server-password",              0,  1,0,&serverPassword,                           NULL,cmdOptionParsePassword,NULL,                                  "server password (use with care!)","password"                              ),
-  CMD_OPTION_STRING       ("job-directory",                0,  1,0,serverJobDirectory,                        DEFAULT_JOB_DIRECTORY,                                             "server job directory","path name"                                         ),
+  CMD_OPTION_STRING       ("server-jobs-directory",        0,  1,0,serverJobsDirectory,                       DEFAULT_JOBS_DIRECTORY,                                             "server job directory","path name"                                        ),
 
   CMD_OPTION_BOOLEAN      ("batch",                        0,  2,0,batchFlag,                                 FALSE,                                                             "run in batch mode"                                                        ),
   CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,0,&globalOptions.remoteBARExecutable,        DEFAULT_REMOTE_BAR_EXECUTABLE,cmdOptionParseString,NULL,           "remote BAR executable","file name"                                        ),
@@ -2218,23 +2218,15 @@ int main(int argc, const char *argv[])
   if      (daemonFlag)
   {
     /* daemon mode -> run server with netwerk */
-    if ((serverPort != 0) || (serverTLSPort != 0))
-    {
-      error = Server_run(serverPort,
-                         serverTLSPort,
-                         serverCAFileName,
-                         serverCertFileName,
-                         serverKeyFileName,
-                         serverPassword,
-                         serverJobDirectory,
-                         &jobOptions
-                        );
-    }
-    else
-    {
-      printError("No port number specified!\n");
-      error = ERROR_INVALID_ARGUMENT;
-    }
+    error = Server_run(serverPort,
+                       serverTLSPort,
+                       serverCAFileName,
+                       serverCertFileName,
+                       serverKeyFileName,
+                       serverPassword,
+                       serverJobsDirectory,
+                       &jobOptions
+                      );
   }
   else if (batchFlag)
   {
