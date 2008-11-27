@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -72,6 +72,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
@@ -377,6 +378,16 @@ class WidgetListener
         cachedText = text;
       }
     }
+    else if (control instanceof Spinner)
+    {
+      int n = 0;
+      switch (variable.getType())
+      {
+        case LONG:   n = (int)variable.getLong(); break; 
+        case DOUBLE: n = (int)variable.getDouble(); break; 
+      }
+      ((Spinner)control).setSelection(n);
+    }
     else if (control instanceof ProgressBar)
     {
       double value = 0;
@@ -389,7 +400,7 @@ class WidgetListener
     }
     else
     {
-      throw new Error("Unknown widget '"+control+"' in wiget listener!");
+      throw new InternalError("Unknown widget '"+control+"' in wiget listener!");
     }
   }
 
@@ -776,10 +787,8 @@ boolean xxx=false;
       {
         Table     widget    = (Table)selectionEvent.widget;
         TabStatus tabStatus = (TabStatus)widget.getData();
-
         selectedJobData = (JobData)selectionEvent.item.getData();
         if (tabJobs != null) tabJobs.selectJob(selectedJobData.name);
-
         widgetSelectedJob.setText("Selected '"+selectedJobData.name+"'");
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -792,7 +801,6 @@ boolean xxx=false;
       {
         TableColumn       tableColumn = (TableColumn)selectionEvent.widget;
         JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList,tableColumn);
-
         synchronized(jobList)
         {
           Widgets.sortTableColumn(widgetJobList,tableColumn,jobDataComparator);
@@ -1136,7 +1144,6 @@ boolean xxx=false;
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           jobStart();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1152,7 +1159,6 @@ boolean xxx=false;
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           jobAbort();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1167,7 +1173,6 @@ boolean xxx=false;
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           jobTogglePause();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1183,7 +1188,6 @@ boolean xxx=false;
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -1197,7 +1201,6 @@ boolean xxx=false;
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           shell.close();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1978,6 +1981,7 @@ class TabJobs
   BARVariable storageFileName         = new BARVariable("");
   BARVariable storageLoginName        = new BARVariable("");
   BARVariable storageHostName         = new BARVariable("");
+  BARVariable storageHostPort         = new BARVariable(0);
   BARVariable storageDeviceName       = new BARVariable("");
   BARVariable overwriteArchiveFiles   = new BARVariable(false);
   BARVariable sshPublicKeyFileName    = new BARVariable("");
@@ -2009,6 +2013,7 @@ class TabJobs
     TreeColumn  treeColumn;
     TreeItem    treeItem;
     Text        text;
+    Spinner     spinner;
     TableColumn tableColumn;
 
     // get shell, display
@@ -2053,8 +2058,7 @@ class TabJobs
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Combo widget = (Combo)selectionEvent.widget;
-
-          int index = widget.getSelectionIndex();
+          int   index  = widget.getSelectionIndex();
           if (index >= 0)
           {
             selectedJobName = widgetJobList.getItem(index);
@@ -2075,7 +2079,6 @@ class TabJobs
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           jobNew();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2090,7 +2093,6 @@ class TabJobs
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           if (selectedJobId > 0)
           {
             jobRename();
@@ -2108,7 +2110,6 @@ class TabJobs
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           if (selectedJobId > 0)
           {
             jobDelete();
@@ -2136,7 +2137,6 @@ class TabJobs
           {
             TreeColumn             treeColumn = (TreeColumn)selectionEvent.widget;
             FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
-
             synchronized(scheduleList)
             {
               Widgets.sortTreeColumn(widgetFileTree,treeColumn,fileTreeDataComparator);
@@ -2166,7 +2166,6 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
@@ -2195,7 +2194,6 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
@@ -2224,7 +2222,6 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
@@ -2353,9 +2350,8 @@ class TabJobs
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
+              Button  widget      = (Button)selectionEvent.widget;
               boolean checkedFlag = widget.getSelection();
-
               skipUnreadable.set(checkedFlag);
               BARServer.set(selectedJobId,"skip-unreadable",checkedFlag);
             }
@@ -2383,10 +2379,9 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
-               archivePartSizeFlag.set(false);
-               archivePartSize.set(0);
-               BARServer.set(selectedJobId,"archive-part-size",0);
+              archivePartSizeFlag.set(false);
+              archivePartSize.set(0);
+              BARServer.set(selectedJobId,"archive-part-size",0);
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2408,8 +2403,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
-               archivePartSizeFlag.set(true);
+              archivePartSizeFlag.set(true);
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2432,7 +2426,7 @@ class TabJobs
             public void modifyText(ModifyEvent modifyEvent)
             {
               Combo widget = (Combo)modifyEvent.widget;
-              Color color = COLOR_MODIFIED;
+              Color color  = COLOR_MODIFIED;
               try
               {
                 long n = Units.parseByteSize(widget.getText());
@@ -2448,8 +2442,8 @@ class TabJobs
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              Combo widget = (Combo)selectionEvent.widget;
-              String s = widget.getText();
+              Combo  widget = (Combo)selectionEvent.widget;
+              String s      = widget.getText();
               try
               {
                 long n = Units.parseByteSize(s);
@@ -2464,7 +2458,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Combo widget = (Combo)selectionEvent.widget;
-              long n = Units.parseByteSize(widget.getText());
+              long  n      = Units.parseByteSize(widget.getText());
               archivePartSize.set(n);
               BARServer.set(selectedJobId,"archive-part-size",n);
             }
@@ -2476,8 +2470,8 @@ class TabJobs
             }
             public void focusLost(FocusEvent focusEvent)
             {
-              Combo widget = (Combo)focusEvent.widget;
-              String s = widget.getText();
+              Combo  widget = (Combo)focusEvent.widget;
+              String s      = widget.getText();
               try
               {
                 long n = Units.parseByteSize(s);
@@ -2517,10 +2511,10 @@ throw new Error("NYI");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-               Combo widget = (Combo)selectionEvent.widget;
-               String s = widget.getText();
-               compressAlgorithm.set(s);
-               BARServer.set(selectedJobId,"compress-algorithm",s);
+              Combo  widget = (Combo)selectionEvent.widget;
+              String s      = widget.getText();
+              compressAlgorithm.set(s);
+              BARServer.set(selectedJobId,"compress-algorithm",s);
             }
           });
           Widgets.addModifyListener(new WidgetListener(combo,compressAlgorithm));
@@ -2543,10 +2537,10 @@ throw new Error("NYI");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-               Combo widget = (Combo)selectionEvent.widget;
-               String s = widget.getText();
-               cryptAlgorithm.set(s);
-               BARServer.set(selectedJobId,"crypt-algorithm",s);
+              Combo  widget = (Combo)selectionEvent.widget;
+              String s      = widget.getText();
+              cryptAlgorithm.set(s);
+              BARServer.set(selectedJobId,"crypt-algorithm",s);
             }
           });
           Widgets.addModifyListener(new WidgetListener(combo,cryptAlgorithm));
@@ -2562,7 +2556,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               Widgets.setEnabled(widgetCryptPublicKeyFileName,false);
               Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,false);
               cryptType.set("symmetric");
@@ -2589,7 +2582,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               Widgets.setEnabled(widgetCryptPublicKeyFileName,true);
               Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,true);
               cryptType.set("asymmetric");
@@ -2615,8 +2607,8 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text widget = (Text)modifyEvent.widget;
-              Color color = COLOR_MODIFIED;
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
               try
               {
                 String s = widget.getText();
@@ -2632,7 +2624,7 @@ throw new Error("NYI");
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              Text widget = (Text)selectionEvent.widget;
+              Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               cryptPublicKeyFileName.set(string);
               BARServer.set(selectedJobId,"crypt-public-key",string);
@@ -2649,7 +2641,7 @@ throw new Error("NYI");
             }
             public void focusLost(FocusEvent focusEvent)
             {
-              Text widget = (Text)focusEvent.widget;
+              Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
               cryptPublicKeyFileName.set(string);
               BARServer.set(selectedJobId,"crypt-public-key",string);
@@ -2663,7 +2655,7 @@ throw new Error("NYI");
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
+              Button widget   = (Button)selectionEvent.widget;
               String fileName = Dialogs.fileSave(shell,
                                                  "Select public key file",
                                                  cryptPublicKeyFileName.getString(),
@@ -2696,9 +2688,8 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
-               archiveType.set("normal");
-               BARServer.set(selectedJobId,"archive-type","normal");
+              archiveType.set("normal");
+              BARServer.set(selectedJobId,"archive-type","normal");
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2719,9 +2710,8 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
-               archiveType.set("full");
-               BARServer.set(selectedJobId,"archive-type","full");
+              archiveType.set("full");
+              BARServer.set(selectedJobId,"archive-type","full");
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2742,9 +2732,8 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
-               archiveType.set("incremental");
-               BARServer.set(selectedJobId,"archive-type","incremental");
+              archiveType.set("incremental");
+              BARServer.set(selectedJobId,"archive-type","incremental");
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2764,8 +2753,8 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text widget = (Text)modifyEvent.widget;
-              Color color = COLOR_MODIFIED;
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
               try
               {
                 String s = widget.getText();
@@ -2781,7 +2770,7 @@ throw new Error("NYI");
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              Text widget = (Text)selectionEvent.widget;
+              Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               incrementalListFileName.set(string);
               BARServer.set(selectedJobId,"incremental-list-file",string);
@@ -2798,7 +2787,7 @@ throw new Error("NYI");
             }
             public void focusLost(FocusEvent focusEvent)
             {
-              Text widget = (Text)focusEvent.widget;
+              Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
               incrementalListFileName.set(string);
               BARServer.set(selectedJobId,"incremental-list-file",string);
@@ -2812,7 +2801,7 @@ throw new Error("NYI");
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
+              Button widget   = (Button)selectionEvent.widget;
               String fileName = Dialogs.fileSave(shell,
                                                  "Select incremental file",
                                                  incrementalListFileName.getString(),
@@ -2843,8 +2832,8 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text widget = (Text)modifyEvent.widget;
-              Color color = COLOR_MODIFIED;
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
               try
               {
                 String s = widget.getText();
@@ -2890,7 +2879,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               if (selectedJobId != 0)
               {
                 storageFileNameEdit();
@@ -2916,7 +2904,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               storageType.set("filesystem");
               BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
@@ -2939,7 +2926,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               storageType.set("ftp");
               BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
@@ -2962,7 +2948,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               storageType.set("scp");
               BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
@@ -2985,7 +2970,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               storageType.set("sftp");
               BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
@@ -3008,7 +2992,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               storageType.set("dvd");
               BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
@@ -3031,7 +3014,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               storageType.set("device");
               BARServer.set(selectedJobId,"archive-name",getArchiveName());
             }
@@ -3066,9 +3048,8 @@ throw new Error("NYI");
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
+              Button  widget      = (Button)selectionEvent.widget;
               boolean checkedFlag = widget.getSelection();
-
               overwriteArchiveFiles.set(checkedFlag);
               BARServer.set(selectedJobId,"overwrite-archive-files",checkedFlag);
             }
@@ -3105,8 +3086,8 @@ throw new Error("NYI");
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text widget = (Text)modifyEvent.widget;
-                Color color = COLOR_MODIFIED;
+                Text  widget = (Text)modifyEvent.widget;
+                Color color  = COLOR_MODIFIED;
                 try
                 {
                   String s = widget.getText();
@@ -3154,8 +3135,8 @@ throw new Error("NYI");
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text widget = (Text)modifyEvent.widget;
-                Color color = COLOR_MODIFIED;
+                Text  widget = (Text)modifyEvent.widget;
+                Color color  = COLOR_MODIFIED;
                 try
                 {
                   String s = widget.getText();
@@ -3208,10 +3189,9 @@ throw new Error("NYI");
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
-
-                 maxBandWidthFlag.set(false);
-                 maxBandWidth.set(0);
-                 BARServer.set(selectedJobId,"max-band-width",0);
+                maxBandWidthFlag.set(false);
+                maxBandWidth.set(0);
+                BARServer.set(selectedJobId,"max-band-width",0);
               }
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -3233,8 +3213,7 @@ throw new Error("NYI");
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
-
-                 archivePartSizeFlag.set(true);
+                archivePartSizeFlag.set(true);
               }
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -3282,8 +3261,8 @@ throw new Error("NYI");
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text widget = (Text)modifyEvent.widget;
-                Color color = COLOR_MODIFIED;
+                Text  widget = (Text)modifyEvent.widget;
+                Color color  = COLOR_MODIFIED;
                 try
                 {
                   String s = widget.getText();
@@ -3331,16 +3310,10 @@ throw new Error("NYI");
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text widget = (Text)modifyEvent.widget;
-                Color color = COLOR_MODIFIED;
-                try
-                {
-                  String s = widget.getText();
-                  if (storageHostName.getString().equals(s)) color = COLOR_WHITE;
-                }
-                catch (NumberFormatException exception)
-                {
-                }
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String s      = widget.getText();
+                if (storageHostName.getString().equals(s)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -3370,6 +3343,92 @@ throw new Error("NYI");
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageHostName));
+
+            label = Widgets.newLabel(subComposite,"Port:");
+            Widgets.layout(label,0,4,TableLayoutData.W);
+
+            text = Widgets.newText(subComposite,null);
+            Widgets.layout(text,0,5,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+            text.addModifyListener(new ModifyListener()
+            {
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String s      = widget.getText();
+                try
+                {
+                  long n = !s.equals("")?Long.parseLong(widget.getText()):0;
+                  if (storageHostPort.getLong() == n) color = COLOR_WHITE;
+                }
+                catch (NumberFormatException exception)
+                {
+                }
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text   widget = (Text)selectionEvent.widget;
+                String s      = widget.getText();
+                try
+                {
+                  long n = !s.equals("")?Long.parseLong(widget.getText()):0;
+                  if ((n >= 0) && (n <= 65535))
+                  {
+                    storageHostPort.set(n);
+                    BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                  }
+                  else
+                  {
+                    Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
+                    widget.forceFocus();
+                  }
+                }
+                catch (NumberFormatException exception)
+                {
+                  Dialogs.error(shell,"'"+s+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                  widget.forceFocus();
+                }
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+throw new Error("NYI");
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text   widget = (Text)focusEvent.widget;
+                String s      = widget.getText();
+                try
+                {
+                  long n = !s.equals("")?Long.parseLong(widget.getText()):0;
+                  if ((n >= 0) && (n <= 65535))
+                  {
+                    storageHostPort.set(n);
+                    BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                  }
+                  else
+                  {
+                    Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
+                    widget.forceFocus();
+                  }
+                }
+                catch (NumberFormatException exception)
+                {
+                  Dialogs.error(shell,"'"+s+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                  widget.forceFocus();
+                }
+              }
+            });
+            Widgets.addModifyListener(new WidgetListener(text,storageHostPort));
           }
 
           label = Widgets.newLabel(composite,"SSH public key:");
@@ -3380,8 +3439,8 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text widget = (Text)modifyEvent.widget;
-              Color color = COLOR_MODIFIED;
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
               try
               {
                 String s = widget.getText();
@@ -3397,8 +3456,7 @@ throw new Error("NYI");
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-System.err.println("BARControl.java"+", "+3309+": ");
-              Text widget = (Text)selectionEvent.widget;
+              Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               sshPublicKeyFileName.set(string);
               BARServer.set(selectedJobId,"ssh-public-key",string);
@@ -3415,8 +3473,7 @@ throw new Error("NYI");
             }
             public void focusLost(FocusEvent focusEvent)
             {
-System.err.println("BARControl.java"+", "+3326+": ");
-              Text widget = (Text)focusEvent.widget;
+              Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
               sshPublicKeyFileName.set(string);
               BARServer.set(selectedJobId,"ssh-public-key",string);
@@ -3432,8 +3489,8 @@ System.err.println("BARControl.java"+", "+3326+": ");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text widget = (Text)modifyEvent.widget;
-              Color color = COLOR_MODIFIED;
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
               try
               {
                 String s = widget.getText();
@@ -3449,7 +3506,7 @@ System.err.println("BARControl.java"+", "+3326+": ");
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              Text widget = (Text)selectionEvent.widget;
+              Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               sshPrivateKeyFileName.set(string);
               BARServer.set(selectedJobId,"ssh-private-key",string);
@@ -3466,7 +3523,7 @@ throw new Error("NYI");
             }
             public void focusLost(FocusEvent focusEvent)
             {
-              Text widget = (Text)focusEvent.widget;
+              Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
               sshPrivateKeyFileName.set(string);
               BARServer.set(selectedJobId,"ssh-private-key",string);
@@ -3487,10 +3544,9 @@ throw new Error("NYI");
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
-
-                 maxBandWidthFlag.set(false);
-                 maxBandWidth.set(0);
-                 BARServer.set(selectedJobId,"max-band-width",0);
+                maxBandWidthFlag.set(false);
+                maxBandWidth.set(0);
+                BARServer.set(selectedJobId,"max-band-width",0);
               }
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -3512,10 +3568,9 @@ throw new Error("NYI");
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
-
-                 maxBandWidthFlag.set(false);
-                 maxBandWidth.set(0);
-                 BARServer.set(selectedJobId,"max-band-width",0);
+                maxBandWidthFlag.set(false);
+                maxBandWidth.set(0);
+                BARServer.set(selectedJobId,"max-band-width",0);
               }
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -3557,8 +3612,8 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text widget = (Text)modifyEvent.widget;
-              Color color = COLOR_MODIFIED;
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
               try
               {
                 String s = widget.getText();
@@ -3610,7 +3665,7 @@ throw new Error("NYI");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Combo widget = (Combo)modifyEvent.widget;
-                Color color = COLOR_MODIFIED;
+                Color color  = COLOR_MODIFIED;
                 try
                 {
                   long n = Units.parseByteSize(widget.getText());
@@ -3626,8 +3681,8 @@ throw new Error("NYI");
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                Combo widget = (Combo)selectionEvent.widget;
-                String s = widget.getText();
+                Combo  widget = (Combo)selectionEvent.widget;
+                String s      = widget.getText();
                 try
                 {
                   long n = Units.parseByteSize(s);
@@ -3642,7 +3697,7 @@ throw new Error("NYI");
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Combo widget = (Combo)selectionEvent.widget;
-                long n = Units.parseByteSize(widget.getText());
+                long  n      = Units.parseByteSize(widget.getText());
                 volumeSize.set(n);
                 BARServer.set(selectedJobId,"volume-size",n);
               }
@@ -3654,8 +3709,8 @@ throw new Error("NYI");
               }
               public void focusLost(FocusEvent focusEvent)
               {
-                Combo widget = (Combo)focusEvent.widget;
-                String s = widget.getText();
+                Combo  widget = (Combo)focusEvent.widget;
+                String s      = widget.getText();
                 try
                 {
                   long n = Units.parseByteSize(s);
@@ -3692,9 +3747,8 @@ throw new Error("NYI");
             {
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
+                Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
-
                 ecc.set(checkedFlag);
                 BARServer.set(selectedJobId,"ecc",checkedFlag);
               }
@@ -3726,8 +3780,8 @@ throw new Error("NYI");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text widget = (Text)modifyEvent.widget;
-              Color color = COLOR_MODIFIED;
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
               try
               {
                 String s = widget.getText();
@@ -3779,7 +3833,7 @@ throw new Error("NYI");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Combo widget = (Combo)modifyEvent.widget;
-                Color color = COLOR_MODIFIED;
+                Color color  = COLOR_MODIFIED;
                 try
                 {
                   long n = Units.parseByteSize(widget.getText());
@@ -3795,8 +3849,8 @@ throw new Error("NYI");
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                Combo widget = (Combo)selectionEvent.widget;
-                String s = widget.getText();
+                Combo  widget = (Combo)selectionEvent.widget;
+                String s      = widget.getText();
                 try
                 {
                   long n = Units.parseByteSize(s);
@@ -3811,7 +3865,7 @@ throw new Error("NYI");
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Combo widget = (Combo)selectionEvent.widget;
-                long n = Units.parseByteSize(widget.getText());
+                long  n      = Units.parseByteSize(widget.getText());
                 volumeSize.set(n);
                 BARServer.set(selectedJobId,"volume-size",n);
               }
@@ -3823,8 +3877,8 @@ throw new Error("NYI");
               }
               public void focusLost(FocusEvent focusEvent)
               {
-                Combo widget = (Combo)focusEvent.widget;
-                String s = widget.getText();
+                Combo  widget = (Combo)focusEvent.widget;
+                String s      = widget.getText();
                 try
                 {
                   long n = Units.parseByteSize(s);
@@ -3871,7 +3925,6 @@ throw new Error("NYI");
           {
             TableColumn            tableColumn = (TableColumn)selectionEvent.widget;
             ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleList,tableColumn);
-
             synchronized(scheduleList)
             {
               Widgets.sortTableColumn(widgetScheduleList,tableColumn,scheduleDataComparator);
@@ -3903,7 +3956,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               scheduleNew();
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3917,7 +3969,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               scheduleEdit();
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3931,7 +3982,6 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-
               scheduleDelete();
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4034,79 +4084,228 @@ throw new Error("NYI");
 
   private String getArchiveName()
   {
+    StringBuffer archiveName = new StringBuffer();
+
     if      (storageType.equals("ftp"))
-      return String.format("ftp:%s@%s:%s",storageLoginName,storageHostName,storageFileName);
+    {
+      archiveName.append("ftp:");
+      if (!storageLoginName.equals("") || !storageHostName.equals(""))
+      {
+        archiveName.append("//");
+        if (!storageLoginName.equals("")) { archiveName.append(storageLoginName); archiveName.append('@'); }
+        if (!storageHostName.equals("")) { archiveName.append(storageHostName); }
+        archiveName.append('/');
+      }
+    }
     else if (storageType.equals("scp"))
-      return String.format("scp:%s@%s:%s",storageLoginName,storageHostName,storageFileName);
+    {
+      archiveName.append("scp:");
+      if (!storageLoginName.equals("") || !storageHostName.equals(""))
+      {
+        archiveName.append("//");
+        if (!storageLoginName.equals("")) { archiveName.append(storageLoginName); archiveName.append('@'); }
+        if (!storageHostName.equals("")) { archiveName.append(storageHostName); }
+        if (storageHostPort.getLong() > 0) { archiveName.append(':'); archiveName.append(storageHostPort.getLong()); }
+        archiveName.append('/');
+      }
+    }
     else if (storageType.equals("sftp"))
-      return String.format("sftp:%s@%s:%s",storageLoginName,storageHostName,storageFileName);
+    {
+      archiveName.append("sftp:");
+      if (!storageLoginName.equals("") || !storageHostName.equals(""))
+      {
+        archiveName.append("//");
+        if (!storageLoginName.equals("")) { archiveName.append(storageLoginName); archiveName.append('@'); }
+        if (!storageHostName.equals("")) { archiveName.append(storageHostName); }
+        if (storageHostPort.getLong() > 0) { archiveName.append(':'); archiveName.append(storageHostPort.getLong()); }
+        archiveName.append('/');
+      }
+    }
     else if (storageType.equals("dvd"))
-      return String.format("dvd:%s:%s",storageDeviceName,storageFileName);
+    {
+      archiveName.append("dvd:");
+      if (!storageDeviceName.equals(""))
+      {
+        archiveName.append("//");
+        if (!storageHostName.equals("")) { archiveName.append(storageDeviceName); }
+        archiveName.append('/');
+      }
+    }
     else if (storageType.equals("device"))
-      return String.format("device:%s:%s",storageDeviceName,storageFileName);
-    else
-      return storageFileName.toString();
+    {
+      archiveName.append("device:");
+      if (!storageDeviceName.equals(""))
+      {
+        archiveName.append("//");
+        if (!storageHostName.equals("")) { archiveName.append(storageDeviceName); }
+        archiveName.append('/');
+      }
+    }
+    archiveName.append(storageFileName);
+
+    return archiveName.toString();
   }
 
   private void parseArchiveName(String archiveName)
   {
-    Object[] data = new Object[3];
+    storageType.set      ("filesystem");
+    storageLoginName.set ("");
+    storageHostName.set  ("");
+    storageDeviceName.set("");
+    storageFileName.set  (archiveName);
 
-    if      (StringParser.parse(archiveName,"ftp:%s@%s:%s",data,StringParser.QUOTE_CHARS))
+    if       (archiveName.startsWith("ftp:"))
     {
-      storageType.set      ("ftp");
-      storageLoginName.set ((String)data[0]);
-      storageHostName.set  ((String)data[1]);
-      storageDeviceName.set("");
-      storageFileName.set  ((String)data[2]);
+      // ftp
+      storageType.set("ftp");
+
+      String specifier = archiveName.substring(4);
+      if (specifier.startsWith("//"))
+      {
+        Object[] data = new Object[2];
+
+        int index = 2;
+        if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
+        {
+          storageLoginName.set((String)data[0]);
+          index = specifier.indexOf('@')+1;
+        }
+        if (StringParser.parse(specifier.substring(index),"%s/%s",data,StringParser.QUOTE_CHARS))
+        {
+          storageHostName.set((String)data[0]);
+          storageFileName.set((String)data[1]);
+        }
+        else
+        {
+          storageFileName.set(specifier);
+        }
+      }
+      else
+      {
+        storageFileName.set(specifier);
+      }
     }
-    else if (StringParser.parse(archiveName,"scp:%s@%s:%s",data,StringParser.QUOTE_CHARS))
+    else if (archiveName.startsWith("scp:"))
     {
-      storageType.set      ("scp");
-      storageLoginName.set ((String)data[0]);
-      storageHostName.set  ((String)data[1]);
-      storageDeviceName.set("");
-      storageFileName.set  ((String)data[2]);
+      // scp
+      storageType.set("scp");
+
+      String specifier = archiveName.substring(4);
+      if (specifier.startsWith("//"))
+      {
+        Object[] data = new Object[3];
+
+        int index = 2;
+        if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
+        {
+          storageLoginName.set((String)data[0]);
+          index = specifier.indexOf('@')+1;
+        }
+        if      (StringParser.parse(specifier.substring(index),"%s:%d/%s",data,StringParser.QUOTE_CHARS))
+        {
+          storageHostName.set((String)data[0]);
+          storageHostPort.set((Integer)data[1]);
+          storageFileName.set((String)data[2]);
+        }
+        else if (StringParser.parse(specifier.substring(2),"%s/%s",data,StringParser.QUOTE_CHARS))
+        {
+          storageHostName.set((String)data[0]);
+          storageFileName.set((String)data[1]);
+        }
+        else
+        {
+        storageFileName.set(specifier);
+        }
+      }
+      else
+      {
+        storageFileName.set(specifier);
+      }
     }
-    else if (StringParser.parse(archiveName,"sftp:%s@%s:%s",data,StringParser.QUOTE_CHARS))
+    else if (archiveName.startsWith("sftp:"))
     {
-      storageType.set      ("sftp");
-      storageLoginName.set ((String)data[0]);
-      storageHostName.set  ((String)data[1]);
-      storageDeviceName.set("");
-      storageFileName.set  ((String)data[2]);
+      // sftp
+      storageType.set("sftp");
+
+      String specifier = archiveName.substring(5);
+      if (specifier.startsWith("//"))
+      {
+        Object[] data = new Object[3];
+
+        int index = 2;
+        if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
+        {
+          storageLoginName.set((String)data[0]);
+          index = specifier.indexOf('@')+1;
+        }
+        if      (StringParser.parse(specifier.substring(index),"%s:%d/%s",data,StringParser.QUOTE_CHARS))
+        {
+          storageHostName.set((String)data[0]);
+          storageHostPort.set((Integer)data[1]);
+          storageFileName.set((String)data[2]);
+        }
+        else if (StringParser.parse(specifier.substring(2),"%s/%s",data,StringParser.QUOTE_CHARS))
+        {
+          storageHostName.set((String)data[0]);
+          storageFileName.set((String)data[1]);
+        }
+        else
+        {
+        storageFileName.set(specifier);
+        }
+      }
+      else
+      {
+        storageFileName.set(specifier);
+      }
     }
-    else if (StringParser.parse(archiveName,"dvd:%s:%s",data,StringParser.QUOTE_CHARS))
+    else if (archiveName.startsWith("dvd:"))
     {
-      storageType.set      ("dvd");
-      storageLoginName.set ("");
-      storageHostName.set  ("");
-      storageDeviceName.set((String)data[0]);
-      storageFileName.set  ((String)data[1]);
+      // dvd
+      storageType.set("dvd");
+
+      String specifier = archiveName.substring(4);
+      if (specifier.startsWith("//"))
+      {
+        Object[] data = new Object[2];
+        if (StringParser.parse(archiveName,"%s/%s",data,StringParser.QUOTE_CHARS))
+        {
+          storageDeviceName.set((String)data[0]);
+          storageFileName.set((String)data[1]);
+        }
+        else
+        {
+        storageFileName.set(specifier);
+        }
+      }
+      else
+      {
+        storageFileName.set(specifier);
+      }
     }
-    else if (StringParser.parse(archiveName,"dvd:%s",data,StringParser.QUOTE_CHARS))
+    else if (archiveName.startsWith("device:"))
     {
-      storageType.set      ("dvd");
-      storageFileName.set  ("");
-      storageLoginName.set ("");
-      storageDeviceName.set("");
-      storageFileName.set  ((String)data[0]);
-    }
-    else if (StringParser.parse(archiveName,"device:%s:%s",data,StringParser.QUOTE_CHARS))
-    {
-      storageType.set      ("device");
-      storageLoginName.set ("");
-      storageHostName.set  ("");
-      storageDeviceName.set((String)data[0]);
-      storageFileName.set  ((String)data[1]);
-    }
-    else
-    {
-      storageType.set      ("filesystem");
-      storageLoginName.set ("");
-      storageHostName.set  ("");
-      storageDeviceName.set("");
-      storageFileName.set  (archiveName);
+      // dvd
+      storageType.set("device");
+
+      String specifier = archiveName.substring(7);
+      if (specifier.startsWith("//"))
+      {
+        Object[] data = new Object[2];
+        if (StringParser.parse(archiveName,"%s/%s",data,StringParser.QUOTE_CHARS))
+        {
+          storageDeviceName.set((String)data[0]);
+          storageFileName.set((String)data[1]);
+        }
+        else
+        {
+        storageFileName.set(specifier);
+        }
+      }
+      else
+      {
+        storageFileName.set(specifier);
+      }
     }
   }
 
@@ -4411,7 +4610,7 @@ throw new Error("NYI");
     {
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget = (Button)selectionEvent.widget;
+        Button widget  = (Button)selectionEvent.widget;
         String jobName = widgetJobName.getText();
         if (!jobName.equals(""))
         {
@@ -4498,7 +4697,7 @@ throw new Error("NYI");
     {
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget = (Button)selectionEvent.widget;
+        Button widget     = (Button)selectionEvent.widget;
         String newJobName = widgetNewJobName.getText();
         if (!newJobName.equals(""))
         {
@@ -4651,7 +4850,6 @@ throw new Error("NYI");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           Dialogs.close(dialog,false);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4677,7 +4875,6 @@ throw new Error("NYI");
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
-
         pattern[0] = widgetPattern.getText();
         Dialogs.close(dialog,true);
       }
@@ -5641,7 +5838,6 @@ void storageFileNameEdit()
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           Dialogs.close(dialog,false);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5656,7 +5852,6 @@ void storageFileNameEdit()
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
-
         storageFileName.set(storageFileNameEditor.getFileName());
         Dialogs.close(dialog,true);
       }
@@ -5873,7 +6068,6 @@ void storageFileNameEdit()
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           Dialogs.close(dialog,false);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5901,7 +6095,6 @@ throw new Error("NYI");
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
-
         scheduleData.setDate(widgetYear.getText(),widgetMonth.getText(),widgetDay.getText());
         scheduleData.weekDay = widgetWeekDay.getText();
         scheduleData.setTime(widgetHour.getText(),widgetMinute.getText());
@@ -6309,7 +6502,6 @@ public class BARControl
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           loginData.serverName = widgetServerName.getText();
           loginData.password   = widgetPassword.getText();
           Dialogs.close(dialog,true);
@@ -6327,7 +6519,6 @@ public class BARControl
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
           Dialogs.close(dialog,false);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6345,7 +6536,6 @@ public class BARControl
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
         Text widget = (Text)selectionEvent.widget;
-
         widgetPassword.forceFocus();
       }
     });
@@ -6357,7 +6547,6 @@ public class BARControl
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
         Text widget = (Text)selectionEvent.widget;
-
         widgetLoginButton.forceFocus();
       }
     });
@@ -6433,7 +6622,6 @@ public class BARControl
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         MenuItem widget = (MenuItem)selectionEvent.widget;
-
         Widgets.notify(tabStatus.widgetButtonStart);
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6446,7 +6634,6 @@ public class BARControl
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         MenuItem widget = (MenuItem)selectionEvent.widget;
-
         Widgets.notify(tabStatus.widgetButtonAbort);
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6459,7 +6646,6 @@ public class BARControl
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         MenuItem widget = (MenuItem)selectionEvent.widget;
-
         Widgets.notify(tabStatus.widgetButtonTogglePause);
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6473,7 +6659,6 @@ public class BARControl
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         MenuItem widget = (MenuItem)selectionEvent.widget;
-
         Widgets.notify(tabStatus.widgetButtonQuit);
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6487,7 +6672,6 @@ public class BARControl
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         MenuItem widget = (MenuItem)selectionEvent.widget;
-
         Dialogs.info(shell,"About","BAR control.\n\nWritten by Torsten Rupp.\n\nThanx to Matthias Albert.");
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6500,7 +6684,7 @@ public class BARControl
    */
   private void run()
   {
-    // set window size, manage window
+    // set window size, manage window (approximate height according to height of a text line)
     shell.setSize(800,600+5*(Widgets.getTextHeight(shell)+4));
     shell.open();
 
@@ -6585,6 +6769,10 @@ public class BARControl
       }
       System.err.println("");
       System.err.println("Please report this assertion error to torsten.rupp@gmx.net.");
+    }
+    catch (InternalError error)
+    {
+      System.err.println("INTERNAL ERROR: "+error.getMessage());
     }
     catch (Error error)
     {
