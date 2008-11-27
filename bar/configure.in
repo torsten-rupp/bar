@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.16 $
+dnl $Revision: 1.17 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -225,8 +225,13 @@ AC_ARG_ENABLE(
   [ENABLE_DEBUG=$enableval]
 )
 AC_ARG_ENABLE(
+  link-static,
+  AC_HELP_STRING([--disable-link-static],[disable static linkage (same as --enable-link-dynamic)]),
+  [if test "$enableval" = "no"; then ENABLE_LINK_DYNAMIC=yes; fi]
+)
+AC_ARG_ENABLE(
   link-dynamic,
-  AC_HELP_STRING([--enable-link-dynamic],[enable dynamic linkage]),
+  AC_HELP_STRING([--enable-link-dynamic],[enable dynamic linkage (same as --disable-link-static)]),
   [ENABLE_LINK_DYNAMIC=$enableval]
 )
 AC_ARG_ENABLE(
@@ -373,6 +378,7 @@ if test $ENABLE_GCRYPT = "yes"; then
   else
     AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt crypto";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
   fi
+  LIBRARIES="$LIBRARIES dl"
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
   else

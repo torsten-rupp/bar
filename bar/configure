@@ -805,7 +805,10 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          enable debug version
-  --enable-link-dynamic   enable dynamic linkage
+  --disable-link-static   disable static linkage (same as
+                          --enable-link-dynamic)
+  --enable-link-dynamic   enable dynamic linkage (same as
+                          --disable-link-static)
   --disable-bzip2         disable bzip2 support
   --disable-gcrypt        disable gcrypt support
   --disable-ftp           disable FTP support
@@ -1450,6 +1453,12 @@ fi;
 if test "${enable_debug+set}" = set; then
   enableval="$enable_debug"
   ENABLE_DEBUG=$enableval
+
+fi;
+# Check whether --enable-link-static or --disable-link-static was given.
+if test "${enable_link_static+set}" = set; then
+  enableval="$enable_link_static"
+  if test "$enableval" = "no"; then ENABLE_LINK_DYNAMIC=yes; fi
 
 fi;
 # Check whether --enable-link-dynamic or --disable-link-dynamic was given.
@@ -4582,6 +4591,7 @@ _ACEOF
 fi
 
   fi
+  LIBRARIES="$LIBRARIES dl"
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
 echo $ECHO_N "checking for library containing gpg_strerror... $ECHO_C" >&6

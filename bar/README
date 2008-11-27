@@ -38,8 +38,24 @@ BAR - BAckup Archiver
 
 --- Installation
 
+If there is no binary package available for your system,
+install the packages from the following sources:
+
+Install zlib:
+  tar xjf zlib-1.2.3.tar.bz2
+  cd zlib-1.2.3
+  ./configure
+  make
+  make install
+
 Install gcrypt:
-  tar xzf libgcrypt-1.2.4.tar.gz 
+  tar xzf libgpg-error-1.4.tar.gz
+  cd libgpg-error-1.4
+  ./configure
+  make
+  make install
+
+  tar xzf libgcrypt-1.2.4.tar.gz
   cd libgcrypt-1.2.4
   ./configure
   make
@@ -78,9 +94,10 @@ Install ssh2:
   make install
   ldconfig
 
-./configure
-make
-make install
+Then install BAR with:
+  ./configure
+  make
+  make install
 
 --- Archive files and encryption
 
@@ -162,6 +179,13 @@ or use the start-script 'barserver' from /etc/init.d.
 
 Please note that for a TLS connection the TSL keys and
 cerificate files have to be available.
+
+If you want to use a ssh tunnel to connect to the bar server
+connect the ssh tunnel to port number 38523 (plain
+connection) or 38524 (TLS connenction). e. g:
+
+
+
 
 Install Java, SWT, launch4j:
 

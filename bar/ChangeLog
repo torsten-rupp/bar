@@ -1,10 +1,26 @@
-2008-11-22 0.09b
+2008-11-27 0.09b
   * fixed drag+drop in archive name editor
   * added crypt public key field in storage tab
-  * addec CRC to public/private-key to avoid SigSegV in gcrypt-library
+  * added CRC to public/private-key to avoid SigSegV in gcrypt-library
     when key is invalid. Sorry this also mean the key data format
     changed, thus you have to generate a new public/private key pair.
     Note: you cannot open old archives with the new keys!
+  * added option -h/--help to barcontrol
+  * barcontrol: read default server name/password/ports from
+    $HOME/.bar/barcontrol.cfg (if this file exists)
+  * renamed option --job-directory into --server-jobs-directory
+  * improved check of options: output error if temporary directory
+    cannot be written to
+  * barcontrol: add field for port to scp/sftp connections
+  * change format for archive-file names. Use now URL like names:
+    ftp://<name>@<host>/<filename>
+    scp://<name>@<host>:<port>/<filename>
+    sftp://<name>@<host>:<port>/<filename>
+    dvd://<device>/<filename>
+    device://<device>/<filename>
+    <filename>
+  * improved error messages
+  * fixed linker problem: link libdl, too
 
 2008-11-21 0.09a
   * small fixes in make files
