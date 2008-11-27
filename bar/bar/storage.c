@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -594,49 +594,48 @@ StorageTypes Storage_getType(const String storageName,
                              String       storageSpecifier
                             )
 {
-  long i;
-
-  if      (String_findCString(storageName,STRING_BEGIN,"ftp:") == 0)
+  if      (String_subEqualsCString(storageName,"ftp:",STRING_BEGIN,4))
   {
     if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,4,STRING_END);
     return STORAGE_TYPE_FTP;
   }
-  if      (String_findCString(storageName,STRING_BEGIN,"ssh:") == 0)
+  else if (String_subEqualsCString(storageName,"ssh:",STRING_BEGIN,4))
   {
     if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,4,STRING_END);
     return STORAGE_TYPE_SSH;
   }
-  if (String_findCString(storageName,STRING_BEGIN,"scp:") == 0)
+  else if (String_subEqualsCString(storageName,"scp:",STRING_BEGIN,4))
   {
     if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,4,STRING_END);
     return STORAGE_TYPE_SCP;
   }
-  if (String_findCString(storageName,STRING_BEGIN,"sftp:") == 0)
+  else if (String_subEqualsCString(storageName,"sftp:",STRING_BEGIN,5))
   {
     if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,5,STRING_END);
     return STORAGE_TYPE_SFTP;
   }
 /*
-  if (String_findCString(storageName,STRING_BEGIN,"cd:") == 0)
+  else if (String_subEqualsCString(storageName,"cd:",STRING_BEGIN,3))
   {
     if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,3,STRING_END);
     return STORAGE_TYPE_CD;
   }
 */
-  if (String_findCString(storageName,STRING_BEGIN,"dvd:") == 0)
+  else if (String_subEqualsCString(storageName,"dvd:",STRING_BEGIN,4))
   {
     if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,4,STRING_END);
     return STORAGE_TYPE_DVD;
   }
-  i = String_findChar(storageName,STRING_BEGIN,':');
-  if (i >= 0)
-  {    
-    if (storageSpecifier != NULL) String_set(storageSpecifier,storageName);
+  else if (String_subEqualsCString(storageName,"device:",STRING_BEGIN,7))
+  {
+    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,7,STRING_END);
     return STORAGE_TYPE_DEVICE;
   }
-
-  if (storageSpecifier != NULL) String_set(storageSpecifier,storageName);
-  return STORAGE_TYPE_FILESYSTEM;
+  else
+  {
+    if (storageSpecifier != NULL) String_set(storageSpecifier,storageName);
+    return STORAGE_TYPE_FILESYSTEM;
+  }
 }
 
 bool Storage_parseFTPSpecifier(const String ftpSpecifier,
@@ -645,72 +644,80 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
                                String       fileName
                               )
 {
-  long i0,i1;
+  ulong nextIndex;
 
   assert(ftpSpecifier != NULL);
 
-  /* get user name */
-  i0 = 0;
-  i1 = String_findChar(ftpSpecifier,i0,'@');
-  if (i1 < 0)
+  String_clear(loginName);
+  String_clear(hostName);
+  String_clear(fileName);
+
+  if (String_subEqualsCString(ftpSpecifier,"//",STRING_BEGIN,2))
   {
-    printError("No user name given!\n");
-    return FALSE;
+    nextIndex = 2;
+    if (String_match(ftpSpecifier,nextIndex,"[[:alnum:]_]+@.*",NULL,NULL))
+    {
+      String_parse(ftpSpecifier,nextIndex,"%S@",&nextIndex,loginName);
+    }
+    if (String_match(ftpSpecifier,2,"[[:alnum:]_]+/.*",NULL,NULL))
+    {
+      return String_parse(ftpSpecifier,2,"%S/%S",NULL,hostName,fileName);
+    }
+    else
+    {
+      String_set(fileName,ftpSpecifier);
+      return TRUE;
+    }
   }
-  if (loginName != NULL) String_sub(loginName,ftpSpecifier,i0,i1-i0);
-
-  /* get host name */
-  i0 = i1+1;
-  i1 = String_findChar(ftpSpecifier,i0,':');
-  if (i1 < 0)
+  else
   {
-    printError("No host name given!\n");
-    return FALSE;
+    String_set(fileName,ftpSpecifier);
+    return TRUE;
   }
-  if (hostName != NULL) String_sub(hostName,ftpSpecifier,i0,i1-i0);
-
-  /* get file name */
-  i0 = i1+1;
-  if (fileName != NULL) String_sub(fileName,ftpSpecifier,i0,STRING_END);
-
-  return TRUE;
 }
 
 bool Storage_parseSSHSpecifier(const String sshSpecifier,
                                String       loginName,
                                String       hostName,
+                               uint         *hostPort,
                                String       fileName
                               )
 {
-  long i0,i1;
+  ulong nextIndex;
 
   assert(sshSpecifier != NULL);
 
-  /* get user name */
-  i0 = 0;
-  i1 = String_findChar(sshSpecifier,i0,'@');
-  if (i1 < 0)
+  String_clear(loginName);
+  String_clear(hostName);
+  if (hostPort != NULL) (*hostPort) = 0;
+  String_clear(fileName);
+
+  if (String_subEqualsCString(sshSpecifier,"//",STRING_BEGIN,2))
   {
-    printError("No user name given!\n");
-    return FALSE;
+    nextIndex = 2;
+    if (String_match(sshSpecifier,nextIndex,"[[:alnum:]_]+@.*",NULL,NULL))
+    {
+      String_parse(sshSpecifier,nextIndex,"%S@",&nextIndex,loginName);
+    }
+    if      (String_match(sshSpecifier,nextIndex,"[[:alnum:]_]+:[[:digit:]]+/.*",NULL,NULL))
+    {
+      return String_parse(sshSpecifier,nextIndex,"%S:%d/%S",NULL,hostName,hostPort,fileName);
+    }
+    else if (String_match(sshSpecifier,nextIndex,"[[:alnum:]_]+/.*",NULL,NULL))
+    {
+      return String_parse(sshSpecifier,nextIndex,"%S/%S",NULL,hostName,fileName);
+    }
+    else
+    {
+      String_sub(fileName,sshSpecifier,nextIndex,STRING_END);
+      return TRUE;
+    }
   }
-  if (loginName != NULL) String_sub(loginName,sshSpecifier,i0,i1-i0);
-
-  /* get host name */
-  i0 = i1+1;
-  i1 = String_findChar(sshSpecifier,i0,':');
-  if (i1 < 0)
+  else
   {
-    printError("No host name given!\n");
-    return FALSE;
+    String_set(fileName,sshSpecifier);
+    return TRUE;
   }
-  if (hostName != NULL) String_sub(hostName,sshSpecifier,i0,i1-i0);
-
-  /* get file name */
-  i0 = i1+1;
-  if (fileName != NULL) String_sub(fileName,sshSpecifier,i0,STRING_END);
-
-  return TRUE;
 }
 
 bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
@@ -719,39 +726,30 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
                                   String       fileName
                                  )
 {
-  long i;
-
   assert(deviceSpecifier != NULL);
 
-  i = String_findChar(deviceSpecifier,0,':');
-  if (i >= 0)
-  {
-    /* get device name */
-    if (deviceName != NULL)
-    {
-      if (i > 0)
-      {
-        String_sub(deviceName,deviceSpecifier,0,i);
-      }
-      else
-      {
-        String_set(deviceName,defaultDeviceName);
-      }
-    }
+  String_clear(deviceName);
+  String_clear(fileName);
 
-    /* get file name */
-    if (fileName != NULL) String_sub(fileName,deviceSpecifier,i+1,STRING_END);
+  if (String_subEqualsCString(deviceSpecifier,"//",STRING_BEGIN,2))
+  {
+    if (String_match(deviceSpecifier,2,"[[:print:]]+/.*",NULL,NULL))
+    {
+      return String_parse(deviceSpecifier,2,"%S/%S",NULL,deviceName,fileName);
+    }
+    else
+    {
+      if (deviceName != NULL) String_set(deviceName,defaultDeviceName);
+      String_set(fileName,deviceSpecifier);
+      return TRUE;
+    }
   }
   else
   {
-    /* default device name */
     if (deviceName != NULL) String_set(deviceName,defaultDeviceName);
-
-    /* get file name */
-    if (fileName != NULL) String_set(fileName,deviceSpecifier);
+    String_set(fileName,deviceSpecifier);
+    return TRUE;
   }
-
-  return TRUE;
 }
 
 Errors Storage_prepare(const String     storageName,
@@ -863,6 +861,7 @@ Errors Storage_prepare(const String     storageName,
         {
           String       loginName;
           String       hostName;
+          uint         hostPort;
           String       hostFileName;
           Errors       error;
           SocketHandle socketHandle;
@@ -871,7 +870,7 @@ Errors Storage_prepare(const String     storageName,
           loginName    = String_new();
           hostName     = String_new();
           hostFileName = String_new();
-          if (!Storage_parseSSHSpecifier(storageSpecifier,loginName,hostName,hostFileName))
+          if (!Storage_parseSSHSpecifier(storageSpecifier,loginName,hostName,&hostPort,hostFileName))
           {
             String_delete(hostFileName);
             String_delete(hostName);
@@ -879,6 +878,10 @@ Errors Storage_prepare(const String     storageName,
             String_delete(storageSpecifier);
             return ERROR_SSH_SESSION_FAIL;
           }
+fprintf(stderr,"%s,%d: loginName=%s\n",__FILE__,__LINE__,String_cString(loginName));
+fprintf(stderr,"%s,%d: hostName=%s\n",__FILE__,__LINE__,String_cString(hostName));
+fprintf(stderr,"%s,%d: host=POrt=%d\n",__FILE__,__LINE__,hostPort);
+fprintf(stderr,"%s,%d: hostFileName=%s\n",__FILE__,__LINE__,String_cString(hostFileName));
 
           /* initialize password */
           if (!initSSHPassword(jobOptions))
@@ -896,8 +899,8 @@ Errors Storage_prepare(const String     storageName,
           error = Network_connect(&socketHandle,
                                   SOCKET_TYPE_SSH,
                                   hostName,
-                                  sshServer.port,
-                                  loginName,
+                                  (hostPort != 0)?hostPort:sshServer.port,
+                                  !String_empty(loginName)?loginName:sshServer.loginName,
                                   (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
                                   sshServer.publicKeyFileName,
                                   sshServer.privateKeyFileName,
@@ -1090,6 +1093,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           if (!Storage_parseSSHSpecifier(storageSpecifier,
                                          storageFileHandle->scp.loginName,
                                          storageFileHandle->scp.hostName,
+                                         &storageFileHandle->scp.hostPort,
                                          fileName
                                         )
              )
@@ -1103,8 +1107,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           /* get SSH server data */
           getSSHServer(storageFileHandle->scp.hostName,jobOptions,&sshServer);
-          storageFileHandle->scp.hostPort = sshServer.port;
           if (String_empty(storageFileHandle->scp.loginName)) String_set(storageFileHandle->scp.loginName,sshServer.loginName);
+          if (storageFileHandle->scp.hostPort == 0) storageFileHandle->scp.hostPort = sshServer.port;
           storageFileHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
           Password_set(storageFileHandle->scp.password,sshServer.password);
@@ -1150,6 +1154,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           if (!Storage_parseSSHSpecifier(storageSpecifier,
                                          storageFileHandle->sftp.loginName,
                                          storageFileHandle->sftp.hostName,
+                                         &storageFileHandle->sftp.hostPort,
                                          fileName
                                         )
              )
@@ -1163,8 +1168,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           /* get SSH server data */
           getSSHServer(storageFileHandle->sftp.hostName,jobOptions,&sshServer);
-          storageFileHandle->sftp.hostPort = sshServer.port;
           if (String_empty(storageFileHandle->sftp.loginName)) String_set(storageFileHandle->sftp.loginName,sshServer.loginName);
+          if (storageFileHandle->sftp.hostPort == 0) storageFileHandle->sftp.hostPort = sshServer.port;
           storageFileHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
           Password_set(storageFileHandle->sftp.password,sshServer.password);
@@ -1450,6 +1455,104 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
   }
 
   return ERROR_NONE;
+}
+
+String Storage_getName(const StorageFileHandle *storageFileHandle,
+                       String                  name,
+                       const String            fileName
+                      )
+{
+  assert(storageFileHandle != NULL);
+
+  String_clear(name);
+  switch (storageFileHandle->type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      break;
+    case STORAGE_TYPE_SSH:
+      break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+        String_appendCString(name,"ftp:");
+        if (!String_empty(storageFileHandle->ftp.hostName))
+        {
+          String_appendCString(name,"//");
+          if (!String_empty(storageFileHandle->ftp.loginName))
+          {
+            String_format(name,"%S@",storageFileHandle->ftp.loginName);
+          }
+          String_format(name,"%S/",storageFileHandle->ftp.hostName);
+        }
+      #else /* not HAVE_FTP */
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SCP:
+      #ifdef HAVE_SSH2
+        String_appendCString(name,"scp:");
+        if (!String_empty(storageFileHandle->scp.hostName))
+        {
+          String_appendCString(name,"//");
+          if (!String_empty(storageFileHandle->scp.loginName))
+          {
+            String_format(name,"%S@",storageFileHandle->scp.loginName);
+          }
+          String_append(name,storageFileHandle->scp.hostName);
+          if (storageFileHandle->scp.hostPort != 0)
+          {
+            String_format(name,":%d",storageFileHandle->scp.hostPort);
+          }
+          String_appendChar(name,'/');
+        }
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_SFTP:
+      #ifdef HAVE_SSH2
+        String_appendCString(name,"sftp:");
+        if (!String_empty(storageFileHandle->sftp.hostName))
+        {
+          String_appendCString(name,"//");
+          if (!String_empty(storageFileHandle->sftp.loginName))
+          {
+            String_format(name,"%S@",storageFileHandle->sftp.loginName);
+          }
+          String_append(name,storageFileHandle->sftp.hostName);
+          if (storageFileHandle->sftp.hostPort != 0)
+          {
+            String_format(name,":%d",storageFileHandle->sftp.hostPort);
+          }
+          String_appendChar(name,'/');
+        }
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_DVD:
+      String_appendCString(name,"dvd:");
+      if (!String_empty(storageFileHandle->dvd.name))
+      {
+        String_appendCString(name,"//");
+        String_append(name,storageFileHandle->dvd.name);
+        String_appendChar(name,'/');
+      }
+      break;
+    case STORAGE_TYPE_DEVICE:
+      String_appendCString(name,"device:");
+      if (!String_empty(storageFileHandle->device.name))
+      {
+        String_appendCString(name,"//");
+        String_append(name,storageFileHandle->device.name);
+        String_appendChar(name,'/');
+      }
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+  String_append(name,fileName);
+
+  return name;
 }
 
 Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
@@ -2509,9 +2612,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             {
               /* read into read-ahead buffer */
               n = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
-                                   storageFileHandle->sftp.readAheadBuffer.data,
-                                   MIN((size_t)(storageFileHandle->sftp.size-storageFileHandle->sftp.index),MAX_BUFFER_SIZE)
-                                  );
+                                    (char*)storageFileHandle->sftp.readAheadBuffer.data,
+                                    MIN((size_t)(storageFileHandle->sftp.size-storageFileHandle->sftp.index),MAX_BUFFER_SIZE)
+                                   );
               if (n < 0)
               {
                 return ERROR(IO_ERROR,errno);
@@ -2992,6 +3095,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         {
           String loginName;
           String hostName;
+          uint   hostPort;
           String hostFileName;
 
           /* init variables */
@@ -3002,7 +3106,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           loginName    = String_new();
           hostName     = String_new();
           hostFileName = String_new();
-          if (!Storage_parseSSHSpecifier(storageSpecifier,loginName,hostName,hostFileName))
+          if (!Storage_parseSSHSpecifier(storageSpecifier,loginName,hostName,&hostPort,hostFileName))
           {
             String_delete(hostFileName);
             String_delete(hostName);
@@ -3019,8 +3123,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           error = Network_connect(&storageDirectoryHandle->sftp.socketHandle,
                                   SOCKET_TYPE_SSH,
                                   hostName,
-                                  sshServer.port,
-                                  loginName,
+                                  (hostPort != 0)?hostPort:sshServer.port,
+                                  !String_empty(loginName)?loginName:sshServer.loginName,
                                   (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
                                   sshServer.publicKeyFileName,
                                   sshServer.privateKeyFileName,

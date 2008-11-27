@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -642,7 +642,7 @@ Errors File_copy(const String sourceFileName,
 * Purpose: check if file exists
 * Input  : fileName - file name
 * Output : -
-* Return : TRUE if file exists, FALSE otherweise
+* Return : TRUE if file/directory exists, FALSE otherweise
 * Notes  : -
 \***********************************************************************/
 
@@ -678,12 +678,26 @@ bool File_isDirectoryCString(const char *fileName);
 * Purpose: check if file and is readable
 * Input  : fileName - file name
 * Output : -
-* Return : TRUE if file and is readable, FALSE otherweise
+* Return : TRUE if file/directory exists and is readable, FALSE
+*          otherweise
 * Notes  : -
 \***********************************************************************/
 
-bool File_isFileReadable(const String fileName);
-bool File_isFileReadableCString(const char *fileName);
+bool File_isReadable(const String fileName);
+bool File_isReadableCString(const char *fileName);
+
+/***********************************************************************\
+* Name   : File_isDirectoryWriteable, File_isDirectoryWriteableCString
+* Purpose: check if file and is readable
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if file/directory exists and is writable, FALSE
+*          otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isWriteable(const String fileName);
+bool File_isWriteableCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_getInfo

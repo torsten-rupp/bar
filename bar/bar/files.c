@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -1318,56 +1318,28 @@ bool File_isDirectoryCString(const char *fileName)
          );
 }
 
-bool File_isFileReadable(const String fileName)
+bool File_isReadable(const String fileName)
 {
-  struct stat fileStat;
-  FILE        *file;
-
-  assert(fileName != NULL);
-
-  /* check if file */
-  if ((stat(String_cString(fileName),&fileStat) != 0) || !S_ISREG(fileStat.st_mode))
-  {
-    return FALSE;
-  }
-
-  /* check if readable */
-  file = fopen(String_cString(fileName),"r");
-  if (file != NULL)
-  {
-    fclose(file);
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
+  return File_isReadableCString(String_cString(fileName));
 }
 
-bool File_isFileReadableCString(const char *fileName)
+bool File_isReadableCString(const char *fileName)
 {
-  struct stat fileStat;
-  FILE        *file;
-
   assert(fileName != NULL);
 
-  /* check if file */
-  if ((stat(fileName,&fileStat) != 0) || !S_ISREG(fileStat.st_mode))
-  {
-    return FALSE;
-  }
+  return access(fileName,F_OK|R_OK) == 0;
+}
 
-  /* check if readable */
-  file = fopen(fileName,"r");
-  if (file != NULL)
-  {
-    fclose(file);
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
+bool File_isWriteable(const String fileName)
+{
+  return File_isWriteableCString(String_cString(fileName));
+}
+
+bool File_isWriteableCString(const char *fileName)
+{
+  assert(fileName != NULL);
+
+  return access(fileName,F_OK|W_OK) == 0;
 }
 
 Errors File_getFileInfo(const String fileName,

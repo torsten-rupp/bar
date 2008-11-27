@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -656,17 +656,17 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
       break;
     case SERVER_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
-        if ((caFileName == NULL) || !File_existsCString(caFileName) || !File_isFileReadableCString(caFileName))
+        if ((caFileName == NULL) || !File_isFileCString(caFileName) || !File_isReadableCString(caFileName))
         {
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_CA;
         }
-        if ((certFileName == NULL) || !File_existsCString(certFileName) || !File_isFileReadableCString(certFileName))
+        if ((certFileName == NULL) || !File_isFileCString(certFileName) || !File_isReadableCString(certFileName))
         {
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_CERTIFICATE;
         }
-        if ((keyFileName == NULL) || !File_existsCString(keyFileName) || !File_isFileReadableCString(keyFileName))
+        if ((keyFileName == NULL) || !File_isFileCString(keyFileName) || !File_isReadableCString(keyFileName))
         {
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_KEY;
@@ -1335,6 +1335,8 @@ Errors Network_executeKeepAlive(NetworkExecuteHandle *networkExecuteHandle)
       {
         return ERROR_NETWORK_SEND;
       }
+    #else /* not HAVE_SSH2_CHANNEL_SEND_KEEPALIVE */
+      UNUSED_VARIABLE(networkExecuteHandle);
     #endif /* HAVE_SSH2_CHANNEL_SEND_KEEPALIVE */
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(networkExecuteHandle);

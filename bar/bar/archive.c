@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -1671,28 +1671,6 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
     String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
     return error;
   }
-
-#if 0
-  /* close chunks */
-  error = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
-  if (error != ERROR_NONE)
-  {
-    Chunk_done(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
-    Crypt_done(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
-    Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
-    String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
-    return error;
-  }
-  error = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectory);
-  if (error != ERROR_NONE)
-  {
-    Chunk_done(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
-    Crypt_done(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
-    Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
-    String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
-    return error;
-  }
-#endif /* 0 */
 
   return ERROR_NONE;
 }

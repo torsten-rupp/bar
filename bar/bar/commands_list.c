@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -763,7 +763,10 @@ remoteBarFlag=FALSE;
         break;
       case STORAGE_TYPE_SSH:
         {
-          String               userName,hostName,hostFileName;
+          String               userName;
+          String               hostName;
+          uint                 hostPort;
+          String               hostFileName;
           SSHServer            sshServer;
           NetworkExecuteHandle networkExecuteHandle;
           String               line;
@@ -784,7 +787,7 @@ remoteBarFlag=FALSE;
           userName     = String_new();
           hostName     = String_new();
           hostFileName = String_new();
-          if (!Storage_parseSSHSpecifier(storageSpecifier,userName,hostName,hostFileName))
+          if (!Storage_parseSSHSpecifier(storageSpecifier,userName,hostName,&hostPort,hostFileName))
           {
             String_delete(hostFileName);
             String_delete(hostName);

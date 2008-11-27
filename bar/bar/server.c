@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -869,7 +869,7 @@ LOCAL Errors rereadJobFiles(const char *jobsDirectory)
     File_getFileBaseName(baseName,fileName);
 
     /* check if readable file and not ".*" */
-    if (File_isFileReadable(fileName) && (String_index(baseName,0) != '.'))
+    if (File_isFile(fileName) && File_isReadable(fileName) && (String_index(baseName,0) != '.'))
     {
       /* lock */
       Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -910,14 +910,14 @@ LOCAL Errors rereadJobFiles(const char *jobsDirectory)
     {
       File_setFileNameCString(fileName,jobsDirectory);
       File_appendFileName(fileName,jobNode->name);
-      if (File_isFileReadable(fileName))
+      if (File_isFile(fileName) && File_isReadable(fileName))
       {
         /* exists => ok */
         jobNode = jobNode->next;
       }
       else
       {
-        /* not exists => delete */
+        /* not exists => delete job node */
         deleteJobNode = jobNode;
         jobNode = jobNode->next;
         List_remove(&jobList,deleteJobNode);

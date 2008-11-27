@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -2319,25 +2319,29 @@ bool String_equals(const String string1, const String string2)
   bool  equalFlag;
   ulong z;
 
-  assert(string1 != NULL);
-  assert(string2 != NULL);
-
-  CHECK_VALID(string1);
-  CHECK_VALID(string2);
-
-  if (string1->length == string2->length)
+  if ((string1 != NULL) && (string2 != NULL))
   {
-    equalFlag = TRUE;
-    z         = 0;
-    while (equalFlag && (z < string1->length))
+    CHECK_VALID(string1);
+    CHECK_VALID(string2);
+
+    if (string1->length == string2->length)
     {
-      equalFlag = (string1->data[z] == string2->data[z]);
-      z++;
+      equalFlag = TRUE;
+      z         = 0;
+      while (equalFlag && (z < string1->length))
+      {
+        equalFlag = (string1->data[z] == string2->data[z]);
+        z++;
+      }
+    }
+    else
+    {
+      equalFlag = FALSE;
     }
   }
   else
   {
-    equalFlag = FALSE;
+    equalFlag = (string1 == NULL) && (string2 == NULL);
   }
 
   return equalFlag;
@@ -2351,17 +2355,71 @@ bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLe
   assert(string != NULL);
   assert(buffer != NULL);
 
+  if ((string != NULL) && (buffer != NULL))
+  {
+    CHECK_VALID(string);
+
+    if (string->length == bufferLength)
+    {
+      equalFlag = TRUE;
+      z         = 0;
+      while (equalFlag && (z < string->length))
+      {
+        equalFlag = (string->data[z] == buffer[z]);
+        z++;
+      }
+    }
+    else
+    {
+      equalFlag = FALSE;
+    }
+  }
+  else
+  {
+    equalFlag = (string == NULL) && (bufferLength == 0);
+  }
+
+  return equalFlag;
+}
+
+bool String_equalsCString(const String string, const char *s)
+{
+  bool equalFlag;
+
   CHECK_VALID(string);
 
-  if (string->length == bufferLength)
+  if (string != NULL)
   {
-    equalFlag = TRUE;
-    z         = 0;
-    while (equalFlag && (z < string->length))
+    assert(string->data != NULL);
+
+    if (s != NULL)
     {
-      equalFlag = (string->data[z] == buffer[z]);
-      z++;
+      equalFlag = String_equalsBuffer(string,s,strlen(s));
     }
+    else
+    {
+      equalFlag = (string->length == 0);
+    }
+  }
+  else
+  {
+    equalFlag = (s == NULL);
+  }
+
+  return equalFlag;
+}
+
+bool String_equalsChar(const String string, char ch)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    equalFlag = ((string->length == 1) && (string->data[0] == ch));
   }
   else
   {
@@ -2371,8 +2429,91 @@ bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLe
   return equalFlag;
 }
 
-bool String_equalsCString(const String string, const char *s)
+bool String_subEquals(const String string1, const String string2, long index, ulong length)
 {
+  long  i;
+  bool  equalFlag;
+  ulong z;
+
+  assert(string1 != NULL);
+  assert(string2 != NULL);
+
+  if ((string1 != NULL) && (string2 != NULL))
+  {
+    CHECK_VALID(string1);
+    CHECK_VALID(string2);
+
+    i = (index != STRING_END)?index:(long)string1->length-(long)length;
+    if (   (i >= 0)
+        && ((i+length) <= string1->length)
+        && (length <= string2->length)
+       )
+    {
+      equalFlag = TRUE;
+      z         = 0;
+      while (equalFlag && (z < length))
+      {
+        equalFlag = (string1->data[i+z] == string2->data[z]);
+        z++;
+      }
+    }
+    else
+    {
+      equalFlag = FALSE;
+    }
+  }
+  else
+  {
+    equalFlag = (string1 == NULL) && (string2 == NULL);
+  }
+
+  return equalFlag;
+}
+
+bool String_subEqualsBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length)
+{
+  long  i;
+  bool  equalFlag;
+  ulong z;
+
+  assert(string != NULL);
+  assert(buffer != NULL);
+
+  if ((string != NULL) && (buffer != NULL))
+  {
+    CHECK_VALID(string);
+
+    i = (index != STRING_END)?index:(long)string->length-(long)length;
+    if (   (i >= 0)
+        && ((i+length) <= string->length)
+        && (length <= bufferLength)
+       )
+    {
+      equalFlag = TRUE;
+      z         = 0;
+      while (equalFlag && (z < length))
+      {
+        equalFlag = (string->data[i+z] == buffer[z]);
+        z++;
+      }
+    }
+    else
+    {
+      equalFlag = FALSE;
+    }
+  }
+  else
+  {
+    equalFlag = (string == NULL) && (bufferLength == 0);
+  }
+
+  return equalFlag;
+}
+
+bool String_subEqualsCString(const String string, const char *s, long index, ulong length)
+{
+  bool equalFlag;
+
   CHECK_VALID(string);
 
   if (string != NULL)
@@ -2381,39 +2522,46 @@ bool String_equalsCString(const String string, const char *s)
 
     if (s != NULL)
     {
-      return String_equalsBuffer(string,s,strlen(s));
+      equalFlag = String_subEqualsBuffer(string,s,strlen(s),index,length);
     }
     else
     {
-      return (string->length == 0);
+      equalFlag = (string->length == 0);
     }
   }
   else
   {
-    return (s == NULL);
+    equalFlag = (s == NULL);
   }
+
+  return equalFlag;
 }
 
-bool String_equalsChar(const String string, char ch)
+bool String_subEqualsChar(const String string, char ch, long index)
 {
+  bool equalFlag;
+
   CHECK_VALID(string);
 
   if (string != NULL)
   {
     assert(string->data != NULL);
 
-    return ((string->length == 1) && (string->data[0] == ch));
+    equalFlag = ((index < string->length) && (string->data[index] == ch));
   }
   else
   {
-    return FALSE;
+    equalFlag = FALSE;
   }
+
+  return equalFlag;
 }
 
 long String_find(const String string, ulong index, const String findString)
 {
-  long z,i;
   long findIndex;
+  long  i;
+  ulong z;
 
   assert(string != NULL);
   assert(findString != NULL);
@@ -2423,17 +2571,17 @@ long String_find(const String string, ulong index, const String findString)
 
   findIndex = -1;
 
-  z = (index != STRING_BEGIN)?index:0;
-  while (((z+findString->length) <= string->length) && (findIndex < 0))
+  i = (index != STRING_BEGIN)?index:0;
+  while (((i+findString->length) <= string->length) && (findIndex < 0))
   {
-    i = 0;
-    while ((i < findString->length) && (string->data[z+i] == findString->data[i]))
+    z = 0;
+    while ((z < findString->length) && (string->data[i+z] == findString->data[z]))
     {
-      i++;
+      z++;
     }
-    if (i >=  findString->length) findIndex = z;
+    if (z >=  findString->length) findIndex = i;
 
-    z++;
+    i++;
   }
 
   return findIndex;
@@ -2443,7 +2591,8 @@ long String_findCString(const String string, ulong index, const char *s)
 {
   long findIndex;
   long sLength;
-  long z,i;
+  long  i;
+  ulong z;
 
   assert(string != NULL);
   assert(s != NULL);
@@ -2453,17 +2602,17 @@ long String_findCString(const String string, ulong index, const char *s)
   findIndex = -1;
 
   sLength = strlen(s);
-  z = (index != STRING_BEGIN)?index:0;
-  while (((z+sLength) <= string->length) && (findIndex < 0))
+  i = (index != STRING_BEGIN)?index:0;
+  while (((i+sLength) <= string->length) && (findIndex < 0))
   {
-    i = 0;
-    while ((i < sLength) && (string->data[z+i] == s[i]))
+    z = 0;
+    while ((z < sLength) && (string->data[i+z] == s[z]))
     {
-      i++;
+      z++;
     }
-    if (i >=  sLength) findIndex = z;
+    if (z >= sLength) findIndex = i;
 
-    z++;
+    i++;
   }
 
   return findIndex;
@@ -2471,25 +2620,26 @@ long String_findCString(const String string, ulong index, const char *s)
 
 long String_findChar(const String string, ulong index, char ch)
 {
-  long z;
+  long i;
 
   assert(string != NULL);
 
   CHECK_VALID(string);
 
-  z = (index != STRING_BEGIN)?index:0;
-  while ((z < string->length) && (string->data[z] != ch))
+  i = (index != STRING_BEGIN)?index:0;
+  while ((i < string->length) && (string->data[i] != ch))
   {
-    z++;
+    i++;
   }
 
-  return (z < string->length)?z:-1;
+  return (i < string->length)?i:-1;
 }
 
 long String_findLast(const String string, long index, String findString)
 {
-  long z,i;
-  long findIndex;
+  long  findIndex;
+  long  i;
+  ulong z;
 
   assert(string != NULL);
   assert(findString != NULL);
@@ -2498,17 +2648,17 @@ long String_findLast(const String string, long index, String findString)
 
   findIndex = -1;
 
-  z = (index != STRING_END)?index:string->length-1;
-  while ((z >= 0) && (findIndex < 0))
+  i = (index != STRING_END)?index:string->length-1;
+  while ((i >= 0) && (findIndex < 0))
   {
-    i = 0;
-    while ((i < findString->length) && (string->data[z+i] == findString->data[i]))
+    z = 0;
+    while ((z < findString->length) && (string->data[i+z] == findString->data[z]))
     {
-      i++;
+      z++;
     }
-    if (i >=  findString->length) findIndex = z;
+    if (z >= findString->length) findIndex = i;
 
-    z--;
+    i--;
   }
 
   return findIndex;
@@ -2518,7 +2668,8 @@ long String_findLastCString(const String string, long index, const char *s)
 {
   long findIndex;
   long sLength;
-  long z,i;
+  long  i;
+  ulong z;
 
   assert(string != NULL);
   assert(s != NULL);
@@ -2528,17 +2679,17 @@ long String_findLastCString(const String string, long index, const char *s)
   findIndex = -1;
 
   sLength = strlen(s);
-  z = (index != STRING_END)?index:string->length-1;
-  while ((z >= 0) && (findIndex < 0))
+  i = (index != STRING_END)?index:string->length-1;
+  while ((i >= 0) && (findIndex < 0))
   {
-    i = 0;
-    while ((i < sLength) && (string->data[z+i] == s[i]))
+    z = 0;
+    while ((z < sLength) && (string->data[i+z] == s[z]))
     {
-      i++;
+      z++;
     }
-    if (i >=  sLength) findIndex = z;
+    if (z >=  sLength) findIndex = i;
 
-    z--;
+    i--;
   }
 
   return findIndex;
@@ -2546,19 +2697,19 @@ long String_findLastCString(const String string, long index, const char *s)
 
 long String_findLastChar(const String string, long index, char ch)
 {
-  long z;
+  long i;
 
   assert(string != NULL);
 
   CHECK_VALID(string);
 
-  z = (index != STRING_END)?index:string->length-1;
-  while ((z >= 0) && (string->data[z] != ch))
+  i = (index != STRING_END)?index:string->length-1;
+  while ((i >= 0) && (string->data[i] != ch))
   {
-    z--;
+    i--;
   }
 
-  return (z >= 0)?z:-1;
+  return (i >= 0)?i:-1;
 }
 
 String String_iterate(const                 String string,

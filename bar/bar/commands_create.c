@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1378,6 +1378,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
   #define MAX_RETRIES 3
 
   byte       *buffer;
+  String     storageName;
   StorageMsg storageMsg;
   Errors     error;
   FileHandle fileHandle;
@@ -1392,10 +1393,11 @@ LOCAL void storageThread(CreateInfo *createInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  storageName = String_new();
 
+  /* initial pre-processing */
   if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
   {
-    /* initial pre-processing */
     if (createInfo->failError == ERROR_NONE)
     {
       /* pause */
@@ -1441,7 +1443,13 @@ LOCAL void storageThread(CreateInfo *createInfo)
           continue;
         }
 
-        printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageMsg.destinationFileName));
+        /* get storage name */
+        Storage_getName(&createInfo->storageFileHandle,
+                        storageName,
+                        storageMsg.destinationFileName
+                       );
+
+        printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageName));
 
         /* open file to store */
         error = File_open(&fileHandle,storageMsg.fileName,FILE_OPENMODE_READ);
@@ -1485,7 +1493,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
             {
               printInfo(0,"FAIL!\n");
               printError("Cannot store file '%s' (error: %s)\n",
-                         String_cString(storageMsg.destinationFileName),
+                         String_cString(storageName),
                          getErrorText(error)
                         );
               createInfo->failError = error;
@@ -1509,7 +1517,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
             {
               printInfo(0,"FAIL!\n");
               printError("Cannot read file '%s' (error: %s)!\n",
-                         String_cString(storageMsg.fileName),
+                         String_cString(storageName),
                          getErrorText(error)
                         );
               createInfo->failError = error;
@@ -1522,7 +1530,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
               {
                 printInfo(0,"FAIL!\n");
                 printError("Cannot write file '%s' (error: %s)!\n",
-                           String_cString(storageMsg.destinationFileName),
+                           String_cString(storageName),
                            getErrorText(error)
                           );
                 createInfo->failError = error;
@@ -1545,7 +1553,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
 
           if (error == ERROR_NONE)
           {
-            logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageMsg.destinationFileName));
+            logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageName));
             printInfo(0,"ok\n");
           }
         }
@@ -1631,6 +1639,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
   }
 
   /* free resoures */
+  String_delete(storageName);
   free(buffer);
 
   createInfo->storageThreadExitFlag = TRUE;

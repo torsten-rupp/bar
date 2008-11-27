@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -292,7 +292,8 @@ StorageTypes Storage_getType(const String storageName,
 
 /***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
-* Purpose: parse FTP specifier: <user name>@<host name>:<file name>
+* Purpose: parse FTP specifier:
+*            [[<user name>@]<host name>/]<file name>
 * Input  : ftpSpecifier - FTP specifier string
 * Output : userName     - user name (can be NULL)
 *          hostName     - host name (can be NULL)
@@ -309,10 +310,12 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 
 /***********************************************************************\
 * Name   : Storage_parseSSHSpecifier
-* Purpose: parse ssh specifier: <user name>@<host name>:<file name>
+* Purpose: parse ssh specifier:
+*            [//[<user name>@]<host name>[:<port>]/]<file name>
 * Input  : sshSpecifier - ssh specifier string
 * Output : userName     - user name (can be NULL)
 *          hostName     - host name (can be NULL)
+*          hostPort     - host port number (can be NULL)
 *          fileName     - file name (can be NULL)
 * Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
 * Notes  : -
@@ -321,12 +324,14 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 bool Storage_parseSSHSpecifier(const String sshSpecifier,
                                String       userName,
                                String       hostName,
+                               uint         *hostPort,
                                String       fileName
                               );
 
 /***********************************************************************\
 * Name   : Storage_parseDevicepecifier
-* Purpose: parse device specifier: <device name>:<file name>
+* Purpose: parse device specifier:
+*            [//<device name>/]<file name>
 * Input  : deviceSpecifier   - device specifier string
 *          defaultDeviceName - default device name
 * Output : deviceName - device name (can be NULL)
@@ -360,7 +365,7 @@ Errors Storage_prepare(const String     storageName,
 
 /***********************************************************************\
 * Name   : Storage_init
-* Purpose: init new storage file
+* Purpose: init new storage
 * Input  : storageFileHandle            - storage file handle variable
 *          storageName                  - storage name:
 *                                           <file name>
@@ -389,7 +394,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
 /***********************************************************************\
 * Name   : Storage_done
-* Purpose: deinit storage file
+* Purpose: deinit storage
 * Input  : storageFileHandle - storage file handle variable
 * Output : -
 * Return : ERROR_NONE or errorcode
@@ -397,6 +402,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 \***********************************************************************/
 
 Errors Storage_done(StorageFileHandle *storageFileHandle);
+
+String Storage_getName(const StorageFileHandle *storageFileHandle,
+                       String                  name,
+                       const String            fileName
+                      );
 
 /***********************************************************************\
 * Name   : Storage_preProcess
@@ -422,7 +432,27 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                            bool              finalFlag
                           );
 
+/***********************************************************************\
+* Name   : Storage_getVolumeNumber
+* Purpose: get current volume number
+* Input  : storageFileHandle - storage file handle
+* Output : -
+* Return : volume number
+* Notes  : -
+\***********************************************************************/
+
 uint Storage_getVolumeNumber(const StorageFileHandle *storageFileHandle);
+
+/***********************************************************************\
+* Name   : Storage_setVolumeNumber
+* Purpose: set volume number
+* Input  : storageFileHandle - storage file handle
+*          volumeNumber      - volume number
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
                              uint              volumeNumber
                             );
@@ -563,8 +593,8 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
 
 /***********************************************************************\
 * Name   : Storage_openDirectory
-* Purpose: open storage
-* Input  : storageDirectoryBandle - storage directory handle variable
+* Purpose: open storage directory
+* Input  : storageDirectoryHandle - storage directory handle variable
 *          storageName            - storage name
 *          jobOptions             - job options
 * Output : storageDirectoryHandle - initialized storage directory handle

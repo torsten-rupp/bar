@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1207,6 +1207,24 @@ LOCAL void doneAll(void)
   Password_doneAll();
 }
 
+/***********************************************************************\
+* Name   : validateOptions
+* Purpose: validate options
+* Input  : -
+* Output : -
+* Return : TRUE if options valid, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool validateOptions(void)
+{
+  if (!File_exists(globalOptions.tmpDirectory)) { printError("Temporary directory '%s' does not exists!\n",String_cString(globalOptions.tmpDirectory)); return FALSE; }
+  if (!File_isDirectory(globalOptions.tmpDirectory)) { printError("'%s' is not a directory!\n",String_cString(globalOptions.tmpDirectory)); return FALSE; }
+  if (!File_isWriteable(globalOptions.tmpDirectory)) { printError("Temporary directory '%s' is not writeable!\n",String_cString(globalOptions.tmpDirectory)); return FALSE; }
+
+  return TRUE;
+}
+
 /*---------------------------------------------------------------------*/
 
 void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
@@ -2120,7 +2138,7 @@ int main(int argc, const char *argv[])
     /* read default configuration from /CONFIG_DIR/bar.cfg (ignore errors) */
     File_setFileNameCString(fileName,CONFIG_DIR);
     File_appendFileNameCString(fileName,DEFAULT_CONFIG_FILE_NAME);
-    if (File_isFileReadable(fileName))
+    if (File_isFile(fileName) && File_isReadable(fileName))
     {
       StringList_append(&configFileNameList,fileName);
     }
@@ -2172,6 +2190,8 @@ int main(int argc, const char *argv[])
     #endif /* not NDEBUG */
     return EXITCODE_INVALID_ARGUMENT;
   }
+
+  /* output version, help */
   if (versionFlag)
   {
     #ifndef NDEBUG
@@ -2203,8 +2223,31 @@ int main(int argc, const char *argv[])
     return EXITCODE_OK;
   }
 
+  /* check parameters */
+  if (!validateOptions())
+  {
+    doneAll();
+    #ifndef NDEBUG
+      Array_debug();
+      String_debug();
+      String_debugDone();
+    #endif /* not NDEBUG */
+    return EXITCODE_FAIL;
+  }
+
   /* create session log file */
-  File_getTmpFileName(tmpLogFileName,NULL,globalOptions.tmpDirectory);
+  error = File_getTmpFileName(tmpLogFileName,NULL,globalOptions.tmpDirectory);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot create temporary file in '%s'!\n",String_cString(globalOptions.tmpDirectory));
+    doneAll();
+    #ifndef NDEBUG
+      Array_debug();
+      String_debug();
+      String_debugDone();
+    #endif /* not NDEBUG */
+    return EXITCODE_FAIL;
+  }
   tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
 
   /* open log files */

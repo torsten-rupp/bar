@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -351,6 +351,26 @@ bool String_equals(const String string1, const String string2);
 bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength);
 bool String_equalsCString(const String string, const char *s);
 bool String_equalsChar(const String string, char ch);
+
+/***********************************************************************\
+* Name   : String_subEquals, String_subEqualsBuffer,
+*          String_subEqualsCString, String_subEqualsChar
+* Purpose: check if string2 is equal to string1 at some position
+* Input  : string1,string2            - strings to compare
+*          string/buffer/bufferLength - string/buffer to compare
+*          string/s                   - string/C-string to compare
+*          string,ch                  - strings/character to compare
+*          index                      - position in string1
+*          length                     - length to compare
+* Output : -
+* Return : TRUE if strings equal, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool String_subEquals(const String string1, const String string2, long index, ulong length);
+bool String_subEqualsBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length);
+bool String_subEqualsCString(const String string, const char *s, long index, ulong length);
+bool String_subEqualsChar(const String string, char ch, long index);
 
 /***********************************************************************\
 * Name   : String_find, String_findCString, String_findChar
