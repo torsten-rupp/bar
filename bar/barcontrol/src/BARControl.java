@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -4082,6 +4082,15 @@ throw new Error("NYI");
     });
   }
 
+  /** get archive name
+   * @return archive name
+   *   ftp://<name>@<host>/<file name>
+   *   scp://<name>@<host>:<port>/<file name>
+   *   sftp://<name>@<host>:<port>/<file name>
+   *   dvd://<device>/<file name>
+   *   device://<device>/<file name>
+   *   <file name>
+   */
   private String getArchiveName()
   {
     StringBuffer archiveName = new StringBuffer();
@@ -4146,6 +4155,15 @@ throw new Error("NYI");
     return archiveName.toString();
   }
 
+  /** parse archive name
+   * @param archiveName archive name
+   *   ftp://<name>@<host>/<file name>
+   *   scp://<name>@<host>:<port>/<file name>
+   *   sftp://<name>@<host>:<port>/<file name>
+   *   dvd://<device>/<file name>
+   *   device://<device>/<file name>
+   *   <file name>
+   */
   private void parseArchiveName(String archiveName)
   {
     storageType.set      ("filesystem");
@@ -5399,7 +5417,7 @@ throw new Error("NYI");
       setFileName(fileName);
     }
 
-    /** set file name
+    /** set file name, parse parts
      * @param file name
      */
     void setFileName(String fileName)
@@ -5418,31 +5436,49 @@ throw new Error("NYI");
 
           // get next text part
           part = new StringBuffer();
-          while ((z < fileName.length()) && (fileName.charAt(z) != '%'))
+          while (   (z < fileName.length())
+                 && (fileName.charAt(z) != '%')
+                 && (fileName.charAt(z) != '#')
+                )
           {
             part.append(fileName.charAt(z)); z++;
           }
           storageNamePartList.add(new StorageNamePart(part.toString()));
           storageNamePartList.add(new StorageNamePart(null));
 
-          if ((z < fileName.length()) && (fileName.charAt(z) == '%'))
+          if (z < fileName.length())
           {
-            // add next variable part
-            part = new StringBuffer();
-            part.append('%'); z++;
-            if ((z < fileName.length()) && (fileName.charAt(z) == '%'))
+            switch (fileName.charAt(z))
             {
-              part.append('%'); z++;
+              case '%':
+                // add variable part
+                part = new StringBuffer();
+                part.append('%'); z++;
+                if ((z < fileName.length()) && (fileName.charAt(z) == '%'))
+                {
+                  part.append('%'); z++;
+                }
+                else
+                {
+                  while ((z < fileName.length()) && (Character.isLetterOrDigit(fileName.charAt(z))))
+                  {
+                    part.append(fileName.charAt(z)); z++;
+                  }
+                }
+                storageNamePartList.add(new StorageNamePart(part.toString()));
+                storageNamePartList.add(new StorageNamePart(null));
+                break;
+              case '#':
+                // add number part
+                part = new StringBuffer();
+                while ((z < fileName.length()) && (fileName.charAt(z) == '#'))
+                {
+                  part.append(fileName.charAt(z)); z++;
+                }
+                storageNamePartList.add(new StorageNamePart(part.toString()));
+                storageNamePartList.add(new StorageNamePart(null));
+                break;
             }
-            else
-            {
-              while ((z < fileName.length()) && (Character.isLetterOrDigit(fileName.charAt(z))))
-              {
-                part.append(fileName.charAt(z)); z++;
-              }
-            }
-            storageNamePartList.add(new StorageNamePart(part.toString()));
-            storageNamePartList.add(new StorageNamePart(null));
           }
         }
       }
@@ -5552,6 +5588,10 @@ throw new Error("NYI");
       Widgets.layout(control,row,column*2+1,TableLayoutData.WE);
     }
 
+    /** add part
+     * @param index index to add/insert part
+     * @param string part to add
+     */
     private void addPart(int index, String string)
     {
       boolean redrawFlag = false;
@@ -5588,6 +5628,9 @@ throw new Error("NYI");
       }
     }
 
+    /** remove part
+     * @param storageNamePart storage name part to remove
+     */
     private void remPart(StorageNamePart storageNamePart)
     {
       boolean redrawFlag = false;
@@ -5661,8 +5704,6 @@ throw new Error("NYI");
     }
 
     /** update example line
-     * @param 
-     * @return 
      */
     private void updateExample()
     {
@@ -5674,14 +5715,15 @@ throw new Error("NYI");
         {
           if (storageNamePart.string != null)
           {
-            if      (storageNamePart.string.equals("#"))
-              exampleName.append("1");
-            else if (storageNamePart.string.equals("##"))
-              exampleName.append("12");
-            else if (storageNamePart.string.equals("###"))
-              exampleName.append("123");
-            else if (storageNamePart.string.equals("####"))
-              exampleName.append("1234");
+            if      (storageNamePart.string.startsWith("#"))
+            {
+              int z = 0;
+              while ((z < storageNamePart.string.length()) && (storageNamePart.string.charAt(z) == '#'))
+              {
+                exampleName.append("1234567890".charAt(z%10));
+                z++;
+              }
+            }
             else if (storageNamePart.string.equals("%type"))
               exampleName.append("full");
             else if (storageNamePart.string.equals("%last"))
@@ -5800,8 +5842,8 @@ throw new Error("NYI");
 
   /** edit storage file name
    */
-//  private void storageFileNameEdit()
-void storageFileNameEdit()
+  //  private void storageFileNameEdit()
+  void storageFileNameEdit()
   {
     Composite composite;
     Label     label;
