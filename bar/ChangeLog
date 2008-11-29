@@ -1,3 +1,6 @@
+2008-11-29 0.09c
+  * barcontrol: fixed #-parsing in archive name editor
+
 2008-11-27 0.09b
   * fixed drag+drop in archive name editor
   * added crypt public key field in storage tab
