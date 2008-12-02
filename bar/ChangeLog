@@ -1,5 +1,10 @@
-2008-11-29 0.09c
+2008-12-01 0.09c
   * barcontrol: fixed #-parsing in archive name editor
+  * fixed missing barcontrol.in, barcontrol.bat.in, barcontrol.xml source
+  * fixed creation of scripts from *.in files
+  * completed bar-keygen
+  * no external SWT jar needed anymore to compile (but can still be used
+    optional)
 
 2008-11-27 0.09b
   * fixed drag+drop in archive name editor

@@ -273,7 +273,7 @@ PACKAGE_BUGREPORT=
 
 ac_unique_file="."
 ac_unique_file="bar/bar.c"
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os ENABLE_DEBUG ENABLE_GUI PLATFORM INSTALL_DIR INSTALL_BIN_DIR CONFIG_DIR TLS_DIR CC LD STRIP CC_FLAGS CC_WARN_FLAGS CC_OPTIMIZE CC_DEFINES CC_INCLUDES LD_FLAGS LIBRARY_PATHS LIBRARIES STATIC_LIBRARIES JAVA JAVAC JAR JAVA_FLAGS JAVAC_FLAGS SWT_DIR LAUNCH4J_DIR CERTOOL KEYTOOL PERL INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LAUNCH4J CERTTOOL CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os PLATFORM ENABLE_DEBUG ENABLE_GUI INSTALL_DIR INSTALL_BIN_DIR CONFIG_DIR TLS_DIR CC LD STRIP CC_FLAGS CC_WARN_FLAGS CC_OPTIMIZE CC_DEFINES CC_INCLUDES LD_FLAGS LIBRARY_PATHS LIBRARIES STATIC_LIBRARIES JAVA JAVAC JAR JAVA_FLAGS JAVAC_FLAGS SWT_DIR LAUNCH4J_DIR CERTOOL KEYTOOL PERL INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LAUNCH4J CERTTOOL CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -4452,7 +4452,7 @@ echo "$as_me:$LINENO: result: $ac_cv_search_gcry_check_version" >&5
 echo "${ECHO_T}$ac_cv_search_gcry_check_version" >&6
 if test "$ac_cv_search_gcry_check_version" != no; then
   test "$ac_cv_search_gcry_check_version" = "none required" || LIBS="$ac_cv_search_gcry_check_version $LIBS"
-  HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt crypto";
+  HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_GCRYPT 1
 _ACEOF
@@ -4583,7 +4583,7 @@ echo "$as_me:$LINENO: result: $ac_cv_search_gcry_check_version" >&5
 echo "${ECHO_T}$ac_cv_search_gcry_check_version" >&6
 if test "$ac_cv_search_gcry_check_version" != no; then
   test "$ac_cv_search_gcry_check_version" = "none required" || LIBS="$ac_cv_search_gcry_check_version $LIBS"
-  HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt crypto";
+  HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_GCRYPT 1
 _ACEOF
@@ -6531,29 +6531,6 @@ done
 
 
 
-if test $ENABLE_GUI = "yes"; then
-  if test -z "$SWT_DIR"; then
-    echo "$as_me:$LINENO: checking for SWT" >&5
-echo $ECHO_N "checking for SWT... $ECHO_C" >&6
-    if   test -f /usr/local/swt/swt.jar; then
-      SWT_DIR=/usr/local/swt
-    elif test -f /usr/swt/swt.jar; then
-      SWT_DIR=/usr/swt
-    else
-      echo "$as_me:$LINENO: result: none" >&5
-echo "${ECHO_T}none" >&6
-      { { echo "$as_me:$LINENO: error: No swt.jar found. Please specify SWT directory with --with-swt-dir=<path> or disable GUI support with --disable-gui." >&5
-echo "$as_me: error: No swt.jar found. Please specify SWT directory with --with-swt-dir=<path> or disable GUI support with --disable-gui." >&2;}
-   { (exit 1); exit 1; }; }
-    fi
-    echo "$as_me:$LINENO: result: $SWT_DIR" >&5
-echo "${ECHO_T}$SWT_DIR" >&6
-  fi
-else
-  SWT_DIR=""
-fi
-
-
 
 cat >>confdefs.h <<_ACEOF
 #define CONFIG_DIR "$CONFIG_DIR"
@@ -6599,6 +6576,7 @@ fi
           ac_config_files="$ac_config_files bar/Makefile"
 
           ac_config_files="$ac_config_files barcontrol/Makefile"
+
 
           ac_config_files="$ac_config_files barcontrol/src/Config.java"
 
@@ -7253,9 +7231,9 @@ s,@host@,$host,;t t
 s,@host_cpu@,$host_cpu,;t t
 s,@host_vendor@,$host_vendor,;t t
 s,@host_os@,$host_os,;t t
+s,@PLATFORM@,$PLATFORM,;t t
 s,@ENABLE_DEBUG@,$ENABLE_DEBUG,;t t
 s,@ENABLE_GUI@,$ENABLE_GUI,;t t
-s,@PLATFORM@,$PLATFORM,;t t
 s,@INSTALL_DIR@,$INSTALL_DIR,;t t
 s,@INSTALL_BIN_DIR@,$INSTALL_BIN_DIR,;t t
 s,@CONFIG_DIR@,$CONFIG_DIR,;t t

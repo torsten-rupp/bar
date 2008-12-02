@@ -33,7 +33,7 @@ BAR - BAckup Archiver
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
   eject (optional)
 * Java for graphical frontend (see below)
-* SWT (optional)
+* SWT 3.4 (optional)
 * ANT and launch4j (optional)
 
 --- Installation

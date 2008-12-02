@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.17 $
+dnl $Revision: 1.18 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -110,10 +110,10 @@ dnl AC_PRESERVE_HELP_ORDER
 
 dnl ----------------------- substitute settings ------------------------
 
+AC_SUBST(PLATFORM)                          dnl platform
+
 AC_SUBST(ENABLE_DEBUG)                      dnl "yes" for debug version, "no" otherwise
 AC_SUBST(ENABLE_GUI)                        dnl "yes" to build GUI, "no" otherwise
-
-AC_SUBST(PLATFORM)                          dnl platform
 
 AC_SUBST(INSTALL_DIR)                       dnl installation directory
 AC_SUBST(INSTALL_BIN_DIR)                   dnl installation directory for binaries
@@ -374,9 +374,9 @@ if test $ENABLE_GCRYPT = "yes"; then
 fi
 if test $ENABLE_GCRYPT = "yes"; then
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt crypto";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
+    AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
   else
-    AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt crypto";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
+    AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
   fi
   LIBRARIES="$LIBRARIES dl"
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -421,24 +421,6 @@ AC_CHECK_FUNCS(ftello,,AC_ERROR([function ftello() is not available]))
 
 AC_CHECK_FUNCS(zlibVersion,,AC_ERROR([function zlibVersion() is not available in zlib.h]))
 
-
-if test $ENABLE_GUI = "yes"; then
-  if test -z "$SWT_DIR"; then
-    AC_MSG_CHECKING([for SWT])
-    if   test -f /usr/local/swt/swt.jar; then
-      SWT_DIR=/usr/local/swt
-    elif test -f /usr/swt/swt.jar; then
-      SWT_DIR=/usr/swt
-    else
-      AC_MSG_RESULT([none])
-      AC_MSG_ERROR([No swt.jar found. Please specify SWT directory with --with-swt-dir=<path> or disable GUI support with --disable-gui.])
-    fi
-    AC_MSG_RESULT($SWT_DIR)
-  fi
-else
-  SWT_DIR=""
-fi
-
 dnl -------------------------------- misc ------------------------------
 
 AC_DEFINE_UNQUOTED(CONFIG_DIR,"$CONFIG_DIR",[configuration directory])
@@ -481,9 +463,12 @@ else
   INSTALL_BIN_DIR=$bindir
 fi
 
+dnl make files
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(bar/Makefile)
 AC_CONFIG_FILES(barcontrol/Makefile)
+
+dnl config files
 AC_CONFIG_FILES(barcontrol/src/Config.java)
 
 AC_CONFIG_COMMANDS(BUILD_NOTE,
