@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.41 $
+# $Revision: 1.42 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -188,7 +188,7 @@ install: \
   $(SCRIPTS)
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar/bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 ifeq ($(ENABLE_GUI),yes)
 	$(INSTALL) $(if $(findstring $(PLATFORM),Linux),\
                         barcontrol/barcontrol \
