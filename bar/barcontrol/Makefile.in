@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -10,28 +10,42 @@
 
 #---------------------------------- settings ---------------------------------
 
-ENABLE_DEBUG = @ENABLE_DEBUG@
-ENABLE_GUI   = @ENABLE_GUI@
+PLATFORM        = @PLATFORM@
+
+ENABLE_DEBUG    = @ENABLE_DEBUG@
+ENABLE_GUI      = @ENABLE_GUI@
 
 #------------------------------------ paths ----------------------------------
 
-SWT_DIR      = @SWT_DIR@
-LAUNCH4J_DIR = @LAUNCH4J_DIR@
+SWT_DIR         = @SWT_DIR@
+LAUNCH4J_DIR    = @LAUNCH4J_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
-JAVA         = @JAVA@
-JAVA_FLAGS   = @JAVA_FLAGS@
+JAVA            = @JAVA@
+JAVA_FLAGS      = @JAVA_FLAGS@
 
-JAVAC        = @JAVAC@
-JAVAC_FLAGS  = @JAVAC_FLAGS@
+JAVAC           = @JAVAC@
+JAVAC_FLAGS     = @JAVAC_FLAGS@
 # -Xlint
 
-JAR          = @JAR@
+JAR             = @JAR@
 
-SWT_JAR      = $(SWT_DIR)/swt.jar
+SWT_JAR_LINUX   = jars/swt-3.4-linux.jar
+SWT_JAR_WINDOWS = jars/swt-3.4-windows.jar
 
-CLASSPATH    = classes:$(SWT_JAR)
+ifneq ($(SWT_DIR),)
+SWT_JAR         = $(SWT_DIR)/swt.jar
+else
+ifeq ($(PLATFORM),Linux)
+SWT_JAR         = $(SWT_JAR_LINUX)
+endif
+ifeq ($(PLATFORM),Windows)
+SWT_JAR         = $(SWT_JAR_WINDOWS)
+endif
+endif
+
+CLASSPATH       = classes:$(SWT_JAR)
 
 #---------------------------------- commands----------------------------------
 
@@ -48,6 +62,7 @@ PERL       = @PERL@
 RMDIR      = rmdir
 RMF        = rm -f
 RMRF       = rm -rf
+SED        = sed
 TAR        = tar
 UNZIP      = unzip
 
@@ -58,11 +73,7 @@ UNZIP      = unzip
 classes/%.class:src/%.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
-ifneq ($(SWT_DIR),)
 	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) src/*.java
-else
-	@$(ECHO) "ERROR: no swt.jar - cannot compile Java sources"
-endif
 else
 	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
 endif
@@ -80,7 +91,8 @@ SOURCES        = src/BARControl.java \
                  src/StringParser.java \
                  src/Dprintf.java \
 
-OTHER_SOURCES  = jar.txt \
+OTHER_SOURCES  = barcontrol.xml \
+                 jar.txt \
 
 OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).class) \
                  classes/Config.class \
@@ -102,11 +114,13 @@ clean:
 	$(RMF) $(INTERMEDIATE)
 	$(RMF) classes/*.class
 	$(RMF) $(TARGETS)
+	$(RMRF) tmp
 
 distclean: clean
 	$(RMF) Makefile
 	$(RMF) src/Config.java
-	$(RMRF) tmp
+	$(RMF) barcontrol
+	$(RMF) barcontrol.bat
 
 .PHONE: jars
 jars: barcontrol.jar barcontrol-linux.jar barcontrol-windows.jar
@@ -127,7 +141,7 @@ endif
 barcontrol-linux.jar: jar.txt $(OBJECTS) images/*.gif jars/swt-3.4-linux.jar
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
-	($(CD) tmp/jar; $(UNZIP) ../../jars/swt-3.4-linux.jar 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_LINUX) 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
 	$(CP) images/*.gif tmp/jar/images
@@ -140,7 +154,7 @@ endif
 barcontrol-windows.jar: jar.txt $(OBJECTS) images/*.gif jars/swt-3.4-windows.jar
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
-	($(CD) tmp/jar; $(UNZIP) ../../jars/swt-3.4-windows.jar 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_WINDOWS) 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
 	$(CP) images/*.gif tmp/jar/images
@@ -155,8 +169,8 @@ barcontrol: barcontrol.in barcontrol-linux.jar
 	$(CAT) barcontrol.in | \
         ( \
           while IFS="" read line; do \
-            line=$${line//\@JAVA\@/$(JAVA)}; \
-            $(ECHO) $$line; \
+            line=`$(ECHO) "$$line"|$(SED) 's|\@JAVA\@|$(JAVA)|g'`; \
+            $(ECHO) "$$line"; \
           done; \
         ) > $@
 	$(CHMOD) 775 $@
@@ -171,8 +185,8 @@ barcontrol.bat: barcontrol.bat.in barcontrol-windows.jar
 	$(CAT) barcontrol.bat.in | \
         ( \
           while IFS="" read line; do \
-            line=$${line//\@JAVA\@/$(JAVA)}; \
-            $(ECHO) $$line; \
+            line=`$(ECHO) "$$line"|$(SED) 's|\@JAVA\@|$(JAVA)|g'`; \
+            $(ECHO) "$$line"; \
           done; \
         ) > $@
 	$(CHMOD) 775 $@
@@ -202,6 +216,7 @@ dist:
 	$(INSTALL) -m 664 \
                    Makefile.in \
                    barcontrol.cfg \
+                   barcontrol.in \
                    $(DIRECTORY)/barcontrol
 	$(INSTALL) -m 664 \
                    $(sort $(SOURCES)) \
