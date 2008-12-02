@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: generate BAR server keys (PEM files)
 # Systems: Unix
@@ -23,6 +23,7 @@ CHMOD="chmod"
 CP="cp"
 ECHO="echo"
 ECHO_NO_LF="echo"
+INSTALL="install -c"
 MKDIR="mkdir"
 MKTEMP="mktemp"
 MV="mv"
@@ -32,7 +33,7 @@ RMRF="rm -rf"
 SED="sed"
 
 # directories
-TLS_DIR="@TLS_DIR@"
+DEFAULT_TLS_DIR="@TLS_DIR@"
 
 # exit codes
 EXITCODE_OK=0
@@ -41,6 +42,9 @@ EXITCODE_FAILURE=1
 EXITCODE_INVALID_ARGUMENT=5
 EXITCODE_CREATE_TEMPORARY_DIRECTORY=6
 
+EXITCODE_CREATE_DIRECTORY_FAIL=10
+EXITCODE_CREATE_KEY_FAIL=11
+
 EXITCODE_INTERNAL_ERROR=126
 
 EXITCODE_UNKNOWN=127
@@ -48,6 +52,9 @@ EXITCODE_UNKNOWN=127
 # --------------------------- environment variables --------------------------
 
 # --------------------------------- variables --------------------------------
+
+# directories
+tlsDir="$DEFAULT_TLS_DIR"
 
 # flags
 quietFlag=0
@@ -209,8 +216,8 @@ printUsage()
   $CAT << EOT
 Usage: $PROGRAM_NAME [...] [--]...
 
-Options: 
-         -h|--help               - print this help
+Options: -d|--tls-dir=<path>  - TLS directory
+         -h|--help            - print this help
 EOT
 }
 
@@ -224,12 +231,12 @@ while test $# != 0; do
       printUsage
       exit $EXITCODE_OK
       ;;
-    -x=* | --xxx=*)
-      XXX=`$ECHO "$1" | $SED 's/^[^=]*=\(.*\)$/\1/g'`
+    -d=* | --tls-dir=*)
+      tlsDir=`$ECHO "$1" | $SED 's/^[^=]*=\(.*\)$/\1/g'`
       shift
       ;;
-    -x | --xxx)
-      XXX=$2
+    -d | --tls-dir)
+      tlsDir=$2
       shift
       shift
       ;;
@@ -291,42 +298,84 @@ if test -z "$tmpDir"; then
 fi
 
 # create template files
-$ECHO $TEMPLATE_CA > $tmpDir/ca.tmpl
-$ECHO $TEMPLATE_CLIENT > $tmpDir/client.tmpl
-$ECHO $TEMPLATE_SERVER > $tmpDir/server.tmpl
+$CAT <<EOT > $tmpDir/ca.tmpl
+@CA.TEMPL@
+EOT
+$CAT <<EOT > $tmpDir/client.tmpl
+@CLIENT.TEMPL@
+EOT
+$CAT <<EOT > $tmpDir/server.tmpl
+@SERVER.TEMPL@
+EOT
 
 # create bar-key.pem
+$INSTALL -d $tlsDir/private
+if test $? -ne 0; then
+  exit $EXITCODE_CREATE_DIRECTORY_FAIL
+fi
 $CERTTOOL \
   --generate-privkey \
-  --outfile $TLS_DIR/private/bar-key.pem \
+  --outfile $tlsDir/private/bar-key.pem \
   1>/dev/null 2>/dev/null
+rc=$?
+if test $rc -ne 0; then
+  printError "Cannot create BAR key 'bar-key.pem' (exitcode: $rc)"
+  exit $EXITCODE_CREATE_KEY_FAIL
+fi
 
 # create bar-ca.pem
+$INSTALL -d $tlsDir/certs
+if test $? -ne 0; then
+  exit $EXITCODE_CREATE_DIRECTORY_FAIL
+fi
 $CERTTOOL \
   --generate-self-signed \
   --template $tmpDir/ca.tmpl \
-  --load-privkey $TLS_DIR/private/bar-key.pem \
-  --outfile $TLS_DIR/certs/bar-ca.pem \
+  --load-privkey $tlsDir/private/bar-key.pem \
+  --outfile $tlsDir/certs/bar-ca.pem \
   1>/dev/null 2>/dev/null
+rc=$?
+if test $rc -ne 0; then
+  printError "Cannot create BAR authority certficate 'bar-ca.pem (exitcode: $rc)"
+  exit $EXITCODE_CREATE_KEY_FAIL
+fi
 
 # create bar-server-key.pem
+$INSTALL -d $tlsDir/private
+if test $? -ne 0; then
+  exit $EXITCODE_CREATE_DIRECTORY_FAIL
+fi
 $CERTTOOL \
   --generate-privkey \
-  --outfile $TLS_DIR/private/bar-server-key.pem \
+  --outfile $tlsDir/private/bar-server-key.pem \
   1>/dev/null 2>/dev/null
+rc=$?
+if test $rc -ne 0; then
+  printError "Cannot create BAR server key 'bar-server-key.pem' (exitcode: $rc)"
+  exit $EXITCODE_CREATE_KEY_FAIL
+fi
 
 # create bar-server-cert.pem
+$INSTALL -d $tlsDir/certs
+if test $? -ne 0; then
+  exit $EXITCODE_CREATE_DIRECTORY_FAIL
+fi
 $CERTTOOL \
   --generate-certificate \
   --template $tmpDir/server.tmpl \
-  --load-privkey $TLS_DIR/private/bar-server-key.pem \
-  --load-ca-certificate $TLS_DIR/certs/bar-ca.pem \
-  --load-ca-privkey $TLS_DIR/private/bar-key.pem \
-  --outfile $TLS_DIR/certs/bar-server-cert.pem \
+  --load-privkey $tlsDir/private/bar-server-key.pem \
+  --load-ca-certificate $tlsDir/certs/bar-ca.pem \
+  --load-ca-privkey $tlsDir/private/bar-key.pem \
+  --outfile $tlsDir/certs/bar-server-cert.pem \
   1>/dev/null 2>/dev/null
+rc=$?
+if test $rc -ne 0; then
+  printError "Cannot create BAR server certificate 'bar-server-cert.pem' (exitcode: $rc)"
+  exit $EXITCODE_CREATE_KEY_FAIL
+fi
 
 # free resources
-echo $RMRF $tmpDir 2>/dev/null
+$RMRF $tmpDir 2>/dev/null
 
 exit $EXITCODE_OK
 # end of file

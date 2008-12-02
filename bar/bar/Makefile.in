@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -49,6 +49,7 @@ PERL       = @PERL@
 RMDIR      = rmdir
 RMF        = rm -f
 RMRF       = rm -rf
+SED        = sed
 TAR        = tar
 
 #------------------------ specific variables/settings ------------------------
@@ -177,10 +178,17 @@ bar-keygen: bar-keygen.in
 	$(CAT) bar-keygen.in | \
         ( \
           while IFS="" read -r line; do \
-            line=$${line//\@DESTDIR\@/$(DESTDIR)}; \
-            line=$${line//\@TLS_DIR\@/$(TLS_DIR)}; \
-            line=$${line//\@CA.TEMPL\@/$(CA.TEMPL)}; \
-            $(ECHO) "$$line"; \
+            if   test "$$line" = "@CA.TEMPL@"; then \
+              $(CAT) ../ssl/ca.tmpl; \
+            elif test "$$line" = "@CLIENT.TEMPL@"; then \
+              $(CAT) ../ssl/client.tmpl; \
+            elif test "$$line" = "@SERVER.TEMPL@"; then \
+              $(CAT) ../ssl/server.tmpl; \
+            else \
+              line=`$(ECHO) "$$line"|$(SED) 's|\@DESTDIR\@|$(DESTDIR)|g'`; \
+              line=`$(ECHO) "$$line"|$(SED) 's|\@TLS_DIR\@|$(TLS_DIR)|g'`; \
+              $(ECHO) "$$line"; \
+            fi; \
           done; \
         ) > $@
 	$(CHMOD) 775 $@
