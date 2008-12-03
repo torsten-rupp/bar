@@ -1,3 +1,8 @@
+2008-12-03 0.09d
+  * fixed missing server-jobs-directory in BAR server
+  * fixed wrong path to bar+bar.cfg binary when installing
+  * fix installation when barcontrol was not built
+
 2008-12-01 0.09c
   * barcontrol: fixed #-parsing in archive name editor
   * fixed missing barcontrol.in, barcontrol.bat.in, barcontrol.xml source

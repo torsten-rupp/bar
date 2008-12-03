@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -499,6 +499,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_CSTRING  ("server-cert-file",             &serverCertFileName,-1                                  ),
   CONFIG_VALUE_CSTRING  ("server-key-file",              &serverKeyFileName,-1                                   ),
   CONFIG_VALUE_SPECIAL  ("server-password",              &serverPassword,-1,                                     configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_CSTRING  ("server-jobs-directory",        &serverJobsDirectory,-1                                 ),
 
   CONFIG_VALUE_STRING   ("remote-bar-executable",        &globalOptions.remoteBARExecutable,-1                   ),
 

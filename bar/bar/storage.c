@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -1014,6 +1014,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
       /* init variables */
       storageFileHandle->type = STORAGE_TYPE_FILESYSTEM;
       String_set(fileName,storageSpecifier);
+
+      if (jobOptions->overwriteArchiveFilesFlag)
+      {
+        /* delete old storage files */
+      }
       break;
     case STORAGE_TYPE_SSH:
       String_delete(storageSpecifier);

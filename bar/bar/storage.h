@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -47,7 +47,7 @@ typedef struct
   double volumeProgress;                   // current volume progress [0..100]
 } StorageStatusInfo;
 
-typedef bool(*StorageStatusInfoFunction)(void *userData,
+typedef bool(*StorageStatusInfoFunction)(void                    *userData,
                                          const StorageStatusInfo *storageStatusInfo
                                         );
 
@@ -350,9 +350,6 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
 * Name   : Storage_prepare
 * Purpose: prepare storage: read password, init files
 * Input  : storageName - storage name:
-*                          <file name>
-*                          scp:<user name>@<host name>:<file name>
-*                          sftp:<user name>@<host name>:<file name>
 *          options     - options
 * Output : -
 * Return : ERROR_NONE or errorcode
@@ -368,9 +365,6 @@ Errors Storage_prepare(const String     storageName,
 * Purpose: init new storage
 * Input  : storageFileHandle            - storage file handle variable
 *          storageName                  - storage name:
-*                                           <file name>
-*                                           scp:<user name>@<host name>:<file name>
-*                                           sftp:<user name>@<host name>:<file name>
 *          jobOptions                   - job options
 *          storageRequestVolumeFunction - volume request call back
 *          storageRequestVolumeUserData - user data for volume request
@@ -402,6 +396,15 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 \***********************************************************************/
 
 Errors Storage_done(StorageFileHandle *storageFileHandle);
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 String Storage_getName(const StorageFileHandle *storageFileHandle,
                        String                  name,
@@ -461,10 +464,7 @@ void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
 * Name   : Storage_create
 * Purpose: create new storage file
 * Input  : storageFileHandle - storage file handle
-*          storageName      - storage name:
-*                               <file name>
-*                               scp:<user name>@<host name>:<file name>
-*                               sftp:<user name>@<host name>:<file name>
+*          storageName      - storage name
 *          fileSize         - storage file size
 *          jobOptions       - job options
 * Output : -
@@ -482,9 +482,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 * Name   : Storage_open
 * Purpose: open storage file
 * Input  : storageFileHandle - storage handle file
-*          storageName       - storage name:
-*                                <file name>
-*                                sftp:<user name>@<host name>:<file name>
+*          storageName       - storage name
 *          jobOptions        - job options
 * Output : -
 * Return : ERROR_NONE or errorcode

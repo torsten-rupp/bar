@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.42 $
+# $Revision: 1.43 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -45,7 +45,7 @@ TAR        = tar
 #------------------------ specific variables/settings ------------------------
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 09c
+VERSION_MINOR = 09d
 
 CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
@@ -182,8 +182,9 @@ doc: doc/bar.7
 .PHONY: install uninstall
 install: \
   bar/bar \
-  $(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
-  $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol.bat barcontrol-windows.jar)) \
+  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
+                                       $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol.bat barcontrol-windows.jar)) \
+  ) \
   $(KEY_FILES) \
   $(SCRIPTS)
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_DIR)"
@@ -201,7 +202,7 @@ ifeq ($(ENABLE_GUI),yes)
                     ) "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
 	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)"
-	if test ! -f "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; then $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(CONFIG_DIR)"; else echo "$(DESTDIR)$(CONFIG_DIR)/bar.cfg NOT installed - file already exists\!"; fi
+	if test ! -f "$(DESTDIR)$(CONFIG_DIR)/bar.cfg"; then $(INSTALL) -m 600 bar/bar.cfg "$(DESTDIR)$(CONFIG_DIR)"; else echo "$(DESTDIR)$(CONFIG_DIR)/bar.cfg NOT installed - file already exists!"; fi
 ifeq ($(ENABLE_GUI),yes)
 	$(INSTALL) bar.jks "$(DESTDIR)$(CONFIG_DIR)"
 endif
@@ -212,7 +213,7 @@ endif
 	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(TLS_DIR)/certs"
 	$(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"
 	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(TLS_DIR)/private"
-	if test ! -f /etc/init.d/barserver; then $(INSTALL) -m 600 scripts/barserver /etc/init.d/barserver; else echo "/etc/init.d/barserver NOT installed - file already exists\!"; fi
+	if test ! -f /etc/init.d/barserver; then $(INSTALL) -m 600 scripts/barserver /etc/init.d/barserver; else echo "/etc/init.d/barserver NOT installed - file already exists!"; fi
 
 uninstall:
 	@read -n 1 -p "Really uninstall? [y/N] " s; \
