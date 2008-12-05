@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -101,6 +101,34 @@ void Network_doneAll(void)
   #endif /* HAVE_SSH2 */
 }
 
+bool Network_exists(const String hostName)
+{
+  return Network_existsCString(String_cString(hostName));
+}
+
+bool Network_existsCString(const char *hostName)
+{
+  #ifdef HAVE_GETBYHOSTNAME_R
+    char           buffer[512];
+    struct hostent bufferAddressEntry;
+    struct hostent *hostAddressEntry;
+    int            getHostByNameError;
+  #endif /* HAVE_GETBYHOSTNAME_R */
+
+  #ifdef HAVE_GETBYHOSTNAME_R
+    return    (gethostbyname_r(hostName,
+                               &bufferAddressEntry,
+                               buffer,
+                               sizeof(buffer),
+                               &hostAddressEntry,
+                               &getHostByNameError
+                              ) == 0)
+           && (hostAddressEntry != NULL);
+  #else /* not HAVE_GETBYHOSTNAME_R */
+    return gethostbyname(hostName) != NULL;
+  #endif /* HAVE_GETBYHOSTNAME_R */
+}
+
 Errors Network_connect(SocketHandle *socketHandle,
                        SocketTypes  socketType,
                        const String hostName,
@@ -112,6 +140,11 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         flags
                       )
 {
+  #ifdef HAVE_GETBYHOSTNAME_R
+    char           buffer[512];
+    struct hostent bufferAddressEntry;
+    int            getHostByNameError;
+  #endif /* HAVE_GETBYHOSTNAME_R */
   struct hostent     *hostAddressEntry;
   in_addr_t          ipAddress;
   struct sockaddr_in socketAddress;
@@ -126,7 +159,22 @@ Errors Network_connect(SocketHandle *socketHandle,
   {
     case SOCKET_TYPE_PLAIN:
       /* get host IP address */
-      hostAddressEntry = gethostbyname(String_cString(hostName));
+      #ifdef HAVE_GETBYHOSTNAME_R
+        if (   (gethostbyname_r(String_cString(hostName),
+                                &bufferAddressEntry,
+                                buffer,
+                                sizeof(buffer),
+                                 &hostAddressEntry,
+                                &getHostByNameError
+                               ) != 0)
+            && (hostAddressEntry != NULL)
+           )
+        {
+          hostAddressEntry = NULL;
+        }
+      #else /* not HAVE_GETBYHOSTNAME_R */
+        hostAddressEntry = gethostbyname(String_cString(hostName));
+      #endif /* HAVE_GETBYHOSTNAME_R */
       if (hostAddressEntry != NULL)
       {
         assert(hostAddressEntry->h_length > 0);
@@ -178,7 +226,22 @@ Errors Network_connect(SocketHandle *socketHandle,
         /* initialise variables */
 
         /* get host IP address */
-        hostAddressEntry = gethostbyname(String_cString(hostName));
+        #ifdef HAVE_GETBYHOSTNAME_R
+          if (  (gethostbyname_r(String_cString(hostName),
+                                 &bufferAddressEntry,
+                                 buffer,
+                                 sizeof(buffer),
+                                 &hostAddressEntry,
+                                 &getHostByNameError
+                                ) != 0)
+              && (hostAddressEntry != NULL)
+             )
+          {
+            hostAddressEntry = NULL;
+          }
+        #else /* not HAVE_GETBYHOSTNAME_R */
+          hostAddressEntry = gethostbyname(String_cString(hostName));
+        #endif /* HAVE_GETBYHOSTNAME_R */
         if (hostAddressEntry != NULL)
         {
           assert(hostAddressEntry->h_length > 0);

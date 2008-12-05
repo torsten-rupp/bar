@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -157,6 +157,18 @@ Errors Network_initAll(void);
 \***********************************************************************/
 
 void Network_doneAll(void);
+
+/***********************************************************************\
+* Name   : Network_exists, Network_existsCString
+* Purpose: check if host name is valid
+* Input  : hostName - host name
+* Output : -
+* Return : TRUE iff host name exists and is valid, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Network_exists(const String hostName);
+bool Network_existsCString(const char *hostName);
 
 /***********************************************************************\
 * Name   : Network_connect
