@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/bar/errors.def,v $
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
@@ -19,6 +19,7 @@ ERROR CONFIG                         "config error"
 ERROR ABORTED                        "aborted"
 ERROR FUNCTION_NOT_SUPPORTED         "function not supported"
 ERROR STILL_NOT_IMPLEMENTED          "function still not implemented"
+ERROR DAEMON_FAIL                    "run as daemon fail"
 
 # patterns
 ERROR INVALID_PATTERN                "init pattern matching"
@@ -31,13 +32,17 @@ ERROR NO_TLS_KEY                     "no or unreadable TLS (SSL) key file 'bar-s
 ERROR INVALID_TLS_CA                 "invalid TLS (SSL) certificate authority"
 ERROR INVALID_TLS_CERTIFICATE        "invalid TLS (SSL) certificate"
 ERROR TLS_HANDSHAKE                  "TLS (SSL) handshake failure"
-ERROR INVALID_SSH_SPEFICIER          "invalid SSH specifier"
+ERROR INVALID_SSH_SPECIFIER          "invalid SSH specifier"
 ERROR SSH_SESSION_FAIL               "initialize ssh session fail"
 ERROR SSH_AUTHENTIFICATION           "invalid ssh password"
 
 # FTP
+ERROR INVALID_FTP_SPECIFIER          "invalid FTP specifier"
 ERROR FTP_SESSION_FAIL               "initialize FTP session fail"
 ERROR FTP_AUTHENTIFICATION           "invalid FTP user/password"
+ERROR FTP_CREATE                     "create FTP file fail"
+ERROR FTP_READ                       "read FTP file fail"
+ERROR FTP_WRITE                      "write FTP file fail"
 
 # compress
 ERROR INIT_COMPRESS                  "init compress fail"
