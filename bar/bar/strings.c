@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -834,6 +834,12 @@ LOCAL bool parseString(const struct __String *string,
         case 'u':
           /* get data */
           z = 0;
+          if ((index < string->length) && ((string->data[index] == '+') || (string->data[index] == '-')))
+          {
+            buffer[z] = string->data[index];
+            z++;
+            index++;
+          }
           while (   (index < string->length)
                  && (z < sizeof(buffer)-1)
                  && isdigit(string->data[index])
@@ -951,6 +957,12 @@ LOCAL bool parseString(const struct __String *string,
         case 'A':
           /* get data */
           z = 0;
+          if ((index < string->length) && ((string->data[index] == '+') || (string->data[index] == '-')))
+          {
+            buffer[z] = string->data[index];
+            z++;
+            index++;
+          }
           while (   (index < string->length)
                  && (z < sizeof(buffer)-1)
                  && isdigit(string->data[index])
