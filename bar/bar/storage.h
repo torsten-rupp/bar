@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -293,17 +293,23 @@ StorageTypes Storage_getType(const String storageName,
 /***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
 * Purpose: parse FTP specifier:
-*            [[<user name>@]<host name>/]<file name>
-* Input  : ftpSpecifier - FTP specifier string
-* Output : userName     - user name (can be NULL)
-*          hostName     - host name (can be NULL)
-*          fileName     - file name (can be NULL)
+*            [[<user name>[:<password>]@]<host name>/]<file name>
+* Input  : ftpSpecifier  - FTP specifier string
+*          loginName     - login user name variable (can be NULL)
+*          password      - password variable (can be NULL)
+*          hostName      - host name variable (can be NULL)
+*          fileName      - file name variable (can be NULL)
+* Output : loginName - login user name (can be NULL)
+*          password  - password (can be NULL)
+*          hostName  - host name (can be NULL)
+*          fileName  - file name (can be NULL)
 * Return : TRUE if FTP specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
 
 bool Storage_parseFTPSpecifier(const String ftpSpecifier,
                                String       loginName,
+                               Password     *password,
                                String       hostName,
                                String       fileName
                               );
@@ -313,7 +319,11 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 * Purpose: parse ssh specifier:
 *            [//[<user name>@]<host name>[:<port>]/]<file name>
 * Input  : sshSpecifier - ssh specifier string
-* Output : userName     - user name (can be NULL)
+*          loginName    - login user name variable (can be NULL)
+*          hostName     - host name variable (can be NULL)
+*          hostPort     - host port number variable (can be NULL)
+*          fileName     - file name variable (can be NULL)
+* Output : loginName    - login user name (can be NULL)
 *          hostName     - host name (can be NULL)
 *          hostPort     - host port number (can be NULL)
 *          fileName     - file name (can be NULL)
@@ -322,7 +332,7 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 \***********************************************************************/
 
 bool Storage_parseSSHSpecifier(const String sshSpecifier,
-                               String       userName,
+                               String       loginName,
                                String       hostName,
                                uint         *hostPort,
                                String       fileName
@@ -334,6 +344,8 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
 *            [//<device name>/]<file name>
 * Input  : deviceSpecifier   - device specifier string
 *          defaultDeviceName - default device name
+*          deviceName        - device name variable (can be NULL)
+*          fileName          - file name variable (can be NULL)
 * Output : deviceName - device name (can be NULL)
 *          fileName   - file name (can be NULL)
 * Return : TRUE if DVD specifier parsed, FALSE if specifier invalid
@@ -345,6 +357,29 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
                                   String       deviceName,
                                   String       fileName
                                  );
+
+/***********************************************************************\
+* Name   : Storage_formatArchiveFileName
+* Purpose: get archive file name
+* Input  : fileName          - file name variable
+*          storageFileHandle - storage file handle
+*          partNumber        - part number (>=0 for parts, -1 for single
+*                              archive)
+*          lastPartFlag      - TRUE iff last part
+*          time              - time
+*          archiveType       - archive type
+* Output : -
+* Return : formated file name
+* Notes  : -
+\***********************************************************************/
+
+String Storage_formatArchiveFileName(String       fileName,
+                                     const String templateFileName,
+                                     int          partNumber,
+                                     bool         lastPartFlag,
+                                     time_t       time,
+                                     ArchiveTypes archiveType
+                                    );
 
 /***********************************************************************\
 * Name   : Storage_prepare

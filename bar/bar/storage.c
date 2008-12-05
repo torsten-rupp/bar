@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -138,6 +138,99 @@ LOCAL bool initSSHPassword(const JobOptions *jobOptions)
   }
 }
 #endif /* HAVE_SSH2 */
+
+/***********************************************************************\
+* Name   : checkFTPLogin
+* Purpose: check if FTP login is possible
+* Input  : loginName - login name
+*          password  - login password
+*          hostName  - host name
+* Output : -
+* Return : ERROR_NONE if login is possible, error code otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors checkFTPLogin(const String loginName,
+                           Password     *password,
+                           const String hostName
+                          )
+{
+  netbuf     *ftpControl;
+  const char *plainPassword;
+
+  /* check host name (Note: FTP library crash if host name is not valid!) */
+  if (!Network_exists(hostName))
+  {
+    return ERROR_HOST_NOT_FOUND;
+  }
+
+  /* connect */
+  if (FtpConnect(String_cString(hostName),&ftpControl) != 1)
+  {
+    return ERROR_FTP_SESSION_FAIL;
+  }
+
+  /* login */
+  plainPassword = Password_deploy(password);
+  if (FtpLogin(String_cString(loginName),
+               plainPassword,
+               ftpControl
+              ) != 1
+     )
+  {
+    Password_undeploy(password);
+    FtpQuit(ftpControl);
+    return ERROR_FTP_AUTHENTIFICATION;
+  }
+  Password_undeploy(password);
+  FtpQuit(ftpControl);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : checkSSHLogin
+* Purpose: check if SSH login is possible
+* Input  : loginName          - login name
+*          password           - login password
+*          hostName           - host name
+*          hostPort           - host SSH port
+*          publicKeyFileName  - SSH public key file name
+*          privateKeyFileName - SSH private key file name
+* Output : -
+* Return : ERROR_NONE if login is possible, error code otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors checkSSHLogin(const String loginName,
+                           Password     *password,
+                           const String hostName,
+                           uint         hostPort,
+                           const String publicKeyFileName,
+                           const String privateKeyFileName
+                          )
+{
+  SocketHandle socketHandle;
+  Errors       error;
+  
+  error = Network_connect(&socketHandle,
+                          SOCKET_TYPE_SSH,
+                          hostName,
+                          hostPort,
+                          loginName,
+                          password,
+                          publicKeyFileName,
+                          privateKeyFileName,
+                          0
+                         );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  Network_disconnect(&socketHandle);
+
+  return ERROR_NONE;
+}
 
 /***********************************************************************\
 * Name   : limitBandWidth
@@ -640,11 +733,13 @@ StorageTypes Storage_getType(const String storageName,
 
 bool Storage_parseFTPSpecifier(const String ftpSpecifier,
                                String       loginName,
+                               Password     *password,
                                String       hostName,
                                String       fileName
                               )
 {
-  ulong nextIndex;
+  ulong  nextIndex;
+  String s;
 
   assert(ftpSpecifier != NULL);
 
@@ -655,13 +750,20 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
   if (String_subEqualsCString(ftpSpecifier,"//",STRING_BEGIN,2))
   {
     nextIndex = 2;
-    if (String_match(ftpSpecifier,nextIndex,"[[:alnum:]_]+@.*",NULL,NULL))
+    if      (String_match(ftpSpecifier,nextIndex,"[[:alnum:]_]+:[[:alnum:]_]*@.*",NULL,NULL))
+    {
+      s = String_new();
+      String_parse(ftpSpecifier,nextIndex,"%S:%S@",&nextIndex,loginName,s);
+      if (password != NULL) Password_setString(password,s);
+      String_delete(s);
+    }
+    else if (String_match(ftpSpecifier,nextIndex,"[[:alnum:]_]+@.*",NULL,NULL))
     {
       String_parse(ftpSpecifier,nextIndex,"%S@",&nextIndex,loginName);
     }
-    if (String_match(ftpSpecifier,2,"[[:alnum:]_]+/.*",NULL,NULL))
+    if (String_match(ftpSpecifier,nextIndex,"[[:alnum:]_]+/.*",NULL,NULL))
     {
-      return String_parse(ftpSpecifier,2,"%S/%S",NULL,hostName,fileName);
+      return String_parse(ftpSpecifier,nextIndex,"%S/%S",NULL,hostName,fileName);
     }
     else
     {
@@ -726,6 +828,8 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
                                   String       fileName
                                  )
 {
+  ulong nextIndex;
+
   assert(deviceSpecifier != NULL);
 
   String_clear(deviceName);
@@ -733,14 +837,15 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
 
   if (String_subEqualsCString(deviceSpecifier,"//",STRING_BEGIN,2))
   {
-    if (String_match(deviceSpecifier,2,"[[:print:]]+/.*",NULL,NULL))
+    nextIndex = 2;
+    if (String_match(deviceSpecifier,nextIndex,"[[:print:]]+/.*",NULL,NULL))
     {
-      return String_parse(deviceSpecifier,2,"%S/%S",NULL,deviceName,fileName);
+      return String_parse(deviceSpecifier,nextIndex,"%S/%S",NULL,deviceName,fileName);
     }
     else
     {
       if (deviceName != NULL) String_set(deviceName,defaultDeviceName);
-      String_set(fileName,deviceSpecifier);
+      String_sub(fileName,deviceSpecifier,nextIndex,STRING_END);
       return TRUE;
     }
   }
@@ -751,6 +856,9 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
     return TRUE;
   }
 }
+
+#if 0
+obsolete, now in init
 
 Errors Storage_prepare(const String     storageName,
                        const JobOptions *jobOptions
@@ -788,19 +896,20 @@ Errors Storage_prepare(const String     storageName,
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
         {
-          String     loginName;
-          String     hostName;
-          String     hostFileName;
-          netbuf     *ftpControl;
-          Password   *password;
-          const char *plainPassword;
+          String   loginName;
+          Password password;
+          String   hostName;
+          String   hostFileName;
+          Errors   error;
 
           /* parse ssh login specification */
-          loginName    = String_new();
-          hostName     = String_new();
-          hostFileName = String_new();
-          if (!Storage_parseFTPSpecifier(storageSpecifier,loginName,hostName,hostFileName))
+          loginName     = String_new();
+          hostName      = String_new();
+          hostFileName  = String_new();
+          Password_init(&password);
+          if (!Storage_parseFTPSpecifier(storageSpecifier,loginName,&password,hostName,hostFileName))
           {
+            Password_done(&password);
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
@@ -808,44 +917,40 @@ Errors Storage_prepare(const String     storageName,
             return ERROR_FTP_SESSION_FAIL;
           }
 
-          /* initialize password */
-          if (!initFTPPassword(jobOptions))
-          {
-            String_delete(hostFileName);
-            String_delete(hostName);
-            String_delete(loginName);
-            String_delete(storageSpecifier);
-            return ERROR_NO_PASSWORD;
-          }
-
-          /* check if FTP login is possible */
+          /* get server data */
           getFTPServer(hostName,jobOptions,&ftpServer);
           if (String_empty(loginName)) String_set(loginName,ftpServer.loginName);
-          if (FtpConnect(String_cString(hostName),&ftpControl) != 1)
+
+          /* check if FTP login is possible */
+          error = ERROR_UNKNOWN;
+          if ((error != ERROR_NONE) && !Password_empty(&password))
           {
+            error = checkFTPLogin(loginName,&password,hostName);
+          }
+          if ((error != ERROR_NONE) && (ftpServer.password != NULL))
+          {
+            error = checkFTPLogin(loginName,ftpServer.password,hostName);
+          }
+          if (error != ERROR_NONE)
+          {
+            /* initialize default password */
+            if (initFTPPassword(jobOptions))
+            {
+              error = checkFTPLogin(loginName,defaultFTPPassword,hostName);
+            }
+          }
+          if (error != ERROR_NONE)
+          {
+            Password_done(&password);
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
             String_delete(storageSpecifier);
-            return ERROR_FTP_SESSION_FAIL;
-
+            return error;
           }
-          password = (ftpServer.password != NULL)?ftpServer.password:defaultFTPPassword;
-          plainPassword = Password_deploy(password);
-          if (FtpLogin(String_cString(loginName),
-                       plainPassword,
-                       ftpControl
-                      ) != 1
-             )
-          {
-            Password_undeploy(password);
-            FtpQuit(ftpControl);
-            return ERROR_FTP_AUTHENTIFICATION;
-          }
-          Password_undeploy(password);
-          FtpQuit(ftpControl);
 
           /* free resources */
+          Password_done(&password);
           String_delete(hostFileName);
           String_delete(hostName);
           String_delete(loginName);
@@ -859,12 +964,11 @@ Errors Storage_prepare(const String     storageName,
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          String       loginName;
-          String       hostName;
-          uint         hostPort;
-          String       hostFileName;
-          Errors       error;
-          SocketHandle socketHandle;
+          String loginName;
+          String hostName;
+          uint   hostPort;
+          String hostFileName;
+          Errors error;
 
           /* parse ssh login specification */
           loginName    = String_new();
@@ -878,10 +982,6 @@ Errors Storage_prepare(const String     storageName,
             String_delete(storageSpecifier);
             return ERROR_SSH_SESSION_FAIL;
           }
-fprintf(stderr,"%s,%d: loginName=%s\n",__FILE__,__LINE__,String_cString(loginName));
-fprintf(stderr,"%s,%d: hostName=%s\n",__FILE__,__LINE__,String_cString(hostName));
-fprintf(stderr,"%s,%d: host=POrt=%d\n",__FILE__,__LINE__,hostPort);
-fprintf(stderr,"%s,%d: hostFileName=%s\n",__FILE__,__LINE__,String_cString(hostFileName));
 
           /* initialize password */
           if (!initSSHPassword(jobOptions))
@@ -893,19 +993,25 @@ fprintf(stderr,"%s,%d: hostFileName=%s\n",__FILE__,__LINE__,String_cString(hostF
             return ERROR_NO_PASSWORD;
           }
 
-          /* check if SSH login is possible */
+          /* get server data */
           getSSHServer(hostName,jobOptions,&sshServer);
           if (String_empty(loginName)) String_set(loginName,sshServer.loginName);
-          error = Network_connect(&socketHandle,
-                                  SOCKET_TYPE_SSH,
-                                  hostName,
-                                  (hostPort != 0)?hostPort:sshServer.port,
-                                  !String_empty(loginName)?loginName:sshServer.loginName,
-                                  (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
-                                  sshServer.publicKeyFileName,
-                                  sshServer.privateKeyFileName,
-                                  0
-                                 );
+          if (hostPort == 0) hostPort = sshServer.port;
+
+          /* check if SSH login is possible */
+          error = ERROR_UNKNOWN;
+          if ((error != ERROR_NONE) && (sshServer.password != NULL))
+          {
+            error = checkSSHLogin(loginName,sshServer.password,hostName,hostPort,sshServer.publicKeyFileName,sshServer.privateKeyFileName);
+          }
+          if (error != ERROR_NONE)
+          {
+            /* initialize default password */
+            if (initFTPPassword(jobOptions))
+            {
+              error = checkSSHLogin(loginName,defaultSSHPassword,hostName,hostPort,sshServer.publicKeyFileName,sshServer.privateKeyFileName);
+            }
+          }
           if (error != ERROR_NONE)
           {
             String_delete(hostFileName);
@@ -914,7 +1020,6 @@ fprintf(stderr,"%s,%d: hostFileName=%s\n",__FILE__,__LINE__,String_cString(hostF
             String_delete(storageSpecifier);
             return error;
           }
-          Network_disconnect(&socketHandle);
 
           /* free resources */
           String_delete(hostFileName);
@@ -965,6 +1070,7 @@ fprintf(stderr,"%s,%d: hostFileName=%s\n",__FILE__,__LINE__,String_cString(hostF
 
   return ERROR_NONE;
 }
+#endif /* 0 */
 
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const String                 storageName,
@@ -1027,7 +1133,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
         {
-          uint z;
+          uint   z;
+          Errors error;
 
           /* init variables */
           storageFileHandle->type                    = STORAGE_TYPE_FTP;
@@ -1047,6 +1154,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           /* parse storage string */
           if (!Storage_parseFTPSpecifier(storageSpecifier,
                                          storageFileHandle->ftp.loginName,
+                                         storageFileHandle->ftp.password,
                                          storageFileHandle->ftp.hostName,
                                          fileName
                                         )
@@ -1056,13 +1164,56 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             String_delete(storageFileHandle->ftp.loginName);
             String_delete(storageFileHandle->ftp.hostName);
             String_delete(storageSpecifier);
-            return ERROR_INVALID_SSH_SPEFICIER;
+            return ERROR_INVALID_FTP_SPECIFIER;
           }
 
           /* get FTP server data */
           getFTPServer(storageFileHandle->ftp.hostName,jobOptions,&ftpServer);
           if (String_empty(storageFileHandle->ftp.loginName)) String_set(storageFileHandle->ftp.loginName,ftpServer.loginName);
-          Password_set(storageFileHandle->ftp.password,ftpServer.password);
+
+          /* check FTP login, get correct password */
+          error = ERROR_UNKNOWN;
+          if ((error != ERROR_NONE) && !Password_empty(storageFileHandle->ftp.password))
+          {
+            error = checkFTPLogin(storageFileHandle->ftp.loginName,
+                                  storageFileHandle->ftp.password,
+                                  storageFileHandle->ftp.hostName
+                                 );
+          }
+          if ((error != ERROR_NONE) && (ftpServer.password != NULL))
+          {
+            error = checkFTPLogin(storageFileHandle->ftp.loginName,
+                                  ftpServer.password,
+                                  storageFileHandle->ftp.hostName
+                                 );
+            if (error == ERROR_NONE)
+            {
+              Password_set(storageFileHandle->ftp.password,ftpServer.password);
+            }
+          }
+          if (error != ERROR_NONE)
+          {
+            /* initialize default password */
+            if (initFTPPassword(jobOptions))
+            {
+              error = checkFTPLogin(storageFileHandle->ftp.loginName,
+                                    defaultFTPPassword,
+                                    storageFileHandle->ftp.hostName
+                                   );
+              if (error == ERROR_NONE)
+              {
+                Password_set(storageFileHandle->ftp.password,defaultFTPPassword);
+              }
+            }
+          }
+          if (error != ERROR_NONE)
+          {
+            Password_delete(storageFileHandle->ftp.password);
+            String_delete(storageFileHandle->ftp.loginName);
+            String_delete(storageFileHandle->ftp.hostName);
+            String_delete(storageSpecifier);
+            return error;
+          }
 
           /* free resources */
         }
@@ -1074,7 +1225,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         {
-          uint z;
+          uint   z;
+          Errors error;
 
           /* init variables */
           storageFileHandle->type                      = STORAGE_TYPE_SCP;
@@ -1107,7 +1259,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             String_delete(storageFileHandle->scp.loginName);
             String_delete(storageFileHandle->scp.hostName);
             String_delete(storageSpecifier);
-            return ERROR_INVALID_SSH_SPEFICIER;
+            return ERROR_INVALID_SSH_SPECIFIER;
           }
 
           /* get SSH server data */
@@ -1116,7 +1268,49 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           if (storageFileHandle->scp.hostPort == 0) storageFileHandle->scp.hostPort = sshServer.port;
           storageFileHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
-          Password_set(storageFileHandle->scp.password,sshServer.password);
+
+          /* check if SSH login is possible */
+          error = ERROR_UNKNOWN;
+          if ((error != ERROR_NONE) && (sshServer.password != NULL))
+          {
+            error = checkSSHLogin(storageFileHandle->scp.loginName,
+                                  sshServer.password,
+                                  storageFileHandle->scp.hostName,
+                                  storageFileHandle->scp.hostPort,
+                                  storageFileHandle->scp.sshPublicKeyFileName,
+                                  storageFileHandle->scp.sshPrivateKeyFileName
+                                 );
+            if (error == ERROR_NONE)
+            {
+              Password_set(storageFileHandle->scp.password,sshServer.password);
+            }
+          }
+          if (error != ERROR_NONE)
+          {
+            /* initialize default password */
+            if (initSSHPassword(jobOptions))
+            {
+              error = checkSSHLogin(storageFileHandle->scp.loginName,
+                                    defaultSSHPassword,
+                                    storageFileHandle->scp.hostName,
+                                    storageFileHandle->scp.hostPort,
+                                    storageFileHandle->scp.sshPublicKeyFileName,
+                                    storageFileHandle->scp.sshPrivateKeyFileName
+                                   );
+              if (error == ERROR_NONE)
+              {
+                Password_set(storageFileHandle->scp.password,defaultSSHPassword);
+              }
+            }
+          }
+          if (error != ERROR_NONE)
+          {
+            Password_delete(storageFileHandle->scp.password);
+            String_delete(storageFileHandle->scp.loginName);
+            String_delete(storageFileHandle->scp.hostName);
+            String_delete(storageSpecifier);
+            return error;
+          }
 
           /* free resources */
         }
@@ -1128,7 +1322,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          uint z;
+          uint   z;
+          Errors error;
 
           /* init variables */
           storageFileHandle->type                       = STORAGE_TYPE_SFTP;    
@@ -1168,7 +1363,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             String_delete(storageFileHandle->sftp.loginName);
             String_delete(storageFileHandle->sftp.hostName);
             String_delete(storageSpecifier);
-            return ERROR_INVALID_SSH_SPEFICIER;
+            return ERROR_INVALID_SSH_SPECIFIER;
           }
 
           /* get SSH server data */
@@ -1177,7 +1372,51 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           if (storageFileHandle->sftp.hostPort == 0) storageFileHandle->sftp.hostPort = sshServer.port;
           storageFileHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
-          Password_set(storageFileHandle->sftp.password,sshServer.password);
+
+          /* check if SSH login is possible */
+          error = ERROR_UNKNOWN;
+          if ((error != ERROR_NONE) && (sshServer.password != NULL))
+          {
+            error = checkSSHLogin(storageFileHandle->sftp.loginName,
+                                  sshServer.password,
+                                  storageFileHandle->sftp.hostName,
+                                  storageFileHandle->sftp.hostPort,
+                                  storageFileHandle->sftp.sshPublicKeyFileName,
+                                  storageFileHandle->sftp.sshPrivateKeyFileName
+                                 );
+            if (error == ERROR_NONE)
+            {
+              Password_set(storageFileHandle->sftp.password,sshServer.password);
+            }
+          }
+          if (error != ERROR_NONE)
+          {
+            /* initialize default password */
+            if (initSSHPassword(jobOptions))
+            {
+              error = checkSSHLogin(storageFileHandle->sftp.loginName,
+                                    defaultSSHPassword,
+                                    storageFileHandle->sftp.hostName,
+                                    storageFileHandle->sftp.hostPort,
+                                    storageFileHandle->sftp.sshPublicKeyFileName,
+                                    storageFileHandle->sftp.sshPrivateKeyFileName
+                                   );
+              if (error == ERROR_NONE)
+              {
+                Password_set(storageFileHandle->sftp.password,defaultSSHPassword);
+              }
+            }
+          }
+          if (error != ERROR_NONE)
+          {
+            Password_delete(storageFileHandle->sftp.password);
+            String_delete(storageFileHandle->sftp.loginName);
+            String_delete(storageFileHandle->sftp.hostName);
+            String_delete(storageSpecifier);
+            return error;
+          }
+
+          /* free resources */
         }
       #else /* not HAVE_SSH2 */
         String_delete(storageSpecifier);
@@ -1964,6 +2203,138 @@ void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
   storageFileHandle->volumeNumber = volumeNumber;
 }
 
+#if 0
+String Storage_formatArchiveFileName(String            fileName,
+                                     const String templateFileName,
+                                     int               partNumber,
+                                     bool              lastPartFlag,
+                                     time_t            time,
+                                     ArchiveTypes      archiveType
+                                    )
+{
+  TextMacro textMacros[2];
+
+  bool      partNumberFlag;
+  struct tm tmStruct;
+  long      i,j;
+  char      format[4];
+  char      buffer[256];
+  size_t    length;
+  ulong     divisor;
+  ulong     n;
+  int       z;
+  int       d;
+
+  /* expand named macros */
+  switch (archiveType)
+  {
+    case ARCHIVE_TYPE_NORMAL:      TEXT_MACRO_CSTRING(textMacros[0],"%type","normal");      break;
+    case ARCHIVE_TYPE_FULL:        TEXT_MACRO_CSTRING(textMacros[0],"%type","full");        break;
+    case ARCHIVE_TYPE_INCREMENTAL: TEXT_MACRO_CSTRING(textMacros[0],"%type","incremental"); break;
+    case ARCHIVE_TYPE_UNKNOWN:     TEXT_MACRO_CSTRING(textMacros[0],"%type","unknown");     break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+      #endif /* NDEBUG */
+  }
+  TEXT_MACRO_CSTRING(textMacros[1],"%last",lastPartFlag?"-last":"");
+  Misc_expandMacros(fileName,storageFileHandle->templteFileName,textMacros,SIZE_OF_ARRAY(textMacros));
+
+  /* expand time macros, part number */
+  localtime_r(&time,&tmStruct);
+  partNumberFlag = FALSE;
+  i = 0;
+  while (i < String_length(fileName))
+  {
+    switch (String_index(fileName,i))
+    {
+      case '%':
+        if ((i+1) < String_length(fileName))
+        {
+          switch (String_index(fileName,i+1))
+          {
+            case 'E':
+            case 'O':
+              format[0] = '%';
+              format[1] = String_index(fileName,i+1);
+              format[2] = String_index(fileName,i+2);
+              format[3] = '\0';
+
+              length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
+
+              String_remove(fileName,i,3);
+              String_insertBuffer(fileName,i,buffer,length);
+              i += length;
+              break;
+            case '%':
+              String_remove(fileName,i,1);
+              i += 1;
+              break;
+            case '#':
+              String_remove(fileName,i,1);
+              i += 1;
+              break;
+            default:
+              format[0] = '%';
+              format[1] = String_index(fileName,i+1);
+              format[2] = '\0';
+
+              length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
+
+              String_remove(fileName,i,2);
+              String_insertBuffer(fileName,i,buffer,length);
+              i += length;
+              break;
+          }
+        }
+        else
+        {
+         i += 1;
+        }      
+        break;
+      case '#':
+        /* find #...# and get max. divisor for part number */
+        divisor = 1;
+        j = i+1;
+        while ((j < String_length(fileName) && String_index(fileName,j) == '#'))
+        {
+          j++;
+          if (divisor < 1000000000) divisor*=10;
+        }
+
+        /* replace #...# by part number */     
+        n = partNumber;
+        z = 0;
+        while (divisor > 0)
+        {
+          d = n/divisor; n = n%divisor; divisor = divisor/10;
+          if (z < sizeof(buffer)-1)
+          {
+            buffer[z] = '0'+d; z++;
+          }
+        }
+        buffer[z] = '\0';
+        String_replaceCString(fileName,i,j-i,buffer);
+
+        partNumberFlag = TRUE;
+
+        i = j+1;
+        break;
+      default:
+        i += 1;
+        break;
+    }
+  }
+  if ((partNumber >= 0) && !partNumberFlag)
+  {
+    String_format(fileName,".%06d",partNumber);
+  }
+
+  return fileName;
+}
+#endif /* 0 */
+
 Errors Storage_create(StorageFileHandle *storageFileHandle,
                       const String      fileName,
                       uint64            fileSize,
@@ -2009,10 +2380,13 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
         /* initialise variables */
 
         /* connect */
+        if (!Network_exists(storageFileHandle->ftp.hostName))
+        {
+          return ERROR_HOST_NOT_FOUND;
+        }
         if (FtpConnect(String_cString(storageFileHandle->ftp.hostName),&storageFileHandle->ftp.control) != 1)
         {
           return ERROR_FTP_SESSION_FAIL;
-
         }
 
         /* login */
@@ -2039,7 +2413,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
            )
         {
           FtpQuit(storageFileHandle->ftp.control);
-          return ERROR_FTP_AUTHENTIFICATION;
+          return ERROR_FTP_CREATE;
         }
       }
       #else /* not HAVE_FTP */
@@ -2225,6 +2599,10 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
         /* initialise variables */
 
         /* connect */
+        if (!Network_exists(storageFileHandle->ftp.hostName))
+        {
+          return ERROR_HOST_NOT_FOUND;
+        }
         if (FtpConnect(String_cString(storageFileHandle->ftp.hostName),&storageFileHandle->ftp.control) != 1)
         {
           return ERROR_FTP_SESSION_FAIL;
