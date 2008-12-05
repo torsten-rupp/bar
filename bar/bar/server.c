@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -2856,6 +2856,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   if (error != ERROR_NONE)
   {
     File_deleteFileName(fileName);
+    sendResult(clientInfo,id,TRUE,1,"create job '%s' fail: %s",String_cString(arguments[0]),getErrorText(error));
     return;
   }
   File_close(&fileHandle);
