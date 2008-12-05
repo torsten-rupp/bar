@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -124,6 +124,7 @@ LOCAL FTPServer     *currentFTPServer = &ftpServer;
 LOCAL SSHServer     *currentSSHServer = &sshServer;
 LOCAL Device        *currentDevice = &device;
 LOCAL bool          daemonFlag;
+LOCAL bool          noDetachFlag;
 LOCAL uint          serverPort;
 LOCAL bool          serverTLSPort;
 LOCAL const char    *serverCAFileName;
@@ -255,7 +256,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("compare",                      'd',0,0,command,                                   COMMAND_LIST,COMMAND_COMPARE,                                      "compare contents of archive with files"                                   ),
   CMD_OPTION_ENUM         ("extract",                      'x',0,0,command,                                   COMMAND_LIST,COMMAND_RESTORE,                                      "restore archive"                                                          ),
   CMD_OPTION_ENUM         ("generate-keys",                0,  0,0,command,                                   COMMAND_LIST,COMMAND_GENERATE_KEYS,                                "generate new public/private key pair"                                     ),
-//  CMD_OPTION_ENUM         ("new-key-password",             0,  0,0,command,                                   COMMAND_LIST,COMMAND_NEW_KEY_PASSWORD,                           "set new private key password"                                           ),
+//  CMD_OPTION_ENUM         ("new-key-password",             0,  0,0,command,                                   COMMAND_LIST,COMMAND_NEW_KEY_PASSWORD,                           "set new private key password"                                             ),
   CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,0,keyBits,                                   DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS,
                                                                                                               MIN_ASYMMETRIC_CRYPT_KEY_BITS,
                                                                                                               MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,             "key bits"                                                                 ),
@@ -268,7 +269,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_ENUM         ("full",                         'f',0,0,jobOptions.archiveType,                    ARCHIVE_TYPE_NORMAL,ARCHIVE_TYPE_FULL,                             "create full archive and incremental list file"                            ),
   CMD_OPTION_ENUM         ("incremental",                  'i',0,0,jobOptions.archiveType,                    ARCHIVE_TYPE_NORMAL,ARCHIVE_TYPE_INCREMENTAL,                      "create incremental archive"                                               ),
-  CMD_OPTION_SPECIAL      ("incremental-list-file",        0,  1,0,&jobOptions.incrementalListFileName,       NULL,cmdOptionParseString,NULL,                                    "incremental list file name (implies --create-incremental-list","file name"),
+  CMD_OPTION_SPECIAL      ("incremental-list-file",        'I',1,0,&jobOptions.incrementalListFileName,       NULL,cmdOptionParseString,NULL,                                    "incremental list file name (default: <archive name>.bid)","file name"     ),
 
   CMD_OPTION_INTEGER      ("directory-strip",              'p',1,0,jobOptions.directoryStripCount,            0,0,INT_MAX,NULL,                                                  "number of directories to strip on extract"                                ),
   CMD_OPTION_SPECIAL      ("directory",                    0,  0,0,&jobOptions.directory   ,                  NULL,cmdOptionParseString,NULL,                                    "directory to restore files","path"                                        ),
@@ -300,6 +301,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,0,&sshServer.privateKeyFileName,             NULL,cmdOptionParseString,NULL,                                    "ssh privat key file name","file name"                                     ),
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                FALSE,                                                             "run in daemon mode"                                                       ),
+  CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                FALSE,                                                           "do not detach in daemon mode"                                             ),
   CMD_OPTION_INTEGER      ("server-port",                  0,  1,0,serverPort,                                DEFAULT_SERVER_PORT,0,65535,NULL,                                  "server port"                                                              ),
   CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,0,serverTLSPort,                             DEFAULT_TLS_SERVER_PORT,0,65535,NULL,                              "TLS (SSL) server port"                                                    ),
   CMD_OPTION_STRING       ("server-ca-file",               0,  1,0,serverCAFileName,                          DEFAULT_TLS_SERVER_CA_FILE,                                        "TLS (SSL) server certificate authority file (CA file)","file name"        ),
@@ -2261,16 +2263,41 @@ int main(int argc, const char *argv[])
   error = ERROR_NONE;
   if      (daemonFlag)
   {
-    /* daemon mode -> run server with netwerk */
-    error = Server_run(serverPort,
-                       serverTLSPort,
-                       serverCAFileName,
-                       serverCertFileName,
-                       serverKeyFileName,
-                       serverPassword,
-                       serverJobsDirectory,
-                       &jobOptions
-                      );
+    /* daemon mode -> run server with network */
+    if (!noDetachFlag)
+    {
+      /* detached */
+      if (daemon(1,0) == 0)
+      {
+        error = Server_run(serverPort,
+                           serverTLSPort,
+                           serverCAFileName,
+                           serverCertFileName,
+                           serverKeyFileName,
+                           serverPassword,
+                           serverJobsDirectory,
+                           &jobOptions
+                          );
+      }
+      else
+      {
+        error = ERROR_DAEMON_FAIL;
+      }
+    }
+    else
+    {
+      /* not detached */
+      error = Server_run(serverPort,
+                         serverTLSPort,
+                         serverCAFileName,
+                         serverCertFileName,
+                         serverKeyFileName,
+                         serverPassword,
+                         serverJobsDirectory,
+                         &jobOptions
+                        );
+
+    }
   }
   else if (batchFlag)
   {

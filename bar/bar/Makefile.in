@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -212,13 +212,15 @@ destroyer@EXEEXT@: $(DESTROYER_OBJECTS)
 # run server
 .PHONY: barserver barserver_ssl
 barserver: bar
+	$(INSTALL) -d jobs
 	nice ./bar \
-          --daemon \
+          --daemon -D \
           --server-jobs-directory jobs
 
 barserver_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
 	nice ./bar \
-          --daemon \
+          --daemon -D \
           --server-jobs-directory jobs \
           --server-ca-file=../bar-ca.pem \
           --server-cert-file=../bar-server-cert.pem \
