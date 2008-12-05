@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -139,6 +139,7 @@ LOCAL bool initSSHPassword(const JobOptions *jobOptions)
 }
 #endif /* HAVE_SSH2 */
 
+#ifdef HAVE_FTP
 /***********************************************************************\
 * Name   : checkFTPLogin
 * Purpose: check if FTP login is possible
@@ -187,6 +188,7 @@ LOCAL Errors checkFTPLogin(const String loginName,
 
   return ERROR_NONE;
 }
+#endif /* HAVE_FTP */
 
 /***********************************************************************\
 * Name   : checkSSHLogin
