@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -249,6 +249,7 @@ LOCAL Errors writeIncrementalList(const String     fileName,
   assert(fileName != NULL);
   assert(filesDictionary != NULL);
 
+  String                    directory;
   String                    tmpFileName;
   Errors                    error;
   FileHandle                fileHandle;
@@ -267,14 +268,22 @@ LOCAL Errors writeIncrementalList(const String     fileName,
   assert(filesDictionary != NULL);
 
   /* get temporary name */
-  tmpFileName = String_new();
-  File_getTmpFileName(tmpFileName,NULL,NULL);
+  directory = File_getFilePathName(File_newFileName(),fileName);
+  tmpFileName = File_newFileName();
+  error = File_getTmpFileName(tmpFileName,NULL,directory);
+  if (error != ERROR_NONE)
+  {
+    File_deleteFileName(tmpFileName);
+    File_deleteFileName(directory);
+    return error;
+  }
 
   /* open file */
   error = File_open(&fileHandle,tmpFileName,FILE_OPENMODE_CREATE);
   if (error != ERROR_NONE)
   {
-    String_delete(tmpFileName);
+    File_deleteFileName(tmpFileName);
+    File_deleteFileName(directory);
     return error;
   }
 
@@ -285,7 +294,8 @@ LOCAL Errors writeIncrementalList(const String     fileName,
   if (error != ERROR_NONE)
   {
     File_close(&fileHandle);
-    String_delete(tmpFileName);
+    File_deleteFileName(tmpFileName);
+    File_deleteFileName(directory);
     return error;
   }
   version = INCREMENTAL_LIST_FILE_VERSION;
@@ -293,7 +303,8 @@ LOCAL Errors writeIncrementalList(const String     fileName,
   if (error != ERROR_NONE)
   {
     File_close(&fileHandle);
-    String_delete(tmpFileName);
+    File_deleteFileName(tmpFileName);
+    File_deleteFileName(directory);
     return error;
   }
 
@@ -336,7 +347,8 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
   if (error != ERROR_NONE)
   {
     File_delete(tmpFileName,FALSE);
-    String_delete(tmpFileName);
+    File_deleteFileName(tmpFileName);
+    File_deleteFileName(directory);
     return error;
   }
 
@@ -349,7 +361,8 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
     {
       String_delete(directoryName);
       File_delete(tmpFileName,FALSE);
-      String_delete(tmpFileName);
+      File_deleteFileName(tmpFileName);
+      File_deleteFileName(directory);
       return error;
     }
   }
@@ -360,12 +373,14 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
   if (error != ERROR_NONE)
   {
     File_delete(tmpFileName,FALSE);
-    String_delete(tmpFileName);
+    File_deleteFileName(tmpFileName);
+    File_deleteFileName(directory);
     return error;
   }
 
   /* free resources */
-  String_delete(tmpFileName);
+  File_deleteFileName(tmpFileName);
+  File_deleteFileName(directory);
 
   return ERROR_NONE;
 }
@@ -1722,6 +1737,27 @@ Errors Command_create(const char                   *archiveFileName,
   }
   fileName = String_new();
 
+#if 0
+  /* prepare storage */
+  error = Storage_prepare(String_setCString(fileName,archiveFileName),
+                           createInfo.jobOptions
+                         );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot create storage '%s' (error: %s)\n",
+               archiveFileName,
+               getErrorText(error)
+              );
+    String_delete(fileName);
+    free(buffer);
+    String_delete(createInfo.statusInfo.storageName);
+    String_delete(createInfo.statusInfo.fileName);
+    String_delete(createInfo.archiveFileName);
+
+    return error;
+  }
+#endif /* 0 */
+
   /* init file name list, list lock and list signal */
   if (!MsgQueue_init(&createInfo.fileMsgQueue,MAX_FILE_MSG_QUEUE_ENTRIES))
   {
@@ -2332,7 +2368,7 @@ Errors Command_create(const char                   *archiveFileName,
   Storage_done(&createInfo.storageFileHandle);
 
   /* write incremental list */
-  if ((createInfo.failError == ERROR_NONE) && storeIncrementalFileInfoFlag)
+  if (storeIncrementalFileInfoFlag && (createInfo.failError == ERROR_NONE))
   {
     printInfo(1,"Write incremental list '%s'...",String_cString(incrementalListFileName));
     error = writeIncrementalList(incrementalListFileName,
@@ -2345,6 +2381,7 @@ Errors Command_create(const char                   *archiveFileName,
                  String_cString(incrementalListFileName),
                  getErrorText(error)
                 );
+      String_delete(incrementalListFileName);
       Semaphore_done(&createInfo.storageSemaphore);
       MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
       MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
