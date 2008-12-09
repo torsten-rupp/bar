@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.18 $
+dnl $Revision: 1.19 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -414,12 +414,14 @@ if test $ENABLE_TLS = "yes"; then
 fi
 
 AC_CHECK_PTHREAD_DEFINES
-AC_CHECK_FUNCS(pthread_attr_setname,pthread.h,,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
+AC_CHECK_FUNC(pthread_attr_setname,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
 
-AC_CHECK_FUNCS(fseeko,,AC_ERROR([function fseeko() is not available]))
-AC_CHECK_FUNCS(ftello,,AC_ERROR([function ftello() is not available]))
+AC_CHECK_FUNC(gethostbyname_r,AC_DEFINE(HAVE_GETBYHOSTNAME_R,1,[getbyhostname_r() available]))
 
-AC_CHECK_FUNCS(zlibVersion,,AC_ERROR([function zlibVersion() is not available in zlib.h]))
+AC_CHECK_FUNC(fseeko,,AC_ERROR([function fseeko() is not available]))
+AC_CHECK_FUNC(ftello,,AC_ERROR([function ftello() is not available]))
+
+AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available in zlib.h]))
 
 dnl -------------------------------- misc ------------------------------
 

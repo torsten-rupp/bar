@@ -1,3 +1,28 @@
+2008-12-09 0.09g
+  * add option --pid-file
+
+2008-12-07 0.09f
+  * small fix in "make install"
+
+2008-12-04 0.09e
+  * changed FTP URL to <login name>:<password>@<host name>/<filename>
+  * improved password input: check if connection to ftp/ssh-server is
+    possible in advance; select the right password
+  * barcontrol: change FTP field names, added password field
+  * fixed problem when writing incremental file list and current
+    directory is not writable: create the temporary file in the same
+    diretory like the destination file
+  * removed some debug code
+  * barcontrol: fixed error handling when authorization fail
+  * barcontrol: fixed internal protocol data parser when data contain
+    a negative number
+  * fixed some wrong file names in "make install"
+  * added barserver start script for Debian (Thanks to Matthias Albert)
+  * fixed lost string
+  * run bar as daemon in background; added option -D to disable detach
+    mode
+  * fixed missing server result when new job cannot be created
+
 2008-12-03 0.09d
   * fixed missing server-jobs-directory in BAR server
   * fixed wrong path to bar+bar.cfg binary when installing

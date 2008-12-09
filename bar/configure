@@ -6107,13 +6107,9 @@ EOF
 fi
 echo "$as_me:$LINENO: result: $ac_extended_pthread_defines" >&5
 echo "${ECHO_T}$ac_extended_pthread_defines" >&6
-
-for ac_func in pthread_attr_setname
-do
-as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
-echo "$as_me:$LINENO: checking for $ac_func" >&5
-echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
-if eval "test \"\${$as_ac_var+set}\" = set"; then
+echo "$as_me:$LINENO: checking for pthread_attr_setname" >&5
+echo $ECHO_N "checking for pthread_attr_setname... $ECHO_C" >&6
+if test "${ac_cv_func_pthread_attr_setname+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   cat >conftest.$ac_ext <<_ACEOF
@@ -6122,12 +6118,12 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
-/* Define $ac_func to an innocuous variant, in case <limits.h> declares $ac_func.
+/* Define pthread_attr_setname to an innocuous variant, in case <limits.h> declares pthread_attr_setname.
    For example, HP-UX 11i <limits.h> declares gettimeofday.  */
-#define $ac_func innocuous_$ac_func
+#define pthread_attr_setname innocuous_pthread_attr_setname
 
 /* System header to define __stub macros and hopefully few prototypes,
-    which can conflict with char $ac_func (); below.
+    which can conflict with char pthread_attr_setname (); below.
     Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
     <limits.h> exists even on freestanding compilers.  */
 
@@ -6137,7 +6133,7 @@ cat >>conftest.$ac_ext <<_ACEOF
 # include <assert.h>
 #endif
 
-#undef $ac_func
+#undef pthread_attr_setname
 
 /* Override any gcc2 internal prototype to avoid an error.  */
 #ifdef __cplusplus
@@ -6146,14 +6142,14 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char $ac_func ();
+char pthread_attr_setname ();
 /* The GNU C library defines this for functions which it implements
     to always fail with ENOSYS.  Some functions are actually named
     something starting with __ and the normal name is an alias.  */
-#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+#if defined (__stub_pthread_attr_setname) || defined (__stub___pthread_attr_setname)
 choke me
 #else
-char (*f) () = $ac_func;
+char (*f) () = pthread_attr_setname;
 #endif
 #ifdef __cplusplus
 }
@@ -6162,7 +6158,7 @@ char (*f) () = $ac_func;
 int
 main ()
 {
-return f != $ac_func;
+return f != pthread_attr_setname;
   ;
   return 0;
 }
@@ -6189,34 +6185,30 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  eval "$as_ac_var=yes"
+  ac_cv_func_pthread_attr_setname=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-eval "$as_ac_var=no"
+ac_cv_func_pthread_attr_setname=no
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
 fi
-echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
-echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
-if test `eval echo '${'$as_ac_var'}'` = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
+echo "$as_me:$LINENO: result: $ac_cv_func_pthread_attr_setname" >&5
+echo "${ECHO_T}$ac_cv_func_pthread_attr_setname" >&6
+if test $ac_cv_func_pthread_attr_setname = yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_PTHREAD_ATTR_SETNAME 1
 _ACEOF
- pthread.h
+
 fi
-done
 
 
-
-for ac_func in fseeko
-do
-as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
-echo "$as_me:$LINENO: checking for $ac_func" >&5
-echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
-if eval "test \"\${$as_ac_var+set}\" = set"; then
+echo "$as_me:$LINENO: checking for gethostbyname_r" >&5
+echo $ECHO_N "checking for gethostbyname_r... $ECHO_C" >&6
+if test "${ac_cv_func_gethostbyname_r+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   cat >conftest.$ac_ext <<_ACEOF
@@ -6225,12 +6217,12 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
-/* Define $ac_func to an innocuous variant, in case <limits.h> declares $ac_func.
+/* Define gethostbyname_r to an innocuous variant, in case <limits.h> declares gethostbyname_r.
    For example, HP-UX 11i <limits.h> declares gettimeofday.  */
-#define $ac_func innocuous_$ac_func
+#define gethostbyname_r innocuous_gethostbyname_r
 
 /* System header to define __stub macros and hopefully few prototypes,
-    which can conflict with char $ac_func (); below.
+    which can conflict with char gethostbyname_r (); below.
     Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
     <limits.h> exists even on freestanding compilers.  */
 
@@ -6240,7 +6232,7 @@ cat >>conftest.$ac_ext <<_ACEOF
 # include <assert.h>
 #endif
 
-#undef $ac_func
+#undef gethostbyname_r
 
 /* Override any gcc2 internal prototype to avoid an error.  */
 #ifdef __cplusplus
@@ -6249,14 +6241,14 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char $ac_func ();
+char gethostbyname_r ();
 /* The GNU C library defines this for functions which it implements
     to always fail with ENOSYS.  Some functions are actually named
     something starting with __ and the normal name is an alias.  */
-#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+#if defined (__stub_gethostbyname_r) || defined (__stub___gethostbyname_r)
 choke me
 #else
-char (*f) () = $ac_func;
+char (*f) () = gethostbyname_r;
 #endif
 #ifdef __cplusplus
 }
@@ -6265,7 +6257,7 @@ char (*f) () = $ac_func;
 int
 main ()
 {
-return f != $ac_func;
+return f != gethostbyname_r;
   ;
   return 0;
 }
@@ -6292,37 +6284,128 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  eval "$as_ac_var=yes"
+  ac_cv_func_gethostbyname_r=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-eval "$as_ac_var=no"
+ac_cv_func_gethostbyname_r=no
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
 fi
-echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
-echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
-if test `eval echo '${'$as_ac_var'}'` = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
+echo "$as_me:$LINENO: result: $ac_cv_func_gethostbyname_r" >&5
+echo "${ECHO_T}$ac_cv_func_gethostbyname_r" >&6
+if test $ac_cv_func_gethostbyname_r = yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_GETBYHOSTNAME_R 1
 _ACEOF
 
+fi
+
+
+echo "$as_me:$LINENO: checking for fseeko" >&5
+echo $ECHO_N "checking for fseeko... $ECHO_C" >&6
+if test "${ac_cv_func_fseeko+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* Define fseeko to an innocuous variant, in case <limits.h> declares fseeko.
+   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
+#define fseeko innocuous_fseeko
+
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char fseeko (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+
+#undef fseeko
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char fseeko ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_fseeko) || defined (__stub___fseeko)
+choke me
+#else
+char (*f) () = fseeko;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+int
+main ()
+{
+return f != fseeko;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_func_fseeko=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_func_fseeko=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_func_fseeko" >&5
+echo "${ECHO_T}$ac_cv_func_fseeko" >&6
+if test $ac_cv_func_fseeko = yes; then
+  :
 else
   { { echo "$as_me:$LINENO: error: function fseeko() is not available" >&5
 echo "$as_me: error: function fseeko() is not available" >&2;}
    { (exit 1); exit 1; }; }
 fi
-done
 
-
-for ac_func in ftello
-do
-as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
-echo "$as_me:$LINENO: checking for $ac_func" >&5
-echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
-if eval "test \"\${$as_ac_var+set}\" = set"; then
+echo "$as_me:$LINENO: checking for ftello" >&5
+echo $ECHO_N "checking for ftello... $ECHO_C" >&6
+if test "${ac_cv_func_ftello+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   cat >conftest.$ac_ext <<_ACEOF
@@ -6331,12 +6414,12 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
-/* Define $ac_func to an innocuous variant, in case <limits.h> declares $ac_func.
+/* Define ftello to an innocuous variant, in case <limits.h> declares ftello.
    For example, HP-UX 11i <limits.h> declares gettimeofday.  */
-#define $ac_func innocuous_$ac_func
+#define ftello innocuous_ftello
 
 /* System header to define __stub macros and hopefully few prototypes,
-    which can conflict with char $ac_func (); below.
+    which can conflict with char ftello (); below.
     Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
     <limits.h> exists even on freestanding compilers.  */
 
@@ -6346,7 +6429,7 @@ cat >>conftest.$ac_ext <<_ACEOF
 # include <assert.h>
 #endif
 
-#undef $ac_func
+#undef ftello
 
 /* Override any gcc2 internal prototype to avoid an error.  */
 #ifdef __cplusplus
@@ -6355,14 +6438,14 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char $ac_func ();
+char ftello ();
 /* The GNU C library defines this for functions which it implements
     to always fail with ENOSYS.  Some functions are actually named
     something starting with __ and the normal name is an alias.  */
-#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+#if defined (__stub_ftello) || defined (__stub___ftello)
 choke me
 #else
-char (*f) () = $ac_func;
+char (*f) () = ftello;
 #endif
 #ifdef __cplusplus
 }
@@ -6371,7 +6454,7 @@ char (*f) () = $ac_func;
 int
 main ()
 {
-return f != $ac_func;
+return f != ftello;
   ;
   return 0;
 }
@@ -6398,38 +6481,30 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  eval "$as_ac_var=yes"
+  ac_cv_func_ftello=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-eval "$as_ac_var=no"
+ac_cv_func_ftello=no
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
 fi
-echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
-echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
-if test `eval echo '${'$as_ac_var'}'` = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
-_ACEOF
-
+echo "$as_me:$LINENO: result: $ac_cv_func_ftello" >&5
+echo "${ECHO_T}$ac_cv_func_ftello" >&6
+if test $ac_cv_func_ftello = yes; then
+  :
 else
   { { echo "$as_me:$LINENO: error: function ftello() is not available" >&5
 echo "$as_me: error: function ftello() is not available" >&2;}
    { (exit 1); exit 1; }; }
 fi
-done
 
 
-
-for ac_func in zlibVersion
-do
-as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
-echo "$as_me:$LINENO: checking for $ac_func" >&5
-echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
-if eval "test \"\${$as_ac_var+set}\" = set"; then
+echo "$as_me:$LINENO: checking for zlibVersion" >&5
+echo $ECHO_N "checking for zlibVersion... $ECHO_C" >&6
+if test "${ac_cv_func_zlibVersion+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   cat >conftest.$ac_ext <<_ACEOF
@@ -6438,12 +6513,12 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
-/* Define $ac_func to an innocuous variant, in case <limits.h> declares $ac_func.
+/* Define zlibVersion to an innocuous variant, in case <limits.h> declares zlibVersion.
    For example, HP-UX 11i <limits.h> declares gettimeofday.  */
-#define $ac_func innocuous_$ac_func
+#define zlibVersion innocuous_zlibVersion
 
 /* System header to define __stub macros and hopefully few prototypes,
-    which can conflict with char $ac_func (); below.
+    which can conflict with char zlibVersion (); below.
     Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
     <limits.h> exists even on freestanding compilers.  */
 
@@ -6453,7 +6528,7 @@ cat >>conftest.$ac_ext <<_ACEOF
 # include <assert.h>
 #endif
 
-#undef $ac_func
+#undef zlibVersion
 
 /* Override any gcc2 internal prototype to avoid an error.  */
 #ifdef __cplusplus
@@ -6462,14 +6537,14 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char $ac_func ();
+char zlibVersion ();
 /* The GNU C library defines this for functions which it implements
     to always fail with ENOSYS.  Some functions are actually named
     something starting with __ and the normal name is an alias.  */
-#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+#if defined (__stub_zlibVersion) || defined (__stub___zlibVersion)
 choke me
 #else
-char (*f) () = $ac_func;
+char (*f) () = zlibVersion;
 #endif
 #ifdef __cplusplus
 }
@@ -6478,7 +6553,7 @@ char (*f) () = $ac_func;
 int
 main ()
 {
-return f != $ac_func;
+return f != zlibVersion;
   ;
   return 0;
 }
@@ -6505,29 +6580,25 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  eval "$as_ac_var=yes"
+  ac_cv_func_zlibVersion=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-eval "$as_ac_var=no"
+ac_cv_func_zlibVersion=no
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
 fi
-echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
-echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
-if test `eval echo '${'$as_ac_var'}'` = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
-_ACEOF
-
+echo "$as_me:$LINENO: result: $ac_cv_func_zlibVersion" >&5
+echo "${ECHO_T}$ac_cv_func_zlibVersion" >&6
+if test $ac_cv_func_zlibVersion = yes; then
+  :
 else
   { { echo "$as_me:$LINENO: error: function zlibVersion() is not available in zlib.h" >&5
 echo "$as_me: error: function zlibVersion() is not available in zlib.h" >&2;}
    { (exit 1); exit 1; }; }
 fi
-done
 
 
 
