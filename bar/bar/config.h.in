@@ -19,12 +19,6 @@
 /* bzip2 installed */
 #undef HAVE_BZ2
 
-/* Define to 1 if you have the `fseeko' function. */
-#undef HAVE_FSEEKO
-
-/* Define to 1 if you have the `ftello' function. */
-#undef HAVE_FTELLO
-
 /* FTP installed */
 #undef HAVE_FTP
 
@@ -34,19 +28,22 @@
 /* getbyhostname_r() available */
 #undef HAVE_GETBYHOSTNAME_R
 
-/* Define to 1 if you have the `gethostbyname_r' function. */
-#undef HAVE_GETHOSTBYNAME_R
-
 /* GNU TLS installed */
 #undef HAVE_GNU_TLS
 
 /* GPG error installed */
 #undef HAVE_GPG_ERROR
 
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
 /* defined if long long data type available */
 #undef HAVE_LONG_LONG
 
-/* Define to 1 if you have the `pthread_attr_setname' function. */
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
+/* pthread_attr_setname() available */
 #undef HAVE_PTHREAD_ATTR_SETNAME
 
 /* SSH2 installed */
@@ -55,14 +52,32 @@
 /* SSH2 libssh2_channel_send_keepalive */
 #undef HAVE_SSH2_CHANNEL_SEND_KEEPALIVE
 
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
 /* TASN.1 installed */
 #undef HAVE_TASN1
 
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
 /* z installed */
 #undef HAVE_Z
-
-/* Define to 1 if you have the `zlibVersion' function. */
-#undef HAVE_ZLIBVERSION
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
@@ -78,6 +93,12 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* The size of a `void *', as computed by sizeof. */
+#undef SIZEOF_VOID_P
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
 
 /* TLS directory */
 #undef TLS_DIR

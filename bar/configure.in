@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.19 $
+dnl $Revision: 1.20 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -354,6 +354,7 @@ done
 AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
 AC_SYS_LARGEFILE
 dnl AC_CHECK_LARGEFILE_DEFINES
+AC_CHECK_SIZEOF(void *)
 
 AC_SEARCH_LIBS(round,m,,AC_ERROR([m library not found]))
 AC_SEARCH_LIBS(pthread_create,pthread,,AC_ERROR([pthread library not found]))

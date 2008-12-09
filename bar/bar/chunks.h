@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/chunks.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 

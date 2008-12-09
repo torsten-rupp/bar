@@ -22,4 +22,3 @@ ToDo
 - support to access multiple bar servers
 - script to generate pem-keys
 - support openssl key generator
-- file header chunk "BAR"; ignored when reading

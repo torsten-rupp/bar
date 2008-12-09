@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -203,7 +203,7 @@ errors.c: errors.def
 archive_format.h: archive_format.def
 	$(PERL) archive_format.pl < $^ -h $@
 archive_format.c: archive_format.def
-	$(PERL) archive_format.pl < $^ -c $@
+	$(PERL) archive_format.pl < $^ -c $@ -i archive_format.h
 
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
@@ -402,7 +402,15 @@ dist:
                           bar.cfg \
                    ) \
                    $(DIRECTORY)/bar
-
+	$(INSTALL) -d $(DIRECTORY)/bar/test
+	$(INSTALL) -d $(DIRECTORY)/bar/test/data
+	$(INSTALL) -m 664 test/data/zero.dat \
+                          test/data/zero512k.dat \
+                          test/data/zero1024.dat \
+                          test/data/random512k.dat \
+                          test/data/random1024.dat \
+                          test/data/smallfile.dat \
+                          $(DIRECTORY)/bar/test/data
 -include Makefile.depend
 
 # end of file

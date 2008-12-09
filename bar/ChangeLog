@@ -1,3 +1,9 @@
+2008-12-09 0.09f
+  * fixed problem with internal data alignment on 64bit systems
+  * added test data to distribution
+  * added chunk BAR0 to archive files as indicator for a bar file;
+    chunk is skipped when reading an archive
+
 2008-12-09 0.09g
   * add option --pid-file
 

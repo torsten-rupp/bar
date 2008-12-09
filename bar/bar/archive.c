@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -425,6 +425,58 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
   return newPartFlag;
 }
 
+#if 0
+/***********************************************************************\
+* Name   : readHeader
+* Purpose: read encryption key
+* Input  : archiveInfo - archive info block
+*          chunkHeader - key chunk header
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readHeader(ArchiveInfo       *archiveInfo,
+                        const ChunkHeader *chunkHeader
+                       )
+{
+  Errors    error;
+  ChunkInfo chunkInfoBar;
+  ChunkBar  chunkBar;
+
+  assert(archiveInfo != NULL);
+  assert(chunkHeader != NULL);
+
+  /* create key chunk */
+  error = Chunk_init(&chunkInfoBar,
+                     NULL,
+                     &archiveInfo->fileHandle,
+                     0,
+                     NULL
+                    );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  /* read key chunk */
+  error = Chunk_open(&chunkInfoBar,
+                     chunkHeader,
+                     CHUNK_ID_BAR,
+                     CHUNK_DEFINITION_BAR,
+                     Chunk_getSize(CHUNK_DEFINITION_BAR,0,NULL),
+                     &chunkBar
+                    );
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+#endif /* 0 */
+
 /***********************************************************************\
 * Name   : readEncryptionKey
 * Purpose: read encryption key
@@ -503,6 +555,60 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
     Chunk_done(&chunkInfoKey);
     return error;
   }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : writeHeader
+* Purpose: write header
+* Input  : archiveInfo - archive info block
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors writeHeader(ArchiveInfo *archiveInfo)
+{
+  Errors    error;
+  ChunkInfo chunkInfoBar;
+  ChunkKey  chunkBar;
+
+  assert(archiveInfo != NULL);
+
+  /* create key chunk */
+  error = Chunk_init(&chunkInfoBar,
+                     NULL,
+                     &archiveInfo->fileHandle,
+                     0,
+                     NULL
+                    );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  /* write header */
+  error = Chunk_create(&chunkInfoBar,
+                       CHUNK_ID_BAR,
+                       CHUNK_DEFINITION_BAR,
+                       Chunk_getSize(CHUNK_DEFINITION_BAR,0,&chunkBar),
+                       &chunkBar
+                      );
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+
+  /* free resources */
+  error = Chunk_close(&chunkInfoBar);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+  Chunk_done(&chunkInfoBar);
 
   return ERROR_NONE;
 }
@@ -597,6 +703,14 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
   error = File_open(&archiveInfo->fileHandle,archiveInfo->fileName,FILE_OPENMODE_CREATE);
   if (error != ERROR_NONE)
   {
+    return error;
+  }
+
+  /* write bar header */
+  error = writeHeader(archiveInfo);
+  if (error != ERROR_NONE)
+  {
+    File_close(&archiveInfo->fileHandle);
     return error;
   }
 
@@ -1182,11 +1296,7 @@ Errors Archive_open(ArchiveInfo   *archiveInfo,
                     PasswordModes passwordMode
                    )
 {
-  ChunkHeader    chunkHeader;
-  Errors         error;
-  PasswordHandle passwordHandle;
-  const Password *password;
-  bool           decryptedFlag;
+  Errors error;
 
   assert(archiveInfo != NULL);
   assert(archiveFileName != NULL);
@@ -1216,73 +1326,100 @@ Errors Archive_open(ArchiveInfo   *archiveInfo,
     return error;
   }
 
-  /* check if key chunk -> read key for asymmetric encryption */
-  error = getNextChunkHeader(archiveInfo,&chunkHeader);
-  if (error != ERROR_NONE)
-  {
-    File_close(&archiveInfo->fileHandle);
-    String_delete(archiveInfo->fileName);
-    return error;
-  }
-  if (chunkHeader.id == CHUNK_ID_KEY)
-  {
-    /* check if private key available */
-    if (jobOptions->cryptPrivateKeyFileName == NULL)
-    {
-      File_close(&archiveInfo->fileHandle);
-      String_delete(archiveInfo->fileName);
-      return ERROR_NO_PUBLIC_KEY;
-    }
+  return ERROR_NONE;
+}
 
-    /* read private key, try to read key with no password, all passwords */
-    Crypt_initKey(&archiveInfo->cryptKey);
-    decryptedFlag = FALSE;
-    error = Crypt_readKeyFile(&archiveInfo->cryptKey,
-                              jobOptions->cryptPrivateKeyFileName,
-                              NULL
-                             );
-    if (error == ERROR_NONE)
-    {
-      decryptedFlag = TRUE;
-    }
-    password = getFirstCryptPassword(&passwordHandle,
-                                     archiveInfo->fileName,
-                                     archiveInfo->jobOptions,
-                                     archiveInfo->passwordMode
-                                    );
-    while (   !decryptedFlag
-           && (password != NULL)
-          )
-    {
-      error = Crypt_readKeyFile(&archiveInfo->cryptKey,
-                                jobOptions->cryptPrivateKeyFileName,
-                                password
-                               );
-      if (error == ERROR_NONE)
-      {
-        decryptedFlag = TRUE;
-      }
-      else
-      {
-        /* next password */
-        password = getNextCryptPassword(&passwordHandle);
-      }
-    }
-    if (!decryptedFlag)
-    {
-      File_close(&archiveInfo->fileHandle);
-      String_delete(archiveInfo->fileName);
-      return error;
-    }
+bool Archive_eof(ArchiveInfo *archiveInfo)
+{
+  bool           chunkHeaderFoundFlag;
+  Errors         error;
+  ChunkHeader    chunkHeader;
+  bool           decryptedFlag;
+  PasswordHandle passwordHandle;
+  const Password *password;
 
-    /* read encryption key */
-    error = readEncryptionKey(archiveInfo,&chunkHeader);
+  assert(archiveInfo != NULL);
+
+  /* find next file, directory, link, special chunk */
+  chunkHeaderFoundFlag = FALSE;
+  while (!File_eof(&archiveInfo->fileHandle) && !chunkHeaderFoundFlag)
+  {
+    /* get next chunk header */
+    error = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (error != ERROR_NONE)
     {
-      File_close(&archiveInfo->fileHandle);
-      String_delete(archiveInfo->fileName);
       return error;
     }
+
+    /* find next file, directory, link, special chunk */
+    switch (chunkHeader.id)
+    {
+      case CHUNK_ID_BAR:
+        /* bar header is simply ignored */
+        error = Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        break;
+      case CHUNK_ID_KEY:
+        /* check if private key available */
+        if (archiveInfo->jobOptions->cryptPrivateKeyFileName == NULL)
+        {
+          File_close(&archiveInfo->fileHandle);
+          String_delete(archiveInfo->fileName);
+          return ERROR_NO_PUBLIC_KEY;
+        }
+
+        /* read private key, try to read key with no password, all passwords */
+        Crypt_initKey(&archiveInfo->cryptKey);
+        decryptedFlag = FALSE;
+        error = Crypt_readKeyFile(&archiveInfo->cryptKey,
+                                  archiveInfo->jobOptions->cryptPrivateKeyFileName,
+                                  NULL
+                                 );
+        if (error == ERROR_NONE)
+        {
+          decryptedFlag = TRUE;
+        }
+        password = getFirstCryptPassword(&passwordHandle,
+                                         archiveInfo->fileName,
+                                         archiveInfo->jobOptions,
+                                         archiveInfo->passwordMode
+                                        );
+        while (   !decryptedFlag
+               && (password != NULL)
+              )
+        {
+          error = Crypt_readKeyFile(&archiveInfo->cryptKey,
+                                    archiveInfo->jobOptions->cryptPrivateKeyFileName,
+                                    password
+                                   );
+          if (error == ERROR_NONE)
+          {
+            decryptedFlag = TRUE;
+          }
+          else
+          {
+            /* next password */
+            password = getNextCryptPassword(&passwordHandle);
+          }
+        }
+        if (!decryptedFlag)
+        {
+          File_close(&archiveInfo->fileHandle);
+          String_delete(archiveInfo->fileName);
+          return error;
+        }
+
+        /* read encryption key */
+        error = readEncryptionKey(archiveInfo,&chunkHeader);
+        if (error != ERROR_NONE)
+        {
+          File_close(&archiveInfo->fileHandle);
+          String_delete(archiveInfo->fileName);
+          return error;
+        }
 #if 0
 Password_dump(archiveInfo->cryptPassword);
 {
@@ -1291,48 +1428,22 @@ byte *p=archiveInfo->cryptKeyData;
 fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
 }
 #endif /* 0 */
-    archiveInfo->cryptType = CRYPT_TYPE_ASYMMETRIC;
-  }
-  else
-  {
-    ungetNextChunkHeader(archiveInfo,&chunkHeader);
-  }
-
-  return ERROR_NONE;
-}
-
-bool Archive_eof(ArchiveInfo *archiveInfo)
-{
-  bool        chunkHeaderFoundFlag;
-  Errors      error;
-  ChunkHeader chunkHeader;
-
-  assert(archiveInfo != NULL);
-
-  /* find next file, directory, link, special chunk */
-  chunkHeaderFoundFlag = FALSE;
-  while (!File_eof(&archiveInfo->fileHandle) && !chunkHeaderFoundFlag)
-  {
-    error = getNextChunkHeader(archiveInfo,&chunkHeader);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    chunkHeaderFoundFlag = (   (chunkHeader.id == CHUNK_ID_FILE)
-                            || (chunkHeader.id == CHUNK_ID_DIRECTORY)
-                            || (chunkHeader.id == CHUNK_ID_LINK)
-                            || (chunkHeader.id == CHUNK_ID_SPECIAL)
-                           );
-
-    if (!chunkHeaderFoundFlag)
-    {
-      error = Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-      printWarning("Skipped unexpected chunk '%s'\n",Chunk_idToString(chunkHeader.id));
+        archiveInfo->cryptType = CRYPT_TYPE_ASYMMETRIC;
+        break;
+      case CHUNK_ID_FILE:
+      case CHUNK_ID_DIRECTORY:
+      case CHUNK_ID_LINK:
+      case CHUNK_ID_SPECIAL:
+        chunkHeaderFoundFlag = TRUE;
+        break;
+      default:
+        error = Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        printWarning("Skipped unexpected chunk '%s'\n",Chunk_idToString(chunkHeader.id));
+        break;
     }
   }
 
@@ -1961,8 +2072,11 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
                                FileTypes       *fileType
                               )
 {
-  Errors      error;
-  ChunkHeader chunkHeader;
+  Errors         error;
+  ChunkHeader    chunkHeader;
+  bool           decryptedFlag;
+  PasswordHandle passwordHandle;
+  const Password *password;
 
   assert(archiveInfo != NULL);
   assert(archiveFileInfo != NULL);
@@ -1973,24 +2087,105 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
   /* find next file, directory, link, special chunk */
   do
   {
+    /* get next chunk */
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (error != ERROR_NONE)
     {
       return error;
     }
 
-    if (   (chunkHeader.id != CHUNK_ID_FILE)
-        && (chunkHeader.id != CHUNK_ID_DIRECTORY)
-        && (chunkHeader.id != CHUNK_ID_LINK)
-        && (chunkHeader.id != CHUNK_ID_SPECIAL)
-       )
+    switch (chunkHeader.id)
     {
-      error = Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-      continue;
+      case CHUNK_ID_BAR:
+        /* bar header is simply ignored */
+        error = Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        break;
+      case CHUNK_ID_KEY:
+        /* check if private key available */
+        if (archiveInfo->jobOptions->cryptPrivateKeyFileName == NULL)
+        {
+          File_close(&archiveInfo->fileHandle);
+          String_delete(archiveInfo->fileName);
+          return ERROR_NO_PUBLIC_KEY;
+        }
+
+        /* read private key, try to read key with no password, all passwords */
+        Crypt_initKey(&archiveInfo->cryptKey);
+        decryptedFlag = FALSE;
+        error = Crypt_readKeyFile(&archiveInfo->cryptKey,
+                                  archiveInfo->jobOptions->cryptPrivateKeyFileName,
+                                  NULL
+                                 );
+        if (error == ERROR_NONE)
+        {
+          decryptedFlag = TRUE;
+        }
+        password = getFirstCryptPassword(&passwordHandle,
+                                         archiveInfo->fileName,
+                                         archiveInfo->jobOptions,
+                                         archiveInfo->passwordMode
+                                        );
+        while (   !decryptedFlag
+               && (password != NULL)
+              )
+        {
+          error = Crypt_readKeyFile(&archiveInfo->cryptKey,
+                                    archiveInfo->jobOptions->cryptPrivateKeyFileName,
+                                    password
+                                   );
+          if (error == ERROR_NONE)
+          {
+            decryptedFlag = TRUE;
+          }
+          else
+          {
+            /* next password */
+            password = getNextCryptPassword(&passwordHandle);
+          }
+        }
+        if (!decryptedFlag)
+        {
+          File_close(&archiveInfo->fileHandle);
+          String_delete(archiveInfo->fileName);
+          return error;
+        }
+
+        /* read encryption key */
+        error = readEncryptionKey(archiveInfo,&chunkHeader);
+        if (error != ERROR_NONE)
+        {
+          File_close(&archiveInfo->fileHandle);
+          String_delete(archiveInfo->fileName);
+          return error;
+        }
+#if 0
+Password_dump(archiveInfo->cryptPassword);
+{
+int z;
+byte *p=archiveInfo->cryptKeyData;
+fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
+}
+#endif /* 0 */
+        archiveInfo->cryptType = CRYPT_TYPE_ASYMMETRIC;
+        break;
+      case CHUNK_ID_FILE:
+      case CHUNK_ID_DIRECTORY:
+      case CHUNK_ID_LINK:
+      case CHUNK_ID_SPECIAL:
+        break;
+      default:
+        /* skip unknown chunks */
+        error = Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        printWarning("Skipped unexpected chunk '%s'\n",Chunk_idToString(chunkHeader.id));
+        break;
     }
   }
   while (   (chunkHeader.id != CHUNK_ID_FILE)

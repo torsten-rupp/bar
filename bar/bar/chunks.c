@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/chunks.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -35,17 +35,10 @@
 
 /***************************** Constants *******************************/
 
-/* number of padding bytes in C-structs */
-#define PADDING_INT8    3
-#define PADDING_INT16   2
-#define PADDING_INT32   0
-#define PADDING_INT64   0
-#define PADDING_ADDRESS 0
-
 /* chunk header definition */
 LOCAL int CHUNK_DEFINITION[] = {
-                                 CHUNK_DATATYPE_UINT32,
-                                 CHUNK_DATATYPE_UINT64,
+                                 CHUNK_DATATYPE_UINT32,offsetof(ChunkHeader,id),
+                                 CHUNK_DATATYPE_UINT64,offsetof(ChunkHeader,size),
                                  0
                                };
 #define CHUNK_DEFINITION_SIZE (4+8)
@@ -149,9 +142,9 @@ LOCAL Errors readDefinition(void      *userData,
   p = buffer;
   if (definition != NULL)
   {
-    for (z = 0; definition[z] != 0; z++)
+    for (z = 0; definition[z+0] != 0; z+=2)
     {
-      switch (definition[z])
+      switch (definition[z+0])
       {
         case CHUNK_DATATYPE_UINT8:
         case CHUNK_DATATYPE_INT8:
@@ -168,7 +161,7 @@ LOCAL Errors readDefinition(void      *userData,
             n = (*((uint8*)p));
             p += 1;
 
-            (*((uint8*)data)) = n; data = ((char*)data)+1+PADDING_INT8;
+            (*((uint8*)((char*)data+definition[z+1]))) = n;
           }
           break;
         case CHUNK_DATATYPE_UINT16:
@@ -186,7 +179,7 @@ LOCAL Errors readDefinition(void      *userData,
             n = ntohs(*((uint16*)p));
             p += 2;
 
-            (*((uint16*)data)) = n; data = ((char*)data)+2+PADDING_INT16;
+            (*((uint16*)((char*)data+definition[z+1]))) = n;
           }
           break;
         case CHUNK_DATATYPE_UINT32:
@@ -204,7 +197,7 @@ LOCAL Errors readDefinition(void      *userData,
             n = ntohl(*((uint32*)p));
             p += 4;
 
-            (*((uint32*)data)) = n; data = ((char*)data)+4+PADDING_INT32;
+            (*((uint32*)((char*)data+definition[z+1]))) = n;
           }
           break;
         case CHUNK_DATATYPE_UINT64:
@@ -227,7 +220,7 @@ LOCAL Errors readDefinition(void      *userData,
             p += 4;
             n = (((uint64)h) << 32) | (((uint64)l << 0));
 
-            (*((uint64*)data)) = n; data = ((char*)data)+8+PADDING_INT64;
+            (*((uint64*)((char*)data+definition[z+1]))) = n;
           }
           break;
         case CHUNK_DATATYPE_STRING:
@@ -252,8 +245,7 @@ LOCAL Errors readDefinition(void      *userData,
             crc = crc32(crc,p,length);
             s = String_newBuffer(p,length); p += length;
 
-//pointer size???
-            (*((String*)data)) = s; data = ((char*)data)+4+PADDING_ADDRESS;
+            (*((String*)((char*)data+definition[z+1]))) = s;
           }
           break;
         case CHUNK_DATATYPE_DATA:
@@ -343,16 +335,16 @@ LOCAL Errors writeDefinition(void       *userData,
   p = buffer;
   if (definition != NULL)
   {
-    for (z = 0; definition[z] != 0; z++)
+    for (z = 0; definition[z+0] != 0; z+=2)
     {
-      switch (definition[z])
+      switch (definition[z+0])
       {
         case CHUNK_DATATYPE_UINT8:
         case CHUNK_DATATYPE_INT8:
           {
             uint8 n;
 
-            n = (*((uint8*)data)); data = ((char*)data)+1+PADDING_INT8;
+            n = (*((uint8*)((char*)data+definition[z+1])));
 
             assert(p+1 <= buffer+bufferLength);
             (*((uint8*)p)) = n;
@@ -365,7 +357,7 @@ LOCAL Errors writeDefinition(void       *userData,
           {
             uint16 n;
 
-            n = (*((uint16*)data)); data = ((char*)data)+2+PADDING_INT16;
+            n = (*((uint16*)((char*)data+definition[z+1])));
 
             assert(p+2 <= buffer+bufferLength);
             (*((uint16*)p)) = htons(n);
@@ -378,7 +370,7 @@ LOCAL Errors writeDefinition(void       *userData,
           {
             uint32 n;
 
-            n = (*((uint32*)data)); data = ((char*)data)+4+PADDING_INT32;
+            n = (*((uint32*)((char*)data+definition[z+1])));
 
             assert(p+4 <= buffer+bufferLength);
             (*((uint32*)p)) = htonl(n);
@@ -392,7 +384,7 @@ LOCAL Errors writeDefinition(void       *userData,
             uint64 n;
             uint32 h,l;
 
-            n = (*((uint64*)data)); data = ((char*)data)+8+PADDING_INT64;
+            n = (*((uint64*)((char*)data+definition[z+1])));
 
             assert(p+8 <= buffer+bufferLength);
             h = (n & 0xFFFFffff00000000LL) >> 32;
@@ -410,8 +402,7 @@ LOCAL Errors writeDefinition(void       *userData,
             uint16 length;
             String s;
 
-//pointer size???    
-            s = (*((String*)data)); data = ((char*)data)+4+PADDING_ADDRESS;
+            s = (*((String*)((char*)data+definition[z+1])));
             length = (uint16)String_length(s);
 
             assert(p+2 <= buffer+bufferLength);
@@ -529,33 +520,27 @@ ulong Chunk_getSize(const int  *definition,
 
   assert(definition != NULL);
 
-//  return getDefinitionSize(definition,alignment,data);
-
   definitionSize = 0;
-  for (z = 0; definition[z] != 0; z++)
+  for (z = 0; definition[z+0] != 0; z+=2)
   {
-    switch (definition[z])
+    switch (definition[z+0])
     {
       case CHUNK_DATATYPE_UINT8:
       case CHUNK_DATATYPE_INT8:
         definitionSize += 1;
-        if (data != NULL) data = ((char*)data) + 4;
         break;
       case CHUNK_DATATYPE_UINT16:
       case CHUNK_DATATYPE_INT16:
         definitionSize += 2;
-        if (data != NULL) data = ((char*)data) + 4;
         break;
       case CHUNK_DATATYPE_UINT32:
       case CHUNK_DATATYPE_INT32:
       case CHUNK_DATATYPE_CRC32:
         definitionSize += 4;
-        if (data != NULL) data = ((char*)data) + 4;
         break;
       case CHUNK_DATATYPE_UINT64:
       case CHUNK_DATATYPE_INT64:
         definitionSize += 8;
-        if (data != NULL) data = ((char*)data) + 8;
         break;
       case CHUNK_DATATYPE_STRING:
         {
@@ -563,11 +548,9 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(data != NULL);
 
-          s = (*((String*)data));
+          s = (*((String*)((char*)data+definition[z+1])));
           assert(s != NULL);
-          definitionSize += 2 + String_length(s);
-//pointer size???
-          data = ((char*)data) + 4;
+          definitionSize += 2+String_length(s);
         }
         break;
       case CHUNK_DATATYPE_DATA:

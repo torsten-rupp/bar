@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/archive_format.pl,v $
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: create header/c file definition from format definition
 # Systems : all
@@ -78,6 +78,7 @@ sub writeCFile($)
 
 GetOptions("c=s" => \$cFileName,
            "h=s" => \$hFileName,
+           "i=s" => \$includeFileName,
           );
 
 if ($cFileName ne "")
@@ -92,6 +93,7 @@ if ($hFileName ne "")
 }
 
 writeCFile("#include \"chunks.h\"\n");
+if ($includeFileName ne "") { writeCFile("#include \"$includeFileName\"\n"); }
 
 my $line;
 my $lineNb=0;
@@ -126,35 +128,42 @@ while ($line=<STDIN>)
         writeHFile("  $1 $2;\n");
         writeHFile("  uint8 pad".$n."[3];\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
+        push(@parseDefinitions,"offsetof($PREFIX_NAME$structName,$2)");
       }
       elsif ($line =~ /^\s*(uint16|int16)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         writeHFile("  uint8 pad".$n."[2];\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
+        push(@parseDefinitions,"offsetof($PREFIX_NAME$structName,$2)");
       }
       elsif ($line =~ /^\s*(uint32|int32)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
+        push(@parseDefinitions,"offsetof($PREFIX_NAME$structName,$2)");
       }
       elsif ($line =~ /^\s*(uint64|int64)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
+        push(@parseDefinitions,"offsetof($PREFIX_NAME$structName,$2)");
       }
       elsif ($line =~ /^\s*string\s+(\w+)/)
       {
         writeHFile("  String $1;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{string});
+        push(@parseDefinitions,"offsetof($PREFIX_NAME$structName,$1)");
       }
       elsif ($line =~ /^\s*data\s+(\w+)/)
       {
         push(@parseDefinitions,$DEFINITION_TYPES->{data});
+        push(@parseDefinitions,"0");
       }
       elsif ($line =~ /^\s*crc32\s+(\w+)/)
       {
         push(@parseDefinitions,$DEFINITION_TYPES->{crc32});
+        push(@parseDefinitions,"0");
       }
       else
       {
@@ -164,7 +173,6 @@ while ($line=<STDIN>)
 
       $n++;
     }
-#    writeHFile("} $PREFIX_NAME$structName __attribute__ ((packed));\n");
     writeHFile("} $PREFIX_NAME$structName;\n");
     push(@parseDefinitions,"0");
     writeHFile("extern int $PREFIX_DEFINITION$idName\[\];\n");
