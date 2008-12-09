@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -140,6 +140,8 @@ LOCAL const char    *logPostCommand;
 LOCAL bool          batchFlag;
 LOCAL bool          versionFlag;
 LOCAL bool          helpFlag,xhelpFlag,helpInternalFlag;
+
+LOCAL const char    *pidFileName;
 
 /*---------------------------------------------------------------------*/
 
@@ -346,8 +348,10 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,0,jobOptions.errorCorrectionCodesFlag,       FALSE,                                                             "add error-correction codes with 'dvdisaster' tool"                        ),
 
   CMD_OPTION_SET          ("log",                          0,  1,0,logTypes,                                  0,COMMAND_LINE_OPTIONS_LOG_TYPES,                                  "log types"                                                                ),
-  CMD_OPTION_STRING       ("log-file",                     0,  1,0,logFileName       ,                        NULL,                                                              "log file name","file name"                                                ),
+  CMD_OPTION_STRING       ("log-file",                     0,  1,0,logFileName,                               NULL,                                                              "log file name","file name"                                                ),
   CMD_OPTION_STRING       ("log-post-command",             0,  1,0,logPostCommand,                            NULL,                                                              "log file post-process command","command"                                  ),
+
+  CMD_OPTION_STRING       ("pid-file",                     0,  1,0,pidFileName,                               NULL,                                                              "process id file name","file name"                                         ),
 
   CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,0,jobOptions.skipUnreadableFlag,             TRUE,                                                              "skip unreadable files"                                                    ),
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      0,  0,0,jobOptions.overwriteArchiveFilesFlag,      FALSE,                                                             "overwrite existing archive files"                                         ),
@@ -540,6 +544,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_SET      ("log",                          &logTypes,-1,                                           CONFIG_VALUE_LOG_TYPES),
   CONFIG_VALUE_CSTRING  ("log-file",                     &logFileName,-1                                         ),
   CONFIG_VALUE_CSTRING  ("log-post-command",             &logPostCommand,-1                                      ),
+
+  CONFIG_VALUE_CSTRING  ("pid-file",                     &pidFileName,-1                                         ),
 
   CONFIG_VALUE_BOOLEAN  ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                       ),
   CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",      &jobOptions.overwriteArchiveFilesFlag,-1                ),
@@ -2100,9 +2106,10 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
 
 int main(int argc, const char *argv[])
 {
-  String fileName;
-  bool   printInfoFlag;
-  Errors error;
+  String     fileName;
+  bool       printInfoFlag;
+  Errors     error;
+  FileHandle fileHandle;
 
   /* init */
   if (!initAll())
@@ -2236,6 +2243,27 @@ int main(int argc, const char *argv[])
       String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_FAIL;
+  }
+
+  /* create pid file */
+  if (pidFileName != NULL)
+  {
+    fileName = String_newCString(pidFileName);
+    error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,getErrorText(error));
+      doneAll();
+      #ifndef NDEBUG
+        Array_debug();
+        String_debug();
+        String_debugDone();
+      #endif /* not NDEBUG */
+      return EXITCODE_FAIL;
+    }
+    File_printLine(&fileHandle,"%d",(int)getpid());
+    File_close(&fileHandle);
+    String_delete(fileName);
   }
 
   /* create session log file */
@@ -2524,6 +2552,14 @@ int main(int argc, const char *argv[])
   if (logFile != NULL) fclose(logFile);
   fclose(tmpLogFile);unlink(String_cString(tmpLogFileName));
   File_delete(tmpLogFileName,FALSE);
+
+  /* delete pid file */
+  if (pidFileName != NULL)
+  {
+    fileName = String_newCString(pidFileName);
+    File_delete(fileName,FALSE);
+    String_delete(fileName);
+  }
 
   /* free resources */
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));

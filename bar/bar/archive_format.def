@@ -1,12 +1,15 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/bar/archive_format.def,v $
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems: all
 #
 #***********************************************************************
+
+CHUNK BAR "BAR0" Bar
+  crc32  crc
 
 CHUNK KEY "KEY0" Key
   data   data

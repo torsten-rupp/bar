@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -357,29 +357,6 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
                                   String       deviceName,
                                   String       fileName
                                  );
-
-/***********************************************************************\
-* Name   : Storage_formatArchiveFileName
-* Purpose: get archive file name
-* Input  : fileName          - file name variable
-*          storageFileHandle - storage file handle
-*          partNumber        - part number (>=0 for parts, -1 for single
-*                              archive)
-*          lastPartFlag      - TRUE iff last part
-*          time              - time
-*          archiveType       - archive type
-* Output : -
-* Return : formated file name
-* Notes  : -
-\***********************************************************************/
-
-String Storage_formatArchiveFileName(String       fileName,
-                                     const String templateFileName,
-                                     int          partNumber,
-                                     bool         lastPartFlag,
-                                     time_t       time,
-                                     ArchiveTypes archiveType
-                                    );
 
 /***********************************************************************\
 * Name   : Storage_prepare
