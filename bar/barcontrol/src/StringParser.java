@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/StringParser.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -284,6 +284,11 @@ class StringParser
             case 'u':
               /* get data */
               buffer = new StringBuffer();
+              if ((index < string.length()) && ((string.charAt(index) == '+') || (string.charAt(index) == '-')))
+              {
+                buffer.append(string.charAt(index));
+                index++;
+              }
               while (   (index < string.length())
                      && Character.isDigit(string.charAt(index))
                     )
@@ -401,6 +406,11 @@ class StringParser
             case 'A':
               /* get data */
               buffer = new StringBuffer();
+              if ((index < string.length()) && ((string.charAt(index) == '+') || (string.charAt(index) == '-')))
+              {
+                buffer.append(string.charAt(index));
+                index++;
+              }
               while (   (index < string.length())
                      && Character.isDigit(string.charAt(index))
                     )

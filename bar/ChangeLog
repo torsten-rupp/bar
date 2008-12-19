@@ -1,4 +1,35 @@
-2008-12-09 0.09f
+2008-12-?? 0.10
+  * fixed some not freed resources
+  * fixed error message when password is not given or wrong
+  * improved input password: ask for password if not given
+    in some configuration file when mode is "default"
+  * added option --group: group equals files in list; limit
+    output to most recent entries if not given option --all.
+    Add archive name in group mode. Usage: find most recent
+    file 'foo' in a set of backups, e. g.
+    bar *.bar -# "*/foo" -g
+  * added option --all: list all entries in group
+  * barcontrol: fixed Java exception when scheduling date/time
+    can not be parsed
+  * barcontrol: added "normal" type to start-dialog
+  * default value for ssh port is now 22
+  * do not ask for a password if bar is started server- or
+    batch mode
+  * barcontrol: flush not written configuration data to disk
+    when terminating barcontrol
+  * barcontrol: fixed reseting port number
+  * barcontrol: set default sort mode to "weekday" for scheduling
+    list
+  * barcontrol: try to login with preset server name and login
+    password. Open login-dialog only when login fail or when option
+    --login-dialog is given.
+
+2008-12-10 0.09i
+  * fixed creating pid file: when server is detached write pid of
+    running process, not of terminated parent (thanks to Matthias
+    Albert)
+
+2008-12-09 0.09h
   * fixed problem with internal data alignment on 64bit systems
   * added test data to distribution
   * added chunk BAR0 to archive files as indicator for a bar file;

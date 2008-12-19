@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.45 $
+# $Revision: 1.46 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -34,18 +34,20 @@ CP         = cp
 DIFF       = diff
 ECHO       = echo
 ECHO_NO_LF = echo -n
+GREP       = grep
 INSTALL    = @INSTALL@
 MKDIR      = mkdir
 PERL       = @PERL@
 RMDIR      = rmdir
 RMF        = rm -f
 RMRF       = rm -rf
+SED        = sed
 TAR        = tar
 
 #------------------------ specific variables/settings ------------------------
 
-VERSION_MAJOR = 0
-VERSION_MINOR = 09h
+VERSION_MAJOR := $(shell $(CAT) version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR := $(shell $(CAT) version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 
 CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
@@ -292,6 +294,7 @@ $(DISTRIBUTION_NAME).tar.bz2:
 	$(INSTALL) -m 664 \
                    configure.in \
                    Makefile.in \
+                   version \
                    ToDo \
                    README \
                    ChangeLog \

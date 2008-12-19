@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -583,14 +583,15 @@ class TabStatus
   class JobDataComparator implements Comparator<JobData>
   {
     // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_NAME                   = 0;
-    private final static int SORTMODE_STATE                  = 1;
-    private final static int SORTMODE_TYPE                   = 2;
-    private final static int SORTMODE_PARTSIZE               = 3;
-    private final static int SORTMODE_COMPRESS               = 4;
-    private final static int SORTMODE_CRYPT                  = 5;
-    private final static int SORTMODE_LAST_EXECUTED_DATETIME = 6;
-    private final static int SORTMODE_ESTIMATED_TIME         = 7;
+    private final static int SORTMODE_ID                     = 0;
+    private final static int SORTMODE_NAME                   = 1;
+    private final static int SORTMODE_STATE                  = 2;
+    private final static int SORTMODE_TYPE                   = 3;
+    private final static int SORTMODE_PARTSIZE               = 4;
+    private final static int SORTMODE_COMPRESS               = 5;
+    private final static int SORTMODE_CRYPT                  = 6;
+    private final static int SORTMODE_LAST_EXECUTED_DATETIME = 7;
+    private final static int SORTMODE_ESTIMATED_TIME         = 8;
 
     private int sortMode;
 
@@ -600,7 +601,8 @@ class TabStatus
      */
     JobDataComparator(Table table, TableColumn sortColumn)
     {
-      if      (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
+      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_ID;
+      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
       else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_STATE;
       else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_TYPE;
       else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_PARTSIZE;
@@ -618,7 +620,8 @@ class TabStatus
     {
       TableColumn sortColumn = table.getSortColumn();
 
-      if      (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
+      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_ID;
+      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
       else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_STATE;
       else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_TYPE;
       else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_PARTSIZE;
@@ -639,6 +642,10 @@ class TabStatus
     {
       switch (sortMode)
       {
+        case SORTMODE_ID:
+          if (jobData1.id < jobData2.id) return -1;
+          if (jobData1.id > jobData2.id) return  1;
+          else                           return  0;
         case SORTMODE_NAME:
           return jobData1.name.compareTo(jobData2.name);
         case SORTMODE_STATE:
@@ -1454,6 +1461,7 @@ boolean xxx=false;
          widgetButtonAbort.setEnabled(state.equals("waiting") || state.equals("running"));
 //         widgetButtonVolume.setEnabled(state.equals("running"));
       }
+else { Dprintf.dprintf("unexecpted "+result[0]); }
     }
   }
 
@@ -1473,15 +1481,18 @@ boolean xxx=false;
   {
     assert selectedJobData != null;
 
-    switch (Dialogs.select(shell,"Confirmation","Start job '"+selectedJobData.name+"'?",new String[]{"Full","Incremental","Cancel"},2))
+    switch (Dialogs.select(shell,"Confirmation","Start job '"+selectedJobData.name+"'?",new String[]{"Normal","Full","Incremental","Cancel"},2))
     {
       case 0:
-        BARServer.executeCommand("JOB_START "+selectedJobData.id+" full");
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" normal");
         break;
       case 1:
-        BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" full");
         break;
       case 2:
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
+        break;
+      case 3:
         break;
     }
   }
@@ -1979,9 +1990,10 @@ class TabJobs
   BARVariable incrementalListFileName = new BARVariable("");
   BARVariable storageType             = new BARVariable(new String[]{"filesystem","ftp","scp","sftp","dvd","device"});
   BARVariable storageFileName         = new BARVariable("");
-  BARVariable storageLoginName        = new BARVariable("");
   BARVariable storageHostName         = new BARVariable("");
   BARVariable storageHostPort         = new BARVariable(0);
+  BARVariable storageLoginName        = new BARVariable("");
+  BARVariable storageLoginPassword    = new BARVariable("");
   BARVariable storageDeviceName       = new BARVariable("");
   BARVariable overwriteArchiveFiles   = new BARVariable(false);
   BARVariable sshPublicKeyFileName    = new BARVariable("");
@@ -2569,8 +2581,9 @@ throw new Error("NYI");
           {
             public void modified(Control control, BARVariable cryptType)
             {
-              Widgets.setEnabled(widgetCryptPublicKeyFileName,false);
-              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,false);
+              boolean asymmetricFlag = cryptType.equals("asymmetric");
+              Widgets.setEnabled(widgetCryptPublicKeyFileName,asymmetricFlag);
+              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,asymmetricFlag);
               ((Button)control).setSelection(cryptType.equals("symmetric"));
             }
           });
@@ -2595,14 +2608,17 @@ throw new Error("NYI");
           {
             public void modified(Control control, BARVariable cryptType)
             {
-              Widgets.setEnabled(widgetCryptPublicKeyFileName,true);
-              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,true);
+              boolean asymmetricFlag = cryptType.equals("asymmetric");
+              Widgets.setEnabled(widgetCryptPublicKeyFileName,asymmetricFlag);
+              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,asymmetricFlag);
               ((Button)control).setSelection(cryptType.equals("asymmetric"));
             }
           });
 
+          label = Widgets.newLabel(composite,"Public key:");
+          Widgets.layout(label,0,2,TableLayoutData.W);
           widgetCryptPublicKeyFileName = Widgets.newText(composite,null);
-          Widgets.layout(widgetCryptPublicKeyFileName,0,2,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+          Widgets.layout(widgetCryptPublicKeyFileName,0,3,TableLayoutData.WE|TableLayoutData.EXPAND_X);
           widgetCryptPublicKeyFileName.addModifyListener(new ModifyListener()
           {
             public void modifyText(ModifyEvent modifyEvent)
@@ -2650,7 +2666,7 @@ throw new Error("NYI");
           Widgets.addModifyListener(new WidgetListener(widgetCryptPublicKeyFileName,cryptPublicKeyFileName));
 
           widgetCryptPublicKeyFileNameSelect = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
-          Widgets.layout(widgetCryptPublicKeyFileNameSelect,0,3,TableLayoutData.DEFAULT);
+          Widgets.layout(widgetCryptPublicKeyFileNameSelect,0,4,TableLayoutData.DEFAULT);
           widgetCryptPublicKeyFileNameSelect.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -3060,7 +3076,7 @@ throw new Error("NYI");
           Widgets.addModifyListener(new WidgetListener(button,overwriteArchiveFiles));
         }
 
-        // destiniation ftp
+        // destination ftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N|TableLayoutData.EXPAND_X);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
@@ -3072,12 +3088,10 @@ throw new Error("NYI");
         });
         Widgets.setVisible(composite,false);
         {
-          label = Widgets.newLabel(composite,"Server");
-          Widgets.layout(label,0,0,TableLayoutData.W);
           composite = Widgets.newComposite(composite,SWT.NONE);
-          Widgets.layout(composite,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+          Widgets.layout(composite,0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
           {
-            label = Widgets.newLabel(composite,"Login:");
+            label = Widgets.newLabel(composite,"User:");
             Widgets.layout(label,0,0,TableLayoutData.W);
 
             text = Widgets.newText(composite,null);
@@ -3174,6 +3188,55 @@ throw new Error("NYI");
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageHostName));
+
+            label = Widgets.newLabel(composite,"Password:");
+            Widgets.layout(label,0,4,TableLayoutData.W);
+
+            text = Widgets.newPassword(composite,null);
+            Widgets.layout(text,0,5,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+            text.addModifyListener(new ModifyListener()
+            {
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text  widget = (Text)modifyEvent.widget;
+                Color color  = COLOR_MODIFIED;
+                try
+                {
+                  String s = widget.getText();
+                  if (storageLoginPassword.getString().equals(s)) color = COLOR_WHITE;
+                }
+                catch (NumberFormatException exception)
+                {
+                }
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text widget = (Text)selectionEvent.widget;
+                storageLoginPassword.set(widget.getText());
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+  throw new Error("NYI");
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageLoginPassword.set(widget.getText());
+                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              }
+            });
+            Widgets.addModifyListener(new WidgetListener(text,storageLoginPassword));
           }
 
 /*
@@ -3937,6 +4000,10 @@ throw new Error("NYI");
         tableColumn = Widgets.addTableColumn(widgetScheduleList,0,"Date",     SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleList,1,"Week day", SWT.LEFT,100,true );
+        synchronized(scheduleList)
+        {
+          Widgets.sortTableColumn(widgetScheduleList,tableColumn,new ScheduleDataComparator(widgetScheduleList,tableColumn));
+        }
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleList,2,"Time",     SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
@@ -4101,7 +4168,12 @@ throw new Error("NYI");
       if (!storageLoginName.equals("") || !storageHostName.equals(""))
       {
         archiveName.append("//");
-        if (!storageLoginName.equals("")) { archiveName.append(storageLoginName); archiveName.append('@'); }
+        if (!storageLoginName.equals("") || !storageLoginPassword.equals(""))
+        {
+          if (!storageLoginName.equals("")) archiveName.append(storageLoginName);
+          if (!storageLoginPassword.equals("")) { archiveName.append(':'); archiveName.append(storageLoginPassword); }
+          archiveName.append('@');
+        }
         if (!storageHostName.equals("")) { archiveName.append(storageHostName); }
         archiveName.append('/');
       }
@@ -4183,7 +4255,13 @@ throw new Error("NYI");
         Object[] data = new Object[2];
 
         int index = 2;
-        if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
+        if      (StringParser.parse(specifier.substring(index),"%s:%s@",data,StringParser.QUOTE_CHARS))
+        {
+          storageLoginName.set((String)data[0]);
+          storageLoginPassword.set((String)data[1]);
+          index = specifier.indexOf('@')+1;
+        }
+        else if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
         {
           storageLoginName.set((String)data[0]);
           index = specifier.indexOf('@')+1;
@@ -4228,6 +4306,7 @@ throw new Error("NYI");
         else if (StringParser.parse(specifier.substring(2),"%s/%s",data,StringParser.QUOTE_CHARS))
         {
           storageHostName.set((String)data[0]);
+          storageHostPort.set(0);
           storageFileName.set((String)data[1]);
         }
         else
@@ -4265,6 +4344,7 @@ throw new Error("NYI");
         else if (StringParser.parse(specifier.substring(2),"%s/%s",data,StringParser.QUOTE_CHARS))
         {
           storageHostName.set((String)data[0]);
+          storageHostPort.set(0);
           storageFileName.set((String)data[1]);
         }
         else
@@ -4632,8 +4712,15 @@ throw new Error("NYI");
         String jobName = widgetJobName.getText();
         if (!jobName.equals(""))
         {
-          BARServer.executeCommand("JOB_NEW "+StringParser.escape(jobName));
-          updateJobList();
+          try
+          {
+            BARServer.executeCommand("JOB_NEW "+StringParser.escape(jobName));
+            updateJobList();
+          }
+          catch (CommunicationError error)
+          {
+            Dialogs.error(shell,"Cannot create new job:\n\n"+error.getMessage());
+          }
         }
         widget.getShell().close();
       }
@@ -6024,23 +6111,23 @@ throw new Error("NYI");
       {
         widgetYear = Widgets.newOptionMenu(subComposite,null);
         widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015"});
-        widgetYear.setText(scheduleData.getYear());
+        widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
         if (widgetYear.getText().equals("")) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);
 
         widgetMonth = Widgets.newOptionMenu(subComposite,null);
         widgetMonth.setItems(new String[]{"*","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
-        widgetMonth.setText(scheduleData.getMonth());
+        widgetMonth.setText(scheduleData.getMonth()); if (widgetMonth.getText().equals("")) widgetMonth.setText("*");
         Widgets.layout(widgetMonth,0,1,TableLayoutData.W);
 
         widgetDay = Widgets.newOptionMenu(subComposite,null);
         widgetDay.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
-        widgetDay.setText(scheduleData.getDay());
+        widgetDay.setText(scheduleData.getDay()); if (widgetDay.getText().equals("")) widgetDay.setText("*");
         Widgets.layout(widgetDay,0,2,TableLayoutData.W);
 
         widgetWeekDay = Widgets.newOptionMenu(subComposite,null);
         widgetWeekDay.setItems(new String[]{"*","Mon","Tue","Wed","Thu","Fri","Sat","Sun"});
-        widgetWeekDay.setText(scheduleData.weekDay);
+        widgetWeekDay.setText(scheduleData.weekDay); if (widgetWeekDay.getText().equals("")) widgetWeekDay.setText("*");
         Widgets.layout(widgetWeekDay,0,3,TableLayoutData.W);
       }
 
@@ -6052,12 +6139,12 @@ throw new Error("NYI");
       {
         widgetHour = Widgets.newOptionMenu(subComposite,null);
         widgetHour.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
-        widgetHour.setText(scheduleData.getHour());
+        widgetHour.setText(scheduleData.getHour()); if (widgetHour.getText().equals("")) widgetHour.setText("*");
         Widgets.layout(widgetHour,0,0,TableLayoutData.W);
 
         widgetMinute = Widgets.newOptionMenu(subComposite,null);
         widgetMinute.setItems(new String[]{"*","0","5","10","15","20","30","35","40","45","50","55"});
-        widgetMinute.setText(scheduleData.getMinute());
+        widgetMinute.setText(scheduleData.getMinute()); if (widgetMinute.getText().equals("")) widgetMinute.setText("*");
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
       }
 
@@ -6374,9 +6461,10 @@ public class BARControl
   final static int    DEFAULT_SERVER_TLS_PORT = 38524;
 
   // --------------------------- variables --------------------------------
-  private String    serverName    = DEFAULT_SERVER_NAME;
-  private int       serverPort    = DEFAULT_SERVER_PORT;
-  private int       serverTLSPort = DEFAULT_SERVER_TLS_PORT;
+  private String    serverName      = DEFAULT_SERVER_NAME;
+  private int       serverPort      = DEFAULT_SERVER_PORT;
+  private int       serverTLSPort   = DEFAULT_SERVER_TLS_PORT;
+  private boolean   loginDialogFlag = false;
 
   private Display   display;
   private Shell     shell;
@@ -6398,6 +6486,7 @@ public class BARControl
     System.out.println("");
     System.out.println("Options: -p|--port=<n>  - server port");
     System.out.println("         --tls-port=<n> - TLS server port");
+    System.out.println("         --login-dialog - force to open login dialog");
     System.out.println("         -h|--help      - print this help");
   }
 
@@ -6472,6 +6561,28 @@ public class BARControl
           throw new Error("Invalid value '"+args[z+1]+"' for option --tls-port (error: "+exception.getMessage()+")!");          
         }
         z += 2;
+      }
+      else if (args[z].startsWith("--login-dialog="))
+      {
+        String value = args[z].substring(args[z].indexOf('=')+1).toLowerCase();
+        if      (value.equals("yes") || value.equals("on")  || value.equals("1"))
+        {
+          loginDialogFlag = true;
+        }
+        else if (value.equals("no") || value.equals("off")  || value.equals("0"))
+        {
+          loginDialogFlag = false;
+        }
+        else
+        {
+          throw new Error("Invalid value '"+value+"' for option --login-dialog (error: expected yes,on,1 or no,off,0)!");
+        }
+        z += 1;
+      }
+      else if (args[z].equals("--login-dialog"))
+      {
+        loginDialogFlag = true;
+        z += 1;
       }
       else if (args[z].equals("--"))
       {
@@ -6753,7 +6864,19 @@ public class BARControl
       // connect to server
       LoginData loginData = new LoginData(serverName,serverPort,serverTLSPort);
       boolean connectOkFlag = false;
-      do
+      if (!loginData.serverName.equals("") && !loginData.password.equals("") && !loginDialogFlag)
+      {
+        // connect to server with preset data
+        try
+        {
+          BARServer.connect(loginData.serverName,loginData.port,loginData.tlsPort,loginData.password);
+          connectOkFlag = true;
+        }
+        catch (ConnectionError error)
+        {
+        }
+      }
+      while (!connectOkFlag)
       {
         // get login data
         if (!getLoginData(loginData))
@@ -6780,8 +6903,6 @@ public class BARControl
           }
         }
       }
-      while (!connectOkFlag);
-
 
       // open main window
       createWindow();

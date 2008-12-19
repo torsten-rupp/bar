@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -232,7 +232,7 @@ class BARServer
           || (Integer.parseInt(data[2]) != 0)
          )
       {
-        throw new CommunicationError("Authorization fail");
+        throw new ConnectionError("Authorization fail");
       }
     }
     catch (IOException exception)
@@ -260,7 +260,7 @@ class BARServer
           || (Integer.parseInt(data[2]) != 0)
          )
       {
-        throw new CommunicationError("Cannot connect to '"+hostname+"' (error: "+data[3]+")");
+        throw new ConnectionError("Cannot connect to '"+hostname+"' (error: "+data[3]+")");
       }
     }
     catch (IOException exception)
@@ -275,6 +275,10 @@ class BARServer
   {
     try
     {
+      /* flush data (ignore errors) */
+      executeCommand("JOB_FLUSH");
+
+      /* close connection */
       input.close();
       output.close();
       socket.close();
@@ -350,7 +354,7 @@ class BARServer
           if (Integer.parseInt(data[1]) != 0)
           {
             errorCode = Integer.parseInt(data[2]);
-            if (errorCode != 0) throw new CommunicationError("command fail with error "+errorCode+": "+data[3]);
+            if (errorCode != 0) throw new CommunicationError(data[3]+" (error: "+errorCode+")");
             completedFlag = true;
           }
 
@@ -369,7 +373,7 @@ class BARServer
         }
         else
         {
-System.err.println("BARControl.java"+", "+505+": "+commandId+"::"+line);
+Dprintf.dprintf();
           lines.add(line);
         }
       }

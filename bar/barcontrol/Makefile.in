@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -56,6 +56,7 @@ CP         = cp
 DIFF       = diff
 ECHO       = echo
 ECHO_NO_LF = echo -n
+GREP       = grep
 INSTALL    = @INSTALL@
 MKDIR      = mkdir
 PERL       = @PERL@
@@ -67,6 +68,9 @@ TAR        = tar
 UNZIP      = unzip
 
 #------------------------ specific variables/settings ------------------------
+
+VERSION_MAJOR := $(shell $(CAT) ../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR := $(shell $(CAT) ../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 
 #---------------------------------- rules ------------------------------------
 

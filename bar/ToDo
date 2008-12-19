@@ -22,3 +22,7 @@ ToDo
 - support to access multiple bar servers
 - script to generate pem-keys
 - support openssl key generator
+- rename patterns.? patternlists.?
+- flush in server protocol to store change data
+- barcontrol: --login option
+- clear interal performance arrays before next job is started

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Dprintf.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dprintf functions
 * Systems: all
@@ -76,7 +76,7 @@ public class Dprintf
    */
   static public void dprintf(int level, Object object)
   {
-    dprintf(3,level,"",object);
+    dprintf(3,level,"%s",object);
   }
 
   /** output debug data
@@ -93,7 +93,7 @@ public class Dprintf
    */
   static public void dprintf(Object object)
   {
-    dprintf(3,0,"",object);
+    dprintf(3,0,"%s",object);
   }
 
   /** output debug data
