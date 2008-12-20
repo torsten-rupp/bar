@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems : all
@@ -262,7 +262,7 @@ LOCAL const Password *getNextCryptPassword(PasswordHandle *passwordHandle)
 
     passwordHandle->passwordMode = PASSWORD_MODE_ASK;
   }
-  else if (!passwordHandle->inputFlag && (passwordHandle->passwordMode==PASSWORD_MODE_ASK))
+  else if (!passwordHandle->inputFlag && ((passwordHandle->passwordMode==PASSWORD_MODE_ASK) || (globalOptions.cryptPassword==NULL)))
   {
     /* input password */
     password = Password_new();
@@ -759,7 +759,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
     /* call back */
     error = archiveInfo->archiveNewFileFunction(archiveInfo->fileName,
                                                 size,
-                                                (archiveInfo->jobOptions->archivePartSize > 0)?archiveInfo->partNumber:-1,
+                                                (archiveInfo->jobOptions->archivePartSize > 0)?archiveInfo->partNumber:ARCHIVE_PART_NUMBER_NONE,
                                                 lastPartFlag,
                                                 archiveInfo->archiveNewFileUserData
                                                );
@@ -1366,8 +1366,6 @@ bool Archive_eof(ArchiveInfo *archiveInfo)
         /* check if private key available */
         if (archiveInfo->jobOptions->cryptPrivateKeyFileName == NULL)
         {
-          File_close(&archiveInfo->fileHandle);
-          String_delete(archiveInfo->fileName);
           return ERROR_NO_PUBLIC_KEY;
         }
 
@@ -1407,8 +1405,6 @@ bool Archive_eof(ArchiveInfo *archiveInfo)
         }
         if (!decryptedFlag)
         {
-          File_close(&archiveInfo->fileHandle);
-          String_delete(archiveInfo->fileName);
           return error;
         }
 
@@ -1416,8 +1412,6 @@ bool Archive_eof(ArchiveInfo *archiveInfo)
         error = readEncryptionKey(archiveInfo,&chunkHeader);
         if (error != ERROR_NONE)
         {
-          File_close(&archiveInfo->fileHandle);
-          String_delete(archiveInfo->fileName);
           return error;
         }
 #if 0
@@ -2228,9 +2222,10 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
-  bool           decryptedFlag;
   PasswordHandle passwordHandle;
   const Password *password;
+  bool           passwordFlag;
+  bool           decryptedFlag;
   ChunkHeader    subChunkHeader;
   bool           foundFileEntryFlag,foundFileDataFlag;
 
@@ -2347,15 +2342,19 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                                        archiveInfo->passwordMode
                                       );
     }
+    passwordFlag  = (password != NULL);
+    decryptedFlag = FALSE;
   }
   else
   {
-    password = NULL;
+    password      = NULL;
+    passwordFlag  = FALSE;
+    decryptedFlag = TRUE;
   }
-  decryptedFlag      = FALSE;
   foundFileEntryFlag = FALSE;
   foundFileDataFlag  = FALSE;
-  while (   !decryptedFlag
+  while (   !foundFileEntryFlag
+         && !foundFileDataFlag
          && ((archiveFileInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
         )
   {
@@ -2502,11 +2501,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
       }
     }
 
-    if (error == ERROR_NONE)
-    {
-      decryptedFlag = TRUE;
-    }
-    else
+    if (error != ERROR_NONE)
     {
       /* free resources */
       Chunk_done(&archiveFileInfo->file.chunkInfoFileData);
@@ -2531,21 +2526,14 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   if (!foundFileEntryFlag || !foundFileDataFlag)
   {
     if (foundFileEntryFlag) String_delete(archiveFileInfo->file.chunkFileEntry.name);
-
-    if (decryptedFlag)
-    {
-      Chunk_done(&archiveFileInfo->file.chunkInfoFileData);
-      Chunk_done(&archiveFileInfo->file.chunkInfoFileEntry);
-      Crypt_done(&archiveFileInfo->file.cryptInfoData);
-      Crypt_done(&archiveFileInfo->file.cryptInfoFileData);
-      Crypt_done(&archiveFileInfo->file.cryptInfoFileEntry);
-    }
     Compress_delete(&archiveFileInfo->file.compressInfoData);
     free(archiveFileInfo->file.buffer);
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
 
     if      (error != ERROR_NONE) return error;
+    else if (!passwordFlag)       return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)      return ERROR_INVALID_PASSWORD;
     else if (!foundFileEntryFlag) return ERROR_NO_FILE_ENTRY;
     else if (!foundFileDataFlag)  return ERROR_NO_FILE_DATA;
     HALT_INTERNAL_ERROR_UNREACHABLE();
@@ -2573,10 +2561,11 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
-  bool           decryptedFlag;
-  bool           foundDirectoryEntryFlag;
   PasswordHandle passwordHandle;
   const Password *password;
+  bool           passwordFlag;
+  bool           decryptedFlag;
+  bool           foundDirectoryEntryFlag;
   ChunkHeader    subChunkHeader;
 
   assert(archiveInfo != NULL);
@@ -2666,14 +2655,17 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
                                        archiveInfo->passwordMode
                                       );
     }
+    passwordFlag  = (password != NULL);
+    decryptedFlag = FALSE;
   }
   else
   {
-    password = NULL;
+    password      = NULL;
+    passwordFlag  = FALSE;
+    decryptedFlag = TRUE;
   }
-  decryptedFlag           = FALSE;
   foundDirectoryEntryFlag = FALSE;
-  while (   !decryptedFlag
+  while (   !foundDirectoryEntryFlag
          && ((archiveFileInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
         )
   {
@@ -2760,11 +2752,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
       }
     }
 
-    if (error == ERROR_NONE)
-    {
-      decryptedFlag = TRUE;
-    }
-    else
+    if (error != ERROR_NONE)
     {
       /* free resources */
       Crypt_done(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
@@ -2785,15 +2773,12 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
 
   if (!foundDirectoryEntryFlag)
   {
-    if (decryptedFlag)
-    {
-      Crypt_done(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
-      Chunk_done(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
-    }
     Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
 
     if      (error != ERROR_NONE)      return error;
+    else if (!passwordFlag)            return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)           return ERROR_INVALID_PASSWORD;
     else if (!foundDirectoryEntryFlag) return ERROR_NO_DIRECTORY_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
@@ -2816,10 +2801,11 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
-  bool           decryptedFlag;
-  bool           foundLinkEntryFlag;
   PasswordHandle passwordHandle;
   const Password *password;
+  bool           passwordFlag;
+  bool           decryptedFlag;
+  bool           foundLinkEntryFlag;
   ChunkHeader    subChunkHeader;
 
   assert(archiveInfo != NULL);
@@ -2909,14 +2895,18 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
                                        archiveInfo->passwordMode
                                       );
     }
+    passwordFlag  = (password != NULL);
+    decryptedFlag = FALSE;
   }
   else
   {
-    password = NULL;
+    password      = NULL;
+    passwordFlag  = FALSE;
+    decryptedFlag = TRUE;
   }
   decryptedFlag      = FALSE;
   foundLinkEntryFlag = FALSE;
-  while (   !decryptedFlag
+  while (   !foundLinkEntryFlag
          && ((archiveFileInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
         )
   {
@@ -3004,11 +2994,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
       }
     }
 
-    if (error == ERROR_NONE)
-    {
-      decryptedFlag = TRUE;
-    }
-    else
+    if (error != ERROR_NONE)
     {
       /* free resources */
       Chunk_done(&archiveFileInfo->link.chunkInfoLinkEntry);
@@ -3029,15 +3015,12 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
 
   if (!foundLinkEntryFlag)
   {
-    if (decryptedFlag)
-    {
-      Chunk_done(&archiveFileInfo->link.chunkInfoLinkEntry);
-      Crypt_done(&archiveFileInfo->link.cryptInfoLinkEntry);
-    }
     Chunk_done(&archiveFileInfo->link.chunkInfoLink);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
 
     if      (error != ERROR_NONE) return error;
+    else if (!passwordFlag)       return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)      return ERROR_INVALID_PASSWORD;
     else if (!foundLinkEntryFlag) return ERROR_NO_LINK_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
@@ -3059,10 +3042,11 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
-  bool           decryptedFlag;
-  bool           foundSpecialEntryFlag;
   PasswordHandle passwordHandle;
   const Password *password;
+  bool           passwordFlag;
+  bool           decryptedFlag;
+  bool           foundSpecialEntryFlag;
   ChunkHeader    subChunkHeader;
 
   assert(archiveInfo != NULL);
@@ -3135,7 +3119,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
   }
   assert(archiveFileInfo->blockLength > 0);
 
-  /* try to read file entry with all passwords */
+  /* try to read special entry with all passwords */
   Chunk_tell(&archiveFileInfo->special.chunkInfoSpecial,&index);
   if (archiveFileInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -3152,14 +3136,17 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
                                        archiveInfo->passwordMode
                                       );
     }
+    passwordFlag  = (password != NULL);
+    decryptedFlag = FALSE;
   }
   else
   {
-    password = NULL;
+    password      = NULL;
+    passwordFlag  = FALSE;
+    decryptedFlag = TRUE;
   }
-  decryptedFlag         = FALSE;
   foundSpecialEntryFlag = FALSE;
-  while (   !decryptedFlag
+  while (   !foundSpecialEntryFlag
          && ((archiveFileInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
         )
   {
@@ -3249,11 +3236,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
       }
     }
 
-    if (error == ERROR_NONE)
-    {
-      decryptedFlag = TRUE;
-    }
-    else
+    if (error != ERROR_NONE)
     {
       /* free resources */
       Chunk_done(&archiveFileInfo->special.chunkInfoSpecialEntry);
@@ -3274,15 +3257,12 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
 
   if (!foundSpecialEntryFlag)
   {
-    if (decryptedFlag)
-    {
-      Chunk_done(&archiveFileInfo->special.chunkInfoSpecialEntry);
-      Crypt_done(&archiveFileInfo->special.cryptInfoSpecialEntry);
-    }
     Chunk_done(&archiveFileInfo->special.chunkInfoSpecial);
     Chunk_skip(&archiveInfo->fileHandle,&chunkHeader);
 
     if      (error != ERROR_NONE)    return error;
+    else if (!passwordFlag)          return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)         return ERROR_INVALID_PASSWORD;
     else if (!foundSpecialEntryFlag) return ERROR_NO_SPECIAL_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
@@ -3467,6 +3447,22 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           String_delete(archiveFileInfo->file.chunkFileEntry.name);
           break;
         case FILE_TYPE_DIRECTORY:
+          /* close chunks */
+          error = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+          error = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectory);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+
+          /* free resources */
+          Chunk_done(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
+          Crypt_done(&archiveFileInfo->directory.cryptInfoDirectoryEntry);
+          Chunk_done(&archiveFileInfo->directory.chunkInfoDirectory);
           String_delete(archiveFileInfo->directory.chunkDirectoryEntry.name);
           break;
         case FILE_TYPE_LINK:
