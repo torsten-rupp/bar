@@ -49,8 +49,11 @@
 /* SSH2 installed */
 #undef HAVE_SSH2
 
-/* SSH2 libssh2_channel_send_keepalive */
+/* SSH2 has libssh2_channel_send_keepalive() */
 #undef HAVE_SSH2_CHANNEL_SEND_KEEPALIVE
+
+/* SSH2 has libssh2_sftp_seek2() function. */
+#undef HAVE_SSH2_SFTP_SEEK2
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -25,6 +25,7 @@
 
 #include "global.h"
 #include "strings.h"
+#include "lists.h"
 #include "stringlists.h"
 #include "arrays.h"
 
@@ -44,8 +45,85 @@
 
 /***************************** Constants *******************************/
 
+#define DEFAULT_FORMAT_TITLE_NORMAL_LONG "%type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_FORMAT_TITLE_GROUP_LONG  "%archiveName:-20s %type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_FORMAT_TITLE_NORMAL      "%type:4s %size:-10s %date:-25s %name:s"
+#define DEFAULT_FORMAT_TITLE_GROUP       "%archiveName:-20s %type:4s %size:-10s %date:-25s %name:s"
+
+#define DEFAULT_FORMAT_NORMAL_LONG       "%type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_FORMAT_GROUP_LONG        "%archiveName:-20s %type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_FORMAT_NORMAL            "%type:4s %size:-10s %date:-25s %name:s"
+#define DEFAULT_FORMAT_GROUP             "%archiveName:-20s %type:4s %size:-10s %date:-25s %name:s"
+
+/* archive entry types */
+typedef enum
+{
+  ARCHIVE_ENTRY_TYPE_NONE,
+
+  ARCHIVE_ENTRY_TYPE_FILE,
+  ARCHIVE_ENTRY_TYPE_DIRECTORY,
+  ARCHIVE_ENTRY_TYPE_LINK,
+  ARCHIVE_ENTRY_TYPE_SPECIAL,
+} ArchiveEntryTypes;
+
 /***************************** Datatypes *******************************/
 
+/* archive entry node */
+typedef struct ArchiveEntryNode
+{
+  LIST_NODE_HEADER(struct ArchiveEntryNode);
+
+  String            archiveFileName;
+  ArchiveEntryTypes type;
+  union
+  {
+    struct
+    {
+      String             fileName;
+      uint64             fileSize;
+      uint64             timeModified;
+      uint64             archiveFileSize;
+      CompressAlgorithms compressAlgorithm;
+      CryptAlgorithms    cryptAlgorithm;
+      CryptTypes         cryptType;
+      uint64             fragmentOffset;
+      uint64             fragmentSize;
+    } file;
+    struct
+    {
+      String          directoryName;
+      CryptAlgorithms cryptAlgorithm;
+      CryptTypes      cryptType;
+    } directory;
+    struct
+    {
+      String          linkName;
+      String          destinationName;
+      CryptAlgorithms cryptAlgorithm;
+      CryptTypes      cryptType;
+    } link;
+    struct
+    {
+      String           fileName;
+      CryptAlgorithms  cryptAlgorithm;
+      CryptTypes       cryptType;
+      FileSpecialTypes fileSpecialType;
+      ulong            major;
+      ulong            minor;
+    } special;
+  };
+
+  String       name;
+  SocketHandle socketHandle;
+} ArchiveEntryNode;
+
+/* archive entry list */
+typedef struct
+{
+  LIST_HEADER(ArchiveEntryNode);
+} ArchiveEntryList;
+
+// obsolete?
 typedef struct SSHSocketNode
 {
   LIST_NODE_HEADER(struct SSHSocketNode);
@@ -60,6 +138,7 @@ typedef struct
 } SSHSocketList;
 
 /***************************** Variables *******************************/
+LOCAL ArchiveEntryList archiveEntryList;
 
 /****************************** Macros *********************************/
 
@@ -76,8 +155,8 @@ typedef struct
 /***********************************************************************\
 * Name   : printHeader
 * Purpose: print list header
-* Input  : archiveFileName - archive file name
-*          
+* Input  : archiveFileName - archive file name or NULL if archive should
+*                            not be printed
 * Output : -
 * Return : -
 * Notes  : -
@@ -85,33 +164,52 @@ typedef struct
 
 LOCAL void printHeader(const String archiveFileName)
 {
-  printInfo(0,"List archive '%s':\n",String_cString(archiveFileName));
-  printInfo(0,"\n");
-  if (globalOptions.longFormatFlag)
+  const TextMacro MACROS[] =
   {
-    printInfo(0,
-              "%4s %-10s %-25s %-22s %-10s %-7s %-10s %s\n",
-              "Type",
-              "Size",
-              "Date/Time",
-              "Part",
-              "Compress",
-              "Ratio %",
-              "Crypt",
-              "Name"
-             );
-  }
-  else
+    TEXT_MACRO_CSTRING("%archiveName","Archive"  ),
+    TEXT_MACRO_CSTRING("%type",       "Type"     ),
+    TEXT_MACRO_CSTRING("%size",       "Size"     ),
+    TEXT_MACRO_CSTRING("%date",       "Date/Time"),
+    TEXT_MACRO_CSTRING("%part",       "Part"     ),
+    TEXT_MACRO_CSTRING("%compress",   "Compress" ),
+    TEXT_MACRO_CSTRING("%ratio",      "Ratio %"  ),
+    TEXT_MACRO_CSTRING("%crypt",      "Crypt"    ),
+    TEXT_MACRO_CSTRING("%name",       "Name"     ),
+    TEXT_MACRO_CSTRING("%type",       "Type"     ),
+    TEXT_MACRO_CSTRING("%type",       "Type"     ),
+    TEXT_MACRO_CSTRING("%type",       "Type"     ),
+    TEXT_MACRO_CSTRING("%type",       "Type"     ),
+  };
+
+  String     string;
+  const char *template;
+
+  string = String_new();
+
+  if (!globalOptions.noHeaderFooterFlag)
   {
-    printInfo(0,
-              "%4s %-10s %-25s %s\n",
-              "Type",
-              "Size",
-              "Date/Time",
-              "Name"
-             );
-  }
-  printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
+    /* header */
+    if (archiveFileName != NULL)
+    {
+      printInfo(0,"List archive '%s':\n",String_cString(archiveFileName));
+      printInfo(0,"\n");
+    }
+
+    /* title line */
+    if (globalOptions.longFormatFlag)
+    {
+      template = (archiveFileName != NULL) ? DEFAULT_FORMAT_TITLE_NORMAL_LONG : DEFAULT_FORMAT_TITLE_GROUP_LONG;
+    }
+    else
+    {
+      template = (archiveFileName != NULL) ? DEFAULT_FORMAT_TITLE_NORMAL : DEFAULT_FORMAT_TITLE_GROUP;
+    }
+    Misc_expandMacros(String_clear(string),template,MACROS,SIZE_OF_ARRAY(MACROS));
+    printInfo(0,"%s\n",String_cString(string));
+    printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
+  }    
+
+  String_delete(string);
 }
 
 /***********************************************************************\
@@ -125,15 +223,20 @@ LOCAL void printHeader(const String archiveFileName)
 
 LOCAL void printFooter(ulong fileCount)
 {
-  printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
-  printInfo(0,"%lu file(s)\n",fileCount);
-  printInfo(0,"\n");
+  if (!globalOptions.noHeaderFooterFlag)
+  {
+    printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
+    printInfo(0,"%lu file(s)\n",fileCount);
+    printInfo(0,"\n");
+  }
 }
 
 /***********************************************************************\
 * Name   : printFileInfo
 * Purpose: print file information
-* Input  : fileName          - file name
+* Input  : archiveFileName   - archive name or NULL if archive name
+*                              should not be printed
+*          fileName          - file name
 *          fileSize          - file size [bytes]
 *          archiveFileSize   - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
@@ -146,7 +249,8 @@ LOCAL void printFooter(ulong fileCount)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printFileInfo(const String       fileName,
+LOCAL void printFileInfo(const String       archiveFileName,
+                         const String       fileName,
                          uint64             fileSize,
                          uint64             timeModified,
                          uint64             archiveFileSize,
@@ -174,6 +278,10 @@ LOCAL void printFileInfo(const String       fileName,
     ratio = 0;
   }
 
+  if (archiveFileName != NULL)
+  {
+    printf("%-20s ",String_cString(archiveFileName));
+  }
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
@@ -203,16 +311,19 @@ LOCAL void printFileInfo(const String       fileName,
 
 /***********************************************************************\
 * Name   : printDirectoryInfo
-* Purpose: print link information
-* Input  : directoryName  - directory name
-*          cryptAlgorithm - used crypt algorithm
-*          cryptType      - crypt type; see CRYPT_TYPES
+* Purpose: print directory information
+* Input  : archiveFileName - archive name or NULL if archive name should
+*                            not be printed
+*          directoryName   - directory name
+*          cryptAlgorithm  - used crypt algorithm
+*          cryptType       - crypt type; see CRYPT_TYPES
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printDirectoryInfo(const String    directoryName,
+LOCAL void printDirectoryInfo(const String    archiveFileName,
+                              const String    directoryName,
                               CryptAlgorithms cryptAlgorithm,
                               CryptTypes      cryptType
                              )
@@ -221,6 +332,10 @@ LOCAL void printDirectoryInfo(const String    directoryName,
 
   assert(directoryName != NULL);
 
+  if (archiveFileName != NULL)
+  {
+    printf("%-30s ",String_cString(archiveFileName));
+  }
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
@@ -241,7 +356,9 @@ LOCAL void printDirectoryInfo(const String    directoryName,
 /***********************************************************************\
 * Name   : printLinkInfo
 * Purpose: print link information
-* Input  : linkName        - link name
+* Input  : archiveFileName - archive name or NULL if archive name should
+*                            not be printed
+*          linkName        - link name
 *          destinationName - name of referenced file
 *          cryptAlgorithm  - used crypt algorithm
 *          cryptType       - crypt type; see CRYPT_TYPES
@@ -250,7 +367,8 @@ LOCAL void printDirectoryInfo(const String    directoryName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printLinkInfo(const String    linkName,
+LOCAL void printLinkInfo(const String    archiveFileName,
+                         const String    linkName,
                          const String    destinationName,
                          CryptAlgorithms cryptAlgorithm,
                          CryptTypes      cryptType
@@ -261,6 +379,10 @@ LOCAL void printLinkInfo(const String    linkName,
   assert(linkName != NULL);
   assert(destinationName != NULL);
 
+  if (archiveFileName != NULL)
+  {
+    printf("%-30s ",String_cString(archiveFileName));
+  }
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
@@ -283,7 +405,9 @@ LOCAL void printLinkInfo(const String    linkName,
 /***********************************************************************\
 * Name   : printSpecialInfo
 * Purpose: print special information
-* Input  : fileName        - file name
+* Input  : archiveFileName - archive name or NULL if archive name should
+*                            not be printed
+*          fileName        - file name
 *          cryptAlgorithm  - used crypt algorithm
 *          cryptType       - crypt type; see CRYPT_TYPES
 *          fileSpecialType - special file type
@@ -294,7 +418,8 @@ LOCAL void printLinkInfo(const String    linkName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printSpecialInfo(const String     fileName,
+LOCAL void printSpecialInfo(const String     archiveFileName,
+                            const String     fileName,
                             CryptAlgorithms  cryptAlgorithm,
                             CryptTypes       cryptType,
                             FileSpecialTypes fileSpecialType,
@@ -306,6 +431,10 @@ LOCAL void printSpecialInfo(const String     fileName,
 
   assert(fileName != NULL);
 
+  if (archiveFileName != NULL)
+  {
+    printf("%-30s ",String_cString(archiveFileName));
+  }
   switch (fileSpecialType)
   {
     case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
@@ -388,6 +517,420 @@ LOCAL void printSpecialInfo(const String     fileName,
   }
 }
 
+/***********************************************************************\
+* Name   : addListFileInfo
+* Purpose: add file info to archive entry list
+* Input  : fileName          - file name
+*          fileSize          - file size [bytes]
+*          archiveFileSize   - archive size [bytes]
+*          compressAlgorithm - used compress algorithm
+*          cryptAlgorithm    - used crypt algorithm
+*          cryptType         - crypt type; see CRYPT_TYPES
+*          fragmentOffset    - fragment offset (0..n-1)
+*          fragmentSize      - fragment length
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void addListFileInfo(const String       archiveFileName,
+                           const String       fileName,
+                           uint64             fileSize,
+                           uint64             timeModified,
+                           uint64             archiveFileSize,
+                           CompressAlgorithms compressAlgorithm,
+                           CryptAlgorithms    cryptAlgorithm,
+                           CryptTypes         cryptType,
+                           uint64             fragmentOffset,
+                           uint64             fragmentSize
+                          )
+{
+  ArchiveEntryNode *archiveEntryNode;
+
+  /* allocate node */
+  archiveEntryNode = LIST_NEW_NODE(ArchiveEntryNode);
+  if (archiveEntryNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  /* init node */
+  archiveEntryNode->archiveFileName        = String_duplicate(archiveFileName);
+  archiveEntryNode->type                   = ARCHIVE_ENTRY_TYPE_FILE;
+  archiveEntryNode->file.fileName          = String_duplicate(fileName);
+  archiveEntryNode->file.fileSize          = fileSize;
+  archiveEntryNode->file.timeModified      = timeModified;
+  archiveEntryNode->file.archiveFileSize   = archiveFileSize;
+  archiveEntryNode->file.compressAlgorithm = compressAlgorithm;
+  archiveEntryNode->file.cryptAlgorithm    = cryptAlgorithm;
+  archiveEntryNode->file.cryptType         = cryptType;
+  archiveEntryNode->file.fragmentOffset    = fragmentOffset;
+  archiveEntryNode->file.fragmentSize      = fragmentSize;
+
+  /* append to list */
+  List_append(&archiveEntryList,archiveEntryNode);
+}
+
+/***********************************************************************\
+* Name   : addListDirectoryInfo
+* Purpose: add directory info to archive entry list
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void addListDirectoryInfo(const String    archiveFileName,
+                                const String    directoryName,
+                                CryptAlgorithms cryptAlgorithm,
+                                CryptTypes      cryptType
+                               )
+{
+  ArchiveEntryNode *archiveEntryNode;
+
+  /* allocate node */
+  archiveEntryNode = LIST_NEW_NODE(ArchiveEntryNode);
+  if (archiveEntryNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  /* init node */
+  archiveEntryNode->archiveFileName          = String_duplicate(archiveFileName);
+  archiveEntryNode->type                     = ARCHIVE_ENTRY_TYPE_DIRECTORY;
+  archiveEntryNode->directory.directoryName  = String_duplicate(directoryName);
+  archiveEntryNode->directory.cryptAlgorithm = cryptAlgorithm;
+  archiveEntryNode->directory.cryptType      = cryptType;
+
+  /* append to list */
+  List_append(&archiveEntryList,archiveEntryNode);
+}
+
+/***********************************************************************\
+* Name   : addListLinkInfo
+* Purpose: add link info to archive entry list
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void addListLinkInfo(const String    archiveFileName,
+                           const String    linkName,
+                           const String    destinationName,
+                           CryptAlgorithms cryptAlgorithm,
+                           CryptTypes      cryptType
+                          )
+{
+  ArchiveEntryNode *archiveEntryNode;
+
+  /* allocate node */
+  archiveEntryNode = LIST_NEW_NODE(ArchiveEntryNode);
+  if (archiveEntryNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  /* init node */
+  archiveEntryNode->archiveFileName      = String_duplicate(archiveFileName);
+  archiveEntryNode->type                 = ARCHIVE_ENTRY_TYPE_LINK;
+  archiveEntryNode->link.linkName        = String_duplicate(linkName);
+  archiveEntryNode->link.destinationName = String_duplicate(destinationName);
+  archiveEntryNode->link.cryptAlgorithm  = cryptAlgorithm;
+  archiveEntryNode->link.cryptType       = cryptType;
+
+  /* append to list */
+  List_append(&archiveEntryList,archiveEntryNode);
+}
+
+/***********************************************************************\
+* Name   : addListSpecialInfo
+* Purpose: add special info to archive entry list
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void addListSpecialInfo(const String     archiveFileName,
+                              const String     fileName,
+                              CryptAlgorithms  cryptAlgorithm,
+                              CryptTypes       cryptType,
+                              FileSpecialTypes fileSpecialType,
+                              ulong            major,
+                              ulong            minor
+                             )
+{
+  ArchiveEntryNode *archiveEntryNode;
+
+  /* allocate node */
+  archiveEntryNode = LIST_NEW_NODE(ArchiveEntryNode);
+  if (archiveEntryNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  /* init node */
+  archiveEntryNode->archiveFileName         = String_duplicate(archiveFileName);
+  archiveEntryNode->type                    = ARCHIVE_ENTRY_TYPE_SPECIAL;
+  archiveEntryNode->special.fileName        = String_duplicate(fileName);
+  archiveEntryNode->special.cryptAlgorithm  = cryptAlgorithm;
+  archiveEntryNode->special.cryptType       = cryptType;
+  archiveEntryNode->special.fileSpecialType = fileSpecialType;
+  archiveEntryNode->special.major           = major;
+  archiveEntryNode->special.minor           = minor;
+
+  /* append to list */
+  List_append(&archiveEntryList,archiveEntryNode);
+}
+
+/***********************************************************************\
+* Name   : freeArchiveEntryNode
+* Purpose: free archive entry node
+* Input  : archiveEntryNode - node to free
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeArchiveEntryNode(ArchiveEntryNode *archiveEntryNode)
+{
+  assert(archiveEntryNode != NULL);
+
+  switch (archiveEntryNode->type)
+  {
+    case ARCHIVE_ENTRY_TYPE_NONE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_FILE:
+      String_delete(archiveEntryNode->file.fileName);
+      break;
+    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      String_delete(archiveEntryNode->directory.directoryName);
+      break;
+    case ARCHIVE_ENTRY_TYPE_LINK:
+      String_delete(archiveEntryNode->link.destinationName);
+      String_delete(archiveEntryNode->link.linkName);
+      break;
+    case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      String_delete(archiveEntryNode->special.fileName);
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+  String_delete(archiveEntryNode->archiveFileName);
+}
+
+/***********************************************************************\
+* Name   : compareArchiveEntryNode
+* Purpose: compare archive entries
+* Input  : archiveEntryNode1,archiveEntryNode2 - nodes to compare
+* Output : -
+* Return : -1 iff name1 < name2 or
+*                 name1 == name2 && timeModified1 < timeModified2
+*           1 iff name1 > name2 or
+*                 name1 == name2 && timeModified1 > timeModified2
+*           0 iff name1 == name2 && timeModified1 == timeModified2
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int compareArchiveEntryNode(ArchiveEntryNode *archiveEntryNode1, ArchiveEntryNode *archiveEntryNode2, void *dummy)
+{
+  String name1,name2;
+  uint64 modifiedTime1,modifiedTime2;
+
+  assert(archiveEntryNode1 != NULL);
+  assert(archiveEntryNode2 != NULL);
+
+  UNUSED_VARIABLE(dummy);
+
+  /* get data */
+  name1         = NULL;
+  modifiedTime1 = 0LL;
+  name2         = NULL;
+  modifiedTime2 = 0LL;
+  switch (archiveEntryNode1->type)
+  {
+    case ARCHIVE_ENTRY_TYPE_FILE:
+      name1         = archiveEntryNode1->file.fileName;
+      modifiedTime1 = archiveEntryNode1->file.timeModified;
+      break;
+    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      name1         = archiveEntryNode1->directory.directoryName;
+      modifiedTime1 = 0LL;
+      break;
+    case ARCHIVE_ENTRY_TYPE_LINK:
+      name1         = archiveEntryNode1->link.linkName;
+      modifiedTime1 = 0LL;
+      break;
+    case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      name1         = archiveEntryNode1->special.fileName;
+      modifiedTime1 = 0LL;
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+  switch (archiveEntryNode2->type)
+  {
+    case ARCHIVE_ENTRY_TYPE_FILE:
+      name2         = archiveEntryNode2->file.fileName;
+      modifiedTime2 = archiveEntryNode2->file.timeModified;
+      break;
+    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      name2         = archiveEntryNode2->directory.directoryName;
+      modifiedTime2 = 0LL;
+      break;
+    case ARCHIVE_ENTRY_TYPE_LINK:
+      name2         = archiveEntryNode2->link.linkName;
+      modifiedTime2 = 0LL;
+      break;
+    case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      name2         = archiveEntryNode2->special.fileName;
+      modifiedTime2 = 0LL;
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  /* compare */
+  switch (String_compare(name1,name2,NULL,NULL))
+  {
+    case -1:
+      return -1;
+      break;
+    case  1:
+      return 1;
+      break;
+    case  0:
+      if      (modifiedTime1 > modifiedTime2) return -1;
+      else if (modifiedTime1 < modifiedTime2) return  1;
+      else                                    return  0;
+      break;
+  }
+
+  return 0;
+}
+
+/***********************************************************************\
+* Name   : printList
+* Purpose: sort, group and print list with entries
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printList(void)
+{
+  ArchiveEntryNode  *archiveEntryNode;
+  ArchiveEntryTypes prevArchiveEntryType;
+  String            prevArchiveName;
+
+  /* sort list */
+  List_sort(&archiveEntryList,
+            (ListNodeCompareFunction)compareArchiveEntryNode,
+            NULL
+           );
+
+  /* output list */
+  prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_NONE;
+  prevArchiveName      = NULL;
+  archiveEntryNode = archiveEntryList.head;
+  while (archiveEntryNode != NULL)
+  {
+    /* output */
+    switch (archiveEntryNode->type)
+    {
+      case ARCHIVE_ENTRY_TYPE_FILE:
+        if (   globalOptions.allFlag
+            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_FILE)
+            || !String_equals(prevArchiveName,archiveEntryNode->file.fileName)
+           )
+        {
+          printFileInfo(archiveEntryNode->archiveFileName,
+                        archiveEntryNode->file.fileName,
+                        archiveEntryNode->file.fileSize,
+                        archiveEntryNode->file.timeModified,
+                        archiveEntryNode->file.archiveFileSize,
+                        archiveEntryNode->file.compressAlgorithm,
+                        archiveEntryNode->file.cryptAlgorithm,
+                        archiveEntryNode->file.cryptType,
+                        archiveEntryNode->file.fragmentOffset,
+                        archiveEntryNode->file.fragmentSize
+                       );
+          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_FILE;
+          prevArchiveName      = archiveEntryNode->file.fileName;
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+        if (   globalOptions.allFlag
+            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_DIRECTORY)
+            || !String_equals(prevArchiveName,archiveEntryNode->file.fileName)
+           )
+        {
+          printDirectoryInfo(archiveEntryNode->archiveFileName,
+                             archiveEntryNode->directory.directoryName,
+                             archiveEntryNode->directory.cryptAlgorithm,
+                             archiveEntryNode->directory.cryptType
+                            );
+          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
+          prevArchiveName      = archiveEntryNode->directory.directoryName;
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_LINK:
+        if (   globalOptions.allFlag
+            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_LINK)
+            || !String_equals(prevArchiveName,archiveEntryNode->file.fileName)
+           )
+        {
+          printLinkInfo(archiveEntryNode->archiveFileName,
+                        archiveEntryNode->link.linkName,
+                        archiveEntryNode->link.destinationName,
+                        archiveEntryNode->link.cryptAlgorithm,
+                        archiveEntryNode->link.cryptType
+                       );
+          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
+          prevArchiveName      = archiveEntryNode->link.linkName;
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        if (   globalOptions.allFlag
+            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_SPECIAL)
+            || !String_equals(prevArchiveName,archiveEntryNode->file.fileName)
+           )
+        {
+          printSpecialInfo(archiveEntryNode->archiveFileName,
+                           archiveEntryNode->special.fileName,
+                           archiveEntryNode->special.cryptAlgorithm,
+                           archiveEntryNode->special.cryptType,
+                           archiveEntryNode->special.fileSpecialType,
+                           archiveEntryNode->special.major,
+                           archiveEntryNode->special.minor
+                          );
+          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
+          prevArchiveName      = archiveEntryNode->special.fileName;
+        }
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break; /* not reached */
+    }
+
+    /* next entry */
+    archiveEntryNode = archiveEntryNode->next;
+  }
+}
+
 /*---------------------------------------------------------------------*/
 
 Errors Command_list(StringList  *archiveFileNameList,
@@ -397,15 +940,15 @@ Errors Command_list(StringList  *archiveFileNameList,
                    )
 {
   String       archiveFileName;
+  String       storageSpecifier;
   bool         printedInfoFlag;
   ulong        fileCount;
-  String       storageSpecifier;
   Errors       failError;
   bool         retryFlag;
 bool         remoteBarFlag;
 //  SSHSocketList sshSocketList;
 //  SSHSocketNode *sshSocketNode;
-  SocketHandle  socketHandle;
+  SocketHandle socketHandle;
 
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
@@ -415,6 +958,7 @@ bool         remoteBarFlag;
 remoteBarFlag=FALSE;
 
   /* init variables */
+  List_init(&archiveEntryList);
   archiveFileName  = String_new();
   storageSpecifier = String_new();
 
@@ -448,7 +992,7 @@ remoteBarFlag=FALSE;
           {
             printError("Cannot open file '%s' (error: %s)!\n",
                        String_cString(archiveFileName),
-                       getErrorText(error)
+                       Errors_getText(error)
                       );
             if (failError == ERROR_NONE) failError = error;
             continue;
@@ -468,7 +1012,7 @@ remoteBarFlag=FALSE;
             {
               printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               if (failError == ERROR_NONE) failError = error;
               break;
@@ -515,7 +1059,7 @@ remoteBarFlag=FALSE;
                   {
                     printError("Cannot not read 'file' content of archive '%s' (error: %s)!\n",
                                String_cString(archiveFileName),
-                               getErrorText(error)
+                               Errors_getText(error)
                               );
                     String_delete(fileName);
                     if (failError == ERROR_NONE) failError = error;
@@ -526,23 +1070,42 @@ remoteBarFlag=FALSE;
                       && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
-                    if (!printedInfoFlag)
+                    if (globalOptions.groupFlag)
                     {
-                      printHeader(archiveFileName);
-                      printedInfoFlag = TRUE;
+                      /* add file info to list */
+                      addListFileInfo(archiveFileName,
+                                      fileName,
+                                      fileInfo.size,
+                                      fileInfo.timeModified,
+                                      archiveFileInfo.file.chunkInfoFileData.size,
+                                      compressAlgorithm,
+                                      cryptAlgorithm,
+                                      cryptType,
+                                      fragmentOffset,
+                                      fragmentSize
+                                     );
                     }
+                    else
+                    {
+                      if (!printedInfoFlag)
+                      {
+                        printHeader(archiveFileName);
+                        printedInfoFlag = TRUE;
+                      }
 
-                    /* output file info */
-                    printFileInfo(fileName,
-                                  fileInfo.size,
-                                  fileInfo.timeModified,
-                                  archiveFileInfo.file.chunkInfoFileData.size,
-                                  compressAlgorithm,
-                                  cryptAlgorithm,
-                                  cryptType,
-                                  fragmentOffset,
-                                  fragmentSize
-                                 );
+                      /* output file info */
+                      printFileInfo(NULL,
+                                    fileName,
+                                    fileInfo.size,
+                                    fileInfo.timeModified,
+                                    archiveFileInfo.file.chunkInfoFileData.size,
+                                    compressAlgorithm,
+                                    cryptAlgorithm,
+                                    cryptType,
+                                    fragmentOffset,
+                                    fragmentSize
+                                   );
+                    }
                     fileCount++;
                   }
 
@@ -584,7 +1147,7 @@ remoteBarFlag=FALSE;
                   {
                     printError("Cannot not read 'directory' content of archive '%s' (error: %s)!\n",
                                String_cString(archiveFileName),
-                               getErrorText(error)
+                               Errors_getText(error)
                               );
                     String_delete(directoryName);
                     if (failError == ERROR_NONE) failError = error;
@@ -595,17 +1158,30 @@ remoteBarFlag=FALSE;
                       && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
-                    if (!printedInfoFlag)
+                    if (globalOptions.groupFlag)
                     {
-                      printHeader(archiveFileName);
-                      printedInfoFlag = TRUE;
+                      /* add directory info to list */
+                      addListDirectoryInfo(archiveFileName,
+                                           directoryName,
+                                           cryptAlgorithm,
+                                           cryptType
+                                          );
                     }
+                    else
+                    {
+                      if (!printedInfoFlag)
+                      {
+                        printHeader(archiveFileName);
+                        printedInfoFlag = TRUE;
+                      }
 
-                    /* output file info */
-                    printDirectoryInfo(directoryName,
-                                       cryptAlgorithm,
-                                       cryptType
-                                      );
+                      /* output file info */
+                      printDirectoryInfo(NULL,
+                                         directoryName,
+                                         cryptAlgorithm,
+                                         cryptType
+                                        );
+                    }
                     fileCount++;
                   }
 
@@ -650,7 +1226,7 @@ remoteBarFlag=FALSE;
                   {
                     printError("Cannot not read 'link' content of archive '%s' (error: %s)!\n",
                                String_cString(archiveFileName),
-                               getErrorText(error)
+                               Errors_getText(error)
                               );
                     String_delete(fileName);
                     String_delete(linkName);
@@ -662,18 +1238,32 @@ remoteBarFlag=FALSE;
                       && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
-                    if (!printedInfoFlag)
+                    if (globalOptions.groupFlag)
                     {
-                      printHeader(archiveFileName);
-                      printedInfoFlag = TRUE;
+                      /* add link info to list */
+                      addListLinkInfo(archiveFileName,
+                                      linkName,
+                                      fileName,
+                                      cryptAlgorithm,
+                                      cryptType
+                                     );
                     }
+                    else
+                    {
+                      if (!printedInfoFlag)
+                      {
+                        printHeader(archiveFileName);
+                        printedInfoFlag = TRUE;
+                      }
 
-                    /* output file info */
-                    printLinkInfo(linkName,
-                                  fileName,
-                                  cryptAlgorithm,
-                                  cryptType
-                                 );
+                      /* output file info */
+                      printLinkInfo(NULL,
+                                    linkName,
+                                    fileName,
+                                    cryptAlgorithm,
+                                    cryptType
+                                   );
+                    }
                     fileCount++;
                   }
 
@@ -716,7 +1306,7 @@ remoteBarFlag=FALSE;
                   {
                     printError("Cannot not read 'special' content of archive '%s' (error: %s)!\n",
                                String_cString(archiveFileName),
-                               getErrorText(error)
+                               Errors_getText(error)
                               );
                     String_delete(fileName);
                     if (failError == ERROR_NONE) failError = error;
@@ -727,20 +1317,36 @@ remoteBarFlag=FALSE;
                       && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
-                    if (!printedInfoFlag)
+                    if (globalOptions.groupFlag)
                     {
-                      printHeader(archiveFileName);
-                      printedInfoFlag = TRUE;
+                      /* add special info to list */
+                      addListSpecialInfo(archiveFileName,
+                                         fileName,
+                                         cryptAlgorithm,
+                                         cryptType,
+                                         fileInfo.specialType,
+                                         fileInfo.major,
+                                         fileInfo.minor
+                                        );
                     }
+                    else
+                    {
+                      if (!printedInfoFlag)
+                      {
+                        printHeader(archiveFileName);
+                        printedInfoFlag = TRUE;
+                      }
 
-                    /* output file info */
-                    printSpecialInfo(fileName,
-                                     cryptAlgorithm,
-                                     cryptType,
-                                     fileInfo.specialType,
-                                     fileInfo.major,
-                                     fileInfo.minor
-                                    );
+                      /* output file info */
+                      printSpecialInfo(NULL,
+                                       fileName,
+                                       cryptAlgorithm,
+                                       cryptType,
+                                       fileInfo.specialType,
+                                       fileInfo.major,
+                                       fileInfo.minor
+                                      );
+                    }
                     fileCount++;
                   }
 
@@ -781,6 +1387,9 @@ remoteBarFlag=FALSE;
           CompressAlgorithms   compressAlgorithm;
           CryptAlgorithms      cryptAlgorithm;
           CryptTypes           cryptType;
+          FileSpecialTypes     fileSpecialType;
+          ulong                major;
+          ulong                minor;
           int                  exitCode;
 
           /* parse storage string */
@@ -818,7 +1427,7 @@ remoteBarFlag=FALSE;
               printError("Cannot not connecto to '%s:%d' (error: %s)!\n",
                          String_cString(hostName),
                          sshServer.port,
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(hostFileName);
               String_delete(hostName);
@@ -847,7 +1456,7 @@ remoteBarFlag=FALSE;
           {
             printError("Cannot not execute remote BAR program '%s' (error: %s)!\n",
                        String_cString(line),
-                       getErrorText(error)
+                       Errors_getText(error)
                       );
             if (failError == ERROR_NONE) failError = error;
             break;
@@ -893,23 +1502,42 @@ remoteBarFlag=FALSE;
                     && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
-                  if (!printedInfoFlag)
+                  if (globalOptions.groupFlag)
                   {
-                    printHeader(archiveFileName);
-                    printedInfoFlag = TRUE;
+                      /* add file info to list */
+                    addListFileInfo(archiveFileName,
+                                    fileName,
+                                    fileSize,
+                                    timeModified,
+                                    archiveFileSize,
+                                    compressAlgorithm,
+                                    cryptAlgorithm,
+                                    cryptType,
+                                    fragmentOffset,
+                                    fragmentLength
+                                   );
                   }
+                  else
+                  {
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(archiveFileName);
+                      printedInfoFlag = TRUE;
+                    }
 
-                  /* output file info */
-                  printFileInfo(fileName,
-                                fileSize,
-                                timeModified,
-                                archiveFileSize,
-                                compressAlgorithm,
-                                cryptAlgorithm,
-                                cryptType,
-                                fragmentOffset,
-                                fragmentLength
-                               );
+                    /* output file info */
+                    printFileInfo(NULL,
+                                  fileName,
+                                  fileSize,
+                                  timeModified,
+                                  archiveFileSize,
+                                  compressAlgorithm,
+                                  cryptAlgorithm,
+                                  cryptType,
+                                  fragmentOffset,
+                                  fragmentLength
+                                 );
+                  }
                   fileCount++;
                 }
               }
@@ -930,17 +1558,30 @@ remoteBarFlag=FALSE;
                     && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
-                  if (!printedInfoFlag)
+                  if (globalOptions.groupFlag)
                   {
-                    printHeader(archiveFileName);
-                    printedInfoFlag = TRUE;
+                    /* add directory info to list */
+                    addListDirectoryInfo(archiveFileName,
+                                         directoryName,
+                                         cryptAlgorithm,
+                                         cryptType
+                                        );
                   }
+                  else
+                  {
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(archiveFileName);
+                      printedInfoFlag = TRUE;
+                    }
 
-                  /* output file info */
-                  printDirectoryInfo(directoryName,
-                                     cryptAlgorithm,
-                                     cryptType
-                                    );
+                    /* output file info */
+                    printDirectoryInfo(NULL,
+                                       directoryName,
+                                       cryptAlgorithm,
+                                       cryptType
+                                      );
+                  }
                   fileCount++;
                 }
               }
@@ -952,7 +1593,7 @@ remoteBarFlag=FALSE;
                                     &errorCode,
                                     &completedFlag,
                                     &cryptAlgorithm,
-                                    cryptType,
+                                    &cryptType,
                                     linkName,
                                     fileName
                                    )
@@ -962,18 +1603,85 @@ remoteBarFlag=FALSE;
                     && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
-                  if (!printedInfoFlag)
+                  if (globalOptions.groupFlag)
                   {
-                    printHeader(archiveFileName);
-                    printedInfoFlag = TRUE;
+                    /* add linkinfo to list */
+                    addListLinkInfo(archiveFileName,
+                                    linkName,
+                                    fileName,
+                                    cryptAlgorithm,
+                                    cryptType
+                                   );
                   }
+                  else
+                  {
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(archiveFileName);
+                      printedInfoFlag = TRUE;
+                    }
 
-                  /* output file info */
-                  printLinkInfo(linkName,
-                                fileName,
-                                cryptAlgorithm,
-                                cryptType
-                               );
+                    /* output file info */
+                    printLinkInfo(NULL,
+                                  linkName,
+                                  fileName,
+                                  cryptAlgorithm,
+                                  cryptType
+                                 );
+                  }
+                  fileCount++;
+                }
+              }
+              else if (String_parse(line,
+                                    STRING_BEGIN,
+                                    "%d %d %d SPECIAL %d %d %ld %ld %S",
+                                    NULL,
+                                    &id,
+                                    &errorCode,
+                                    &completedFlag,
+                                    &cryptAlgorithm,
+                                    &cryptType,
+                                    &fileSpecialType,
+                                    &major,
+                                    &minor,
+                                    fileName
+                                   )
+                      )
+              {
+                if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                    && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+                   )
+                {
+                  if (globalOptions.groupFlag)
+                  {
+                    /* add special info to list */
+                    addListSpecialInfo(archiveFileName,
+                                       fileName,
+                                       cryptAlgorithm,
+                                       cryptType,
+                                       fileSpecialType,
+                                       major,
+                                       minor
+                                      );
+                  }
+                  else
+                  {
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(archiveFileName);
+                      printedInfoFlag = TRUE;
+                    }
+
+                    /* output file info */
+                    printSpecialInfo(NULL,
+                                     fileName,
+                                     cryptAlgorithm,
+                                     cryptType,
+                                     fileSpecialType,
+                                     major,
+                                     minor
+                                    );
+                  }
                   fileCount++;
                 }
               }
@@ -1029,9 +1737,18 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
     }
   }
 
+  /* output grouped list */
+  if (globalOptions.groupFlag)
+  {
+    printHeader(NULL);
+    printList();
+//    printFooter()
+  }
+
   /* free resources */
   String_delete(storageSpecifier);
   String_delete(archiveFileName);
+  List_done(&archiveEntryList,(ListNodeFreeFunction)freeArchiveEntryNode,NULL);
 
   return failError;
 }

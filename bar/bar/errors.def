@@ -1,12 +1,14 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/bar/errors.def,v $
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
 #
 #***********************************************************************
+
+INCLUDE "libssh2.h"
 
 NONE    "none"
 DEFAULT "unknown"
@@ -33,16 +35,32 @@ ERROR INVALID_TLS_CA                 "invalid TLS (SSL) certificate authority"
 ERROR INVALID_TLS_CERTIFICATE        "invalid TLS (SSL) certificate"
 ERROR TLS_HANDSHAKE                  "TLS (SSL) handshake failure"
 ERROR INVALID_SSH_SPECIFIER          "invalid SSH specifier"
+ERROR NO_SSH_PASSWORD                "no SSH password given"
+ERROR INVALID_SSH_PASSWORD           "invalid SSH password"
 ERROR SSH_SESSION_FAIL               "initialize ssh session fail"
 ERROR SSH_AUTHENTIFICATION           "invalid ssh password"
+ERROR SSH                            ERROR_TEXT
+
+#  switch (ERRNO)
+#  {
+#    case LIBSSH2_ERROR_SCP_PROTOCOL: 
+#      strncpy(errorText,"ssh protocol error",sizeof(errorText));
+#      break;
+#    default:
+#      snprintf(errorText,sizeof(errorText),"unknown ssh error (code %d)",(int)ERRNO);
+#      break;
+#  }
 
 # FTP
 ERROR INVALID_FTP_SPECIFIER          "invalid FTP specifier"
 ERROR FTP_SESSION_FAIL               "initialize FTP session fail"
+ERROR NO_FTP_PASSWORD                "no FTP password given"
+ERROR INVALID_FTP_PASSWORD           "invalid FTP password"
 ERROR FTP_AUTHENTIFICATION           "invalid FTP user/password"
-ERROR FTP_CREATE                     "create FTP file fail"
-ERROR FTP_READ                       "read FTP file fail"
-ERROR FTP_WRITE                      "write FTP file fail"
+#ERROR FTP_CREATE                     "create FTP file fail"
+#ERROR FTP_READ                       "read FTP file fail"
+#ERROR FTP_WRITE                      "write FTP file fail"
+#ERROR FTP_DELETE                     "delete FTP file fail"
 
 # compress
 ERROR INIT_COMPRESS                  "init compress fail"
@@ -78,6 +96,10 @@ ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
 ERROR IO_ERROR
   strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+
+ERROR READ_FILE                      "read file fail"
+ERROR WRITE_FILE                     "write file fail"
+ERROR DELETE_FILE                    "delete file fail"
 
 ERROR PARSE_DEVICE_LIST              "error parsing device list"
 ERROR FILE_EXITS                     "file already exists"

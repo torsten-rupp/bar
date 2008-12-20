@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -740,7 +740,7 @@ LOCAL bool readJobFile(JobNode *jobNode)
   {
     printError("Cannot open file '%s' (error: %s)!\n",
                String_cString(jobNode->fileName),
-               getErrorText(error)
+               Errors_getText(error)
               );
     String_delete(line);
     return FALSE;
@@ -764,7 +764,7 @@ LOCAL bool readJobFile(JobNode *jobNode)
     {
       printError("Cannot read file '%s' (error: %s)!\n",
                  String_cString(jobNode->fileName),
-                 getErrorText(error)
+                 Errors_getText(error)
                 );
       failFlag = TRUE;
       break;
@@ -1090,6 +1090,31 @@ LOCAL Errors updateJobFile(JobNode *jobNode)
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : updateAllJobFiles
+* Purpose: update all job files
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateAllJobFiles(void)
+{
+  JobNode *jobNode;
+
+  jobNode = jobList.head;
+  while (jobNode != NULL)
+  {
+    if (jobNode->modifiedFlag)
+    {
+      updateJobFile(jobNode);
+    }
+
+    jobNode = jobNode->next;
+  }
+}
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
@@ -1356,7 +1381,7 @@ LOCAL void jobThreadEntry(void)
                                                     &pauseFlag,
                                                     &jobNode->requestedAbortFlag
                                                    );
-        logMessage(LOG_TYPE_ALWAYS,"done create '%s' (error: %s)",String_cString(jobNode->fileName),getErrorText(jobNode->runningInfo.error));
+        logMessage(LOG_TYPE_ALWAYS,"done create '%s' (error: %s)",String_cString(jobNode->fileName),Errors_getText(jobNode->runningInfo.error));
         break;
       case JOB_TYPE_RESTORE:
         {
@@ -1375,7 +1400,7 @@ LOCAL void jobThreadEntry(void)
                                                        &jobNode->requestedAbortFlag
                                                       );
           StringList_done(&archiveFileNameList);
-          logMessage(LOG_TYPE_ALWAYS,"done restore (error: %s)",getErrorText(jobNode->runningInfo.error));
+          logMessage(LOG_TYPE_ALWAYS,"done restore (error: %s)",Errors_getText(jobNode->runningInfo.error));
         }
         break;
       #ifndef NDEBUG
@@ -1430,16 +1455,7 @@ LOCAL void schedulerThreadEntry(void)
   {
     /* update job files */
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-    jobNode = jobList.head;
-    while (jobNode != NULL)
-    {
-      if (jobNode->modifiedFlag)
-      {
-        updateJobFile(jobNode);
-      }
-
-      jobNode = jobNode->next;
-    }
+    updateAllJobFiles();
     Semaphore_unlock(&jobList.lock);
 
     /* re-read config files */
@@ -1518,7 +1534,7 @@ LOCAL void schedulerThreadEntry(void)
     }
     Semaphore_unlock(&jobList.lock);
 
-    /* sleep 1min */
+    /* sleep 1min, check update and quit flag */
     z = 0;
     while ((z < 60) && !quitFlag)
     {
@@ -1823,7 +1839,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
   /* format result */
   sendResult(clientInfo,id,TRUE,0,
              "%s",
-             getErrorText(error)
+             Errors_getText(error)
             );
 }
 
@@ -1842,7 +1858,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
   error = File_openDevices(&deviceHandle);
   if (error != ERROR_NONE)
   {
-    sendResult(clientInfo,id,TRUE,1,"cannot open device list (error: %s)",getErrorText(error));
+    sendResult(clientInfo,id,TRUE,1,"cannot open device list (error: %s)",Errors_getText(error));
     return;
   }
 
@@ -1852,7 +1868,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
     error = File_readDevice(&deviceHandle,deviceName);
     if (error != ERROR_NONE)
     {
-      sendResult(clientInfo,id,TRUE,1,"cannot read device list (error: %s)",getErrorText(error));
+      sendResult(clientInfo,id,TRUE,1,"cannot read device list (error: %s)",Errors_getText(error));
       File_closeDevices(&deviceHandle);
       String_delete(deviceName);
       return;
@@ -1889,7 +1905,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
   error = File_openDirectory(&directoryHandle,arguments[0]);
   if (error != ERROR_NONE)
   {
-    sendResult(clientInfo,id,TRUE,1,"cannot open '%S' (error: %s)",arguments[0],getErrorText(error));
+    sendResult(clientInfo,id,TRUE,1,"cannot open '%S' (error: %s)",arguments[0],Errors_getText(error));
     return;
   }
 
@@ -1956,7 +1972,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
     }
     else
     {
-      sendResult(clientInfo,id,TRUE,1,"cannot read directory '%S' (error: %s)",arguments[0],getErrorText(error));
+      sendResult(clientInfo,id,TRUE,1,"cannot read directory '%S' (error: %s)",arguments[0],Errors_getText(error));
       File_closeDirectory(&directoryHandle);
       String_delete(fileName);
       return;
@@ -1967,6 +1983,196 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
   File_closeDirectory(&directoryHandle);
 
   sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint              jobId;
+  String            name;
+  JobNode           *jobNode;
+  uint              z;
+  String            s;
+  ConfigValueFormat configValueFormat;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, name, value */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected config value name");
+    return;
+  }
+  name = arguments[1];
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* find config value */
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
+         && !String_equalsCString(name,CONFIG_VALUES[z].name)
+        )
+  {
+    z++;
+  }
+  if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+  {
+    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",name);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* send value */
+  s = String_new();
+  ConfigValue_formatInit(&configValueFormat,
+                         &CONFIG_VALUES[z],
+                         CONFIG_VALUE_FORMAT_MODE_VALUE,
+                         jobNode
+                        );
+  ConfigValue_format(&configValueFormat,s);
+  ConfigValue_formatDone(&configValueFormat);
+  sendResult(clientInfo,id,TRUE,0,"%S",s);
+  String_delete(s);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  String  name,value;
+  JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, name, value */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected config name");
+    return;
+  }
+  name = arguments[1];
+  if (argumentCount < 3)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected config value for '%S'",arguments[1]);
+    return;
+  }
+  value = arguments[2];
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* parse */
+  if (ConfigValue_parse(String_cString(name),
+                        String_cString(value),
+                        CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                        NULL,
+                        NULL,
+                        jobNode
+                       )
+     )
+  {
+    jobNode->modifiedFlag = TRUE;
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else
+  {
+    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",name);
+  }
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  String  name;
+  JobNode *jobNode;
+  uint    z;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, name, value */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected config value name");
+    return;
+  }
+  name = arguments[1];
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* find config value */
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
+         && !String_equalsCString(name,CONFIG_VALUES[z].name)
+        )
+  {
+    z++;
+  }
+  if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+  {
+    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",name);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* delete value */
+//  ConfigValue_reset(&CONFIG_VALUES[z],jobNode);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
 }
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -2036,7 +2242,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
     sendResult(clientInfo,id,TRUE,0,
                "%'s %'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %f %d",
                getJobStateText(jobNode->state),
-               (jobNode->runningInfo.error != ERROR_NONE)?getErrorText(jobNode->runningInfo.error):"",
+               (jobNode->runningInfo.error != ERROR_NONE)?Errors_getText(jobNode->runningInfo.error):"",
                jobNode->runningInfo.doneFiles,
                jobNode->runningInfo.doneBytes,
                jobNode->runningInfo.totalFiles,
@@ -2068,6 +2274,311 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  String     fileName;
+  JobNode    *jobNode;
+  FileHandle fileHandle;
+  Errors     error;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get filename */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected name");
+    return;
+  }
+  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),arguments[0]);
+  if (File_exists(fileName))
+  {
+    sendResult(clientInfo,id,TRUE,1,"job '%s' already exists",String_cString(arguments[0]));
+    return;
+  }
+
+  /* create file */
+  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+  if (error != ERROR_NONE)
+  {
+    File_deleteFileName(fileName);
+    sendResult(clientInfo,id,TRUE,1,"create job '%s' fail: %s",String_cString(arguments[0]),Errors_getText(error));
+    return;
+  }
+  File_close(&fileHandle);
+
+  /* create new job */
+  jobNode = newJob(JOB_TYPE_BACKUP,fileName);
+  if (jobNode == NULL)
+  {
+    File_delete(fileName,FALSE);
+    File_deleteFileName(fileName);
+    sendResult(clientInfo,id,TRUE,1,"insufficient memory");
+    return;
+  }
+  copyJobOptions(serverDefaultJobOptions,&jobNode->jobOptions);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* add new job to list */
+  List_append(&jobList,jobNode);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"%d",jobNode->id);
+
+  /* free resources */
+  File_deleteFileName(fileName);
+}
+
+LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  String  name;
+  JobNode *jobNode;
+  String  fileName;
+  Errors  error;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected name");
+    return;
+  }
+  name = arguments[1];
+  if (File_exists(name))
+  {
+    sendResult(clientInfo,id,TRUE,1,"job '%s' already exists",String_cString(arguments[1]));
+    return;
+  }
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* rename job */
+  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
+  error = File_rename(jobNode->fileName,fileName);
+  if (error != ERROR_NONE)
+  {
+    sendResult(clientInfo,id,TRUE,1,"error renaming job #%d: %s",jobId,Errors_getText(error));
+    Semaphore_unlock(&jobList.lock);
+    File_deleteFileName(fileName);
+    return;
+  }
+  File_deleteFileName(fileName);
+
+  /* store new file name */
+  File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobsDirectory),name);
+  String_set(jobNode->name,name);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  JobNode *jobNode;
+  Errors  error;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* remove job in list if not running or requested volume */
+  if (CHECK_JOB_IS_RUNNING(jobNode))
+  {
+    sendResult(clientInfo,id,TRUE,1,"job #%d running",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* delete job file */
+  error = File_delete(jobNode->fileName,FALSE);
+  if (error != ERROR_NONE)
+  {
+    sendResult(clientInfo,id,TRUE,1,"error deleting job #%d: %s",jobId,Errors_getText(error));
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+  List_remove(&jobList,jobNode);
+  deleteJob(jobNode);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint         jobId;
+  ArchiveTypes archiveType;
+  JobNode      *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* get archive type */
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected archive type");
+    return;
+  }
+  if      (String_equalsCString(arguments[1],"normal"     )) archiveType = ARCHIVE_TYPE_NORMAL;
+  else if (String_equalsCString(arguments[1],"full"       )) archiveType = ARCHIVE_TYPE_FULL;
+  else if (String_equalsCString(arguments[1],"incremental")) archiveType = ARCHIVE_TYPE_INCREMENTAL;
+  else
+  {
+    sendResult(clientInfo,id,TRUE,1,"unknown archive type '%S'",arguments[1]);
+    return;
+  }
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* run job */
+  if  (!CHECK_JOB_IS_ACTIVE(jobNode))
+  {
+    /* set state */
+    jobNode->state              = JOB_STATE_WAITING;
+    jobNode->archiveType        = archiveType;
+    jobNode->requestedAbortFlag = FALSE;
+    resetJobRunningInfo(jobNode);
+  }
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,1,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* abort job */
+  if      (CHECK_JOB_IS_RUNNING(jobNode))
+  {
+    jobNode->requestedAbortFlag = TRUE;
+    while (CHECK_JOB_IS_RUNNING(jobNode))
+    {
+      Semaphore_waitModified(&jobList.lock);
+    }
+  }
+  else if (CHECK_JOB_IS_ACTIVE(jobNode))
+  {
+    jobNode->state = JOB_STATE_NONE;
+  }
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* update all job files */
+  updateAllJobFiles();
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
 LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -2638,480 +3149,6 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   String_delete(s);
 }
 
-LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  uint              jobId;
-  String            name;
-  JobNode           *jobNode;
-  uint              z;
-  String            s;
-  ConfigValueFormat configValueFormat;
-
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get job id, name, value */
-  if (argumentCount < 1)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected job id");
-    return;
-  }
-  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
-  if (argumentCount < 2)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected config value name");
-    return;
-  }
-  name = arguments[1];
-
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* find config value */
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
-         && !String_equalsCString(name,CONFIG_VALUES[z].name)
-        )
-  {
-    z++;
-  }
-  if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
-  {
-    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",name);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* send value */
-  s = String_new();
-  ConfigValue_formatInit(&configValueFormat,
-                         &CONFIG_VALUES[z],
-                         CONFIG_VALUE_FORMAT_MODE_VALUE,
-                         jobNode
-                        );
-  ConfigValue_format(&configValueFormat,s);
-  ConfigValue_formatDone(&configValueFormat);
-  sendResult(clientInfo,id,TRUE,0,"%S",s);
-  String_delete(s);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-}
-
-LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  uint    jobId;
-  String  name,value;
-  JobNode *jobNode;
-
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get job id, name, value */
-  if (argumentCount < 1)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected job id");
-    return;
-  }
-  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
-  if (argumentCount < 2)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected config name");
-    return;
-  }
-  name = arguments[1];
-  if (argumentCount < 3)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected config value for '%S'",arguments[1]);
-    return;
-  }
-  value = arguments[2];
-
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* parse */
-  if (ConfigValue_parse(String_cString(name),
-                        String_cString(value),
-                        CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
-                        NULL,
-                        NULL,
-                        jobNode
-                       )
-     )
-  {
-    jobNode->modifiedFlag = TRUE;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else
-  {
-    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",name);
-  }
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-}
-
-LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  uint    jobId;
-  String  name;
-  JobNode *jobNode;
-  uint    z;
-
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get job id, name, value */
-  if (argumentCount < 1)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected job id");
-    return;
-  }
-  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
-  if (argumentCount < 2)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected config value name");
-    return;
-  }
-  name = arguments[1];
-
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* find config value */
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
-         && !String_equalsCString(name,CONFIG_VALUES[z].name)
-        )
-  {
-    z++;
-  }
-  if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
-  {
-    sendResult(clientInfo,id,TRUE,1,"unknown config value '%S'",name);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* delete value */
-//  ConfigValue_reset(&CONFIG_VALUES[z],jobNode);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-}
-
-LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  String     fileName;
-  JobNode    *jobNode;
-  FileHandle fileHandle;
-  Errors     error;
-
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get filename */
-  if (argumentCount < 1)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected name");
-    return;
-  }
-  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),arguments[0]);
-  if (File_exists(fileName))
-  {
-    sendResult(clientInfo,id,TRUE,1,"job '%s' already exists",String_cString(arguments[0]));
-    return;
-  }
-
-  /* create file */
-  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
-  if (error != ERROR_NONE)
-  {
-    File_deleteFileName(fileName);
-    sendResult(clientInfo,id,TRUE,1,"create job '%s' fail: %s",String_cString(arguments[0]),getErrorText(error));
-    return;
-  }
-  File_close(&fileHandle);
-
-  /* create new job */
-  jobNode = newJob(JOB_TYPE_BACKUP,fileName);
-  if (jobNode == NULL)
-  {
-    File_delete(fileName,FALSE);
-    File_deleteFileName(fileName);
-    sendResult(clientInfo,id,TRUE,1,"insufficient memory");
-    return;
-  }
-  copyJobOptions(serverDefaultJobOptions,&jobNode->jobOptions);
-
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* add new job to list */
-  List_append(&jobList,jobNode);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"%d",jobNode->id);
-
-  /* free resources */
-  File_deleteFileName(fileName);
-}
-
-LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  uint    jobId;
-  String  name;
-  JobNode *jobNode;
-  String  fileName;
-  Errors  error;
-
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get id */
-  if (argumentCount < 1)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected job id");
-    return;
-  }
-  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
-  if (argumentCount < 2)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected name");
-    return;
-  }
-  name = arguments[1];
-  if (File_exists(name))
-  {
-    sendResult(clientInfo,id,TRUE,1,"job '%s' already exists",String_cString(arguments[1]));
-    return;
-  }
-
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* rename job */
-  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
-  error = File_rename(jobNode->fileName,fileName);
-  if (error != ERROR_NONE)
-  {
-    sendResult(clientInfo,id,TRUE,1,"error renaming job #%d: %s",jobId,getErrorText(error));
-    Semaphore_unlock(&jobList.lock);
-    File_deleteFileName(fileName);
-    return;
-  }
-  File_deleteFileName(fileName);
-
-  /* store new file name */
-  File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobsDirectory),name);
-  String_set(jobNode->name,name);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
-}
-
-LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  uint    jobId;
-  JobNode *jobNode;
-  Errors  error;
-
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get id */
-  if (argumentCount < 1)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected job id");
-    return;
-  }
-  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
-
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* remove job in list if not running or requested volume */
-  if (CHECK_JOB_IS_RUNNING(jobNode))
-  {
-    sendResult(clientInfo,id,TRUE,1,"job #%d running",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* delete job file */
-  error = File_delete(jobNode->fileName,FALSE);
-  if (error != ERROR_NONE)
-  {
-    sendResult(clientInfo,id,TRUE,1,"error deleting job #%d: %s",jobId,getErrorText(error));
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-  List_remove(&jobList,jobNode);
-  deleteJob(jobNode);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
-}
-
-LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  uint         jobId;
-  ArchiveTypes archiveType;
-  JobNode      *jobNode;
-
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get id */
-  if (argumentCount < 1)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected job id");
-    return;
-  }
-  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
-
-  /* get archive type */
-  if (argumentCount < 2)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected archive type");
-    return;
-  }
-  if      (String_equalsCString(arguments[1],"full"       )) archiveType = ARCHIVE_TYPE_FULL;
-  else if (String_equalsCString(arguments[1],"incremental")) archiveType = ARCHIVE_TYPE_INCREMENTAL;
-  else
-  {
-    sendResult(clientInfo,id,TRUE,1,"unknown archive type '%S'",arguments[1]);
-    return;
-  }
-
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* run job */
-  if  (!CHECK_JOB_IS_ACTIVE(jobNode))
-  {
-    /* set state */
-    jobNode->state              = JOB_STATE_WAITING;
-    jobNode->archiveType        = archiveType;
-    jobNode->requestedAbortFlag = FALSE;
-    resetJobRunningInfo(jobNode);
-  }
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
-}
-
-LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  uint    jobId;
-  JobNode *jobNode;
-
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get id */
-  if (argumentCount < 1)
-  {
-    sendResult(clientInfo,id,TRUE,1,"expected job id");
-    return;
-  }
-  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
-
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,1,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* abort job */
-  if      (CHECK_JOB_IS_RUNNING(jobNode))
-  {
-    jobNode->requestedAbortFlag = TRUE;
-    while (CHECK_JOB_IS_RUNNING(jobNode))
-    {
-      Semaphore_waitModified(&jobList.lock);
-    }
-  }
-  else if (CHECK_JOB_IS_ACTIVE(jobNode))
-  {
-    jobNode->state = JOB_STATE_NONE;
-  }
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
-}
-
 LOCAL void serverCommand_volume(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint    jobId;
@@ -3185,7 +3222,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                       );
   if (error != ERROR_NONE)
   {
-    sendResult(clientInfo,id,TRUE,1,"Cannot open '%S' (error: %s)",arguments[0],getErrorText(error));
+    sendResult(clientInfo,id,TRUE,1,"Cannot open '%S' (error: %s)",arguments[0],Errors_getText(error));
     return;
   }
 
@@ -3199,7 +3236,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                    );
     if (error != ERROR_NONE)
     {
-      sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],getErrorText(error));
+      sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],Errors_getText(error));
       break;
     }
 
@@ -3229,7 +3266,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                        );
           if (error != ERROR_NONE)
           {
-            sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],getErrorText(error));
+            sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],Errors_getText(error));
             String_delete(fileName);
             break;
           }
@@ -3275,7 +3312,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                             );
           if (error != ERROR_NONE)
           {
-            sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],getErrorText(error));
+            sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],Errors_getText(error));
             String_delete(directoryName);
             break;
           }
@@ -3319,7 +3356,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                        );
           if (error != ERROR_NONE)
           {
-            sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],getErrorText(error));
+            sendResult(clientInfo,id,TRUE,1,"Cannot not read content of archive '%S' (error: %s)",arguments[0],Errors_getText(error));
             String_delete(fileName);
             String_delete(linkName);
             break;
@@ -3398,6 +3435,7 @@ SERVER_COMMANDS[] =
   { "JOB_DELETE",            "i",   serverCommand_jobDelete,           AUTHORIZATION_STATE_OK      },
   { "JOB_START",             "i",   serverCommand_jobStart,            AUTHORIZATION_STATE_OK      },
   { "JOB_ABORT",             "i",   serverCommand_jobAbort,            AUTHORIZATION_STATE_OK      },
+  { "JOB_FLUSH",             "",    serverCommand_jobFlush,            AUTHORIZATION_STATE_OK      },
   { "INCLUDE_PATTERNS_LIST", "i",   serverCommand_includePatternsList, AUTHORIZATION_STATE_OK      },
   { "INCLUDE_PATTERNS_CLEAR","i",   serverCommand_includePatternsClear,AUTHORIZATION_STATE_OK      },
   { "INCLUDE_PATTERNS_ADD",  "i S", serverCommand_includePatternsAdd,  AUTHORIZATION_STATE_OK      },
@@ -3968,7 +4006,7 @@ Errors Server_run(uint             port,
     {
       printError("Cannot initialize server at port %u (error: %s)!\n",
                  port,
-                 getErrorText(error)
+                 Errors_getText(error)
                 );
       return error;
     }
@@ -3994,7 +4032,7 @@ Errors Server_run(uint             port,
         {
           printError("Cannot initialize TLS/SSL server at port %u (error: %s)!\n",
                      tlsPort,
-                     getErrorText(error)
+                     Errors_getText(error)
                     );
           if (port != 0) Network_doneServer(&serverSocketHandle);
           return FALSE;
@@ -4077,7 +4115,7 @@ Errors Server_run(uint             port,
       else
       {
         printError("Cannot establish client connection (error: %s)!\n",
-                   getErrorText(error)
+                   Errors_getText(error)
                   );
       }
     }
@@ -4100,7 +4138,7 @@ Errors Server_run(uint             port,
       else
       {
         printError("Cannot establish client TLS connection (error: %s)!\n",
-                   getErrorText(error)
+                   Errors_getText(error)
                   );
       }
     }
@@ -4213,7 +4251,7 @@ Errors Server_batch(int inputDescriptor,
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize input (error: %s)!\n",
-               getErrorText(error)
+               Errors_getText(error)
               );
     return error;
   }
@@ -4221,7 +4259,7 @@ Errors Server_batch(int inputDescriptor,
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize input (error: %s)!\n",
-               getErrorText(error)
+               Errors_getText(error)
               );
     File_close(&inputFileHandle);
     return error;

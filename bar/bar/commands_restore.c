@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -222,7 +222,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
     {
       printError("Cannot open archive file '%s' (error: %s)!\n",
                  String_cString(archiveFileName),
-                 getErrorText(error)
+                 Errors_getText(error)
                 );
       if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
       continue;
@@ -251,7 +251,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
       {
         printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
                    String_cString(archiveFileName),
-                   getErrorText(error)
+                   Errors_getText(error)
                   );
         if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
         break;
@@ -288,7 +288,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
             {
               printError("Cannot not read 'file' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(fileName);
               if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
@@ -354,7 +354,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot create directory '%s' (error: %s)\n",
                              String_cString(directoryName),
-                             getErrorText(error)
+                             Errors_getText(error)
                             );
                   String_delete(directoryName);
                   String_delete(destinationFileName);
@@ -374,7 +374,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot open file '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -391,7 +391,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot write file '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 File_close(&fileHandle);
                 String_delete(destinationFileName);
@@ -423,7 +423,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot not read content of archive '%s' (error: %s)!\n",
                              String_cString(archiveFileName),
-                             getErrorText(error)
+                             Errors_getText(error)
                             );
                   if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
                   break;
@@ -434,7 +434,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot write file '%s' (error: %s)\n",
                              String_cString(destinationFileName),
-                             getErrorText(error)
+                             Errors_getText(error)
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -481,7 +481,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot set file info of '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -535,7 +535,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
             {
               printError("Cannot not read 'directory' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(directoryName);
               if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
@@ -581,7 +581,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot create directory '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -600,7 +600,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot set directory info of '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -651,7 +651,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
             {
               printError("Cannot not read 'link' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(fileName);
               String_delete(linkName);
@@ -703,7 +703,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 printError("Cannot create link '%s' -> '%s' (error: %s)\n",
                            String_cString(destinationFileName),
                            String_cString(fileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -723,7 +723,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot set file info of '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -773,7 +773,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
             {
               printError("Cannot not read 'special' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(fileName);
               if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
@@ -826,7 +826,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot create special device '%s' (error: %s)\n",
                            String_cString(fileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -845,7 +845,7 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot set file info of '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_test.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -109,7 +109,7 @@ Errors Command_test(StringList  *archiveFileNameList,
     {
       printError("Cannot open archive file '%s' (error: %s)!\n",
                  String_cString(archiveFileName),
-                 getErrorText(error)
+                 Errors_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
       continue;
@@ -127,7 +127,7 @@ Errors Command_test(StringList  *archiveFileNameList,
       {
         printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
                    String_cString(archiveFileName),
-                   getErrorText(error)
+                   Errors_getText(error)
                   );
         if (failError == ERROR_NONE) failError = error;
         break;
@@ -160,7 +160,7 @@ Errors Command_test(StringList  *archiveFileNameList,
             {
               printError("Cannot not read 'file' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(fileName);
               if (failError == ERROR_NONE) failError = error;
@@ -194,7 +194,7 @@ Errors Command_test(StringList  *archiveFileNameList,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot not read content of archive '%s' (error: %s)!\n",
                              String_cString(archiveFileName),
-                             getErrorText(error)
+                             Errors_getText(error)
                             );
                   if (failError == ERROR_NONE) failError = error;
                   break;
@@ -251,7 +251,7 @@ Errors Command_test(StringList  *archiveFileNameList,
             {
               printError("Cannot not read 'directory' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(directoryName);
               if (failError == ERROR_NONE) failError = error;
@@ -300,7 +300,7 @@ Errors Command_test(StringList  *archiveFileNameList,
             {
               printError("Cannot not read 'link' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(fileName);
               String_delete(linkName);
@@ -348,7 +348,7 @@ Errors Command_test(StringList  *archiveFileNameList,
             {
               printError("Cannot not read 'special' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(fileName);
               if (failError == ERROR_NONE) failError = error;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -36,6 +36,7 @@
 
 /***************************** Datatypes *******************************/
 
+/* request new volume call-back */
 typedef bool(*StorageRequestVolumeFunction)(void *userData,
                                             uint volumeNumber
                                            );
@@ -47,16 +48,19 @@ typedef struct
   double volumeProgress;                   // current volume progress [0..100]
 } StorageStatusInfo;
 
+/* storage status call-back */
 typedef bool(*StorageStatusInfoFunction)(void                    *userData,
                                          const StorageStatusInfo *storageStatusInfo
                                         );
 
+/* storage modes */
 typedef enum
 {
   STORAGE_MODE_READ,
   STORAGE_MODE_WRITE,
 } StorageModes;
 
+/* storage types */
 typedef enum
 {
   STORAGE_TYPE_FILESYSTEM,
@@ -68,6 +72,7 @@ typedef enum
   STORAGE_TYPE_DEVICE
 } StorageTypes;
 
+/* volume states */
 typedef enum
 {
   STORAGE_VOLUME_STATE_UNKNOWN,
@@ -76,6 +81,7 @@ typedef enum
   STORAGE_VOLUME_STATE_LOADED,
 } StorageVolumeStates;
 
+/* bandwidth data */
 typedef struct
 {
   ulong  max;
@@ -359,29 +365,6 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
                                  );
 
 /***********************************************************************\
-* Name   : Storage_formatArchiveFileName
-* Purpose: get archive file name
-* Input  : fileName          - file name variable
-*          storageFileHandle - storage file handle
-*          partNumber        - part number (>=0 for parts, -1 for single
-*                              archive)
-*          lastPartFlag      - TRUE iff last part
-*          time              - time
-*          archiveType       - archive type
-* Output : -
-* Return : formated file name
-* Notes  : -
-\***********************************************************************/
-
-String Storage_formatArchiveFileName(String       fileName,
-                                     const String templateFileName,
-                                     int          partNumber,
-                                     bool         lastPartFlag,
-                                     time_t       time,
-                                     ArchiveTypes archiveType
-                                    );
-
-/***********************************************************************\
 * Name   : Storage_prepare
 * Purpose: prepare storage: read password, init files
 * Input  : storageName - storage name:
@@ -399,7 +382,7 @@ Errors Storage_prepare(const String     storageName,
 * Name   : Storage_init
 * Purpose: init new storage
 * Input  : storageFileHandle            - storage file handle variable
-*          storageName                  - storage name:
+*          storageName                  - storage name
 *          jobOptions                   - job options
 *          storageRequestVolumeFunction - volume request call back
 *          storageRequestVolumeUserData - user data for volume request
@@ -433,11 +416,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 Errors Storage_done(StorageFileHandle *storageFileHandle);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Storage_getName
+* Purpose: get complete storage name
+* Input  : storageFileHandle - storage file handle
+*          name              - name variable
+*          fileName          - archive file name
 * Output : -
-* Return : -
+* Return : name
 * Notes  : -
 \***********************************************************************/
 
@@ -499,9 +484,9 @@ void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
 * Name   : Storage_create
 * Purpose: create new storage file
 * Input  : storageFileHandle - storage file handle
-*          storageName      - storage name
-*          fileSize         - storage file size
-*          jobOptions       - job options
+*          fileName          - archive file name
+*          fileSize          - storage file size
+*          jobOptions        - job options
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -516,8 +501,8 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 /***********************************************************************\
 * Name   : Storage_open
 * Purpose: open storage file
-* Input  : storageFileHandle - storage handle file
-*          storageName       - storage name
+* Input  : storageFileHandle - storage file handle
+*          fileName          - archive file name
 *          jobOptions        - job options
 * Output : -
 * Return : ERROR_NONE or errorcode
@@ -622,11 +607,25 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
                     uint64            offset
                    );
 
+/***********************************************************************\
+* Name   : Storage_delete
+* Purpose: delete storage file
+* Input  : storageFileHandle - storage file handle
+*          fileName          - archive file name
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_delete(StorageFileHandle *storageFileHandle,
+                      const String      fileName
+                     );
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
 * Name   : Storage_openDirectory
-* Purpose: open storage directory
+* Purpose: open storage directory for reading directory entries
 * Input  : storageDirectoryHandle - storage directory handle variable
 *          storageName            - storage name
 *          jobOptions             - job options

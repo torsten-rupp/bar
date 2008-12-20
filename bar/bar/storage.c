@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -105,7 +105,14 @@ LOCAL bool initFTPPassword(const JobOptions *jobOptions)
 
   if (jobOptions->ftpServer.password == NULL)
   {
-    return Password_input(defaultFTPPassword,"FTP login password");
+    if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+    {
+      return Password_input(defaultFTPPassword,"FTP login password");
+    }
+    else
+    {
+      return FALSE;
+    }
   }
   else
   {
@@ -130,7 +137,14 @@ LOCAL bool initSSHPassword(const JobOptions *jobOptions)
 
   if (jobOptions->sshServer.password == NULL)
   {
-    return Password_input(defaultSSHPassword,"Login password");
+    if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+    {
+      return Password_input(defaultSSHPassword,"SSH login password");
+    }
+    else
+    {
+      return FALSE;
+    }
   }
   else
   {
@@ -328,8 +342,8 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
   TextMacro  textMacros[2];
   bool       dvdRequestedFlag,dvdLoadedFlag;
 
-  TEXT_MACRO_STRING(textMacros[0],"%device",storageFileHandle->device.name          );
-  TEXT_MACRO_INT   (textMacros[1],"%number",storageFileHandle->requestedVolumeNumber);
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageFileHandle->device.name          );
+  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageFileHandle->requestedVolumeNumber);
 
   if (   (storageFileHandle->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
       || (storageFileHandle->volumeState == STORAGE_VOLUME_STATE_LOADED)
@@ -455,8 +469,8 @@ LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFla
   TextMacro textMacros[2];
   bool      volumeRequestedFlag,volumeLoadedFlag;
 
-  TEXT_MACRO_STRING(textMacros[0],"%device",storageFileHandle->device.name          );
-  TEXT_MACRO_INT   (textMacros[1],"%number",storageFileHandle->requestedVolumeNumber);
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageFileHandle->device.name          );
+  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageFileHandle->requestedVolumeNumber);
 
   if (   (storageFileHandle->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
       || (storageFileHandle->volumeState == STORAGE_VOLUME_STATE_LOADED)
@@ -585,7 +599,7 @@ LOCAL void processIOmkisofs(StorageFileHandle *storageFileHandle,
   double p;
 
   s = String_new();
-  if (String_match(line,STRING_BEGIN,".* ([0-9\\.]+)% done.*",NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".* ([0-9\\.]+)% done.*",NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: mkisofs: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
@@ -613,14 +627,14 @@ LOCAL void processIOdvdisaster(StorageFileHandle *storageFileHandle,
   double p;
 
   s = String_new();
-  if (String_match(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: dvdisaster1: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
     storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->dvd.step+0)*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
     updateStatusInfo(storageFileHandle);
   }
-  if (String_match(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: dvdisaster2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
@@ -650,7 +664,7 @@ LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
 
 //fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
-  if (String_match(line,STRING_BEGIN,".* \\(([0-9\\.]+)%\\) .*",NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".* \\(([0-9\\.]+)%\\) .*",NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: growisofs2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
@@ -752,18 +766,18 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
   if (String_subEqualsCString(ftpSpecifier,"//",STRING_BEGIN,2))
   {
     nextIndex = 2;
-    if      (String_match(ftpSpecifier,nextIndex,"[[:alnum:]_]+:[[:alnum:]_]*@.*",NULL,NULL))
+    if      (String_matchCString(ftpSpecifier,nextIndex,"[[:alnum:]_]+:[[:alnum:]_]*@.*",NULL,NULL))
     {
       s = String_new();
       String_parse(ftpSpecifier,nextIndex,"%S:%S@",&nextIndex,loginName,s);
       if (password != NULL) Password_setString(password,s);
       String_delete(s);
     }
-    else if (String_match(ftpSpecifier,nextIndex,"[[:alnum:]_]+@.*",NULL,NULL))
+    else if (String_matchCString(ftpSpecifier,nextIndex,"[[:alnum:]_]+@.*",NULL,NULL))
     {
       String_parse(ftpSpecifier,nextIndex,"%S@",&nextIndex,loginName);
     }
-    if (String_match(ftpSpecifier,nextIndex,"[[:alnum:]_]+/.*",NULL,NULL))
+    if (String_matchCString(ftpSpecifier,nextIndex,"[[:alnum:]_]+/.*",NULL,NULL))
     {
       return String_parse(ftpSpecifier,nextIndex,"%S/%S",NULL,hostName,fileName);
     }
@@ -799,15 +813,15 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
   if (String_subEqualsCString(sshSpecifier,"//",STRING_BEGIN,2))
   {
     nextIndex = 2;
-    if (String_match(sshSpecifier,nextIndex,"[[:alnum:]_]+@.*",NULL,NULL))
+    if (String_matchCString(sshSpecifier,nextIndex,"[[:alnum:]_]+@.*",NULL,NULL))
     {
       String_parse(sshSpecifier,nextIndex,"%S@",&nextIndex,loginName);
     }
-    if      (String_match(sshSpecifier,nextIndex,"[[:alnum:]_]+:[[:digit:]]+/.*",NULL,NULL))
+    if      (String_matchCString(sshSpecifier,nextIndex,"[[:alnum:]_]+:[[:digit:]]+/.*",NULL,NULL))
     {
       return String_parse(sshSpecifier,nextIndex,"%S:%d/%S",NULL,hostName,hostPort,fileName);
     }
-    else if (String_match(sshSpecifier,nextIndex,"[[:alnum:]_]+/.*",NULL,NULL))
+    else if (String_matchCString(sshSpecifier,nextIndex,"[[:alnum:]_]+/.*",NULL,NULL))
     {
       return String_parse(sshSpecifier,nextIndex,"%S/%S",NULL,hostName,fileName);
     }
@@ -840,7 +854,7 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
   if (String_subEqualsCString(deviceSpecifier,"//",STRING_BEGIN,2))
   {
     nextIndex = 2;
-    if (String_match(deviceSpecifier,nextIndex,"[[:print:]]+/.*",NULL,NULL))
+    if (String_matchCString(deviceSpecifier,nextIndex,"[[:print:]]+/.*",NULL,NULL))
     {
       return String_parse(deviceSpecifier,nextIndex,"%S/%S",NULL,deviceName,fileName);
     }
@@ -1207,6 +1221,10 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                 Password_set(storageFileHandle->ftp.password,defaultFTPPassword);
               }
             }
+            else
+            {
+              error = (ftpServer.password != NULL)?ERROR_INVALID_FTP_PASSWORD:ERROR_NO_FTP_PASSWORD;
+            }
           }
           if (error != ERROR_NONE)
           {
@@ -1303,6 +1321,10 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
               {
                 Password_set(storageFileHandle->scp.password,defaultSSHPassword);
               }
+            }
+            else
+            {
+              error = (sshServer.password != NULL)?ERROR_INVALID_SSH_PASSWORD:ERROR_NO_SSH_PASSWORD;
             }
           }
           if (error != ERROR_NONE)
@@ -1929,11 +1951,11 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           }
 
           /* init macros */
-          TEXT_MACRO_STRING(textMacros[0],"%device", storageFileHandle->dvd.name     );
-          TEXT_MACRO_STRING(textMacros[1],"%file",   storageFileHandle->dvd.directory);
-          TEXT_MACRO_STRING(textMacros[2],"%image",  imageFileName                   );
-          TEXT_MACRO_INT   (textMacros[3],"%sectors",0                               );
-          TEXT_MACRO_INT   (textMacros[4],"%number", storageFileHandle->volumeNumber );
+          TEXT_MACRO_N_STRING (textMacros[0],"%device", storageFileHandle->dvd.name     );
+          TEXT_MACRO_N_STRING (textMacros[1],"%file",   storageFileHandle->dvd.directory);
+          TEXT_MACRO_N_STRING (textMacros[2],"%image",  imageFileName                   );
+          TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",0                               );
+          TEXT_MACRO_N_INTEGER(textMacros[4],"%number", storageFileHandle->volumeNumber );
 
           if (storageFileHandle->jobOptions->errorCorrectionCodesFlag)
           {
@@ -1978,7 +2000,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             /* get number of image sectors */
             if (File_getFileInfo(imageFileName,&fileInfo) == ERROR_NONE)
             {
-              TEXT_MACRO_INT(textMacros[3],"%sectors",(ulong)(fileInfo.size/2048LL));
+              TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",(ulong)(fileInfo.size/2048LL));
             }
 
             /* check if new dvd is required */
@@ -2105,10 +2127,10 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           }
 
           /* init macros */
-          TEXT_MACRO_STRING(textMacros[0],"%device",storageFileHandle->device.name     );
-          TEXT_MACRO_STRING(textMacros[1],"%file",  storageFileHandle->device.directory);
-          TEXT_MACRO_STRING(textMacros[2],"%image", imageFileName                      );
-          TEXT_MACRO_INT   (textMacros[3],"%number",storageFileHandle->volumeNumber    );
+          TEXT_MACRO_N_STRING (textMacros[0],"%device",storageFileHandle->device.name     );
+          TEXT_MACRO_N_STRING (textMacros[1],"%file",  storageFileHandle->device.directory);
+          TEXT_MACRO_N_STRING (textMacros[2],"%image", imageFileName                      );
+          TEXT_MACRO_N_INTEGER(textMacros[3],"%number",storageFileHandle->volumeNumber    );
 
           /* create image */
           if (error == ERROR_NONE)
@@ -2205,138 +2227,6 @@ void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
   storageFileHandle->volumeNumber = volumeNumber;
 }
 
-#if 0
-String Storage_formatArchiveFileName(String            fileName,
-                                     const String templateFileName,
-                                     int               partNumber,
-                                     bool              lastPartFlag,
-                                     time_t            time,
-                                     ArchiveTypes      archiveType
-                                    )
-{
-  TextMacro textMacros[2];
-
-  bool      partNumberFlag;
-  struct tm tmStruct;
-  long      i,j;
-  char      format[4];
-  char      buffer[256];
-  size_t    length;
-  ulong     divisor;
-  ulong     n;
-  int       z;
-  int       d;
-
-  /* expand named macros */
-  switch (archiveType)
-  {
-    case ARCHIVE_TYPE_NORMAL:      TEXT_MACRO_CSTRING(textMacros[0],"%type","normal");      break;
-    case ARCHIVE_TYPE_FULL:        TEXT_MACRO_CSTRING(textMacros[0],"%type","full");        break;
-    case ARCHIVE_TYPE_INCREMENTAL: TEXT_MACRO_CSTRING(textMacros[0],"%type","incremental"); break;
-    case ARCHIVE_TYPE_UNKNOWN:     TEXT_MACRO_CSTRING(textMacros[0],"%type","unknown");     break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-      #endif /* NDEBUG */
-  }
-  TEXT_MACRO_CSTRING(textMacros[1],"%last",lastPartFlag?"-last":"");
-  Misc_expandMacros(fileName,storageFileHandle->templteFileName,textMacros,SIZE_OF_ARRAY(textMacros));
-
-  /* expand time macros, part number */
-  localtime_r(&time,&tmStruct);
-  partNumberFlag = FALSE;
-  i = 0;
-  while (i < String_length(fileName))
-  {
-    switch (String_index(fileName,i))
-    {
-      case '%':
-        if ((i+1) < String_length(fileName))
-        {
-          switch (String_index(fileName,i+1))
-          {
-            case 'E':
-            case 'O':
-              format[0] = '%';
-              format[1] = String_index(fileName,i+1);
-              format[2] = String_index(fileName,i+2);
-              format[3] = '\0';
-
-              length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
-
-              String_remove(fileName,i,3);
-              String_insertBuffer(fileName,i,buffer,length);
-              i += length;
-              break;
-            case '%':
-              String_remove(fileName,i,1);
-              i += 1;
-              break;
-            case '#':
-              String_remove(fileName,i,1);
-              i += 1;
-              break;
-            default:
-              format[0] = '%';
-              format[1] = String_index(fileName,i+1);
-              format[2] = '\0';
-
-              length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
-
-              String_remove(fileName,i,2);
-              String_insertBuffer(fileName,i,buffer,length);
-              i += length;
-              break;
-          }
-        }
-        else
-        {
-         i += 1;
-        }      
-        break;
-      case '#':
-        /* find #...# and get max. divisor for part number */
-        divisor = 1;
-        j = i+1;
-        while ((j < String_length(fileName) && String_index(fileName,j) == '#'))
-        {
-          j++;
-          if (divisor < 1000000000) divisor*=10;
-        }
-
-        /* replace #...# by part number */     
-        n = partNumber;
-        z = 0;
-        while (divisor > 0)
-        {
-          d = n/divisor; n = n%divisor; divisor = divisor/10;
-          if (z < sizeof(buffer)-1)
-          {
-            buffer[z] = '0'+d; z++;
-          }
-        }
-        buffer[z] = '\0';
-        String_replaceCString(fileName,i,j-i,buffer);
-
-        partNumberFlag = TRUE;
-
-        i = j+1;
-        break;
-      default:
-        i += 1;
-        break;
-    }
-  }
-  if ((partNumber >= 0) && !partNumberFlag)
-  {
-    String_format(fileName,".%06d",partNumber);
-  }
-
-  return fileName;
-}
-#endif /* 0 */
-
 Errors Storage_create(StorageFileHandle *storageFileHandle,
                       const String      fileName,
                       uint64            fileSize,
@@ -2415,7 +2305,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
            )
         {
           FtpQuit(storageFileHandle->ftp.control);
-          return ERROR_FTP_CREATE;
+          return ERROR_CREATE_FILE;
         }
       }
       #else /* not HAVE_FTP */
@@ -2444,7 +2334,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
             return error;
           }
 
-          /* open channel and send file */
+          /* open channel and file for writing */
           storageFileHandle->scp.channel = libssh2_scp_send(Network_getSSHSession(&storageFileHandle->scp.socketHandle),
                                                             String_cString(fileName),
 // ???
@@ -2453,9 +2343,15 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
                                                            );
           if (storageFileHandle->scp.channel == NULL)
           {
-            printError("Init ssh channel fail!\n");
+            char *sshErrorText;
+
+            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+            error = ERRORX(SSH,
+                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                           sshErrorText
+                          );
             Network_disconnect(&storageFileHandle->scp.socketHandle);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
         }
       #else /* not HAVE_SSH2 */
@@ -2482,16 +2378,22 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
             return error;
           }
 
-          /* init FTP session */
-          storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->scp.socketHandle));
+          /* init session */
+          storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->sftp.socketHandle));
           if (storageFileHandle->sftp.sftp == NULL)
           {
-            printError("Init sftp fail!\n");
+            char *sshErrorText;
+
+            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+            error = ERRORX(SSH,
+                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                           sshErrorText
+                          );
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
 
-          /* create FTP file */
+          /* create file */
           storageFileHandle->sftp.sftpHandle = libssh2_sftp_open(storageFileHandle->sftp.sftp,
                                                                  String_cString(fileName),
                                                                  LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_TRUNC,
@@ -2500,10 +2402,16 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
                                                                 );
           if (storageFileHandle->sftp.sftpHandle == NULL)
           {
-            printError("Create sftp file fail!\n");
+            char *sshErrorText;
+
+            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+            error = ERRORX(SSH,
+                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                           sshErrorText
+                          );
             libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
         }
       #else /* not HAVE_SSH2 */
@@ -2625,7 +2533,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
         }
         Password_undeploy(storageFileHandle->ftp.password);
 
-        /* read file */
+        /* open file for reading */
         if (FtpAccess(String_cString(fileName),
                       FTPLIB_FILE_READ,
                       FTPLIB_IMAGE,
@@ -2669,16 +2577,22 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             return error;
           }
 
-          /* open channel and receive file */
+          /* open channel and file for reading */
           storageFileHandle->scp.channel = libssh2_scp_recv(Network_getSSHSession(&storageFileHandle->scp.socketHandle),
                                                             String_cString(fileName),
                                                             &fileInfo
                                                            );
           if (storageFileHandle->scp.channel == NULL)
           {
-            printError("Init ssh channel fail!\n");
+            char *sshErrorText;
+
+            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+            error = ERRORX(SSH,
+                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                           sshErrorText
+                          );
             Network_disconnect(&storageFileHandle->scp.socketHandle);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
         }
       #else /* not HAVE_SSH2 */
@@ -2713,16 +2627,16 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             return error;
           }
 
-          /* init FTP session */
-          storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->scp.socketHandle));
+          /* init session */
+          storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->sftp.socketHandle));
           if (storageFileHandle->sftp.sftp == NULL)
           {
-            printError("Init sftp fail!\n");
+            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)));
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
 
-          /* open FTP file */
+          /* open file */
           storageFileHandle->sftp.sftpHandle = libssh2_sftp_open(storageFileHandle->sftp.sftp,
                                                                  String_cString(fileName),
                                                                  LIBSSH2_FXF_READ,
@@ -2730,10 +2644,16 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
                                                                 );
           if (storageFileHandle->sftp.sftpHandle == NULL)
           {
-            printError("Create sftp file fail!\n");
+            char *sshErrorText;
+
+            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+            error = ERRORX(SSH,
+                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                           sshErrorText
+                          );
             libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
 
           /* get file size */
@@ -2742,11 +2662,17 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
                                 ) != 0
              )
           {
-            printError("Cannot detect sftp file size!\n");
+            char *sshErrorText;
+
+            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+            error = ERRORX(SSH,
+                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                           sshErrorText
+                          );
             libssh2_sftp_close(storageFileHandle->sftp.sftpHandle);
             libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
-            return ERROR_SSH_SESSION_FAIL;
+            return error;
           }
           storageFileHandle->sftp.size = sftpAttributes.filesize;
         }
@@ -2957,6 +2883,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
+        assert(storageFileHandle->scp.channel != NULL);
+
         (*bytesRead) = libssh2_channel_read(storageFileHandle->scp.channel,
                                             buffer,
                                             size
@@ -2971,6 +2899,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
           ulong  i;
           size_t n;
 
+          assert(storageFileHandle->sftp.sftpHandle != NULL);
           assert(storageFileHandle->sftp.readAheadBuffer.data != NULL);
 
           (*bytesRead) = 0;
@@ -2992,7 +2921,11 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
           /* read rest of data */
           if (size > 0)
           {
-            libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,storageFileHandle->sftp.index);
+            #ifdef HAVE_SSH2_SFTP_SEEK2
+              libssh2_sftp_seek2(storageFileHandle->sftp.sftpHandle,storageFileHandle->sftp.index);
+            #else
+              libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,storageFileHandle->sftp.index);
+            #endif
             if (size < MAX_BUFFER_SIZE)
             {
               /* read into read-ahead buffer */
@@ -3014,7 +2947,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             }
             else
             {
-              /* read directlu */
+              /* read direct */
               n = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
                                     buffer,
                                     size
@@ -3112,10 +3045,15 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
 
             /* get end time, transmission time */
             endTimestamp = Misc_getTimestamp();
-            assert(endTimestamp >= startTimestamp);
 
-            /* limit used band width if requested */
-            limitBandWidth(&storageFileHandle->ftp.bandWidth,n,endTimestamp-startTimestamp);
+            /* limit used band width if requested (note: when the system time is
+               changing endTimestamp may become smaller than startTimestamp;
+               thus do not check this with an assert())
+            */
+            if (endTimestamp >= startTimestamp)
+            {
+              limitBandWidth(&storageFileHandle->ftp.bandWidth,n,endTimestamp-startTimestamp);
+            }
           };
         }
       #else /* not HAVE_FTP */
@@ -3131,6 +3069,8 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
           long   length;
           long   n;
           uint64 startTimestamp,endTimestamp;
+
+          assert(storageFileHandle->scp.channel != NULL);
 
           writtenBytes = 0;
           while (writtenBytes < size)
@@ -3165,7 +3105,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             /* get end time, transmission time */
             endTimestamp = Misc_getTimestamp();
 
-            /* limit used band width if requested */
+            /* limit used band width if requested (note: when the system time is
+               changing endTimestamp may become smaller than startTimestamp;
+               thus do not check this with an assert())
+            */
             if (endTimestamp >= startTimestamp)
             {
               limitBandWidth(&storageFileHandle->scp.bandWidth,n,endTimestamp-startTimestamp);
@@ -3183,6 +3126,8 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
           long   length;
           long   n;
           uint64 startTimestamp,endTimestamp;
+
+          assert(storageFileHandle->sftp.sftpHandle != NULL);
 
           writtenBytes = 0;
           while (writtenBytes < size)
@@ -3216,10 +3161,16 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
 
             /* get end time, transmission time */
             endTimestamp = Misc_getTimestamp();
-            assert(endTimestamp >= startTimestamp);
 
-            /* limit used band width if requested */
-            limitBandWidth(&storageFileHandle->sftp.bandWidth,n,endTimestamp-startTimestamp);
+            /* limit used band width if requested (note: when the system time is
+               changing endTimestamp may become smaller than startTimestamp;
+               thus do not check this with an assert())
+            */
+            if (endTimestamp >= startTimestamp)
+            {
+fprintf(stderr,"%s,%d: %ld %ld\n",__FILE__,__LINE__,n,endTimestamp-startTimestamp);
+              limitBandWidth(&storageFileHandle->sftp.bandWidth,n,endTimestamp-startTimestamp);
+            }
           };
         }
       #else /* not HAVE_SSH2 */
@@ -3393,11 +3344,15 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
-//??? large file?
-//fprintf(stderr,"%s,%d: seek %llu\n",__FILE__,__LINE__,offset);
-        libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,
-                          offset
-                         );
+        #ifdef HAVE_SSH2_SFTP_SEEK2
+          libssh2_sftp_seek2(storageFileHandle->sftp.sftpHandle,
+                             offset
+                            );
+        #else
+          libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,
+                            (size_t)offset
+                           );
+        #endif
         storageFileHandle->sftp.index = offset;
       #else /* not HAVE_SSH2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -3423,6 +3378,96 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return ERROR_NONE;
 }
 
+Errors Storage_delete(StorageFileHandle *storageFileHandle,
+                      const String      fileName
+                     )
+{
+  Errors error;
+
+  assert(storageFileHandle != NULL);
+
+  error = ERROR_UNKNOWN;
+  switch (storageFileHandle->type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      error = File_delete(fileName,FALSE);
+      break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+        error = (FtpDelete(String_cString(fileName),storageFileHandle->ftp.data) == 1)?ERROR_NONE:ERROR_DELETE_FILE;
+      #else /* not HAVE_FTP */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_SCP:
+      #ifdef HAVE_SSH2
+#if 0
+whould this be a possible implementation?
+        {
+          String command;
+
+          /* there is no unlink command for scp: execute either 'rm' or 'del' on remote server */
+          command = String_new();        
+          if (error != ERROR_NONE)
+          {
+            String_format(String_clear(command),"rm %'S",fileName);
+            error = (libssh2_channel_exec(storageFileHandle->scp.channel,
+                                          String_cString(command)
+                                         ) != 0
+                    )?ERROR_NONE:ERROR_DELETE_FILE;
+          }
+          if (error != ERROR_NONE)
+          {
+            String_format(String_clear(command),"del %'S",fileName);
+            error = (libssh2_channel_exec(storageFileHandle->scp.channel,
+                                          String_cString(command)
+                                         ) != 0
+                    )?ERROR_NONE:ERROR_DELETE_FILE;
+          }
+          String_delete(command);
+        }
+      #else /* not HAVE_SSH2 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+#endif /* 0 */
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SFTP:
+      #ifdef HAVE_SSH2
+        error = (libssh2_sftp_unlink(storageFileHandle->sftp.sftp,
+                                     String_cString(fileName)
+                                    ) != 0
+                )?ERROR_NONE:ERROR_DELETE_FILE;
+      #else /* not HAVE_SSH2 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_DVD:
+      #ifdef HAVE_SSH2
+        error = ERROR_NONE;
+      #else /* not HAVE_SSH2 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_DEVICE:
+      error = ERROR_NONE;
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return error;
+}
+
 /*---------------------------------------------------------------------*/
 
 Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
@@ -3431,6 +3476,7 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
                             )
 {
   String    storageSpecifier;
+  String    pathName;
   #ifdef HAVE_FRP
     FTPServer ftpServer;
   #endif /* HAVE_FRP */
@@ -3450,15 +3496,12 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
       /* init variables */
       storageDirectoryHandle->type = STORAGE_TYPE_FILESYSTEM;
 
-      /* open file */
+      /* open directory */
+      pathName = File_getFilePathName(String_new(),storageSpecifier);
       error = File_openDirectory(&storageDirectoryHandle->fileSystem.directoryHandle,
-                                 storageName
+                                 pathName
                                 );
-      if (error != ERROR_NONE)
-      {
-        String_delete(storageSpecifier);
-        return error;
-      }
+      String_delete(pathName);
       break;
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
@@ -3473,7 +3516,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      HALT_INTERNAL_ERROR("scp does not support directory operations");
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -3497,8 +3540,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String_delete(hostName);
             String_delete(loginName);
             String_delete(storageDirectoryHandle->sftp.pathName);
-            String_delete(storageSpecifier);
-            return ERROR_SSH_SESSION_FAIL;
+            error = ERROR_SSH_SESSION_FAIL;
+            break;
           }
           String_set(storageDirectoryHandle->sftp.pathName,hostFileName);
 
@@ -3521,39 +3564,36 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String_delete(hostName);
             String_delete(loginName);
             String_delete(storageDirectoryHandle->sftp.pathName);
-            String_delete(storageSpecifier);
-            return error;
+            break;
           }
 
           /* init FTP session */
           storageDirectoryHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryHandle->sftp.socketHandle));
           if (storageDirectoryHandle->sftp.sftp == NULL)
           {
-            printError("Init sftp fail!\n");
+            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryHandle->sftp.socketHandle)));
             Network_disconnect(&storageDirectoryHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
             String_delete(storageDirectoryHandle->sftp.pathName);
-            String_delete(storageSpecifier);
-            return ERROR_SSH_SESSION_FAIL;
+            break;
           }
 
-          /* open FTP file */
+          /* open directory for reading */
           storageDirectoryHandle->sftp.sftpHandle = libssh2_sftp_opendir(storageDirectoryHandle->sftp.sftp,
                                                                          String_cString(hostFileName)
                                                                         );
           if (storageDirectoryHandle->sftp.sftpHandle == NULL)
           {
-            printError("Create sftp file fail!\n");
+            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryHandle->sftp.socketHandle)));
             libssh2_sftp_shutdown(storageDirectoryHandle->sftp.sftp);
             Network_disconnect(&storageDirectoryHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
             String_delete(storageDirectoryHandle->sftp.pathName);
-            String_delete(storageSpecifier);
-            return ERROR_SSH_SESSION_FAIL;
+            break;
           }
         }
       #else /* not HAVE_SSH2 */
@@ -3564,18 +3604,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       /* init variables */
       storageDirectoryHandle->type = STORAGE_TYPE_DEVICE;
 
-      /* open file */
+      /* open directory */
       error = File_openDirectory(&storageDirectoryHandle->dvd.directoryHandle,
                                  storageName
                                 );
-      if (error != ERROR_NONE)
-      {
-        String_delete(storageSpecifier);
-        return error;
-      }
       break;
     case STORAGE_TYPE_DEVICE:
-      return ERROR_FUNCTION_NOT_SUPPORTED;
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     #ifndef NDEBUG
       default:
@@ -3585,7 +3620,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   }
   String_delete(storageSpecifier);
 
-  return ERROR_NONE;
+  return error;
 }
 
 void Storage_closeDirectory(StorageDirectoryHandle *storageDirectoryHandle)

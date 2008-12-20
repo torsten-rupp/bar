@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_compare.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive compare function
 * Systems : all
@@ -141,7 +141,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
     {
       printError("Cannot open archive file '%s' (error: %s)!\n",
                  String_cString(archiveFileName),
-                 getErrorText(error)
+                 Errors_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
       continue;
@@ -161,7 +161,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
       {
         printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
                    String_cString(archiveFileName),
-                   getErrorText(error)
+                   Errors_getText(error)
                   );
         if (failError == ERROR_NONE) failError = error;
         break;
@@ -198,7 +198,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
             {
               printError("Cannot not read 'file' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(fileName);
               if (failError == ERROR_NONE) failError = error;
@@ -252,7 +252,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot open file '%s' (error: %s)\n",
                            String_cString(fileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
@@ -289,7 +289,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot read file '%s' (error: %s)\n",
                            String_cString(fileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 File_close(&fileHandle);
                 Archive_closeEntry(&archiveFileInfo);
@@ -314,7 +314,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot not read content of archive '%s' (error: %s)!\n",
                              String_cString(archiveFileName),
-                             getErrorText(error)
+                             Errors_getText(error)
                             );
                   if (failError == ERROR_NONE) failError = error;
                   break;
@@ -325,7 +325,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot read file '%s' (error: %s)\n",
                              String_cString(fileName),
-                             getErrorText(error)
+                             Errors_getText(error)
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -409,7 +409,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
             {
               printError("Cannot not read 'directory' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(directoryName);
               if (failError == ERROR_NONE) failError = error;
@@ -457,7 +457,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
               {
                 printError("Cannot not read local directory '%s' (error: %s)!\n",
                            String_cString(directoryName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(directoryName);
@@ -505,7 +505,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
             {
               printError("Cannot not read 'link' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(fileName);
               String_delete(linkName);
@@ -559,7 +559,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
               {
                 printError("Cannot not read local file '%s' (error: %s)!\n",
                            String_cString(linkName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 String_delete(localFileName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -597,7 +597,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
               {
                 printError("Cannot not read local file '%s' (error: %s)!\n",
                            String_cString(linkName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
@@ -643,7 +643,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
             {
               printError("Cannot not read 'special' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
-                         getErrorText(error)
+                         Errors_getText(error)
                         );
               String_delete(fileName);
               if (failError == ERROR_NONE) failError = error;
@@ -692,7 +692,7 @@ Errors Command_compare(StringList  *archiveFileNameList,
               {
                 printError("Cannot not read local file '%s' (error: %s)!\n",
                            String_cString(fileName),
-                           getErrorText(error)
+                           Errors_getText(error)
                           );
                 Archive_closeEntry(&archiveFileInfo);
                 String_delete(fileName);
