@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/stringlists.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -14,6 +14,7 @@
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
+#include <regex.h>
 #include <assert.h>
 
 #include "lists.h"
@@ -253,6 +254,61 @@ String StringList_getLast(StringList *stringList, String string)
 
     return NULL;
   }
+}
+
+StringNode *StringList_find(StringList *stringList, const String string)
+{
+  return StringList_findCString(stringList,String_cString(string));
+}
+
+StringNode *StringList_findCString(StringList *stringList, const char *s)
+{
+  StringNode *stringNode;
+
+  assert(stringList != NULL);
+
+  stringNode = stringList->head;
+  while (   (stringNode != NULL)
+         && !String_equalsCString(stringNode->string,s)
+        )
+  {
+    stringNode = stringNode->next;
+  }
+
+  return stringNode;
+}
+
+StringNode *StringList_match(StringList *stringList, const String pattern)
+{
+  return StringList_matchCString(stringList,String_cString(pattern));
+}
+
+StringNode *StringList_matchCString(StringList *stringList, const char *pattern)
+{
+  regex_t    regex;
+  StringNode *stringNode;
+
+  assert(stringList != NULL);
+
+  /* compile pattern */
+  if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
+  {
+    return NULL;
+  }
+
+  /* search in list */
+  stringNode = stringList->head;
+  while (   (stringNode != NULL)
+         && (regexec(&regex,String_cString(stringNode->string),0,NULL,0) != 0)
+        )
+  {
+    stringNode = stringNode->next;
+  }
+
+  /* free resources */
+  regfree(&regex);
+
+  return stringNode;
 }
 
 const char* const *StringList_toCStringArray(const StringList *stringList)

@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/stringlists.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: string list functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -22,6 +22,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+#define STRINGLIST_BEGIN NULL
 
 /***************************** Datatypes *******************************/
 
@@ -208,6 +210,22 @@ String StringList_getFirst(StringList *stringList, String string);
 \***********************************************************************/
 
 String StringList_getLast(StringList *stringList, String string);
+
+
+StringNode *StringList_find(StringList *stringList, const String string);
+StringNode *StringList_findCString(StringList *stringList, const char *s);
+
+/***********************************************************************\
+* Name   : StringList_match
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+StringNode *StringList_match(StringList *stringList, const String pattern);
+StringNode *StringList_matchCString(StringList *stringList, const char *pattern);
 
 /***********************************************************************\
 * Name   : StringList_toCStringArray
