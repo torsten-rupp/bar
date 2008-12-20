@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -53,7 +53,9 @@
 
 #define __VERSION_TO_STRING(z) __VERSION_TO_STRING_TMP(z)
 #define __VERSION_TO_STRING_TMP(z) #z
-#define VERSION __VERSION_TO_STRING(VERSION_MAJOR) "." __VERSION_TO_STRING(VERSION_MINOR)
+#define VERSION_MAJOR_STRING __VERSION_TO_STRING(VERSION_MAJOR)
+#define VERSION_MINOR_STRING __VERSION_TO_STRING(VERSION_MINOR)
+#define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING
 
 #define DEFAULT_CONFIG_FILE_NAME       "bar.cfg"
 #define DEFAULT_TMP_DIRECTORY          "/tmp"
@@ -296,14 +298,14 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("ftp-login-name",               0,  0,0,&ftpServer.loginName,                      NULL,cmdOptionParseString,NULL,                                    "ftp login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,0,&ftpServer.password,                       NULL,cmdOptionParsePassword,NULL,                                  "ftp password (use with care!)","password"                                 ),
 
-  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,0,sshServer.port,                            0,0,65535,NULL,                                                    "ssh port"                                                                 ),
+  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,0,sshServer.port,                            22,0,65535,NULL,                                                   "ssh port (default: 22)"                                                   ),
   CMD_OPTION_SPECIAL      ("ssh-login-name",               0,  0,0,&sshServer.loginName,                      NULL,cmdOptionParseString,NULL,                                    "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,0,&sshServer.password,                       NULL,cmdOptionParsePassword,NULL,                                  "ssh password (use with care!)","password"                                 ),
   CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,0,&sshServer.publicKeyFileName,              NULL,cmdOptionParseString,NULL,                                    "ssh public key file name","file name"                                     ),
   CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,0,&sshServer.privateKeyFileName,             NULL,cmdOptionParseString,NULL,                                    "ssh privat key file name","file name"                                     ),
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                FALSE,                                                             "run in daemon mode"                                                       ),
-  CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                FALSE,                                                           "do not detach in daemon mode"                                             ),
+  CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                              FALSE,                                                             "do not detach in daemon mode"                                             ),
   CMD_OPTION_INTEGER      ("server-port",                  0,  1,0,serverPort,                                DEFAULT_SERVER_PORT,0,65535,NULL,                                  "server port"                                                              ),
   CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,0,serverTLSPort,                             DEFAULT_TLS_SERVER_PORT,0,65535,NULL,                              "TLS (SSL) server port"                                                    ),
   CMD_OPTION_STRING       ("server-ca-file",               0,  1,0,serverCAFileName,                          DEFAULT_TLS_SERVER_CA_FILE,                                        "TLS (SSL) server certificate authority file (CA file)","file name"        ),
@@ -353,6 +355,11 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_STRING       ("pid-file",                     0,  1,0,pidFileName,                               NULL,                                                              "process id file name","file name"                                         ),
 
+  CMD_OPTION_BOOLEAN      ("group",                        'g',0,0,globalOptions.groupFlag,                   FALSE,                                                             "group files in list"                                                      ),
+  CMD_OPTION_BOOLEAN      ("all",                          0,  0,0,globalOptions.allFlag,                     FALSE,                                                             "show all files"                                                           ),
+  CMD_OPTION_BOOLEAN      ("long-format",                  0,  0,0,globalOptions.longFormatFlag,              FALSE,                                                             "list in long format"                                                      ),
+  CMD_OPTION_BOOLEAN      ("no-header-footer",             0,  0,0,globalOptions.noHeaderFooterFlag,          FALSE,                                                             "output no header/footer in list"                                          ),
+
   CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,0,jobOptions.skipUnreadableFlag,             TRUE,                                                              "skip unreadable files"                                                    ),
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      0,  0,0,jobOptions.overwriteArchiveFilesFlag,      FALSE,                                                             "overwrite existing archive files"                                         ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,0,jobOptions.overwriteFilesFlag,             FALSE,                                                             "overwrite existing files"                                                 ),
@@ -361,7 +368,6 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-bar-on-dvd",                0,  1,0,jobOptions.noBAROnDVDFlag,                 FALSE,                                                             "do not store a copy of BAR on DVDs"                                       ),
   CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,0,jobOptions.stopOnErrorFlag,                FALSE,                                                             "immediately stop on error"                                                ),
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,         FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
-  CMD_OPTION_BOOLEAN      ("long-format",                  0,  0,0,globalOptions.longFormatFlag,              FALSE,                                                             "list in long format"                                                      ),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                   FALSE,                                                             "surpress any output"                                                      ),
   CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                1,0,3,NULL,                                                        "verbosity level"                                                          ),
 
@@ -645,7 +651,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   {
     printError("Cannot open file '%s' (error: %s)!\n",
                String_cString(fileName),
-               getErrorText(error)
+               Errors_getText(error)
               );
     return FALSE;
   }
@@ -666,7 +672,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       if (printInfoFlag) printf("FAIL!\n");
       printError("Cannot read file '%s' (error: %s)!\n",
                  String_cString(fileName),
-                 getErrorText(error)
+                 Errors_getText(error)
                 );
       failFlag = TRUE;
       break;
@@ -708,7 +714,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
         HALT_INSUFFICIENT_MEMORY();
       }
       sshServerNode->name                         = String_duplicate(name);
-      sshServerNode->sshServer.port               = 0;
+      sshServerNode->sshServer.port               = 22;
       sshServerNode->sshServer.loginName          = NULL;
       sshServerNode->sshServer.password           = NULL;
       sshServerNode->sshServer.publicKeyFileName  = NULL;
@@ -956,7 +962,6 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
 LOCAL void printUsage(const char *programName, uint level)
 {
   assert(programName != NULL);
-
   printf("Usage: %s [<options>] [--] <archive name> [<files>...]\n",programName);
   printf("       %s [<options>] [--] <key file name>\n",programName);
   printf("\n");
@@ -1397,7 +1402,7 @@ void logPostProcess(void)
   if (logPostCommand != NULL)
   {
     printInfo(2,"Log post process...");
-    TEXT_MACRO_STRING(textMacros[0],"%file",tmpLogFileName);
+    TEXT_MACRO_N_STRING(textMacros[0],"%file",tmpLogFileName);
     error = Misc_executeCommand(logPostCommand,
                                 textMacros,SIZE_OF_ARRAY(textMacros),
                                 NULL,
@@ -1411,7 +1416,7 @@ void logPostProcess(void)
     else
     {
       printInfo(2,"FAIL\n");
-      printError("Cannot post-process log file (error: %s)\n",getErrorText(error));
+      printError("Cannot post-process log file (error: %s)\n",Errors_getText(error));
     }
   }
 
@@ -2102,14 +2107,66 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
   }
 }
 
+/***********************************************************************\
+* Name   : createPIDFile
+* Purpose: create pid file
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors createPIDFile(void)
+{
+  String     fileName;
+  Errors     error;
+  FileHandle fileHandle;
+
+  if (pidFileName != NULL)
+  {
+    fileName = File_newFileName();
+    error = File_open(&fileHandle,File_setFileNameCString(fileName,pidFileName),FILE_OPENMODE_CREATE);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,Errors_getText(error));
+      return error;
+    }
+    File_printLine(&fileHandle,"%d",(int)getpid());
+    File_close(&fileHandle);
+    File_deleteFileName(fileName);
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : deletePIDFile
+* Purpose: delete pid file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deletePIDFile(void)
+{
+  String fileName;
+
+  if (pidFileName != NULL)
+  {
+    fileName = String_newCString(pidFileName);
+    File_delete(fileName,FALSE);
+    String_delete(fileName);
+  }
+}
+
 /*---------------------------------------------------------------------*/
 
 int main(int argc, const char *argv[])
 {
-  String     fileName;
-  bool       printInfoFlag;
-  Errors     error;
-  FileHandle fileHandle;
+  String fileName;
+  bool   printInfoFlag;
+  Errors error;
 
   /* init */
   if (!initAll())
@@ -2205,9 +2262,9 @@ int main(int argc, const char *argv[])
   if (versionFlag)
   {
     #ifndef NDEBUG
-      printf("BAR version %s (debug)\n",VERSION);
+      printf("BAR version %s (debug)\n",VERSION_STRING);
     #else /* NDEBUG */
-      printf("BAR version %s\n",VERSION);
+      printf("BAR version %s\n",VERSION_STRING);
     #endif /* not NDEBUG */
 
     doneAll();
@@ -2245,27 +2302,6 @@ int main(int argc, const char *argv[])
     return EXITCODE_FAIL;
   }
 
-  /* create pid file */
-  if (pidFileName != NULL)
-  {
-    fileName = String_newCString(pidFileName);
-    error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,getErrorText(error));
-      doneAll();
-      #ifndef NDEBUG
-        Array_debug();
-        String_debug();
-        String_debugDone();
-      #endif /* not NDEBUG */
-      return EXITCODE_FAIL;
-    }
-    File_printLine(&fileHandle,"%d",(int)getpid());
-    File_close(&fileHandle);
-    String_delete(fileName);
-  }
-
   /* create session log file */
   error = File_getTmpFileName(tmpLogFileName,NULL,globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
@@ -2290,13 +2326,93 @@ int main(int argc, const char *argv[])
 
   error = ERROR_NONE;
   if      (daemonFlag)
-  {
+  {    
     /* daemon mode -> run server with network */
+    globalOptions.runMode = RUN_MODE_SERVER;
+
     if (!noDetachFlag)
     {
-      /* detached */
+      /* run server (detached) */
       if (daemon(1,0) == 0)
       {
+        if (pidFileName != NULL)
+        {
+          /* create pid file */
+          error = createPIDFile();
+        }
+
+        if (error == ERROR_NONE)
+        {
+          /* run server */
+          error = Server_run(serverPort,
+                             serverTLSPort,
+                             serverCAFileName,
+                             serverCertFileName,
+                             serverKeyFileName,
+                             serverPassword,
+                             serverJobsDirectory,
+                             &jobOptions
+                            );
+        }
+
+        if (pidFileName != NULL)
+        {
+          /* delete pid file */
+          deletePIDFile();
+        }
+
+        /* close log files */
+        if (logFile != NULL) fclose(logFile);
+        fclose(tmpLogFile);unlink(String_cString(tmpLogFileName));
+        File_delete(tmpLogFileName,FALSE);
+
+        /* free resources */
+        CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
+        doneAll();
+        #ifndef NDEBUG
+          Array_debug();
+          String_debug();
+          String_debugDone();
+        #endif /* not NDEBUG */
+
+        switch (error)
+        {
+          case ERROR_NONE:
+            return EXITCODE_OK;
+            break;
+          case ERROR_INVALID_ARGUMENT:
+            return EXITCODE_INVALID_ARGUMENT;
+            break;
+          case ERROR_CONFIG:
+            return EXITCODE_CONFIG_ERROR;
+          case ERROR_FUNCTION_NOT_SUPPORTED:
+            return EXITCODE_FUNCTION_NOT_SUPPORTED;
+            break;
+          default:
+            return EXITCODE_FAIL;
+            break;
+        }
+      }
+      else
+      {
+        error = ERROR_DAEMON_FAIL;
+      }
+    }
+    else
+    {
+      if (pidFileName != NULL)
+      {
+        /* create pid file */
+        error = createPIDFile();
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,Errors_getText(error));
+        }
+      }
+
+      if (error == ERROR_NONE)
+      {
+        /* run server (not detached) */
         error = Server_run(serverPort,
                            serverTLSPort,
                            serverCAFileName,
@@ -2307,28 +2423,18 @@ int main(int argc, const char *argv[])
                            &jobOptions
                           );
       }
-      else
-      {
-        error = ERROR_DAEMON_FAIL;
-      }
-    }
-    else
-    {
-      /* not detached */
-      error = Server_run(serverPort,
-                         serverTLSPort,
-                         serverCAFileName,
-                         serverCertFileName,
-                         serverKeyFileName,
-                         serverPassword,
-                         serverJobsDirectory,
-                         &jobOptions
-                        );
 
+      if (pidFileName != NULL)
+      {
+        /* delete pid file */
+        deletePIDFile();
+      }
     }
   }
   else if (batchFlag)
   {
+    globalOptions.runMode = RUN_MODE_BATCH;
+
     /* batch mode -> run server with standard i/o */
     error = Server_batch(STDIN_FILENO,
                          STDOUT_FILENO
@@ -2336,6 +2442,8 @@ int main(int argc, const char *argv[])
   }
   else
   {
+    globalOptions.runMode = RUN_MODE_INTERACTIVE;
+
     switch (command)
     {
       case COMMAND_CREATE:
@@ -2552,14 +2660,6 @@ int main(int argc, const char *argv[])
   if (logFile != NULL) fclose(logFile);
   fclose(tmpLogFile);unlink(String_cString(tmpLogFileName));
   File_delete(tmpLogFileName,FALSE);
-
-  /* delete pid file */
-  if (pidFileName != NULL)
-  {
-    fileName = String_newCString(pidFileName);
-    File_delete(fileName,FALSE);
-    String_delete(fileName);
-  }
 
   /* free resources */
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
