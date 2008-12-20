@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -47,6 +47,14 @@ typedef enum
 
   EXITCODE_UNKNOWN=128
 } ExitCodes;
+
+/* run modes */
+typedef enum
+{
+  RUN_MODE_INTERACTIVE,
+  RUN_MODE_BATCH,
+  RUN_MODE_SERVER,
+} RunModes;
 
 /* log types */
 typedef enum
@@ -186,6 +194,8 @@ typedef struct
 /* global options */
 typedef struct
 {
+  RunModes               runMode;
+
   const char             *barExecutable;               // name of BAR executable
 
   uint                   niceLevel;
@@ -217,9 +227,13 @@ typedef struct
   const DeviceList       *deviceList;                  // list with devices
   Device                 defaultDevice;                // default device
 
-  bool                   noDefaultConfigFlag;          // do not read default config
-  bool                   longFormatFlag;
-  bool                   quietFlag;
+  bool                   groupFlag;                    // TRUE iff entries in list should be grouped
+  bool                   allFlag;                      // TRUE iff all entries should be listed/restored
+  bool                   longFormatFlag;               // TRUE iff long format list
+  bool                   noHeaderFooterFlag;           // TRUE iff no header/footer should be printed in list
+
+  bool                   noDefaultConfigFlag;          // TRUE iff default config should not be read 
+  bool                   quietFlag;                    // TRUE iff suppress any output
   long                   verboseLevel;
 } GlobalOptions;
 

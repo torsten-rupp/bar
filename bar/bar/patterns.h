@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patterns.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -29,6 +29,10 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+#define PATTERN_CHAR_SET_GLOB           "?*"
+#define PATTERN_CHAR_SET_REGEX          "*+?{}():[].^$|"
+#define PATTERN_CHAR_SET_EXTENDED_REGEX "*+?{}():[].^$|"
 
 /* pattern types */
 typedef enum
