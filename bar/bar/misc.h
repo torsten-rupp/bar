@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -58,8 +58,8 @@ typedef enum
 /* text macro definitions */
 typedef enum
 {
-  TEXT_MACRO_TYPE_INT,
-  TEXT_MACRO_TYPE_INT64,
+  TEXT_MACRO_TYPE_INTEGER,
+  TEXT_MACRO_TYPE_INTEGER64,
   TEXT_MACRO_TYPE_CSTRING,
   TEXT_MACRO_TYPE_STRING,
 } TextMacroTypes;
@@ -68,10 +68,13 @@ typedef struct
 {
   TextMacroTypes type;
   const char     *name;
-  int            i;
-  int64          l;
-  const char     *s;
-  String         string;
+  struct
+  {
+    int            i;
+    int64          l;
+    const char     *s;
+    String         string;
+  } value;
 } TextMacro;
 
 typedef void(*ExecuteIOFunction)(void         *userData,
@@ -98,29 +101,54 @@ typedef struct
 
 /****************************** Macros *********************************/
 
-#define TEXT_MACRO_INT(macro,_name,value) \
+#define TEXT_MACRO_INTEGER(name,value) \
+  { \
+    TEXT_MACRO_TYPE_INTEGER, \
+    name, \
+    {value,0LL,NULL,NULL} \
+  }
+#define TEXT_MACRO_INTEGER64(name,value) \
+  { \
+    TEXT_MACRO_TYPE_INTEGER64, \
+    name, \
+    {0,value,NULL,NULL} \
+  }
+#define TEXT_MACRO_CSTRING(name,value) \
+  { \
+    TEXT_MACRO_TYPE_CSTRING, \
+    name, \
+    {0,0LL,value,NULL} \
+  }
+#define TEXT_MACRO_STRING(name,value) \
+  { \
+    TEXT_MACRO_TYPE_STRING, \
+    name, \
+    {0,0LL,NULL,value} \
+  }
+
+#define TEXT_MACRO_N_INTEGER(macro,_name,_value) \
   do { \
-    macro.type   = TEXT_MACRO_TYPE_INT; \
-    macro.name   = _name; \
-    macro.i      = value; \
+    macro.type    = TEXT_MACRO_TYPE_INTEGER; \
+    macro.name    = _name; \
+    macro.value.i = _value; \
   } while (0)
-#define TEXT_MACRO_INT64(macro,_name,value) \
+#define TEXT_MACRO_N_INTEGER64(macro,_name,_value) \
   do { \
-    macro.type   = TEXT_MACRO_TYPE_INT64; \
-    macro.name   = _name; \
-    macro.l      = value; \
+    macro.type    = TEXT_MACRO_TYPE_INTEGER64; \
+    macro.name    = _name; \
+    macro.value.l = _value; \
   } while (0)
-#define TEXT_MACRO_CSTRING(macro,_name,value) \
+#define TEXT_MACRO_N_CSTRING(macro,_name,_value) \
   do { \
-    macro.type   = TEXT_MACRO_TYPE_CSTRING; \
-    macro.name   = _name; \
-    macro.s      = value; \
+    macro.type    = TEXT_MACRO_TYPE_CSTRING; \
+    macro.name    = _name; \
+    macro.value.s = _value; \
   } while (0)
-#define TEXT_MACRO_STRING(macro,_name,value) \
+#define TEXT_MACRO_N_STRING(macro,_name,_value) \
   do { \
-    macro.type   = TEXT_MACRO_TYPE_STRING; \
-    macro.name   = _name; \
-    macro.string = value; \
+    macro.type         = TEXT_MACRO_TYPE_STRING; \
+    macro.name         = _name; \
+    macro.value.string = _value; \
   } while (0)
 
 /***************************** Forwards ********************************/
@@ -227,22 +255,22 @@ void Misc_udelay(uint64 time);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : Misc_expandMacros
-* Purpose: expand macros %... in string
+* Name   : Misc_expandMacrosCString
+* Purpose: expand macros %<name>:<format> in string
 * Input  : string     - string variable
 *          template   - string with macros
 *          macros     - array with macro definitions
 *          macroCount - number of macro definitions
 * Output : s - string with expanded macros
-* Return : -
+* Return : expanded string
 * Notes  : -
 \***********************************************************************/
 
-void Misc_expandMacros(String          string,
-                       const String    template,
-                       const TextMacro macros[],
-                       uint            macroCount
-                      );
+String Misc_expandMacros(String          string,
+                         const char      *template,
+                         const TextMacro macros[],
+                         uint            macroCount
+                        );
 
 /*---------------------------------------------------------------------*/
 

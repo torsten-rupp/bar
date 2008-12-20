@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -236,55 +236,123 @@ void Misc_udelay(uint64 time)
 
 /*---------------------------------------------------------------------*/
 
-void Misc_expandMacros(String          string,
-                       const String    template,
-                       const TextMacro macros[],
-                       uint            macroCount
-                      )
+String Misc_expandMacros(String          string,
+                         const char      *template,
+                         const TextMacro macros[],
+                         uint            macroCount
+                        )
 {
-  long i0,i1;
-  long i;
-  int  iz,z;
-  char buffer[128];
+  long       templateLength;
+  long       i0,i1;
+  int        index;
+  long       i;
+  const char *s;
+  int        z;
+  char       format[128];
 
+  assert(template != NULL);
   assert((macroCount == 0) || (macros != NULL));
+
+  templateLength = strlen(template);
 
   String_clear(string);
   i0 = 0;
   do
   {
     /* find next macro */
-    iz = -1;
-    i1 = -1;
+    i1    = -1;
+    index = -1;
     for (z = 0; z < macroCount; z++)
     {
-      i = String_findCString(template,i0,macros[z].name);
-      if ((i >= 0) && ((i1 < 0) || (i < i1)))
+      s = strstr(&template[i0],macros[z].name);
+      if (s != NULL)
       {
-        iz = z;
-        i1 = i;
+        i = (long)(s-template);
+        if ((i1 < 0) || (i < i1))
+        {
+          i1    = i;
+          index = z;
+        }
       }
     }
 
     /* expand macro */
-    if (iz >= 0)
+    if (index >= 0)
     {
-      String_appendSub(string,template,i0,i1-i0);
-      switch (macros[iz].type)
+      /* add prefix string */
+      String_appendBuffer(string,&template[i0],i1-i0);
+      i0 = i1+strlen(macros[index].name);
+
+      /* find format string (if any) */
+      if ((i0 < templateLength) && (template[i0] == ':'))
       {
-        case TEXT_MACRO_TYPE_INT:
-          snprintf(buffer,sizeof(buffer)-1,"%d",macros[iz].i); buffer[sizeof(buffer)-1] = '\0';
-          String_appendCString(string,buffer);
+        /* skip ':' */
+        i0++;
+
+        /* get format string */
+        i = 0;
+        format[i] = '%'; i++;
+        while (   (i0 < templateLength)
+               && (   isdigit(template[i0])
+                   || (template[i0] == '-')
+                   || (template[i0] == '.')
+                  )
+              )
+        {
+          if (i < sizeof(format)-1)
+          {
+            format[i] = template[i0]; i++;
+          }
+          i0++;
+        }
+        if (i0 < templateLength)
+        {
+          if (i < sizeof(format)-1)
+          {
+            format[i] = template[i0]; i++;
+          }
+          i0++;
+        }
+        format[i] = '\0';
+      }
+      else
+      {
+        /* predefined format string */
+        switch (macros[index].type)
+        {
+          case TEXT_MACRO_TYPE_INTEGER:
+            strcpy(format,"%d");
+            break;
+          case TEXT_MACRO_TYPE_INTEGER64:
+            strcpy(format,"%lld");
+            break;
+          case TEXT_MACRO_TYPE_CSTRING:
+            strcpy(format,"%s");
+            break;
+          case TEXT_MACRO_TYPE_STRING:
+            strcpy(format,"%S");
+            break;
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; /* not reached */
+          #endif /* NDEBUG */
+        }
+      }
+      
+      switch (macros[index].type)
+      {
+        case TEXT_MACRO_TYPE_INTEGER:
+          String_format(string,format,macros[index].value.i);
           break;
-        case TEXT_MACRO_TYPE_INT64:
-          snprintf(buffer,sizeof(buffer)-1,"%lld",macros[iz].l); buffer[sizeof(buffer)-1] = '\0';
-          String_appendCString(string,buffer);
+        case TEXT_MACRO_TYPE_INTEGER64:
+          String_format(string,format,macros[index].value.l);
           break;
         case TEXT_MACRO_TYPE_CSTRING:
-          String_appendCString(string,macros[iz].s);
+          String_format(string,format,macros[index].value.s);
           break;
         case TEXT_MACRO_TYPE_STRING:
-          String_append(string,macros[iz].string);
+          String_format(string,format,macros[index].value.string);
           break;
         #ifndef NDEBUG
           default:
@@ -292,11 +360,14 @@ void Misc_expandMacros(String          string,
             break; /* not reached */
         #endif /* NDEBUG */
       }
-      i0 = i1+strlen(macros[iz].name);
     }
   }
-  while (iz >= 0);
-  String_appendSub(string,template,i0,STRING_END);
+  while (index >= 0);
+
+  /* add postfix string */
+  String_appendBuffer(string,&template[i0],templateLength-i0);
+
+  return string;
 }
 
 /*---------------------------------------------------------------------*/
@@ -310,7 +381,6 @@ Errors Misc_executeCommand(const char        *commandTemplate,
                           )
 {
   Errors          error;
-  String          s;
   String          commandLine;
   StringTokenizer stringTokenizer;
   String          token;
@@ -337,9 +407,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
     StringList_init(&argumentList);
 
     /* expand command line */
-    s = String_newCString(commandTemplate);
-    Misc_expandMacros(commandLine,s,macros,macroCount);
-    String_delete(s);
+    Misc_expandMacros(commandLine,commandTemplate,macros,macroCount);
     printInfo(3,"Execute command '%s'...",String_cString(commandLine));
 
     /* parse command */
