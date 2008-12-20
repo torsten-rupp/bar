@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -348,33 +348,40 @@ class BARServer
         {
           throw new CommunicationError("malformed command result '"+line+"'");
         }
-        if (Integer.parseInt(data[0]) == commandId)
+        try
         {
-          // check if completed
-          if (Integer.parseInt(data[1]) != 0)
+          if (Integer.parseInt(data[0]) == commandId)
           {
-            errorCode = Integer.parseInt(data[2]);
-            if (errorCode != 0) throw new CommunicationError(data[3]+" (error: "+errorCode+")");
-            completedFlag = true;
-          }
+            // check if completed
+            if (Integer.parseInt(data[1]) != 0)
+            {
+              errorCode = Integer.parseInt(data[2]);
+              if (errorCode != 0) throw new CommunicationError(data[3]+" (error: "+errorCode+")");
+              completedFlag = true;
+            }
 
-          if (result != null)
+            if (result != null)
+            {
+              // store data
+              if      (result instanceof ArrayList)
+              {
+                ((ArrayList<String>)result).add(data[3]);
+              }
+              else if (result instanceof String[])
+              {
+                ((String[])result)[0] = data[3];
+              }
+            }
+          }
+          else
           {
-            // store data
-            if      (result instanceof ArrayList)
-            {
-              ((ArrayList<String>)result).add(data[3]);
-            }
-            else if (result instanceof String[])
-            {
-              ((String[])result)[0] = data[3];
-            }
+Dprintf.dprintf();
+            lines.add(line);
           }
         }
-        else
+        catch (NumberFormatException exception)
         {
-Dprintf.dprintf();
-          lines.add(line);
+          throw new CommunicationError("malformed command result '"+line+"'");
         }
       }
     }
