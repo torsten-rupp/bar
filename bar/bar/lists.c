@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/lists.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dynamic list functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -341,18 +341,18 @@ Node *List_getLast(void *list)
   return node;
 }
 
-const Node *List_findFirst(const void              *list,
-                           ListNodeCompareFunction listNodeCompareFunction,
-                           void                    *listNodeCompareUserData
+const Node *List_findFirst(const void             *list,
+                           ListNodeEqualsFunction listNodeEqualsFunction,
+                           void                   *listNodeEqualsUserData
                           )
 {
   Node *node;
 
   assert(list != NULL);
-  assert(listNodeCompareFunction != NULL);
+  assert(listNodeEqualsFunction != NULL);
 
   node = ((List*)list)->head;
-  while ((node != NULL) && (listNodeCompareFunction(node,listNodeCompareUserData) != 0))
+  while ((node != NULL) && (listNodeEqualsFunction(node,listNodeEqualsUserData) != 0))
   {
     node = node->next;
   }
@@ -360,27 +360,138 @@ const Node *List_findFirst(const void              *list,
   return node;
 }
 
-const Node *List_findNext(const void              *list,
-                          const void              *node,
-                          ListNodeCompareFunction listNodeCompareFunction,
-                          void                    *listNodeCompareUserData
+const Node *List_findNext(const void             *list,
+                          const void             *node,
+                          ListNodeEqualsFunction listNodeEqualsFunction,
+                          void                   *listNodeEqualsUserData
                          )
 {
   assert(list != NULL);
-  assert(listNodeCompareFunction != NULL);
+  assert(listNodeEqualsFunction != NULL);
 
   UNUSED_VARIABLE(list);
 
   if (node != NULL)
   {
     node = (((Node*)node))->next;
-    while ((node != NULL) && (listNodeCompareFunction(node,listNodeCompareUserData) != 0))
+    while ((node != NULL) && (listNodeEqualsFunction(node,listNodeEqualsUserData) != 0))
     {
       node = (((Node*)node))->next;
     }
   }
 
   return node;
+}
+
+#if 0
+void pp(void *list)
+{
+  void *node;
+
+printf("---\n");
+  node = ((List*)list)->head;
+  while (node != NULL)
+  {
+printf("%p\n",node);
+node = ((Node*)node)->next;
+  }
+}
+#endif /* 0 */
+
+void List_sort(void                    *list,
+               ListNodeCompareFunction listNodeCompareFunction,
+               void                    *listNodeCompareUserData
+              )
+{
+  List  sortedList;
+  void  *node1,*node2;
+  ulong n;
+  bool  mergedFlag;
+  ulong i;
+  ulong n1,n2;
+  void  *node;
+
+  assert(list != NULL);
+  assert(listNodeCompareFunction != NULL);
+
+//pp(list);
+
+  /* sort list with merge-sort */
+  n = 1;
+  do
+  {
+    sortedList.head = NULL;
+    sortedList.tail = NULL;
+
+    mergedFlag = FALSE;
+    node1 = ((List*)list)->head;
+    while (node1 != NULL)
+    {
+      /* find start of sub-list 2 */
+      node2 = node1;
+      for (i = 0; (i < n) && (node2 != NULL); i++)
+      {
+        node2 = ((Node*)node2)->next;
+      }
+
+      /* merge */
+      n1 = n;
+      n2 = n;
+      while (((n1 > 0) && (node1 != NULL)) || ((n2 > 0) && (node2 != NULL)))
+      {
+        /* select next node to add to sorted list */
+        if      ((n1 == 0) || (node1 == NULL))
+        {
+          /* sub-list 1 is empty -> select node from sub-list 2 */
+          node = node2; node2 = ((Node*)node2)->next; n2--;
+        }
+        else if ((n2 == 0) || (node2 == NULL))
+        {
+          /* sub-list 2 is empty -> select node from sub-list 1 */
+          node = node1; node1 = ((Node*)node1)->next; n1--;
+        }
+        else
+        {
+          /* compare nodess from sub-list 1, 2 */
+          if (listNodeCompareFunction(node1,node2,listNodeCompareUserData) < 0)
+          {
+            /* node1 < node2 -> select node1 */
+            node = node1; node1 = ((Node*)node1)->next; n1--;
+          }
+          else
+          {
+            /* node1 >= node2 -> select node2 */
+            node = node2; node2 = ((Node*)node2)->next; n2--;
+          }
+          mergedFlag = TRUE;    
+        }
+
+        /* add to list */
+        ((Node*)node)->prev = ((List*)list)->tail;
+        ((Node*)node)->next = NULL;
+        if (sortedList.head != NULL)
+        {
+          sortedList.tail->next = node;
+          sortedList.tail = node;
+        }
+        else
+        {
+          sortedList.head = node;
+          sortedList.tail = node;
+        }
+      }
+//pp(&sortedList);
+
+      /* next sub-lists */
+      node1 = node2;
+    }
+
+    /* next sub-list size */
+    ((List*)list)->head = sortedList.head;
+    ((List*)list)->tail = sortedList.tail;
+    n *= 2;
+  }
+  while (mergedFlag);
 }
 
 #ifdef __cplusplus

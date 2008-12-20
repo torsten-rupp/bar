@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/lists.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -48,8 +48,11 @@ typedef void(*ListNodeFreeFunction)(void *node, void *userData);
 /* copy list node function */
 typedef void*(*ListNodeCopyFunction)(const void *node, void *userData);
 
-/* compare list node function */
-typedef int(*ListNodeCompareFunction)(const void *node, void *userData);
+/* list node equals function */
+typedef int(*ListNodeEqualsFunction)(const void *node, void *userData);
+
+/* compare list nodes function */
+typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void *userData);
 
 /***************************** Variables *******************************/
 
@@ -329,17 +332,17 @@ Node *List_getLast(void *list);
 /***********************************************************************\
 * Name   : List_findFirst
 * Purpose: find node in list
-* Input  : list                    - list
-*          listNodeCompareFunction - compare function
-*          listNodeCompareUserData - user data for compare function
+* Input  : list                   - list
+*          listNodeEqualsFunction - equals function
+*          listNodeEqualsUserData - user data for equals function
 * Output : -
 * Return : node or NULL if not found
 * Notes  : -
 \***********************************************************************/
 
-const Node *List_findFirst(const void              *list,
-                           ListNodeCompareFunction listNodeCompareFunction,
-                           void                    *listNodeCompareUserData
+const Node *List_findFirst(const void             *list,
+                           ListNodeEqualsFunction listNodeEqualsFunction,
+                           void                   *listNodeEqualsUserData
                           );
 
 /***********************************************************************\
@@ -347,18 +350,34 @@ const Node *List_findFirst(const void              *list,
 * Purpose: find next node in list
 * Input  : list                    - list
 *          node                    - previous found node
-*          listNodeCompareFunction - compare function
-*          listNodeCompareUserData - user data for compare function
+*          listNodeEqualsFunction - equals function
+*          listNodeEqualsUserData - user data for equals function
 * Output : -
 * Return : next node or NULL if no next node found
 * Notes  : -
 \***********************************************************************/
 
-const Node *List_findNext(const void              *list,
-                          const void              *node,
-                          ListNodeCompareFunction listNodeCompareFunction,
-                          void                    *listNodeCompareUserData
+const Node *List_findNext(const void             *list,
+                          const void             *node,
+                          ListNodeEqualsFunction listNodeEqualsFunction,
+                          void                   *listNodeEqualsUserData
                          );
+
+/***********************************************************************\
+* Name   : List_sort
+* Purpose: sort list
+* Input  : list                - list
+*          listNodeCompareFunction - compare function
+*          listNodeCmpUserData - user data for compare function
+* Output : -
+* Return : -
+* Notes  : use temporary O(n) memory
+\***********************************************************************/
+
+void List_sort(void                    *list,
+               ListNodeCompareFunction listNodeCompareFunction,
+               void                    *listNodeCompareUserData
+              );
 
 #ifdef __cplusplus
   }
