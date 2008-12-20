@@ -23,6 +23,10 @@ List contents of an archive:
 
   bar -l home*.bar
 
+or simply
+
+  bar home*.bar
+
 Check archive:
 
   bar -t home*.bar
@@ -31,10 +35,14 @@ Compare contents of an archive with files:
 
   bar -d home*.bar
 
+Find most recent file in all archives:
+
+  bar -g -# '*/foo' *.bar
+
 Restore contents of an archive:
 
   bar -x home*.bar
- 
+
 3) --- Extended usage of BAR -------------------------------
 
 Note: The example commands are formated with "\" to avoid
@@ -68,7 +76,7 @@ it on server via ssh (scp):
     -c \
     --compress-algorithm=bzip9 --crypt-algorithm=AES256 \
     --archive-part-size=128M \
-    scp:myname@myserver.org/home.bar \
+    scp://myname@myserver.org/home.bar \
     /home
 
 Create an archive with compression, encryption, splitted in 128MBytes parts, store

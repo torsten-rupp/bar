@@ -25,10 +25,11 @@ A: Yes. Use option --no-storage and --create-incremental-list.
    The incremental list file is created, but no archive files
    are neither created nor stored.
 
-Q: I cannot establish a TLS/SSL connection with barcontrol.tcl.
-A: For the TLS/SSL connection in barcontrol.tcl the TclTk TLS
-   package is needed. Plese install:
-   http://downloads.sourceforge.net/tls/tls1.5.0-src.tar.gz
+Q: I cannot establish a TLS/SSL connection with barcontrol.
+A: For the TLS/SSL connection in barcontrol a TLS/SSL key
+   is required. Create that key once with "make keys" and
+   copy the keys with "make install_keys" in the appropiapted
+   directories of your system.
 
 Q: I tried to list a *.bid-file, but it does not show anything.
 A: The .bid-files are not archive files, but files with lists
@@ -36,3 +37,13 @@ A: The .bid-files are not archive files, but files with lists
    modified, delete or copy those files. The content is not
    encrypted. There is no need to e. g. storage them on an
    external server.
+
+Q: When I specify "-# /foo/" the list of included files is
+   different to "-# /foo". Why?
+A: The options values for -# and -! are patterns, not file or
+   directory names. "-# /foo/" match to everying which starts
+   wie "/foo/" including the trailing "/". If the directory
+   "/foo" contain sub-directories only those sub-directories
+   are included. If you specify "-# /foo" the directory "foo"
+   including all sub-directories and all files starting wie
+   "foo" in the directoty "/" are included.
