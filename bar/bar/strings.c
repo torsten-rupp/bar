@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -164,6 +164,117 @@ LOCAL void debugStringInit(void)
   List_init(&debugFreeStringList);
 }
 #endif /* not NDEBUG */
+
+/***********************************************************************\
+* Name   : allocString
+* Purpose: allocate a new string
+* Input  : -
+* Output : -
+* Return : allocated string or NULL on insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+LOCAL inline struct __String* allocString(void)
+{
+  struct __String *string;
+
+  string = (struct __String*)malloc(sizeof(struct __String));
+  if (string == NULL)
+  {
+    #ifdef HALT_ON_INSUFFICIENT_MEMORY
+      HALT_INSUFFICIENT_MEMORY();
+    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
+      return NULL;
+    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
+  }
+  string->data = (char*)malloc(STRING_START_LENGTH);
+  if (string->data == NULL)
+  {
+    free(string);
+    #ifdef HALT_ON_INSUFFICIENT_MEMORY
+      HALT_INSUFFICIENT_MEMORY();
+    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
+      return NULL;
+    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
+  }
+
+  string->length    = 0;
+  string->maxLength = STRING_START_LENGTH;
+  string->data[0]   = '\0';
+  #ifndef NDEBUG
+    #ifdef FILL_MEMORY
+      memset(&string->data[1],DEBUG_FILL_BYTE,STRING_START_LENGTH-1);
+    #endif /* FILL_MEMORY */
+  #endif /* not NDEBUG */
+
+  UPDATE_VALID(string);
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : deleteString
+* Purpose: delete a string
+* Input  : string - string to delete
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL inline void deleteString(struct __String *string)
+{
+  assert(string != NULL);
+  assert(string->data != NULL);
+
+  free(string->data);
+  free(string);
+}
+
+/***********************************************************************\
+* Name   : allocTmpString
+* Purpose: allocate a temporary string
+* Input  : -
+* Output : -
+* Return : allocated string or NULL on insufficient memory
+* Notes  : temporary strings are not included in list of allocated
+*          strings
+\***********************************************************************/
+
+LOCAL inline struct __String* allocTmpString(void)
+{
+  return allocString();
+}
+
+/***********************************************************************\
+* Name   : assignTmpString
+* Purpose: assign data of string to string
+* Input  : toString   - to string
+*          fromString - from strong
+* Output : -
+* Return : -
+* Notes  : fromString will become invalid after operation!
+\***********************************************************************/
+
+LOCAL inline void assignTmpString(struct __String *toString, struct __String *fromString)
+{
+  assert(toString != NULL);
+  assert(toString->data != NULL);
+  assert(fromString != NULL);
+  assert(fromString->data != NULL);
+
+  free(toString->data);
+
+  toString->length    = fromString->length;
+  toString->maxLength = fromString->maxLength;
+  toString->data      = fromString->data;
+  #ifndef NDEBUG
+    fromString->length    = 0L;
+    fromString->maxLength = 0L;
+    fromString->data      = NULL;
+  #endif /* not NDEBUG */
+
+  UPDATE_VALID(toString);
+}
 
 /***********************************************************************\
 * Name   : ensureStringLength
@@ -388,7 +499,8 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
 
 LOCAL void formatString(struct __String *string,
                         const char      *format,
-                        const va_list   arguments)
+                        const va_list   arguments
+                       )
 {
   FormatToken  formatToken;
   union
@@ -1351,6 +1463,81 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
   return factor;
 }
 
+LOCAL bool matchString(const String  string,
+                       ulong         index,
+                       const char    *pattern,
+                       String        matchedString,
+                       const va_list matchedSubStrings
+                      )
+{
+  regex_t    regex;
+  va_list    arguments;
+  String     matchedSubString;
+  uint       subMatchCount;
+  regmatch_t *subMatches;
+  bool       matchFlag;
+  uint       z;
+
+  assert(string != NULL);
+  assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
+  assert(pattern != NULL);
+
+  /* compile pattern */
+  if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
+  {
+    return FALSE;
+  }
+
+  /* count sub-patterns */
+  va_copy(arguments,matchedSubStrings);
+  subMatchCount = 1;
+  do
+  {
+    matchedSubString = (String)va_arg(arguments,void*);
+    if (matchedSubString != NULL) subMatchCount++;
+  }
+  while (matchedSubString != NULL);
+  va_end(arguments);
+
+  /* allocate sub-patterns array */
+  subMatches = (regmatch_t*)malloc(subMatchCount*sizeof(regmatch_t));
+  if (subMatches == NULL)
+  {
+    regfree(&regex);
+    return FALSE;
+  }
+
+  /* match */
+  matchFlag = (regexec(&regex,String_cString(string)+index,subMatchCount,subMatches,0) == 0);
+
+  /* get sub-matches */
+  if (matchFlag)
+  {
+    if (matchedString != NULL)
+    {
+      String_setBuffer(matchedString,&string->data[subMatches[0].rm_so],subMatches[0].rm_eo-subMatches[0].rm_so);
+    }
+
+    va_copy(arguments,matchedSubStrings);
+    for (z = 1; z < subMatchCount; z++)
+    {
+      matchedSubString = (String)va_arg(arguments,void*);
+      assert(matchedSubString != NULL);
+      if (subMatches[z].rm_so != -1)
+      {
+        String_setBuffer(matchedSubString,&string->data[subMatches[z].rm_so],subMatches[z].rm_eo-subMatches[z].rm_so);
+      }
+    }
+    va_end(arguments);
+  }
+
+  /* free resources */
+  free(subMatches);
+  regfree(&regex);
+
+  return matchFlag;
+}
+
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
@@ -1364,34 +1551,11 @@ String __String_new(const char *fileName, ulong lineNb)
     DebugStringNode *debugStringNode;;
   #endif /* not NDEBUG */
 
-  string = (struct __String*)malloc(sizeof(struct __String));
+  string = allocString();
   if (string == NULL)
   {
-    #ifdef HALT_ON_INSUFFICIENT_MEMORY
-      HALT_INSUFFICIENT_MEMORY();
-    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
-      return NULL;
-    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
+    return NULL;
   }
-  string->data = (char*)malloc(STRING_START_LENGTH);
-  if (string->data == NULL)
-  {
-    free(string);
-    #ifdef HALT_ON_INSUFFICIENT_MEMORY
-      HALT_INSUFFICIENT_MEMORY();
-    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
-      return NULL;
-    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
-  }
-
-  string->length    = 0;
-  string->maxLength = STRING_START_LENGTH;
-  string->data[0]   = '\0';
-  #ifndef NDEBUG
-    #ifdef FILL_MEMORY
-      memset(&string->data[1],DEBUG_FILL_BYTE,STRING_START_LENGTH-1);
-    #endif /* FILL_MEMORY */
-  #endif /* not NDEBUG */
 
   #ifndef NDEBUG
     pthread_once(&debugStringInitFlag,debugStringInit);
@@ -1418,7 +1582,7 @@ String __String_new(const char *fileName, ulong lineNb)
     debugStringNode->lineNb       = lineNb;
     debugStringNode->prevFileName = NULL;
     debugStringNode->prevLineNb   = 0;
-    debugStringNode->string   = string;
+    debugStringNode->string       = string;
     List_append(&debugAllocStringList,debugStringNode);
     pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
@@ -1583,6 +1747,8 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
     DebugStringNode *debugStringNode;;
   #endif /* not NDEBUG */
 
+  CHECK_VALID(string);
+
   #ifndef NDEBUG
     pthread_mutex_lock(&debugStringLock);
     debugStringNode = debugFreeStringList.head;
@@ -1605,8 +1771,6 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
     }
     pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
-
-  CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -1655,9 +1819,9 @@ String String_clear(String string)
 
     string->data[0] = '\0';
     string->length = 0;
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -1684,9 +1848,9 @@ String String_set(String string, const String sourceString)
       string->data[0] = '\0';
       string->length = 0;
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -1708,9 +1872,9 @@ String String_setCString(String string, const char *s)
       string->data[0] = '\0';
       string->length = 0;
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -1748,9 +1912,9 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength)
       string->data[0] = '\0';
       string->length = 0;
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -1791,9 +1955,9 @@ String String_sub(String string, const String fromString, ulong fromIndex, long 
       string->data[0] = '\0';
       string->length = 0;
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -1884,9 +2048,9 @@ String String_append(String string, const String appendString)
       string->data[n] = '\0';
       string->length = n;
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -1921,9 +2085,9 @@ String String_appendSub(String string, const String fromString, ulong fromIndex,
         string->length += n;
       }
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -1945,9 +2109,9 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
       string->data[n] = '\0';
       string->length = n;
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -1966,8 +2130,6 @@ String String_appendCString(String string, const char *s)
     }
   }
 
-  UPDATE_VALID(string);
-
   return string;
 }
 
@@ -1981,8 +2143,6 @@ String String_appendChar(String string, char ch)
 
     String_appendBuffer(string,&ch,1);
   }
-
-  UPDATE_VALID(string);
 
   return string;
 }
@@ -2018,9 +2178,9 @@ String String_insert(String string, ulong index, const String insertString)
         string->length = n;
       }
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -2066,9 +2226,9 @@ String String_insertSub(String string, ulong index, const String fromString, ulo
         }
       }
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -2103,9 +2263,9 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
         string->length = n;
       }
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -2124,8 +2284,6 @@ String String_insertCString(String string, ulong index, const char *s)
     }
   }
 
-  UPDATE_VALID(string);
-
   return string;
 }
 
@@ -2139,8 +2297,6 @@ String String_insertChar(String string, ulong index, char ch)
 
     String_insertBuffer(string,index,&ch,1);
   }
-
-  UPDATE_VALID(string);
 
   return string;
 }
@@ -2175,9 +2331,9 @@ String String_remove(String string, ulong index, ulong length)
       string->data[n] = '\0';
       string->length = n;
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -2190,8 +2346,6 @@ String String_replace(String string, ulong index, ulong length, const String ins
   String_remove(string,index,length);
   String_insert(string,index,insertString);
 
-  UPDATE_VALID(string);
-
   return string;
 }
 
@@ -2201,8 +2355,6 @@ String String_replaceBuffer(String string, ulong index, ulong length, const char
 
   String_remove(string,index,length);
   String_insertBuffer(string,index,buffer,bufferLength);
-
-  UPDATE_VALID(string);
 
   return string;
 }
@@ -2214,8 +2366,6 @@ String String_replaceCString(String string, ulong index, ulong length, const cha
   String_remove(string,index,length);
   String_insertCString(string,index,s);
 
-  UPDATE_VALID(string);
-
   return string;
 }
 
@@ -2225,8 +2375,6 @@ String String_replaceChar(String string, ulong index, ulong length, char ch)
 
   String_remove(string,index,length);
   String_insertChar(string,index,ch);
-
-  UPDATE_VALID(string);
 
   return string;
 }
@@ -2724,12 +2872,14 @@ long String_findLastChar(const String string, long index, char ch)
   return (i >= 0)?i:-1;
 }
 
-String String_iterate(const                 String string,
+String String_iterate(                      String string,
                       StringIterateFunction stringIterateFunction,
                       void                  *stringIterateUserData
                      )
 {
-  ulong z;
+  ulong      z;
+  const char *s;
+  ulong      n;
 
   assert(stringIterateFunction != NULL);
 
@@ -2739,13 +2889,29 @@ String String_iterate(const                 String string,
   {
     assert(string->data != NULL);
 
-    for (z = 0; z < string->length; z++)
+    z = 0;
+    while (z < string->length)
     {
-      string->data[z] = stringIterateFunction(stringIterateUserData,string->data[z]);
-    }
-  }
+      s = stringIterateFunction(stringIterateUserData,string->data[z]);
+      if (s != NULL)
+      {
+        n = strlen(s);
+        ensureStringLength(string,string->length+n-1);
+        memmove(&string->data[z+n],&string->data[z+1],string->length-(z+1));
+        memcpy(&string->data[z],s,n);
+        string->data[string->length+n-1] = '\0';
+        string->length += n-1;
 
-  UPDATE_VALID(string);
+        z += n;
+      }
+      else
+      {
+        z += 1;
+      }
+    }
+
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -2764,9 +2930,9 @@ String String_toLower(String string)
     {
       string->data[z] = tolower(string->data[z]);
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -2785,9 +2951,9 @@ String String_toUpper(String string)
     {
       string->data[z] = toupper(string->data[z]);
     }
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -2798,8 +2964,6 @@ String String_trim(String string, const char *chars)
 
   String_trimRight(string,chars);
   String_trimLeft(string,chars);
-
-  UPDATE_VALID(string);
 
   return string;
 }
@@ -2821,9 +2985,9 @@ String String_trimRight(String string, const char *chars)
     }
     string->data[n] = '\0';
     string->length = n;
-  }
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -2850,9 +3014,71 @@ String String_trimLeft(String string, const char *chars)
       string->data[n] = '\0';
       string->length = n;
     }
+
+    UPDATE_VALID(string);
   }
 
-  UPDATE_VALID(string);
+  return string;
+}
+
+String String_escape(String string, const char *chars, char escapeChar)
+{
+  String s;
+  ulong  z;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    s = allocTmpString();
+    for (z = 0; z < string->length; z++)
+    {
+      if ((string->data[z] == escapeChar) || ((chars != NULL) && (strchr(chars,string->data[z]) != NULL)))
+      {
+        String_appendChar(s,escapeChar);
+      }
+      String_appendChar(s,string->data[z]);
+    }
+    assignTmpString(string,s);
+  }
+
+  return string;
+}
+
+String String_unescape(String string, char escapeChar)
+{
+  String s;
+  ulong  z;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    s = allocTmpString();
+    z = 0;
+    while (z < string->length)
+    {
+      if (string->data[z] == escapeChar)
+      {
+        z++;
+        if (z < string->length)
+        {
+          String_appendChar(s,string->data[z]);
+          z++;
+        }
+      }
+      else
+      {
+        String_appendChar(s,string->data[z]);
+      }
+      z++;
+    }
+    assignTmpString(string,s);
+  }
 
   return string;
 }
@@ -2868,25 +3094,18 @@ String String_quote(String string, char quoteChar)
   {
     assert(string->data != NULL);
 
-    s = String_new();
+    s = allocTmpString();
     String_appendChar(s,quoteChar);
-    z = 0;
-    while (z < string->length)
+    for (z = 0; z < string->length; z++)
     {
       if (string->data[z] == quoteChar)
       {
         String_appendChar(s,'\\');
-        String_appendChar(s,quoteChar);
       }
-      else
-      {
-        String_appendChar(s,string->data[z]);
-      }
-      z++;
+      String_appendChar(s,string->data[z]);
     }
     String_appendChar(s,quoteChar);
-    String_set(string,s);
-    String_delete(s);
+    assignTmpString(string,s);
   }
 
   return string;
@@ -2912,23 +3131,27 @@ String String_unquote(String string, const char *quoteChars)
       if ((t0 != NULL) && (t1 != NULL) && ((*t0) == (*t1)))
       {
         quoteChar = (*t0);
-        s = String_new();
+
+        s = allocTmpString();
         z = 1;
         while (z < string->length-1)
         {
-          if      ((z < string->length-2) && (string->data[z+0] == '\\') && (string->data[z+1] == quoteChar))
+          if (string->data[z] == quoteChar)
           {
-            String_appendChar(s,quoteChar);
-            z+=2;
+            z++;
+            if (z < string->length-1)
+            {
+              String_appendChar(s,string->data[z]);
+              z++;
+            }
           }
           else
           {
             String_appendChar(s,string->data[z]);
-            z+=1;
           }
+          z++;
         }
-        String_set(string,s);
-        String_delete(s);
+        assignTmpString(string,s);
       }
     }
   }
@@ -2944,16 +3167,19 @@ String String_padRight(String string, ulong length, char ch)
 
   CHECK_VALID(string);
 
-  if (string->length < length)
+  if (string != NULL)
   {
-    n = length-string->length;
-    ensureStringLength(string,length);
-    memset(&string->data[string->length],ch,n);
-    string->data[length] = '\0';
-    string->length = length;
-  }
+    if (string->length < length)
+    {
+      n = length-string->length;
+      ensureStringLength(string,length);
+      memset(&string->data[string->length],ch,n);
+      string->data[length] = '\0';
+      string->length = length;
 
-  UPDATE_VALID(string);
+      UPDATE_VALID(string);
+    }
+  }
 
   return string;
 }
@@ -2966,17 +3192,37 @@ String String_padLeft(String string, ulong length, char ch)
 
   CHECK_VALID(string);
 
-  if (string->length < length)
+  if (string != NULL)
   {
-    n = length-string->length;
-    ensureStringLength(string,length);
-    memmove(&string->data[n],&string->data[0],string->length);
-    memset(&string->data[0],ch,n);
-    string->data[length] = '\0';
-    string->length = length;
+    if (string->length < length)
+    {
+      n = length-string->length;
+      ensureStringLength(string,length);
+      memmove(&string->data[n],&string->data[0],string->length);
+      memset(&string->data[0],ch,n);
+      string->data[length] = '\0';
+      string->length = length;
+
+      UPDATE_VALID(string);
+    }
   }
 
-  UPDATE_VALID(string);
+  return string;
+}
+
+String String_fillChar(String string, ulong length, char ch)
+{
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    ensureStringLength(string,length);
+    memset(&string->data[0],ch,length);
+    string->data[length] = '\0';
+    string->length = length;
+
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -2990,11 +3236,14 @@ String String_format(String string, const char *format, ...)
 
   CHECK_VALID(string);
 
-  va_start(arguments,format);
-  formatString(string,format,arguments);
-  va_end(arguments);
+  if (string != NULL)
+  {
+    va_start(arguments,format);
+    formatString(string,format,arguments);
+    va_end(arguments);
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -3006,9 +3255,12 @@ String String_vformat(String string, const char *format, va_list arguments)
 
   CHECK_VALID(string);
 
-  formatString(string,format,arguments);
+  if (string != NULL)
+  {
+    formatString(string,format,arguments);
 
-  UPDATE_VALID(string);
+    UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -3181,74 +3433,26 @@ bool String_parse(const String string, ulong index, const char *format, ulong *n
   return result;
 }
 
-bool String_match(const String string, ulong index, const char *pattern, String matchString, ...)
+bool String_match(const String string, ulong index, const String pattern, String matchedString, ...)
 {
-  String     subPattern;
-  regex_t    regex;
-  va_list    arguments;
-  uint       subPatternCount;
-  regmatch_t *subPatterns;
-  bool       matchFlag;
-  uint       z;
+  va_list arguments;
+  bool    matchFlag;
 
-  assert(string != NULL);
-  assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
-  assert(pattern != NULL);
-
-  /* compile pattern */
-  if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
-  {
-    return FALSE;
-  }
-
-  /* count sub-patterns */
-  subPatternCount = 1;
-  va_start(arguments,matchString);
-  do
-  {
-    subPattern = (String)va_arg(arguments,void*);
-    if (subPattern != NULL) subPatternCount++;
-  }
-  while (subPattern != NULL);
+  va_start(arguments,matchedString);
+  matchFlag = matchString(string,index,String_cString(pattern),matchedString,arguments);
   va_end(arguments);
 
-  /* allocate sub-patterns array */
-  subPatterns = (regmatch_t*)malloc(subPatternCount*sizeof(regmatch_t));
-  if (subPatterns == NULL)
-  {
-    regfree(&regex);
-    return FALSE;
-  }
+  return matchFlag;
+}
 
-  /* match */
-  matchFlag = (regexec(&regex,String_cString(string)+index,subPatternCount,subPatterns,0) == 0);
+bool String_matchCString(const String string, ulong index, const char *pattern, String matchedString, ...)
+{
+  va_list arguments;
+  bool    matchFlag;
 
-  /* get sub-patterns */
-  if (matchFlag)
-  {
-    if (matchString != NULL)
-    {
-      String_setBuffer(subPattern,&string->data[subPatterns[0].rm_so],subPatterns[0].rm_eo-subPatterns[0].rm_so);
-    }
-
-    z = 1;
-    va_start(arguments,matchString);
-    do
-    {
-      subPattern = (String)va_arg(arguments,void*);
-      if ((subPattern != NULL) && (subPatterns[z].rm_so != -1))
-      {
-        String_setBuffer(subPattern,&string->data[subPatterns[z].rm_so],subPatterns[z].rm_eo-subPatterns[z].rm_so);
-      }
-      z++;
-    }
-    while (subPattern != NULL);
-    va_end(arguments);
-  }
-
-  /* free resources */
-  free(subPatterns);
-  regfree(&regex);
+  va_start(arguments,matchedString);
+  matchFlag = matchString(string,index,pattern,matchedString,arguments);
+  va_end(arguments);
 
   return matchFlag;
 }

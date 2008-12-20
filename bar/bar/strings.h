@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -49,7 +49,7 @@ typedef struct
 
 /* comparison, iteration functions */
 typedef int(*StringCompareFunction)(void *userData, char ch1, char ch2);
-typedef char(*StringIterateFunction)(void *userData, char ch);
+typedef const char*(*StringIterateFunction)(void *userData, char ch);
 
 typedef struct
 {
@@ -198,8 +198,8 @@ char *String_subCString(char *s, const String fromString, ulong index, long leng
 char *String_subBuffer(char *buffer, const String fromString, ulong index, long length);
 
 /***********************************************************************\
-* Name   : String_append, String_appendSub, String_appendCString,
-*          String_appendChar
+* Name   : String_append, String_appendSub, String_appendBuffer,
+*          String_appendCString, String_appendChar
 * Purpose: append to string
 * Input  : string                - string
 *          appendString/s/buffer - string to append
@@ -319,7 +319,7 @@ const char *String_cString(const String string);
 * Name   : String_compare
 * Purpose: compare two strings
 * Input  : string1,string2       - strings to compare
-*          stringCompareFunction - string compare function
+*          stringCompareFunction - string compare function (can be NULL)
 *          stringCompareUserData - user data for compare function
 * Output : -
 * Return : -1 if string1 <  string2
@@ -399,10 +399,11 @@ long String_findLastChar(const String string, long index, char ch);
 *          stringIterateUserData - user data for iterator function
 * Output : -
 * Return : string
-* Notes  : -
+* Notes  : Note: returned string of iterate function replaces character
+*          in string
 \***********************************************************************/
 
-String String_iterate(const String          string,
+String String_iterate(String                string,
                       StringIterateFunction stringIterateFunction,
                       void                  *stringIterateUserData
                      );
@@ -434,6 +435,31 @@ String String_trimRight(String string, const char *chars);
 String String_trimLeft(String string, const char *chars);
 
 /***********************************************************************\
+* Name   : String_escape
+* Purpose: escape string
+* Input  : string     - string variable
+*          chars      - characters to escape
+*          escapeChar - escape char
+* Output : -
+* Return : escaped string
+* Notes  : -
+\***********************************************************************/
+
+String String_escape(String string, const char *chars, char escapeChar);
+
+/***********************************************************************\
+* Name   : String_unescape
+* Purpose: unescape string
+* Input  : string     - string variable
+*          escapeChar - escape char
+* Output : -
+* Return : unescaped string
+* Notes  : -
+\***********************************************************************/
+
+String String_unescape(String string, char escapeChar);
+
+/***********************************************************************\
 * Name   : String_quote, String_unquote
 * Purpose: quote/unquote string
 * Input  : string     - string
@@ -441,7 +467,8 @@ String String_trimLeft(String string, const char *chars);
 *          quoteChars - quote characters to remove
 * Output : -
 * Return : quoted/unquoted string
-* Notes  : -
+* Notes  : add quote character and escape enclosed quote characters if
+*          needed
 \***********************************************************************/
 
 String String_quote(String string, char quoteChar);
@@ -460,6 +487,20 @@ String String_unquote(String string, const char *quoteChars);
 
 String String_padRight(String string, ulong length, char ch);
 String String_padLeft(String string, ulong length, char ch);
+
+/***********************************************************************\
+* Name   : String_fill
+* Purpose: fill string with character
+* Input  : string - string
+*          length - length to fill
+*          ch     - fill char
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+//String String_fillString(String string, ulong length, char ch);
+String String_fillChar(String string, ulong length, char ch);
 
 /***********************************************************************\
 * Name   : String_format, String String_vformat
@@ -556,7 +597,7 @@ bool String_scan(const String string, ulong index, const char *format, ...);
 bool String_parse(const String string, ulong index, const char *format, ulong *nextIndex, ...);
 
 /***********************************************************************\
-* Name   : String_match
+* Name   : String_match, String_matchCString
 * Purpose: match string pattern
 * Input  : string      - string
 *          pattern     - pattern
@@ -568,7 +609,8 @@ bool String_parse(const String string, ulong index, const char *format, ulong *n
 * Notes  : -
 \***********************************************************************/
 
-bool String_match(const String string, ulong index, const char *pattern, String matchString, ...);
+bool String_match(const String string, ulong index, const String pattern, String matchString, ...);
+bool String_matchCString(const String string, ulong index, const char *pattern, String matchString, ...);
 
 /***********************************************************************\
 * Name   : String_toInteger, String_toInteger64, String_toDouble,
