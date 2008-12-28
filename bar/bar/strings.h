@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -535,6 +535,7 @@ String String_vformat(String string, const char *format, va_list arguments);
 
 void String_initTokenizer(StringTokenizer *stringTokenizer,
                           const String    string,
+                          ulong           index,
                           const char      *separatorChars,
                           const char      *stringQuotes,
                           bool            skipEmptyTokens
@@ -600,6 +601,7 @@ bool String_parse(const String string, ulong index, const char *format, ulong *n
 * Name   : String_match, String_matchCString
 * Purpose: match string pattern
 * Input  : string      - string
+*          index       - start index in string
 *          pattern     - pattern
 *          matchString - regular expression match string
 *          ...         - optional sub-patterns (strings), last value
@@ -619,7 +621,7 @@ bool String_matchCString(const String string, ulong index, const char *pattern, 
 *          string (string without enclosing quotes ' or ")
 * Input  : string                   - string variable (for string)
 *          convertString            - string to convert
-*          index                    - start index
+*          index                    - start index in convertString
 *          stringUnits              - string units (for integer, double)
 *          stringUnitCount          - number of string units (for
 *                                     integer, double)

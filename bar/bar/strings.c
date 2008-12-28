@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -331,8 +331,8 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
       formatToken->token[formatToken->length] = ch; formatToken->length++; \
     } while (0)
 
-  assert(format!=NULL);
-  assert(formatToken!=NULL);
+  assert(format != NULL);
+  assert(formatToken != NULL);
 
   formatToken->length           = 0;
   formatToken->alternateFlag    = FALSE;
@@ -346,16 +346,18 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   formatToken->quoteChar        = '\0';
 
   /* format start character */
-  assert((*format)=='%');
+  assert((*format) == '%');
   ADD_CHAR(formatToken,(*format));
   format++;
 
   /* flags */
-  while (   ((*format) == '#')
-         || ((*format) == '0')
-         || ((*format) == '-')
-         || ((*format) == ' ')
-         || ((*format) == '+')
+  while (   ((*format) != '\0')
+         && (   ((*format) == '#')
+             || ((*format) == '0')
+             || ((*format) == '-')
+             || ((*format) == ' ')
+             || ((*format) == '+')
+            )
         )
   {
     ADD_CHAR(formatToken,(*format));
@@ -376,7 +378,9 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   }
 
   /* width, precision */
-  while (isdigit((int)(*format)))
+  while (   ((*format) != '\0')
+         && isdigit((int)(*format))
+        )
   {
     ADD_CHAR(formatToken,(*format));
 
@@ -385,7 +389,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   }
 
   /* precision */
-  if ((*format) == '.')
+  if (((*format) != '\0') && ((*format) == '.'))
   {
     ADD_CHAR(formatToken,(*format));
     format++;
@@ -399,85 +403,91 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   }
 
   /* quoting character */
-  if ((*(format+1) == 's') || (*((format+1)) == 'S'))
+  if (((*format) != '\0') && ((*(format+1) == 's') || (*((format+1)) == 'S')))
   {
     formatToken->quoteChar = (*format);
     format++;
   }
 
   /* length modifier */
-  if      (((*format) == 'h') && (*((format+1)) == 'h'))
+  if ((*format) != '\0')
   {
-    ADD_CHAR(formatToken,(*(format+0)));
-    ADD_CHAR(formatToken,(*(format+1)));
+    if      (((*format) == 'h') && (*((format+1)) == 'h'))
+    {
+      ADD_CHAR(formatToken,(*(format+0)));
+      ADD_CHAR(formatToken,(*(format+1)));
 
-    formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-    format+=2;
-  }
-  else if ((*format) == 'h')
-  {
-    ADD_CHAR(formatToken,(*format));
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
+      format+=2;
+    }
+    else if ((*format) == 'h')
+    {
+      ADD_CHAR(formatToken,(*format));
 
-    formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-    format++;
-  }
-  else if (((*format) == 'l') && (*((format+1)) == 'l'))
-  {
-    ADD_CHAR(formatToken,(*(format+0)));
-    ADD_CHAR(formatToken,(*(format+1)));
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
+      format++;
+    }
+    else if (((*format) == 'l') && (*((format+1)) == 'l'))
+    {
+      ADD_CHAR(formatToken,(*(format+0)));
+      ADD_CHAR(formatToken,(*(format+1)));
 
-    formatToken->lengthType = FORMAT_LENGTH_TYPE_LONGLONG;
-    format+=2;
-  }
-  else if ((*format) == 'l')
-  {
-    ADD_CHAR(formatToken,(*format));
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_LONGLONG;
+      format+=2;
+    }
+    else if ((*format) == 'l')
+    {
+      ADD_CHAR(formatToken,(*format));
 
-    formatToken->lengthType = FORMAT_LENGTH_TYPE_LONG;
-    format++;
-  }
-  else if ((*format) == 'q')
-  {
-    ADD_CHAR(formatToken,(*format));
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_LONG;
+      format++;
+    }
+    else if ((*format) == 'q')
+    {
+      ADD_CHAR(formatToken,(*format));
 
-    formatToken->lengthType = FORMAT_LENGTH_TYPE_QUAD;
-    format++;
-  }
-  else if ((*format) == 'j')
-  {
-    ADD_CHAR(formatToken,(*format));
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_QUAD;
+      format++;
+    }
+    else if ((*format) == 'j')
+    {
+      ADD_CHAR(formatToken,(*format));
 
-    formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-    format++;
-  }
-  else if ((*format) == 'z')
-  {
-    ADD_CHAR(formatToken,(*format));
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
+      format++;
+    }
+    else if ((*format) == 'z')
+    {
+      ADD_CHAR(formatToken,(*format));
 
-    formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-    format++;
-  }
-  else if ((*format) == 't')
-  {
-    ADD_CHAR(formatToken,(*format));
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
+      format++;
+    }
+    else if ((*format) == 't')
+    {
+      ADD_CHAR(formatToken,(*format));
 
-    formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-    format++;
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
+      format++;
+    }
   }
 
   /* conversion character */
-  switch (*format)
+  if ((*format) != '\0')
   {
-    case 'S':
-      ADD_CHAR(formatToken,'s');
-      formatToken->conversionChar = 'S';
-      break;
-    default:
-      ADD_CHAR(formatToken,(*format));
-      formatToken->conversionChar = (*format);
-      break;
+    switch (*format)
+    {
+      case 'S':
+        ADD_CHAR(formatToken,'s');
+        formatToken->conversionChar = 'S';
+        break;
+      default:
+        ADD_CHAR(formatToken,(*format));
+        formatToken->conversionChar = (*format);
+        break;
+    }
+    format++;
   }
-  format++;
 
   ADD_CHAR(formatToken,'\0');
   
@@ -511,6 +521,7 @@ LOCAL void formatString(struct __String *string,
     unsigned int       ui;
     unsigned long      ul;
     unsigned long long ull;
+    float              f;
     double             d;
     const char         *s;
     void               *p;
@@ -691,18 +702,36 @@ LOCAL void formatString(struct __String *string,
         case 'G':
         case 'a':
         case 'A':
-          data.d = va_arg(arguments,double);
-          length = snprintf(buffer,sizeof(buffer),formatToken.token,data.d);
-          if (length < sizeof(buffer))
+          switch (formatToken.lengthType)
           {
-            String_appendCString(string,buffer);
-          }
-          else
-          {
-            ensureStringLength(string,string->length+length);
-            snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
-            string->length += length; 
-            UPDATE_VALID(string);
+            case FORMAT_LENGTH_TYPE_INTEGER:
+            case FORMAT_LENGTH_TYPE_LONG:
+              {
+                data.d = va_arg(arguments,double);
+                length = snprintf(buffer,sizeof(buffer),formatToken.token,data.d);
+                if (length < sizeof(buffer))
+                {
+                  String_appendCString(string,buffer);
+                }
+                else
+                {
+                  ensureStringLength(string,string->length+length);
+                  snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
+                  string->length += length; 
+                  UPDATE_VALID(string);
+                }
+              }
+              break;
+            case FORMAT_LENGTH_TYPE_LONGLONG:
+              {
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+              }
+              break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
           }
           break;
         case 's':
@@ -905,6 +934,7 @@ LOCAL bool parseString(const struct __String *string,
     int             *i;
     long int        *l;
     long long int   *ll;
+    float           *f;
     double          *d;
     char            *c;
     char            *s;
@@ -933,162 +963,27 @@ LOCAL bool parseString(const struct __String *string,
       index++;
     }
 
-    if ((*format) == '%')
+    if ((*format) != '\0')
     {
-      /* get format token */
-      format = parseNextFormatToken(format,&formatToken);
-
-      /* parse string and store values */
-      switch (formatToken.conversionChar)
+      if ((*format) == '%')
       {
-        case 'i':
-        case 'd':
-        case 'u':
-          /* get data */
-          z = 0;
-          if ((index < string->length) && ((string->data[index] == '+') || (string->data[index] == '-')))
-          {
-            buffer[z] = string->data[index];
-            z++;
-            index++;
-          }
-          while (   (index < string->length)
-                 && (z < sizeof(buffer)-1)
-                 && isdigit(string->data[index])
-                )
-          {
-            buffer[z] = string->data[index];
-            z++;
-            index++;
-          }
-          buffer[z] = '\0';
+        /* get format token */
+        format = parseNextFormatToken(format,&formatToken);
 
-          /* convert */
-          switch (formatToken.lengthType)
-          {
-            case FORMAT_LENGTH_TYPE_INTEGER:
-              value.i = va_arg(arguments,int*);
-              if (value.i != NULL) (*value.i) = strtol(buffer,NULL,10);
-              break;
-            case FORMAT_LENGTH_TYPE_LONG:
-              value.l = va_arg(arguments,long int*);
-              if (value.l != NULL) (*value.l) = strtol(buffer,NULL,10);
-              break;
-            case FORMAT_LENGTH_TYPE_LONGLONG:
-              value.ll = va_arg(arguments,long long int*);
-              if (value.ll != NULL) (*value.ll) = strtoll(buffer,NULL,10);
-              break;
-            case FORMAT_LENGTH_TYPE_DOUBLE:
-              break;
-            case FORMAT_LENGTH_TYPE_QUAD:
-              break;
-            case FORMAT_LENGTH_TYPE_POINTER:
-              break;
-          }
-          break;
-        case 'c':
-          /* get data */
-          if (index < string->length)
-          {
-            buffer[0] = string->data[index];
-            index++;
-          }
-
-          /* convert */
-          value.c = va_arg(arguments,char*);
-          if (value.c != NULL) (*value.c) = buffer[0];
-          break;
-        case 'o':
-          /* get data */
-          z = 0;
-          while (   (index < string->length)
-                 && (z < sizeof(buffer)-1)
-                 && (string->data[index] >= '0')
-                 && (string->data[index] <= '7')
-                )
-          {
-            buffer[z] = string->data[index];
-            z++;
-            index++;
-          }
-          buffer[z] = '\0';
-
-          /* convert */
-          value.i = va_arg(arguments,int*);
-          if (value.i != NULL) (*value.i) = strtol(buffer,NULL,8);
-          break;
-        case 'x':
-        case 'X':
-          /* get data */
-          if (((index+1) < string->length) && (string->data[index+0] == '0') && (string->data[index+0] == 'x'))
-          {
-            index+=2;
-          }
-          z = 0;
-          while (   (index < string->length)
-                 && (z < sizeof(buffer)-1)
-                 && isdigit(string->data[index])
-                )
-          {
-            buffer[z] = string->data[index];
-            z++;
-            index++;
-          }
-          buffer[z] = '\0';
-
-          /* convert */
-          switch (formatToken.lengthType)
-          {
-            case FORMAT_LENGTH_TYPE_INTEGER:
-              value.i = va_arg(arguments,int*);
-              if (value.i != NULL) (*value.i) = strtol(buffer,NULL,16);
-              break;
-            case FORMAT_LENGTH_TYPE_LONG:
-              value.l = va_arg(arguments,long int*);
-              if (value.l != NULL) (*value.l) = strtol(buffer,NULL,16);
-              break;
-            case FORMAT_LENGTH_TYPE_LONGLONG:
-              value.ll = va_arg(arguments,long long int*);
-              if (value.ll != NULL) (*value.ll) = strtol(buffer,NULL,16);
-              break;
-            case FORMAT_LENGTH_TYPE_DOUBLE:
-              break;
-            case FORMAT_LENGTH_TYPE_QUAD:
-              break;
-            case FORMAT_LENGTH_TYPE_POINTER:
-              break;
-          }
-          break;
-        case 'e':
-        case 'E':
-        case 'f':
-        case 'F':
-        case 'g':
-        case 'G':
-        case 'a':
-        case 'A':
-          /* get data */
-          z = 0;
-          if ((index < string->length) && ((string->data[index] == '+') || (string->data[index] == '-')  || (string->data[index] == '.')))
-          {
-            buffer[z] = string->data[index];
-            z++;
-            index++;
-          }
-          while (   (index < string->length)
-                 && (z < sizeof(buffer)-1)
-                 && isdigit(string->data[index])
-                )
-          {
-            buffer[z] = string->data[index];
-            z++;
-            index++;
-          }
-          if ((index < string->length) && (string->data[index] == '.'))
-          {
-            buffer[z] = '.';
-            z++;
-            index++;
+        /* parse string and store values */
+        switch (formatToken.conversionChar)
+        {
+          case 'i':
+          case 'd':
+          case 'u':
+            /* get data */
+            z = 0;
+            if ((index < string->length) && ((string->data[index] == '+') || (string->data[index] == '-')))
+            {
+              buffer[z] = string->data[index];
+              z++;
+              index++;
+            }
             while (   (index < string->length)
                    && (z < sizeof(buffer)-1)
                    && isdigit(string->data[index])
@@ -1098,311 +993,538 @@ LOCAL bool parseString(const struct __String *string,
               z++;
               index++;
             }
-          }
-          buffer[z] = '\0';
+            buffer[z] = '\0';
 
-          /* convert */
-          value.d = va_arg(arguments,double*);
-          if (value.d != NULL) (*value.d) = strtod(buffer,NULL);
-          break;
-        case 's':
-          /* get and copy data */
-          value.s = va_arg(arguments,char*);
-          assert(formatToken.width > 0);
-
-          z = 0;
-          while (   (index < string->length)
-                 && (formatToken.blankFlag || !isspace(string->data[index]))
-                 && (string->data[index] != (*format))
-                )
-          {
-            if (string->data[index] == '\\')
+            /* convert */
+            if (z > 0)
             {
-              index++;
-              if (index < string->length)
+              switch (formatToken.lengthType)
               {
-                if ((formatToken.width == 0) || (z < formatToken.width-1))
-                {
-                  if (value.s != NULL) value.s[z] = string->data[index];
-                  z++;
-                }
-                index++;
+                case FORMAT_LENGTH_TYPE_INTEGER:
+                  value.i = va_arg(arguments,int*);
+                  if (value.i != NULL) (*value.i) = strtol(buffer,NULL,10);
+                  break;
+                case FORMAT_LENGTH_TYPE_LONG:
+                  value.l = va_arg(arguments,long int*);
+                  if (value.l != NULL) (*value.l) = strtol(buffer,NULL,10);
+                  break;
+                case FORMAT_LENGTH_TYPE_LONGLONG:
+                  value.ll = va_arg(arguments,long long int*);
+                  if (value.ll != NULL) (*value.ll) = strtoll(buffer,NULL,10);
+                  break;
+                default:
+                  #ifndef NDEBUG
+                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  #endif /* NDEBUG */
+                  break; /* not reached */
               }
             }
             else
             {
-              /* check for string quote */
-              stringQuote = NULL;
-              if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-              if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
-
-              if (stringQuote != NULL)
-              {
-                do
-                {
-                  /* skip quote-char */
-                  index++;
-
-                  /* get string */
-                  while ((index < string->length) && (string->data[index] != (*stringQuote)))
-                  {
-                    if (string->data[index] == '\\')
-                    {
-                      index++;
-                      if (index < string->length)
-                      {
-                        if ((formatToken.width == 0) || (z < formatToken.width-1))
-                        {
-                          if (value.s != NULL) value.s[z] = string->data[index];
-                          z++;
-                        }
-                        index++;
-                      }
-                    }
-                    else
-                    {
-                      if (z < (formatToken.width-1))
-                      {
-                        if (value.s != NULL) value.s[z] = string->data[index];
-                        z++;
-                      }
-                      index++;
-                    }
-                  }
-
-                  /* skip quote-char */
-                  if (index < string->length)
-                  {
-                    index++;
-                  }
-
-                  stringQuote = NULL;
-                  if (index < string->length)
-                  {
-                    if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-                    if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
-                  }
-                }
-                while (stringQuote != NULL);
-              }
-              else
-              {
-                if (z < (formatToken.width-1))
-                {
-                  if (value.s != NULL) value.s[z] = string->data[index];
-                  z++;
-                }
-                index++;
-              }
+              return FALSE;
             }
-          }
-          if (value.s != NULL) value.s[z] = '\0';
-          break;
-        case 'p':
-        case 'n':
-          break;
-        case 'S':
-          /* get and copy data */
-          value.string = va_arg(arguments,String);
-          CHECK_VALID(value.string);
-
-          String_clear(value.string);           
-          z = 0;
-          while (   (index < string->length)
-                 && (formatToken.blankFlag || !isspace(string->data[index]))
-// NUL in string here a problem?
-                 && (string->data[index] != (*format))
-                )
-          {
-            if (string->data[index] == '\\')
+            break;
+          case 'c':
+            /* get data */
+            if (index < string->length)
             {
+              buffer[0] = string->data[index];
               index++;
-              if (index < string->length)
-              {
-                if ((formatToken.width == 0) || (z < formatToken.width-1))
-                {
-                  String_appendChar(value.string,string->data[index]);
-                  z++;
-                }
-                index++;
-              }
+            }
+
+            /* convert */
+            if (z > 0)
+            {
+              value.c = va_arg(arguments,char*);
+              if (value.c != NULL) (*value.c) = buffer[0];
             }
             else
             {
-              /* check for string quote */
-              stringQuote = NULL;
-              if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-              if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
-
-              if (stringQuote != NULL)
-              {
-                do
-                {
-                  /* skip quote-char */
-                  index++;
-
-                  /* get string */
-                  while ((index < string->length) && (string->data[index] != (*stringQuote)))
-                  {
-                    if (string->data[index] == '\\')
-                    {
-                      index++;
-                      if (index < string->length)
-                      {
-                        if ((formatToken.width == 0) || (z < formatToken.width-1))
-                        {
-                          String_appendChar(value.string,string->data[index]);
-                          z++;
-                        }
-                        index++;
-                      }
-                    }
-                    else
-                    {
-                      if ((formatToken.width == 0) || (z < formatToken.width-1))
-                      {
-                        String_appendChar(value.string,string->data[index]);
-                        z++;
-                      }
-                      index++;
-                    }
-                  }
-
-                  /* skip quote-char */
-                  if (index < string->length)
-                  {
-                    index++;
-                  }
-
-                  /* check for string quote */
-                  stringQuote = NULL;
-                  if (index < string->length)
-                  {
-                    if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-                    if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
-                  }
-                }
-                while (stringQuote != NULL);
-              }
-              else
-              {
-                if ((formatToken.width == 0) || (z < formatToken.width-1))
-                {
-                  String_appendChar(value.string,string->data[index]);
-                  z++;
-                }
-                index++;
-              }
+              return FALSE;
             }
-          }
-          break;
-#if 0
-still not implemented
-        case 'b':
-          /* binaray value */
-          switch (formatToken.lengthType)
-          {
-            case FORMAT_LENGTH_TYPE_INTEGER:
-              {
-                unsigned int bits;
-
-                bits = va_arg(arguments,unsigned int);
-              }
-              break;
-            case FORMAT_LENGTH_TYPE_LONG:
-              {
-                unsigned long bits;
-
-                bits = va_arg(arguments,unsigned long);
-              }
-              break;
-            case FORMAT_LENGTH_TYPE_LONGLONG:
-              {
-                #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
-                  unsigned long long bits;
-
-                  bits = va_arg(arguments,unsigned long long);
-                }
-                #else /* not _LONG_LONG || HAVE_LONG_LONG */
-                  HALT_INTERNAL_ERROR("long long not supported");
-                #endif /* _LONG_LONG || HAVE_LONG_LONG */
-              break;
-            #ifndef NDEBUG
-              default:
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break; /* not reached */
-            #endif /* NDEBUG */
-          }
-          bufferCount = 0;
-          FLUSH_OUTPUT();
-HALT_NOT_YET_IMPLEMENTED();
-          break;
-#endif /* 0 */
-        case 'y':
-          /* get data */
-          z = 0;
-          while (   (index < string->length)
-                 && !isspace(string->data[index])
-                )
-          {
-            if (z < sizeof(buffer)-1)
+            break;
+          case 'o':
+            /* get data */
+            z = 0;
+            while (   (index < string->length)
+                   && (z < sizeof(buffer)-1)
+                   && (string->data[index] >= '0')
+                   && (string->data[index] <= '7')
+                  )
             {
               buffer[z] = string->data[index];
               z++;
+              index++;
+            }
+            buffer[z] = '\0';
+
+            /* convert */
+            if (z > 0)
+            {
+              switch (formatToken.lengthType)
+              {
+                case FORMAT_LENGTH_TYPE_INTEGER:
+                  value.i = va_arg(arguments,int*);
+                  if (value.i != NULL) (*value.i) = strtol(buffer,NULL,8);
+                  break;
+                case FORMAT_LENGTH_TYPE_LONG:
+                  value.l = va_arg(arguments,long int*);
+                  if (value.l != NULL) (*value.l) = strtol(buffer,NULL,10);
+                  break;
+                case FORMAT_LENGTH_TYPE_LONGLONG:
+                  value.ll = va_arg(arguments,long long int*);
+                  if (value.ll != NULL) (*value.ll) = strtoll(buffer,NULL,10);
+                  break;
+                default:
+                  #ifndef NDEBUG
+                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  #endif /* NDEBUG */
+                  break; /* not reached */
+              }
+            }
+            else
+            {
+              return FALSE;
+            }
+            break;
+          case 'x':
+          case 'X':
+            /* get data */
+            if (((index+1) < string->length) && (string->data[index+0] == '0') && (string->data[index+0] == 'x'))
+            {
+              index+=2;
+            }
+            z = 0;
+            while (   (index < string->length)
+                   && (z < sizeof(buffer)-1)
+                   && isdigit(string->data[index])
+                  )
+            {
+              buffer[z] = string->data[index];
+              z++;
+              index++;
+            }
+            buffer[z] = '\0';
+
+            /* convert */
+            if (z > 0)
+            {
+              switch (formatToken.lengthType)
+              {
+                case FORMAT_LENGTH_TYPE_INTEGER:
+                  value.i = va_arg(arguments,int*);
+                  if (value.i != NULL) (*value.i) = strtol(buffer,NULL,16);
+                  break;
+                case FORMAT_LENGTH_TYPE_LONG:
+                  value.l = va_arg(arguments,long int*);
+                  if (value.l != NULL) (*value.l) = strtol(buffer,NULL,16);
+                  break;
+                case FORMAT_LENGTH_TYPE_LONGLONG:
+                  value.ll = va_arg(arguments,long long int*);
+                  if (value.ll != NULL) (*value.ll) = strtol(buffer,NULL,16);
+                  break;
+                default:
+                  #ifndef NDEBUG
+                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  #endif /* NDEBUG */
+                  break; /* not reached */
+              }
+            }
+            else
+            {
+              return FALSE;
+            }
+            break;
+          case 'e':
+          case 'E':
+          case 'f':
+          case 'F':
+          case 'g':
+          case 'G':
+          case 'a':
+          case 'A':
+            /* get data */
+            z = 0;
+            if ((index < string->length) && ((string->data[index] == '+') || (string->data[index] == '-')  || (string->data[index] == '.')))
+            {
+              buffer[z] = string->data[index];
+              z++;
+              index++;
+            }
+            while (   (index < string->length)
+                   && (z < sizeof(buffer)-1)
+                   && isdigit(string->data[index])
+                  )
+            {
+              buffer[z] = string->data[index];
+              z++;
+              index++;
+            }
+            if ((index < string->length) && (string->data[index] == '.'))
+            {
+              buffer[z] = '.';
+              z++;
+              index++;
+              while (   (index < string->length)
+                     && (z < sizeof(buffer)-1)
+                     && isdigit(string->data[index])
+                    )
+              {
+                buffer[z] = string->data[index];
+                z++;
+                index++;
+              }
+            }
+            buffer[z] = '\0';
+
+            /* convert */
+            if (z > 0)
+            {
+              switch (formatToken.lengthType)
+              {
+                case FORMAT_LENGTH_TYPE_INTEGER:
+                  value.f = va_arg(arguments,float*);
+                  if (value.f != NULL) (*value.f) = strtod(buffer,NULL);
+                  break;
+                case FORMAT_LENGTH_TYPE_LONG:
+                  value.d = va_arg(arguments,double*);
+                  if (value.d != NULL) (*value.d) = strtod(buffer,NULL);
+                  break;
+                case FORMAT_LENGTH_TYPE_LONGLONG:
+                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                  break;
+                default:
+                  #ifndef NDEBUG
+                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  #endif /* NDEBUG */
+                  break; /* not reached */
+              }
+            }
+            else
+            {
+              return FALSE;
+            }
+            break;
+          case 's':
+            /* get and copy data */
+            value.s = va_arg(arguments,char*);
+            assert(formatToken.width > 0);
+
+            if (index < string->length)
+            {
+              z = 0;
+              while (   (index < string->length)
+                     && (formatToken.blankFlag || !isspace(string->data[index]))
+                     && (string->data[index] != (*format))
+                    )
+              {
+                if (string->data[index] == '\\')
+                {
+                  index++;
+                  if (index < string->length)
+                  {
+                    if ((formatToken.width == 0) || (z < formatToken.width-1))
+                    {
+                      if (value.s != NULL) value.s[z] = string->data[index];
+                      z++;
+                    }
+                    index++;
+                  }
+                }
+                else
+                {
+                  /* check for string quote */
+                  stringQuote = NULL;
+                  if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+                  if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
+
+                  if (stringQuote != NULL)
+                  {
+                    do
+                    {
+                      /* skip quote-char */
+                      index++;
+
+                      /* get string */
+                      while ((index < string->length) && (string->data[index] != (*stringQuote)))
+                      {
+                        if (string->data[index] == '\\')
+                        {
+                          index++;
+                          if (index < string->length)
+                          {
+                            if ((formatToken.width == 0) || (z < formatToken.width-1))
+                            {
+                              if (value.s != NULL) value.s[z] = string->data[index];
+                              z++;
+                            }
+                            index++;
+                          }
+                        }
+                        else
+                        {
+                          if (z < (formatToken.width-1))
+                          {
+                            if (value.s != NULL) value.s[z] = string->data[index];
+                            z++;
+                          }
+                          index++;
+                        }
+                      }
+
+                      /* skip quote-char */
+                      if (index < string->length)
+                      {
+                        index++;
+                      }
+
+                      stringQuote = NULL;
+                      if (index < string->length)
+                      {
+                        if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+                        if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
+                      }
+                    }
+                    while (stringQuote != NULL);
+                  }
+                  else
+                  {
+                    if (z < (formatToken.width-1))
+                    {
+                      if (value.s != NULL) value.s[z] = string->data[index];
+                      z++;
+                    }
+                    index++;
+                  }
+                }
+              }
+              if (value.s != NULL) value.s[z] = '\0';
+            }
+            else
+            {
+              return FALSE;
+            }
+            break;
+          case 'p':
+          case 'n':
+            break;
+          case 'S':
+            /* get and copy data */
+            value.string = va_arg(arguments,String);
+            CHECK_VALID(value.string);
+
+            if (index < string->length)
+            {
+              String_clear(value.string);           
+              z = 0;
+              while (   (index < string->length)
+                     && (formatToken.blankFlag || !isspace(string->data[index]))
+    // NUL in string here a problem?
+                     && (string->data[index] != (*format))
+                    )
+              {
+                if (string->data[index] == '\\')
+                {
+                  index++;
+                  if (index < string->length)
+                  {
+                    if ((formatToken.width == 0) || (z < formatToken.width-1))
+                    {
+                      String_appendChar(value.string,string->data[index]);
+                      z++;
+                    }
+                    index++;
+                  }
+                }
+                else
+                {
+                  /* check for string quote */
+                  stringQuote = NULL;
+                  if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+                  if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
+
+                  if (stringQuote != NULL)
+                  {
+                    do
+                    {
+                      /* skip quote-char */
+                      index++;
+
+                      /* get string */
+                      while ((index < string->length) && (string->data[index] != (*stringQuote)))
+                      {
+                        if (string->data[index] == '\\')
+                        {
+                          index++;
+                          if (index < string->length)
+                          {
+                            if ((formatToken.width == 0) || (z < formatToken.width-1))
+                            {
+                              String_appendChar(value.string,string->data[index]);
+                              z++;
+                            }
+                            index++;
+                          }
+                        }
+                        else
+                        {
+                          if ((formatToken.width == 0) || (z < formatToken.width-1))
+                          {
+                            String_appendChar(value.string,string->data[index]);
+                            z++;
+                          }
+                          index++;
+                        }
+                      }
+
+                      /* skip quote-char */
+                      if (index < string->length)
+                      {
+                        index++;
+                      }
+
+                      /* check for string quote */
+                      stringQuote = NULL;
+                      if (index < string->length)
+                      {
+                        if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
+                        if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
+                      }
+                    }
+                    while (stringQuote != NULL);
+                  }
+                  else
+                  {
+                    if ((formatToken.width == 0) || (z < formatToken.width-1))
+                    {
+                      String_appendChar(value.string,string->data[index]);
+                      z++;
+                    }
+                    index++;
+                  }
+                }
+              }
+            }
+            else
+            {
+              return FALSE;
+            }
+            break;
+  #if 0
+  still not implemented
+          case 'b':
+            /* binaray value */
+            switch (formatToken.lengthType)
+            {
+              case FORMAT_LENGTH_TYPE_INTEGER:
+                {
+                  unsigned int bits;
+
+                  bits = va_arg(arguments,unsigned int);
+                }
+                break;
+              case FORMAT_LENGTH_TYPE_LONG:
+                {
+                  unsigned long bits;
+
+                  bits = va_arg(arguments,unsigned long);
+                }
+                break;
+              case FORMAT_LENGTH_TYPE_LONGLONG:
+                {
+                  #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+                    unsigned long long bits;
+
+                    bits = va_arg(arguments,unsigned long long);
+                  }
+                  #else /* not _LONG_LONG || HAVE_LONG_LONG */
+                    HALT_INTERNAL_ERROR("long long not supported");
+                  #endif /* _LONG_LONG || HAVE_LONG_LONG */
+                break;
+              #ifndef NDEBUG
+                default:
+                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  break; /* not reached */
+              #endif /* NDEBUG */
+            }
+            bufferCount = 0;
+            FLUSH_OUTPUT();
+  HALT_NOT_YET_IMPLEMENTED();
+            break;
+  #endif /* 0 */
+          case 'y':
+            /* get data */
+            z = 0;
+            while (   (index < string->length)
+                   && !isspace(string->data[index])
+                  )
+            {
+              if (z < sizeof(buffer)-1)
+              {
+                buffer[z] = string->data[index];
+                z++;
+              }
+              index++;
+            }
+            buffer[z] = '\0';
+
+            /* convert */
+            if (z > 0)
+            {
+              value.b = va_arg(arguments,bool*);
+              foundFlag = FALSE;
+              z = 0;
+              while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS)))
+              {
+                if (strcmp(buffer,DEFAULT_TRUE_STRINGS[z]) == 0)
+                {
+                  if (value.b != NULL) (*value.b) = TRUE;
+                  foundFlag = TRUE;
+                }
+                z++;
+              }
+              z = 0;
+              while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS)))
+              {
+                if (strcmp(buffer,DEFAULT_FALSE_STRINGS[z]) == 0)
+                {
+                  if (value.b != NULL) (*value.b) = FALSE;
+                  foundFlag = TRUE;
+                }
+                z++;
+              }
+
+              if (!foundFlag)
+              {
+                return FALSE;
+              }
+            }
+            else
+            {
+              return FALSE;
+            }
+            break;
+          case '%':
+            if ((index >= string->length) || (string->data[index] != '%'))
+            {
+              return FALSE;
             }
             index++;
-          }
-          buffer[z] = '\0';
-
-          /* convert */
-          value.b = va_arg(arguments,bool*);
-          foundFlag = FALSE;
-          z = 0;
-          while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS)))
-          {
-            if (strcmp(buffer,DEFAULT_TRUE_STRINGS[z]) == 0)
-            {
-              if (value.b != NULL) (*value.b) = TRUE;
-              foundFlag = TRUE;
-            }
-            z++;
-          }
-          z = 0;
-          while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS)))
-          {
-            if (strcmp(buffer,DEFAULT_FALSE_STRINGS[z]) == 0)
-            {
-              if (value.b != NULL) (*value.b) = FALSE;
-              foundFlag = TRUE;
-            }
-            z++;
-          }
-
-          if (!foundFlag)
-          {
-            return FALSE;
-          }
-          break;
-        case '%':
-          if ((index >= string->length) || (string->data[index] != '%'))
-          {
-            return FALSE;
-          }
-          index++;
-          break;
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
+            break;
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        }
       }
-    }
-    else
-    {
-      if ((index >= string->length) || (string->data[index] != (*format)))
+      else
       {
-        return FALSE;
+        if ((index >= string->length) || (string->data[index] != (*format)))
+        {
+          return FALSE;
+        }
+        index++;
+        format++;
       }
-      index++;
-      format++;
     }
   }
   if (nextIndex != NULL)
@@ -1582,7 +1704,7 @@ String __String_new(const char *fileName, ulong lineNb)
     debugStringNode->lineNb       = lineNb;
     debugStringNode->prevFileName = NULL;
     debugStringNode->prevLineNb   = 0;
-    debugStringNode->string       = string;
+    debugStringNode->string   = string;
     List_append(&debugAllocStringList,debugStringNode);
     pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
@@ -3267,6 +3389,7 @@ String String_vformat(String string, const char *format, va_list arguments)
 
 void String_initTokenizer(StringTokenizer *stringTokenizer,
                           const String    string,
+                          ulong           index,
                           const char      *separatorChars,
                           const char      *stringQuotes,
                           bool            skipEmptyTokens
@@ -3279,7 +3402,7 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
 
   stringTokenizer->data            = string->data;
   stringTokenizer->length          = string->length;
-  stringTokenizer->index           = 0;
+  stringTokenizer->index           = index;
   stringTokenizer->separatorChars  = separatorChars;
   stringTokenizer->stringQuotes    = stringQuotes;
   stringTokenizer->skipEmptyTokens = skipEmptyTokens;
