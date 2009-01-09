@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -807,12 +807,12 @@ LOCAL String formatArchiveFileName(String       fileName,
         }      
         break;
       case '#':
-        if (partNumber != ARCHIVE_PART_NUMBER_NONE)
+        /* #... */
+        switch (formatMode)
         {
-          /* #... */
-          switch (formatMode)
-          {
-            case FORMAT_MODE_FILE_NAME:
+          case FORMAT_MODE_FILE_NAME:
+            if (partNumber != ARCHIVE_PART_NUMBER_NONE)
+            {
               /* find #...# and get max. divisor for part number */
               divisor = 1;
               j = i+1;
@@ -838,23 +838,23 @@ LOCAL String formatArchiveFileName(String       fileName,
               i = j;
 
               partNumberFlag = TRUE;
-              break;
-            case FORMAT_MODE_PATTERN:
-              /* replace by "." */
-              String_replaceChar(fileName,i,1,'.');
-              i += 1;
-              break;
-            #ifndef NDEBUG
-              default:
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break; /* not reached */
-              #endif /* NDEBUG */
-          }
+           }
+           else
+           {
+             i += 1;
+           }       
+           break;
+          case FORMAT_MODE_PATTERN:
+            /* replace by "." */
+            String_replaceChar(fileName,i,1,'.');
+            i += 1;
+            break;
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; /* not reached */
+            #endif /* NDEBUG */
         }
-        else
-        {
-          i += 1;
-        }       
         break;
       default:
         i += 1;
@@ -1507,6 +1507,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
   uint                   retryCount;
   ulong                  n;
   String                 pattern;
+  String                 storagePath;
   String                 fileName;
   StorageDirectoryHandle storageDirectoryHandle;
 
@@ -1770,41 +1771,47 @@ LOCAL void storageThread(CreateInfo *createInfo)
   {
     if (createInfo->failError == ERROR_NONE)
     {
-      pattern = formatArchiveFileName(String_new(),
-                                      FORMAT_MODE_PATTERN,
-                                      createInfo->archiveType,
-                                      createInfo->archiveFileName,
-                                      createInfo->startTime,
-                                      ARCHIVE_PART_NUMBER_NONE,
-                                      FALSE
-                                     );
-    fprintf(stderr,"%s,%d: pa=%s\n",__FILE__,__LINE__,String_cString(pattern));
-
-      error = Storage_openDirectory(&storageDirectoryHandle,
-                                    createInfo->storageName,
-                                    createInfo->jobOptions
-                                   );
-      if (error == ERROR_NONE)
+      if (!globalOptions.keepOldArchiveFilesFlag)
       {
-        fileName = String_new();
-        while (Storage_readDirectory(&storageDirectoryHandle,fileName) == ERROR_NONE)
+        pattern = formatArchiveFileName(String_new(),
+                                        FORMAT_MODE_PATTERN,
+                                        createInfo->archiveType,
+                                        createInfo->archiveFileName,
+                                        createInfo->startTime,
+                                        ARCHIVE_PART_NUMBER_NONE,
+                                        FALSE
+                                       );
+//fprintf(stderr,"%s,%d: pa=%s\n",__FILE__,__LINE__,String_cString(pattern));
+
+        storagePath = File_getFilePathName(String_new(),createInfo->storageName);
+        error = Storage_openDirectory(&storageDirectoryHandle,
+                                      storagePath,
+                                      createInfo->jobOptions
+                                     );
+        if (error == ERROR_NONE)
         {
-          /* find in storage list */
-          if (String_match(fileName,STRING_BEGIN,pattern,NULL,NULL))
+          fileName = String_new();
+          while (   !Storage_endOfDirectory(&storageDirectoryHandle)
+                 && (Storage_readDirectory(&storageDirectoryHandle,fileName) == ERROR_NONE)
+                )
           {
-    //fprintf(stderr,"%s,%d: fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
-            if (StringList_find(&createInfo->storageFileList,fileName) == NULL)
+            /* find in storage list */
+            if (String_match(fileName,STRING_BEGIN,pattern,NULL,NULL))
             {
-    fprintf(stderr,"%s,%d: deletete  %s    \n",__FILE__,__LINE__,String_cString(fileName));
-              Storage_delete(&createInfo->storageFileHandle,fileName);
+              if (StringList_find(&createInfo->storageFileList,fileName) == NULL)
+              {
+//fprintf(stderr,"%s,%d: deletete  %s    \n",__FILE__,__LINE__,String_cString(fileName));
+                Storage_delete(&createInfo->storageFileHandle,fileName);
+              }
             }
           }
-        }
-        String_delete(fileName);
+          String_delete(fileName);
 
-        Storage_closeDirectory(&storageDirectoryHandle);
+          Storage_closeDirectory(&storageDirectoryHandle);
+        }
+        String_delete(storagePath);
+        String_delete(pattern);
       }
-      String_delete(pattern);
     }
   }
 

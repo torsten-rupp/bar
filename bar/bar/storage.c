@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -23,10 +23,10 @@
 #include <assert.h>
 
 #include "global.h"
-#include "errors.h"
 #include "strings.h"
-
 #include "files.h"
+#include "errors.h"
+
 #include "network.h"
 #include "passwords.h"
 #include "misc.h"
@@ -37,7 +37,7 @@
 
 /***************************** Constants *******************************/
 #define MAX_BUFFER_SIZE     (4*1024)
-#define MAX_FILENAME_LENGTH (4*1024)
+#define MAX_FILENAME_LENGTH (8*1024)
 
 #define UNLOAD_VOLUME_DELAY_TIME (10LL*1000LL*1000LL) /* [us] */
 #define LOAD_VOLUME_DELAY_TIME   (10LL*1000LL*1000LL) /* [us] */
@@ -2795,6 +2795,122 @@ void Storage_close(StorageFileHandle *storageFileHandle)
   }
 }
 
+Errors Storage_delete(StorageFileHandle *storageFileHandle,
+                      const String      fileName
+                     )
+{
+  Errors error;
+
+  assert(storageFileHandle != NULL);
+
+  error = ERROR_UNKNOWN;
+  switch (storageFileHandle->type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      error = File_delete(fileName,FALSE);
+      break;
+    case STORAGE_TYPE_FTP:
+      #ifdef HAVE_FTP
+        error = (FtpDelete(String_cString(fileName),storageFileHandle->ftp.data) == 1)?ERROR_NONE:ERROR_DELETE_FILE;
+      #else /* not HAVE_FTP */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_SCP:
+      #ifdef HAVE_SSH2
+#if 0
+whould this be a possible implementation?
+        {
+          String command;
+
+          /* there is no unlink command for scp: execute either 'rm' or 'del' on remote server */
+          command = String_new();        
+          if (error != ERROR_NONE)
+          {
+            String_format(String_clear(command),"rm %'S",fileName);
+            error = (libssh2_channel_exec(storageFileHandle->scp.channel,
+                                          String_cString(command)
+                                         ) != 0
+                    )?ERROR_NONE:ERROR_DELETE_FILE;
+          }
+          if (error != ERROR_NONE)
+          {
+            String_format(String_clear(command),"del %'S",fileName);
+            error = (libssh2_channel_exec(storageFileHandle->scp.channel,
+                                          String_cString(command)
+                                         ) != 0
+                    )?ERROR_NONE:ERROR_DELETE_FILE;
+          }
+          String_delete(command);
+        }
+      #else /* not HAVE_SSH2 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+#endif /* 0 */
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SFTP:
+      #ifdef HAVE_SSH2
+        error = Network_connect(&storageFileHandle->sftp.socketHandle,
+                                SOCKET_TYPE_SSH,
+                                storageFileHandle->sftp.hostName,
+                                storageFileHandle->sftp.hostPort,
+                                storageFileHandle->sftp.loginName,
+                                storageFileHandle->sftp.password,
+                                storageFileHandle->sftp.sshPublicKeyFileName,
+                                storageFileHandle->sftp.sshPrivateKeyFileName,
+                                0
+                               );
+        if (error == ERROR_NONE)
+        {
+          /* init session */
+          storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->sftp.socketHandle));
+          if (storageFileHandle->sftp.sftp != NULL)
+          {
+            error = (libssh2_sftp_unlink(storageFileHandle->sftp.sftp,
+                                         String_cString(fileName)
+                                        ) != 0
+                    )?ERROR_NONE:ERROR_DELETE_FILE;
+
+            libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
+          }
+          else
+          {
+            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)));
+            Network_disconnect(&storageFileHandle->sftp.socketHandle);
+          }
+          Network_disconnect(&storageFileHandle->sftp.socketHandle);
+        }
+      #else /* not HAVE_SSH2 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_DVD:
+      #ifdef HAVE_SSH2
+        error = ERROR_NONE;
+      #else /* not HAVE_SSH2 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_DEVICE:
+      error = ERROR_NONE;
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return error;
+}
+
 bool Storage_eof(StorageFileHandle *storageFileHandle)
 {
   assert(storageFileHandle != NULL);
@@ -3168,7 +3284,6 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             */
             if (endTimestamp >= startTimestamp)
             {
-fprintf(stderr,"%s,%d: %ld %ld\n",__FILE__,__LINE__,n,endTimestamp-startTimestamp);
               limitBandWidth(&storageFileHandle->sftp.bandWidth,n,endTimestamp-startTimestamp);
             }
           };
@@ -3378,96 +3493,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return ERROR_NONE;
 }
 
-Errors Storage_delete(StorageFileHandle *storageFileHandle,
-                      const String      fileName
-                     )
-{
-  Errors error;
-
-  assert(storageFileHandle != NULL);
-
-  error = ERROR_UNKNOWN;
-  switch (storageFileHandle->type)
-  {
-    case STORAGE_TYPE_FILESYSTEM:
-      error = File_delete(fileName,FALSE);
-      break;
-    case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
-        error = (FtpDelete(String_cString(fileName),storageFileHandle->ftp.data) == 1)?ERROR_NONE:ERROR_DELETE_FILE;
-      #else /* not HAVE_FTP */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
-      break;
-    case STORAGE_TYPE_SSH:
-      #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
-      break;
-    case STORAGE_TYPE_SCP:
-      #ifdef HAVE_SSH2
-#if 0
-whould this be a possible implementation?
-        {
-          String command;
-
-          /* there is no unlink command for scp: execute either 'rm' or 'del' on remote server */
-          command = String_new();        
-          if (error != ERROR_NONE)
-          {
-            String_format(String_clear(command),"rm %'S",fileName);
-            error = (libssh2_channel_exec(storageFileHandle->scp.channel,
-                                          String_cString(command)
-                                         ) != 0
-                    )?ERROR_NONE:ERROR_DELETE_FILE;
-          }
-          if (error != ERROR_NONE)
-          {
-            String_format(String_clear(command),"del %'S",fileName);
-            error = (libssh2_channel_exec(storageFileHandle->scp.channel,
-                                          String_cString(command)
-                                         ) != 0
-                    )?ERROR_NONE:ERROR_DELETE_FILE;
-          }
-          String_delete(command);
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
-#endif /* 0 */
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
-      break;
-    case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        error = (libssh2_sftp_unlink(storageFileHandle->sftp.sftp,
-                                     String_cString(fileName)
-                                    ) != 0
-                )?ERROR_NONE:ERROR_DELETE_FILE;
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
-      break;
-    case STORAGE_TYPE_DVD:
-      #ifdef HAVE_SSH2
-        error = ERROR_NONE;
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
-      break;
-    case STORAGE_TYPE_DEVICE:
-      error = ERROR_NONE;
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
-
-  return error;
-}
-
 /*---------------------------------------------------------------------*/
 
 Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
@@ -3527,8 +3552,16 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           String hostFileName;
 
           /* init variables */
-          storageDirectoryHandle->type          = STORAGE_TYPE_SFTP;
-          storageDirectoryHandle->sftp.pathName = String_new();
+          storageDirectoryHandle->type               = STORAGE_TYPE_SFTP;
+          storageDirectoryHandle->sftp.pathName      = String_new();
+          storageDirectoryHandle->sftp.buffer        = (char*)malloc(MAX_FILENAME_LENGTH);
+          if (storageDirectoryHandle->sftp.buffer == NULL)
+          {
+            error = ERROR_INSUFFICIENT_MEMORY;
+            break;
+          }
+          storageDirectoryHandle->sftp.bufferLength  = 0;
+          storageDirectoryHandle->sftp.entryReadFlag = FALSE;
 
           /* parse storage string */
           loginName    = String_new();
@@ -3539,6 +3572,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
+            free(storageDirectoryHandle->sftp.buffer);
             String_delete(storageDirectoryHandle->sftp.pathName);
             error = ERROR_SSH_SESSION_FAIL;
             break;
@@ -3563,6 +3597,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
+            free(storageDirectoryHandle->sftp.buffer);
             String_delete(storageDirectoryHandle->sftp.pathName);
             break;
           }
@@ -3576,6 +3611,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
+            free(storageDirectoryHandle->sftp.buffer);
             String_delete(storageDirectoryHandle->sftp.pathName);
             break;
           }
@@ -3592,9 +3628,15 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
+            free(storageDirectoryHandle->sftp.buffer);
             String_delete(storageDirectoryHandle->sftp.pathName);
             break;
           }
+
+          /* free resources */
+          String_delete(hostFileName);
+          String_delete(hostName);
+          String_delete(loginName);
         }
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(jobOptions);
@@ -3652,6 +3694,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         libssh2_sftp_closedir(storageDirectoryHandle->sftp.sftpHandle);
         libssh2_sftp_shutdown(storageDirectoryHandle->sftp.sftp);
         Network_disconnect(&storageDirectoryHandle->sftp.socketHandle);
+        free(storageDirectoryHandle->sftp.buffer);
         String_delete(storageDirectoryHandle->sftp.pathName);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
@@ -3710,11 +3753,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                                    MAX_FILENAME_LENGTH,
                                    &sftpAttributes
                                   );
-          if (n >= 0)
+          if (n > 0)
           {
+            storageDirectoryHandle->sftp.bufferLength = n;
             storageDirectoryHandle->sftp.entryReadFlag = TRUE;
           }
-          storageDirectoryHandle->sftp.bufferLength = n;
         }
 
         endOfDirectoryFlag = !storageDirectoryHandle->sftp.entryReadFlag;
@@ -3780,17 +3823,27 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                                    MAX_FILENAME_LENGTH,
                                    &sftpAttributes
                                   );
-          if (n < 0)
+          if      (n > 0)
           {
-            return ERROR(IO_ERROR,errno);
+            String_set(fileName,storageDirectoryHandle->sftp.pathName);
+            File_appendFileNameBuffer(fileName,storageDirectoryHandle->sftp.buffer,n);
+
+            error = ERROR_NONE;
           }
-          storageDirectoryHandle->sftp.bufferLength = n;
+          else
+          {
+            error = ERROR(IO_ERROR,errno);
+          }
         }
+        else
+        {
+          String_set(fileName,storageDirectoryHandle->sftp.pathName);
+          File_appendFileNameBuffer(fileName,storageDirectoryHandle->sftp.buffer,storageDirectoryHandle->sftp.bufferLength);
 
-        String_set(fileName,storageDirectoryHandle->sftp.pathName);
-        File_appendFileNameBuffer(fileName,storageDirectoryHandle->sftp.buffer,storageDirectoryHandle->sftp.bufferLength);
+          storageDirectoryHandle->sftp.entryReadFlag = FALSE;
 
-        storageDirectoryHandle->sftp.entryReadFlag = FALSE;
+          error = ERROR_NONE;
+        }
       }
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */

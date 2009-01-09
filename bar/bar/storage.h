@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -28,6 +28,8 @@
 #include "files.h"
 #include "errors.h"
 #include "network.h"
+
+#include "bar.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -526,6 +528,20 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
 void Storage_close(StorageFileHandle *storageFileHandle);
 
 /***********************************************************************\
+* Name   : Storage_delete
+* Purpose: delete storage file
+* Input  : storageFileHandle - storage file handle
+*          fileName          - archive file name
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_delete(StorageFileHandle *storageFileHandle,
+                      const String      fileName
+                     );
+
+/***********************************************************************\
 * Name   : Storage_eof
 * Purpose: check if end-of-file in storage file
 * Input  : storageFileHandle - storage file handle
@@ -606,20 +622,6 @@ Errors Storage_tell(StorageFileHandle *storageFileHandle,
 Errors Storage_seek(StorageFileHandle *storageFileHandle,
                     uint64            offset
                    );
-
-/***********************************************************************\
-* Name   : Storage_delete
-* Purpose: delete storage file
-* Input  : storageFileHandle - storage file handle
-*          fileName          - archive file name
-* Output : -
-* Return : ERROR_NONE or errorcode
-* Notes  : -
-\***********************************************************************/
-
-Errors Storage_delete(StorageFileHandle *storageFileHandle,
-                      const String      fileName
-                     );
 
 /*---------------------------------------------------------------------*/
 

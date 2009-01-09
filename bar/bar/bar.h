@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -231,6 +231,7 @@ typedef struct
   bool                   allFlag;                      // TRUE iff all entries should be listed/restored
   bool                   longFormatFlag;               // TRUE iff long format list
   bool                   noHeaderFooterFlag;           // TRUE iff no header/footer should be printed in list
+  bool                   keepOldArchiveFilesFlag;      // TRUE iff old archive files should not be deleted after creating new files
 
   bool                   noDefaultConfigFlag;          // TRUE iff default config should not be read 
   bool                   quietFlag;                    // TRUE iff suppress any output
