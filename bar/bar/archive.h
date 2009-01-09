@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -28,6 +28,8 @@
 #include "crypt.h"
 #include "archive_format.h"
 #include "files.h"
+
+#include "bar.h"
 
 /****************** Conditional compilation switches *******************/
 

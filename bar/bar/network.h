@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -29,6 +29,8 @@
 
 #include "global.h"
 #include "errors.h"
+
+#include "passwords.h"
 
 /****************** Conditional compilation switches *******************/
 

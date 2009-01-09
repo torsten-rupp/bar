@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -18,11 +18,11 @@
 #include "global.h"
 #include "strings.h"
 #include "lists.h"
-
+#include "files.h"
 #include "errors.h"
+
 #include "archive_format.h"
 #include "chunks.h"
-#include "files.h"
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"

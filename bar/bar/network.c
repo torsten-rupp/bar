@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -34,10 +34,11 @@
 
 #include "global.h"
 #include "strings.h"
-
-#include "errors.h"
 #include "files.h"
+#include "errors.h"
+
 #include "bar.h"
+#include "passwords.h"
 
 #include "network.h"
 
