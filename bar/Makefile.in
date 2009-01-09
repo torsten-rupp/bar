@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.46 $
+# $Revision: 1.47 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -182,7 +182,7 @@ endif
 doc: doc/bar.7
 
 # install/uninstall
-.PHONY: install uninstall
+.PHONY: install install_keys uninstall
 install: \
   bar/bar \
   $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
@@ -231,6 +231,15 @@ endif
         else \
           echo "/etc/init.d/barserver NOT installed - file already exists!"; \
         fi
+
+install_keys: \
+  $(KEY_FILES)
+	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)"
+	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)/certs"
+	$(INSTALL) -m 644 bar-ca.pem "$(DESTDIR)$(TLS_DIR)/certs"
+	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(TLS_DIR)/certs"
+	$(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"
+	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(TLS_DIR)/private"
 
 uninstall:
 	@read -n 1 -p "Really uninstall? [y/N] " s; \
