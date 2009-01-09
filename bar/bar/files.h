@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -12,8 +12,6 @@
 #define __FILES__
 
 /****************************** Includes *******************************/
-#include "config.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -22,10 +20,7 @@
 
 #include "global.h"
 #include "strings.h"
-
-#include "bar.h"
-#include "compress.h"
-#include "crypt.h"
+#include "errors.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -498,6 +493,9 @@ Errors File_makeDirectory(const String pathName);
 Errors File_openDirectory(DirectoryHandle *directoryHandle,
                           const String    pathName
                          );
+Errors File_openDirectoryCString(DirectoryHandle *directoryHandle,
+                                 const char      *pathName
+                                );
 
 /***********************************************************************\
 * Name   : File_closeDirectory

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/destroyer.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: "destroy" binary files by overwrite/insert/delete bytes;
 *           used for test only!
@@ -151,7 +151,7 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
   assert(definition != NULL);
 
   t = String_newCString(s);
-  String_initTokenizer(&stringTokenizer,t,":",NULL,FALSE);
+  String_initTokenizer(&stringTokenizer,t,STRING_BEGIN,":",NULL,FALSE);
 
   /* get type */
   if (String_getNextToken(&stringTokenizer,&w,NULL))

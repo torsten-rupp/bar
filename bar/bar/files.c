@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -9,8 +9,6 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include "config.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -210,7 +208,7 @@ void File_initSplitFileName(StringTokenizer *stringTokenizer, String fileName)
   assert(stringTokenizer != NULL);
   assert(fileName != NULL);
 
-  String_initTokenizer(stringTokenizer,fileName,FILES_PATHNAME_SEPARATOR_CHARS,NULL,FALSE);
+  String_initTokenizer(stringTokenizer,fileName,STRING_BEGIN,FILES_PATHNAME_SEPARATOR_CHARS,NULL,FALSE);
 }
 
 void File_doneSplitFileName(StringTokenizer *stringTokenizer)
@@ -737,7 +735,7 @@ Errors File_tell(FileHandle *fileHandle, uint64 *offset)
     return ERROR(IO_ERROR,errno);
   }
 // NYI
-assert(sizeof(off_t)==8);
+//assert(sizeof(off_t)==8);
 assert(n == (off_t)fileHandle->index);
 
   (*offset) = fileHandle->index;
@@ -842,13 +840,23 @@ Errors File_openDirectory(DirectoryHandle *directoryHandle,
   assert(directoryHandle != NULL);
   assert(pathName != NULL);
 
-  directoryHandle->dir = opendir(String_cString(pathName));
+  return File_openDirectoryCString(directoryHandle,String_cString(pathName));
+}
+
+Errors File_openDirectoryCString(DirectoryHandle *directoryHandle,
+                                 const char      *pathName
+                                )
+{
+  assert(directoryHandle != NULL);
+  assert(pathName != NULL);
+
+  directoryHandle->dir = opendir(pathName);
   if (directoryHandle->dir == NULL)
   {
     return ERROR(OPEN_DIRECTORY,errno);
   }
 
-  directoryHandle->name  = String_duplicate(pathName);
+  directoryHandle->name  = String_newCString(pathName);
   directoryHandle->entry = NULL;
 
   return ERROR_NONE;

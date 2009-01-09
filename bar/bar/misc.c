@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -411,7 +411,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
     printInfo(3,"Execute command '%s'...",String_cString(commandLine));
 
     /* parse command */
-    String_initTokenizer(&stringTokenizer,commandLine,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
+    String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
     if (!String_getNextToken(&stringTokenizer,&token,NULL))
     {
       String_doneTokenizer(&stringTokenizer);

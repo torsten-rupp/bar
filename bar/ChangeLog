@@ -23,6 +23,8 @@
   * barcontrol: try to login with preset server name and login
     password. Open login-dialog only when login fail or when option
     --login-dialog is given.
+  * delete old archive files (only possible for file, ftp, sftp).
+    Can be disabled by --keep-old-archive-files
 
 2008-12-10 0.09i
   * fixed creating pid file: when server is detached write pid of

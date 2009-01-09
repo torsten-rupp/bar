@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -3520,7 +3520,7 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
   commandMsg->arguments             = NULL;
 
   /* initialize tokenizer */
-  String_initTokenizer(&stringTokenizer,string,STRING_WHITE_SPACES,STRING_QUOTES,TRUE);
+  String_initTokenizer(&stringTokenizer,string,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,TRUE);
 
   /* get id */
   if (!String_getNextToken(&stringTokenizer,&token,NULL))
