@@ -1,0 +1,1116 @@
+/***********************************************************************\
+*
+* $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
+* $Revision: 1.1 $
+* $Author: torsten $
+* Contents: BARControl (frontend for BAR)
+* Systems: all
+*
+\***********************************************************************/
+
+/****************************** Imports ********************************/
+//import java.io.ByteArrayInputStream;
+//import java.io.ByteArrayOutputStream;
+import java.io.File;
+//import java.io.FileReader;
+//import java.io.BufferedReader;
+//import java.io.IOException;
+//import java.io.ObjectInputStream;
+//import java.io.ObjectOutputStream;
+//import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+//import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+
+import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.dnd.ByteArrayTransfer;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DragSource;
+import org.eclipse.swt.dnd.DragSourceEvent;
+import org.eclipse.swt.dnd.DragSourceListener;
+import org.eclipse.swt.dnd.DropTarget;
+import org.eclipse.swt.dnd.DropTargetAdapter;
+import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.dnd.TransferData;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.FocusListener;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseMoveListener;
+import org.eclipse.swt.events.MouseTrackListener;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Group;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.List;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Spinner;
+import org.eclipse.swt.widgets.TabFolder;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.swt.widgets.TreeItem;
+import org.eclipse.swt.widgets.Widget;
+
+/****************************** Classes ********************************/
+
+/** tab status
+ */
+class TabStatus
+{
+  enum States
+  {
+    RUNNING,
+    PAUSE,
+  };
+
+  /** job data
+   */
+  class JobData
+  {
+    int    id;
+    String name;
+    String state;
+    String type;
+    long   archivePartSize;
+    String compressAlgorithm;
+    String cryptAlgorithm;
+    String cryptType;
+    long   lastExecutedDateTime;
+    long   estimatedRestTime;
+
+    private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+    /** create job data
+     */
+    JobData(int id, String name, String state, String type, long archivePartSize, String compressAlgorithm, String cryptAlgorithm, String cryptType, long lastExecutedDateTime, long estimatedRestTime)
+    {
+      this.id                   = id;
+      this.name                 = name;
+      this.state                = state;
+      this.type                 = type;
+      this.archivePartSize      = archivePartSize;
+      this.compressAlgorithm    = compressAlgorithm;
+      this.cryptAlgorithm       = cryptAlgorithm;
+      this.cryptType            = cryptType;
+      this.lastExecutedDateTime = lastExecutedDateTime;
+      this.estimatedRestTime    = estimatedRestTime;
+    }
+
+    /** get job crypt algorithm (including "*" for asymmetric)
+     * @return crypt algorithm
+     */
+    String getCryptAlgorithm()
+    {
+      return cryptAlgorithm+(cryptType.equals("ASYMMETRIC")?"*":"");
+    }
+
+    /** format last executed date/time
+     * @return date/time string
+     */
+    String formatLastExecutedDateTime()
+    {
+      if (lastExecutedDateTime > 0)
+      {
+        return simpleDateFormat.format(new Date(lastExecutedDateTime*1000));
+      }
+      else
+      {
+        return "-";
+      }
+    }
+
+    /** format estimated rest time
+     * @return estimated rest time string
+     */
+    String formatEstimatedRestTime()
+    {
+      long   estimatedRestDays    = estimatedRestTime/(24*60*60);
+      long   estimatedRestHours   = estimatedRestTime%(24*60*60)/(60*60);
+      long   estimatedRestMinutes = estimatedRestTime%(60*60   )/(60   );
+      long   estimatedRestSeconds = estimatedRestTime%(60      );
+
+      return String.format("%2d days %02d:%02d:%02d",
+                           estimatedRestDays,
+                           estimatedRestHours,
+                           estimatedRestMinutes,
+                           estimatedRestSeconds
+                          );
+    }
+
+    public String toString()
+    {
+      return "Job {"+id+", "+name+", "+state+", "+type+"}";
+    }
+  };
+
+  /** job data comparator
+   */
+  class JobDataComparator implements Comparator<JobData>
+  {
+    // Note: enum in inner classes are not possible in Java, thus use the old way...
+    private final static int SORTMODE_ID                     = 0;
+    private final static int SORTMODE_NAME                   = 1;
+    private final static int SORTMODE_STATE                  = 2;
+    private final static int SORTMODE_TYPE                   = 3;
+    private final static int SORTMODE_PARTSIZE               = 4;
+    private final static int SORTMODE_COMPRESS               = 5;
+    private final static int SORTMODE_CRYPT                  = 6;
+    private final static int SORTMODE_LAST_EXECUTED_DATETIME = 7;
+    private final static int SORTMODE_ESTIMATED_TIME         = 8;
+
+    private int sortMode;
+
+    /** create job data comparator
+     * @param table job table
+     * @param sortColumn sorting column
+     */
+    JobDataComparator(Table table, TableColumn sortColumn)
+    {
+      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_ID;
+      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_STATE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_PARTSIZE;
+      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_COMPRESS;
+      else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_CRYPT;
+      else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
+      else if (table.getColumn(8) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
+      else                                       sortMode = SORTMODE_NAME;
+    }
+
+    /** create job data comparator
+     * @param table job table
+     */
+    JobDataComparator(Table table)
+    {
+      TableColumn sortColumn = table.getSortColumn();
+
+      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_ID;
+      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_STATE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_PARTSIZE;
+      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_COMPRESS;
+      else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_CRYPT;
+      else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
+      else if (table.getColumn(8) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
+      else                                       sortMode = SORTMODE_NAME;
+    }
+
+    /** compare job data
+     * @param jobData1, jobData2 file tree data to compare
+     * @return -1 iff jobData1 < jobData2,
+                0 iff jobData1 = jobData2, 
+                1 iff jobData1 > jobData2
+     */
+    public int compare(JobData jobData1, JobData jobData2)
+    {
+      switch (sortMode)
+      {
+        case SORTMODE_ID:
+          if (jobData1.id < jobData2.id) return -1;
+          if (jobData1.id > jobData2.id) return  1;
+          else                           return  0;
+        case SORTMODE_NAME:
+          return jobData1.name.compareTo(jobData2.name);
+        case SORTMODE_STATE:
+          return jobData1.state.compareTo(jobData2.state);
+        case SORTMODE_TYPE:
+          return jobData1.type.compareTo(jobData2.type);
+        case SORTMODE_PARTSIZE:
+          if      (jobData1.archivePartSize < jobData2.archivePartSize) return -1;
+          else if (jobData1.archivePartSize > jobData2.archivePartSize) return  1;
+          else                                                          return  0;
+        case SORTMODE_COMPRESS:
+          return jobData1.compressAlgorithm.compareTo(jobData2.compressAlgorithm);
+        case SORTMODE_CRYPT:
+          String crypt1 = jobData1.cryptAlgorithm+(jobData1.cryptType.equals("ASYMMETRIC")?"*":"");
+          String crypt2 = jobData2.cryptAlgorithm+(jobData2.cryptType.equals("ASYMMETRIC")?"*":"");
+
+          return crypt1.compareTo(crypt2);
+        case SORTMODE_LAST_EXECUTED_DATETIME:
+          if      (jobData1.lastExecutedDateTime < jobData2.lastExecutedDateTime) return -1;
+          else if (jobData1.lastExecutedDateTime > jobData2.lastExecutedDateTime) return  1;
+          else                                                                    return  0;
+        case SORTMODE_ESTIMATED_TIME:
+          if      (jobData1.estimatedRestTime < jobData2.estimatedRestTime) return -1;
+          else if (jobData1.estimatedRestTime > jobData2.estimatedRestTime) return  1;
+          else                                                              return  0;
+        default:
+          return 0;
+      }
+    }
+  }
+
+  // global variable references
+  Shell       shell;
+  TabJobs     tabJobs;
+
+  // widgets
+  Composite   widgetTab;
+  Table       widgetJobList;
+  Group       widgetSelectedJob;
+  Button      widgetButtonStart;
+  Button      widgetButtonAbort;
+  Button      widgetButtonTogglePause;
+  Button      widgetButtonVolume;
+  Button      widgetButtonQuit;
+
+  // BAR variables
+  BARVariable doneFiles             = new BARVariable(0);
+  BARVariable doneBytes             = new BARVariable(0);
+  BARVariable storedBytes           = new BARVariable(0);
+  BARVariable skippedFiles          = new BARVariable(0);
+  BARVariable skippedBytes          = new BARVariable(0);
+  BARVariable errorFiles            = new BARVariable(0);
+  BARVariable errorBytes            = new BARVariable(0);
+  BARVariable totalFiles            = new BARVariable(0);
+  BARVariable totalBytes            = new BARVariable(0);
+
+  BARVariable filesPerSecond        = new BARVariable(0.0); 
+  BARVariable bytesPerSecond        = new BARVariable(0.0);
+  BARVariable storageBytesPerSecond = new BARVariable(0.0);
+  BARVariable ratio                 = new BARVariable(0.0);
+
+  BARVariable fileName              = new BARVariable("");
+  BARVariable fileProgress          = new BARVariable(0.0);
+  BARVariable storageName           = new BARVariable("");
+  BARVariable storageProgress       = new BARVariable(0.0);
+  BARVariable volumeNumber          = new BARVariable(0);
+  BARVariable volumeProgress        = new BARVariable(0.0);
+  BARVariable totalFilesProgress    = new BARVariable(0.0);
+  BARVariable totalBytesProgress    = new BARVariable(0.0);
+  BARVariable message               = new BARVariable("");
+
+  // variables
+  private HashMap<String,JobData> jobList = new HashMap<String,JobData> ();
+  private JobData selectedJobData         = null;
+  private States  status                  = States.RUNNING;
+
+  /** status update thread
+   */
+  class TabStatusUpdateThread extends Thread
+  {
+    private TabStatus tabStatus;
+
+    /** initialize status update thread
+     * @param tabStatus tab status
+     */
+    TabStatusUpdateThread(TabStatus tabStatus)
+    {
+      this.tabStatus = tabStatus;
+    }
+
+    /** run status update thread
+     */
+    public void run()
+    {
+      for (;;)
+      {
+        try
+        {
+          tabStatus.widgetTab.getDisplay().syncExec(new Runnable()
+          {
+            public void run()
+            {
+              tabStatus.update();
+            }
+          });
+        }
+        catch (org.eclipse.swt.SWTException exception)
+        {
+          // ignore SWT exceptions
+        }
+
+        try { Thread.sleep(1000); } catch (InterruptedException exception) {};
+      }
+    }
+  }
+
+  TabStatus(TabFolder parentTabFolder, int accelerator)
+  {
+    TableColumn tableColumn;
+    Group       group;
+    Composite   composite;
+    Button      button;
+    Label       label;
+    ProgressBar progressBar;
+
+    // get shell
+    shell = parentTabFolder.getShell();
+
+    // create tab
+    widgetTab = Widgets.addTab(parentTabFolder,"Status"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
+    widgetTab.setLayout(new TableLayout(new double[]{1,0,0},
+                                        null,
+                                        2
+                                       )
+                       );
+    Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
+
+    // list with jobs
+    widgetJobList = Widgets.newTable(widgetTab,this);
+    Widgets.layout(widgetJobList,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
+    widgetJobList.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Table     widget    = (Table)selectionEvent.widget;
+        TabStatus tabStatus = (TabStatus)widget.getData();
+        selectedJobData = (JobData)selectionEvent.item.getData();
+        if (tabJobs != null) tabJobs.selectJob(selectedJobData.name);
+        widgetSelectedJob.setText("Selected '"+selectedJobData.name+"'");
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+    SelectionListener jobListColumnSelectionListener = new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        TableColumn       tableColumn = (TableColumn)selectionEvent.widget;
+        JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList,tableColumn);
+        synchronized(jobList)
+        {
+          Widgets.sortTableColumn(widgetJobList,tableColumn,jobDataComparator);
+        }
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    };
+    tableColumn = Widgets.addTableColumn(widgetJobList,0,"#",             SWT.RIGHT, 30,false);
+    tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetJobList,1,"Name",          SWT.LEFT, 100,true );
+    tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetJobList,2,"State",         SWT.LEFT,  60,true );
+    tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetJobList,3,"Type",          SWT.LEFT,  80,true );
+    tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetJobList,4,"Part size",     SWT.RIGHT,  0,true );
+    tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetJobList,5,"Compress",      SWT.LEFT,  80,true );
+    tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetJobList,6,"Crypt",         SWT.LEFT,  70,true );
+    tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetJobList,7,"Last executed", SWT.LEFT, 150,true );
+    tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetJobList,8,"Estimated time",SWT.LEFT, 120,true );
+    tableColumn.addSelectionListener(jobListColumnSelectionListener);
+
+    // selected job group
+    widgetSelectedJob = Widgets.newGroup(widgetTab,"Selected ''",SWT.NONE);
+    widgetSelectedJob.setLayout(new TableLayout(null,
+                                                new double[]{0,1,0,1,0,0,1,0},
+                                                4
+                                               )
+                               );
+    Widgets.layout(widgetSelectedJob,1,0,TableLayoutData.WE);
+    {
+      // done files/bytes
+      label = Widgets.newLabel(widgetSelectedJob,"Done:");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+      label= Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,doneFiles));
+      label = Widgets.newLabel(widgetSelectedJob,"files");
+      Widgets.layout(label,0,2,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,0,3,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,doneBytes));
+      label = Widgets.newLabel(widgetSelectedJob,"bytes");
+      Widgets.layout(label,0,4,TableLayoutData.W);
+      label = Widgets.newLabel(widgetSelectedJob,"/");
+      Widgets.layout(label,0,5,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,0,6,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,doneBytes)
+      {
+        public String getString(BARVariable variable)
+        {
+          return Units.getByteSize(variable.getLong());
+        }
+      });
+      label = Widgets.newLabel(widgetSelectedJob);
+      Widgets.layout(label,0,7,TableLayoutData.W,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+      Widgets.addModifyListener(new WidgetListener(label,doneBytes)
+      {
+        public String getString(BARVariable variable)
+        {
+          return Units.getByteUnit(variable.getLong());
+        }
+      });
+
+      // stored files/bytes
+      label = Widgets.newLabel(widgetSelectedJob,"Stored:");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,1,3,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,storedBytes));
+      label = Widgets.newLabel(widgetSelectedJob,"bytes");
+      Widgets.layout(label,1,4,TableLayoutData.W);
+      label = Widgets.newLabel(widgetSelectedJob,"/");
+      Widgets.layout(label,1,5,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,1,6,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,storedBytes)
+      {
+        public String getString(BARVariable variable)
+        {
+          return Units.getByteSize(variable.getLong());
+        }
+      });
+      label = Widgets.newLabel(widgetSelectedJob);
+      Widgets.layout(label,1,7,TableLayoutData.W,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+      Widgets.addModifyListener(new WidgetListener(label,storedBytes)
+      {
+        public String getString(BARVariable variable)
+        {
+          return Units.getByteUnit(variable.getLong());
+        }
+      });
+
+      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
+      Widgets.layout(composite,1,8,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      {
+        label = Widgets.newLabel(composite,"Ratio");
+        Widgets.layout(label,0,0,TableLayoutData.W);
+        label = Widgets.newNumberView(composite);
+        Widgets.layout(label,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+        Widgets.addModifyListener(new WidgetListener(label,ratio)
+        {
+          public String getString(BARVariable variable)
+          {
+            return String.format("%.1f",variable.getDouble());
+          }
+        });
+        label = Widgets.newLabel(composite,"%");
+        Widgets.layout(label,0,2,TableLayoutData.W);
+      }
+
+      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
+      Widgets.layout(composite,1,9,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      {
+        label = Widgets.newNumberView(composite);
+        Widgets.layout(label,0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+        Widgets.addModifyListener(new WidgetListener(label,storageBytesPerSecond)
+        {
+          public String getString(BARVariable variable)
+          {
+            return Units.getByteSize(variable.getDouble());
+          }
+        });
+        label = Widgets.newLabel(composite);
+        Widgets.layout(label,0,1,TableLayoutData.W,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+        Widgets.addModifyListener(new WidgetListener(label,storageBytesPerSecond)
+        {
+          public String getString(BARVariable variable)
+          {
+            return Units.getByteUnit(variable.getDouble())+"/s";
+          }
+        });
+      }
+
+      // skipped files/bytes, ratio
+      label = Widgets.newLabel(widgetSelectedJob,"Skipped:");
+      Widgets.layout(label,2,0,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,2,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,skippedFiles));
+      label = Widgets.newLabel(widgetSelectedJob,"files");
+      Widgets.layout(label,2,2,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,2,3,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,skippedBytes));
+      label = Widgets.newLabel(widgetSelectedJob,"bytes");
+      Widgets.layout(label,2,4,TableLayoutData.W);
+      label = Widgets.newLabel(widgetSelectedJob,"/");
+      Widgets.layout(label,2,5,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,2,6,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,skippedBytes)
+      {
+        public String getString(BARVariable variable)
+        {
+          return Units.getByteSize(variable.getLong());
+        }
+      });
+      label = Widgets.newLabel(widgetSelectedJob);
+      Widgets.layout(label,2,7,TableLayoutData.W,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+      Widgets.addModifyListener(new WidgetListener(label,skippedBytes)
+      {
+        public String getString(BARVariable variable)
+        {
+          return Units.getByteUnit(variable.getLong());
+        }
+      });
+
+      // error files/bytes
+      label = Widgets.newLabel(widgetSelectedJob,"Errors:");
+      Widgets.layout(label,3,0,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,3,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,errorFiles));
+      label = Widgets.newLabel(widgetSelectedJob,"files");
+      Widgets.layout(label,3,2,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,3,3,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,errorFiles));
+      label = Widgets.newLabel(widgetSelectedJob,"bytes");
+      Widgets.layout(label,3,4,TableLayoutData.W);
+      label = Widgets.newLabel(widgetSelectedJob,"/");
+      Widgets.layout(label,3,5,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,3,6,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,errorBytes)
+      {
+        public String getString(BARVariable variable)
+        {
+          return Units.getByteSize(variable.getLong());
+        }
+      });
+      label = Widgets.newLabel(widgetSelectedJob);
+      Widgets.layout(label,3,7,TableLayoutData.W,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+      Widgets.addModifyListener(new WidgetListener(label,errorBytes)
+      {
+        public String getString(BARVariable variable)
+        {
+          return Units.getByteUnit(variable.getLong());
+        }
+      });
+
+      // total files/bytes, files/s, bytes/s
+      label = Widgets.newLabel(widgetSelectedJob,"Total:");
+      Widgets.layout(label,4,0,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,4,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,totalFiles));
+      label = Widgets.newLabel(widgetSelectedJob,"files");
+      Widgets.layout(label,4,2,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,4,3,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,totalBytes));
+      label = Widgets.newLabel(widgetSelectedJob,"bytes");
+      Widgets.layout(label,4,4,TableLayoutData.W);
+      label = Widgets.newLabel(widgetSelectedJob,"/");
+      Widgets.layout(label,4,5,TableLayoutData.W);
+      label = Widgets.newNumberView(widgetSelectedJob);
+      Widgets.layout(label,4,6,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.addModifyListener(new WidgetListener(label,totalBytes)
+      {
+        public String getString(BARVariable variable)
+        {
+          return Units.getByteSize(variable.getLong());
+        }
+      });
+      label = Widgets.newLabel(widgetSelectedJob);
+      Widgets.layout(label,4,7,TableLayoutData.W,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+      Widgets.addModifyListener(new WidgetListener(label,totalBytes)
+      {
+        public String getString(BARVariable variable)
+        {
+          return Units.getByteUnit(variable.getLong());
+        }
+      });
+
+      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
+      Widgets.layout(composite,4,8,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      {
+        label = Widgets.newNumberView(composite);
+        Widgets.layout(label,0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+        Widgets.addModifyListener(new WidgetListener(label,filesPerSecond)
+        {
+          public String getString(BARVariable variable)
+          {
+            return String.format("%.1f",variable.getDouble());
+          }
+        });
+        label = Widgets.newLabel(composite,"files/s");
+        Widgets.layout(label,0,1,TableLayoutData.W);
+      }
+
+      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
+      Widgets.layout(composite,4,9,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      {
+        label = Widgets.newNumberView(composite);
+        Widgets.layout(label,0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+        Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
+        {
+          public String getString(BARVariable variable)
+          {
+            return Units.getByteSize(variable.getDouble());
+          }
+        });
+        label = Widgets.newLabel(composite);
+        Widgets.layout(label,0,1,TableLayoutData.W,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+        Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
+        {
+          public String getString(BARVariable variable)
+          {
+            return Units.getByteUnit(variable.getDouble())+"/s";
+          }
+        });
+      }
+
+      // current file, file percentage
+      label = Widgets.newLabel(widgetSelectedJob,"File:");
+      Widgets.layout(label,5,0,TableLayoutData.W);
+      label = Widgets.newView(widgetSelectedJob);
+      Widgets.layout(label,5,1,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,9);
+      Widgets.addModifyListener(new WidgetListener(label,fileName));
+      progressBar = Widgets.newProgressBar(widgetSelectedJob,null);
+      Widgets.layout(progressBar,6,1,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,9);
+      Widgets.addModifyListener(new WidgetListener(progressBar,fileProgress));
+
+      // storage file, storage percentage
+      label = Widgets.newLabel(widgetSelectedJob,"Storage:");
+      Widgets.layout(label,7,0,TableLayoutData.W);
+      label = Widgets.newView(widgetSelectedJob);
+      Widgets.layout(label,7,1,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,9);
+      Widgets.addModifyListener(new WidgetListener(label,storageName));
+      progressBar = Widgets.newProgressBar(widgetSelectedJob,null);
+      Widgets.layout(progressBar,8,1,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,9);
+      Widgets.addModifyListener(new WidgetListener(progressBar,storageProgress));
+
+      // volume percentage
+      label = Widgets.newLabel(widgetSelectedJob,"Volume:");
+      Widgets.layout(label,9,0,TableLayoutData.W);
+      progressBar = Widgets.newProgressBar(widgetSelectedJob,null);
+      Widgets.layout(progressBar,9,1,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,9);
+      Widgets.addModifyListener(new WidgetListener(progressBar,volumeProgress));
+
+      // total files percentage
+      label = Widgets.newLabel(widgetSelectedJob,"Total files:");
+      Widgets.layout(label,10,0,TableLayoutData.W);
+      progressBar = Widgets.newProgressBar(widgetSelectedJob,null);
+      Widgets.layout(progressBar,10,1,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,9);
+      Widgets.addModifyListener(new WidgetListener(progressBar,totalFilesProgress));
+
+      // total bytes percentage
+      label = Widgets.newLabel(widgetSelectedJob,"Total bytes:");
+      Widgets.layout(label,11,0,TableLayoutData.W);
+      progressBar = Widgets.newProgressBar(widgetSelectedJob,null);
+      Widgets.layout(progressBar,11,1,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,9);
+      Widgets.addModifyListener(new WidgetListener(progressBar,totalBytesProgress));
+
+      // message
+      label = Widgets.newLabel(widgetSelectedJob,"Message:");
+      Widgets.layout(label,12,0,TableLayoutData.W);
+      label = Widgets.newView(widgetSelectedJob);
+      Widgets.layout(label,12,1,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,9);
+      Widgets.addModifyListener(new WidgetListener(label,message));
+    }
+
+    // buttons
+    composite = Widgets.newComposite(widgetTab,SWT.NONE,4);
+    Widgets.layout(composite,2,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    {
+      widgetButtonStart = Widgets.newButton(composite,null,"Start");
+      Widgets.layout(widgetButtonStart,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+      widgetButtonStart.setEnabled(false);
+      widgetButtonStart.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          jobStart();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      widgetButtonAbort = Widgets.newButton(composite,null,"Abort");
+      Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+      widgetButtonAbort.setEnabled(false);
+      widgetButtonAbort.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          jobAbort();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      widgetButtonTogglePause = Widgets.newButton(composite,null,"Continue");
+      Widgets.layout(widgetButtonTogglePause,0,2,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT); // how to calculate correct max. width? ,0,0,Widgets.getTextSize(widgetButtonTogglePause,new String[]{"Pause","Continue"}));
+      widgetButtonTogglePause.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          jobTogglePause();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      widgetButtonVolume = Widgets.newButton(composite,null,"Volume");
+      Widgets.layout(widgetButtonVolume,0,3,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+      widgetButtonVolume.setEnabled(false);
+      widgetButtonVolume.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      widgetButtonQuit = Widgets.newButton(composite,null,"Quit");
+      Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT);
+      widgetButtonQuit.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          shell.close();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    // start status update thread
+    TabStatusUpdateThread tabStatusUpdateThread = new TabStatusUpdateThread(this);
+    tabStatusUpdateThread.setDaemon(true);
+    tabStatusUpdateThread.start();
+  }
+
+  //-----------------------------------------------------------------------
+
+  void setTabJobs(TabJobs tabJobs)
+  {
+    this.tabJobs = tabJobs;
+  }
+
+  /** getProgress
+   * @param n,m process current/max. value
+   * @return progress value (in %)
+   */
+  private double getProgress(long n, long m)
+  {
+    return (m > 0)?((double)n*100.0)/(double)m:0.0;
+  }
+
+  /** update status
+   */
+  private void updateStatus()
+  {
+    // get status
+    String[] result = new String[1];
+    BARServer.executeCommand("STATUS",result);
+
+    if (result[0].equals("pause"))
+    {
+      status = States.PAUSE;
+      widgetButtonTogglePause.setText("Continue");
+    }
+    else
+    {
+      status = States.RUNNING;
+      widgetButtonTogglePause.setText("Pause");
+    }
+  }
+
+  /** find index of table item for job
+   * @param tableItems table items
+   * @param id job id to find
+   * @return table item or null if not found
+   */
+  private int getTableItemIndex(TableItem[] tableItems, int id)
+  {
+    for (int z = 0; z < tableItems.length; z++)
+    {
+      if (((JobData)tableItems[z].getData()).id == id) return z;
+    }
+
+    return -1;
+  }
+
+  /** find index for insert of job data in sorted job table
+   * @param jobData job data
+   * @return index in job table
+   */
+  private int findJobListIndex(JobData jobData)
+  {
+    TableItem         tableItems[] = widgetJobList.getItems();
+    JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList);
+
+    int index = 0;
+    while (   (index < tableItems.length)
+           && (jobDataComparator.compare(jobData,(JobData)tableItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
+
+  /** update job list
+   */
+  private void updateJobList()
+  {
+    if (!widgetJobList.isDisposed())
+    {
+      // get job list
+      ArrayList<String> result = new ArrayList<String>();
+      int errorCode = BARServer.executeCommand("JOB_LIST",result);
+      if (errorCode != 0) return;
+
+      // update entries in job list
+      synchronized(jobList)
+      {
+        jobList.clear();
+        TableItem[] tableItems     = widgetJobList.getItems();
+        boolean[]   tableItemFlags = new boolean[tableItems.length];
+        for (String line : result)
+        {
+          Object data[] = new Object[10];
+          /* format:
+             <id>
+             <name>
+             <state>
+             <type>
+             <archivePartSize>
+             <compressAlgorithm>
+             <cryptAlgorithm>
+             <cryptTyp>
+             <lastExecutedDateTime>
+             <estimatedRestTime>
+          */
+//System.err.println("BARControl.java"+", "+1357+": "+line);
+          if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+          {
+//System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[9]);
+            // get data
+            int    id                   = (Integer)data[0];
+            String name                 = (String )data[1];
+            String state                = (String )data[2];
+            String type                 = (String )data[3];
+            int    archivePartSize      = (Integer)data[4];
+            String compressAlgorithm    = (String )data[5];
+            String cryptAlgorithm       = (String )data[6];
+            String cryptType            = (String )data[7];
+            long   lastExecutedDateTime = (Long   )data[8];
+            long   estimatedRestTime    = (Long   )data[9];
+
+            // get/create table item
+            TableItem tableItem;
+            JobData   jobData = new JobData(id,
+                                            name,
+                                            state,
+                                            type,
+                                            archivePartSize,
+                                            compressAlgorithm,
+                                            cryptAlgorithm,
+                                            cryptType,
+                                            lastExecutedDateTime,
+                                            estimatedRestTime
+                                           );
+            int index = getTableItemIndex(tableItems,id);
+            if (index >= 0)
+            {
+              tableItem = tableItems[index];
+              tableItemFlags[index] = true;
+            }
+            else
+            {
+              tableItem = new TableItem(widgetJobList,SWT.NONE,findJobListIndex(jobData));
+            }
+            tableItem.setData(jobData);
+
+            jobList.put(name,jobData);
+            tableItem.setText(0,Integer.toString(jobData.id));
+            tableItem.setText(1,jobData.name);
+            tableItem.setText(2,(status != States.PAUSE)?jobData.state:"pause");
+            tableItem.setText(3,jobData.type);
+            tableItem.setText(4,Units.formatByteSize(jobData.archivePartSize));
+            tableItem.setText(5,jobData.compressAlgorithm);
+            tableItem.setText(6,jobData.getCryptAlgorithm());
+            tableItem.setText(7,jobData.formatLastExecutedDateTime());
+            tableItem.setText(8,jobData.formatEstimatedRestTime());
+          }
+        }
+
+        // remove not existing entries
+        for (int z = 0; z < tableItems.length; z++)
+        {
+          if (!tableItemFlags[z]) widgetJobList.remove(z);
+        }
+      }
+    }
+  }
+
+  /** update job information
+   */
+  private void updateJobInfo()
+  {
+    if (selectedJobData != null)
+    {
+      // get job info
+      String result[] = new String[1];
+      int errorCode = BARServer.executeCommand(String.format("JOB_INFO %d",selectedJobData.id),result);
+      if (errorCode != 0) return;
+
+      // update job info
+      Object data[] = new Object[24];
+      /* format:
+        <state>
+        <error>
+        <doneFiles>
+        <doneBytes>
+        <totalFiles>
+        <totalBytes>
+        <skippedFiles>
+        <skippedBytes>
+        <errorFiles>
+        <errorBytes>
+        <filesPerSecond>
+        <bytesPerSecond>
+        <storageBytesPerSecond>
+        <archiveBytes>
+        <ratio \
+        <fileName>
+        <fileDoneBytes>
+        <fileTotalBytes>
+        <storageName>
+        <storageDoneBytes>
+        <storageTotalBytes>
+        <volumeNumber>
+        <volumeProgress>
+        <requestedVolumeNumber\>
+      */
+      if (StringParser.parse(result[0],"%S %S %ld %ld %ld %ld %ld %ld %ld %ld %f %f %f %ld %f %S %ld %ld %S %ld %ld %ld %f %d",data,StringParser.QUOTE_CHARS))
+      {
+         String state = (String)data[0];
+
+         doneFiles.set            ((Long  )data[ 2]);
+         doneBytes.set            ((Long  )data[ 3]);
+         storedBytes.set          ((Long  )data[20]);
+         skippedFiles.set         ((Long  )data[ 6]);
+         skippedBytes.set         ((Long  )data[ 7]);
+         errorFiles.set           ((Long  )data[ 8]);
+         errorBytes.set           ((Long  )data[ 9]);
+         totalFiles.set           ((Long  )data[ 4]);
+         totalBytes.set           ((Long  )data[ 5]);
+
+         filesPerSecond.set       ((Double)data[10]);
+         bytesPerSecond.set       ((Double)data[11]);
+         storageBytesPerSecond.set((Double)data[12]);
+//         archiveBytes.set((Long)data[13]);
+         ratio.set                ((Double)data[14]);
+
+         fileName.set             ((String)data[15]);
+         fileProgress.set         (getProgress((Long)data[16],(Long)data[17]));
+         storageName.set          ((String)data[18]);
+         storageProgress.set      (getProgress((Long)data[19],(Long)data[20]));
+         volumeNumber.set         ((Long  )data[21]);
+         volumeProgress.set       ((Double)data[22]);
+         totalFilesProgress.set   (getProgress((Long)data[ 2],(Long)data[ 4]));
+         totalBytesProgress.set   (getProgress((Long)data[ 3],(Long)data[ 5]));
+         message.set              ((String)data[ 1]);
+
+         widgetButtonStart.setEnabled(!state.equals("running") && !state.equals("waiting") && !state.equals("pause"));
+         widgetButtonAbort.setEnabled(state.equals("waiting") || state.equals("running"));
+//         widgetButtonVolume.setEnabled(state.equals("running"));
+      }
+else { Dprintf.dprintf("unexecpted "+result[0]); }
+    }
+  }
+
+  /** update status, job list, job data
+   */
+  void update()
+  {
+    // update job list
+    updateStatus();
+    updateJobList();
+    updateJobInfo();
+  }
+
+  /** start selected job
+   */
+  private void jobStart()
+  {
+    assert selectedJobData != null;
+
+    switch (Dialogs.select(shell,"Confirmation","Start job '"+selectedJobData.name+"'?",new String[]{"Normal","Full","Incremental","Cancel"},2))
+    {
+      case 0:
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" normal");
+        break;
+      case 1:
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" full");
+        break;
+      case 2:
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
+        break;
+      case 3:
+        break;
+    }
+  }
+
+  /** abort selected job
+   */
+  private void jobAbort()
+  {
+    assert selectedJobData != null;
+
+    BARServer.executeCommand("JOB_ABORT "+selectedJobData.id);
+  }
+
+  /** toggle pause all jobs
+   */
+  private void jobTogglePause()
+  {
+    switch (status)
+    {
+      case RUNNING: BARServer.executeCommand("PAUSE"   ); break;
+      case PAUSE:   BARServer.executeCommand("CONTINUE"); break;
+    }
+  }
+}
+
+/* end of file */
