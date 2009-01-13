@@ -190,7 +190,7 @@ if (debug) System.err.println("layout "+this+": children="+children.length+" row
     Rectangle rectangle = composite.getClientArea();
 if (debug) System.err.println("composite="+composite+" rectangle="+rectangle);
 
-    // calculate fixed row, column size
+    // calculate fixed row/column sizes
     fixedWidth  = 0;
     fixedHeight = 0;
     for (int i = 0; i < columns; i++)
@@ -298,7 +298,7 @@ if (debug) System.err.println(String.format("  %-40s: size=(%4d,%4d) row=%2d col
   {
 if (debug) System.err.println("--------------------------------------------------------");
 if (debug) System.err.println("init "+this+": children="+children.length);
-    // get sizes
+    // get sizes of children
     sizes = new Point[children.length];
     for (int i = 0; i < children.length; i++)
     {
@@ -318,7 +318,7 @@ System.err.println(String.format("  (%4d,%4d) %s: %s",
                                 )
                   );
 
-    // get number of rows, columns
+    // get number of rows/columns
     rows    = 0;
     columns = 0;
     for (int i = 0; i < children.length; i++)
@@ -453,7 +453,7 @@ if (debug) { System.err.print("column size hints: ");for (int i = 0; i < columns
     sum = 0.0;
     for (int i = 0; i < weights.length; i++) { sum += expandFlags[i]?weights[i]:0.0; };
     for (int i = 0; i < weights.length; i++) { weights[i] = expandFlags[i]?((sum > 0.0)?weights[i]/sum:1.0):0.0; }; 
-//System.err.print("weights "+sum); for (int i = 0; i < weights.length; i++) { System.err.print(" "+weights[i]); }; System.err.println();
+//System.err.print("weights sum="+sum+": "); for (int i = 0; i < weights.length; i++) { System.err.print(" "+weights[i]); }; System.err.println();
 
     return weights;
   }
