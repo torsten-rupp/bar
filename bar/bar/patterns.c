@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patterns.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -210,11 +210,6 @@ void Pattern_done(Pattern *pattern)
   regfree(&pattern->regexExact);
   regfree(&pattern->regexEnd);
   regfree(&pattern->regexBegin);
-}
-
-Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern)
-{
-  assert(pattern != NULL);
 }
 
 bool Pattern_match(const Pattern     *pattern,

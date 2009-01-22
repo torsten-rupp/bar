@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/stringlists.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -135,7 +135,7 @@ bool StringList_empty(const StringList *stringList)
   return List_empty(stringList);
 }
 
-unsigned long StringList_count(const StringList *stringList)
+ulong StringList_count(const StringList *stringList)
 {
   assert(stringList != NULL);
 
@@ -289,6 +289,7 @@ StringNode *StringList_matchCString(StringList *stringList, const char *pattern)
   StringNode *stringNode;
 
   assert(stringList != NULL);
+  assert(pattern != NULL);
 
   /* compile pattern */
   if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)

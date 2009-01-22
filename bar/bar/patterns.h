@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patterns.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -117,18 +117,6 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
 \***********************************************************************/
 
 void Pattern_done(Pattern *pattern);
-
-/***********************************************************************\
-* Name   : Pattern_copy
-* Purpose: copy pattern
-* Input  : pattern - pattern variable
-*          fromPattern - pattern to copy
-* Output : pattern - initialzied variable
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern);
 
 /***********************************************************************\
 * Name   : Pattern_match

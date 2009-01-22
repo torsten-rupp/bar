@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/lists.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -215,7 +215,7 @@ void List_move(void *fromList,
   }
 }
 
-unsigned long List_empty(const void *list)
+bool List_empty(const void *list)
 {
   assert(list != NULL);
   assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||

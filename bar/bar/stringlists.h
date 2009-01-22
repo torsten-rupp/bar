@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/stringlists.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems: all
@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "global.h"
 #include "strings.h"
 #include "lists.h"
 
@@ -138,7 +139,7 @@ bool StringList_empty(const StringList *stringList);
 * Notes  : -
 \***********************************************************************/
 
-unsigned long StringList_count(const StringList *stringList);
+ulong StringList_count(const StringList *stringList);
 
 /***********************************************************************\
 * Name   : StringList_insert/StringList_insertCString/
@@ -211,16 +212,26 @@ String StringList_getFirst(StringList *stringList, String string);
 
 String StringList_getLast(StringList *stringList, String string);
 
+/***********************************************************************\
+* Name   : StringList_find
+* Purpose: find string in string list
+* Input  : stringList - string list
+*          string,s   - string to find
+* Output : -
+* Return : string node or NULL of string not found
+* Notes  : -
+\***********************************************************************/
 
 StringNode *StringList_find(StringList *stringList, const String string);
 StringNode *StringList_findCString(StringList *stringList, const char *s);
 
 /***********************************************************************\
 * Name   : StringList_match
-* Purpose: 
-* Input  : -
+* Purpose: match string with string list
+* Input  : stringList - string list
+*          patternm   - pattern string
 * Output : -
-* Return : -
+* Return : string node or NULL of string do not match
 * Notes  : -
 \***********************************************************************/
 

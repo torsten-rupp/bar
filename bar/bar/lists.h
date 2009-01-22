@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/lists.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -13,6 +13,8 @@
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
+
+#include "global.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -250,7 +252,7 @@ void List_move(void *fromList,
 * Notes  : -
 \***********************************************************************/
 
-unsigned long List_empty(const void *list);
+bool List_empty(const void *list);
 
 /***********************************************************************\
 * Name   : List_count
