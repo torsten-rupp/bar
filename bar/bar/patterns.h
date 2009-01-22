@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patterns.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -21,7 +21,6 @@
 #include <assert.h>
 
 #include "global.h"
-#include "lists.h"
 #include "strings.h"
 
 #include "errors.h"
@@ -52,21 +51,13 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-typedef struct PatternNode
+typedef struct
 {
-  LIST_NODE_HEADER(struct PatternNode);
-
   PatternTypes type;
-  String       pattern;
   regex_t      regexBegin;              // regular expression for matching begin
   regex_t      regexEnd;                // regular expression for matching end
   regex_t      regexExact;              // regular expression for matching exact
-} PatternNode;
-
-typedef struct
-{
-  LIST_HEADER(PatternNode);
-} PatternList;
+} Pattern;
 
 /***************************** Variables *******************************/
 
@@ -103,120 +94,68 @@ Errors Pattern_initAll(void);
 void Pattern_doneAll(void);
 
 /***********************************************************************\
-* Name   : Pattern_initList
-* Purpose: init pattern list
-* Input  : patternList - pattern list
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Pattern_initList(PatternList *patternList);
-
-/***********************************************************************\
-* Name   : Pattern_doneList
-* Purpose: done pattern list
-* Input  : patternList - pattern list
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Pattern_doneList(PatternList *patternList);
-
-/***********************************************************************\
-* Name   : Pattern_clearList
-* Purpose: remove all patterns in list
-* Input  : patternList - pattern list
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Pattern_clearList(PatternList *patternList);
-
-/***********************************************************************\
-* Name   : Pattern_copyList
-* Purpose: copy all patterns from source list to destination list
-* Input  : fromPatternList - from pattern list (source)
-*          toPatternList   - to pattern list (destination)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Pattern_copyList(const PatternList *fromPatternList, PatternList *toPatternList);
-
-/***********************************************************************\
-* Name   : Pattern_moveList
-* Purpose: move all patterns from source list to destination list
-* Input  : fromPatternList - from pattern list (source)
-*          toPatternList   - to pattern list (destination)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Pattern_moveList(PatternList *fromPatternList, PatternList *toPatternList);
-
-/***********************************************************************\
-* Name   : Pattern_appendList
-* Purpose: add pattern to pattern list
-* Input  : patternList - pattern list
-*          pattern     - pattern
-*          patternType - pattern type; see PATTERN_TTYPE_*
-* Output : -
+* Name   : Pattern_init
+* Purpose: init pattern
+* Input  : pattern - pattern variable
+*          string  - pattern
+*          patternType - pattern type; see PATTERN_TYPE_*
+* Output : pattern - initialzied variable
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Pattern_appendList(PatternList  *patternList,
-                          const char   *pattern,
-                          PatternTypes patternType
-                         );
+Errors Pattern_init(Pattern *pattern, const String string, PatternTypes patternType);
+Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes patternType);
+
+/***********************************************************************\
+* Name   : Pattern_done
+* Purpose: done pattern
+* Input  : pattern - pattern
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Pattern_done(Pattern *pattern);
+
+/***********************************************************************\
+* Name   : Pattern_copy
+* Purpose: copy pattern
+* Input  : pattern - pattern variable
+*          fromPattern - pattern to copy
+* Output : pattern - initialzied variable
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern);
 
 /***********************************************************************\
 * Name   : Pattern_match
 * Purpose: patch string with single pattern
-* Input  : patternNode      - pattern node
-*          s                - string
+* Input  : pattern          - pattern
+*          string           - string
 *          patternMatchMode - pattern match mode; see PatternMatchModes
 * Output : -
 * Return : TRUE if pattern match, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Pattern_match(PatternNode       *patternNode,
-                   String            s,
+bool Pattern_match(const Pattern     *pattern,
+                   const String      string,
                    PatternMatchModes patternMatchMode
                   );
 
 /***********************************************************************\
-* Name   : Pattern_matchList
-* Purpose: patch string with all patterns of list
-* Input  : patternList      - pattern list
-*          s                - string
-*          patternMatchMode - pattern match mode; see PatternMatchModes
-* Output : -
-* Return : TRUE if pattern match, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool Pattern_matchList(PatternList       *patternList,
-                       String            s,
-                       PatternMatchModes patternMatchMode
-                      );
-
-/***********************************************************************\
 * Name   : Pattern_checkIsPattern
 * Purpose: check if string is a pattern
-* Input  : s - string
+* Input  : string - string
 * Output : -
 * Return : TRUE is s is a pattern, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Pattern_checkIsPattern(String s);
+bool Pattern_checkIsPattern(const String string);
 
 #ifdef __cplusplus
   }

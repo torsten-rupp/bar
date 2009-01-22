@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_compare.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -21,7 +21,7 @@
 #include "stringlists.h"
 
 #include "bar.h"
-#include "patterns.h"
+#include "patternlists.h"
 #include "crypt.h"
 
 /****************** Conditional compilation switches *******************/

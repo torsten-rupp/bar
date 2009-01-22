@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -28,7 +28,7 @@
 #include "stringlists.h"
 
 #include "errors.h"
-#include "patterns.h"
+#include "patternlists.h"
 #include "files.h"
 #include "archive.h"
 #include "filefragmentlists.h"
@@ -93,6 +93,9 @@ LOCAL String getDestinationFileName(String       destinationFileName,
   String          pathName,baseName,name;
   StringTokenizer fileNameTokenizer;
   int             z;
+
+  assert(destinationFileName != NULL);
+  assert(fileName != NULL);
 
   if (directory != NULL)
   {
@@ -295,8 +298,8 @@ Errors Command_restore(StringList                *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               String_set(restoreInfo.statusInfo.fileName,fileName);
@@ -348,7 +351,11 @@ Errors Command_restore(StringList                *archiveFileNameList,
               directoryName = File_getFilePathName(String_new(),destinationFileName);
               if (!File_exists(directoryName))
               {
-                error = File_makeDirectory(directoryName);
+                error = File_makeDirectory(directoryName,
+                                           fileInfo.userId,
+                                           fileInfo.groupId,
+                                           fileInfo.permission
+                                          );
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -470,10 +477,6 @@ Errors Command_restore(StringList                *archiveFileNameList,
               }
 #endif /* 0 */
 
-              /* add fragment to file fragment list */
-              FileFragmentList_add(fileFragmentNode,fragmentOffset,fragmentSize);
-//FileFragmentList_print(fileFragmentNode,String_cString(fileName));
-
               /* set file time, permissions, file owner/group */
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
@@ -492,6 +495,10 @@ Errors Command_restore(StringList                *archiveFileNameList,
                 }
                 continue;
               }
+
+              /* add fragment to file fragment list */
+              FileFragmentList_add(fileFragmentNode,fragmentOffset,fragmentSize);
+//FileFragmentList_print(fileFragmentNode,String_cString(fileName));
 
               /* discard fragment list if file is complete */
               if (FileFragmentList_checkComplete(fileFragmentNode))
@@ -542,8 +549,8 @@ Errors Command_restore(StringList                *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
-                && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               String_set(restoreInfo.statusInfo.fileName,directoryName);
@@ -575,7 +582,11 @@ Errors Command_restore(StringList                *archiveFileNameList,
 
               printInfo(2,"  Restore directory '%s'...",String_cString(destinationFileName));
 
-              error = File_makeDirectory(destinationFileName);
+              error = File_makeDirectory(destinationFileName,
+                                         fileInfo.userId,
+                                         fileInfo.groupId,
+                                         fileInfo.permission
+                                        );
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
@@ -659,8 +670,8 @@ Errors Command_restore(StringList                *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
-                && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               String_set(restoreInfo.statusInfo.fileName,linkName);
@@ -780,8 +791,8 @@ Errors Command_restore(StringList                *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               String_set(restoreInfo.statusInfo.fileName,fileName);

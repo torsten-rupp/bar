@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -93,6 +93,7 @@ BAR_SOURCES          = bar.c \
                        archive_format.c \
                        chunks.c \
                        patterns.c \
+                       patternlists.c \
                        compress.c \
                        crypt.c \
                        passwords.c \
@@ -191,10 +192,10 @@ bar-keygen: bar-keygen.in
 	$(CHMOD) 775 $@
 
 # error definition
-errors.h: errors.def
-	$(PERL) errors.pl < $^ -h $@
-errors.c: errors.def
-	$(PERL) errors.pl < $^ -c $@
+errors.h: ../errors.def ../errors.pl
+	$(PERL) ../errors.pl < $^ -h $@
+errors.c: ../errors.def ../errors.pl
+	$(PERL) ../errors.pl < $^ -c $@
 
 # archive format definition
 archive_format.h: archive_format.def

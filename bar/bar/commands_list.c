@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -33,6 +33,7 @@
 #include "errors.h"
 #include "misc.h"
 #include "patterns.h"
+#include "patternlists.h"
 #include "files.h"
 #include "archive.h"
 #include "storage.h"
@@ -974,7 +975,6 @@ remoteBarFlag=FALSE;
     {
       case STORAGE_TYPE_FILESYSTEM:
       case STORAGE_TYPE_FTP:
-      case STORAGE_TYPE_SCP:
       case STORAGE_TYPE_SFTP:
         {
           Errors          error;
@@ -1032,29 +1032,16 @@ remoteBarFlag=FALSE;
 
                   /* open archive file */
                   fileName = String_new();
-                  do
-                  {
-                    error = Archive_readFileEntry(&archiveInfo,
-                                                  &archiveFileInfo,
-                                                  &compressAlgorithm,
-                                                  &cryptAlgorithm,
-                                                  &cryptType,
-                                                  fileName,
-                                                  &fileInfo,
-                                                  &fragmentOffset,
-                                                  &fragmentSize
-                                                 );
-                    retryFlag = FALSE;
-#if 0
-                    if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
-                    {
-                      inputCryptPassword(&jobOptions->cryptPassword);
-                      retryFlag         = TRUE;
-                      inputPasswordFlag = TRUE;
-                    }
-#endif /* 0 */
-                  }
-                  while ((error != ERROR_NONE) && retryFlag);
+                  error = Archive_readFileEntry(&archiveInfo,
+                                                &archiveFileInfo,
+                                                &compressAlgorithm,
+                                                &cryptAlgorithm,
+                                                &cryptType,
+                                                fileName,
+                                                &fileInfo,
+                                                &fragmentOffset,
+                                                &fragmentSize
+                                               );
                   if (error != ERROR_NONE)
                   {
                     printError("Cannot not read 'file' content of archive '%s' (error: %s)!\n",
@@ -1066,8 +1053,8 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-                      && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                  if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
                     if (globalOptions.groupFlag)
@@ -1123,26 +1110,13 @@ remoteBarFlag=FALSE;
 
                   /* open archive lin */
                   directoryName = String_new();
-                  do
-                  {
-                    error = Archive_readDirectoryEntry(&archiveInfo,
-                                                       &archiveFileInfo,
-                                                       &cryptAlgorithm,
-                                                       &cryptType,
-                                                       directoryName,
-                                                       &fileInfo
-                                                      );
-                    retryFlag = FALSE;
-#if 0
-                    if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
-                    {
-                      inputCryptPassword(&jobOptions->cryptPassword);
-                      retryFlag         = TRUE;
-                      inputPasswordFlag = TRUE;
-                    }
-#endif /* 0 */
-                  }
-                  while ((error != ERROR_NONE) && retryFlag);
+                  error = Archive_readDirectoryEntry(&archiveInfo,
+                                                     &archiveFileInfo,
+                                                     &cryptAlgorithm,
+                                                     &cryptType,
+                                                     directoryName,
+                                                     &fileInfo
+                                                    );
                   if (error != ERROR_NONE)
                   {
                     printError("Cannot not read 'directory' content of archive '%s' (error: %s)!\n",
@@ -1154,8 +1128,8 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
-                      && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+                  if (   (List_empty(includePatternList) || PatternList_match(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
                     if (globalOptions.groupFlag)
@@ -1201,27 +1175,14 @@ remoteBarFlag=FALSE;
                   /* open archive lin */
                   linkName = String_new();
                   fileName = String_new();
-                  do
-                  {
-                    error = Archive_readLinkEntry(&archiveInfo,
-                                                  &archiveFileInfo,
-                                                  &cryptAlgorithm,
-                                                  &cryptType,
-                                                  linkName,
-                                                  fileName,
-                                                  &fileInfo
-                                                 );
-                    retryFlag = FALSE;
-#if 0
-                    if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
-                    {
-                      inputCryptPassword(&jobOptions->cryptPassword);
-                      retryFlag         = TRUE;
-                      inputPasswordFlag = TRUE;
-                    }
-#endif /* 0 */
-                  }
-                  while ((error != ERROR_NONE) && retryFlag);
+                  error = Archive_readLinkEntry(&archiveInfo,
+                                                &archiveFileInfo,
+                                                &cryptAlgorithm,
+                                                &cryptType,
+                                                linkName,
+                                                fileName,
+                                                &fileInfo
+                                               );
                   if (error != ERROR_NONE)
                   {
                     printError("Cannot not read 'link' content of archive '%s' (error: %s)!\n",
@@ -1234,8 +1195,8 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
-                      && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+                  if (   (List_empty(includePatternList) || PatternList_match(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
                     if (globalOptions.groupFlag)
@@ -1282,26 +1243,13 @@ remoteBarFlag=FALSE;
 
                   /* open archive lin */
                   fileName = String_new();
-                  do
-                  {
-                    error = Archive_readSpecialEntry(&archiveInfo,
-                                                     &archiveFileInfo,
-                                                     &cryptAlgorithm,
-                                                     &cryptType,
-                                                     fileName,
-                                                     &fileInfo
-                                                    );
-                    retryFlag = FALSE;
-#if 0
-                    if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
-                    {
-                      inputCryptPassword(&jobOptions->cryptPassword);
-                      retryFlag         = TRUE;
-                      inputPasswordFlag = TRUE;
-                    }
-#endif /* 0 */
-                  }
-                  while ((error != ERROR_NONE) && retryFlag);
+                  error = Archive_readSpecialEntry(&archiveInfo,
+                                                   &archiveFileInfo,
+                                                   &cryptAlgorithm,
+                                                   &cryptType,
+                                                   fileName,
+                                                   &fileInfo
+                                                  );
                   if (error != ERROR_NONE)
                   {
                     printError("Cannot not read 'special' content of archive '%s' (error: %s)!\n",
@@ -1313,8 +1261,8 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-                      && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                  if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
                     if (globalOptions.groupFlag)
@@ -1368,14 +1316,16 @@ remoteBarFlag=FALSE;
         }
         break;
       case STORAGE_TYPE_SSH:
+      case STORAGE_TYPE_SCP:
         {
-          String               userName;
+          String               loginName;
           String               hostName;
           uint                 hostPort;
-          String               hostFileName;
+          String               archiveFileName;
           SSHServer            sshServer;
           NetworkExecuteHandle networkExecuteHandle;
           String               line;
+          uint                 majorVersion,minorVersion;
           Errors               error;
           int                  id,errorCode;
           bool                 completedFlag;
@@ -1390,17 +1340,24 @@ remoteBarFlag=FALSE;
           FileSpecialTypes     fileSpecialType;
           ulong                major;
           ulong                minor;
-          int                  exitCode;
+          int                  exitcode;
 
           /* parse storage string */
-          userName     = String_new();
-          hostName     = String_new();
-          hostFileName = String_new();
-          if (!Storage_parseSSHSpecifier(storageSpecifier,userName,hostName,&hostPort,hostFileName))
+          loginName       = String_new();
+          hostName        = String_new();
+          hostPort        = 0;
+          archiveFileName = String_new();
+          if (!Storage_parseSSHSpecifier(storageSpecifier,
+                                         loginName,
+                                         hostName,
+                                         &hostPort,
+                                         archiveFileName
+                                        )
+             )
           {
-            String_delete(hostFileName);
+            String_delete(archiveFileName);
             String_delete(hostName);
-            String_delete(userName);
+            String_delete(loginName);
             printError("Cannot not parse storage name '%s'!\n",
                        String_cString(storageSpecifier)
                       );
@@ -1412,11 +1369,13 @@ remoteBarFlag=FALSE;
           if (!remoteBarFlag)
           {
             getSSHServer(hostName,jobOptions,&sshServer);
+            if (String_empty(loginName)) String_set(loginName,sshServer.loginName);
+            if (hostPort == 0) hostPort = sshServer.port;
             error = Network_connect(&socketHandle,
                                     SOCKET_TYPE_SSH,
                                     hostName,
-                                    sshServer.port,
-                                    userName,
+                                    hostPort,
+                                    loginName,
                                     sshServer.password,
                                     sshServer.publicKeyFileName,
                                     sshServer.privateKeyFileName,
@@ -1426,12 +1385,12 @@ remoteBarFlag=FALSE;
             {
               printError("Cannot not connecto to '%s:%d' (error: %s)!\n",
                          String_cString(hostName),
-                         sshServer.port,
+                         hostPort,
                          Errors_getText(error)
                         );
-              String_delete(hostFileName);
+              String_delete(archiveFileName);
               String_delete(hostName);
-              String_delete(userName);
+              String_delete(loginName);
               if (failError == ERROR_NONE) failError = error;
               break;
             }
@@ -1439,14 +1398,9 @@ remoteBarFlag=FALSE;
             remoteBarFlag = TRUE;
           }
 
-          line = String_new();
-          fileName      = String_new();
-          directoryName = String_new();
-          linkName      = String_new();
-
-
           /* start remote BAR in batch mode */
-          String_format(String_clear(line),"%s --batch",globalOptions.remoteBARExecutable);
+          line = String_format(String_new(),"%s --batch",!String_empty(globalOptions.remoteBARExecutable)?String_cString(globalOptions.remoteBARExecutable):"bar");
+fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
           error = Network_execute(&networkExecuteHandle,
                                   &socketHandle,
                                   NETWORK_EXECUTE_IO_MASK_STDOUT|NETWORK_EXECUTE_IO_MASK_STDERR,
@@ -1458,16 +1412,55 @@ remoteBarFlag=FALSE;
                        String_cString(line),
                        Errors_getText(error)
                       );
+            String_delete(line);
+            String_delete(archiveFileName);
+            String_delete(hostName);
+            String_delete(loginName);
             if (failError == ERROR_NONE) failError = error;
             break;
           }
+          if (Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,60*1000))
+          {
+            Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
+            exitcode = Network_terminate(&networkExecuteHandle);
+            printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_empty(line)?String_cString(line):"unknown",exitcode);
+            String_delete(line);
+            String_delete(archiveFileName);
+            String_delete(hostName);
+            String_delete(loginName);
+            if (failError == ERROR_NONE) failError = ERROR_NO_RESPONSE;
+            break;
+          }
+          Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,line,0);
+fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
+          if (!String_parse(line,STRING_BEGIN,"BAR VERSION %d %d",NULL,&majorVersion,&minorVersion))
+          {
+            Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
+            exitcode = Network_terminate(&networkExecuteHandle);
+            printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_empty(line)?String_cString(line):"unknown",exitcode);
+            String_delete(line);
+            String_delete(archiveFileName);
+            String_delete(hostName);
+            String_delete(loginName);
+            if (failError == ERROR_NONE) failError = ERROR_INVALID_RESPONSE;
+            break;
+          }
+          String_delete(line);
 
+          /* read archive content */
+          line          = String_new();
+          fileName      = String_new();
+          directoryName = String_new();
+          linkName      = String_new();
           do
           {
             /* send list archive command */
-            String_format(String_clear(line),"1 SET crypt-password %'s",jobOptions->cryptPassword);
-            Network_executeWriteLine(&networkExecuteHandle,line);
-            String_format(String_clear(line),"2 ARCHIVE_LIST %S",hostFileName);
+            if (!Password_empty(jobOptions->cryptPassword))
+            {
+              String_format(String_clear(line),"1 SET crypt-password %'s",jobOptions->cryptPassword);
+              Network_executeWriteLine(&networkExecuteHandle,line);
+            }
+            String_format(String_clear(line),"2 ARCHIVE_LIST %S",archiveFileName);
             Network_executeWriteLine(&networkExecuteHandle,line);
             Network_executeSendEOF(&networkExecuteHandle);
 
@@ -1476,7 +1469,7 @@ remoteBarFlag=FALSE;
             {
               /* read line */
               Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,line,60*1000);
-  //fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(line));
+fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
 
               /* parse and output list */
               if      (String_parse(line,
@@ -1498,8 +1491,8 @@ remoteBarFlag=FALSE;
                                    )
                       )
               {
-                if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-                    && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                    && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
                   if (globalOptions.groupFlag)
@@ -1554,8 +1547,8 @@ remoteBarFlag=FALSE;
                                    )
                       )
               {
-                if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
-                    && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+                if (   (List_empty(includePatternList) || PatternList_match(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                    && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
                   if (globalOptions.groupFlag)
@@ -1599,8 +1592,8 @@ remoteBarFlag=FALSE;
                                    )
                       )
               {
-                if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
-                    && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+                if (   (List_empty(includePatternList) || PatternList_match(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                    && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
                   if (globalOptions.groupFlag)
@@ -1648,8 +1641,8 @@ remoteBarFlag=FALSE;
                                    )
                       )
               {
-                if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
-                    && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+                if (   (List_empty(includePatternList) || PatternList_match(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                    && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
                   if (globalOptions.groupFlag)
@@ -1707,22 +1700,23 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
 #endif /* 0 */
           }
           while ((error != ERROR_NONE) && retryFlag);
-
-          exitCode = Network_terminate(&networkExecuteHandle);
-          if (exitCode != 0)
-          {
-            printError("Remote BAR program return exitcode %d!\n",exitCode);
-            if (failError == ERROR_NONE) failError = ERROR_NETWORK_EXECUTE_FAIL;
-          }
-
-          /* free resources */
           String_delete(linkName);
           String_delete(directoryName);
           String_delete(fileName);
           String_delete(line);
-          String_delete(hostFileName);
+
+          /* close connection */
+          exitcode = Network_terminate(&networkExecuteHandle);
+          if (exitcode != 0)
+          {
+            printError("Remote BAR program return exitcode %d!\n",exitcode);
+            if (failError == ERROR_NONE) failError = ERROR_NETWORK_EXECUTE_FAIL;
+          }
+
+          /* free resources */
+          String_delete(archiveFileName);
           String_delete(hostName);
-          String_delete(userName);
+          String_delete(loginName);
         }
         break;
       default:

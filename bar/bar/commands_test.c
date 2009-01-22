@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_test.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -28,7 +28,7 @@
 #include "stringlists.h"
 
 #include "errors.h"
-#include "patterns.h"
+#include "patternlists.h"
 #include "files.h"
 #include "archive.h"
 #include "filefragmentlists.h"
@@ -167,8 +167,8 @@ Errors Command_test(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               printInfo(2,"  Test file '%s'...",String_cString(fileName));
@@ -258,8 +258,8 @@ Errors Command_test(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
-                && !Pattern_matchList(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               printInfo(2,"  Test directory '%s'...",String_cString(directoryName));
@@ -308,8 +308,8 @@ Errors Command_test(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
-                && !Pattern_matchList(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               printInfo(2,"  Test link '%s'...",String_cString(linkName));
@@ -355,8 +355,8 @@ Errors Command_test(StringList  *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || Pattern_matchList(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && !Pattern_matchList(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
               printInfo(2,"  Test special device '%s'...",String_cString(fileName));
