@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -3787,7 +3787,6 @@ Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
           uint64 size;
           uint   year,month,day;
           uint   hour,minute;
-          char   monthName[16];
           uint   n;
 
           readFlag = FALSE;

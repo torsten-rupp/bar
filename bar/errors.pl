@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all
@@ -43,21 +43,12 @@ my $ERROR_TEXTINDEX_MAX_COUNT = 63;;
 
 my $PREFIX                    = "ERROR_";
 
-my $cFileName,$hFileName;
+my $cFileName,$hFileName,$javaFileName;
+my $errorNumber=0;
 
 # --------------------------------- includes ---------------------------------
 
 # -------------------------------- functions ---------------------------------
-
-sub writeHFile($)
-{
-  my $s=shift(@_);
-
-  if ($hFileName ne "")
-  {
-    print HFILE_HANDLE $s;
-  }
-}
 
 sub writeCFile($)
 {
@@ -69,22 +60,24 @@ sub writeCFile($)
   }
 }
 
-sub writeHPrefix()
+sub writeHFile($)
 {
-  print HFILE_HANDLE "typedef enum\n";
-  print HFILE_HANDLE "{\n";
-  print HFILE_HANDLE "  /*   0 */ ".$PREFIX."NONE,\n";
+  my $s=shift(@_);
+
+  if ($hFileName ne "")
+  {
+    print HFILE_HANDLE $s;
+  }
 }
 
-sub writeHPostfix()
+sub writeJavaFile($)
 {
-  print HFILE_HANDLE "  ".$PREFIX."UNKNOWN\n";
-  print HFILE_HANDLE "} Errors;\n";
-  print HFILE_HANDLE "\n";
-  print HFILE_HANDLE "const int _Errors_textToIndex(const char *text);\n";
-  print HFILE_HANDLE "const char *Errors_getText(Errors error);\n";
-  print HFILE_HANDLE "\n";
-  print HFILE_HANDLE "#endif /* __ARCHIVE_FORMAT__ */\n";
+  my $s=shift(@_);
+
+  if ($javaFileName ne "")
+  {
+    print JAVAFILE_HANDLE $s;
+  }
 }
 
 sub writeCPrefix()
@@ -97,6 +90,11 @@ sub writeCPrefix()
   print CFILE_HANDLE "#define ERROR_CPDE GET_ERROR_CODE(error)\n";
   print CFILE_HANDLE "#define ERROR_TEXT GET_ERROR_TEXT(error)\n";
   print CFILE_HANDLE "#define ERRNO      GET_ERRNO(error)\n";
+  print CFILE_HANDLE "\n";
+  print CFILE_HANDLE "unsigned int Errors_getCode(Errors error)\n";
+  print CFILE_HANDLE "{\n";
+  print CFILE_HANDLE "  return GET_ERROR_CODE(error);\n";
+  print CFILE_HANDLE "}\n";
   print CFILE_HANDLE "\n";
   print CFILE_HANDLE "const char *Errors_getText(Errors error)\n";
   print CFILE_HANDLE "{\n";
@@ -119,10 +117,43 @@ sub writeCPostfix()
   print CFILE_HANDLE "}\n";
 }
 
+sub writeHPrefix()
+{
+  print HFILE_HANDLE "typedef enum\n";
+  print HFILE_HANDLE "{\n";
+  print HFILE_HANDLE "  ".$PREFIX."NONE = 0,\n";
+}
+
+sub writeHPostfix()
+{
+  print HFILE_HANDLE "  ".$PREFIX."UNKNOWN = $errorNumber\n";
+  print HFILE_HANDLE "} Errors;\n";
+  print HFILE_HANDLE "\n";
+  print HFILE_HANDLE "const int _Errors_textToIndex(const char *text);\n";
+  print HFILE_HANDLE "unsigned int Errors_getCode(Errors error);\n";
+  print HFILE_HANDLE "const char *Errors_getText(Errors error);\n";
+  print HFILE_HANDLE "\n";
+  print HFILE_HANDLE "#endif /* __ARCHIVE_FORMAT__ */\n";
+}
+
+sub writeJavaPrefix()
+{
+  print JAVAFILE_HANDLE "class Errors\n";
+  print JAVAFILE_HANDLE "{\n";
+  print JAVAFILE_HANDLE "  static final int NONE = 0;\n";
+}
+
+sub writeJavaPostfix()
+{
+  print JAVAFILE_HANDLE "  static final int UNKNOWN = $errorNumber;\n";
+  print JAVAFILE_HANDLE "}\n";
+}
+
 # ------------------------------ main program  -------------------------------
 
 GetOptions("c=s" => \$cFileName,
            "h=s" => \$hFileName,
+           "j=s" => \$javaFileName,
           );
 
 if ($cFileName ne "")
@@ -196,6 +227,11 @@ if ($hFileName ne "")
   print HFILE_HANDLE "\n";
   writeHPrefix();
 }
+if ($javaFileName ne "")
+{
+  open(JAVAFILE_HANDLE,"> $javaFileName");
+  writeJavaPrefix();
+}
 
 my @names;
 my $defaultText;
@@ -214,7 +250,9 @@ while ($line=<STDIN>)
     # error <name> <text>
     my $name=$1;
     my $text=$2;
-    writeHFile("  $PREFIX$name,\n");
+    $errorNumber++;
+    writeHFile("  $PREFIX$name = $errorNumber,\n");
+    writeJavaFile("  static final int $name = $errorNumber;\n");
     if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
     writeCFile("    case $PREFIX$name: return \"$text\";\n");
   }
@@ -223,9 +261,20 @@ while ($line=<STDIN>)
     # error <name> <function>
     my $name    =$1;
     my $function=$2;
-    writeHFile("  $PREFIX$name,\n");
+    $errorNumber++;
+    writeHFile("  $PREFIX$name = $errorNumber,\n");
+    writeJavaFile("  static final int $name = $errorNumber;\n");
     if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
     writeCFile("    case $PREFIX$name: return $function;\n");
+  }
+  elsif ($line =~ /^ERROR\s+(\w+)\s*$/)
+  {
+    # error <name>
+    my $name=$1;
+    $errorNumber++;
+    writeHFile("  $PREFIX$name = $errorNumber,\n");
+    writeJavaFile("  static final int $name = $errorNumber;\n");
+    push(@names,$name);
   }
   elsif ($line =~ /^INCLUDE\s+"(.*)"\s*$/)
   {
@@ -243,13 +292,6 @@ while ($line=<STDIN>)
   elsif ($line =~ /^DEFAULT\s+"(.*)"\s*$/)
   {
     $defaultText=$1;
-  }
-  elsif ($line =~ /^ERROR\s+(\w+)\s*$/)
-  {
-    # error <name>
-    my $name=$1;
-    writeHFile("  $PREFIX$name,\n");
-    push(@names,$name);
   }
   else
   {
@@ -290,6 +332,11 @@ if ($hFileName ne "")
 {
   writeHPostfix();
   close(HFILE_HANDLE);
+}
+if ($javaFileName ne "")
+{
+  writeJavaPostfix();
+  close(JAVAFILE_HANDLE);
 }
 
 exit 0;

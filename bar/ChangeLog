@@ -25,6 +25,16 @@
     --login-dialog is given.
   * delete old archive files (only possible for file, ftp, sftp).
     Can be disabled by --keep-old-archive-files
+  * barcontrol: fixed bug when double-clicking file entry in file
+  * fixed default login name/password for ftp, ssh: use command line
+    options if not set otherwise
+  * fixed default device name: use command line options if not set
+    otherwise
+  * fix problem with infinite backup when temporary directory is
+    included in file list. The bar temporary directory and all
+    created files are now not included in a backup. Note: this cannot
+    work when two instances of bar are running doing a backup of
+    each other.
 
 2008-12-10 0.09i
   * fixed creating pid file: when server is detached write pid of
