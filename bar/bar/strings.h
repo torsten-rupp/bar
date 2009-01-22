@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -159,6 +159,17 @@ void __String_delete(const char *fileName, ulong lineNb, String string);
 \***********************************************************************/
 
 String String_clear(String string);
+
+/***********************************************************************\
+* Name   : String_erase
+* Purpose: erase string content
+* Input  : string - string to erase
+* Output : -
+* Return : erased string (empty)
+* Notes  : -
+\***********************************************************************/
+
+String String_erase(String string);
 
 /***********************************************************************\
 * Name   : String_set, String_setCString, String_setChar,

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1504,6 +1504,17 @@ LOCAL bool parseString(const struct __String *string,
               return FALSE;
             }
             break;
+          case '*':
+            /* skip value */
+            z = 0;
+            while (   (index < string->length)
+                   && !isspace(string->data[index])
+                   && (string->data[index] != (*format))
+                  )
+            {
+              index++;
+            }
+            break;
           case '%':
             if ((index >= string->length) || (string->data[index] != '%'))
             {
@@ -1940,6 +1951,23 @@ String String_clear(String string)
     assert(string->data != NULL);
 
     string->data[0] = '\0';
+    string->length = 0;
+
+    UPDATE_VALID(string);
+  }
+
+  return string;
+}
+
+String String_erase(String string)
+{
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    memset(string->data,0,string->maxLength);
     string->length = 0;
 
     UPDATE_VALID(string);
