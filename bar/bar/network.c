@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -49,6 +49,8 @@
   #define DH_BITS 1024
 #else /* not HAVE_GNU_TLS */
 #endif /* HAVE_GNU_TLS */
+
+#define SEND_TIMEOUT 30000
 
 /***************************** Datatypes *******************************/
 
@@ -498,7 +500,9 @@ Errors Network_receive(SocketHandle *socketHandle,
                        ulong        *bytesReceived
                       )
 {
-  long n;
+  struct timeval tv;
+  fd_set         fdSet;
+  long           n;
 
   assert(socketHandle != NULL);
   assert(bytesReceived != NULL);
@@ -513,16 +517,13 @@ Errors Network_receive(SocketHandle *socketHandle,
       }
       else
       {
-        struct timeval tv;
-        fd_set         fdSet;
 
         tv.tv_sec  = timeout/1000;
         tv.tv_usec = (timeout%1000)*1000;
         FD_ZERO(&fdSet);
         assert(socketHandle->handle < FD_SETSIZE);
         FD_SET(socketHandle->handle,&fdSet);
-        n = select(socketHandle->handle+1,&fdSet,NULL,NULL,&tv);
-        if (n > 0)
+        if (select(socketHandle->handle+1,&fdSet,NULL,NULL,&tv) > 0)
         {
           n = recv(socketHandle->handle,buffer,maxLength,0);
         }
@@ -564,35 +565,81 @@ Errors Network_send(SocketHandle *socketHandle,
                     ulong        length
                    )
 {
-  long sentBytes;
+//  Errors         error;
+  ulong          sentBytes;
+  struct timeval tv;
+  fd_set         fdSetInput,fdSetOutput,fdSetError;
+  long           n;
 
   assert(socketHandle != NULL);
 
-  sentBytes = -1L;
-  switch (socketHandle->type)
+  sentBytes = 0L;
+  if (length > 0)
   {
-    case SOCKET_TYPE_PLAIN:
-      sentBytes = send(socketHandle->handle,buffer,length,0);
-      break;
-    case SOCKET_TYPE_SSH:
-      #ifdef HAVE_SSH2
+    switch (socketHandle->type)
+    {
+      case SOCKET_TYPE_PLAIN:
+          do
+          {
+            /* wait until space in buffer is available */
+            assert(socketHandle->handle < FD_SETSIZE);
+            tv.tv_sec  = SEND_TIMEOUT/1000;
+            tv.tv_usec = (SEND_TIMEOUT%1000)*1000;
+            FD_ZERO(&fdSetInput);
+            FD_SET(socketHandle->handle,&fdSetInput);
+            FD_ZERO(&fdSetOutput);
+            FD_SET(socketHandle->handle,&fdSetOutput);
+            FD_ZERO(&fdSetError);
+            FD_SET(socketHandle->handle,&fdSetError);
+            select(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&tv);
+
+            /* send data */
+            n = send(socketHandle->handle,((char*)buffer)+sentBytes,length-sentBytes,0);
+            if      (n > 0) sentBytes += n;
+            else if ((n == -1) && (errno != EAGAIN)) break;
+          }
+          while (sentBytes < length);
+        break;
+      case SOCKET_TYPE_SSH:
+        #ifdef HAVE_SSH2
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-      #else /* not HAVE_SSH2 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
-      break;
-    case SOCKET_TYPE_TLS:
-      #ifdef HAVE_GNU_TLS
-        sentBytes = gnutls_record_send(socketHandle->gnuTLS.session,buffer,length);
-      #else /* not HAVE_GNU_TLS */
-        sentBytes = 0L;
-      #endif /* HAVE_GNU_TLS */
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+        #else /* not HAVE_SSH2 */
+          return ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_SSH2 */
+        break;
+      case SOCKET_TYPE_TLS:
+        #ifdef HAVE_GNU_TLS
+          do
+          {
+            /* wait until space in buffer is available */
+            assert(socketHandle->handle < FD_SETSIZE);
+            tv.tv_sec  = SEND_TIMEOUT/1000;
+            tv.tv_usec = (SEND_TIMEOUT%1000)*1000;
+            FD_ZERO(&fdSetInput);
+            FD_SET(socketHandle->handle,&fdSetInput);
+            FD_ZERO(&fdSetOutput);
+            FD_SET(socketHandle->handle,&fdSetOutput);
+            FD_ZERO(&fdSetError);
+            FD_SET(socketHandle->handle,&fdSetError);
+            select(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&tv);
+
+            /* send data */
+            n = gnutls_record_send(socketHandle->gnuTLS.session,((char*)buffer)+sentBytes,length-sentBytes);
+            if      (n > 0) sentBytes += n;
+            else if ((n < 0) && (errno != GNUTLS_E_AGAIN)) break;
+          }
+          while (sentBytes < length);
+        #else /* not HAVE_GNU_TLS */
+          sentBytes = 0L;
+        #endif /* HAVE_GNU_TLS */
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
+//  if (sentBytes != length) fprintf(stderr,"%s,%d: send error %d: %s\n",__FILE__,__LINE__,errno,strerror(errno));
   }
 
   return (sentBytes == length)?ERROR_NONE:ERROR_NETWORK_SEND;
@@ -1093,7 +1140,7 @@ bool Network_executeEOF(NetworkExecuteHandle  *networkExecuteHandle,
         {
           return TRUE;
         }
-    //fprintf(stderr,"%s,%d: bytesRead=%lu\n",__FILE__,__LINE__,bytesRead);
+//fprintf(stderr,"%s,%d: bytesRead=%lu\n",__FILE__,__LINE__,bytesRead);
         networkExecuteHandle->stderrBuffer.index = 0;
         networkExecuteHandle->stderrBuffer.length = bytesRead;
       }
@@ -1229,7 +1276,6 @@ Errors Network_executeWriteLine(NetworkExecuteHandle *networkExecuteHandle,
 
   assert(networkExecuteHandle != NULL);
 
-fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(line));
   error = Network_executeWrite(networkExecuteHandle,
                                String_cString(line),
                                String_length(line)
