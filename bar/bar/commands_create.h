@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #include "bar.h"
-#include "patterns.h"
+#include "patternlists.h"
 #include "compress.h"
 #include "crypt.h"
 
