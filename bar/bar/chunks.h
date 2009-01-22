@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/chunks.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems: all
@@ -54,6 +54,23 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+/* i/o functions */
+typedef struct
+{
+  /* check end of data */
+  bool(*eof)(void *userData);
+  /* read data */
+  Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead);
+  /* write data */
+  Errors(*write)(void *userData, const void *buffer, ulong length);
+  /* tell position */
+  Errors(*tell)(void *userData, uint64 *offset);
+  /* seek to position */
+  Errors(*seek)(void *userData, uint64 offset);
+  /* get size */
+  uint64(*getSize)(void *userData);
+} ChunkIO;
+
 typedef uint32 ChunkId;
 
 typedef struct
@@ -66,7 +83,8 @@ typedef struct
 typedef struct ChunkInfo
 {
   struct ChunkInfo *parentChunkInfo;
-  void             *userData;
+  const ChunkIO    *io;             // i/o functions
+  void             *ioUserData;     // user data for i/o
 
   ChunkModes       mode;
   uint             alignment;       // alignment for chunk
@@ -101,24 +119,13 @@ typedef struct
 /***********************************************************************\
 * Name   : Chunk_initAll
 * Purpose: init chunks
-* Input  : eof     - call back check end of data
-*          read    - call back read data
-*          write   - call back write data
-*          tell    - call back tell position
-*          seek    - call back seek to position
-*          getSize - call back get size
+* Input  : -
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_initAll(bool(*eof)(void *userData),
-                     Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
-                     Errors(*write)(void *userData, const void *buffer, ulong length),
-                     Errors(*tell)(void *userData, uint64 *offset),
-                     Errors(*seek)(void *userData, uint64 offset),
-                     uint64(*getSize)(void *userData)
-                    );
+Errors Chunk_initAll(void);
 
 /***********************************************************************\
 * Name   : Chunk_doneAll
@@ -130,6 +137,17 @@ Errors Chunk_initAll(bool(*eof)(void *userData),
 \***********************************************************************/
 
 void Chunk_doneAll(void);
+
+void Chunk_initIO(ChunkIO *chunkIO,
+                  bool(*eof)(void *userData),
+                  Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
+                  Errors(*write)(void *userData, const void *buffer, ulong length),
+                  Errors(*tell)(void *userData, uint64 *offset),
+                  Errors(*seek)(void *userData, uint64 offset),
+                  uint64(*getSize)(void *userData)
+                 );
+
+void Chunk_doneIO(ChunkIO *chunkIO);
 
 /***********************************************************************\
 * Name   : Chunk_idToString
@@ -163,7 +181,8 @@ ulong Chunk_getSize(const int  *definition,
 * Purpose: init chunk info block
 * Input  : chunkInfo       - chunk info block to initialize
 *          parentChunkInfo - parent chunk info block
-*          userData        - user data for i/o
+*          chunkIO         - i/o functions
+*          chunkIOUserData - user data for i/o
 *          alignment       - alignment to use
 *          cryptInfo       - crypt info
 * Output : -
@@ -171,11 +190,12 @@ ulong Chunk_getSize(const int  *definition,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_init(ChunkInfo *chunkInfo,
-                  ChunkInfo *parentChunkInfo,
-                  void      *userData,
-                  uint      alignment,
-                  CryptInfo *cryptInfo
+Errors Chunk_init(ChunkInfo     *chunkInfo,
+                  ChunkInfo     *parentChunkInfo,
+                  const ChunkIO *chunkIO,
+                  void          *chunkIOUserData,
+                  uint          alignment,
+                  CryptInfo     *cryptInfo
                  );
 
 /***********************************************************************\
@@ -192,45 +212,52 @@ void Chunk_done(ChunkInfo *chunkInfo);
 /***********************************************************************\
 * Name   : Chunk_next
 * Purpose: get next chunk
-* Input  : userData - user data for file i/o
+* Input  : chunkIO         - i/o functions
+*          chunkIOUserData - user data for file i/o
 * Output : chunkHeader - chunk header
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_next(void        *userData,
-                  ChunkHeader *chunkHeader
+Errors Chunk_next(const ChunkIO *chunkIO,
+                  void          *chunkIOUserData,
+                  ChunkHeader   *chunkHeader
                  );
 
 /***********************************************************************\
 * Name   : Chunk_skip
 * Purpose: skip chink
-* Input  : userData    - user data for file i/o
-*          chunkHeader - chunk header
+* Input  : chunkIO         - i/o functions
+*          chunkIOUserData - user data for file i/o
+*          chunkHeader     - chunk header
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_skip(void        *userData,
-                  ChunkHeader *chunkHeader
+Errors Chunk_skip(const ChunkIO     *chunkIO,
+                  void              *chunkIOUserData,
+                  const ChunkHeader *chunkHeader
                  );
 
 /***********************************************************************\
 * Name   : Chunk_eof
 * Purpose: check of end of chunks (file)
-* Input  : userData - user data for file i/o
+* Input  : chunkIO         - i/o functions
+*          chunkIOUserData - user data for file i/o
 * Output : -
 * Return : TRUE if end of chunks, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Chunk_eof(void *userData);
+bool Chunk_eof(const ChunkIO *chunkIO,
+               void          *chunkIOUserData
+              );
 
 /***********************************************************************\
 * Name   : Chunk_tell
 * Purpose: get current index position in chunk
-* Input  : chunkInfo      - chunk info block
+* Input  : chunkInfo - chunk info block
 * Output : index - index
 * Return : -
 * Notes  : -

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -28,6 +28,7 @@
 #include "crypt.h"
 #include "archive_format.h"
 #include "files.h"
+#include "storage.h"
 
 #include "bar.h"
 
@@ -35,6 +36,12 @@
 
 /***************************** Constants *******************************/
 #define ARCHIVE_PART_NUMBER_NONE -1
+
+typedef enum
+{
+  ARCHIVE_IO_TYPE_FILE,
+  ARCHIVE_IO_TYPE_STORAGE_FILE,
+} ArchiveIOTypes;
 
 /***************************** Datatypes *******************************/
 
@@ -72,13 +79,27 @@ typedef struct
 
   uint                   blockLength;                    // block length for file entry/file data (depend on used crypt algorithm)
 
-  uint                   partNumber;                     // file part number
-  bool                   fileOpenFlag;                   // TRUE iff file is open
   String                 fileName;                       // file name
-  FileHandle             fileHandle;                     // file handle
+  ArchiveIOTypes         ioType;                         // i/o type
+  union
+  {
+    struct
+    {
+      FileHandle           fileHandle;                     // file handle
+      bool                   fileOpenFlag;                   // TRUE iff file is open
+    } file;
+    struct
+    {
+      StorageFileHandle    storageFileHandle;              // storage file handle
+    } storageFile;
+  };
+  const ChunkIO          *chunkIO;
+  void                   *chunkIOUserData;
+
+  uint                   partNumber;                     // file part number
 
   bool                   nextChunkHeaderReadFlag;        // TRUE iff next chunk header read
-  ChunkHeader            nextChunkHeader;                // next file, directory, link chunk header
+  ChunkHeader            nextChunkHeader;                // next chunk header
 } ArchiveInfo;
 
 typedef struct
@@ -188,6 +209,28 @@ Errors Archive_initAll(void);
 \***********************************************************************/
 
 void Archive_doneAll(void);
+
+/***********************************************************************\
+* Name   : Archive_clearCryptPasswords
+* Purpose: clear crypt passwords (except default passwords)
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Archive_clearCryptPasswords(void);
+
+/***********************************************************************\
+* Name   : Archive_appendCryptPassword
+* Purpose: append password to crypt password list
+* Input  : password - password
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Archive_appendCryptPassword(const Password *password);
 
 /***********************************************************************\
 * Name   : Archive_create
