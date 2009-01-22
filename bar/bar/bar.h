@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -200,23 +200,22 @@ typedef struct
 
   uint                   niceLevel;
   
-  String                 tmpDirectory;
-  uint64                 maxTmpSize;
+  String                 tmpDirectory;                 // directory for temporary files
+  uint64                 maxTmpSize;                   // max. size of temporary files
 
-  ulong                  maxBandWidth;
+  ulong                  maxBandWidth;                 // max. bandwidth to use [bytes/s]
 
   ulong                  compressMinFileSize;          // min. size of file for using compression
 
   Password               *cryptPassword;               // default password for encryption/decryption
-//  String   publicKeyFileName;           // public key file name (ssh,scp,sftp)
-//  String   privateKeyFileName;          // private key file name (ssh,scp,sftp)
 
   FTPServer              *ftpServer;                   // FTP server
-  SSHServer              *sshServer;                   // SSH server
   const FTPServerList    *ftpServerList;               // list with remote servers
+  FTPServer              *defaultFTPServer;            // default FTP server
+
+  SSHServer              *sshServer;                   // SSH server
   const SSHServerList    *sshServerList;               // list with remote servers
-  FTPServer              defaultFTPServer;             // default FTP server
-  SSHServer              defaultSSHServer;             // default SSH server
+  SSHServer              *defaultSSHServer;            // default SSH server
 
   String                 remoteBARExecutable;
 
@@ -225,13 +224,13 @@ typedef struct
   String                 defaultDeviceName;
   Device                 *device;                      // device
   const DeviceList       *deviceList;                  // list with devices
-  Device                 defaultDevice;                // default device
+  Device                 *defaultDevice;               // default device
 
   bool                   groupFlag;                    // TRUE iff entries in list should be grouped
   bool                   allFlag;                      // TRUE iff all entries should be listed/restored
   bool                   longFormatFlag;               // TRUE iff long format list
   bool                   noHeaderFooterFlag;           // TRUE iff no header/footer should be printed in list
-  bool                   keepOldArchiveFilesFlag;      // TRUE iff old archive files should not be deleted after creating new files
+  bool                   deleteOldArchiveFilesFlag;    // TRUE iff old archive files should be deleted after creating new files
 
   bool                   noDefaultConfigFlag;          // TRUE iff default config should not be read 
   bool                   quietFlag;                    // TRUE iff suppress any output
@@ -298,6 +297,7 @@ typedef struct
 
 /***************************** Variables *******************************/
 extern GlobalOptions globalOptions;
+extern String        tmpDirectory;
 
 /****************************** Macros *********************************/
 
