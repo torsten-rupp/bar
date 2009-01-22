@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/passwords.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -26,8 +26,14 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-
 #define MAX_PASSWORD_LENGTH 256
+
+#define PASSWORD_INPUT_MODE_CONSOLE (1 << 0)
+#define PASSWORD_INPUT_MODE_GUI     (1 << 1)
+
+#define PASSWORD_INPUT_MODE_ANY     (PASSWORD_INPUT_MODE_CONSOLE | \
+                                     PASSWORD_INPUT_MODE_GUI \
+                                    )
 
 /***************************** Datatypes *******************************/
 typedef struct
@@ -280,31 +286,35 @@ const char *Password_deploy(Password *password);
 void Password_undeploy(Password *password);
 
 /***********************************************************************\
-* Name   : Password_inputStdin
+* Name   : Password_input
 * Purpose: input password from stdin (without echo characters)
 * Input  : password - password
-*          title    - dialog title text
+*          title    - title text
+*          mode     - input modes; see PASSWORD_INPUT_MODE_*
 * Output : -
 * Return : TRUE if password read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Password_input(Password   *password,
-                    const char *title
+                    const char *title,
+                    uint       modes
                    );
 
 /***********************************************************************\
 * Name   : Password_inputVerify
 * Purpose: verify input of password
 * Input  : password - password to verify
-*          title    - dialog title text
+*          title    - title text
+*          mode     - input modes; see PASSWORD_INPUT_MODE_*
 * Output : -
 * Return : TRUE if passwords equal, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Password_inputVerify(const Password *password,
-                          const char     *title
+                          const char     *title,
+                          uint           modes
                          );
 
 #ifdef __cplusplus

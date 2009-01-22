@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/passwords.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -428,7 +428,8 @@ void Password_undeploy(Password *password)
 }
 
 bool Password_input(Password   *password,
-                    const char *title
+                    const char *title,
+                    uint           modes
                    )
 {
   bool okFlag;
@@ -440,7 +441,7 @@ bool Password_input(Password   *password,
   okFlag = FALSE;
 
   /* input via SSH_ASKPASS program */
-  if (!okFlag)
+  if (((modes & PASSWORD_INPUT_MODE_GUI) != 0) && !okFlag)
   {
     const char *sshAskPassword;
     String     command;
@@ -500,7 +501,7 @@ bool Password_input(Password   *password,
   }
 
   /* input via console */
-  if (!okFlag)
+  if (((modes & PASSWORD_INPUT_MODE_CONSOLE) != 0) && !okFlag)
   {
     int            n;
     struct termios oldTermioSettings;
@@ -591,7 +592,8 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 }
 
 bool Password_inputVerify(const Password *password,
-                          const char     *title
+                          const char     *title,
+                          uint           modes
                          )
 {
   Password verifyPassword;
@@ -599,7 +601,7 @@ bool Password_inputVerify(const Password *password,
 
   /* read passsword again */
   Password_init(&verifyPassword);
-  if (!Password_input(&verifyPassword,title))
+  if (!Password_input(&verifyPassword,title,modes))
   {
     Password_done(&verifyPassword);
     return FALSE;
