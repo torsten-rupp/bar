@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -58,6 +58,10 @@ typedef enum
   FILE_SPECIAL_TYPE_FIFO,
   FILE_SPECIAL_TYPE_SOCKET,
 } FileSpecialTypes;
+
+#define FILE_DEFAULT_USER_ID    0xFFFFFFFF
+#define FILE_DEFAULT_GROUP_ID   0xFFFFFFFF
+#define FILE_DEFAULT_PERMISSION 0xFFFFFFFF
 
 /***************************** Datatypes *******************************/
 
@@ -324,8 +328,6 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
 
 Errors File_close(FileHandle *fileHandle);
 
-Errors File_fail(FileHandle *fileHandle);
-
 /***********************************************************************\
 * Name   : File_eof
 * Purpose: check if end-of-file
@@ -468,17 +470,6 @@ Errors File_truncate(FileHandle *fileHandle,
                     );
 
 /*---------------------------------------------------------------------*/
-
-/***********************************************************************\
-* Name   : File_makeDirectory
-* Purpose: create directory including intermedate directories
-* Input  : pathName - path name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors File_makeDirectory(const String pathName);
 
 /***********************************************************************\
 * Name   : File_openDirectory
@@ -734,6 +725,21 @@ uint64 File_getFileTimeModified(const String fileName);
 Errors File_setFileInfo(const String fileName,
                         FileInfo     *fileInfo
                        );
+
+/***********************************************************************\
+* Name   : File_makeDirectory
+* Purpose: create directory including intermedate directories
+* Input  : pathName - path name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_makeDirectory(const String pathName,
+                          uint32       userId,
+                          uint32       groupId,
+                          uint32       permission
+                         );
 
 /***********************************************************************\
 * Name   : File_readLink

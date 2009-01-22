@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -381,7 +381,11 @@ Errors File_open(FileHandle    *fileHandle,
       pathName = File_getFilePathName(File_newFileName(),fileName);
       if (!File_exists(pathName))
       {
-        error = File_makeDirectory(pathName);
+        error = File_makeDirectory(pathName,
+                                   FILE_DEFAULT_USER_ID,
+                                   FILE_DEFAULT_GROUP_ID,
+                                   FILE_DEFAULT_PERMISSION
+                                  );
         if (error != ERROR_NONE)
         {
           return error;
@@ -415,7 +419,11 @@ Errors File_open(FileHandle    *fileHandle,
       pathName = File_getFilePathName(File_newFileName(),fileName);
       if (!File_exists(pathName))
       {
-        error = File_makeDirectory(pathName);
+        error = File_makeDirectory(pathName,
+                                   FILE_DEFAULT_USER_ID,
+                                   FILE_DEFAULT_GROUP_ID,
+                                   FILE_DEFAULT_PERMISSION
+                                  );
         if (error != ERROR_NONE)
         {
           return error;
@@ -777,62 +785,6 @@ Errors File_truncate(FileHandle *fileHandle,
 
 /*---------------------------------------------------------------------*/
 
-Errors File_makeDirectory(const String pathName)
-{
-  StringTokenizer pathNameTokenizer;
-  String          directoryName;
-  Errors          error;
-  String          name;
-
-  assert(pathName != NULL);
-
-  directoryName = File_newFileName();
-  File_initSplitFileName(&pathNameTokenizer,pathName);
-  if (File_getNextSplitFileName(&pathNameTokenizer,&name))
-  {
-    if (String_length(name) > 0)
-    {
-      File_setFileName(directoryName,name);
-    }
-    else
-    {
-      File_setFileNameChar(directoryName,FILES_PATHNAME_SEPARATOR_CHAR);
-    }
-  }
-  if (!File_exists(directoryName))
-  {
-    if (mkdir(String_cString(directoryName),0700) != 0)
-    {
-      error = ERROR(IO_ERROR,errno);
-      File_doneSplitFileName(&pathNameTokenizer);
-      File_deleteFileName(directoryName);
-      return error;
-    }
-  }
-  while (File_getNextSplitFileName(&pathNameTokenizer,&name))
-  {
-    if (String_length(name) > 0)
-    {     
-      File_appendFileName(directoryName,name);
-
-      if (!File_exists(directoryName))
-      {
-        if (mkdir(String_cString(directoryName),0700) != 0)
-        {
-          error = ERROR(IO_ERROR,errno);
-          File_doneSplitFileName(&pathNameTokenizer);
-          File_deleteFileName(directoryName);
-          return error;
-        }
-      }
-    }
-  }
-  File_doneSplitFileName(&pathNameTokenizer);
-  File_deleteFileName(directoryName);
-
-  return ERROR_NONE;
-}
-
 Errors File_openDirectory(DirectoryHandle *directoryHandle,
                           const String    pathName
                          )
@@ -1077,10 +1029,10 @@ Errors File_delete(const String fileName, bool recursiveFlag)
       {
         StringList_getFirst(&directoryList,directoryName);
 
-        emptyFlag = TRUE;
         dir = opendir(String_cString(directoryName));
         if (dir != NULL)
         {
+          emptyFlag = TRUE;
           while (((entry = readdir(dir)) != NULL) && (error == ERROR_NONE))
           {
             if (   (strcmp(entry->d_name,"." ) != 0)
@@ -1105,10 +1057,9 @@ Errors File_delete(const String fileName, bool recursiveFlag)
                 else if (S_ISDIR(fileStat.st_mode))
                 {
                   StringList_append(&directoryList,name);
+                  emptyFlag = FALSE;
                 }
               }
-
-              emptyFlag = FALSE;
             }
           }
           closedir(dir);
@@ -1120,6 +1071,10 @@ Errors File_delete(const String fileName, bool recursiveFlag)
               error = ERROR(IO_ERROR,errno);
             }
 //HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          }
+          else
+          {
+            StringList_append(&directoryList,directoryName);
           }
         }
       }
@@ -1369,9 +1324,9 @@ Errors File_getFileInfo(const String fileName,
     return ERROR(IO_ERROR,errno);
   }
 
-  if      (S_ISREG(fileStat.st_mode))  fileInfo->type = FILE_TYPE_FILE;
-  else if (S_ISDIR(fileStat.st_mode))  fileInfo->type = FILE_TYPE_DIRECTORY;
-  else if (S_ISLNK(fileStat.st_mode))  fileInfo->type = FILE_TYPE_LINK;
+  if      (S_ISREG(fileStat.st_mode)) fileInfo->type = FILE_TYPE_FILE;
+  else if (S_ISDIR(fileStat.st_mode)) fileInfo->type = FILE_TYPE_DIRECTORY;
+  else if (S_ISLNK(fileStat.st_mode)) fileInfo->type = FILE_TYPE_LINK;
   else if (S_ISCHR(fileStat.st_mode))
   {
     fileInfo->type        = FILE_TYPE_SPECIAL;
@@ -1392,7 +1347,7 @@ Errors File_getFileInfo(const String fileName,
     fileInfo->type        = FILE_TYPE_SPECIAL;
     fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
   }
-  else                                 fileInfo->type = FILE_TYPE_UNKNOWN;
+  else                                fileInfo->type = FILE_TYPE_UNKNOWN;
   fileInfo->size            = fileStat.st_size;
   fileInfo->timeLastAccess  = fileStat.st_atime;
   fileInfo->timeModified    = fileStat.st_mtime;
@@ -1464,6 +1419,110 @@ Errors File_setFileInfo(const String fileName,
       #endif /* NDEBUG */
       break; /* not reached */
   }
+
+  return ERROR_NONE;
+}
+
+Errors File_makeDirectory(const String pathName,
+                          uint32       userId,
+                          uint32       groupId,
+                          uint32       permission
+                         )
+{
+  StringTokenizer pathNameTokenizer;
+  String          directoryName;
+  uid_t           uid;
+  gid_t           gid;
+  Errors          error;
+  String          name;
+
+  assert(pathName != NULL);
+
+  directoryName = File_newFileName();
+  File_initSplitFileName(&pathNameTokenizer,pathName);
+  if (File_getNextSplitFileName(&pathNameTokenizer,&name))
+  {
+    if (String_length(name) > 0)
+    {
+      File_setFileName(directoryName,name);
+    }
+    else
+    {
+      File_setFileNameChar(directoryName,FILES_PATHNAME_SEPARATOR_CHAR);
+    }
+  }
+  if (!File_exists(directoryName))
+  {
+    if (mkdir(String_cString(directoryName),0700) != 0)
+    {
+      error = ERROR(IO_ERROR,errno);
+      File_doneSplitFileName(&pathNameTokenizer);
+      File_deleteFileName(directoryName);
+      return error;
+    }
+    if (   (userId  != FILE_DEFAULT_USER_ID)
+        || (groupId != FILE_DEFAULT_GROUP_ID)
+       )
+    {
+      uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : -1;
+      gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : -1;
+      if (chown(String_cString(directoryName),uid,gid) != 0)
+      {
+        error = ERROR(IO_ERROR,errno);
+        File_doneSplitFileName(&pathNameTokenizer);
+        File_deleteFileName(directoryName);
+        return error;
+      }
+    }
+    if (permission != FILE_DEFAULT_PERMISSION)
+    {
+      if (chmod(String_cString(directoryName),permission) != 0)
+      {
+        error = ERROR(IO_ERROR,errno);
+        File_doneSplitFileName(&pathNameTokenizer);
+        File_deleteFileName(directoryName);
+        return error;
+      }
+    }
+  }
+  while (File_getNextSplitFileName(&pathNameTokenizer,&name))
+  {
+    if (String_length(name) > 0)
+    {     
+      File_appendFileName(directoryName,name);
+
+      if (!File_exists(directoryName))
+      {
+        if (mkdir(String_cString(directoryName),0700) != 0)
+        {
+          error = ERROR(IO_ERROR,errno);
+          File_doneSplitFileName(&pathNameTokenizer);
+          File_deleteFileName(directoryName);
+          return error;
+        }
+        if (   (userId  != FILE_DEFAULT_USER_ID)
+            || (groupId != FILE_DEFAULT_GROUP_ID)
+           )
+        {
+          uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : -1;
+          gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : -1;
+          if (chown(String_cString(directoryName),uid,gid) != 0)
+          {
+            return ERROR(IO_ERROR,errno);
+          }
+        }
+        if (permission != FILE_DEFAULT_PERMISSION)
+        {
+          if (chmod(String_cString(directoryName),permission) != 0)
+          {
+            return ERROR(IO_ERROR,errno);
+          }
+        }
+      }
+    }
+  }
+  File_doneSplitFileName(&pathNameTokenizer);
+  File_deleteFileName(directoryName);
 
   return ERROR_NONE;
 }
