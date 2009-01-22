@@ -1,65 +1,33 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: BARControl (frontend for BAR)
+* Contents: status tab
 * Systems: all
 *
 \***********************************************************************/
 
 /****************************** Imports ********************************/
-//import java.io.ByteArrayInputStream;
-//import java.io.ByteArrayOutputStream;
 import java.io.File;
-//import java.io.FileReader;
-//import java.io.BufferedReader;
-//import java.io.IOException;
-//import java.io.ObjectInputStream;
-//import java.io.ObjectOutputStream;
-//import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-//import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 
-import org.eclipse.swt.custom.SashForm;
-import org.eclipse.swt.dnd.ByteArrayTransfer;
-import org.eclipse.swt.dnd.DND;
-import org.eclipse.swt.dnd.DragSource;
-import org.eclipse.swt.dnd.DragSourceEvent;
-import org.eclipse.swt.dnd.DragSourceListener;
-import org.eclipse.swt.dnd.DropTarget;
-import org.eclipse.swt.dnd.DropTargetAdapter;
-import org.eclipse.swt.dnd.DropTargetEvent;
-import org.eclipse.swt.dnd.TextTransfer;
-import org.eclipse.swt.dnd.Transfer;
-import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
-import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.events.MouseMoveListener;
-import org.eclipse.swt.events.MouseTrackListener;
-import org.eclipse.swt.events.PaintEvent;
-import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.GC;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -69,8 +37,6 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.swt.widgets.Menu;
-import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
@@ -275,44 +241,44 @@ class TabStatus
   }
 
   // global variable references
-  Shell       shell;
-  TabJobs     tabJobs;
+  private Shell       shell;
+  private TabJobs     tabJobs;
 
   // widgets
-  Composite   widgetTab;
-  Table       widgetJobList;
-  Group       widgetSelectedJob;
-  Button      widgetButtonStart;
-  Button      widgetButtonAbort;
-  Button      widgetButtonTogglePause;
-  Button      widgetButtonVolume;
-  Button      widgetButtonQuit;
+  public  Composite   widgetTab;
+  private Table       widgetJobList;
+  private Group       widgetSelectedJob;
+  public  Button      widgetButtonStart;
+  public  Button      widgetButtonAbort;
+  public  Button      widgetButtonTogglePause;
+  private Button      widgetButtonVolume;
+  public  Button      widgetButtonQuit;
 
   // BAR variables
-  BARVariable doneFiles             = new BARVariable(0);
-  BARVariable doneBytes             = new BARVariable(0);
-  BARVariable storedBytes           = new BARVariable(0);
-  BARVariable skippedFiles          = new BARVariable(0);
-  BARVariable skippedBytes          = new BARVariable(0);
-  BARVariable errorFiles            = new BARVariable(0);
-  BARVariable errorBytes            = new BARVariable(0);
-  BARVariable totalFiles            = new BARVariable(0);
-  BARVariable totalBytes            = new BARVariable(0);
+  private BARVariable doneFiles             = new BARVariable(0);
+  private BARVariable doneBytes             = new BARVariable(0);
+  private BARVariable storedBytes           = new BARVariable(0);
+  private BARVariable skippedFiles          = new BARVariable(0);
+  private BARVariable skippedBytes          = new BARVariable(0);
+  private BARVariable errorFiles            = new BARVariable(0);
+  private BARVariable errorBytes            = new BARVariable(0);
+  private BARVariable totalFiles            = new BARVariable(0);
+  private BARVariable totalBytes            = new BARVariable(0);
 
-  BARVariable filesPerSecond        = new BARVariable(0.0); 
-  BARVariable bytesPerSecond        = new BARVariable(0.0);
-  BARVariable storageBytesPerSecond = new BARVariable(0.0);
-  BARVariable ratio                 = new BARVariable(0.0);
+  private BARVariable filesPerSecond        = new BARVariable(0.0); 
+  private BARVariable bytesPerSecond        = new BARVariable(0.0);
+  private BARVariable storageBytesPerSecond = new BARVariable(0.0);
+  private BARVariable ratio                 = new BARVariable(0.0);
 
-  BARVariable fileName              = new BARVariable("");
-  BARVariable fileProgress          = new BARVariable(0.0);
-  BARVariable storageName           = new BARVariable("");
-  BARVariable storageProgress       = new BARVariable(0.0);
-  BARVariable volumeNumber          = new BARVariable(0);
-  BARVariable volumeProgress        = new BARVariable(0.0);
-  BARVariable totalFilesProgress    = new BARVariable(0.0);
-  BARVariable totalBytesProgress    = new BARVariable(0.0);
-  BARVariable message               = new BARVariable("");
+  private BARVariable fileName              = new BARVariable("");
+  private BARVariable fileProgress          = new BARVariable(0.0);
+  private BARVariable storageName           = new BARVariable("");
+  private BARVariable storageProgress       = new BARVariable(0.0);
+  private BARVariable volumeNumber          = new BARVariable(0);
+  private BARVariable volumeProgress        = new BARVariable(0.0);
+  private BARVariable totalFilesProgress    = new BARVariable(0.0);
+  private BARVariable totalBytesProgress    = new BARVariable(0.0);
+  private BARVariable message               = new BARVariable("");
 
   // variables
   private HashMap<String,JobData> jobList = new HashMap<String,JobData> ();
@@ -381,7 +347,7 @@ class TabStatus
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
 
     // list with jobs
-    widgetJobList = Widgets.newTable(widgetTab,this);
+    widgetJobList = Widgets.newTable(widgetTab,SWT.NONE,this);
     Widgets.layout(widgetJobList,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
     widgetJobList.addSelectionListener(new SelectionListener()
     {
@@ -839,7 +805,7 @@ class TabStatus
   {
     // get status
     String[] result = new String[1];
-    BARServer.executeCommand("STATUS",result);
+    if (BARServer.executeCommand("STATUS",result) != 0) return;
 
     if (result[0].equals("pause"))
     {
@@ -896,8 +862,7 @@ class TabStatus
     {
       // get job list
       ArrayList<String> result = new ArrayList<String>();
-      int errorCode = BARServer.executeCommand("JOB_LIST",result);
-      if (errorCode != 0) return;
+      if (BARServer.executeCommand("JOB_LIST",result) != 0) return;
 
       // update entries in job list
       synchronized(jobList)
@@ -991,8 +956,7 @@ class TabStatus
     {
       // get job info
       String result[] = new String[1];
-      int errorCode = BARServer.executeCommand(String.format("JOB_INFO %d",selectedJobData.id),result);
-      if (errorCode != 0) return;
+      if (BARServer.executeCommand(String.format("JOB_INFO %d",selectedJobData.id),result) != 0) return;
 
       // update job info
       Object data[] = new Object[24];

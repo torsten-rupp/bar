@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -56,10 +56,24 @@ class CommunicationError extends Error
   }
 }
 
+/** busy indicator
+ */
+class BARIndicator
+{
+  /** called when busy
+   */
+  public boolean busy(long n)
+  {
+    return true;
+  }
+}
+
 /** BAR server
  */
 class BARServer
 {
+  public static boolean debug = false;
+
   private static String             JAVA_SSL_KEY_FILE_NAME = "bar.jks";
 
   private static Socket             socket;
@@ -67,8 +81,6 @@ class BARServer
   private static BufferedReader     input;
   private static long               commandId;
   private static LinkedList<String> lines;
-
-  static boolean debug = false;
 
   /** connect to BAR server
    * @param hostname host name
@@ -289,20 +301,16 @@ class BARServer
     }
   }
 
-  /** execute command
-   * @param command command to send to BAR server
+  /** abort command execution
    * @param result result (String[] or ArrayList)
-   * @return 0 or error code
+   * @return error code
    */
-  static synchronized int executeCommand(String command, Object result)
+  static int abort(Object result)
   {
-    String  line;
-    boolean completedFlag;
-    int     errorCode;
-
-    // send command
+    /* send abort command to current command */
+    long abortCommandId = commandId;
     commandId++;
-    line = String.format("%d %s",commandId,command);
+    String line = String.format("%d ABORT %d",commandId,abortCommandId);
     try
     {
       output.write(line); output.write('\n'); output.flush();
@@ -313,84 +321,157 @@ class BARServer
     }
     if (debug) System.err.println("Network: sent '"+line+"'");
 
-    // read buffer lines from list
-//???
-
-    // clear result data
-    if (result != null)
+    /* set result */
+    if      (result instanceof ArrayList)
     {
-      if      (result instanceof ArrayList)
-      {
-        ((ArrayList<String>)result).clear();
-      }
-      else if (result instanceof String[])
-      {
-        ((String[])result)[0] = "";
-      }
-      else
-      {
-        throw new Error("Invalid result data type");
-      }
+      ((ArrayList<String>)result).clear();
+      ((ArrayList<String>)result).add("aborted");
+    }
+    else if (result instanceof String[])
+    {
+      ((String[])result)[0] = "aborted";
+    }
+    else
+    {
+      throw new Error("Invalid result data type");
     }
 
-    // read result
-    completedFlag = false;
-    errorCode = -1;
-    try
+    return -1;
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param result result (String[] or ArrayList)
+   * @return 0 or error code
+   */
+  static int executeCommand(String command, Object result, BARIndicator barIndicator)
+  {
+    String  line;
+    long    n;
+    boolean completedFlag;
+    int     errorCode;
+
+    synchronized(output)
     {
-      while (!completedFlag && (line = input.readLine()) != null)
+      if (barIndicator != null)
       {
-        if (debug) System.err.println("Network: received '"+line+"'");
+        if (!barIndicator.busy(0)) return abort(result);
+      }
 
-        // line format: <id> <error code> <completed> <data>
-        String data[] = line.split(" ",4);
-        if (data.length < 4)
-        {
-          throw new CommunicationError("malformed command result '"+line+"'");
-        }
-        try
-        {
-          if (Integer.parseInt(data[0]) == commandId)
-          {
-            // check if completed
-            if (Integer.parseInt(data[1]) != 0)
-            {
-              errorCode = Integer.parseInt(data[2]);
-              if (errorCode != 0) throw new CommunicationError(data[3]+" (error: "+errorCode+")");
-              completedFlag = true;
-            }
+      // send command
+      commandId++;
+      line = String.format("%d %s",commandId,command);
+      try
+      {
+        output.write(line); output.write('\n'); output.flush();
+      }
+      catch (IOException exception)
+      {
+        throw new CommunicationError("i/o error (error: "+exception.getMessage()+")");
+      }
+      if (barIndicator != null)
+      {
+        if (!barIndicator.busy(0)) return abort(result);
+      }
+      if (debug) System.err.println("Network: sent '"+line+"'");
 
-            if (result != null)
-            {
-              // store data
-              if      (result instanceof ArrayList)
-              {
-                ((ArrayList<String>)result).add(data[3]);
-              }
-              else if (result instanceof String[])
-              {
-                ((String[])result)[0] = data[3];
-              }
-            }
-          }
-          else
-          {
-Dprintf.dprintf();
-            lines.add(line);
-          }
-        }
-        catch (NumberFormatException exception)
+      // read buffer lines from list
+  //???
+
+      // clear result data
+      if (result != null)
+      {
+        if      (result instanceof ArrayList)
         {
-          throw new CommunicationError("malformed command result '"+line+"'");
+          ((ArrayList<String>)result).clear();
+        }
+        else if (result instanceof String[])
+        {
+          ((String[])result)[0] = "";
+        }
+        else
+        {
+          throw new Error("Invalid result data type");
         }
       }
-    }
-    catch (IOException exception)
-    {
-      throw new CommunicationError("Command fail (error: "+exception.getMessage()+")");
+
+      // read result
+      n = 0;
+      completedFlag = false;
+      errorCode = -1;
+      try
+      {
+        while (!completedFlag && (line = input.readLine()) != null)
+        {
+          // next line
+          n++;
+          if (barIndicator != null)
+          {
+            if (!barIndicator.busy(n)) return abort(result);
+          }
+          if (debug) System.err.println("Network: received '"+line+"'");
+
+          // parse: line format <id> <error code> <completed flag> <data>
+          String data[] = line.split(" ",4);
+          if (data.length < 4)
+          {
+            throw new CommunicationError("malformed command result '"+line+"'");
+          }
+          try
+          {
+            if (Integer.parseInt(data[0]) == commandId)
+            {
+              // check if completed, check error code
+              if (Integer.parseInt(data[1]) != 0)
+              {
+                errorCode = Integer.parseInt(data[2]);
+  //              if (errorCode != 0) throw new CommunicationError(data[3]+" (error: "+errorCode+")");
+                completedFlag = true;
+              }
+
+              /* get and store data */
+              if (result != null)
+              {
+                // store data
+                if      (result instanceof ArrayList)
+                {
+                  ((ArrayList<String>)result).add(data[3]);
+                }
+                else if (result instanceof String[])
+                {
+                  ((String[])result)[0] = data[3];
+                }
+              }
+            }
+            else
+            {
+//Dprintf.dprintf("commandId=%d: %s\n",commandId,line);
+//              lines.add(line);
+            }
+          }
+          catch (NumberFormatException exception)
+          {
+            throw new CommunicationError("malformed command result '"+line+"'");
+          }
+        }
+      }
+      catch (IOException exception)
+      {
+        throw new CommunicationError("Command fail (error: "+exception.getMessage()+")");
+      }
     }
 
     return errorCode;
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param result result (String[] or ArrayList)
+   * @return 0 or error code
+   */
+  static int executeCommand(String command, Object result)
+  {
+    return executeCommand(command,result,null);
   }
 
   /** execute command
@@ -402,12 +483,42 @@ Dprintf.dprintf();
     return executeCommand(command,null);
   }
 
+  /** set boolean value on BAR server
+   * @param jobId job id
+   * @param name name of value
+   * @param b value
+   */
+  static void set(String name, boolean b)
+  {
+    executeCommand("SET "+name+" "+(b?"yes":"no"));
+  }
+
+  /** set long value on BAR server
+   * @param jobId job id
+   * @param name name of value
+   * @param n value
+   */
+  static void set(String name, long n)
+  {
+    executeCommand("SET "+name+" "+n);
+  }
+
+  /** set string value on BAR server
+   * @param jobId job id
+   * @param name name of value
+   * @param s value
+   */
+  static void set(String name, String s)
+  {
+    executeCommand("SET "+name+" "+StringParser.escape(s));
+  }
+
   /** get boolean value from BAR server
    * @param jobId job id
    * @param name name of value
    * @return value
    */
-  static boolean getBoolean(int jobId, String name)
+  static boolean getBooleanOption(int jobId, String name)
   {
     String[] result = new String[1];
 
@@ -422,7 +533,7 @@ Dprintf.dprintf();
    * @param name name of value
    * @return value
    */
-  static long getLong(int jobId, String name)
+  static long getLongOption(int jobId, String name)
   {
     String[] result = new String[1];
 
@@ -435,7 +546,7 @@ Dprintf.dprintf();
    * @param name name of value
    * @return value
    */
-  static String getString(int jobId, String name)
+  static String getStringOption(int jobId, String name)
   {
     String[] result = new String[1];
 
@@ -443,32 +554,32 @@ Dprintf.dprintf();
     return StringParser.unescape(result[0]);
   }
 
-  /** set boolean value on BAR server
+  /** set boolean option value on BAR server
    * @param jobId job id
-   * @param name name of value
+   * @param name option name of value
    * @param b value
    */
-  static void set(int jobId, String name, boolean b)
+  static void setOption(int jobId, String name, boolean b)
   {
     executeCommand("OPTION_SET "+jobId+" "+name+" "+(b?"yes":"no"));
   }
 
-  /** set long value on BAR server
+  /** set long option value on BAR server
    * @param jobId job id
-   * @param name name of value
+   * @param name option name of value
    * @param n value
    */
-  static void set(int jobId, String name, long n)
+  static void setOption(int jobId, String name, long n)
   {
     executeCommand("OPTION_SET "+jobId+" "+name+" "+n);
   }
 
-  /** set string value on BAR server
+  /** set string option value on BAR server
    * @param jobId job id
-   * @param name name of value
+   * @param name option name of value
    * @param s value
    */
-  static void set(int jobId, String name, String s)
+  static void setOption(int jobId, String name, String s)
   {
     executeCommand("OPTION_SET "+jobId+" "+name+" "+StringParser.escape(s));
   }

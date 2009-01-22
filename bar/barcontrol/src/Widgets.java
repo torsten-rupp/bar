@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -33,6 +33,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.swt.widgets.Sash;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
@@ -249,6 +250,18 @@ class Widgets
     tableLayoutData.exclude = !visibleFlag;
     control.setVisible(visibleFlag);
     control.getParent().layout();
+  }
+
+  /** create empty space
+   * @param composite composite
+   * @param width,height size of empty space
+   * @return canvas space
+   */
+  static Control newSpacer(Composite composite)
+  {
+    Label label = new Label(composite,SWT.NONE);
+
+    return (Control)label;
   }
 
   /** create new label
@@ -514,14 +527,15 @@ class Widgets
 
   /** create new table widget
    * @param composite composite
+   * @param style style
    * @param object object
    * @return new table widget
    */
-  static Table newTable(Composite composite, Object data)
+  static Table newTable(Composite composite, int style, Object data)
   {
     Table table;
 
-    table = new Table(composite,SWT.BORDER|SWT.MULTI|SWT.FULL_SELECTION);
+    table = new Table(composite,style|SWT.BORDER|SWT.MULTI|SWT.FULL_SELECTION);
     table.setLinesVisible(true);
     table.setHeaderVisible(true);
     table.setData(data);
@@ -557,8 +571,6 @@ class Widgets
    */
   static void sortTableColumn(Table table, TableColumn tableColumn, Comparator comparator)
   {
-    TableItem[] tableItems = table.getItems();
-
     // get sorting direction
     int sortDirection = table.getSortDirection();
     if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
@@ -570,6 +582,24 @@ class Widgets
         case SWT.DOWN: sortDirection = SWT.UP;   break;
       }
     }
+    table.setSortColumn(tableColumn);
+    table.setSortDirection(sortDirection);
+
+    // sort column
+    sortTableColumn(table,comparator);
+  }
+
+  /** sort table column
+   * @param table table
+   * @param comparator table data comparator
+   */
+  static void sortTableColumn(Table table, Comparator comparator)
+  {
+    TableItem[] tableItems = table.getItems();
+
+    // get sorting direction
+    int sortDirection = table.getSortDirection();
+    if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
 
     // sort column
     for (int i = 1; i < tableItems.length; i++)
@@ -591,6 +621,7 @@ class Widgets
           {
             texts[z] = tableItems[i].getText(z);
           }
+          boolean checked = tableItems[i].getChecked();
 
           // discard item
           tableItems[i].dispose();
@@ -599,13 +630,12 @@ class Widgets
           TableItem tableItem = new TableItem(table,SWT.NONE,j);
           tableItem.setData(data);
           tableItem.setText(texts);
+          tableItem.setChecked(checked);
 
           tableItems = table.getItems();
         }
       }
     }
-    table.setSortColumn(tableColumn);
-    table.setSortDirection(sortDirection);
   }
 
   /** new progress bar widget
@@ -630,11 +660,11 @@ class Widgets
    * @param object object
    * @return new tree widget
    */
-  static Tree newTree(Composite composite, Object variable)
+  static Tree newTree(Composite composite, int style, Object variable)
   {
     Tree tree;
 
-    tree = new Tree(composite,SWT.BORDER|SWT.H_SCROLL|SWT.V_SCROLL);
+    tree = new Tree(composite,style|SWT.BORDER|SWT.H_SCROLL|SWT.V_SCROLL);
     tree.setHeaderVisible(true);
 
     return tree;
@@ -670,7 +700,7 @@ class Widgets
   {
     TreeItem treeItem;
 
-    treeItem = new TreeItem(tree,SWT.NONE,index);
+    treeItem = new TreeItem(tree,SWT.CHECK,index);
     treeItem.setData(data);
     if (folderFlag) new TreeItem(treeItem,SWT.NONE);
 
@@ -758,12 +788,14 @@ private static void printTree(Tree tree)
     {
       texts[z] = treeItem.getText(z);
     }
+    boolean checked = treeItem.getChecked();
     Image image = treeItem.getImage();
 
     // recreate item
     TreeItem newTreeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
     newTreeItem.setData(data);
     newTreeItem.setText(texts);
+    newTreeItem.setChecked(checked);
     newTreeItem.setImage(image);
     for (TreeItem subTreeItem : treeItem.getItems())
     {
@@ -907,23 +939,20 @@ private static void printTree(Tree tree)
 //printTree(tree);
   }
 
-/*
-  static void remAllTreeItems(Tree tree, boolean folderFlag)
-  {
-    tree.removeAll();
-    if (folderFlag) new TreeItem(tree,SWT.NONE);
-  }
-
-  static void remAllTreeItems(TreeItem treeItem, boolean folderFlag)
-  {
-    treeItem.removeAll();
-    if (folderFlag) new TreeItem(treeItem,SWT.NONE);
-  }
-*/
-
   /** create new sash widget
    * @param composite parent composite
    * @return new sash widget
+   */
+  static Sash newSash(Composite composite, int style)
+  {    
+    Sash sash = new Sash(composite,style);
+
+    return sash;
+  }
+
+  /** create new sash form widget
+   * @param composite parent composite
+   * @return new sash form widget
    */
   static SashForm newSashForm(Composite composite)
   {    

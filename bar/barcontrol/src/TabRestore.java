@@ -1,65 +1,39 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: BARControl (frontend for BAR)
+* Contents: restore tab
 * Systems: all
 *
 \***********************************************************************/
 
 /****************************** Imports ********************************/
-//import java.io.ByteArrayInputStream;
-//import java.io.ByteArrayOutputStream;
 import java.io.File;
-//import java.io.FileReader;
-//import java.io.BufferedReader;
-//import java.io.IOException;
-//import java.io.ObjectInputStream;
-//import java.io.ObjectOutputStream;
-//import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-//import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
-import org.eclipse.swt.custom.SashForm;
-import org.eclipse.swt.dnd.ByteArrayTransfer;
-import org.eclipse.swt.dnd.DND;
-import org.eclipse.swt.dnd.DragSource;
-import org.eclipse.swt.dnd.DragSourceEvent;
-import org.eclipse.swt.dnd.DragSourceListener;
-import org.eclipse.swt.dnd.DropTarget;
-import org.eclipse.swt.dnd.DropTargetAdapter;
-import org.eclipse.swt.dnd.DropTargetEvent;
-import org.eclipse.swt.dnd.TextTransfer;
-import org.eclipse.swt.dnd.Transfer;
-import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
-import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.events.MouseMoveListener;
-import org.eclipse.swt.events.MouseTrackListener;
-import org.eclipse.swt.events.PaintEvent;
-import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -69,8 +43,6 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.swt.widgets.Menu;
-import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
@@ -205,7 +177,6 @@ class TabRestore
      */
     public int compare(ArchiveFileTreeData archiveFileTreeData1, ArchiveFileTreeData archiveFileTreeData2)
     {
-//System.err.println("BARControl.java"+", "+2734+": file1="+archiveTreeData1+" file=2"+archiveTreeData2+" "+sortMode);
       if (archiveFileTreeData1.type == FileTypes.DIRECTORY)
       {
         if (archiveFileTreeData2.type == FileTypes.DIRECTORY)
@@ -240,14 +211,33 @@ class TabRestore
    */
   class FileData
   {
+    String    archiveName;
+    String    name;
+    FileTypes type;
+    long      size;
+    long      datetime;
 
-    FileData()
+    FileData(String archiveName, String name, FileTypes type, long size, long datetime)
     {
+      this.archiveName = archiveName;
+      this.name        = name;
+      this.type        = type;
+      this.size        = size;
+      this.datetime    = datetime;
+    }
+
+    FileData(String archiveName, String name, FileTypes type, long datetime)
+    {
+      this.archiveName = archiveName;
+      this.name        = name;
+      this.type        = type;
+      this.size        = 0;
+      this.datetime    = datetime;
     }
 
     public String toString()
     {
-      return "File {}";
+      return "File {"+archiveName+", "+name+", "+type+", "+size+" bytes, datetime="+datetime+"}";
     }
   };
 
@@ -256,11 +246,11 @@ class TabRestore
   class FileDataComparator implements Comparator<FileData>
   {
     // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_DATE    = 0;
-    private final static int SORTMODE_WEEKDAY = 1;
-    private final static int SORTMODE_TIME    = 2;
-    private final static int SORTMODE_ENABLED = 3;
-    private final static int SORTMODE_TYPE    = 4;
+    private final static int SORTMODE_ARCHIVE = 0;
+    private final static int SORTMODE_NAME    = 1;
+    private final static int SORTMODE_TYPE    = 2;
+    private final static int SORTMODE_SIZE    = 3;
+    private final static int SORTMODE_DATE    = 4;
 
     private int sortMode;
 
@@ -270,12 +260,12 @@ class TabRestore
      */
     FileDataComparator(Table table, TableColumn sortColumn)
     {
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_DATE;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_WEEKDAY;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TIME;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_ENABLED;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_TYPE;
-      else                                       sortMode = SORTMODE_DATE;
+      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_ARCHIVE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_SIZE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_DATE;
+      else                                       sortMode = SORTMODE_NAME;
     }
 
     /** create file data comparator
@@ -285,12 +275,12 @@ class TabRestore
     {
       TableColumn sortColumn = table.getSortColumn();
 
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_DATE;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_WEEKDAY;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TIME;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_ENABLED;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_TYPE;
-      else                                       sortMode = SORTMODE_DATE;
+      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_ARCHIVE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_SIZE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_DATE;
+      else                                       sortMode = SORTMODE_NAME;
     }
     /** compare file data
      * @param fileData1, fileData2 file tree data to compare
@@ -302,11 +292,20 @@ class TabRestore
     {
       switch (sortMode)
       {
-        case SORTMODE_DATE:
-        case SORTMODE_WEEKDAY:
-        case SORTMODE_TIME:
-        case SORTMODE_ENABLED:
+        case SORTMODE_ARCHIVE:
+          return fileData1.archiveName.compareTo(fileData2.archiveName);
+        case SORTMODE_NAME:
+          return fileData1.name.compareTo(fileData2.name);
         case SORTMODE_TYPE:
+          return fileData1.type.compareTo(fileData2.type);
+        case SORTMODE_SIZE:
+          if      (fileData1.size < fileData2.size) return -1;
+          else if (fileData1.size > fileData2.size) return  1;
+          else                                      return  0;
+        case SORTMODE_DATE:
+          if      (fileData1.datetime < fileData2.datetime) return -1;
+          else if (fileData1.datetime > fileData2.datetime) return  1;
+          else                                              return  0;
         default:
           return 0;
       }
@@ -328,27 +327,35 @@ class TabRestore
   private final Image IMAGE_LINK_INCLUDED;
   private final Image IMAGE_LINK_EXCLUDED;
 
+  private final Image IMAGE_MARK_ALL;
+  private final Image IMAGE_UNMARK_ALL;
+
+  // cursors
+  private final Cursor waitCursor;
+
   // global variable references
-  Shell       shell;
-  TabStatus   tabStatus;
+  private Shell       shell;
 
   // widgets
-  Composite   widgetTab;
-  TabFolder   widgetTabFolder;
-  Combo       widgetPath;
-  Tree        widgetArchiveFileTree;
-  Combo       widgetFileFilter;
-  Table       widgetFileList;
-  Text        widgetTo;
-  Button      widgetToSelectButton;
+  public  Composite   widgetTab;
+  private TabFolder   widgetTabFolder;
+  private Combo       widgetPath;
+  private Tree        widgetArchiveFileTree;
+  private Button      widgetListButton;
+  private Combo       widgetFilePattern;
+  private Table       widgetFileList;
+  private Button      widgetRestoreButton;
+  private Text        widgetRestoreTo;
+  private Button      widgetRestoreToSelectButton;
 
   // variables
-  private     HashMap<String,Integer>  jobIds          = new HashMap<String,Integer>();
-  private     String                   selectedJobName = null;
-  private     int                      selectedJobId   = 0;
-  private     LinkedList<FileData>     fileList        = new LinkedList<FileData>();
+  private ArchiveNameParts     archiveNameParts;
 
-  private     SimpleDateFormat         simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  private SimpleDateFormat     simpleDateFormat   = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+  private Pattern              filePattern        = null;
+  private boolean              newestFileOnlyFlag = true;
+  private LinkedList<FileData> fileList           = new LinkedList<FileData>();
 
   TabRestore(TabFolder parentTabFolder, int accelerator)
   {
@@ -362,8 +369,9 @@ class TabRestore
     TreeColumn  treeColumn;
     TreeItem    treeItem;
     Text        text;
-    Spinner     spinner;
+//    Spinner     spinner;
     TableColumn tableColumn;
+    Control     control;
 
     // get shell, display
     shell = parentTabFolder.getShell();
@@ -383,6 +391,12 @@ class TabRestore
     IMAGE_LINK               = Widgets.loadImage(display,"link.gif");
     IMAGE_LINK_INCLUDED      = Widgets.loadImage(display,"linkIncluded.gif");
     IMAGE_LINK_EXCLUDED      = Widgets.loadImage(display,"linkExcluded.gif");
+
+    IMAGE_MARK_ALL           = Widgets.loadImage(display,"mark.gif");
+    IMAGE_UNMARK_ALL         = Widgets.loadImage(display,"unmark.gif");
+
+    // get cursors
+    waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,"Restore"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
@@ -455,7 +469,7 @@ class TabRestore
     }
 
     // archives tree
-    widgetArchiveFileTree = Widgets.newTree(widgetTab,null);
+    widgetArchiveFileTree = Widgets.newTree(widgetTab,SWT.CHECK,null);
     Widgets.layout(widgetArchiveFileTree,1,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
     SelectionListener filesTreeColumnSelectionListener = new SelectionListener()
     {
@@ -480,207 +494,12 @@ class TabRestore
     treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
     treeColumn = Widgets.addTreeColumn(widgetArchiveFileTree,"Modified",SWT.LEFT, 100,false);
     treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
-
-    // path
-    composite = Widgets.newComposite(widgetTab,SWT.NONE);
-    Widgets.layout(composite,2,0,TableLayoutData.WE);
-    {
-      label = Widgets.newLabel(composite,"Filter:");
-      Widgets.layout(label,0,0,TableLayoutData.W);
-
-      widgetFileFilter = Widgets.newCombo(composite,null);
-      Widgets.layout(widgetFileFilter,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
-      widgetFileFilter.addSelectionListener(new SelectionListener()
-      {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-          Combo  widget = (Combo)selectionEvent.widget;
-          String s      = widget.getText();
-          try
-          {
-//              long n = Units.parseByteSize(s);
-//              archivePartSize.set(n);
-//              BARServer.set(selectedJobId,"archive-part-size",n);
-          }
-          catch (NumberFormatException exception)
-          {
-            Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
-          }
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Combo widget = (Combo)selectionEvent.widget;
-          long  n      = Units.parseByteSize(widget.getText());
-//            archivePartSize.set(n);
-//            BARServer.set(selectedJobId,"archive-part-size",n);
-        }
-      });
-      widgetFileFilter.addFocusListener(new FocusListener()
-      {
-        public void focusGained(FocusEvent focusEvent)
-        {
-        }
-        public void focusLost(FocusEvent focusEvent)
-        {
-          Combo  widget = (Combo)focusEvent.widget;
-          String s      = widget.getText();
-          try
-          {
-//              long n = Units.parseByteSize(s);
-//              archivePartSize.set(n);
-//              BARServer.set(selectedJobId,"archive-part-size",n);
-          }
-          catch (NumberFormatException exception)
-          {
-            Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
-            widget.forceFocus();
-          }
-        }
-      });
-    }
-
-    // file list
-    widgetFileList = Widgets.newTable(widgetTab,this);
-    Widgets.layout(widgetFileList,3,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
-    widgetFileList.addListener(SWT.MouseDoubleClick,new Listener()
-    {
-      public void handleEvent(final Event event)
-      {
-//        scheduleEdit();
-      }
-    });
-    SelectionListener fileListColumnSelectionListener = new SelectionListener()
-    {
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        TableColumn        tableColumn = (TableColumn)selectionEvent.widget;
-        FileDataComparator fileDataComparator = new FileDataComparator(widgetFileList,tableColumn);
-        synchronized(widgetFileList)
-        {
-          Widgets.sortTableColumn(widgetFileList,tableColumn,fileDataComparator);
-        }
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-    };
-    tableColumn = Widgets.addTableColumn(widgetFileList,0,"Name",          SWT.LEFT, 200,true );
-    tableColumn.addSelectionListener(fileListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetFileList,1,"Type",          SWT.LEFT,  30,true  );
-    tableColumn.addSelectionListener(fileListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetFileList,2,"Size",          SWT.LEFT,  30,true  );
-    tableColumn.addSelectionListener(fileListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetFileList,3,"Date",          SWT.LEFT,  30,true  );
-    tableColumn.addSelectionListener(fileListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetFileList,4,"Compress",      SWT.LEFT,  80,true );
-    tableColumn.addSelectionListener(fileListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetFileList,5,"Crypt",         SWT.LEFT,  70,true );
-    tableColumn.addSelectionListener(fileListColumnSelectionListener);
-
-    // buttons
-    composite = Widgets.newComposite(widgetTab,SWT.NONE);
-    Widgets.layout(composite,4,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
-    {
-      button = Widgets.newButton(composite,null,"Restore");
-      Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,60,SWT.DEFAULT);
-      button.addSelectionListener(new SelectionListener()
-      {
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-//          scheduleNew();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-      });
-      button = Widgets.newCheckbox(composite,null,"to");
-      Widgets.layout(button,0,1,TableLayoutData.W);
-      button.addSelectionListener(new SelectionListener()
-      {
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button  widget      = (Button)selectionEvent.widget;
-          boolean checkedFlag = widget.getSelection();
-          widgetTo.setEnabled(checkedFlag);
-          widgetToSelectButton.setEnabled(checkedFlag);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-      });
-      widgetTo = Widgets.newText(composite,null);
-      widgetTo.setEnabled(false);
-      Widgets.layout(widgetTo,0,2,TableLayoutData.WE|TableLayoutData.EXPAND_X);
-      widgetTo.addSelectionListener(new SelectionListener()
-      {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-          Text widget = (Text)selectionEvent.widget;
-//            storageFileName.set(widget.getText());
-//            BARServer.set(selectedJobId,"archive-name",getArchiveName());
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-throw new Error("NYI");
-        }
-      });
-      widgetTo.addFocusListener(new FocusListener()
-      {
-        public void focusGained(FocusEvent focusEvent)
-        {
-        }
-        public void focusLost(FocusEvent focusEvent)
-        {
-          Text widget = (Text)focusEvent.widget;
-//            storageFileName.set(widget.getText());
-//            BARServer.set(selectedJobId,"archive-name",getArchiveName());
-        }
-      });
-      widgetToSelectButton = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
-      widgetToSelectButton.setEnabled(false);
-      Widgets.layout(widgetToSelectButton,0,3,TableLayoutData.DEFAULT);
-      widgetToSelectButton.addSelectionListener(new SelectionListener()
-      {
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-          String pathName = Dialogs.directory(shell,
-                                              "Select path",
-                                              widgetTo.getText()
-                                             );
-          if (pathName != null)
-          {
-            widgetTo.setText(pathName);
-          }
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-      });
-    }
-
-    // update data
-    updatePathList();
-  }
-
-  //-----------------------------------------------------------------------
-
-  /** set path to archives
-   */
-  private void setPath(String pathName)
-  {
-    widgetArchiveFileTree.removeAll();
-
-    TreeItem treeItem = Widgets.addTreeItem(widgetArchiveFileTree,new ArchiveFileTreeData(pathName,FileTypes.DIRECTORY,pathName),true);
-    treeItem.setText(pathName);
-    treeItem.setImage(IMAGE_DIRECTORY);
     widgetArchiveFileTree.addListener(SWT.Expand,new Listener()
     {
       public void handleEvent(final Event event)
       {
         final TreeItem treeItem = (TreeItem)event.item;
-        updateArchiveFileList(treeItem);
+        updateArchiveFilesTree(treeItem);
       }
     });
     widgetArchiveFileTree.addListener(SWT.Collapse,new Listener()
@@ -699,27 +518,341 @@ throw new Error("NYI");
         TreeItem treeItem = widgetArchiveFileTree.getItem(new Point(event.x,event.y));
         if (treeItem != null)
         {
-          Event treeEvent = new Event();
-          treeEvent.item = treeItem;
-          if (treeItem.getExpanded())
+          ArchiveFileTreeData archiveFileTreeData = (ArchiveFileTreeData)treeItem.getData();
+          switch (archiveFileTreeData.type)
           {
-            widgetArchiveFileTree.notifyListeners(SWT.Collapse,treeEvent);
-            treeItem.setExpanded(false);
-          }
-          else
-          {
-            widgetArchiveFileTree.notifyListeners(SWT.Expand,treeEvent);
-            treeItem.setExpanded(true);
+            case FILE:
+              treeItem.setChecked(!treeItem.getChecked());
+              widgetListButton.setEnabled(checkArchiveFileSelected());
+              break;
+            case DIRECTORY:
+              Event treeEvent = new Event();
+              treeEvent.item = treeItem;
+              if (treeItem.getExpanded())
+              {
+                widgetArchiveFileTree.notifyListeners(SWT.Collapse,treeEvent);
+                treeItem.setExpanded(false);
+              }
+              else
+              {
+                widgetArchiveFileTree.notifyListeners(SWT.Expand,treeEvent);
+                treeItem.setExpanded(true);
+              }
+              break;
+            default:
+              break;
           }
         }
       }
     });
+    widgetArchiveFileTree.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        widgetListButton.setEnabled(checkArchiveFileSelected());
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+
+    // list
+    composite = Widgets.newComposite(widgetTab,SWT.NONE);
+    Widgets.layout(composite,2,0,TableLayoutData.WE);
+    {
+      widgetListButton = Widgets.newButton(composite,null,"List");
+      widgetListButton.setEnabled(false);
+      Widgets.layout(widgetListButton,0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
+      widgetListButton.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          listArchiveFiles(getSelectedArchiveNames(),
+                           widgetFilePattern.getText()
+                          );
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      button = Widgets.newButton(composite,null,IMAGE_MARK_ALL);
+      Widgets.layout(button,0,1,TableLayoutData.E);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          setSelectedArchiveNames(true);
+          widgetListButton.setEnabled(checkArchiveFileSelected());
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      button = Widgets.newButton(composite,null,IMAGE_UNMARK_ALL);
+      Widgets.layout(button,0,2,TableLayoutData.E);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          setSelectedArchiveNames(false);
+          widgetListButton.setEnabled(checkArchiveFileSelected());
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    // file list
+    widgetFileList = Widgets.newTable(widgetTab,SWT.CHECK,this);
+    Widgets.layout(widgetFileList,3,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
+    SelectionListener fileListColumnSelectionListener = new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        TableColumn        tableColumn = (TableColumn)selectionEvent.widget;
+        FileDataComparator fileDataComparator = new FileDataComparator(widgetFileList,tableColumn);
+        synchronized(widgetFileList)
+        {
+          shell.setCursor(waitCursor);
+          Widgets.sortTableColumn(widgetFileList,tableColumn,fileDataComparator);
+          shell.setCursor(null);
+        }
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    };
+    tableColumn = Widgets.addTableColumn(widgetFileList,0,"Archive",       SWT.LEFT, 200,true );
+    tableColumn.addSelectionListener(fileListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetFileList,0,"Name",          SWT.LEFT, 200,true );
+    tableColumn.addSelectionListener(fileListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetFileList,1,"Type",          SWT.LEFT,  60,true );
+    tableColumn.addSelectionListener(fileListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetFileList,2,"Size",          SWT.RIGHT, 60,true );
+    tableColumn.addSelectionListener(fileListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetFileList,3,"Date",          SWT.LEFT, 140,true );
+    tableColumn.addSelectionListener(fileListColumnSelectionListener);
+    widgetFileList.addListener(SWT.MouseDoubleClick,new Listener()
+    {
+      public void handleEvent(final Event event)
+      {
+        TableItem tableItem = widgetFileList.getItem(new Point(event.x,event.y));
+        if (tableItem != null)
+        {
+          tableItem.setChecked(!tableItem.getChecked());
+          widgetRestoreButton.setEnabled(checkFilesSelected());
+        }
+      }
+    });
+    widgetFileList.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        widgetRestoreButton.setEnabled(checkFilesSelected());
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+
+    composite = Widgets.newComposite(widgetTab,SWT.NONE);
+    Widgets.layout(composite,4,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    {
+      label = Widgets.newLabel(composite,"Filter:");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+      widgetFilePattern = Widgets.newCombo(composite,null);
+      Widgets.layout(widgetFilePattern,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      widgetFilePattern.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          Combo  widget = (Combo)selectionEvent.widget;
+          setFilePattern(widget.getText());
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Combo widget = (Combo)selectionEvent.widget;
+          setFilePattern(widget.getText());
+        }
+      });
+      widgetFilePattern.addFocusListener(new FocusListener()
+      {
+        public void focusGained(FocusEvent focusEvent)
+        {
+        }
+        public void focusLost(FocusEvent focusEvent)
+        {
+          Combo  widget = (Combo)focusEvent.widget;
+          setFilePattern(widget.getText());
+        }
+      });
+
+      button = Widgets.newCheckbox(composite,null,"newest file only");
+      button.setSelection(newestFileOnlyFlag);
+      Widgets.layout(button,0,2,TableLayoutData.W);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button  widget = (Button)selectionEvent.widget;
+          newestFileOnlyFlag = widget.getSelection();
+          updateFileList();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      control = Widgets.newSpacer(composite);
+      Widgets.layout(control,0,3,TableLayoutData.WE,0,0,30,0);
+
+      button = Widgets.newButton(composite,null,IMAGE_MARK_ALL);
+      Widgets.layout(button,0,4,TableLayoutData.E);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          setSelectedFiles(true);
+          widgetRestoreButton.setEnabled(checkFilesSelected());
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      button = Widgets.newButton(composite,null,IMAGE_UNMARK_ALL);
+      Widgets.layout(button,0,5,TableLayoutData.E);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          setSelectedFiles(false);
+          widgetRestoreButton.setEnabled(checkFilesSelected());
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    // restore
+    composite = Widgets.newComposite(widgetTab,SWT.NONE);
+    Widgets.layout(composite,5,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    {
+      widgetRestoreButton = Widgets.newButton(composite,null,"Restore");
+      widgetRestoreButton.setEnabled(false);
+      Widgets.layout(widgetRestoreButton,0,0,TableLayoutData.DEFAULT,0,0,60,SWT.DEFAULT);
+      widgetRestoreButton.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          restoreFiles(getSelectedFiles(),
+                       widgetRestoreTo.getEnabled()?widgetRestoreTo.getText():""
+                      );
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      button = Widgets.newCheckbox(composite,null,"to");
+      Widgets.layout(button,0,1,TableLayoutData.W);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button  widget      = (Button)selectionEvent.widget;
+          boolean checkedFlag = widget.getSelection();
+          widgetRestoreTo.setEnabled(checkedFlag);
+          widgetRestoreToSelectButton.setEnabled(checkedFlag);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      widgetRestoreTo = Widgets.newText(composite,null);
+      widgetRestoreTo.setEnabled(false);
+      Widgets.layout(widgetRestoreTo,0,2,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      widgetRestoreTo.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          Text widget = (Text)selectionEvent.widget;
+//            storageFileName.set(widget.getText());
+//            BARServer.set(selectedJobId,"archive-name",getArchiveName());
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+throw new Error("NYI");
+        }
+      });
+      widgetRestoreTo.addFocusListener(new FocusListener()
+      {
+        public void focusGained(FocusEvent focusEvent)
+        {
+        }
+        public void focusLost(FocusEvent focusEvent)
+        {
+          Text widget = (Text)focusEvent.widget;
+//            storageFileName.set(widget.getText());
+//            BARServer.set(selectedJobId,"archive-name",getArchiveName());
+        }
+      });
+      widgetRestoreToSelectButton = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
+      widgetRestoreToSelectButton.setEnabled(false);
+      Widgets.layout(widgetRestoreToSelectButton,0,3,TableLayoutData.DEFAULT);
+      widgetRestoreToSelectButton.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          String pathName = Dialogs.directory(shell,
+                                              "Select path",
+                                              widgetRestoreTo.getText()
+                                             );
+          if (pathName != null)
+          {
+            widgetRestoreTo.setText(pathName);
+          }
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    // update data
+    updatePathList();
+    setPath("/");
+//setPath("sftp://it-zo.de/backup");
+setPath("file:///home/torsten/projects/bar");
+//widgetFilePattern.setText("/var/lib/*");
+//widgetListButton.setEnabled(true);
+//widgetRestoreTo.setText("/tmp");
   }
 
-  /** clear all data
+  //-----------------------------------------------------------------------
+
+  /** set path to archives
    */
-  private void clear()
+  private void setPath(String pathName)
   {
+    archiveNameParts = new ArchiveNameParts(pathName);
+
+    widgetArchiveFileTree.removeAll();
+
+    TreeItem treeItem = Widgets.addTreeItem(widgetArchiveFileTree,new ArchiveFileTreeData(pathName,FileTypes.DIRECTORY,pathName),true);
+    treeItem.setText(pathName);
+    treeItem.setImage(IMAGE_DIRECTORY);
+    treeItem.setGrayed(true);
   }
 
   /** update path list
@@ -730,10 +863,9 @@ throw new Error("NYI");
     {
       // get job list
       ArrayList<String> result = new ArrayList<String>();
-      int errorCode = BARServer.executeCommand("JOB_LIST",result);
-      if (errorCode != 0) return;
+      if (BARServer.executeCommand("JOB_LIST",result) != 0) return;
 
-      // get archive path names
+      // get archive path names from jobs
       HashSet <String> pathNames = new HashSet<String>();
       for (String line : result)
       {
@@ -756,15 +888,30 @@ throw new Error("NYI");
           int id = (Integer)data[0];
 
           // get archive name
-          String archiveName = BARServer.getString(id,"archive-name");
+          String archiveName = BARServer.getStringOption(id,"archive-name");
 
-          // save path
-          String path = new File(archiveName).getParent();
-          if (path != null) pathNames.add(path);
+          if (   !archiveName.startsWith("ssh")
+              && !archiveName.startsWith("scp:")
+              && !archiveName.startsWith("dvd:")
+              && !archiveName.startsWith("device:")
+             )
+          {
+            // parse archive name
+            ArchiveNameParts archiveNameParts = new ArchiveNameParts(archiveName);
+
+            // get and save path
+            String path = new File(archiveNameParts.fileName).getParent();
+            if (path != null)
+            {
+              archiveNameParts.fileName = path;
+              pathNames.add(archiveNameParts.getArchiveName());
+            }
+          }
         }
 
         // update path list
         widgetPath.removeAll();
+        widgetPath.add("/");
         for (String path : pathNames)
         {
           widgetPath.add(path);
@@ -775,8 +922,7 @@ throw new Error("NYI");
 
   /** find index for insert of tree item in sort list of tree items
    * @param treeItem tree item
-   * @param name name of tree item to insert
-   * @param data data of tree item to insert
+   * @param archiveFileTreeData data of tree item
    * @return index in tree item
    */
   private int findArchiveFilesTreeIndex(TreeItem treeItem, ArchiveFileTreeData archiveFileTreeData)
@@ -798,88 +944,567 @@ throw new Error("NYI");
   /** update file list of tree item
    * @param treeItem tree item to update
    */
-  private void updateArchiveFileList(TreeItem treeItem)
+  private void updateArchiveFilesTree(TreeItem treeItem)
   {
     ArchiveFileTreeData archiveFileTreeData = (ArchiveFileTreeData)treeItem.getData();
     TreeItem            subTreeItem;
 
+    shell.setCursor(waitCursor);
+
     ArrayList<String> result = new ArrayList<String>();
-    BARServer.executeCommand("FILE_LIST "+StringParser.escape(archiveFileTreeData.name),result);
-
-    treeItem.removeAll();
-    for (String line : result)
+    String command = "FILE_LIST "+
+                     StringParser.escape(archiveFileTreeData.name)
+                     ;
+    int errorCode = BARServer.executeCommand(command,
+                                             result,
+                                             new BARIndicator()
+                                             {
+                                               public boolean busy(long n)
+                                               {
+                                                 shell.getDisplay().update();
+                                                 return true;
+                                               }
+                                             }
+                                            );
+    if (errorCode == Errors.NONE)
     {
-//System.err.println("BARControl.java"+", "+1733+": "+line);
-      Object data[] = new Object[10];
-      if      (StringParser.parse(line,"FILE %ld %ld %S",data,StringParser.QUOTE_CHARS))
+      treeItem.removeAll();
+      for (String line : result)
       {
-        /* get data
-           format:
-             size
-             date/time
-             name
-        */
-        long   size     = (Long  )data[0];
-        long   datetime = (Long  )data[1];
-        String name     = (String)data[2];
+  //System.err.println("BARControl.java"+", "+1733+": "+line);
+        Object data[] = new Object[10];
+        if      (StringParser.parse(line,"FILE %ld %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               size
+               date/time
+               name
+          */
+          long   size     = (Long  )data[0];
+          long   datetime = (Long  )data[1];
+          String name     = (String)data[2];
 
-        archiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.FILE,size,datetime,new File(name).getName());
+          archiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.FILE,size,datetime,new File(name).getName());
 
-        subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,archiveFileTreeData),archiveFileTreeData,false);
-        subTreeItem.setText(0,archiveFileTreeData.title);
-        subTreeItem.setText(1,"FILE");
-        subTreeItem.setText(2,Long.toString(size));
-        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        subTreeItem.setImage(IMAGE_FILE);
-      }
-      else if (StringParser.parse(line,"DIRECTORY %ld %ld %S",data,StringParser.QUOTE_CHARS))
-      {
-        /* get data
-           format:
-             size
-             date/time
-             name
-        */
-        long   size     = (Long  )data[0];
-        long   datetime = (Long  )data[1];
-        String name     = (String)data[2];
+          subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,archiveFileTreeData),archiveFileTreeData,false);
+          subTreeItem.setText(0,archiveFileTreeData.title);
+          subTreeItem.setText(1,"FILE");
+          subTreeItem.setText(2,Long.toString(size));
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+          subTreeItem.setImage(IMAGE_FILE);
+        }
+        else if (StringParser.parse(line,"DIRECTORY %ld %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               size
+               date/time
+               name
+          */
+          long   size     = (Long  )data[0];
+          long   datetime = (Long  )data[1];
+          String name     = (String)data[2];
 
-        archiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.DIRECTORY,new File(name).getName());
+          archiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.DIRECTORY,new File(name).getName());
 
-        subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,archiveFileTreeData),archiveFileTreeData,true);
-        subTreeItem.setText(0,archiveFileTreeData.title);
-        subTreeItem.setText(1,"DIR");
-        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        subTreeItem.setImage(IMAGE_DIRECTORY);
-      }
-      else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
-      {
-        /* get data
-           format:
-             date/time
-             name
-        */
-        long   datetime = (Long  )data[0];
-        String name     = (String)data[1];
+          subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,archiveFileTreeData),archiveFileTreeData,true);
+          subTreeItem.setText(0,archiveFileTreeData.title);
+          subTreeItem.setText(1,"DIR");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+          subTreeItem.setImage(IMAGE_DIRECTORY);
+          subTreeItem.setGrayed(true);
+        }
+        else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               date/time
+               name
+          */
+          long   datetime = (Long  )data[0];
+          String name     = (String)data[1];
 
-        archiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.LINK,0,datetime,new File(name).getName());
+          archiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.LINK,0,datetime,new File(name).getName());
 
-        subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,archiveFileTreeData),archiveFileTreeData,false);
-        subTreeItem.setText(0,archiveFileTreeData.title);
-        subTreeItem.setText(1,"LINK");
-        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        subTreeItem.setImage(IMAGE_LINK);
-      }
-      else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
-      {
-      }
-      else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
-      {
-      }
-      else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
-      {
+          subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,archiveFileTreeData),archiveFileTreeData,false);
+          subTreeItem.setText(0,archiveFileTreeData.title);
+          subTreeItem.setText(1,"LINK");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+          subTreeItem.setImage(IMAGE_LINK);
+        }
+        else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+        }
+        else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
+        {
+        }
+        else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
+        {
+        }
       }
     }
+    else
+    {
+      Dialogs.error(shell,"Cannot open '"+archiveFileTreeData.title+"' (error: "+result.get(0)+")");
+    }
+
+    shell.setCursor(null);
+  }
+
+  /** get selected archive file names
+   * @param treeItem tree item to check
+   * @return true iff tree item or some sub-tree item is selected
+   */
+  private void setSelectedArchiveNames(TreeItem treeItem, boolean flag)
+  {
+    treeItem.setChecked(flag);
+
+    for (TreeItem subTreeItem : treeItem.getItems())
+    {
+      setSelectedArchiveNames(subTreeItem,flag);
+    }
+  }
+
+  /** get selected archive file names
+   * @return tree selected archive file names
+   */
+  private void setSelectedArchiveNames(boolean flag)
+  {
+    for (TreeItem treeItem : widgetArchiveFileTree.getItems())
+    {
+      setSelectedArchiveNames(treeItem,flag);
+    }
+  }
+
+  /** get selected archive file names
+   * @param treeItem tree item to check
+   * @return true iff tree item or some sub-tree item is selected
+   */
+  private void getSelectedArchiveNames(HashSet<String> archiveNamesHashSet, TreeItem treeItem)
+  {
+    ArchiveFileTreeData archiveFileTreeData = (ArchiveFileTreeData)treeItem.getData();
+
+    if ((archiveFileTreeData != null) && !treeItem.getGrayed() && treeItem.getChecked())
+    {
+      archiveNamesHashSet.add(archiveFileTreeData.name);
+    }
+
+    for (TreeItem subTreeItem : treeItem.getItems())
+    {
+      getSelectedArchiveNames(archiveNamesHashSet,subTreeItem);
+    }
+  }
+
+  /** get selected archive file names
+   * @return tree selected archive file names
+   */
+  private String[] getSelectedArchiveNames()
+  {
+    HashSet<String> archiveNamesHashSet = new HashSet<String>();
+
+    for (TreeItem treeItem : widgetArchiveFileTree.getItems())
+    {
+      getSelectedArchiveNames(archiveNamesHashSet,treeItem);
+    }
+
+    String archiveNames[] = new String[archiveNamesHashSet.size()];
+    int i = 0;
+    for (String archiveName : archiveNamesHashSet)
+    {
+      archiveNames[i] = archiveNameParts.getArchiveName(archiveName);
+      i++;
+    }
+
+    return archiveNames;
+  }
+
+  /** check if some archive file tree item is selected
+   * @return tree iff some tree item is selected
+   */
+  private boolean checkArchiveFileSelected()
+  {
+    return getSelectedArchiveNames().length > 0;
+  }
+
+  /** list content of archives
+   * @param archiveNames archive names
+   * @param filterPattern filter pattern
+   */
+  private void listArchiveFiles(String archiveNames[], String filterPattern)
+  {
+    int errorCode;
+
+    shell.setCursor(waitCursor);
+
+    fileList.clear();
+//String archiveName = "sftp://it-zo.de/backup/database-normal-Sat-0000-last.bar";
+//String archiveName = "sftp://it-zo.de/backup/test-00.bar";
+//String archiveName = "file:///home/torsten/projects/bar/system-full-Tue-0000.bar";
+    final ProgressDialog progressDialog = new ProgressDialog(shell,"List archives","Read files...");
+    for (String archiveName : archiveNames)
+    {
+//Dprintf.dprintf("s=%s\n",archiveName);
+
+      /* get archive content list */
+      ArrayList<String> result = new ArrayList<String>();
+      String command = "ARCHIVE_LIST "+
+                       StringParser.escape(archiveName)+" "+
+                       StringParser.escape(widgetFilePattern.getText())
+                       ;
+      errorCode = Errors.UNKNOWN;
+      boolean tryAgainFlag = true;
+      while (tryAgainFlag)
+      {
+        tryAgainFlag = false;
+
+        /* try reading archive content */
+        errorCode = BARServer.executeCommand(command,
+                                             result,
+                                             new BARIndicator()
+                                             {
+                                               public boolean busy(final long n)
+                                               {
+                                                 if ((n%10) == 0)
+                                                 {
+                                                   progressDialog.update("Read files..."+((n > 0)?n:""));
+                                                   shell.getDisplay().update();
+                                                 }
+
+                                                 return !progressDialog.isAborted();
+                                               }
+                                             }
+                                            );
+
+        /* ask for crypt password if password error */
+        if (   (errorCode == Errors.CORRUPT_DATA     )
+            || (errorCode == Errors.NO_CRYPT_PASSWORD)
+            || (errorCode == Errors.INVALID_PASSWORD )
+           )
+        {
+          String password = Dialogs.password(shell,
+                                             "Crypt password",
+                                             "Archive: "+archiveName,
+                                             "Crypt password"
+                                             );
+          if (password != null)
+          {
+            BARServer.executeCommand("PASSWORD_ADD "+StringParser.escape(password),result);
+            tryAgainFlag = true;
+          }
+        }
+      }
+
+      /* parse archive content list result */
+      if (errorCode == Errors.NONE)
+      {
+        for (String line : result)
+        {
+//Dprintf.dprintf(line);
+          progressDialog.update("Process...");
+          shell.getDisplay().update();
+          if (progressDialog.isAborted()) break;
+
+          Object data[] = new Object[10];
+          if      (StringParser.parse(line,"FILE %ld %ld %ld %ld %ld %S",data,StringParser.QUOTE_CHARS))
+          {
+            /* get data
+               format:
+                 size
+                 date/time
+                 archive file size
+                 fragment offset
+                 fragment size
+                 name
+            */
+            long   size     = (Long  )data[0];
+            long   datetime = (Long  )data[1];
+            String name     = (String)data[5];
+
+            FileData fileData = new FileData(archiveName,name,FileTypes.FILE,size,datetime);
+            fileList.add(fileData);
+          }
+          else if (StringParser.parse(line,"DIRECTORY %ld %S",data,StringParser.QUOTE_CHARS))
+          {
+            /* get data
+               format:
+                 date/time
+                 name
+            */
+            long   datetime      = (Long  )data[0];
+            String directoryName = (String)data[1];
+
+            FileData fileData = new FileData(archiveName,directoryName,FileTypes.DIRECTORY,datetime);
+            fileList.add(fileData);
+          }
+          else if (StringParser.parse(line,"LINK %ld %S %S",data,StringParser.QUOTE_CHARS))
+          {
+            /* get data
+               format:
+                 date/time
+                 name
+            */
+            long   datetime = (Long  )data[0];
+            String linkName = (String)data[1];
+            String fileName = (String)data[2];
+
+            FileData fileData = new FileData(archiveName,linkName,FileTypes.LINK,datetime);
+            fileList.add(fileData);
+          }
+          else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
+          {
+          }
+          else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
+          {
+          }
+          else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
+          {
+          }
+        }
+      }
+      else
+      {
+        Dialogs.error(shell,"Cannot list archive '"+archiveName+"' (error: "+result.get(0)+")");
+      }
+    }
+    progressDialog.update("Sort...");
+    shell.getDisplay().update();
+    updateFileList();
+    progressDialog.close();
+
+    shell.setCursor(null);
+  }
+
+  /** set file pattern
+   * @param string pattern string
+   */
+  private void setFilePattern(String string)
+  {
+    if (string.length() > 0)
+    {
+      try
+      {
+        StringBuffer patternString = new StringBuffer();
+        patternString.append(".*");
+        for (int z = 0; z < string.length(); z++)
+        {
+          char ch = string.charAt(z);
+          switch (ch)
+          {
+            case '\\':
+            case '[':
+            case ']':
+            case '(':
+            case ')':
+            case '{':
+            case '}':
+            case '+':
+            case '|':
+            case '^':
+            case '$':
+              patternString.append('\\');
+              patternString.append(ch);
+              break;
+            case '*':
+              patternString.append(".*");
+              break;
+            case '?':
+              patternString.append(".?");
+              break;
+            default:
+              patternString.append(ch);
+              break;
+          }
+        }
+        patternString.append(".*");
+        filePattern = Pattern.compile(patternString.toString(),Pattern.CASE_INSENSITIVE);
+      }
+      catch (PatternSyntaxException exception)
+      {
+        Dialogs.error(shell,"'"+string+"' is not valid pattern!\n.");
+      }
+    }
+    else
+    {
+      filePattern = null;
+    }
+    updateFileList();
+  }
+
+  /** check if file pattern matches
+   * @param fileName
+   * @return true iff file pattern matches
+   */
+  private boolean matchFilePattern(String fileName)
+  {
+    return (filePattern == null) || filePattern.matcher(fileName).matches();
+  }
+
+  private void addFileList(final FileData fileData)
+  {
+    switch (fileData.type)
+    {
+      case FILE:
+        if (matchFilePattern(fileData.name))
+        {
+          TableItem tableItem = new TableItem(widgetFileList,SWT.NONE);
+          tableItem.setData(fileData);
+          tableItem.setText(0,fileData.archiveName);
+          tableItem.setText(1,fileData.name);
+          tableItem.setText(2,"FILE");
+          tableItem.setText(3,Long.toString(fileData.size));
+          tableItem.setText(4,simpleDateFormat.format(new Date(fileData.datetime*1000)));
+        }
+        break;
+      case DIRECTORY:
+        if (matchFilePattern(fileData.name))
+        {
+          TableItem tableItem = new TableItem(widgetFileList,SWT.NONE);
+          tableItem.setData(fileData);
+          tableItem.setText(0,fileData.archiveName);
+          tableItem.setText(1,fileData.name);
+          tableItem.setText(2,"DIR");
+          tableItem.setText(3,"");
+          tableItem.setText(4,simpleDateFormat.format(new Date(fileData.datetime*1000)));
+        }
+        break;
+      case LINK:
+        if (matchFilePattern(fileData.name))
+        {
+          TableItem tableItem = new TableItem(widgetFileList,SWT.NONE);
+          tableItem.setData(fileData);
+          tableItem.setText(0,fileData.archiveName);
+          tableItem.setText(1,fileData.name);
+          tableItem.setText(2,"LINK");
+          tableItem.setText(3,"");
+          tableItem.setText(4,simpleDateFormat.format(new Date(fileData.datetime*1000)));
+        }
+        break;
+    }
+  }
+
+  /** update file list, match filter pattern
+   */
+  private void updateFileList()
+  {
+    /* update list */
+    widgetFileList.removeAll();
+    if (newestFileOnlyFlag)
+    {
+      /* collect newest files */
+      HashMap<String,FileData> fileListHashMap = new HashMap<String,FileData>();
+      for (FileData fileData : fileList)
+      {
+        FileData newestFileData = fileListHashMap.get(fileData.name);
+        if (   (newestFileData == null)
+            || (fileData.datetime > newestFileData.datetime)
+           )
+        {
+          fileListHashMap.put(fileData.name,fileData);
+        }
+      }
+
+      for (FileData fileData : fileListHashMap.values())
+      {
+        addFileList(fileData);
+      }
+    }
+    else
+    {
+      /* show all files */
+      for (FileData fileData : fileList)
+      {
+        addFileList(fileData);
+      }
+    }
+
+    /* sort */
+    FileDataComparator fileDataComparator = new FileDataComparator(widgetFileList);
+    synchronized(widgetFileList)
+    {
+      Widgets.sortTableColumn(widgetFileList,fileDataComparator);
+    }
+  }
+
+  /** set selected files
+   * @param flag true iff selected
+   */
+  private void setSelectedFiles(boolean flag)
+  {
+    for (TableItem tableItem : widgetFileList.getItems())
+    {
+      tableItem.setChecked(flag);
+    }
+  }
+
+  /** get selected files
+   * @return selected files data
+   */
+  private FileData[] getSelectedFiles()
+  {
+    ArrayList<FileData> fileDataArray = new ArrayList<FileData>();
+
+    for (TableItem tableItem : widgetFileList.getItems())
+    {
+      if (tableItem.getChecked())
+      {
+        fileDataArray.add((FileData)tableItem.getData());
+      }
+    }
+
+    return fileDataArray.toArray(new FileData[fileDataArray.size()]);
+  }
+
+  /** check if some file item is selected
+   * @return tree iff some file is selected
+   */
+  private boolean checkFilesSelected()
+  {
+    return getSelectedFiles().length > 0;
+  }
+
+  private void restoreFiles(FileData fileData_[], String directory)
+  {
+    int errorCode;
+
+    shell.setCursor(waitCursor);
+
+    if (!directory.equals(""))
+    {
+      BARServer.set("destination",directory);     
+    }
+
+    final ProgressDialog progressDialog = new ProgressDialog(shell,"Restore files","Restore...");
+    for (final FileData fileData : fileData_)
+    {
+Dprintf.dprintf("restore %s to %s\n",fileData.name,directory);
+
+//String archiveName = "sftp://it-zo.de/backup/database-normal-Sat-0000-last.bar";
+//String archiveName = "sftp://it-zo.de/backup/test-00.bar";
+String archiveName = "file:///home/torsten/projects/bar/system-full-Tue-0000.bar";
+Dprintf.dprintf("s=%s\n",archiveName);
+      ArrayList<String> result = new ArrayList<String>();
+      String command = "RESTORE "+
+                       StringParser.escape(fileData.archiveName)+" "+
+                       StringParser.escape(directory)+" "+
+                       StringParser.escape(fileData.name)
+                       ;
+      errorCode = BARServer.executeCommand(command,
+                                           result,
+                                           new BARIndicator()
+                                           {
+                                             public boolean busy(long n)
+                                             {
+                                               shell.getDisplay().update();
+                                               return progressDialog.update("Restore file '"+fileData.archiveName+"'...");
+                                             }
+                                           }
+                                          );
+Dprintf.dprintf("errorCode=%d\n",errorCode);
+    }
+    progressDialog.close();
+
+    shell.setCursor(null);
   }
 
   /** update all data

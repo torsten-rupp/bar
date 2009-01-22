@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -74,7 +74,7 @@ VERSION_MINOR := $(shell $(CAT) ../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 
 #---------------------------------- rules ------------------------------------
 
-classes/%.class:src/%.java
+classes/%.class:src/%.java src/Errors.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) src/*.java
@@ -85,11 +85,15 @@ endif
 #--------------------------------- objects -----------------------------------
 
 SOURCES        = src/BARControl.java \
+                 src/TabStatus.java \
+                 src/TabJobs.java \
+                 src/TabRestore.java \
                  src/BARServer.java \
                  \
                  src/TableLayout.java \
                  src/TableLayoutData.java \
                  src/ProgressBar.java \
+                 src/ProgressDialog.java \
                  src/Widgets.java \
                  src/Dialogs.java \
                  src/StringParser.java \
@@ -99,9 +103,11 @@ OTHER_SOURCES  = barcontrol.xml \
                  jar.txt \
 
 OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).class) \
+                 classes/Errors.class \
                  classes/Config.class \
 
-INTERMEDIATE   = barcontrol.jar \
+INTERMEDIATE   = src/Errors.java \
+                 barcontrol.jar \
                  barcontrol-linux.jar \
                  barcontrol-windows.jar
 
@@ -126,7 +132,12 @@ distclean: clean
 	$(RMF) barcontrol
 	$(RMF) barcontrol.bat
 
-.PHONE: jars
+# error definition
+src/Errors.java: ../errors.def ../errors.pl
+	$(PERL) ../errors.pl < $^ -j $@
+
+# jars
+.PHONY: jars
 jars: barcontrol.jar barcontrol-linux.jar barcontrol-windows.jar
 
 # create jars
@@ -142,7 +153,7 @@ else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
 
-barcontrol-linux.jar: jar.txt $(OBJECTS) images/*.gif jars/swt-3.4-linux.jar
+barcontrol-linux.jar: jar.txt $(OBJECTS) src/Errors.java images/*.gif jars/swt-3.4-linux.jar
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_LINUX) 1>/dev/null; $(RMRF) META-INF)
@@ -199,9 +210,21 @@ endif
 # run
 run: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(OPTIONS)
 else
-	@$(ECHO) "ERROR: no 'java' commadn - cannot execute BARControl"
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+rundebug: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug $(OPTIONS)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+runxdebug: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug --bar-server-debug $(OPTIONS)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 
 # run with jar file

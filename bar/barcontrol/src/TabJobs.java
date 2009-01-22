@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: BARControl (frontend for BAR)
+* Contents: jobs tab
 * Systems: all
 *
 \***********************************************************************/
@@ -213,7 +213,6 @@ class TabJobs
      */
     public int compare(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
     {
-//System.err.println("BARControl.java"+", "+2734+": file1="+fileTreeData1+" file=2"+fileTreeData2+" "+sortMode);
       if (fileTreeData1.type == FileTypes.DIRECTORY)
       {
         if (fileTreeData2.type == FileTypes.DIRECTORY)
@@ -526,49 +525,49 @@ class TabJobs
   private final Image IMAGE_LINK_EXCLUDED;
 
   // global variable references
-  Shell       shell;
-  TabStatus   tabStatus;
+  private Shell       shell;
+  private TabStatus   tabStatus;
 
   // widgets
-  Composite   widgetTab;
-  TabFolder   widgetTabFolder;
-  Combo       widgetJobList;
-  Tree        widgetFileTree;
-  List        widgetIncludedPatterns;
-  List        widgetExcludedPatterns;
-  Combo       widgetArchivePartSize;
-  Text        widgetCryptPublicKeyFileName;
-  Button      widgetCryptPublicKeyFileNameSelect;
-  Combo       widgetFTPMaxBandWidth;
-  Combo       widgetSCPSFTPMaxBandWidth;
-  Table       widgetScheduleList;
+  public  Composite   widgetTab;
+  private TabFolder   widgetTabFolder;
+  private Combo       widgetJobList;
+  private Tree        widgetFileTree;
+  private List        widgetIncludedPatterns;
+  private List        widgetExcludedPatterns;
+  private Combo       widgetArchivePartSize;
+  private Text        widgetCryptPublicKeyFileName;
+  private Button      widgetCryptPublicKeyFileNameSelect;
+  private Combo       widgetFTPMaxBandWidth;
+  private Combo       widgetSCPSFTPMaxBandWidth;
+  private Table       widgetScheduleList;
 
   // BAR variables
-  BARVariable skipUnreadable          = new BARVariable(false);
-  BARVariable overwriteFiles          = new BARVariable(false);
+  private BARVariable skipUnreadable          = new BARVariable(false);
+  private BARVariable overwriteFiles          = new BARVariable(false);
 
-  BARVariable archiveType             = new BARVariable(new String[]{"normal","full","incremental"});
-  BARVariable archivePartSizeFlag     = new BARVariable(false);
-  BARVariable archivePartSize         = new BARVariable(0);
-  BARVariable compressAlgorithm       = new BARVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9"});
-  BARVariable cryptAlgorithm          = new BARVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
-  BARVariable cryptType               = new BARVariable(new String[]{"","symmetric","asymmetric"});
-  BARVariable cryptPublicKeyFileName  = new BARVariable("");
-  BARVariable incrementalListFileName = new BARVariable("");
-  BARVariable storageType             = new BARVariable(new String[]{"filesystem","ftp","scp","sftp","dvd","device"});
-  BARVariable storageFileName         = new BARVariable("");
-  BARVariable storageHostName         = new BARVariable("");
-  BARVariable storageHostPort         = new BARVariable(0);
-  BARVariable storageLoginName        = new BARVariable("");
-  BARVariable storageLoginPassword    = new BARVariable("");
-  BARVariable storageDeviceName       = new BARVariable("");
-  BARVariable overwriteArchiveFiles   = new BARVariable(false);
-  BARVariable sshPublicKeyFileName    = new BARVariable("");
-  BARVariable sshPrivateKeyFileName   = new BARVariable("");
-  BARVariable maxBandWidthFlag        = new BARVariable(false);
-  BARVariable maxBandWidth            = new BARVariable(0);
-  BARVariable volumeSize              = new BARVariable(0);
-  BARVariable ecc                     = new BARVariable(false);
+  private BARVariable archiveType             = new BARVariable(new String[]{"normal","full","incremental"});
+  private BARVariable archivePartSizeFlag     = new BARVariable(false);
+  private BARVariable archivePartSize         = new BARVariable(0);
+  private BARVariable compressAlgorithm       = new BARVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9"});
+  private BARVariable cryptAlgorithm          = new BARVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
+  private BARVariable cryptType               = new BARVariable(new String[]{"","symmetric","asymmetric"});
+  private BARVariable cryptPublicKeyFileName  = new BARVariable("");
+  private BARVariable incrementalListFileName = new BARVariable("");
+  private BARVariable storageType             = new BARVariable(new String[]{"filesystem","ftp","scp","sftp","dvd","device"});
+  private BARVariable storageHostName         = new BARVariable("");
+  private BARVariable storageHostPort         = new BARVariable(0);
+  private BARVariable storageLoginName        = new BARVariable("");
+  private BARVariable storageLoginPassword    = new BARVariable("");
+  private BARVariable storageDeviceName       = new BARVariable("");
+  private BARVariable storageFileName         = new BARVariable("");
+  private BARVariable overwriteArchiveFiles   = new BARVariable(false);
+  private BARVariable sshPublicKeyFileName    = new BARVariable("");
+  private BARVariable sshPrivateKeyFileName   = new BARVariable("");
+  private BARVariable maxBandWidthFlag        = new BARVariable(false);
+  private BARVariable maxBandWidth            = new BARVariable(0);
+  private BARVariable volumeSize              = new BARVariable(0);
+  private BARVariable ecc                     = new BARVariable(false);
 
   // variables
   private     HashMap<String,Integer>  jobIds           = new HashMap<String,Integer>();
@@ -708,7 +707,7 @@ class TabJobs
       Widgets.layout(tab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
       {
         // file tree
-        widgetFileTree = Widgets.newTree(tab,null);
+        widgetFileTree = Widgets.newTree(tab,SWT.NONE,null);
         Widgets.layout(widgetFileTree,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
         SelectionListener filesTreeColumnSelectionListener = new SelectionListener()
         {
@@ -932,7 +931,7 @@ class TabJobs
               Button  widget      = (Button)selectionEvent.widget;
               boolean checkedFlag = widget.getSelection();
               skipUnreadable.set(checkedFlag);
-              BARServer.set(selectedJobId,"skip-unreadable",checkedFlag);
+              BARServer.setOption(selectedJobId,"skip-unreadable",checkedFlag);
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -960,7 +959,7 @@ class TabJobs
               Button widget = (Button)selectionEvent.widget;
               archivePartSizeFlag.set(false);
               archivePartSize.set(0);
-              BARServer.set(selectedJobId,"archive-part-size",0);
+              BARServer.setOption(selectedJobId,"archive-part-size",0);
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1027,7 +1026,7 @@ class TabJobs
               {
                 long n = Units.parseByteSize(s);
                 archivePartSize.set(n);
-                BARServer.set(selectedJobId,"archive-part-size",n);
+                BARServer.setOption(selectedJobId,"archive-part-size",n);
               }
               catch (NumberFormatException exception)
               {
@@ -1039,7 +1038,7 @@ class TabJobs
               Combo widget = (Combo)selectionEvent.widget;
               long  n      = Units.parseByteSize(widget.getText());
               archivePartSize.set(n);
-              BARServer.set(selectedJobId,"archive-part-size",n);
+              BARServer.setOption(selectedJobId,"archive-part-size",n);
             }
           });
           widgetArchivePartSize.addFocusListener(new FocusListener()
@@ -1055,7 +1054,7 @@ class TabJobs
               {
                 long n = Units.parseByteSize(s);
                 archivePartSize.set(n);
-                BARServer.set(selectedJobId,"archive-part-size",n);
+                BARServer.setOption(selectedJobId,"archive-part-size",n);
               }
               catch (NumberFormatException exception)
               {
@@ -1093,7 +1092,7 @@ throw new Error("NYI");
               Combo  widget = (Combo)selectionEvent.widget;
               String s      = widget.getText();
               compressAlgorithm.set(s);
-              BARServer.set(selectedJobId,"compress-algorithm",s);
+              BARServer.setOption(selectedJobId,"compress-algorithm",s);
             }
           });
           Widgets.addModifyListener(new WidgetListener(combo,compressAlgorithm));
@@ -1119,7 +1118,7 @@ throw new Error("NYI");
               Combo  widget = (Combo)selectionEvent.widget;
               String s      = widget.getText();
               cryptAlgorithm.set(s);
-              BARServer.set(selectedJobId,"crypt-algorithm",s);
+              BARServer.setOption(selectedJobId,"crypt-algorithm",s);
             }
           });
           Widgets.addModifyListener(new WidgetListener(combo,cryptAlgorithm));
@@ -1138,7 +1137,7 @@ throw new Error("NYI");
               Widgets.setEnabled(widgetCryptPublicKeyFileName,false);
               Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,false);
               cryptType.set("symmetric");
-              BARServer.set(selectedJobId,"crypt-type","symmetric");
+              BARServer.setOption(selectedJobId,"crypt-type","symmetric");
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1165,7 +1164,7 @@ throw new Error("NYI");
               Widgets.setEnabled(widgetCryptPublicKeyFileName,true);
               Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,true);
               cryptType.set("asymmetric");
-              BARServer.set(selectedJobId,"crypt-type","asymmetric");
+              BARServer.setOption(selectedJobId,"crypt-type","asymmetric");
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1210,7 +1209,7 @@ throw new Error("NYI");
               Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               cryptPublicKeyFileName.set(string);
-              BARServer.set(selectedJobId,"crypt-public-key",string);
+              BARServer.setOption(selectedJobId,"crypt-public-key",string);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -1227,7 +1226,7 @@ throw new Error("NYI");
               Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
               cryptPublicKeyFileName.set(string);
-              BARServer.set(selectedJobId,"crypt-public-key",string);
+              BARServer.setOption(selectedJobId,"crypt-public-key",string);
             }
           });
           Widgets.addModifyListener(new WidgetListener(widgetCryptPublicKeyFileName,cryptPublicKeyFileName));
@@ -1249,7 +1248,7 @@ throw new Error("NYI");
               if (fileName != null)
               {
                 cryptPublicKeyFileName.set(fileName);
-                BARServer.set(selectedJobId,"crypt-public-key",fileName);
+                BARServer.setOption(selectedJobId,"crypt-public-key",fileName);
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1272,7 +1271,7 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("normal");
-              BARServer.set(selectedJobId,"archive-type","normal");
+              BARServer.setOption(selectedJobId,"archive-type","normal");
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1294,7 +1293,7 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("full");
-              BARServer.set(selectedJobId,"archive-type","full");
+              BARServer.setOption(selectedJobId,"archive-type","full");
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1316,7 +1315,7 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("incremental");
-              BARServer.set(selectedJobId,"archive-type","incremental");
+              BARServer.setOption(selectedJobId,"archive-type","incremental");
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1356,7 +1355,7 @@ throw new Error("NYI");
               Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               incrementalListFileName.set(string);
-              BARServer.set(selectedJobId,"incremental-list-file",string);
+              BARServer.setOption(selectedJobId,"incremental-list-file",string);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -1373,7 +1372,7 @@ throw new Error("NYI");
               Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
               incrementalListFileName.set(string);
-              BARServer.set(selectedJobId,"incremental-list-file",string);
+              BARServer.setOption(selectedJobId,"incremental-list-file",string);
             }
           });
           Widgets.addModifyListener(new WidgetListener(text,incrementalListFileName));
@@ -1434,7 +1433,7 @@ throw new Error("NYI");
             {
               Text widget = (Text)selectionEvent.widget;
               storageFileName.set(widget.getText());
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -1450,7 +1449,7 @@ throw new Error("NYI");
             {
               Text widget = (Text)focusEvent.widget;
               storageFileName.set(widget.getText());
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetListener(text,storageFileName));
@@ -1465,7 +1464,7 @@ throw new Error("NYI");
               if (selectedJobId != 0)
               {
                 storageFileNameEdit();
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1488,7 +1487,7 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("filesystem");
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1510,7 +1509,7 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("ftp");
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1532,7 +1531,7 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("scp");
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1554,7 +1553,7 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("sftp");
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1576,7 +1575,7 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("dvd");
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1598,7 +1597,7 @@ throw new Error("NYI");
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("device");
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1634,7 +1633,7 @@ throw new Error("NYI");
               Button  widget      = (Button)selectionEvent.widget;
               boolean checkedFlag = widget.getSelection();
               overwriteArchiveFiles.set(checkedFlag);
-              BARServer.set(selectedJobId,"overwrite-archive-files",checkedFlag);
+              BARServer.setOption(selectedJobId,"overwrite-archive-files",checkedFlag);
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1686,7 +1685,7 @@ throw new Error("NYI");
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -1702,7 +1701,7 @@ throw new Error("NYI");
               {
                 Text widget = (Text)focusEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageLoginName));
@@ -1735,7 +1734,7 @@ throw new Error("NYI");
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -1751,7 +1750,7 @@ throw new Error("NYI");
               {
                 Text widget = (Text)focusEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageHostName));
@@ -1784,7 +1783,7 @@ throw new Error("NYI");
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginPassword.set(widget.getText());
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -1800,7 +1799,7 @@ throw new Error("NYI");
               {
                 Text widget = (Text)focusEvent.widget;
                 storageLoginPassword.set(widget.getText());
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageLoginPassword));
@@ -1821,7 +1820,7 @@ throw new Error("NYI");
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.set(selectedJobId,"max-band-width",0);
+                BARServer.setOption(selectedJobId,"max-band-width",0);
               }
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -1910,7 +1909,7 @@ throw new Error("NYI");
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -1926,7 +1925,7 @@ throw new Error("NYI");
               {
                 Text widget = (Text)focusEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageLoginName));
@@ -1953,7 +1952,7 @@ throw new Error("NYI");
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -1969,7 +1968,7 @@ throw new Error("NYI");
               {
                 Text widget = (Text)focusEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageHostName));
@@ -2009,7 +2008,7 @@ throw new Error("NYI");
                   if ((n >= 0) && (n <= 65535))
                   {
                     storageHostPort.set(n);
-                    BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                    BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
                   }
                   else
                   {
@@ -2043,7 +2042,7 @@ throw new Error("NYI");
                   if ((n >= 0) && (n <= 65535))
                   {
                     storageHostPort.set(n);
-                    BARServer.set(selectedJobId,"archive-name",getArchiveName());
+                    BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
                   }
                   else
                   {
@@ -2089,7 +2088,7 @@ throw new Error("NYI");
               Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               sshPublicKeyFileName.set(string);
-              BARServer.set(selectedJobId,"ssh-public-key",string);
+              BARServer.setOption(selectedJobId,"ssh-public-key",string);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -2106,7 +2105,7 @@ throw new Error("NYI");
               Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
               sshPublicKeyFileName.set(string);
-              BARServer.set(selectedJobId,"ssh-public-key",string);
+              BARServer.setOption(selectedJobId,"ssh-public-key",string);
             }
           });
           Widgets.addModifyListener(new WidgetListener(text,sshPublicKeyFileName));
@@ -2139,7 +2138,7 @@ throw new Error("NYI");
               Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               sshPrivateKeyFileName.set(string);
-              BARServer.set(selectedJobId,"ssh-private-key",string);
+              BARServer.setOption(selectedJobId,"ssh-private-key",string);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -2156,7 +2155,7 @@ throw new Error("NYI");
               Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
               sshPrivateKeyFileName.set(string);
-              BARServer.set(selectedJobId,"ssh-private-key",string);
+              BARServer.setOption(selectedJobId,"ssh-private-key",string);
             }
           });
           Widgets.addModifyListener(new WidgetListener(text,sshPrivateKeyFileName));
@@ -2176,7 +2175,7 @@ throw new Error("NYI");
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.set(selectedJobId,"max-band-width",0);
+                BARServer.setOption(selectedJobId,"max-band-width",0);
               }
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -2200,7 +2199,7 @@ throw new Error("NYI");
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.set(selectedJobId,"max-band-width",0);
+                BARServer.setOption(selectedJobId,"max-band-width",0);
               }
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -2261,7 +2260,7 @@ throw new Error("NYI");
             {
               Text widget = (Text)selectionEvent.widget;
               storageDeviceName.set(widget.getText());
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -2277,7 +2276,7 @@ throw new Error("NYI");
             {
               Text widget = (Text)focusEvent.widget;
               storageDeviceName.set(widget.getText());
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetListener(text,storageDeviceName));
@@ -2317,7 +2316,7 @@ throw new Error("NYI");
                 {
                   long n = Units.parseByteSize(s);
                   volumeSize.set(n);
-                  BARServer.set(selectedJobId,"volume-size",n);
+                  BARServer.setOption(selectedJobId,"volume-size",n);
                 }
                 catch (NumberFormatException exception)
                 {
@@ -2329,7 +2328,7 @@ throw new Error("NYI");
                 Combo widget = (Combo)selectionEvent.widget;
                 long  n      = Units.parseByteSize(widget.getText());
                 volumeSize.set(n);
-                BARServer.set(selectedJobId,"volume-size",n);
+                BARServer.setOption(selectedJobId,"volume-size",n);
               }
             });
             combo.addFocusListener(new FocusListener()
@@ -2345,7 +2344,7 @@ throw new Error("NYI");
                 {
                   long n = Units.parseByteSize(s);
                   volumeSize.set(n);
-                  BARServer.set(selectedJobId,"volume-size",n);
+                  BARServer.setOption(selectedJobId,"volume-size",n);
                 }
                 catch (NumberFormatException exception)
                 {
@@ -2380,7 +2379,7 @@ throw new Error("NYI");
                 Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
                 ecc.set(checkedFlag);
-                BARServer.set(selectedJobId,"ecc",checkedFlag);
+                BARServer.setOption(selectedJobId,"ecc",checkedFlag);
               }
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -2429,7 +2428,7 @@ throw new Error("NYI");
             {
               Text widget = (Text)selectionEvent.widget;
               storageDeviceName.set(widget.getText());
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -2445,7 +2444,7 @@ throw new Error("NYI");
             {
               Text widget = (Text)focusEvent.widget;
               storageDeviceName.set(widget.getText());
-              BARServer.set(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetListener(text,storageDeviceName));
@@ -2485,7 +2484,7 @@ throw new Error("NYI");
                 {
                   long n = Units.parseByteSize(s);
                   volumeSize.set(n);
-                  BARServer.set(selectedJobId,"volume-size",n);
+                  BARServer.setOption(selectedJobId,"volume-size",n);
                 }
                 catch (NumberFormatException exception)
                 {
@@ -2497,7 +2496,7 @@ throw new Error("NYI");
                 Combo widget = (Combo)selectionEvent.widget;
                 long  n      = Units.parseByteSize(widget.getText());
                 volumeSize.set(n);
-                BARServer.set(selectedJobId,"volume-size",n);
+                BARServer.setOption(selectedJobId,"volume-size",n);
               }
             });
             text.addFocusListener(new FocusListener()
@@ -2513,7 +2512,7 @@ throw new Error("NYI");
                 {
                   long n = Units.parseByteSize(s);
                   volumeSize.set(n);
-                  BARServer.set(selectedJobId,"volume-size",n);
+                  BARServer.setOption(selectedJobId,"volume-size",n);
                 }
                 catch (NumberFormatException exception)
                 {
@@ -2540,7 +2539,7 @@ throw new Error("NYI");
       Widgets.layout(tab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
       {
         // list
-        widgetScheduleList = Widgets.newTable(tab,this);
+        widgetScheduleList = Widgets.newTable(tab,SWT.NONE,this);
         Widgets.layout(widgetScheduleList,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
         widgetScheduleList.addListener(SWT.MouseDoubleClick,new Listener()
         {
@@ -2697,17 +2696,21 @@ throw new Error("NYI");
         TreeItem treeItem = widgetFileTree.getItem(new Point(event.x,event.y));
         if (treeItem != null)
         {
-          Event treeEvent = new Event();
-          treeEvent.item = treeItem;
-          if (treeItem.getExpanded())
+          FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+          if (fileTreeData.type == FileTypes.DIRECTORY)
           {
-            widgetFileTree.notifyListeners(SWT.Collapse,treeEvent);
-            treeItem.setExpanded(false);
-          }
-          else
-          {
-            widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
-            treeItem.setExpanded(true);
+            Event treeEvent = new Event();
+            treeEvent.item = treeItem;
+            if (treeItem.getExpanded())
+            {
+              widgetFileTree.notifyListeners(SWT.Collapse,treeEvent);
+              treeItem.setExpanded(false);
+            }
+            else
+            {
+              widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
+              treeItem.setExpanded(true);
+            }
           }
         }
       }
@@ -2716,7 +2719,7 @@ throw new Error("NYI");
 
   /** get archive name
    * @return archive name
-   *   ftp://<name>@<host>/<file name>
+   *   ftp://<name>:<password>@<host>/<file name>
    *   scp://<name>@<host>:<port>/<file name>
    *   sftp://<name>@<host>:<port>/<file name>
    *   dvd://<device>/<file name>
@@ -2725,259 +2728,46 @@ throw new Error("NYI");
    */
   private String getArchiveName()
   {
-    StringBuffer archiveName = new StringBuffer();
+    ArchiveNameParts archiveNameParts = new ArchiveNameParts(storageType.getString(),
+                                                             storageLoginName.getString(),
+                                                             storageLoginPassword.getString(),
+                                                             storageHostName.getString(),
+                                                             (int)storageHostPort.getLong(),
+                                                             storageDeviceName.getString(),
+                                                             storageFileName.getString()
+                                                            );
 
-    if      (storageType.equals("ftp"))
-    {
-      archiveName.append("ftp:");
-      if (!storageLoginName.equals("") || !storageHostName.equals(""))
-      {
-        archiveName.append("//");
-        if (!storageLoginName.equals("") || !storageLoginPassword.equals(""))
-        {
-          if (!storageLoginName.equals("")) archiveName.append(storageLoginName);
-          if (!storageLoginPassword.equals("")) { archiveName.append(':'); archiveName.append(storageLoginPassword); }
-          archiveName.append('@');
-        }
-        if (!storageHostName.equals("")) { archiveName.append(storageHostName); }
-        archiveName.append('/');
-      }
-    }
-    else if (storageType.equals("scp"))
-    {
-      archiveName.append("scp:");
-      if (!storageLoginName.equals("") || !storageHostName.equals(""))
-      {
-        archiveName.append("//");
-        if (!storageLoginName.equals("")) { archiveName.append(storageLoginName); archiveName.append('@'); }
-        if (!storageHostName.equals("")) { archiveName.append(storageHostName); }
-        if (storageHostPort.getLong() > 0) { archiveName.append(':'); archiveName.append(storageHostPort.getLong()); }
-        archiveName.append('/');
-      }
-    }
-    else if (storageType.equals("sftp"))
-    {
-      archiveName.append("sftp:");
-      if (!storageLoginName.equals("") || !storageHostName.equals(""))
-      {
-        archiveName.append("//");
-        if (!storageLoginName.equals("")) { archiveName.append(storageLoginName); archiveName.append('@'); }
-        if (!storageHostName.equals("")) { archiveName.append(storageHostName); }
-        if (storageHostPort.getLong() > 0) { archiveName.append(':'); archiveName.append(storageHostPort.getLong()); }
-        archiveName.append('/');
-      }
-    }
-    else if (storageType.equals("dvd"))
-    {
-      archiveName.append("dvd:");
-      if (!storageDeviceName.equals(""))
-      {
-        archiveName.append("//");
-        if (!storageHostName.equals("")) { archiveName.append(storageDeviceName); }
-        archiveName.append('/');
-      }
-    }
-    else if (storageType.equals("device"))
-    {
-      archiveName.append("device:");
-      if (!storageDeviceName.equals(""))
-      {
-        archiveName.append("//");
-        if (!storageHostName.equals("")) { archiveName.append(storageDeviceName); }
-        archiveName.append('/');
-      }
-    }
-    archiveName.append(storageFileName);
-
-    return archiveName.toString();
+    return archiveNameParts.getArchiveName();
   }
 
   /** parse archive name
-   * @param archiveName archive name
-   *   ftp://<name>@<host>/<file name>
+   * @param name archive name string
+   *   ftp://<name>:<password>@<host>/<file name>
    *   scp://<name>@<host>:<port>/<file name>
    *   sftp://<name>@<host>:<port>/<file name>
    *   dvd://<device>/<file name>
    *   device://<device>/<file name>
+   *   file://<file name>
    *   <file name>
    */
-  private void parseArchiveName(String archiveName)
+  private void parseArchiveName(String name)
   {
-    storageType.set      ("filesystem");
-    storageLoginName.set ("");
-    storageHostName.set  ("");
-    storageDeviceName.set("");
-    storageFileName.set  (archiveName);
+    ArchiveNameParts archiveNameParts = new ArchiveNameParts(name);
 
-    if       (archiveName.startsWith("ftp:"))
-    {
-      // ftp
-      storageType.set("ftp");
-
-      String specifier = archiveName.substring(4);
-      if (specifier.startsWith("//"))
-      {
-        Object[] data = new Object[2];
-
-        int index = 2;
-        if      (StringParser.parse(specifier.substring(index),"%s:%s@",data,StringParser.QUOTE_CHARS))
-        {
-          storageLoginName.set((String)data[0]);
-          storageLoginPassword.set((String)data[1]);
-          index = specifier.indexOf('@')+1;
-        }
-        else if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
-        {
-          storageLoginName.set((String)data[0]);
-          index = specifier.indexOf('@')+1;
-        }
-        if (StringParser.parse(specifier.substring(index),"%s/%s",data,StringParser.QUOTE_CHARS))
-        {
-          storageHostName.set((String)data[0]);
-          storageFileName.set((String)data[1]);
-        }
-        else
-        {
-          storageFileName.set(specifier);
-        }
-      }
-      else
-      {
-        storageFileName.set(specifier);
-      }
-    }
-    else if (archiveName.startsWith("scp:"))
-    {
-      // scp
-      storageType.set("scp");
-
-      String specifier = archiveName.substring(4);
-      if (specifier.startsWith("//"))
-      {
-        Object[] data = new Object[3];
-
-        int index = 2;
-        if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
-        {
-          storageLoginName.set((String)data[0]);
-          index = specifier.indexOf('@')+1;
-        }
-        if      (StringParser.parse(specifier.substring(index),"%s:%d/%s",data,StringParser.QUOTE_CHARS))
-        {
-          storageHostName.set((String)data[0]);
-          storageHostPort.set((Integer)data[1]);
-          storageFileName.set((String)data[2]);
-        }
-        else if (StringParser.parse(specifier.substring(2),"%s/%s",data,StringParser.QUOTE_CHARS))
-        {
-          storageHostName.set((String)data[0]);
-          storageHostPort.set(0);
-          storageFileName.set((String)data[1]);
-        }
-        else
-        {
-        storageFileName.set(specifier);
-        }
-      }
-      else
-      {
-        storageFileName.set(specifier);
-      }
-    }
-    else if (archiveName.startsWith("sftp:"))
-    {
-      // sftp
-      storageType.set("sftp");
-
-      String specifier = archiveName.substring(5);
-      if (specifier.startsWith("//"))
-      {
-        Object[] data = new Object[3];
-
-        int index = 2;
-        if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
-        {
-          storageLoginName.set((String)data[0]);
-          index = specifier.indexOf('@')+1;
-        }
-        if      (StringParser.parse(specifier.substring(index),"%s:%d/%s",data,StringParser.QUOTE_CHARS))
-        {
-          storageHostName.set((String)data[0]);
-          storageHostPort.set((Integer)data[1]);
-          storageFileName.set((String)data[2]);
-        }
-        else if (StringParser.parse(specifier.substring(2),"%s/%s",data,StringParser.QUOTE_CHARS))
-        {
-          storageHostName.set((String)data[0]);
-          storageHostPort.set(0);
-          storageFileName.set((String)data[1]);
-        }
-        else
-        {
-        storageFileName.set(specifier);
-        }
-      }
-      else
-      {
-        storageFileName.set(specifier);
-      }
-    }
-    else if (archiveName.startsWith("dvd:"))
-    {
-      // dvd
-      storageType.set("dvd");
-
-      String specifier = archiveName.substring(4);
-      if (specifier.startsWith("//"))
-      {
-        Object[] data = new Object[2];
-        if (StringParser.parse(archiveName,"%s/%s",data,StringParser.QUOTE_CHARS))
-        {
-          storageDeviceName.set((String)data[0]);
-          storageFileName.set((String)data[1]);
-        }
-        else
-        {
-        storageFileName.set(specifier);
-        }
-      }
-      else
-      {
-        storageFileName.set(specifier);
-      }
-    }
-    else if (archiveName.startsWith("device:"))
-    {
-      // dvd
-      storageType.set("device");
-
-      String specifier = archiveName.substring(7);
-      if (specifier.startsWith("//"))
-      {
-        Object[] data = new Object[2];
-        if (StringParser.parse(archiveName,"%s/%s",data,StringParser.QUOTE_CHARS))
-        {
-          storageDeviceName.set((String)data[0]);
-          storageFileName.set((String)data[1]);
-        }
-        else
-        {
-        storageFileName.set(specifier);
-        }
-      }
-      else
-      {
-        storageFileName.set(specifier);
-      }
-    }
+    storageType.set         (archiveNameParts.type);
+    storageLoginName.set    (archiveNameParts.loginName);
+    storageLoginPassword.set(archiveNameParts.loginPassword);
+    storageHostName.set     (archiveNameParts.hostName);
+    storageHostPort.set     (archiveNameParts.hostPort);
+    storageDeviceName.set   (archiveNameParts.deviceName);
+    storageFileName.set     (archiveNameParts.fileName);
   }
 
   //-----------------------------------------------------------------------
 
   /** find index for insert of tree item in sort list of tree items
    * @param treeItem tree item
-   * @param name name of tree item to insert
-   * @param data data of tree item to insert
+   * @param fileTreeData data of tree item
    * @return index in tree item
    */
   private int findFilesTreeIndex(TreeItem treeItem, FileTreeData fileTreeData)
@@ -3005,7 +2795,7 @@ throw new Error("NYI");
     TreeItem     subTreeItem;
 
     ArrayList<String> result = new ArrayList<String>();
-    BARServer.executeCommand("FILE_LIST "+StringParser.escape(fileTreeData.name),result);
+    BARServer.executeCommand("FILE_LIST file:/"+StringParser.escape(fileTreeData.name),result);
 
     treeItem.removeAll();
     for (String line : result)
@@ -4910,27 +4700,27 @@ throw new Error("NYI");
     if (selectedJobId > 0)
     {
       // get job data
-      skipUnreadable.set(BARServer.getBoolean(selectedJobId,"skip-unreadable"));
-      overwriteFiles.set(BARServer.getBoolean(selectedJobId,"overwrite-files"));
+      skipUnreadable.set(BARServer.getBooleanOption(selectedJobId,"skip-unreadable"));
+      overwriteFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-files"));
 
-      parseArchiveName(BARServer.getString(selectedJobId,"archive-name"));
-      archiveType.set(BARServer.getString(selectedJobId,"archive-type"));
-      archivePartSize.set(Units.parseByteSize(BARServer.getString(selectedJobId,"archive-part-size")));
+      parseArchiveName(BARServer.getStringOption(selectedJobId,"archive-name"));
+      archiveType.set(BARServer.getStringOption(selectedJobId,"archive-type"));
+      archivePartSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"archive-part-size")));
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
-      compressAlgorithm.set(BARServer.getString(selectedJobId,"compress-algorithm"));
-      cryptAlgorithm.set(BARServer.getString(selectedJobId,"crypt-algorithm"));
-      cryptType.set(BARServer.getString(selectedJobId,"crypt-type"));
-      cryptPublicKeyFileName.set(BARServer.getString(selectedJobId,"crypt-public-key"));
-      incrementalListFileName.set(BARServer.getString(selectedJobId,"incremental-list-file"));
-      overwriteArchiveFiles.set(BARServer.getBoolean(selectedJobId,"overwrite-archive-files"));
-      sshPublicKeyFileName.set(BARServer.getString(selectedJobId,"ssh-public-key"));
-      sshPrivateKeyFileName.set(BARServer.getString(selectedJobId,"ssh-private-key"));
+      compressAlgorithm.set(BARServer.getStringOption(selectedJobId,"compress-algorithm"));
+      cryptAlgorithm.set(BARServer.getStringOption(selectedJobId,"crypt-algorithm"));
+      cryptType.set(BARServer.getStringOption(selectedJobId,"crypt-type"));
+      cryptPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"crypt-public-key"));
+      incrementalListFileName.set(BARServer.getStringOption(selectedJobId,"incremental-list-file"));
+      overwriteArchiveFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-archive-files"));
+      sshPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"ssh-public-key"));
+      sshPrivateKeyFileName.set(BARServer.getStringOption(selectedJobId,"ssh-private-key"));
 /* NYI ???
-      maxBandWidth.set(Units.parseByteSize(BARServer.getString(jobId,"max-band-width")));
-      maxBandWidthFlag.set(maxBandWidth.getLong() > 0);
+      maxBandWidth.set(Units.parseByteSize(BARServer.getStringOption(jobId,"max-band-width")));
+      maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
 */
-      volumeSize.set(Units.parseByteSize(BARServer.getString(selectedJobId,"volume-size")));
-      ecc.set(BARServer.getBoolean(selectedJobId,"ecc"));
+      volumeSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"volume-size")));
+      ecc.set(BARServer.getBooleanOption(selectedJobId,"ecc"));
 
       updatePatternList(PatternTypes.INCLUDE);
       updatePatternList(PatternTypes.EXCLUDE);

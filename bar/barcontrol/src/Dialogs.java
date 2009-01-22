@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Dialogs.java,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -491,13 +491,15 @@ class Dialogs
   /** password dialog
    * @param parentShell parent shell
    * @param title title string
+   * @param message message to display
    * @param text text
    * @param okText OK button text
    * @param CancelText cancel button text
    * @return password or null on cancel
    */
-  static String password(Shell parentShell, String title, String text, String okText, String cancelText)
+  static String password(Shell parentShell, String title, String message, String text, String okText, String cancelText)
   {
+    int             row;
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
     Composite       composite;
@@ -512,10 +514,18 @@ class Dialogs
     // password
     final Text   widgetText;
     final Button widgetOkButton;
+    row = 0;
+    if (message != null)
+    {
+      label = new Label(dialog,SWT.LEFT);
+      label.setText(message);
+      label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W));
+      row++;
+    }
     composite = new Composite(dialog,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
-    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    composite.setLayoutData(new TableLayoutData(row+0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
     {
       label = new Label(composite,SWT.LEFT);
       label.setText(text);
@@ -528,7 +538,7 @@ class Dialogs
     // buttons
     composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout());
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    composite.setLayoutData(new TableLayoutData(row+1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
     {
       widgetOkButton = new Button(composite,SWT.CENTER);
       widgetOkButton.setText(okText);
@@ -586,9 +596,20 @@ class Dialogs
    * @param text text
    * @return password or null on cancel
    */
+  static String password(Shell parentShell, String title, String message, String text)
+  {
+    return password(parentShell,title,message,text,"OK","Cancel");
+  }
+
+  /** password dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text
+   * @return password or null on cancel
+   */
   static String password(Shell parentShell, String title, String text)
   {
-    return password(parentShell,title,text,"OK","Cancel");
+    return password(parentShell,title,null,text);
   }
 
   /** password dialog
