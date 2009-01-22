@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -120,66 +120,66 @@ typedef struct
       // FTP storage
       struct
       {
-        String           hostName;
-        String           loginName;
-        Password         *password;
+        String           hostName;                     // FTP server host name       
+        String           loginName;                    // FTP login name             
+        Password         *password;                    // FTP login password         
 
         netbuf           *control;
         netbuf           *data;
-        StorageBandWidth bandWidth;                      // band width data
+        StorageBandWidth bandWidth;                    // band width data            
       } ftp;
     #endif /* HAVE_FTP */
     #ifdef HAVE_SSH2
       // ssh storage (remote BAR)
       struct
       {
-        String           hostName;
-        uint             hostPort;
-        String           loginName;
-        Password         *password;
-        String           sshPublicKeyFileName;
-        String           sshPrivateKeyFileName;
+        String           hostName;                     // ssh server host name       
+        uint             hostPort;                     // ssh server port number     
+        String           loginName;                    // ssh login name             
+        Password         *password;                    // ssh login password         
+        String           sshPublicKeyFileName;         // ssh public key file name   
+        String           sshPrivateKeyFileName;        // ssh private key file name  
 
         SocketHandle     socketHandle;
-        LIBSSH2_CHANNEL  *channel;                       // ssh channel
-        StorageBandWidth bandWidth;                      // band width data
+        LIBSSH2_CHANNEL  *channel;                     // ssh channel                
+        StorageBandWidth bandWidth;                    // band width data            
       } ssh;
       // scp storage
       struct
       {
-        String           hostName;
-        uint             hostPort;
-        String           loginName;
-        Password         *password;
-        String           sshPublicKeyFileName;
-        String           sshPrivateKeyFileName;
+        String           hostName;                     // ssh server host name       
+        uint             hostPort;                     // ssh server port number     
+        String           loginName;                    // ssh login name             
+        Password         *password;                    // ssh login password         
+        String           sshPublicKeyFileName;         // ssh public key file name   
+        String           sshPrivateKeyFileName;        // ssh private key file name  
 
         SocketHandle     socketHandle;
-        LIBSSH2_CHANNEL  *channel;                       // scp channel
-        StorageBandWidth bandWidth;                      // band width data
+        LIBSSH2_CHANNEL  *channel;                     // scp channel                
+        StorageBandWidth bandWidth;                    // band width data            
       } scp;
       // sftp storage
       struct
       {
-        String              hostName;
-        uint                hostPort;
-        String              loginName;
-        Password            *password;
-        String              sshPublicKeyFileName;
-        String              sshPrivateKeyFileName;
+        String              hostName;                  // ssh server host name       
+        uint                hostPort;                  // ssh server port number     
+        String              loginName;                 // ssh login name             
+        Password            *password;                 // ssh login password         
+        String              sshPublicKeyFileName;      // ssh public key file name   
+        String              sshPrivateKeyFileName;     // ssh private key file name  
 
         SocketHandle        socketHandle;
-        LIBSSH2_SFTP        *sftp;                       // sftp session
-        LIBSSH2_SFTP_HANDLE *sftpHandle;                 // sftp handle
-        uint64              index;                       // 
-        uint64              size;                        // size of file [bytes]
+        LIBSSH2_SFTP        *sftp;                     // sftp session               
+        LIBSSH2_SFTP_HANDLE *sftpHandle;               // sftp handle                
+        uint64              index;                     //                            
+        uint64              size;                      // size of file [bytes]       
         struct
         {
           byte   *data;
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
-        StorageBandWidth bandWidth;                      // band width data
+        StorageBandWidth bandWidth;                    // band width data            
       } sftp;
     #endif /* HAVE_SSH2 */
     // dvd storage
@@ -229,19 +229,30 @@ typedef struct
     {
       DirectoryHandle directoryHandle;
     } fileSystem;
+    #ifdef HAVE_FTP
+      struct
+      {
+        String                  pathName;              // directory name
+
+        String                  fileListFileName;
+        FileHandle              fileHandle;
+        String                  line;
+      } ftp;
+    #endif /* HAVE_FTP */
     #ifdef HAVE_SSH2
       struct
       {
-        String              pathName;
+        String                  pathName;              // directory name
 
-        SocketHandle        socketHandle;
-        LIBSSH2_SESSION     *session;
-        LIBSSH2_CHANNEL     *channel;
-        LIBSSH2_SFTP        *sftp;
-        LIBSSH2_SFTP_HANDLE *sftpHandle;
-        char                *buffer;                     // buffer for reading file names
-        ulong               bufferLength;
-        bool                entryReadFlag;               // TRUE if entry read
+        SocketHandle            socketHandle;
+        LIBSSH2_SESSION         *session;
+        LIBSSH2_CHANNEL         *channel;
+        LIBSSH2_SFTP            *sftp;
+        LIBSSH2_SFTP_HANDLE     *sftpHandle;
+        char                    *buffer;               // buffer for reading file names
+        ulong                   bufferLength;
+        LIBSSH2_SFTP_ATTRIBUTES attributes;
+        bool                    entryReadFlag;         // TRUE if entry read
       } sftp;
     #endif /* HAVE_SSH2 */
     struct
@@ -291,7 +302,15 @@ void Storage_doneAll(void);
 * Input  : storageName - storage name
 * Output : storageSpecifier - storage specific data (can be NULL)
 * Return : storage type
-* Notes  : -
+* Notes  : storage types support:
+*            ftp:
+*            ssh:
+*            scp:
+*            sftp:
+*            dvd:
+*            device:
+*            file:
+*            plain file name
 \***********************************************************************/
 
 StorageTypes Storage_getType(const String storageName,
@@ -488,7 +507,6 @@ void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
 * Input  : storageFileHandle - storage file handle
 *          fileName          - archive file name
 *          fileSize          - storage file size
-*          jobOptions        - job options
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -496,8 +514,7 @@ void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
 
 Errors Storage_create(StorageFileHandle *storageFileHandle,
                       const String      fileName,
-                      uint64            fileSize,
-                      const JobOptions  *jobOptions
+                      uint64            fileSize
                      );
 
 /***********************************************************************\
@@ -505,15 +522,13 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 * Purpose: open storage file
 * Input  : storageFileHandle - storage file handle
 *          fileName          - archive file name
-*          jobOptions        - job options
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Storage_open(StorageFileHandle *storageFileHandle,
-                    const String      fileName,
-                    const JobOptions  *jobOptions
+                    const String      fileName
                    );
 
 /***********************************************************************\
@@ -668,13 +683,16 @@ bool Storage_endOfDirectory(StorageDirectoryHandle *storageDirectoryHandle);
 * Purpose: read next directory entry in storage
 * Input  : storageDirectoryHandle - storage directory handle
 *          fileName               - file name variable
+*          fileInfo               - file info (can be NULL)
 * Output : fileName - next file name
+*          fileInfo - next file info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
-                             String                 fileName
+                             String                 fileName,
+                             FileInfo               *fileInfo
                             );
 
 #ifdef __cplusplus
