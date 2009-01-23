@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -781,31 +781,6 @@ class TabRestore
       widgetRestoreTo = Widgets.newText(composite,null);
       widgetRestoreTo.setEnabled(false);
       Widgets.layout(widgetRestoreTo,0,2,TableLayoutData.WE|TableLayoutData.EXPAND_X);
-      widgetRestoreTo.addSelectionListener(new SelectionListener()
-      {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-          Text widget = (Text)selectionEvent.widget;
-//            storageFileName.set(widget.getText());
-//            BARServer.set(selectedJobId,"archive-name",getArchiveName());
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-throw new Error("NYI");
-        }
-      });
-      widgetRestoreTo.addFocusListener(new FocusListener()
-      {
-        public void focusGained(FocusEvent focusEvent)
-        {
-        }
-        public void focusLost(FocusEvent focusEvent)
-        {
-          Text widget = (Text)focusEvent.widget;
-//            storageFileName.set(widget.getText());
-//            BARServer.set(selectedJobId,"archive-name",getArchiveName());
-        }
-      });
       widgetRestoreToSelectButton = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
       widgetRestoreToSelectButton.setEnabled(false);
       Widgets.layout(widgetRestoreToSelectButton,0,3,TableLayoutData.DEFAULT);
@@ -832,11 +807,6 @@ throw new Error("NYI");
     // update data
     updatePathList();
     setPath("/");
-//setPath("sftp://it-zo.de/backup");
-setPath("file:///home/torsten/projects/bar");
-//widgetFilePattern.setText("/var/lib/*");
-//widgetListButton.setEnabled(true);
-//widgetRestoreTo.setText("/tmp");
   }
 
   //-----------------------------------------------------------------------
@@ -971,7 +941,6 @@ setPath("file:///home/torsten/projects/bar");
       treeItem.removeAll();
       for (String line : result)
       {
-  //System.err.println("BARControl.java"+", "+1733+": "+line);
         Object data[] = new Object[10];
         if      (StringParser.parse(line,"FILE %ld %ld %S",data,StringParser.QUOTE_CHARS))
         {
@@ -1137,15 +1106,11 @@ setPath("file:///home/torsten/projects/bar");
 
     shell.setCursor(waitCursor);
 
-    fileList.clear();
-//String archiveName = "sftp://it-zo.de/backup/database-normal-Sat-0000-last.bar";
-//String archiveName = "sftp://it-zo.de/backup/test-00.bar";
-//String archiveName = "file:///home/torsten/projects/bar/system-full-Tue-0000.bar";
     final ProgressDialog progressDialog = new ProgressDialog(shell,"List archives","Read files...");
+    fileList.clear();
     for (String archiveName : archiveNames)
     {
 //Dprintf.dprintf("s=%s\n",archiveName);
-
       /* get archive content list */
       ArrayList<String> result = new ArrayList<String>();
       String command = "ARCHIVE_LIST "+
@@ -1477,12 +1442,7 @@ setPath("file:///home/torsten/projects/bar");
     final ProgressDialog progressDialog = new ProgressDialog(shell,"Restore files","Restore...");
     for (final FileData fileData : fileData_)
     {
-Dprintf.dprintf("restore %s to %s\n",fileData.name,directory);
-
-//String archiveName = "sftp://it-zo.de/backup/database-normal-Sat-0000-last.bar";
-//String archiveName = "sftp://it-zo.de/backup/test-00.bar";
-String archiveName = "file:///home/torsten/projects/bar/system-full-Tue-0000.bar";
-Dprintf.dprintf("s=%s\n",archiveName);
+//Dprintf.dprintf("restore %s to %s\n",fileData.name,directory);
       ArrayList<String> result = new ArrayList<String>();
       String command = "RESTORE "+
                        StringParser.escape(fileData.archiveName)+" "+
@@ -1500,7 +1460,10 @@ Dprintf.dprintf("s=%s\n",archiveName);
                                              }
                                            }
                                           );
-Dprintf.dprintf("errorCode=%d\n",errorCode);
+      if (errorCode != Errors.NONE)
+      {
+        Dialogs.error(shell,"Cannot restore file '"+fileData.name+"' from archive\n'"+fileData.archiveName+"' (error: "+result.get(0)+")");
+      }
     }
     progressDialog.close();
 
