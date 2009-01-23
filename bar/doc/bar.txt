@@ -1,0 +1,220 @@
+NAME
+  bar - backup archiver program
+
+SYNOPSIS
+  bar [<options>] [--] <archive name> [<files>...]
+  bar [<options>] [--] <key file name>
+
+DESCRIPTION
+bar is a backup archiver program to create compressed, encrypted and
+splitted archive files which can be stored on a local harddisk, via
+network on a server or (with addtional external tools) an optical
+medium like a CD or DVD.
+
+Archive files can be created, the content can be listed, tested, compared and
+extraced. Invidiual archive files can be read independant. Listing the contents
+of an archive is fast, even when the content is compressed and encrypted. The
+content can be compressed with either zip(1) or bzip2(1). For encryption
+serveral encryption algorithms from libcrypt project like AES or TWOFISH can be
+used. Public key encryption (RSA) is also supported.
+
+CDs and DVDs with archive files can be created when the external tools
+growisofs(1) and mkisofs(1) are installed. If the tool dvdisaster(1) is
+available CDs and DVDs with additional error correction codes can be
+created.
+
+bar can be executed as a daemon and can created backups in the background
+via the integrated scheduler. The bar daemon can be controlled via a
+network connection (either plain or SSL encrypted) with the graphical
+frontend barcontrol(3).
+
+OPTIONS
+         -c|--create                               create new archive
+         -l|--list                                 list contents of archive
+         -t|--test                                 test contents of archive
+         -d|--compare                              compare contents of archive with files
+         -x|--extract                              restore archive
+         --generate-keys                           generate new public/private key pair
+         --generate-keys-bits=<n>[K]               key bits (default: 2048)
+         --config=<file name>                      configuration file
+         -s|--archive-part-size=<n>[G|M|K]         approximated archive part size
+         --tmp-directory=<path>                    temporary directory
+         --max-tmp-size=<n>[G|M|K]                 max. size of temporary files
+         -f|--full                                 create full archive and incremental list file
+         -i|--incremental                          create incremental archive
+         -I|--incremental-list-file=<file name>    incremental list file name (default: <archive name>.bid)
+         -p|--directory-strip=<n>                  number of directories to strip on extract
+         --directory=<path>                        directory to restore files
+         --nice-level=<n>                          general nice level of processes/threads
+         --max-band-width=<n>[K]                   max. network band width to use
+         --pattern-type=<name>                     select pattern type
+                                                     * glob: glob patterns: * and ? (default)
+                                                     * regex: regular expression pattern matching
+                                                     * extended: extended regular expression pattern matching
+         -#|--include=<pattern>                    include pattern
+         -!|--exclude=<pattern>                    exclude pattern
+         -z|--compress-algorithm=<name>            select compress algorithm to use
+                                                     * none: no compression (default)
+                                                     * zip0: ZIP compression level 0
+                                                     * zip1: ZIP compression level 1
+                                                     * zip2: ZIP compression level 2
+                                                     * zip3: ZIP compression level 3
+                                                     * zip4: ZIP compression level 4
+                                                     * zip5: ZIP compression level 5
+                                                     * zip6: ZIP compression level 6
+                                                     * zip7: ZIP compression level 7
+                                                     * zip8: ZIP compression level 8
+                                                     * zip9: ZIP compression level 9
+                                                     * bzip1: BZIP2 compression level 1
+                                                     * bzip2: BZIP2 compression level 2
+                                                     * bzip3: BZIP2 compression level 3
+                                                     * bzip4: BZIP2 compression level 4
+                                                     * bzip5: BZIP2 compression level 5
+                                                     * bzip6: BZIP2 compression level 6
+                                                     * bzip7: BZIP2 compression level 7
+                                                     * bzip8: BZIP2 compression level 8
+                                                     * bzip9: BZIP2 compression level 9
+         --compress-min-size=<n>[G|M|K]            minimal size of file for compression (default: 32)
+         -y|--crypt-algorithm=<name>               select crypt algorithm to use
+                                                     * none: no crypting (default)
+                                                     * 3DES: 3DES cipher
+                                                     * CAST5: CAST5 cipher
+                                                     * BLOWFISH: Blowfish cipher
+                                                     * AES128: AES cipher 128bit
+                                                     * AES192: AES cipher 192bit
+                                                     * AES256: AES cipher 256bit
+                                                     * TWOFISH128: Twofish cipher 128bit
+                                                     * TWOFISH256: Twofish cipher 256bit
+         -a|--crypt-asymmetric                     use asymetric encryption
+         --crypt-password=<password>               crypt password (use with care!)
+         --crypt-public-key=<file name>            public key for encryption
+         --crypt-private-key=<file name>           private key for decryption
+         --ftp-login-name=<name>                   ftp login name
+         --ftp-password=<password>                 ftp password (use with care!)
+         --ssh-port=<n>                            ssh port (default: 22) (default: 22)
+         --ssh-login-name=<name>                   ssh login name
+         --ssh-password=<password>                 ssh password (use with care!)
+         --ssh-public-key=<file name>              ssh public key file name
+         --ssh-private-key=<file name>             ssh privat key file name
+         --daemon                                  run in daemon mode
+         -D|--no-detach                            do not detach in daemon mode
+         --server-port=<n>                         server port (default: 38523)
+         --server-tls-port=<n>                     TLS (SSL) server port (default: 38524)
+         --server-ca-file=<file name>              TLS (SSL) server certificate authority file (CA file) (default: /etc/ssl/certs/bar-ca.pem)
+         --server-cert-file=<file name>            TLS (SSL) server certificate file (default: /etc/ssl/certs/bar-server-cert.pem)
+         --server-key-file=<file name>             TLS (SSL) server key file (default: /etc/ssl/private/bar-server-key.pem)
+         --server-password=<password>              server password (use with care!)
+         --server-jobs-directory=<path name>       server job directory (default: /etc/bar/jobs)
+         --remote-bar-executable=<file name>       remote BAR executable
+         --dvd-request-volume-command=<command>    request new DVD volume command
+         --dvd-unload-volume-command=<command>     unload DVD volume command
+         --dvd-load-volume-command=<command>       load DVD volume command
+         --dvd-volume-size=<n>[G|M|K]              DVD volume size
+         --dvd-image-pre-command=<command>         make DVD image pre-process command
+         --dvd-image-post-command=<command>        make DVD image post-process command
+         --dvd-image-command=<command>             make DVD image command
+         --dvd-ecc-pre-command=<command>           make DVD error-correction codes pre-process command
+         --dvd-ecc-post-command=<command>          make DVD error-correction codes post-process command
+         --dvd-ecc-command=<command>               make DVD error-correction codes command
+         --dvd-write-pre-command=<command>         write DVD pre-process command
+         --dvd-write-post-command=<command>        write DVD post-process command
+         --dvd-write-command=<command>             write DVD command
+         --dvd-write-command=<command>             write DVD image command
+         --device=<device name>                    default device
+         --device-request-volume-command=<command> request new volume command
+         --device-load-volume-command=<command>    load volume command
+         --device-unload-volume-command=<command>  unload volume command
+         --device-volume-size=<n>[G|M|K]           volume size
+         --device-image-pre-command=<command>      make image pre-process command
+         --device-image-post-command=<command>     make image post-process command
+         --device-image-command=<command>          make image command
+         --device-ecc-pre-command=<command>        make error-correction codes pre-process command
+         --device-ecc-post-command=<command>       make error-correction codes post-process command
+         --device-ecc-command=<command>            make error-correction codes command
+         --device-write-pre-command=<command>      write device pre-process command
+         --device-write-post-command=<command>     write device post-process command
+         --device-write-command=<command>          write device command
+         --ecc                                     add error-correction codes with 'dvdisaster' tool
+         --log=<name>[,<name>...]                  log types
+                                                     none      : no logging (default)
+                                                     errors    : log errors
+                                                     warnings  : log warningss
+                                                     ok        : log stored/restored files
+                                                     unknown   : log unknown files
+                                                     skipped   : log skipped files
+                                                     missing   : log missing files
+                                                     incomplete: log incomplete files
+                                                     excluded  : log excluded files
+                                                     storage   : log storage
+                                                     all       : log everything
+         --log-file=<file name>                    log file name
+         --log-post-command=<command>              log file post-process command
+         --pid-file=<file name>                    process id file name
+         -g|--group                                group files in list
+         --all                                     show all files
+         --long-format                             list in long format
+         --no-header-footer                        output no header/footer in list
+         --delete-old-archive-files                delete old archive files after creating new files
+         --skip-unreadable                         skip unreadable files
+         --overwrite-archive-files                 overwrite existing archive files
+         --overwrite-files                         overwrite existing files
+         --wait-first-volume                       wait for first volume
+         --no-storage                              do not store archives (skip storage)
+         --no-bar-on-dvd                           do not store a copy of BAR on DVDs
+         --stop-on-error                           immediately stop on error
+         --no-default-config                       do not read personal config file ~/.bar/bar.cfg
+         --quiet                                   surpress any output
+         -v|--verbose=<n>                          verbosity level (0..3, default: 1)
+         --version                                 output version
+         -h|--help                                 output this help
+         --xhelp                                   output help to extended options
+         --help-internal                           output help to internal options
+
+EXAMPLES
+Create an archive:
+
+  bar -c home.bar /home
+
+List contents of an archive:
+
+  bar -l home*.bar
+
+or simply
+
+  bar home*.bar
+
+Check archive:
+
+  bar -t home*.bar
+
+Compare contents of an archive with files:
+
+  bar -d home*.bar
+
+Find most recent file in all archives:
+
+  bar -g -# '*/foo' *.bar
+
+Restore contents of an archive:
+
+  bar -x home*.bar
+
+FILES
+/etc/bar/bar.cfg
+
+  system wide bar configuration
+
+/etc/bar/bar.jks
+
+  private key for SSL connetion with bar daemon
+
+/etc/bar/jobs
+
+  jobs directory
+
+$HOME/.bar/bar.cfg
+
+  user specific configuration
+
+BUGS
+Please report bugs to torsten.rupp@gmx.net
