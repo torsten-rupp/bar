@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -228,34 +228,37 @@ LOCAL const Password *getNextCryptPassword(PasswordHandle *passwordHandle)
 
   assert(passwordHandle != NULL);
 
-  password = NULL;
   if      (passwordHandle->passwordNode != NULL)
   {
     /* next password from list */
     password = passwordHandle->passwordNode->password;
     passwordHandle->passwordNode = passwordHandle->passwordNode->next;
   }
-  else if (!passwordHandle->inputFlag && (passwordHandle->passwordMode==PASSWORD_MODE_DEFAULT) && (globalOptions.cryptPassword!=NULL))
+  else if (   (passwordHandle->passwordMode == PASSWORD_MODE_CONFIG)
+           && (passwordHandle->cryptPassword != NULL)
+          )
   {
-    /* add default password */
-    if (globalOptions.cryptPassword != NULL)
-    {
-      Archive_appendCryptPassword(globalOptions.cryptPassword);
-    }
+    /* get password */
+    password = passwordHandle->cryptPassword;
 
+    /* next password is: default */
+    passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
+  }
+  else if (   (passwordHandle->passwordMode == PASSWORD_MODE_DEFAULT)
+           && (globalOptions.cryptPassword != NULL)
+          )
+  {
+    /* get password */
+    password = globalOptions.cryptPassword;
+
+    /* next password is: ask */
     passwordHandle->passwordMode = PASSWORD_MODE_ASK;
   }
-  else if (!passwordHandle->inputFlag && (passwordHandle->passwordMode==PASSWORD_MODE_CONFIG) && (passwordHandle->cryptPassword!=NULL))
-  {
-    /* add config password */
-    if (passwordHandle->cryptPassword != NULL)
-    {
-      Archive_appendCryptPassword(passwordHandle->cryptPassword);
-    }
-
-    passwordHandle->passwordMode = PASSWORD_MODE_ASK;
-  }
-  else if (!passwordHandle->inputFlag && ((passwordHandle->passwordMode==PASSWORD_MODE_ASK) || (globalOptions.cryptPassword==NULL)))
+  else if (   !passwordHandle->inputFlag
+           && (   (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
+               || (globalOptions.cryptPassword == NULL)
+              )
+          )
   {
     /* input password */
     password = Password_new();
@@ -271,14 +274,9 @@ LOCAL const Password *getNextCryptPassword(PasswordHandle *passwordHandle)
     }
 
     /* add to password list */
-    if (password != NULL)
-    {
-      Archive_appendCryptPassword(password);
-    }
+    Archive_appendCryptPassword(password);
 
-    /* free resources */
-    Password_delete(password);
-
+    /* next password is: none */
     passwordHandle->inputFlag = TRUE;
   }
   else
