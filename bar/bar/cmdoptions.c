@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/bar/cmdoptions.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -1021,7 +1021,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
       printSpaces(outputHandle,maxNameLength-strlen(name));
       if (commandLineOptions[i].description != NULL)
       {
-        fprintf(outputHandle," - %s",commandLineOptions[i].description);
+        fprintf(outputHandle," %s",commandLineOptions[i].description);
       }
       switch (commandLineOptions[i].type)
       {
@@ -1150,7 +1150,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
 
           for (j = 0; j < commandLineOptions[i].selectOption.selectCount; j++)
           {
-            printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?3:0)+1);
+            printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?2:0)+1);
             fprintf(outputHandle,"%s",commandLineOptions[i].selectOption.selects[j].name);
             printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].selectOption.selects[j].name));
             fprintf(outputHandle,": %s",commandLineOptions[i].selectOption.selects[j].description);
@@ -1170,7 +1170,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
 
           for (j = 0; j < commandLineOptions[i].setOption.setCount; j++)
           {
-            printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?3:0)+1);
+            printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?2:0)+1);
             fprintf(outputHandle,"%s",commandLineOptions[i].setOption.set[j].name);
             printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].setOption.set[j].name));
             fprintf(outputHandle,": %s",commandLineOptions[i].setOption.set[j].description);
