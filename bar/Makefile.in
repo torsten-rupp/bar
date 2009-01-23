@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.47 $
+# $Revision: 1.48 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -13,18 +13,22 @@
 ENABLE_DEBUG    = @ENABLE_DEBUG@
 ENABLE_GUI      = @ENABLE_GUI@
 
+PLATFORM        = @PLATFORM@
+
 #------------------------------------ paths ----------------------------------
 
-PLATFORM        = @PLATFORM@
 INSTALL_DIR     = @INSTALL_DIR@
 INSTALL_BIN_DIR = @INSTALL_BIN_DIR@
 CONFIG_DIR      = @CONFIG_DIR@
 TLS_DIR         = @TLS_DIR@
+MAN_DIR         = @MAN_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
 CERTTOOL = @CERTTOOL@
 KEYTOOL  = @KEYTOOL@
+
+TXT2MAN  = @TXT2MAN@
 
 #---------------------------------- commands----------------------------------
 
@@ -66,6 +70,8 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 TARGETS              = bar/bar \
                        bar/bar-keygen \
                        $(if $(findstring $(ENABLE_GUI),yes),barcontrol/barcontrol) \
+                       \
+                       doc/bar.7 \
 
 KEY_FILES            = bar-key.pem \
                        bar-ca.pem \
@@ -86,6 +92,7 @@ clean: clean_keys
 ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol clean
 endif
+	$(RMF) $(TARGETS)
 	$(RMRF) $(DISTRIBUTION_NAME)
 	$(RMF) $(DISTRIBUTION_NAME).tgz
 
@@ -181,10 +188,23 @@ endif
 .PHONY: doc
 doc: doc/bar.7
 
+doc/bar.7: doc/bar.txt
+ifneq ($(TXT2MAN),)
+	$(CAT) doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" > $@
+endif
+
+.PHONY: showman
+showman:
+ifneq ($(TXT2MAN),)
+	$(CAT) doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" -T
+else
+	$(ECHO) txt2man not available - cannot create man page.
+endif
+
 # install/uninstall
 .PHONY: install install_keys uninstall
 install: \
-  bar/bar \
+  $(TARGETS) \
   $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
                                        $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar)) \
   ) \
@@ -231,6 +251,8 @@ endif
         else \
           echo "/etc/init.d/barserver NOT installed - file already exists!"; \
         fi
+	$(INSTALL) -d "$(MAN_DIR)/7"
+	$(INSTALL) -m 644 doc/bar.7 "$(MAN_DIR)/man7"
 
 install_keys: \
   $(KEY_FILES)
@@ -256,6 +278,7 @@ uninstall:
           $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(CONFIG_DIR)/bar.jks"; \
           ) \
           $(RMF) "/etc/init.d/barserver"; \
+          $(RMF) "$(MAN_DIR)/man7/bar.7"; \
         fi
 
 # run server
@@ -335,6 +358,7 @@ $(DISTRIBUTION_NAME).tar.bz2:
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/doc
 	$(INSTALL) -m 664 \
                    doc/*.txt \
+                   doc/bar.7 \
                    $(DISTRIBUTION_NAME)/doc
 	#
 	$(TAR) cjf $@ $(DISTRIBUTION_NAME)

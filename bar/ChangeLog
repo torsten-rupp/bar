@@ -35,6 +35,7 @@
     created files are now not included in a backup. Note: this cannot
     work when two instances of bar are running doing a backup of
     each other.
+  * added bar man page (finally!)
 
 2008-12-10 0.09i
   * fixed creating pid file: when server is detached write pid of

@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.21 $
+dnl $Revision: 1.22 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -119,6 +119,7 @@ AC_SUBST(INSTALL_DIR)                       dnl installation directory
 AC_SUBST(INSTALL_BIN_DIR)                   dnl installation directory for binaries
 AC_SUBST(CONFIG_DIR)                        dnl configuration directory
 AC_SUBST(TLS_DIR)                           dnl TLS/SSL directory
+AC_SUBST(MAN_DIR)                           dnl man page directory
 
 AC_SUBST(CC)                                dnl C compiler
 AC_SUBST(LD)                                dnl linker
@@ -148,6 +149,8 @@ AC_SUBST(LAUNCH4J_DIR)                      dnl launch4j directory
 
 AC_SUBST(CERTOOL)                           dnl GNU TLS certtool
 AC_SUBST(KEYTOOL)                           dnl Java keytool
+
+AC_SUBST(TXT2MAN)                           dnl text-to-man page tool
 
 dnl ----------------------- initialize variables -----------------------
 
@@ -330,6 +333,8 @@ fi
 AC_PATH_PROGS(CERTTOOL,certtool)
 AC_PATH_PROGS(KEYTOOL,keytool)
 
+AC_PATH_PROGS(TXT2MAN,txt2man)
+
 dnl -------------- headers/functions/definitions/libraries -------------
 
 # set variables for tests
@@ -466,6 +471,11 @@ if test "$bindir" = "\${exec_prefix}/bin"; then
   fi
 else
   INSTALL_BIN_DIR=$bindir
+fi
+if test "$mandir" = "\${prefix}/man"; then
+  MAN_DIR=${prefix}/man
+else
+  MAN_DIR=${mandir}
 fi
 
 dnl make files
