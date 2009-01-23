@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -225,11 +225,11 @@ barserver_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 # do test
 .PHONY: test test1 test2 test3 test4 test_all
 test:
-	@$(MAKE) QUIET=1 -s test1 test2 test3 test4 test5 test_all
+	@$(MAKE) QUIET=1 --no-print-directory -s test1 test2 test3 test4 test5 test_all
 
 test1: bar
 	@$(ECHO_NO_LF) "Test 1: basic..."
-	$(MAKE) \
+	@$(MAKE) \
           BAR_FILE="test" \
           OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
           standard_test
