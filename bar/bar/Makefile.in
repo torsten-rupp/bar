@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -127,9 +127,7 @@ DESTROYER_SOURCES    = destroyer.c \
 
 DESTROYER_OBJECTS    = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
 
-OTHER_SOURCES        = errors.pl \
-                       errors.def \
-                       archive_format.pl \
+OTHER_SOURCES        = archive_format.pl \
                        archive_format.def \
                        valgrind.supp \
                        bar.cfg \
@@ -388,6 +386,7 @@ memcheck7: bar
 # copy distribution files
 .PHONY: dist
 dist:
+ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/bar
 	$(INSTALL) -m 664 \
                    $(sort $(BAR_SOURCES) \
@@ -409,6 +408,10 @@ dist:
                           test/data/random1024.dat \
                           test/data/smallfile.dat \
                           $(DIRECTORY)/bar/test/data
+else
+	$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
+endif
+
 -include Makefile.depend
 
 # end of file

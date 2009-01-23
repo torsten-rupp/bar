@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.48 $
+# $Revision: 1.49 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -72,6 +72,9 @@ TARGETS              = bar/bar \
                        $(if $(findstring $(ENABLE_GUI),yes),barcontrol/barcontrol) \
                        \
                        doc/bar.7 \
+
+OTHER_SOURCES        = errors.pl \
+                       errors.def \
 
 KEY_FILES            = bar-key.pem \
                        bar-ca.pem \
@@ -322,6 +325,7 @@ $(DISTRIBUTION_NAME).tar.bz2:
 	$(INSTALL) -d $(DISTRIBUTION_NAME)
 	$(INSTALL) -m 775 \
                    configure \
+                   $(OTHER_SOURCES) \
                    $(DISTRIBUTION_NAME)
 	$(INSTALL) -m 664 \
                    configure.in \

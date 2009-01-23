@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -238,6 +238,7 @@ endif
 # copy distribution files
 .PHONY: dist
 dist:
+ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/barcontrol
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/src
 	$(INSTALL) -m 664 \
@@ -261,5 +262,8 @@ dist:
 	$(INSTALL) -m 664 \
                    jars/*.jar \
                    $(DIRECTORY)/barcontrol/jars
+else
+	$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
+endif
 
 # end of file
