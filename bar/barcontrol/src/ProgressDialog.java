@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/ProgressDialog.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: progress dialog
 * Systems: all
@@ -37,7 +37,7 @@ class ProgressDialog
   private boolean        closedFlag;
 
   private Display        display;
-  private Image          images[] = new Image[4];
+  private Image          images[] = new Image[2];
   long                   imageTimestamp;
   int                    imageIndex;
   private Shell          dialog;
@@ -63,8 +63,6 @@ class ProgressDialog
     // load images
     images[0] = Widgets.loadImage(parentShell.getDisplay(),"busy0.gif");
     images[1] = Widgets.loadImage(parentShell.getDisplay(),"busy1.gif");
-    images[2] = Widgets.loadImage(parentShell.getDisplay(),"busy2.gif");
-    images[3] = Widgets.loadImage(parentShell.getDisplay(),"busy3.gif");
     imageTimestamp = System.currentTimeMillis();
     imageIndex = 0;
 
@@ -196,7 +194,7 @@ class ProgressDialog
       if (timestamp > (imageTimestamp+250))
       {
         imageTimestamp = timestamp;
-        imageIndex     = (imageIndex+1)%4;;
+        imageIndex     = (imageIndex+1)%3;
         widgetImage.setImage(images[imageIndex]);
       }
       widgetText.setText(text);

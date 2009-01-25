@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BusyDialog.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: progress dialog
 * Systems: all
@@ -29,9 +29,9 @@ import org.eclipse.swt.widgets.Text;
 
 /****************************** Classes ********************************/
 
-/** progress dialog
+/** busy dialog
  */
-class ProgressDialog
+class BusyDialog
 {
   private final Object[] result = new Object[1];
   private boolean        closedFlag;
@@ -49,7 +49,7 @@ class ProgressDialog
    * @param title dialog title
    * @param message dialog message
    */
-  public ProgressDialog(Shell parentShell, String title, String message)
+  public BusyDialog(Shell parentShell, String title, String message)
   {
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
