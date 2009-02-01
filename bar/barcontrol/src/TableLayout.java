@@ -11,27 +11,27 @@ import org.eclipse.swt.widgets.Layout;
 public class TableLayout extends Layout
 {
   // layout constants
-  public final static int NONE     = 0;
+  public final static int NONE    = 0;
 
-  public final static int N        = 1 << 0;
-  public final static int S        = 1 << 1;
-  public final static int W        = 1 << 2;
-  public final static int E        = 1 << 3;
-  public final static int NS       = N|S;
-  public final static int WE       = W|E;
-  public final static int NW       = N|W;
-  public final static int NE       = N|E;
-  public final static int SW       = S|W;
-  public final static int SE       = S|E;
-  public final static int NSWE     = N|S|W|E;
-  public final static int EXPAND_X = 1 << 4;
-  public final static int EXPAND_Y = 1 << 5;
-  public final static int EXPAND   = EXPAND_X|EXPAND_Y;
+  public final static int N       = 1 << 0;
+  public final static int S       = 1 << 1;
+  public final static int W       = 1 << 2;
+  public final static int E       = 1 << 3;
+  public final static int NS      = N|S;
+  public final static int WE      = W|E;
+  public final static int NW      = N|W;
+  public final static int NE      = N|E;
+  public final static int SW      = S|W;
+  public final static int SE      = S|E;
+  public final static int NSWE    = N|S|W|E;
 
-  public final static int DEFAULT  = 0;
+  public final static int DEFAULT = 0;
 
   // weight of rows for shrinking/expanding
-  public double rowWeights[],columnWeights[];
+  public double rowWeight           = 0.0;
+  public double columnWeight        = 0.0;
+  public double rowWeights[]        = null;
+  public double columnWeights[]     = null;
 
   // margin
   public int      marginTop         = 0;
@@ -44,10 +44,10 @@ public class TableLayout extends Layout
   public int      verticalSpacing   = 2;
 
   // size limits
-  public int      minWidth  = SWT.DEFAULT;
-  public int      minHeight = SWT.DEFAULT;
-  public int      maxWidth  = SWT.DEFAULT;
-  public int      maxHeight = SWT.DEFAULT;
+  public int      minWidth          = SWT.DEFAULT;
+  public int      minHeight         = SWT.DEFAULT;
+  public int      maxWidth          = SWT.DEFAULT;
+  public int      maxHeight         = SWT.DEFAULT;
 
   private int     rows,columns;
   private int     rowSizeHints[],columnSizeHints[];
@@ -63,13 +63,6 @@ public class TableLayout extends Layout
   public TableLayout()
   {
     super();
-
-    this.rowWeights    = null;
-    this.columnWeights = null;
-    this.marginTop     = 0;
-    this.marginBottom  = 0;
-    this.marginLeft    = 0;
-    this.marginRight   = 0;
   }
 
   /** create table layout
@@ -79,12 +72,44 @@ public class TableLayout extends Layout
   {
     super();
 
-    this.rowWeights    = null;
-    this.columnWeights = null;
     this.marginTop     = margin;
     this.marginBottom  = margin;
-    this.marginLeft    = margin;
-    this.marginRight   = margin;
+  }
+
+  /** create table layout
+   * @param rowWeight default row weight (0.0..1.0)
+   * @param columnWeight default column weight (0.0..1.0)
+   */
+  public TableLayout(double rowWeight, double columnWeight)
+  {
+    super();
+
+    this.rowWeight    = rowWeight;
+    this.columnWeight = columnWeight;
+  }
+
+  /** create table layout
+   * @param rowWeights array with row weights (0.0..1.0)
+   * @param columnWeight default column weight (0.0..1.0)
+   */
+  public TableLayout(double rowWeights[], double columnWeight)
+  {
+    super();
+
+    this.rowWeights   = rowWeights;
+    this.columnWeight = columnWeight;
+  }
+
+  /** create table layout
+   * @param rowWeight default row weight (0.0..1.0)
+   * @param columnWeights array with column weights (0.0..1.0)
+   */
+  public TableLayout(double rowWeight, double columnWeights[])
+  {
+    super();
+
+    this.rowWeight     = rowWeight;
+    this.columnWeights = columnWeights;
   }
 
   /** create table layout
@@ -97,6 +122,57 @@ public class TableLayout extends Layout
 
     this.rowWeights    = rowWeights;
     this.columnWeights = columnWeights;
+  }
+
+  /** create table layout
+   * @param rowWeight default row weight (0.0..1.0)
+   * @param columnWeight default column weight (0.0..1.0)
+   * @param margin margin size
+   */
+  public TableLayout(double rowWeight, double columnWeight, int margin)
+  {
+    super();
+
+    this.rowWeight    = rowWeight;
+    this.columnWeight = columnWeight;
+    this.marginTop    = margin;
+    this.marginBottom = margin;
+    this.marginLeft   = margin;
+    this.marginRight  = margin;
+  }
+
+  /** create table layout
+   * @param rowWeights array with row weights (0.0..1.0)
+   * @param columnWeight default column weight (0.0..1.0)
+   * @param margin margin size
+   */
+  public TableLayout(double rowWeights[], double columnWeight, int margin)
+  {
+    super();
+
+    this.rowWeights   = rowWeights;
+    this.columnWeight = columnWeight;
+    this.marginTop    = margin;
+    this.marginBottom = margin;
+    this.marginLeft   = margin;
+    this.marginRight  = margin;
+  }
+
+  /** create table layout
+   * @param rowWeight default row weight (0.0..1.0)
+   * @param columnWeights array with column weights (0.0..1.0)
+   * @param margin margin size
+   */
+  public TableLayout(double rowWeight, double columnWeights[], int margin)
+  {
+    super();
+
+    this.rowWeight     = rowWeight;
+    this.columnWeights = columnWeights;
+    this.marginTop     = margin;
+    this.marginBottom  = margin;
+    this.marginLeft    = margin;
+    this.marginRight   = margin;
   }
 
   /** create table layout
@@ -114,6 +190,66 @@ public class TableLayout extends Layout
     this.marginBottom  = margin;
     this.marginLeft    = margin;
     this.marginRight   = margin;
+  }
+
+  /** create table layout
+   * @param rowWeight default row weight (0.0..1.0)
+   * @param columnWeight default column weight (0.0..1.0)
+   * @param margin margin size
+   * @param spacing space between sub-widgets
+   */
+  public TableLayout(double rowWeight, double columnWeight, int margin, int spacing)
+  {
+    super();
+
+    this.rowWeight         = rowWeight;
+    this.columnWeight      = columnWeight;
+    this.marginTop         = margin;
+    this.marginBottom      = margin;
+    this.marginLeft        = margin;
+    this.marginRight       = margin;
+    this.horizontalSpacing = spacing;
+    this.verticalSpacing   = spacing;
+  }
+
+  /** create table layout
+   * @param rowWeights array with row weights (0.0..1.0)
+   * @param columnWeight default column weight (0.0..1.0)
+   * @param margin margin size
+   * @param spacing space between sub-widgets
+   */
+  public TableLayout(double rowWeights[], double columnWeight, int margin, int spacing)
+  {
+    super();
+
+    this.rowWeight         = rowWeight;
+    this.columnWeights     = columnWeights;
+    this.marginTop         = margin;
+    this.marginBottom      = margin;
+    this.marginLeft        = margin;
+    this.marginRight       = margin;
+    this.horizontalSpacing = spacing;
+    this.verticalSpacing   = spacing;
+  }
+
+  /** create table layout
+   * @param rowWeight default row weight (0.0..1.0)
+   * @param columnWeights array with column weights (0.0..1.0)
+   * @param margin margin size
+   * @param spacing space between sub-widgets
+   */
+  public TableLayout(double rowWeight, double columnWeights[], int margin, int spacing)
+  {
+    super();
+
+    this.rowWeights        = rowWeights;
+    this.columnWeight      = columnWeight;
+    this.marginTop         = margin;
+    this.marginBottom      = margin;
+    this.marginLeft        = margin;
+    this.marginRight       = margin;
+    this.horizontalSpacing = spacing;
+    this.verticalSpacing   = spacing;
   }
 
   /** create table layout
@@ -222,6 +358,7 @@ if (debug) { System.err.print("row weights "); for (int i = 0; i < rowWeights.le
         // fixed row size
         addSize = 0;
       }
+addSize = (int)(variableSize*rowWeights[i]);
       rowSizes[i] = rowSizeHints[i]+addSize+horizontalSpacing;
     }
     width        = rectangle.width-marginLeft-marginRight;
@@ -241,6 +378,7 @@ if (debug) { System.err.print("column weights "); for (int i = 0; i < columnWeig
         // fixed column size
         addSize = 0;
       }
+addSize = (int)(variableSize*columnWeights[i]);
       columnSizes[i] = columnSizeHints[i]+addSize+verticalSpacing;
     }
 if (debug) { System.err.print("row sizes  : ");for (int i = 0; i < rows;    i++) System.err.print(" "+rowSizes[i]   +(rowExpandFlags[i]   ?"*":""));System.err.println(); }
@@ -278,7 +416,7 @@ if (debug) System.err.println("layout:");
       else if ((tableLayoutData.style & TableLayoutData.WE) == 0) childX += (childWidth < width)?(width-childWidth)/2:0;
       if      ((tableLayoutData.style & TableLayoutData.NS) == TableLayoutData.S) childY += (childHeight < height)?height-childHeight:0;
       else if ((tableLayoutData.style & TableLayoutData.NS) == 0) childY += (childHeight < height)?(height-childHeight)/2:0;
-if (debug) System.err.println(String.format("  %-40s: size=(%4d,%4d) row=%2d column=%2d: %4d,%4d+%4dx%4d (%4d,%4d)-(%4d,%4d)",
+if (debug) System.err.println(String.format("  %-30s: size=(%4d,%4d) row/col=(%2d,%2d): %4d,%4d+%4dx%4d (%4d,%4d)-(%4d,%4d)",
                                  children[i],
                                  sizes[i].x,sizes[i].y,
                                  tableLayoutData.row,tableLayoutData.column,
@@ -298,6 +436,7 @@ if (debug) System.err.println(String.format("  %-40s: size=(%4d,%4d) row=%2d col
   {
 if (debug) System.err.println("--------------------------------------------------------");
 if (debug) System.err.println("init "+this+": children="+children.length);
+
     // get sizes of children
     sizes = new Point[children.length];
     for (int i = 0; i < children.length; i++)
@@ -306,17 +445,21 @@ if (debug) System.err.println("init "+this+": children="+children.length);
       if (tableLayoutData == null) throw new Error("no layout data for "+children[i]);
 
       sizes[i] = children[i].computeSize(SWT.DEFAULT,SWT.DEFAULT,true);
-      sizes[i].x = Math.max(sizes[i].x,tableLayoutData.minWidth );
-      sizes[i].y = Math.max(sizes[i].y,tableLayoutData.minHeight);
+      if (tableLayoutData.minWidth  != SWT.DEFAULT) sizes[i].x = Math.max(sizes[i].x,tableLayoutData.minWidth );
+      if (tableLayoutData.maxWidth  != SWT.DEFAULT) sizes[i].x = Math.min(sizes[i].x,tableLayoutData.maxWidth );
+      if (tableLayoutData.minHeight != SWT.DEFAULT) sizes[i].y = Math.max(sizes[i].y,tableLayoutData.minHeight);
+      if (tableLayoutData.maxHeight != SWT.DEFAULT) sizes[i].y = Math.min(sizes[i].y,tableLayoutData.maxHeight);
     }
 if (debug) System.err.println("sizes:");
 if (debug) for (int i = 0; i < sizes.length; i++)
-System.err.println(String.format("  (%4d,%4d) %s: %s",
-                                 sizes[i].x,sizes[i].y,
-                                 ((children[i].getLayoutData()!=null)?((TableLayoutData)children[i].getLayoutData()).toString():""),
-                                 children[i]
-                                )
-                  );
+{
+  System.err.println(String.format("  (%4d,%4d) %s: %s",
+                                   sizes[i].x,sizes[i].y,
+                                   ((children[i].getLayoutData()!=null)?((TableLayoutData)children[i].getLayoutData()).toString():""),
+                                   children[i]
+                                  )
+                    );
+}
 
     // get number of rows/columns
     rows    = 0;
@@ -332,7 +475,7 @@ System.err.println(String.format("  (%4d,%4d) %s: %s",
       rows    = Math.max(rows,   tableLayoutData.row   +rowSpawn   );
       columns = Math.max(columns,tableLayoutData.column+columnSpawn);
     }
-if (debug) System.err.println("rows="+rows+" columsn="+columns);
+if (debug) System.err.println("rows="+rows+" columns="+columns);
 
     // calculate row/columns hint sizes, max. width/height
     rowSizeHints      = new int[rows   ];
@@ -354,8 +497,10 @@ if (debug) System.err.println("rows="+rows+" columsn="+columns);
       // get expansion flags
 //      rowExpandFlags   [tableLayoutData.row   ] |= ((tableLayoutData.style & TableLayoutData.EXPAND_Y) != 0);
 //      columnExpandFlags[tableLayoutData.column] |= ((tableLayoutData.style & TableLayoutData.EXPAND_X) != 0);
-      for (int z = tableLayoutData.column; z < Math.min(tableLayoutData.column+columnSpawn,columns); z++) columnExpandFlags[z] |= ((tableLayoutData.style & TableLayoutData.EXPAND_X) != 0);
-      for (int z = tableLayoutData.row   ; z < Math.min(tableLayoutData.row   +rowSpawn,   rows   ); z++) rowExpandFlags   [z] |= ((tableLayoutData.style & TableLayoutData.EXPAND_Y) != 0);
+//      for (int z = tableLayoutData.column; z < Math.min(tableLayoutData.column+columnSpawn,columns); z++) columnExpandFlags[z] |= ((tableLayoutData.style & TableLayoutData.EXPAND_X) == TableLayoutData.EXPAND_X);
+//      for (int z = tableLayoutData.row   ; z < Math.min(tableLayoutData.row   +rowSpawn,   rows   ); z++) rowExpandFlags   [z] |= ((tableLayoutData.style & TableLayoutData.EXPAND_Y) == TableLayoutData.EXPAND_Y);
+      for (int z = tableLayoutData.column; z < Math.min(tableLayoutData.column+columnSpawn,columns); z++) columnExpandFlags[z] |= ((tableLayoutData.style & TableLayoutData.E) == TableLayoutData.E);
+      for (int z = tableLayoutData.row   ; z < Math.min(tableLayoutData.row   +rowSpawn,   rows   ); z++) rowExpandFlags   [z] |= ((tableLayoutData.style & TableLayoutData.S) == TableLayoutData.S);
 
       // calculate available space
       int availableWidth  = 0;
@@ -363,22 +508,24 @@ if (debug) System.err.println("rows="+rows+" columsn="+columns);
       for (int z = tableLayoutData.column; z < Math.min(tableLayoutData.column+columnSpawn,columns); z++) availableWidth  += columnSizeHints[z];
       for (int z = tableLayoutData.row   ; z < Math.min(tableLayoutData.row   +rowSpawn,   rows   ); z++) availableHeight += rowSizeHints   [z];
 
-      // calculate additional required width, height
+      // calculate additional required width/height
       int addWidth  = (width -availableWidth )/columnSpawn;
       int addHeight = (height-availableHeight)/rowSpawn;
 
-      // expand row/column size if required (not expand and >0)
-      for (int z = tableLayoutData.row; z < Math.min(tableLayoutData.row+rowSpawn,rows); z++)
+      // expand row/column size if required (if not EXPAND flag set and expand value>0)
+      for (int z = tableLayoutData.row; z < Math.min(tableLayoutData.row+1/*+rowSpawn*/,rows); z++)
       {
-        if (!rowExpandFlags[tableLayoutData.row] && (addHeight > 0))
+//        if (!rowExpandFlags[tableLayoutData.row] && (addHeight > 0))
+        if ((addHeight > 0))
         {
           rowSizeHints[z] = Math.max(rowSizeHints[z]+addHeight,height);
         }
         rowSizeHints[z] = Math.max(rowSizeHints[z],tableLayoutData.minHeight);
       }
-      for (int z = tableLayoutData.column; z < Math.min(tableLayoutData.column+columnSpawn,columns); z++)
+      for (int z = tableLayoutData.column; z < Math.min(tableLayoutData.column+1/*+columnSpawn*/,columns); z++)
       {
-        if (!columnExpandFlags[tableLayoutData.column] && (addWidth > 0))
+//        if (!columnExpandFlags[tableLayoutData.column] && (addWidth > 0))
+        if ((addWidth > 0))
         {
           columnSizeHints[z] = Math.max(columnSizeHints[z]+addWidth,width);
         }
@@ -388,7 +535,7 @@ if (debug) System.err.println("rows="+rows+" columsn="+columns);
 if (debug) { System.err.print("row size hints   : ");for (int i = 0; i < rows;    i++) System.err.print(" "+rowSizeHints   [i]+(rowExpandFlags[i]   ?"*":""));System.err.println(); }
 if (debug) { System.err.print("column size hints: ");for (int i = 0; i < columns; i++) System.err.print(" "+columnSizeHints[i]+(columnExpandFlags[i]?"*":""));System.err.println(); }
 
-    // calculate max. width/height
+    // calculate total width/height
     totalWidth  = 0;
     totalHeight = 0;
     for (int i = 0; i < rows; i++)
@@ -403,8 +550,8 @@ if (debug) { System.err.print("column size hints: ");for (int i = 0; i < columns
 //System.err.print("TableLayout.java"+", "+136+": sum column height");for (int i = 0; i < columns; i++) System.err.print(" "+columnSizeHintsSum[i]);System.err.println();
 
     // initialize weights
-    rowWeights    = getWeights(rowWeights,   rows,   rowExpandFlags   );
-    columnWeights = getWeights(columnWeights,columns,columnExpandFlags);
+    rowWeights    = getWeights(rowWeight,   rowWeights,   rows,   rowExpandFlags   );
+    columnWeights = getWeights(columnWeight,columnWeights,columns,columnExpandFlags);
   }
 
   //-----------------------------------------------------------------------
@@ -424,12 +571,13 @@ if (debug) { System.err.print("column size hints: ");for (int i = 0; i < columns
   }
 
   /** get initialized weights array
+   * @param weight default weight
    * @param weights array with weights
    * @param count number of rows/columns
    * @param expandFlags array with expand flags for row/column
    * @return new array with weights
    */
-  private double[] getWeights(double weights[], int count, boolean expandFlags[])
+  private double[] getWeights(double weight, double weights[], int count, boolean expandFlags[])
   {
     double sum;
 
@@ -440,19 +588,21 @@ if (debug) { System.err.print("column size hints: ");for (int i = 0; i < columns
       if (weights != null)
       {
         System.arraycopy(weights,0,newWeights,0,Math.min(weights.length,count));
-        if (newWeights.length > weights.length) Arrays.fill(newWeights,weights.length,newWeights.length,1.0);
+        if (newWeights.length > weights.length) Arrays.fill(newWeights,weights.length,newWeights.length,weight);
       }
       else
       {
-        Arrays.fill(newWeights,1.0);
+        Arrays.fill(newWeights,weight);
       }
       weights = newWeights;
     }
 
     // normalize weights
     sum = 0.0;
-    for (int i = 0; i < weights.length; i++) { sum += expandFlags[i]?weights[i]:0.0; };
-    for (int i = 0; i < weights.length; i++) { weights[i] = expandFlags[i]?((sum > 0.0)?weights[i]/sum:1.0):0.0; }; 
+//    for (int i = 0; i < weights.length; i++) { sum += expandFlags[i]?weights[i]:0.0; };
+//    for (int i = 0; i < weights.length; i++) { weights[i] = expandFlags[i]?((sum > 0.0)?weights[i]/sum:1.0):0.0; }; 
+    for (int i = 0; i < weights.length; i++) { sum += weights[i]; };
+    for (int i = 0; i < weights.length; i++) { weights[i] = ((sum > 0.0)?weights[i]/sum:weight); }; 
 //System.err.print("weights sum="+sum+": "); for (int i = 0; i < weights.length; i++) { System.err.print(" "+weights[i]); }; System.err.println();
 
     return weights;

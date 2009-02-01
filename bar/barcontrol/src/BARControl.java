@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -1051,7 +1051,7 @@ public class BARControl
     composite = new Composite(dialog,SWT.NONE);
     tableLayout = new TableLayout(null,new double[]{1,0},4);
     composite.setLayout(tableLayout);
-    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
     {
       label = new Label(composite,SWT.LEFT);
       label.setText("Server:");
@@ -1059,7 +1059,7 @@ public class BARControl
 
       widgetServerName = new Text(composite,SWT.LEFT|SWT.BORDER);
       if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
-      widgetServerName.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+      widgetServerName.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
 
       label = new Label(composite,SWT.LEFT);
       label.setText("Password:");
@@ -1068,17 +1068,17 @@ public class BARControl
       widgetPassword = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
       if (loginData.password != null) widgetPassword.setText(loginData.password);
 //      widgetPassword.setSelection(0,loginData.password.length());
-      widgetPassword.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+      widgetPassword.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE));
     }
 
     // buttons
     composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout());
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X));
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
     {
       widgetLoginButton = new Button(composite,SWT.CENTER);
       widgetLoginButton.setText("Login");
-      widgetLoginButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
+      widgetLoginButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT));
       widgetLoginButton.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -1095,7 +1095,7 @@ public class BARControl
 
       button = new Button(composite,SWT.CENTER);
       button.setText("Cancel");
-      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
+      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -1146,19 +1146,16 @@ public class BARControl
   {
     shell = new Shell(display);
     shell.setText("BAR control");
-    shell.setLayout(new TableLayout());
+    shell.setLayout(new TableLayout(1.0,1.0));
   }
 
   /** create tabs
    */
   private void createTabs()
   {
-    // create resizable tab (with help of sashForm)
-    SashForm sashForm = new SashForm(shell,SWT.NONE);
-    sashForm.setLayout(new TableLayout());
-    Widgets.layout(sashForm,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
-    tabFolder = new TabFolder(sashForm,SWT.NONE);
-    tabFolder.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND));
+    // create tab
+    tabFolder = Widgets.newTabFolder(shell);
+    Widgets.layout(tabFolder,0,0,TableLayoutData.NSWE);
     tabStatus  = new TabStatus (tabFolder,SWT.F1);
     tabJobs    = new TabJobs   (tabFolder,SWT.F2);
     tabRestore = new TabRestore(tabFolder,SWT.F3);
@@ -1275,9 +1272,15 @@ public class BARControl
     shell.setSize(800,600+5*(Widgets.getTextHeight(shell)+4));
     shell.open();
 
+//Dialogs.info(shell,"Test","test ddddddddddddddddddddddddd");
+//Dialogs.error(shell,"test ddddddddddddddddddddddddd");
+//Dialogs.confirm(shell,"Test","test ddddddddddddddddddddddddd");
+//Dialogs.select(shell,"Test","test ddddddddddddddddddddddddd",new String[]{"1","2","3"},0);
+
     // SWT event loop
     while (!shell.isDisposed())
     {
+//System.err.print(".");
       if (!display.readAndDispatch())
       {
         display.sleep();

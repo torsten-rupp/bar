@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -239,7 +239,7 @@ LOCAL const Password *getNextCryptPassword(PasswordHandle *passwordHandle)
           )
   {
     /* get password */
-    password = passwordHandle->cryptPassword;
+    password = (Password*)passwordHandle->cryptPassword;
 
     /* next password is: default */
     passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;

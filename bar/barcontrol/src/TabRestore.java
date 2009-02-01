@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -56,6 +56,32 @@ import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.swt.widgets.Widget;
 
 /****************************** Classes ********************************/
+
+/** background task
+ */
+abstract class BackgroundTask
+{
+  final BusyDialog busyDialog;
+  Thread           thread;
+
+  BackgroundTask(final BusyDialog busyDialog, final Object userData)
+  {
+    final BackgroundTask backgroundTask = this;
+
+    this.busyDialog = busyDialog;
+
+    thread = new Thread(new Runnable()
+    {
+      public void run()
+      {
+        backgroundTask.run(busyDialog,userData);
+      }
+    });
+    thread.start();
+  }
+
+  abstract public void run(BusyDialog busyDialog, Object userData);
+}
 
 /** tab restore
  */
@@ -335,6 +361,7 @@ class TabRestore
 
   // global variable references
   private Shell       shell;
+  private Display     display;
 
   // widgets
   public  Composite   widgetTab;
@@ -359,7 +386,6 @@ class TabRestore
 
   TabRestore(TabFolder parentTabFolder, int accelerator)
   {
-    Display     display;
     Composite   tab;
     Group       group;
     Composite   composite,subComposite;
@@ -369,7 +395,6 @@ class TabRestore
     TreeColumn  treeColumn;
     TreeItem    treeItem;
     Text        text;
-//    Spinner     spinner;
     TableColumn tableColumn;
     Control     control;
 
@@ -400,22 +425,19 @@ class TabRestore
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,"Restore"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
-    widgetTab.setLayout(new TableLayout(new double[]{0,0.5,0,0.5},
-                                        null,
-                                        2
-                                       )
-                       );
-    Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
+    widgetTab.setLayout(new TableLayout(new double[]{0,0.5,0,0.5,0.0,0.0},1.0,2));
+    Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 
     // path
     composite = Widgets.newComposite(widgetTab,SWT.NONE);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
       label = Widgets.newLabel(composite,"Path:");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetPath = Widgets.newCombo(composite,null);
-      Widgets.layout(widgetPath,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.layout(widgetPath,0,1,TableLayoutData.WE);
       widgetPath.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -470,7 +492,7 @@ class TabRestore
 
     // archives tree
     widgetArchiveFileTree = Widgets.newTree(widgetTab,SWT.CHECK,null);
-    Widgets.layout(widgetArchiveFileTree,1,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
+    Widgets.layout(widgetArchiveFileTree,1,0,TableLayoutData.NSWE);
     SelectionListener filesTreeColumnSelectionListener = new SelectionListener()
     {
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -498,7 +520,8 @@ class TabRestore
     {
       public void handleEvent(final Event event)
       {
-        final TreeItem treeItem = (TreeItem)event.item;
+        TreeItem treeItem = (TreeItem)event.item;
+
         updateArchiveFilesTree(treeItem);
       }
     });
@@ -506,7 +529,7 @@ class TabRestore
     {
       public void handleEvent(final Event event)
       {
-        final TreeItem treeItem = (TreeItem)event.item;
+        TreeItem treeItem = (TreeItem)event.item;
         treeItem.removeAll();
         new TreeItem(treeItem,SWT.NONE);
       }
@@ -558,11 +581,12 @@ class TabRestore
 
     // list
     composite = Widgets.newComposite(widgetTab,SWT.NONE);
+    composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
       widgetListButton = Widgets.newButton(composite,null,"List");
       widgetListButton.setEnabled(false);
-      Widgets.layout(widgetListButton,0,0,TableLayoutData.W|TableLayoutData.EXPAND_X,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetListButton,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetListButton.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -610,7 +634,7 @@ class TabRestore
 
     // file list
     widgetFileList = Widgets.newTable(widgetTab,SWT.CHECK,this);
-    Widgets.layout(widgetFileList,3,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
+    Widgets.layout(widgetFileList,3,0,TableLayoutData.NSWE);
     SelectionListener fileListColumnSelectionListener = new SelectionListener()
     {
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -662,12 +686,13 @@ class TabRestore
     });
 
     composite = Widgets.newComposite(widgetTab,SWT.NONE);
-    Widgets.layout(composite,4,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0,0.0,0.0}));
+    Widgets.layout(composite,4,0,TableLayoutData.WE);
     {
       label = Widgets.newLabel(composite,"Filter:");
       Widgets.layout(label,0,0,TableLayoutData.W);
       widgetFilePattern = Widgets.newCombo(composite,null);
-      Widgets.layout(widgetFilePattern,0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.layout(widgetFilePattern,0,1,TableLayoutData.WE);
       widgetFilePattern.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -745,11 +770,12 @@ class TabRestore
 
     // restore
     composite = Widgets.newComposite(widgetTab,SWT.NONE);
-    Widgets.layout(composite,5,0,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0}));
+    Widgets.layout(composite,5,0,TableLayoutData.WE);
     {
       widgetRestoreButton = Widgets.newButton(composite,null,"Restore");
       widgetRestoreButton.setEnabled(false);
-      Widgets.layout(widgetRestoreButton,0,0,TableLayoutData.DEFAULT,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetRestoreButton,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
       widgetRestoreButton.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -780,7 +806,7 @@ class TabRestore
       });
       widgetRestoreTo = Widgets.newText(composite,null);
       widgetRestoreTo.setEnabled(false);
-      Widgets.layout(widgetRestoreTo,0,2,TableLayoutData.WE|TableLayoutData.EXPAND_X);
+      Widgets.layout(widgetRestoreTo,0,2,TableLayoutData.WE);
       widgetRestoreToSelectButton = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
       widgetRestoreToSelectButton.setEnabled(false);
       Widgets.layout(widgetRestoreToSelectButton,0,3,TableLayoutData.DEFAULT);
@@ -917,108 +943,150 @@ class TabRestore
   private void updateArchiveFilesTree(TreeItem treeItem)
   {
     ArchiveFileTreeData archiveFileTreeData = (ArchiveFileTreeData)treeItem.getData();
-    TreeItem            subTreeItem;
 
     shell.setCursor(waitCursor);
+    BusyDialog busyDialog = new BusyDialog(shell,"List archives",null);
 
-    ArrayList<String> result = new ArrayList<String>();
-    String command = "FILE_LIST "+
-                     StringParser.escape(archiveFileTreeData.name)
-                     ;
-    int errorCode = BARServer.executeCommand(command,
-                                             result,
-                                             new BARIndicator()
-                                             {
-                                               public boolean busy(long n)
-                                               {
-                                                 shell.getDisplay().update();
-                                                 return true;
-                                               }
-                                             }
-                                            );
-    if (errorCode == Errors.NONE)
+    treeItem.removeAll();
+
+    new BackgroundTask(busyDialog,new Object[]{treeItem,archiveFileTreeData})
     {
-      treeItem.removeAll();
-      for (String line : result)
+      public void run(final BusyDialog busyDialog, Object userData)
       {
-        Object data[] = new Object[10];
-        if      (StringParser.parse(line,"FILE %ld %ld %S",data,StringParser.QUOTE_CHARS))
+        final TreeItem            treeItem            = (TreeItem           )((Object[])userData)[0];
+        final ArchiveFileTreeData archiveFileTreeData = (ArchiveFileTreeData)((Object[])userData)[1];
+
+        // start command
+        String commandString = "FILE_LIST "+
+                               StringParser.escape(archiveFileTreeData.name)
+                               ;
+        Command command = BARServer.runCommand(commandString);
+
+        // read results
+        long n = 0;
+        while (!command.endOfData())
         {
-          /* get data
-             format:
-               size
-               date/time
-               name
-          */
-          long   size     = (Long  )data[0];
-          long   datetime = (Long  )data[1];
-          String name     = (String)data[2];
+          final String line = command.getNextResult(250);
+          if (line != null)
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+//Dprintf.dprintf("rrr=%s\n",line);
+                Object data[] = new Object[10];
+                if      (StringParser.parse(line,"FILE %ld %ld %S",data,StringParser.QUOTE_CHARS))
+                {
+                  /* get data
+                     format:
+                       size
+                       date/time
+                       name
+                  */
+                  long   size     = (Long  )data[0];
+                  long   datetime = (Long  )data[1];
+                  String name     = (String)data[2];
 
-          archiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.FILE,size,datetime,new File(name).getName());
+                  ArchiveFileTreeData subArchiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.FILE,size,datetime,new File(name).getName());
 
-          subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,archiveFileTreeData),archiveFileTreeData,false);
-          subTreeItem.setText(0,archiveFileTreeData.title);
-          subTreeItem.setText(1,"FILE");
-          subTreeItem.setText(2,Long.toString(size));
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-          subTreeItem.setImage(IMAGE_FILE);
+                  TreeItem subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,subArchiveFileTreeData),subArchiveFileTreeData,false);
+                  subTreeItem.setText(0,subArchiveFileTreeData.title);
+                  subTreeItem.setText(1,"FILE");
+                  subTreeItem.setText(2,Long.toString(size));
+                  subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+                  subTreeItem.setImage(IMAGE_FILE);
+                }
+                else if (StringParser.parse(line,"DIRECTORY %ld %ld %S",data,StringParser.QUOTE_CHARS))
+                {
+                  /* get data
+                     format:
+                       size
+                       date/time
+                       name
+                  */
+                  long   size     = (Long  )data[0];
+                  long   datetime = (Long  )data[1];
+                  String name     = (String)data[2];
+
+                  ArchiveFileTreeData subArchiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.DIRECTORY,new File(name).getName());
+
+                  TreeItem subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,subArchiveFileTreeData),subArchiveFileTreeData,true);
+                  subTreeItem.setText(0,subArchiveFileTreeData.title);
+                  subTreeItem.setText(1,"DIR");
+                  subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+                  subTreeItem.setImage(IMAGE_DIRECTORY);
+                  subTreeItem.setGrayed(true);
+                }
+                else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
+                {
+                  /* get data
+                     format:
+                       date/time
+                       name
+                  */
+                  long   datetime = (Long  )data[0];
+                  String name     = (String)data[1];
+
+                  ArchiveFileTreeData subArchiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.LINK,0,datetime,new File(name).getName());
+
+                  TreeItem subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,subArchiveFileTreeData),subArchiveFileTreeData,false);
+                  subTreeItem.setText(0,subArchiveFileTreeData.title);
+                  subTreeItem.setText(1,"LINK");
+                  subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+                  subTreeItem.setImage(IMAGE_LINK);
+                }
+                else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
+                {
+                }
+                else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
+                {
+                }
+                else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
+                {
+                }
+              }
+            });
+
+            n++;
+          }
+
+          if (!busyDialog.update("Reading files..."+((n > 0)?n:"")))
+          {
+Dprintf.dprintf("abort\n");
+            BARServer.abortCommand(command);
+          }
         }
-        else if (StringParser.parse(line,"DIRECTORY %ld %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               size
-               date/time
-               name
-          */
-          long   size     = (Long  )data[0];
-          long   datetime = (Long  )data[1];
-          String name     = (String)data[2];
 
-          archiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.DIRECTORY,new File(name).getName());
+        // check command error
+        if (command.getErrorCode() == Errors.NONE)
+        {
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              treeItem.setExpanded(true);
+              busyDialog.close();
+              shell.setCursor(null);
+             }
+          });
+        }
+        else
+        {
+          final String errorText = command.getErrorText();
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              Dialogs.error(shell,"Cannot open '"+archiveFileTreeData.title+"' (error: "+errorText+")");
 
-          subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,archiveFileTreeData),archiveFileTreeData,true);
-          subTreeItem.setText(0,archiveFileTreeData.title);
-          subTreeItem.setText(1,"DIR");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-          subTreeItem.setImage(IMAGE_DIRECTORY);
-          subTreeItem.setGrayed(true);
-        }
-        else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               date/time
-               name
-          */
-          long   datetime = (Long  )data[0];
-          String name     = (String)data[1];
-
-          archiveFileTreeData = new ArchiveFileTreeData(name,FileTypes.LINK,0,datetime,new File(name).getName());
-
-          subTreeItem = Widgets.addTreeItem(treeItem,findArchiveFilesTreeIndex(treeItem,archiveFileTreeData),archiveFileTreeData,false);
-          subTreeItem.setText(0,archiveFileTreeData.title);
-          subTreeItem.setText(1,"LINK");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-          subTreeItem.setImage(IMAGE_LINK);
-        }
-        else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-        }
-        else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
-        {
-        }
-        else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
-        {
+              treeItem.setExpanded(true);
+              busyDialog.close();
+              shell.setCursor(null);
+            }
+          });
         }
       }
-    }
-    else
-    {
-      Dialogs.error(shell,"Cannot open '"+archiveFileTreeData.title+"' (error: "+result.get(0)+")");
-    }
-
-    shell.setCursor(null);
+    };
   }
 
   /** get selected archive file names
@@ -1102,142 +1170,195 @@ class TabRestore
    */
   private void listArchiveFiles(String archiveNames[], String filterPattern)
   {
-    int errorCode;
-
     shell.setCursor(waitCursor);
+    BusyDialog busyDialog = new BusyDialog(shell,"List archives","Archive:");
 
-    final ProgressDialog progressDialog = new ProgressDialog(shell,"List archives","Read files...");
     fileList.clear();
-    for (String archiveName : archiveNames)
+    new BackgroundTask(busyDialog,new Object[]{archiveNames,fileList})
     {
-//Dprintf.dprintf("s=%s\n",archiveName);
-      /* get archive content list */
-      ArrayList<String> result = new ArrayList<String>();
-      String command = "ARCHIVE_LIST "+
-                       StringParser.escape(archiveName)+" "+
-                       StringParser.escape(widgetFilePattern.getText())
-                       ;
-      errorCode = Errors.UNKNOWN;
-      boolean tryAgainFlag = true;
-      while (tryAgainFlag)
+      public void run(final BusyDialog busyDialog, Object userData)
       {
-        tryAgainFlag = false;
+        final String[]             archiveNames = (String[]            )((Object[])userData)[0];
+        final LinkedList<FileData> fileList     = (LinkedList<FileData>)((Object[])userData)[1];
 
-        /* try reading archive content */
-        errorCode = BARServer.executeCommand(command,
-                                             result,
-                                             new BARIndicator()
-                                             {
-                                               public boolean busy(final long n)
-                                               {
-                                                 if ((n%10) == 0)
-                                                 {
-                                                   progressDialog.update("Read files..."+((n > 0)?n:""));
-                                                   shell.getDisplay().update();
-                                                 }
-
-                                                 return !progressDialog.isAborted();
-                                               }
-                                             }
-                                            );
-
-        /* ask for crypt password if password error */
-        if (   (errorCode == Errors.CORRUPT_DATA     )
-            || (errorCode == Errors.NO_CRYPT_PASSWORD)
-            || (errorCode == Errors.INVALID_PASSWORD )
-           )
+        for (final String archiveName : archiveNames)
         {
-          String password = Dialogs.password(shell,
-                                             "Crypt password",
-                                             "Archive: "+archiveName,
-                                             "Crypt password"
-                                             );
-          if (password != null)
+    //Dprintf.dprintf("s=%s\n",archiveName);
+          /* get archive content list */
+          busyDialog.setMessage("Archive: '"+archiveName+"'");
+
+          // start command
+          busyDialog.update("Opening...");
+          String commandString = "ARCHIVE_LIST "+
+                                 StringParser.escape(archiveName)+" "+
+                                 StringParser.escape("")
+                                 ;
+          Command         command = null;
+          int             errorCode = Errors.UNKNOWN;
+          final boolean[] tryAgainFlag = new boolean[1];
+          tryAgainFlag[0] = true;
+          while (tryAgainFlag[0])
           {
-            BARServer.executeCommand("PASSWORD_ADD "+StringParser.escape(password),result);
-            tryAgainFlag = true;
+            tryAgainFlag[0] = false;
+
+            /* try reading archive content */
+            command = BARServer.runCommand(commandString);
+            while (!command.waitForResult(250))
+            {
+              busyDialog.update();
+            }
+
+            /* ask for crypt password if password error */
+            errorCode = command.getErrorCode();
+Dprintf.dprintf("errorCode=%s\n",errorCode);
+            if (   (errorCode == Errors.CORRUPT_DATA     )
+                || (errorCode == Errors.NO_CRYPT_PASSWORD)
+                || (errorCode == Errors.INVALID_PASSWORD )
+               )
+            {
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  String password = Dialogs.password(shell,
+                                                     "Crypt password",
+                                                     "Archive: "+archiveName,
+                                                     "Crypt password"
+                                                     );
+                  if (password != null)
+                  {
+                    String[] result = new String[1];
+                    BARServer.executeCommand("PASSWORD_ADD "+StringParser.escape(password),result);
+                    tryAgainFlag[0] = true;
+                  }
+                }
+              });
+            }
+          }
+
+          if (errorCode == Errors.NONE)
+          {
+            // read results
+            busyDialog.update("Reading files...");
+            long n = 0;
+            while (!command.endOfData())
+            {
+              final String line = command.getNextResult(250);
+              if (line != null)
+              {
+//Dprintf.dprintf("rad2 %s\n",line);
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    Object data[] = new Object[10];
+                    if      (StringParser.parse(line,"FILE %ld %ld %ld %ld %ld %S",data,StringParser.QUOTE_CHARS))
+                    {
+                      /* get data
+                         format:
+                           size
+                           date/time
+                           archive file size
+                           fragment offset
+                           fragment size
+                           name
+                      */
+                      long   size     = (Long  )data[0];
+                      long   datetime = (Long  )data[1];
+                      String name     = (String)data[5];
+
+                      FileData fileData = new FileData(archiveName,name,FileTypes.FILE,size,datetime);
+                      fileList.add(fileData);
+                    }
+                    else if (StringParser.parse(line,"DIRECTORY %ld %S",data,StringParser.QUOTE_CHARS))
+                    {
+                      /* get data
+                         format:
+                           date/time
+                           name
+                      */
+                      long   datetime      = (Long  )data[0];
+                      String directoryName = (String)data[1];
+
+                      FileData fileData = new FileData(archiveName,directoryName,FileTypes.DIRECTORY,datetime);
+                      fileList.add(fileData);
+                    }
+                    else if (StringParser.parse(line,"LINK %ld %S %S",data,StringParser.QUOTE_CHARS))
+                    {
+                      /* get data
+                         format:
+                           date/time
+                           name
+                      */
+                      long   datetime = (Long  )data[0];
+                      String linkName = (String)data[1];
+                      String fileName = (String)data[2];
+
+                      FileData fileData = new FileData(archiveName,linkName,FileTypes.LINK,datetime);
+                      fileList.add(fileData);
+                    }
+                    else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
+                    {
+                    }
+                    else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
+                    {
+                    }
+                    else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
+                    {
+                    }
+                  }
+                });
+
+                n++;
+              }
+
+              if (!busyDialog.update("Reading files..."+((n > 0)?n:"")))
+              {
+  Dprintf.dprintf("abort\n");
+                command.abort();
+              }
+            }
+
+            // check command error
+            if (command.getErrorCode() == Errors.NONE)
+            {
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  busyDialog.update("Sort...");
+                  shell.getDisplay().update();
+                  updateFileList();
+
+                  busyDialog.close();
+                  shell.setCursor(null);
+                }
+              });
+            }
+            else
+            {
+              final String errorText = command.getErrorText();
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  Dialogs.error(shell,"xxxCannot list archive '"+archiveName+"' (error: "+errorText+")");
+
+                  busyDialog.close();
+                  shell.setCursor(null);
+                }
+              });
+            }
+          }
+          else
+          {
+    Dprintf.dprintf("\n");
+            Dialogs.error(shell,"Cannot list archive '"+archiveName+"' (error: )");
+    Dprintf.dprintf("\n");
           }
         }
       }
-
-      /* parse archive content list result */
-      if (errorCode == Errors.NONE)
-      {
-        for (String line : result)
-        {
-//Dprintf.dprintf(line);
-          progressDialog.update("Process...");
-          shell.getDisplay().update();
-          if (progressDialog.isAborted()) break;
-
-          Object data[] = new Object[10];
-          if      (StringParser.parse(line,"FILE %ld %ld %ld %ld %ld %S",data,StringParser.QUOTE_CHARS))
-          {
-            /* get data
-               format:
-                 size
-                 date/time
-                 archive file size
-                 fragment offset
-                 fragment size
-                 name
-            */
-            long   size     = (Long  )data[0];
-            long   datetime = (Long  )data[1];
-            String name     = (String)data[5];
-
-            FileData fileData = new FileData(archiveName,name,FileTypes.FILE,size,datetime);
-            fileList.add(fileData);
-          }
-          else if (StringParser.parse(line,"DIRECTORY %ld %S",data,StringParser.QUOTE_CHARS))
-          {
-            /* get data
-               format:
-                 date/time
-                 name
-            */
-            long   datetime      = (Long  )data[0];
-            String directoryName = (String)data[1];
-
-            FileData fileData = new FileData(archiveName,directoryName,FileTypes.DIRECTORY,datetime);
-            fileList.add(fileData);
-          }
-          else if (StringParser.parse(line,"LINK %ld %S %S",data,StringParser.QUOTE_CHARS))
-          {
-            /* get data
-               format:
-                 date/time
-                 name
-            */
-            long   datetime = (Long  )data[0];
-            String linkName = (String)data[1];
-            String fileName = (String)data[2];
-
-            FileData fileData = new FileData(archiveName,linkName,FileTypes.LINK,datetime);
-            fileList.add(fileData);
-          }
-          else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
-          {
-          }
-          else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
-          {
-          }
-          else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
-          {
-          }
-        }
-      }
-      else
-      {
-        Dialogs.error(shell,"Cannot list archive '"+archiveName+"' (error: "+result.get(0)+")");
-      }
-    }
-    progressDialog.update("Sort...");
-    shell.getDisplay().update();
-    updateFileList();
-    progressDialog.close();
-
-    shell.setCursor(null);
+    };
   }
 
   /** set file pattern
@@ -1439,7 +1560,7 @@ class TabRestore
       BARServer.set("destination",directory);     
     }
 
-    final ProgressDialog progressDialog = new ProgressDialog(shell,"Restore files","Restore...");
+    final BusyDialog busyDialog = new BusyDialog(shell,"Restore files",null);
     for (final FileData fileData : fileData_)
     {
 //Dprintf.dprintf("restore %s to %s\n",fileData.name,directory);
@@ -1451,12 +1572,12 @@ class TabRestore
                        ;
       errorCode = BARServer.executeCommand(command,
                                            result,
-                                           new BARIndicator()
+                                           new Indicator()
                                            {
                                              public boolean busy(long n)
                                              {
                                                shell.getDisplay().update();
-                                               return progressDialog.update("Restore file '"+fileData.archiveName+"'...");
+                                               return busyDialog.update("Restore file '"+fileData.archiveName+"'...");
                                              }
                                            }
                                           );
@@ -1465,7 +1586,7 @@ class TabRestore
         Dialogs.error(shell,"Cannot restore file '"+fileData.name+"' from archive\n'"+fileData.archiveName+"' (error: "+result.get(0)+")");
       }
     }
-    progressDialog.close();
+    busyDialog.close();
 
     shell.setCursor(null);
   }

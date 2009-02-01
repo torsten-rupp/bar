@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BusyDialog.java,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
-* Contents: progress dialog
+* Contents: busy dialog
 * Systems: all
 *
 \***********************************************************************/
@@ -13,6 +13,7 @@ import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Point;
@@ -33,18 +34,21 @@ import org.eclipse.swt.widgets.Text;
  */
 class BusyDialog
 {
-  private final Object[] result = new Object[1];
-  private boolean        closedFlag;
+  private Display display;
 
-  private Display        display;
-  private Image          images[] = new Image[2];
-  long                   imageTimestamp;
-  int                    imageIndex;
-  private Shell          dialog;
-  private Label          widgetImage;
-  private Label          widgetText;
+  private Image   images[] = new Image[2];
+  private long    imageTimestamp;
+  private int     imageIndex;
 
-  /** create progress dialog
+  private Shell   dialog;
+  private Label   widgetImage;
+  private Label   widgetMessage;
+  private Label   widgetText;
+
+  private boolean abortedFlag;
+  private boolean resizedFlag;
+
+  /** create busy dialog
    * @param parentShell parent shell
    * @param title dialog title
    * @param message dialog message
@@ -53,7 +57,7 @@ class BusyDialog
   {
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
-    Composite       composite;
+    Composite       composite,subComposite;
     Label           label;
     Button          button;
     int             x,y;
@@ -69,48 +73,88 @@ class BusyDialog
     // create dialog
     dialog = new Shell(parentShell,SWT.DIALOG_TRIM|SWT.RESIZE|SWT.APPLICATION_MODAL);
     dialog.setText(title);
-    tableLayout = new TableLayout(new double[]{1,0},null,4);
-    tableLayout.minWidth  = 300;
-    tableLayout.minHeight = 70;
+    tableLayout = new TableLayout(new double[]{1.0,0.0},1.0);
+    tableLayout.minWidth = 300;
     dialog.setLayout(tableLayout);
     dialog.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
     // message
     composite = new Composite(dialog,SWT.NONE);
-    tableLayout = new TableLayout(null,new double[]{1,0},4);
-    composite.setLayout(tableLayout);
+    composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},4));
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
     {
-      widgetImage = new Label(composite,SWT.LEFT);
+if (false)
+{
+      widgetImage = new Label(composite,SWT.LEFT|SWT.BORDER);
       widgetImage.setImage(images[imageIndex]);
-      widgetImage.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,10,10));
+      widgetImage.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,2,0,4,4));
+
+      widgetMessage = new Label(composite,SWT.LEFT|SWT.BORDER);
+      if (message != null) widgetMessage.setText(message);
+      widgetMessage.setLayoutData(new TableLayoutData(0,1,TableLayoutData.N|TableLayoutData.WE,0,0,4,4));
 
       widgetText = new Label(composite,SWT.LEFT|SWT.BORDER);
-      widgetText.setText(message);
-      widgetText.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4));
+      widgetText.setLayoutData(new TableLayoutData(1,1,TableLayoutData.S|TableLayoutData.W,0,0,4,4));
+}
+else
+{
+      widgetImage = new Label(composite,SWT.LEFT);
+      widgetImage.setImage(images[imageIndex]);
+      widgetImage.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,4));
+
+      subComposite = new Composite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(new double[]{0.0,1.0},1.0));
+      subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE));
+      {
+        if (message != null)
+        {
+          widgetMessage = new Label(subComposite,SWT.LEFT);
+          widgetMessage.setText(message);
+          widgetMessage.setLayoutData(new TableLayoutData(0,0,TableLayoutData.N|TableLayoutData.WE));
+
+          widgetText = new Label(subComposite,SWT.LEFT);
+          widgetText.setLayoutData(new TableLayoutData(1,0,TableLayoutData.S|TableLayoutData.WE));
+        }
+        else
+        {
+          widgetMessage = null;
+
+          widgetText = new Label(subComposite,SWT.LEFT);
+          widgetText.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+        }
+      }
+}
     }
 
     // buttons
     composite = new Composite(dialog,SWT.NONE);
-    composite.setLayout(new TableLayout());
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE|TableLayoutData.EXPAND_X,0,0,4,4));
+    composite.setLayout(new TableLayout(0.0,1.0));
+    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4,4));
     {
-      button = new Button(composite,SWT.CENTER);
-      button.setText("Cancel");
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.DEFAULT|TableLayoutData.EXPAND_X,0,0,0,0,60,SWT.DEFAULT));
+      button = new Button(composite,SWT.CENTER|SWT.BORDER);
+      button.setText("Abort");
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE)); //,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
-          close(true);
+          abort();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
       });
     }
+
+    // resize handler
+    dialog.addListener(SWT.Resize,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        resizedFlag = true;
+      }
+    });
 
     // add escape key handler
     dialog.addTraverseListener(new TraverseListener()
@@ -121,8 +165,7 @@ class BusyDialog
 
         if (traverseEvent.detail == SWT.TRAVERSE_ESCAPE)
         {
-//          widget.setData(false);
-          close(false);
+          close();
         }
       }
     });
@@ -133,9 +176,7 @@ class BusyDialog
       public void handleEvent(Event event)
       {
         Shell widget = (Shell)event.widget;
-
-//        result[0] = widget.getData();
-        close(false);
+        close();
       }
     });
 
@@ -151,25 +192,36 @@ class BusyDialog
     dialog.setLocation(x,y);
 
     // run dialog
-    closedFlag = false;
+    resizedFlag = false;
+    abortedFlag = false;
     dialog.open();
   }
 
-  /** close progress dialog
-   * @param result result
-   */
-  public void close(boolean result)
-  {
-    this.result[0] = result;
-    closedFlag = true;
-    dialog.dispose();
-  }
-
-  /** close progress dialog
+  /** close busy dialog
    */
   public void close()
   {
-    close(true);
+    display.syncExec(new Runnable()
+    {
+      public void run()
+      {
+        dialog.dispose();
+      }
+    });
+  }
+
+  /** close busy dialog
+   */
+  public void abort()
+  {
+    this.abortedFlag = true;
+    display.syncExec(new Runnable()
+    {
+      public void run()
+      {
+        dialog.dispose();
+      }
+    });
   }
 
   /** check if "cancel" button clicked
@@ -177,27 +229,71 @@ class BusyDialog
    */
   public boolean isAborted()
   {
-    return closedFlag;
+    return abortedFlag;
   }
 
-  /** update progress dialog
+  public void setMessage(final String message)
+  {
+    if ((widgetMessage != null) && !dialog.isDisposed())
+    {
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          widgetMessage.setText(message);
+          display.update();
+
+          /* resize dialog (it not manually changed) */
+          if (!resizedFlag)
+          {
+            GC gc = new GC(widgetMessage);
+            int width = gc.stringExtent(message).x;
+            gc.dispose();
+
+            if (widgetMessage.getSize().x < width) dialog.pack();
+          }
+        }
+      });
+    }
+  }
+
+  /** update busy dialog
    * @param text text to show
+   * @return true if closed, false otherwise
    */
   public boolean update(final String text)
   {
-    display.update();
-    display.readAndDispatch();
-
-    if (!closedFlag)
+    if (!dialog.isDisposed())
     {
-      long timestamp = System.currentTimeMillis();
-      if (timestamp > (imageTimestamp+250))
+      display.syncExec(new Runnable()
       {
-        imageTimestamp = timestamp;
-        imageIndex     = (imageIndex+1)%3;
-        widgetImage.setImage(images[imageIndex]);
-      }
-      widgetText.setText(text);
+        public void run()
+        {
+          long timestamp = System.currentTimeMillis();
+          if (timestamp > (imageTimestamp+250))
+          {
+            imageTimestamp = timestamp;
+            imageIndex     = (imageIndex+1)%2;
+            widgetImage.setImage(images[imageIndex]);
+            display.update();
+          }
+          if (text != null)
+          {
+            widgetText.setText(text);
+            display.update();
+
+            /* resize dialog (it not manually changed) */
+            if (!resizedFlag)
+            {
+              GC gc = new GC(widgetText);
+              int width = gc.stringExtent(text).x;
+              gc.dispose();
+
+              if (widgetText.getSize().x < width) dialog.pack();
+            }
+          }
+        }
+      });
 
       return true;
     }
@@ -207,12 +303,19 @@ class BusyDialog
     }
   }
 
-  /** update progress dialog
+  /** update busy dialog
    * @param n number to show
    */
   public boolean update(Long n)
   {
     return update(Long.toString(n));
+  }
+
+  /** update busy dialog
+   */
+  public boolean update()
+  {
+    return update((String)null);
   }
 }
 

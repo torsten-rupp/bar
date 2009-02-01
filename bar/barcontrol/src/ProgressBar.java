@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/ProgressBar.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: progress bar widget
 * Systems: all
@@ -107,7 +107,7 @@ class ProgressBar extends Canvas
 
     width  = textSize.x;
     height = textSize.y;
-    if (wHint != SWT.DEFAULT) width = wHint;
+    if (wHint != SWT.DEFAULT) width  = wHint;
     if (hHint != SWT.DEFAULT) height = hHint;         
 
     return new Point(width,height);

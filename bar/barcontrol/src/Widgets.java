@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -60,20 +60,30 @@ class Widgets
   //-----------------------------------------------------------------------
 
   /** layout widget
-   * @param 
-   * @return 
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
+   * @param rowSpawn,columnSpan row/column spawn (0..n)
+   * @param padX,padY padding X/Y
+   * @param width,height min. width/height
    */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height)
   {
-    TableLayoutData tableLayoutData = new TableLayoutData(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height);
-//    tableLayoutData.minWidth  = width;
-//    tableLayoutData.minHeight = height;
+    TableLayoutData tableLayoutData = new TableLayoutData(row,column,style,rowSpawn,columnSpawn,padX,padY); //,width,height);
+    tableLayoutData.minWidth  = width;
+    tableLayoutData.minHeight = height;
+    tableLayoutData.maxWidth  = width;
+    tableLayoutData.maxHeight = height;
     control.setLayoutData(tableLayoutData);
   }
 
   /** layout widget
-   * @param 
-   * @return 
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
+   * @param rowSpawn,columnSpan row/column spawn (0..n)
+   * @param padX,padY padding X/Y
+   * @param size min. width/height
    */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, Point size)
   {
@@ -81,8 +91,12 @@ class Widgets
   }
 
   /** layout widget
-   * @param 
-   * @return 
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
+   * @param rowSpawn,columnSpan row/column spawn (0..n)
+   * @param pad padding X/Y
+   * @param size min. width/height
    */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, Point pad, Point size)
   {
@@ -90,17 +104,23 @@ class Widgets
   }
 
   /** layout widget
-   * @param 
-   * @return 
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
+   * @param rowSpawn,columnSpan row/column spawn (0..n)
+   * @param padX,padY padding X/Y
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int width, int height)
+  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY)
   {
-    layout(control,row,column,style,rowSpawn,columnSpawn,0,0,width,height);
+    layout(control,row,column,style,rowSpawn,columnSpawn,padX,padY,SWT.DEFAULT,SWT.DEFAULT);
   }
 
   /** layout widget
-   * @param 
-   * @return 
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
+   * @param rowSpawn,columnSpan row/column spawn (0..n)
+   * @param size padding size
    */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, Point size)
   {
@@ -108,21 +128,37 @@ class Widgets
   }
 
   /** layout widget
-   * @param 
-   * @return 
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
+   * @param rowSpawn,columnSpan row/column spawn (0..n)
+   * @param pad padding X/Y
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn)
+  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int pad)
   {
-    layout(control,row,column,style,rowSpawn,columnSpawn,0,0,SWT.DEFAULT,SWT.DEFAULT);
+    layout(control,row,column,style,rowSpawn,columnSpawn,pad,pad);
   }
 
   /** layout widget
-   * @param 
-   * @return 
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
+   * @param rowSpawn,columnSpan row/column spawn (0..n)
+   */
+  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn)
+  {
+    layout(control,row,column,style,rowSpawn,columnSpawn,0);
+  }
+
+  /** layout widget
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
    */
   static void layout(Control control, int row, int column, int style)
   {
-    layout(control,row,column,style,0,0);
+//    layout(control,row,column,style,0,0);
+    layout(control,row,column,style,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT);
   }
 
   /** get text height
@@ -249,7 +285,10 @@ class Widgets
     TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
     tableLayoutData.exclude = !visibleFlag;
     control.setVisible(visibleFlag);
-    control.getParent().layout();
+    if (visibleFlag)
+    {
+      control.getParent().layout();
+    }
   }
 
   /** create empty space
@@ -957,8 +996,6 @@ private static void printTree(Tree tree)
   static SashForm newSashForm(Composite composite)
   {    
     SashForm sashForm = new SashForm(composite,SWT.NONE);
-    sashForm.setLayout(new TableLayout());
-    layout(sashForm,0,0,TableLayoutData.NSWE|TableLayoutData.EXPAND);
 
     return sashForm;
   }
@@ -970,7 +1007,7 @@ private static void printTree(Tree tree)
   static TabFolder newTabFolder(Composite composite)
   {    
     TabFolder tabFolder = new TabFolder(composite,SWT.NONE);
-    tabFolder.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE|TableLayoutData.EXPAND));
+    tabFolder.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE));
 
     return tabFolder;
   }
@@ -1020,7 +1057,6 @@ private static void printTree(Tree tree)
   static Canvas newCanvas(Composite composite, int style)
   {    
     Canvas canvas = new Canvas(composite,style);
-//    canvas.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE|TableLayoutData.EXPAND));
 
     return canvas;
   }
