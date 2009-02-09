@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1025,18 +1025,12 @@ LOCAL bool parseString(const struct __String *string,
             }
             break;
           case 'c':
-            /* get data */
+            /* convert */
             if (index < string->length)
             {
-              buffer[0] = string->data[index];
-              index++;
-            }
-
-            /* convert */
-            if (z > 0)
-            {
               value.c = va_arg(arguments,char*);
-              if (value.c != NULL) (*value.c) = buffer[0];
+              if (value.c != NULL) (*value.c) = string->data[index];
+              index++;
             }
             else
             {

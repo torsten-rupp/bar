@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1593,6 +1593,7 @@ Errors inputCryptPassword(Password     *password,
   assert(password != NULL);
   assert(fileName != NULL);
 
+  error = ERROR_UNKNOWN;
   switch (globalOptions.runMode)
   {
     case RUN_MODE_INTERACTIVE:

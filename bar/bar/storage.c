@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -3274,10 +3274,13 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
   assert(storageName != NULL);
   assert(jobOptions != NULL);
 
+  error = ERROR_UNKNOWN;
   storageSpecifier = String_new();
   switch (Storage_getType(storageName,storageSpecifier))
   {
     case STORAGE_TYPE_FILESYSTEM:
+      UNUSED_VARIABLE(jobOptions);
+
       /* init variables */
       storageDirectoryHandle->type = STORAGE_TYPE_FILESYSTEM;
 
@@ -3305,7 +3308,6 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
           FTPServer  ftpServer;
           const char *plainPassword;
           netbuf     *control;
-          netbuf     *data;
 
           /* init variables */
           storageDirectoryHandle->type                 = STORAGE_TYPE_FTP;
@@ -3468,7 +3470,6 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
           }
 
           /* disconnect */
-          FtpClose(data);
           FtpQuit(control);
 
           /* open list file */
@@ -3492,12 +3493,18 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
           String_delete(loginName);
         }
       #else /* not HAVE_FTP */
+        UNUSED_VARIABLE(jobOptions);
+
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(jobOptions);
+
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
@@ -3601,9 +3608,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         }
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(jobOptions);
+
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
+      UNUSED_VARIABLE(jobOptions);
+
       /* init variables */
       storageDirectoryHandle->type = STORAGE_TYPE_DEVICE;
 
@@ -3613,6 +3624,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                                 );
       break;
     case STORAGE_TYPE_DEVICE:
+      UNUSED_VARIABLE(jobOptions);
+
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     #ifndef NDEBUG

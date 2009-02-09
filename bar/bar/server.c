@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -165,7 +165,7 @@ typedef struct
   SessionId           sessionId;
   AuthorizationStates authorizationState;
 
-  uint                abortId;
+  uint                abortId;                             // command id to abort
 
   union
   {
@@ -1633,13 +1633,13 @@ LOCAL void sendResult(ClientInfo *clientInfo, uint id, bool completeFlag, uint e
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool commandAborted(ClientInfo *clientInfo, uint id)
+LOCAL bool commandAborted(ClientInfo *clientInfo, uint commandId)
 {
   bool abortedFlag;
 
   assert(clientInfo != NULL);
 
-  abortedFlag = (clientInfo->abortId == id);
+  abortedFlag = (clientInfo->abortId == commandId);
   switch (clientInfo->type)
   {
     case CLIENT_TYPE_BATCH:
@@ -1820,6 +1820,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
 
 LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  uint commandId;
+
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
@@ -1829,9 +1831,10 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const String arg
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id");
     return;
   }
+  commandId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   /* abort command */
-  clientInfo->abortId = id;
+  clientInfo->abortId = commandId;
 
   /* format result */
   sendResult(clientInfo,id,TRUE,0,"");
