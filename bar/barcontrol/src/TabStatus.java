@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -421,7 +421,7 @@ class TabStatus
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
-      Widgets.layout(label,0,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+      Widgets.layout(label,0,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetListener(label,doneBytes)
       {
         public String getString(BARVariable variable)
@@ -450,7 +450,7 @@ class TabStatus
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
-      Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+      Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetListener(label,storedBytes)
       {
         public String getString(BARVariable variable)
@@ -492,7 +492,7 @@ class TabStatus
           }
         });
         label = Widgets.newLabel(composite,"bytes/s");        
-        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
         Widgets.addModifyListener(new WidgetListener(label,storageBytesPerSecond)
         {
           public String getString(BARVariable variable)
@@ -527,7 +527,7 @@ class TabStatus
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
-      Widgets.layout(label,2,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+      Widgets.layout(label,2,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetListener(label,skippedBytes)
       {
         public String getString(BARVariable variable)
@@ -561,7 +561,7 @@ class TabStatus
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
-      Widgets.layout(label,3,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+      Widgets.layout(label,3,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetListener(label,errorBytes)
       {
         public String getString(BARVariable variable)
@@ -595,7 +595,7 @@ class TabStatus
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
-      Widgets.layout(label,4,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+      Widgets.layout(label,4,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetListener(label,totalBytes)
       {
         public String getString(BARVariable variable)
@@ -635,7 +635,7 @@ class TabStatus
           }
         });
         label = Widgets.newLabel(composite,"bytes/s");
-        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","MBytes","GBytes"}));
+        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
         Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
         {
           public String getString(BARVariable variable)
@@ -841,7 +841,7 @@ class TabStatus
     return -1;
   }
 
-  /** find index for insert of job data in sorted job table
+  /** find index for insert of job data in sorted job list
    * @param jobData job data
    * @return index in job table
    */
@@ -1081,7 +1081,10 @@ class TabStatus
   {
     assert selectedJobData != null;
 
-    BARServer.executeCommand("JOB_ABORT "+selectedJobData.id);
+    if (Dialogs.confirm(shell,"Abort job '"+selectedJobData.name+"'?"))
+    {
+      BARServer.executeCommand("JOB_ABORT "+selectedJobData.id);
+    }
   }
 
   /** toggle pause all jobs

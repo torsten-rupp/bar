@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -155,7 +155,7 @@ class Command
       }
     }
 
-    return !completedFlag && (result.size() > 0);
+    return completedFlag || (result.size() > 0);
   }
 
   /** wait until commmand completed
@@ -250,7 +250,15 @@ class Command
    */
   public synchronized int getResult(String result[])
   {
-    result[0] = (this.result.size() > 0) ? this.result.removeFirst() : "";
+    if (errorCode == Errors.NONE)
+    {
+      result[0] = (this.result.size() > 0) ? this.result.removeFirst() : "";
+    }
+    else
+    {
+      result[0] = this.errorText;
+    }
+
     return errorCode;
   }
 
@@ -260,8 +268,16 @@ class Command
    */
   public synchronized int getResult(ArrayList<String> result)
   {
-    result.clear();
-    result.addAll(this.result);
+    if (errorCode == Errors.NONE)
+    {
+      result.clear();
+      result.addAll(this.result);
+    }
+    else
+    {
+      result.add(this.errorText);
+    }
+
     return errorCode;
   }
 

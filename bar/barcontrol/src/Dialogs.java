@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Dialogs.java,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -196,7 +196,17 @@ class Dialogs
 
         if (traverseEvent.detail == SWT.TRAVERSE_ESCAPE)
         {
+          // store ESC result
           widget.setData(escapeKeyReturnValue);
+
+          /* stop processing key, send close event. Note: this is required
+             in case a widget in the dialog has a key-handler. Then the
+             ESC key will not trigger an SWT.Close event.
+          */
+          traverseEvent.doit = false;
+          Event event = new Event();
+          event.widget = dialog;
+          dialog.notifyListeners(SWT.Close,event);
         }
       }
     });
@@ -208,13 +218,18 @@ class Dialogs
       {
         Shell widget = (Shell)event.widget;
 
+        // get dialog result
         result[0] = widget.getData();
+
+        // close the dialog
+        dialog.dispose();
       }
     });
+
     // pack
     dialog.pack();
 
-    // get location for dialog (keep 16 pixel away form right/bottom)
+    // get location for dialog (keep 16/64 pixel away form right/bottom)
     Point cursorPoint = display.getCursorLocation();
     Rectangle displayBounds = display.getBounds();
     Rectangle bounds = dialog.getBounds();
@@ -459,6 +474,16 @@ class Dialogs
   static boolean confirm(Shell parentShell, String title, String message)
   {
     return confirm(parentShell,title,message,"Yes","No");
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param message confirmation message
+   * @return value
+   */
+  static boolean confirm(Shell parentShell, String message)
+  {
+    return confirm(parentShell,"Confirm",message,"Yes","No");
   }
 
   /** confirmation error dialog

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BusyDialog.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: busy dialog
 * Systems: all
@@ -44,6 +44,7 @@ class BusyDialog
   private Label   widgetImage;
   private Label   widgetMessage;
   private Label   widgetText;
+  private Button  widgetAbortButton;
 
   private boolean abortedFlag;
   private boolean resizedFlag;
@@ -59,7 +60,6 @@ class BusyDialog
     TableLayoutData tableLayoutData;
     Composite       composite,subComposite;
     Label           label;
-    Button          button;
     int             x,y;
 
     display = parentShell.getDisplay();
@@ -131,10 +131,10 @@ else
     composite.setLayout(new TableLayout(0.0,1.0));
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4,4));
     {
-      button = new Button(composite,SWT.CENTER|SWT.BORDER);
-      button.setText("Abort");
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE)); //,0,0,0,0,60,SWT.DEFAULT));
-      button.addSelectionListener(new SelectionListener()
+      widgetAbortButton = new Button(composite,SWT.CENTER|SWT.BORDER);
+      widgetAbortButton.setText("Abort");
+      widgetAbortButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE)); //,0,0,0,0,60,SWT.DEFAULT));
+      widgetAbortButton.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
@@ -165,18 +165,21 @@ else
 
         if (traverseEvent.detail == SWT.TRAVERSE_ESCAPE)
         {
-          close();
+          abort();
+          traverseEvent.doit = false;
         }
       }
     });
 
-    // close handler to get result
+    // close handler to abort
     dialog.addListener(SWT.Close,new Listener()
     {
       public void handleEvent(Event event)
       {
         Shell widget = (Shell)event.widget;
-        close();
+
+        abort();
+        event.doit = false;
       }
     });
 
@@ -214,14 +217,8 @@ else
    */
   public void abort()
   {
-    this.abortedFlag = true;
-    display.syncExec(new Runnable()
-    {
-      public void run()
-      {
-        dialog.dispose();
-      }
-    });
+    abortedFlag = true;
+    widgetAbortButton.setEnabled(false);
   }
 
   /** check if "cancel" button clicked

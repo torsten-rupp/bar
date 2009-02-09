@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -916,7 +916,7 @@ class TabRestore
     }
   }
 
-  /** find index for insert of tree item in sort list of tree items
+  /** find index for insert of tree item in sorted list of tree items
    * @param treeItem tree item
    * @param archiveFileTreeData data of tree item
    * @return index in tree item
@@ -964,7 +964,7 @@ class TabRestore
 
         // read results
         long n = 0;
-        while (!command.endOfData())
+        while (!command.endOfData() && !busyDialog.isAborted())
         {
           final String line = command.getNextResult(250);
           if (line != null)
@@ -1050,27 +1050,29 @@ class TabRestore
             n++;
           }
 
-          if (!busyDialog.update("Reading files..."+((n > 0)?n:"")))
-          {
-Dprintf.dprintf("abort\n");
-            BARServer.abortCommand(command);
-          }
+          busyDialog.update("Reading files..."+((n > 0)?n:""));
         }
 
-        // check command error
-        if (command.getErrorCode() == Errors.NONE)
+        // abort command if requested
+        if (busyDialog.isAborted())
         {
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              treeItem.setExpanded(true);
-              busyDialog.close();
-              shell.setCursor(null);
-             }
-          });
+          busyDialog.update("Aborting...");
+          BARServer.abortCommand(command);
         }
-        else
+
+        // close busy dialog, restore cursor
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            treeItem.setExpanded(true);
+            busyDialog.close();
+            shell.setCursor(null);
+           }
+        });
+
+        // check command error
+        if (!busyDialog.isAborted() && (command.getErrorCode() != Errors.NONE))
         {
           final String errorText = command.getErrorText();
           display.syncExec(new Runnable()
@@ -1078,10 +1080,6 @@ Dprintf.dprintf("abort\n");
             public void run()
             {
               Dialogs.error(shell,"Cannot open '"+archiveFileTreeData.title+"' (error: "+errorText+")");
-
-              treeItem.setExpanded(true);
-              busyDialog.close();
-              shell.setCursor(null);
             }
           });
         }
@@ -1183,7 +1181,7 @@ Dprintf.dprintf("abort\n");
 
         for (final String archiveName : archiveNames)
         {
-    //Dprintf.dprintf("s=%s\n",archiveName);
+//Dprintf.dprintf("s=%s\n",archiveName);
           /* get archive content list */
           busyDialog.setMessage("Archive: '"+archiveName+"'");
 
@@ -1197,166 +1195,194 @@ Dprintf.dprintf("abort\n");
           int             errorCode = Errors.UNKNOWN;
           final boolean[] tryAgainFlag = new boolean[1];
           tryAgainFlag[0] = true;
-          while (tryAgainFlag[0])
+          while (tryAgainFlag[0] && !busyDialog.isAborted())
           {
             tryAgainFlag[0] = false;
 
             /* try reading archive content */
             command = BARServer.runCommand(commandString);
-            while (!command.waitForResult(250))
+            while (!command.waitForResult(250) && !busyDialog.isAborted())
             {
               busyDialog.update();
             }
 
-            /* ask for crypt password if password error */
-            errorCode = command.getErrorCode();
-Dprintf.dprintf("errorCode=%s\n",errorCode);
-            if (   (errorCode == Errors.CORRUPT_DATA     )
-                || (errorCode == Errors.NO_CRYPT_PASSWORD)
-                || (errorCode == Errors.INVALID_PASSWORD )
-               )
+            if (!busyDialog.isAborted())
             {
-              display.syncExec(new Runnable()
+              /* ask for crypt password if password error */
+              errorCode = command.getErrorCode();
+              if (   (errorCode == Errors.CORRUPT_DATA     )
+                  || (errorCode == Errors.NO_CRYPT_PASSWORD)
+                  || (errorCode == Errors.INVALID_PASSWORD )
+                 )
               {
-                public void run()
-                {
-                  String password = Dialogs.password(shell,
-                                                     "Crypt password",
-                                                     "Archive: "+archiveName,
-                                                     "Crypt password"
-                                                     );
-                  if (password != null)
-                  {
-                    String[] result = new String[1];
-                    BARServer.executeCommand("PASSWORD_ADD "+StringParser.escape(password),result);
-                    tryAgainFlag[0] = true;
-                  }
-                }
-              });
-            }
-          }
-
-          if (errorCode == Errors.NONE)
-          {
-            // read results
-            busyDialog.update("Reading files...");
-            long n = 0;
-            while (!command.endOfData())
-            {
-              final String line = command.getNextResult(250);
-              if (line != null)
-              {
-//Dprintf.dprintf("rad2 %s\n",line);
                 display.syncExec(new Runnable()
                 {
                   public void run()
                   {
-                    Object data[] = new Object[10];
-                    if      (StringParser.parse(line,"FILE %ld %ld %ld %ld %ld %S",data,StringParser.QUOTE_CHARS))
+                    String password = Dialogs.password(shell,
+                                                       "Crypt password",
+                                                       "Archive: "+archiveName,
+                                                       "Crypt password"
+                                                       );
+                    if (password != null)
                     {
-                      /* get data
-                         format:
-                           size
-                           date/time
-                           archive file size
-                           fragment offset
-                           fragment size
-                           name
-                      */
-                      long   size     = (Long  )data[0];
-                      long   datetime = (Long  )data[1];
-                      String name     = (String)data[5];
-
-                      FileData fileData = new FileData(archiveName,name,FileTypes.FILE,size,datetime);
-                      fileList.add(fileData);
-                    }
-                    else if (StringParser.parse(line,"DIRECTORY %ld %S",data,StringParser.QUOTE_CHARS))
-                    {
-                      /* get data
-                         format:
-                           date/time
-                           name
-                      */
-                      long   datetime      = (Long  )data[0];
-                      String directoryName = (String)data[1];
-
-                      FileData fileData = new FileData(archiveName,directoryName,FileTypes.DIRECTORY,datetime);
-                      fileList.add(fileData);
-                    }
-                    else if (StringParser.parse(line,"LINK %ld %S %S",data,StringParser.QUOTE_CHARS))
-                    {
-                      /* get data
-                         format:
-                           date/time
-                           name
-                      */
-                      long   datetime = (Long  )data[0];
-                      String linkName = (String)data[1];
-                      String fileName = (String)data[2];
-
-                      FileData fileData = new FileData(archiveName,linkName,FileTypes.LINK,datetime);
-                      fileList.add(fileData);
-                    }
-                    else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
-                    {
-                    }
-                    else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
-                    {
-                    }
-                    else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
-                    {
+                      String[] result = new String[1];
+                      BARServer.executeCommand("PASSWORD_ADD "+StringParser.escape(password),result);
+                      tryAgainFlag[0] = true;
                     }
                   }
                 });
-
-                n++;
               }
-
-              if (!busyDialog.update("Reading files..."+((n > 0)?n:"")))
-              {
-  Dprintf.dprintf("abort\n");
-                command.abort();
-              }
-            }
-
-            // check command error
-            if (command.getErrorCode() == Errors.NONE)
-            {
-              display.syncExec(new Runnable()
-              {
-                public void run()
-                {
-                  busyDialog.update("Sort...");
-                  shell.getDisplay().update();
-                  updateFileList();
-
-                  busyDialog.close();
-                  shell.setCursor(null);
-                }
-              });
             }
             else
             {
-              final String errorText = command.getErrorText();
-              display.syncExec(new Runnable()
-              {
-                public void run()
-                {
-                  Dialogs.error(shell,"xxxCannot list archive '"+archiveName+"' (error: "+errorText+")");
-
-                  busyDialog.close();
-                  shell.setCursor(null);
-                }
-              });
+              busyDialog.update("Aborting...");
+              BARServer.abortCommand(command);
+              busyDialog.close();
             }
           }
-          else
+
+          if (!busyDialog.isAborted())
           {
-    Dprintf.dprintf("\n");
-            Dialogs.error(shell,"Cannot list archive '"+archiveName+"' (error: )");
-    Dprintf.dprintf("\n");
+            if (errorCode == Errors.NONE)
+            {
+              // read results
+              busyDialog.update("Reading files...");
+              long n = 0;
+              while (!command.endOfData() && !busyDialog.isAborted())
+              {
+                final String line = command.getNextResult(250);
+                if (line != null)
+                {
+                  display.syncExec(new Runnable()
+                  {
+                    public void run()
+                    {
+                      Object data[] = new Object[10];
+                      if      (StringParser.parse(line,"FILE %ld %ld %ld %ld %ld %S",data,StringParser.QUOTE_CHARS))
+                      {
+                        /* get data
+                           format:
+                             size
+                             date/time
+                             archive file size
+                             fragment offset
+                             fragment size
+                             name
+                        */
+                        long   size     = (Long  )data[0];
+                        long   datetime = (Long  )data[1];
+                        String name     = (String)data[5];
+
+                        FileData fileData = new FileData(archiveName,name,FileTypes.FILE,size,datetime);
+                        fileList.add(fileData);
+                      }
+                      else if (StringParser.parse(line,"DIRECTORY %ld %S",data,StringParser.QUOTE_CHARS))
+                      {
+                        /* get data
+                           format:
+                             date/time
+                             name
+                        */
+                        long   datetime      = (Long  )data[0];
+                        String directoryName = (String)data[1];
+
+                        FileData fileData = new FileData(archiveName,directoryName,FileTypes.DIRECTORY,datetime);
+                        fileList.add(fileData);
+                      }
+                      else if (StringParser.parse(line,"LINK %ld %S %S",data,StringParser.QUOTE_CHARS))
+                      {
+                        /* get data
+                           format:
+                             date/time
+                             name
+                        */
+                        long   datetime = (Long  )data[0];
+                        String linkName = (String)data[1];
+                        String fileName = (String)data[2];
+
+                        FileData fileData = new FileData(archiveName,linkName,FileTypes.LINK,datetime);
+                        fileList.add(fileData);
+                      }
+                      else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
+                      {
+                      }
+                      else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
+                      {
+                      }
+                      else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
+                      {
+                      }
+                    }
+                  });
+
+                  n++;
+                }
+
+                busyDialog.update("Reading files..."+((n > 0)?n:""));
+              }
+
+              // abort command if requested
+              if (busyDialog.isAborted())
+              {
+                busyDialog.update("Aborting...");
+                BARServer.abortCommand(command);
+                busyDialog.close();
+              }
+
+              // check command error
+              if (busyDialog.isAborted() || (command.getErrorCode() != Errors.NONE))
+              {
+                final String errorText = command.getErrorText();
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    Dialogs.error(shell,"Cannot list archive '"+archiveName+"' (error: "+errorText+")");
+                  }
+                });
+              }
+            }
+            else
+            {
+Dprintf.dprintf("\n");
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    Dialogs.error(shell,"Cannot list archive '"+archiveName+"' (error: )");
+                  }
+                });
+Dprintf.dprintf("\n");
+            }
           }
+
+          if (busyDialog.isAborted()) break;
         }
+
+        if (!busyDialog.isAborted())
+        {
+          // sort, update
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              busyDialog.update("Sort...");
+              shell.getDisplay().update();
+              updateFileList();
+            }
+          });
+        }
+
+        // close busy dialog, restore cursor
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            busyDialog.close();
+            shell.setCursor(null);
+          }
+        });
       }
     };
   }

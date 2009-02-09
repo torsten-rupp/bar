@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -53,6 +53,7 @@ import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
@@ -510,64 +511,67 @@ class TabJobs
   }
 
   // colors
-  private final Color COLOR_WHITE;
-  private final Color COLOR_MODIFIED;
+  private final Color  COLOR_WHITE;
+  private final Color  COLOR_MODIFIED;
 
   // images
-  private final Image IMAGE_DIRECTORY;
-  private final Image IMAGE_DIRECTORY_INCLUDED;
-  private final Image IMAGE_DIRECTORY_EXCLUDED;
-  private final Image IMAGE_FILE;
-  private final Image IMAGE_FILE_INCLUDED;
-  private final Image IMAGE_FILE_EXCLUDED;
-  private final Image IMAGE_LINK;
-  private final Image IMAGE_LINK_INCLUDED;
-  private final Image IMAGE_LINK_EXCLUDED;
+  private final Image  IMAGE_DIRECTORY;
+  private final Image  IMAGE_DIRECTORY_INCLUDED;
+  private final Image  IMAGE_DIRECTORY_EXCLUDED;
+  private final Image  IMAGE_FILE;
+  private final Image  IMAGE_FILE_INCLUDED;
+  private final Image  IMAGE_FILE_EXCLUDED;
+  private final Image  IMAGE_LINK;
+  private final Image  IMAGE_LINK_INCLUDED;
+  private final Image  IMAGE_LINK_EXCLUDED;
+
+  // cursors
+  private final Cursor waitCursor;
 
   // global variable references
-  private Shell       shell;
-  private TabStatus   tabStatus;
+  private Shell        shell;
+  private TabStatus    tabStatus;
 
   // widgets
-  public  Composite   widgetTab;
-  private TabFolder   widgetTabFolder;
-  private Combo       widgetJobList;
-  private Tree        widgetFileTree;
-  private List        widgetIncludedPatterns;
-  private List        widgetExcludedPatterns;
-  private Combo       widgetArchivePartSize;
-  private Text        widgetCryptPublicKeyFileName;
-  private Button      widgetCryptPublicKeyFileNameSelect;
-  private Combo       widgetFTPMaxBandWidth;
-  private Combo       widgetSCPSFTPMaxBandWidth;
-  private Table       widgetScheduleList;
+  public  Composite    widgetTab;
+  private TabFolder    widgetTabFolder;
+  private Combo        widgetJobList;
+  private Tree         widgetFileTree;
+  private List         widgetIncludedPatterns;
+  private List         widgetExcludedPatterns;
+  private Combo        widgetArchivePartSize;
+  private Text         widgetCryptPublicKeyFileName;
+  private Button       widgetCryptPublicKeyFileNameSelect;
+  private Combo        widgetFTPMaxBandWidth;
+  private Combo        widgetSCPSFTPMaxBandWidth;
+  private Table        widgetScheduleList;
 
   // BAR variables
-  private BARVariable skipUnreadable          = new BARVariable(false);
-  private BARVariable overwriteFiles          = new BARVariable(false);
+  private BARVariable  skipUnreadable          = new BARVariable(false);
+  private BARVariable  overwriteFiles          = new BARVariable(false);
 
-  private BARVariable archiveType             = new BARVariable(new String[]{"normal","full","incremental"});
-  private BARVariable archivePartSizeFlag     = new BARVariable(false);
-  private BARVariable archivePartSize         = new BARVariable(0);
-  private BARVariable compressAlgorithm       = new BARVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9"});
-  private BARVariable cryptAlgorithm          = new BARVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
-  private BARVariable cryptType               = new BARVariable(new String[]{"","symmetric","asymmetric"});
-  private BARVariable cryptPublicKeyFileName  = new BARVariable("");
-  private BARVariable incrementalListFileName = new BARVariable("");
-  private BARVariable storageType             = new BARVariable(new String[]{"filesystem","ftp","scp","sftp","dvd","device"});
-  private BARVariable storageHostName         = new BARVariable("");
-  private BARVariable storageHostPort         = new BARVariable(0);
-  private BARVariable storageLoginName        = new BARVariable("");
-  private BARVariable storageLoginPassword    = new BARVariable("");
-  private BARVariable storageDeviceName       = new BARVariable("");
-  private BARVariable storageFileName         = new BARVariable("");
-  private BARVariable overwriteArchiveFiles   = new BARVariable(false);
-  private BARVariable sshPublicKeyFileName    = new BARVariable("");
-  private BARVariable sshPrivateKeyFileName   = new BARVariable("");
-  private BARVariable maxBandWidthFlag        = new BARVariable(false);
-  private BARVariable maxBandWidth            = new BARVariable(0);
-  private BARVariable volumeSize              = new BARVariable(0);
-  private BARVariable ecc                     = new BARVariable(false);
+  private BARVariable  archiveType             = new BARVariable(new String[]{"normal","full","incremental"});
+  private BARVariable  archivePartSizeFlag     = new BARVariable(false);
+  private BARVariable  archivePartSize         = new BARVariable(0);
+  private BARVariable  compressAlgorithm       = new BARVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9"});
+  private BARVariable  cryptAlgorithm          = new BARVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
+  private BARVariable  cryptType               = new BARVariable(new String[]{"","symmetric","asymmetric"});
+  private BARVariable  cryptPublicKeyFileName  = new BARVariable("");
+  private BARVariable  incrementalListFileName = new BARVariable("");
+  private BARVariable  storageType             = new BARVariable(new String[]{"filesystem","ftp","scp","sftp","dvd","device"});
+  private BARVariable  storageHostName         = new BARVariable("");
+  private BARVariable  storageHostPort         = new BARVariable(0);
+  private BARVariable  storageLoginName        = new BARVariable("");
+  private BARVariable  storageLoginPassword    = new BARVariable("");
+  private BARVariable  storageDeviceName       = new BARVariable("");
+  private BARVariable  storageFileName         = new BARVariable("");
+  private BARVariable  overwriteArchiveFiles   = new BARVariable(false);
+  private BARVariable  sshPublicKeyFileName    = new BARVariable("");
+  private BARVariable  sshPrivateKeyFileName   = new BARVariable("");
+  private BARVariable  maxBandWidthFlag        = new BARVariable(false);
+  private BARVariable  maxBandWidth            = new BARVariable(0);
+  private BARVariable  volumeSize              = new BARVariable(0);
+  private BARVariable  ecc                     = new BARVariable(false);
 
   // variables
   private     HashMap<String,Integer>  jobIds           = new HashMap<String,Integer>();
@@ -612,6 +616,9 @@ class TabJobs
     IMAGE_LINK               = Widgets.loadImage(display,"link.gif");
     IMAGE_LINK_INCLUDED      = Widgets.loadImage(display,"linkIncluded.gif");
     IMAGE_LINK_EXCLUDED      = Widgets.loadImage(display,"linkExcluded.gif");
+
+    // get cursors
+    waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,"Jobs"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
@@ -2778,7 +2785,7 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** find index for insert of tree item in sort list of tree items
+  /** find index for insert of tree item in sorted list of tree items
    * @param treeItem tree item
    * @param fileTreeData data of tree item
    * @return index in tree item
@@ -2807,149 +2814,159 @@ throw new Error("NYI");
     FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
     TreeItem     subTreeItem;
 
-    ArrayList<String> result = new ArrayList<String>();
-    BARServer.executeCommand("FILE_LIST file:/"+StringParser.escape(fileTreeData.name),result);
+    shell.setCursor(waitCursor);
 
     treeItem.removeAll();
-    for (String line : result)
+
+    ArrayList<String> result = new ArrayList<String>();
+    int errorCode = BARServer.executeCommand("FILE_LIST file://"+StringParser.escape(fileTreeData.name),result);
+    if (errorCode == Errors.NONE)
     {
-//System.err.println("BARControl.java"+", "+1733+": "+line);
-      Object data[] = new Object[10];
-      if      (StringParser.parse(line,"FILE %ld %ld %S",data,StringParser.QUOTE_CHARS))
+      for (String line : result)
       {
-        /* get data
-           format:
-             size
-             date/time
-             name
-        */
-        long   size     = (Long  )data[0];
-        long   datetime = (Long  )data[1];
-        String name     = (String)data[2];
+        Object data[] = new Object[10];
+        if      (StringParser.parse(line,"FILE %ld %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               size
+               date/time
+               name
+          */
+          long   size     = (Long  )data[0];
+          long   datetime = (Long  )data[1];
+          String name     = (String)data[2];
 
-        fileTreeData = new FileTreeData(name,FileTypes.FILE,size,datetime,new File(name).getName());
+          fileTreeData = new FileTreeData(name,FileTypes.FILE,size,datetime,new File(name).getName());
 
-        Image image;
-        if      (includedPatterns.contains(name))
-          image = IMAGE_FILE_INCLUDED;
-        else if (excludedPatterns.contains(name))
-          image = IMAGE_FILE_EXCLUDED;
-        else
-          image = IMAGE_FILE;
+          Image image;
+          if      (includedPatterns.contains(name))
+            image = IMAGE_FILE_INCLUDED;
+          else if (excludedPatterns.contains(name))
+            image = IMAGE_FILE_EXCLUDED;
+          else
+            image = IMAGE_FILE;
 
-        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-        subTreeItem.setText(0,fileTreeData.title);
-        subTreeItem.setText(1,"FILE");
-        subTreeItem.setText(2,Long.toString(size));
-        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        subTreeItem.setImage(image);
-      }
-      else if (StringParser.parse(line,"DIRECTORY %ld %ld %S",data,StringParser.QUOTE_CHARS))
-      {
-        /* get data
-           format:
-             size
-             date/time
-             name
-        */
-        long   size     = (Long  )data[0];
-        long   datetime = (Long  )data[1];
-        String name     = (String)data[2];
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"FILE");
+          subTreeItem.setText(2,Long.toString(size));
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+          subTreeItem.setImage(image);
+        }
+        else if (StringParser.parse(line,"DIRECTORY %ld %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               size
+               date/time
+               name
+          */
+          long   size     = (Long  )data[0];
+          long   datetime = (Long  )data[1];
+          String name     = (String)data[2];
 
-        fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,new File(name).getName());
+          fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,new File(name).getName());
 
-        Image image;
-        if      (includedPatterns.contains(name))
-          image = IMAGE_DIRECTORY_INCLUDED;
-        else if (excludedPatterns.contains(name))
-          image = IMAGE_DIRECTORY_EXCLUDED;
-        else
-          image = IMAGE_DIRECTORY;
+          Image image;
+          if      (includedPatterns.contains(name))
+            image = IMAGE_DIRECTORY_INCLUDED;
+          else if (excludedPatterns.contains(name))
+            image = IMAGE_DIRECTORY_EXCLUDED;
+          else
+            image = IMAGE_DIRECTORY;
 
-        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
-        subTreeItem.setText(0,fileTreeData.title);
-        subTreeItem.setText(1,"DIR");
-        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        subTreeItem.setImage(image);
-      }
-      else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
-      {
-        /* get data
-           format:
-             date/time
-             name
-        */
-        long   datetime = (Long  )data[0];
-        String name     = (String)data[1];
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"DIR");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+          subTreeItem.setImage(image);
+        }
+        else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               date/time
+               name
+          */
+          long   datetime = (Long  )data[0];
+          String name     = (String)data[1];
 
-        fileTreeData = new FileTreeData(name,FileTypes.LINK,0,datetime,new File(name).getName());
+          fileTreeData = new FileTreeData(name,FileTypes.LINK,0,datetime,new File(name).getName());
 
-        Image image;
-        if      (includedPatterns.contains(name))
-          image = IMAGE_LINK_INCLUDED;
-        else if (excludedPatterns.contains(name))
-          image = IMAGE_LINK_EXCLUDED;
-        else
-          image = IMAGE_LINK;
+          Image image;
+          if      (includedPatterns.contains(name))
+            image = IMAGE_LINK_INCLUDED;
+          else if (excludedPatterns.contains(name))
+            image = IMAGE_LINK_EXCLUDED;
+          else
+            image = IMAGE_LINK;
 
 
-        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-        subTreeItem.setText(0,fileTreeData.title);
-        subTreeItem.setText(1,"LINK");
-        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        subTreeItem.setImage(image);
-      }
-      else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
-      {
-        /* get data
-           format:
-             date/time
-             name
-        */
-        long   datetime = (Long  )data[0];
-        String name     = (String)data[1];
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"LINK");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+          subTreeItem.setImage(image);
+        }
+        else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               date/time
+               name
+          */
+          long   datetime = (Long  )data[0];
+          String name     = (String)data[1];
 
-        fileTreeData = new FileTreeData(name,FileTypes.SPECIAL,0,datetime,name);
+          fileTreeData = new FileTreeData(name,FileTypes.SPECIAL,0,datetime,name);
 
-        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-        subTreeItem.setText(0,fileTreeData.title);
-        subTreeItem.setText(1,"SPECIAL");
-        subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-      }
-      else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
-      {
-        /* get data
-           format:
-             name
-        */
-        String name = (String)data[0];
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"SPECIAL");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+        }
+        else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               name
+          */
+          String name = (String)data[0];
 
-        fileTreeData = new FileTreeData(name,FileTypes.DEVICE,name);
+          fileTreeData = new FileTreeData(name,FileTypes.DEVICE,name);
 
-        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-        subTreeItem.setText(0,fileTreeData.title);
-        subTreeItem.setText(1,"DEVICE");
-      }
-      else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
-      {
-        /* get data
-           format:
-             name
-        */
-        String name = (String)data[0];
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"DEVICE");
+        }
+        else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               name
+          */
+          String name = (String)data[0];
 
-        fileTreeData = new FileTreeData(name,FileTypes.SOCKET,name);
+          fileTreeData = new FileTreeData(name,FileTypes.SOCKET,name);
 
-        subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-        subTreeItem.setText(0,fileTreeData.title);
-        subTreeItem.setText(1,"SOCKET");
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"SOCKET");
+        }
       }
     }
+    else
+    {
+       Dialogs.error(shell,"Cannot get file list (error: "+result.get(0)+")");
+    }
+
+    shell.setCursor(null);
   }
 
   //-----------------------------------------------------------------------
 
-  /** find index for insert of job in sort list job list
+  /** find index for insert of job in sorted job list
    * @param jobs jobs
    * @param name name to insert
    * @return index in list
@@ -3198,7 +3215,7 @@ throw new Error("NYI");
     assert selectedJobName != null;
     assert selectedJobId != 0;
 
-    if (Dialogs.confirm(shell,"Delete job","Delete job '"+selectedJobName+"'?"))
+    if (Dialogs.confirm(shell,"Delete job '"+selectedJobName+"'?"))
     {
       BARServer.executeCommand("JOB_DELETE "+selectedJobId);
       updateJobList();
@@ -3209,7 +3226,7 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** find index for insert of name in sort list job list
+  /** find index for insert of pattern in sorted pattern list
    * @param list list
    * @param pattern pattern to insert
    * @return index in list
@@ -3388,7 +3405,7 @@ throw new Error("NYI");
           BARServer.executeCommand("EXCLUDE_PATTERNS_ADD "+selectedJobId+" GLOB "+StringParser.escape(pattern));
 
           excludedPatterns.add(pattern);
-          widgetExcludedPatterns.add(pattern,findPatternsIndex(widgetIncludedPatterns,pattern));
+          widgetExcludedPatterns.add(pattern,findPatternsIndex(widgetExcludedPatterns,pattern));
         }
         break;
     }
@@ -3700,7 +3717,6 @@ throw new Error("NYI");
         {
           public void keyPressed(KeyEvent keyEvent)
           {
-//System.err.println("BARControl.java"+", "+6268+": "+selectedNamePart+" "+highlightedNamePart);
             if ((highlightedNamePart != null) && (highlightedNamePart.string != null) && ((keyEvent.keyCode == SWT.DEL) || (keyEvent.keyCode == SWT.BS)))
             {
               remPart(highlightedNamePart);
@@ -3733,7 +3749,6 @@ throw new Error("NYI");
           }
           public void dragFinished(DragSourceEvent dragSourceEvent)
           {
-//System.err.println("BARControl.java"+", "+6261+": "+dragSourceEvent.data+" "+dragSourceEvent.doit+" "+dragSourceEvent.detail+" "+selectedNamePart);
             if (dragSourceEvent.detail == DND.DROP_MOVE)
             {
               remPart(selectedNamePart);
@@ -3798,11 +3813,9 @@ throw new Error("NYI");
           }
           public void dragOver(DropTargetEvent dropTargetEvent)
           {
-//System.err.println("BARControl.java"+", "+6353+": "+dropTargetEvent);
           }
           public void drop(DropTargetEvent dropTargetEvent)
           {
-//System.err.println("BARControl.java"+", "+6350+": "+dropTargetEvent.data+" "+dropTargetEvent.currentDataType);
             if (dropTargetEvent.data != null)
             {
               if      (dropTargetEvent.data instanceof String)
@@ -4326,6 +4339,29 @@ throw new Error("NYI");
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     storageFileNameEditor = new StorageFileNameEditor(composite,storageFileName.getString());
 
+    Dialogs.run(dialog);
+  }
+
+  void storageFileNameEdit2()
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+    Composite subComposite;
+
+    assert selectedJobId != 0;
+
+    // create dialog
+    final Shell dialog = Dialogs.open(shell,"Edit storage file name",SWT.DEFAULT,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final StorageFileNameEditor storageFileNameEditor;
+    final Button                widgetSave;
+    composite = Widgets.newComposite(dialog,SWT.NONE);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    storageFileNameEditor = new StorageFileNameEditor(composite,storageFileName.getString());
+
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(0.0,1.0));
@@ -4368,7 +4404,7 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** find index for insert of schedule data in sorted schedule table
+  /** find index for insert of schedule data in sorted schedule list
    * @param scheduleData schedule data
    * @return index in schedule table
    */
