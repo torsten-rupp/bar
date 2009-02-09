@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -93,7 +93,7 @@ SOURCES        = src/BARControl.java \
                  src/TableLayout.java \
                  src/TableLayoutData.java \
                  src/ProgressBar.java \
-                 src/ProgressDialog.java \
+                 src/BusyDialog.java \
                  src/Widgets.java \
                  src/Dialogs.java \
                  src/StringParser.java \
