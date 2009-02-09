@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/errors.def,v $
-# $Revision: 1.18 $
+# $Revision: 1.19 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
@@ -37,8 +37,8 @@ ERROR TLS_HANDSHAKE                  "TLS (SSL) handshake failure"
 ERROR INVALID_SSH_SPECIFIER          "invalid SSH specifier"
 ERROR NO_SSH_PASSWORD                "no SSH password given"
 ERROR INVALID_SSH_PASSWORD           "invalid SSH password"
-ERROR SSH_SESSION_FAIL               "initialize ssh session fail"
-ERROR SSH_AUTHENTIFICATION           "invalid ssh password"
+ERROR SSH_SESSION_FAIL               "initialize SSH session fail"
+ERROR SSH_AUTHENTIFICATION           "SSH authentification fail"
 ERROR SSH                            ERROR_TEXT
 
 #  switch (ERRNO)

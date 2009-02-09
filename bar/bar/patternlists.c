@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patternlists.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -159,9 +159,20 @@ void PatternList_move(PatternList *fromPatternList, PatternList *toPatternList)
 }
 
 Errors PatternList_append(PatternList  *patternList,
-                          const char   *pattern,
+                          const String pattern,
                           PatternTypes patternType
                          )
+{
+  assert(patternList != NULL);
+  assert(pattern != NULL);
+
+  return PatternList_appendCString(patternList,String_cString(pattern),patternType);
+}
+
+Errors PatternList_appendCString(PatternList  *patternList,
+                                 const char   *pattern,
+                                 PatternTypes patternType
+                                )
 {
   PatternNode *patternNode;
   Errors      error;

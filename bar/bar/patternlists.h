@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patternlists.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -138,7 +138,7 @@ void PatternList_copy(const PatternList *fromPatternList, PatternList *toPattern
 void PatternList_move(PatternList *fromPatternList, PatternList *toPatternList);
 
 /***********************************************************************\
-* Name   : PatternList_append
+* Name   : PatternList_append, PatternList_appendCString
 * Purpose: add pattern to pattern list
 * Input  : patternList - pattern list
 *          pattern     - pattern
@@ -149,9 +149,13 @@ void PatternList_move(PatternList *fromPatternList, PatternList *toPatternList);
 \***********************************************************************/
 
 Errors PatternList_append(PatternList  *patternList,
-                          const char   *pattern,
+                          const String pattern,
                           PatternTypes patternType
                          );
+Errors PatternList_appendCString(PatternList  *patternList,
+                                 const char   *pattern,
+                                 PatternTypes patternType
+                                );
 
 /***********************************************************************\
 * Name   : PatternList_match

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -709,7 +709,7 @@ StorageTypes Storage_getType(const String storageName,
     if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,6,STRING_END);
     return STORAGE_TYPE_FTP;
   }
-  else if (String_subEqualsCString(storageName,"ssh:",STRING_BEGIN,6))
+  else if (String_subEqualsCString(storageName,"ssh://",STRING_BEGIN,6))
   {
     if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,6,STRING_END);
     return STORAGE_TYPE_SSH;
@@ -1094,10 +1094,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
               {
                 Password_set(storageFileHandle->scp.password,defaultSSHPassword);
               }
-            }
-            else
-            {
-              error = (sshServer.password != NULL)?ERROR_INVALID_SSH_PASSWORD:ERROR_NO_SSH_PASSWORD;
             }
           }
           if (error != ERROR_NONE)

@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -267,7 +267,7 @@ test4 test_asymmetric_crypt: bar
 	@$(ECHO) "ok"
 
 test5 test_split: bar
-	@$(ECHO_NO_LF) "Test 4: split..."
+	@$(ECHO_NO_LF) "Test 5: split..."
 	$(MAKE) \
           BAR_FILE="test-###" \
           OPTIONS="--archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none" \

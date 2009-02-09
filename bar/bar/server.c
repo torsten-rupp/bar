@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -2686,7 +2686,7 @@ LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, co
     sendResult(clientInfo,id,FALSE,0,
                "%s %'S",
                type,
-               patternNode->pattern
+               patternNode->string
               );
     patternNode = patternNode->next;
   }
@@ -2792,12 +2792,13 @@ LOCAL void serverCommand_includePatternsAdd(ClientInfo *clientInfo, uint id, con
   }
 
   /* add to include list */
-  PatternList_append(&jobNode->includePatternList,String_cString(pattern),patternType);
+  PatternList_append(&jobNode->includePatternList,pattern,patternType);
   jobNode->modifiedFlag = TRUE;
-  sendResult(clientInfo,id,TRUE,0,"");
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
 LOCAL void serverCommand_excludePatternsList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -2849,7 +2850,7 @@ LOCAL void serverCommand_excludePatternsList(ClientInfo *clientInfo, uint id, co
     sendResult(clientInfo,id,FALSE,0,
                "%s %'S",
                type,
-               patternNode->pattern
+               patternNode->string
               );
     patternNode = patternNode->next;
   }
@@ -2955,12 +2956,13 @@ LOCAL void serverCommand_excludePatternsAdd(ClientInfo *clientInfo, uint id, con
   }
 
   /* add to exclude list */
-  PatternList_append(&jobNode->excludePatternList,String_cString(pattern),patternType);
+  PatternList_append(&jobNode->excludePatternList,pattern,patternType);
   jobNode->modifiedFlag = TRUE;
-  sendResult(clientInfo,id,TRUE,0,"");
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
 LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3319,7 +3321,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   }
   archiveName = arguments[0];
 
-fprintf(stderr,"%s,%d: archiveName=%s\n",__FILE__,__LINE__,String_cString(archiveName));
   /* open archive */
   error = Archive_open(&archiveInfo,
                        archiveName,
@@ -3334,7 +3335,6 @@ fprintf(stderr,"%s,%d: archiveName=%s\n",__FILE__,__LINE__,String_cString(archiv
 
   /* list contents */
   error = ERROR_NONE;
-fprintf(stderr,"%s,%d: id=%d\n",__FILE__,__LINE__,id);
   while (!Archive_eof(&archiveInfo) && (error == ERROR_NONE) && !commandAborted(clientInfo,id))
   {
 //Misc_udelay(1000*100);
@@ -3417,7 +3417,6 @@ fprintf(stderr,"%s,%d: id=%d\n",__FILE__,__LINE__,id);
                                               );
             if (error != ERROR_NONE)
             {
-  fprintf(stderr,"%s,%d:---------------2 error=%d\n",__FILE__,__LINE__,error);
               sendResult(clientInfo,id,TRUE,error,"Cannot not read content of archive '%S' (error: %s)",archiveName,Errors_getText(error));
               String_delete(directoryName);
               break;
@@ -3543,7 +3542,6 @@ fprintf(stderr,"%s,%d: id=%d\n",__FILE__,__LINE__,id);
   Archive_close(&archiveInfo);
 
   sendResult(clientInfo,id,TRUE,0,"");
-fprintf(stderr,"%s,%d: id=%d done\n",__FILE__,__LINE__,id);
 }
 
 LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3578,7 +3576,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   for (z = 2; z < argumentCount; z++)
   {
     PatternList_append(&includePatternList,
-                       String_cString(arguments[z]),
+                       arguments[z],
                        PATTERN_TYPE_GLOB
                       );
   }
