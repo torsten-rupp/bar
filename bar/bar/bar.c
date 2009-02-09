@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -892,7 +892,7 @@ LOCAL bool cmdOptionParseIncludeExclude(void *userData, void *variable, const ch
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
   /* append to list */
-  if (PatternList_append((PatternList*)variable,value,patternType) != ERROR_NONE)
+  if (PatternList_appendCString((PatternList*)variable,value,patternType) != ERROR_NONE)
   {
     fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
     return FALSE;
@@ -1670,7 +1670,7 @@ bool configValueParseIncludeExclude(void *userData, void *variable, const char *
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
   /* append to list */
-  if (PatternList_append((PatternList*)variable,value,patternType) != ERROR_NONE)
+  if (PatternList_appendCString((PatternList*)variable,value,patternType) != ERROR_NONE)
   {
     fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
     return FALSE;
@@ -1708,13 +1708,13 @@ bool configValueFormatIncludeExclude(void **formatUserData, void *userData, Stri
     switch (patternNode->pattern.type)
     {
       case PATTERN_TYPE_GLOB:
-        String_format(line,"%'S",patternNode->pattern);
+        String_format(line,"%'S",patternNode->string);
         break;
       case PATTERN_TYPE_REGEX:
-        String_format(line,"r:%'S",patternNode->pattern);
+        String_format(line,"r:%'S",patternNode->string);
         break;
       case PATTERN_TYPE_EXTENDED_REGEX:
-        String_format(line,"x:%'S",patternNode->pattern);
+        String_format(line,"x:%'S",patternNode->string);
         break;
       #ifndef NDEBUG
         default:
@@ -2530,7 +2530,7 @@ int main(int argc, const char *argv[])
           /* get include patterns */
           for (z = 2; z < argc; z++)
           {
-            error = PatternList_append(&includePatternList,argv[z],jobOptions.patternType);
+            error = PatternList_appendCString(&includePatternList,argv[z],jobOptions.patternType);
           }
 
           /* create archive */
