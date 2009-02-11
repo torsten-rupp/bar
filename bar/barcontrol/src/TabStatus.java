@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -696,7 +696,7 @@ class TabStatus
 
     // buttons
     composite = Widgets.newComposite(widgetTab,SWT.NONE);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0},2));
+    composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0}));
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
       widgetButtonStart = Widgets.newButton(composite,null,"Start");
@@ -1081,7 +1081,7 @@ class TabStatus
   {
     assert selectedJobData != null;
 
-    if (Dialogs.confirm(shell,"Abort job '"+selectedJobData.name+"'?"))
+    if (Dialogs.confirm(shell,"Abort job '"+selectedJobData.name+"'?",false))
     {
       BARServer.executeCommand("JOB_ABORT "+selectedJobData.id);
     }

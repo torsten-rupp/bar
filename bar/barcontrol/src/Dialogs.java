@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Dialogs.java,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -381,9 +381,10 @@ class Dialogs
    * @param message confirmation message
    * @param yesText yes-text
    * @param noText no-text
+   * @param defaultValue default value
    * @return value
    */
-  static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText, String noText)
+  static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText, String noText, boolean defaultValue)
   {
     TableLayoutData tableLayoutData;
     Composite       composite;
@@ -416,7 +417,8 @@ class Dialogs
     {
       button = new Button(composite,SWT.CENTER);
       button.setText(yesText);
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
+      if (defaultValue == true) button.setFocus();
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -432,7 +434,8 @@ class Dialogs
 
       button = new Button(composite,SWT.CENTER);
       button.setText(noText);
-      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
+      if (defaultValue == false) button.setFocus();
+      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -453,6 +456,36 @@ class Dialogs
   /** confirmation dialog
    * @param parentShell parent shell
    * @param title title string
+   * @param image image to show
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText, String noText)
+  {
+    return confirm(parentShell,title,image,message,yesText,noText,true);
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @param defaultValue default value
+   * @return value
+   */
+  static boolean confirm(Shell parentShell, String title, String message, String yesText, String noText, boolean defaultValue)
+  {
+    Image image = Widgets.loadImage(parentShell.getDisplay(),"question.gif");
+
+    return confirm(parentShell,title,image,message,yesText,noText,defaultValue);
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
    * @param message confirmation message
    * @param yesText yes-text
    * @param noText no-text
@@ -460,9 +493,18 @@ class Dialogs
    */
   static boolean confirm(Shell parentShell, String title, String message, String yesText, String noText)
   {
-    Image image = Widgets.loadImage(parentShell.getDisplay(),"question.gif");
+    return confirm(parentShell,title,message,yesText,noText,true);
+  }
 
-    return confirm(parentShell,title,image,message,yesText,noText);
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message confirmation message
+   * @return value
+   */
+  static boolean confirm(Shell parentShell, String title, String message, boolean defaultValue)
+  {
+    return confirm(parentShell,title,message,"Yes","No");
   }
 
   /** confirmation dialog
@@ -481,9 +523,19 @@ class Dialogs
    * @param message confirmation message
    * @return value
    */
+  static boolean confirm(Shell parentShell, String message, boolean defaultValue)
+  {
+    return confirm(parentShell,"Confirm",message,"Yes","No",defaultValue);
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param message confirmation message
+   * @return value
+   */
   static boolean confirm(Shell parentShell, String message)
   {
-    return confirm(parentShell,"Confirm",message,"Yes","No");
+    return confirm(parentShell,"Confirm",message,"Yes","No",true);
   }
 
   /** confirmation error dialog
