@@ -1,28 +1,22 @@
 ToDo
 
-- restore files with graphical frontend
 - check if file date/permission/owner/group is correct
 - internal pipeling of commands for e. g. repacking, remove/add encryption
 - support ssh-agent (extend libssh2?)
 - improve logfile
 - ssl server: check common name? 
 - improve password quality checker
-- balloon help in barcontrol.tcl
+- balloon help in barcontrol
 - novice/expert mode in barcontrol.tcl
-- barconfig.tcl for creating/edit bar.cfg
+- barconfig for creating/edit bar.cfg
 - Windows port
 - create RPMs
-- native graphical frontend?
 - re-read configuration when modified
 - configure band-width on run-time
-- view needed archives for restore
 - ACL
 - send job from server to other server
 - send-only ssh-login (possible?)
-- support to access multiple bar servers
 - script to generate pem-keys
 - support openssl key generator
-- rename patterns.? patternlists.?
 - flush in server protocol to store change data
-- barcontrol: --login option
-- clear interal performance arrays before next job is started
+- clear internal performance arrays before next job is started

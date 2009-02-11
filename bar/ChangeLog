@@ -1,4 +1,4 @@
-2008-12-?? 0.10
+2009-02-11 0.10
   * fixed some not freed resources
   * fixed error message when password is not given or wrong
   * improved input password: ask for password if not given
