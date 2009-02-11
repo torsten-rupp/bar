@@ -7,16 +7,16 @@ SYNOPSIS
 
 DESCRIPTION
 bar is a backup archiver program to create compressed, encrypted and
-splitted archive files which can be stored on a local harddisk, via
-network on a server or (with addtional external tools) an optical
+splitted archive files which can be stored on a local hard disk, via
+network on a server or (with additional external tools) an optical
 medium like a CD or DVD.
 
 Archive files can be created, the content can be listed, tested, compared and
-extraced. Invidiual archive files can be read independant. Listing the contents
+extracted. Individual archive files can be read independent. Listing the contents
 of an archive is fast, even when the content is compressed and encrypted. The
 content can be compressed with either zip(1) or bzip2(1). For encryption
-serveral encryption algorithms from libcrypt project like AES or TWOFISH can be
-used. Public key encryption (RSA) is also supported.
+several encryption algorithms from the libcrypt project like AES or TWOFISH can
+be used. Public key encryption (RSA) is also supported.
 
 CDs and DVDs with archive files can be created when the external tools
 growisofs(1) and mkisofs(1) are installed. If the tool dvdisaster(1) is
@@ -26,7 +26,7 @@ created.
 bar can be executed as a daemon and can created backups in the background
 via the integrated scheduler. The bar daemon can be controlled via a
 network connection (either plain or SSL encrypted) with the graphical
-frontend barcontrol(3).
+front end barcontrol(3).
 
 OPTIONS
          -c|--create                               create new archive
@@ -85,7 +85,7 @@ OPTIONS
                                                      * AES256: AES cipher 256bit
                                                      * TWOFISH128: Twofish cipher 128bit
                                                      * TWOFISH256: Twofish cipher 256bit
-         -a|--crypt-asymmetric                     use asymetric encryption
+         -a|--crypt-asymmetric                     use asymmetric encryption
          --crypt-password=<password>               crypt password (use with care!)
          --crypt-public-key=<file name>            public key for encryption
          --crypt-private-key=<file name>           private key for decryption
@@ -95,7 +95,7 @@ OPTIONS
          --ssh-login-name=<name>                   ssh login name
          --ssh-password=<password>                 ssh password (use with care!)
          --ssh-public-key=<file name>              ssh public key file name
-         --ssh-private-key=<file name>             ssh privat key file name
+         --ssh-private-key=<file name>             ssh private key file name
          --daemon                                  run in daemon mode
          -D|--no-detach                            do not detach in daemon mode
          --server-port=<n>                         server port (default: 38523)
@@ -138,7 +138,7 @@ OPTIONS
          --log=<name>[,<name>...]                  log types
                                                      none      : no logging (default)
                                                      errors    : log errors
-                                                     warnings  : log warningss
+                                                     warnings  : log warnings
                                                      ok        : log stored/restored files
                                                      unknown   : log unknown files
                                                      skipped   : log skipped files
@@ -163,7 +163,7 @@ OPTIONS
          --no-bar-on-dvd                           do not store a copy of BAR on DVDs
          --stop-on-error                           immediately stop on error
          --no-default-config                       do not read personal config file ~/.bar/bar.cfg
-         --quiet                                   surpress any output
+         --quiet                                   suppress any output
          -v|--verbose=<n>                          verbosity level (0..3, default: 1)
          --version                                 output version
          -h|--help                                 output this help
@@ -206,7 +206,7 @@ FILES
 
 /etc/bar/bar.jks
 
-  private key for SSL connetion with bar daemon
+  private key for SSL connection with bar daemon
 
 /etc/bar/jobs
 

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -239,7 +239,7 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
 {
   {"none",      LOG_TYPE_NONE,              "no logging"               },
   {"errors",    LOG_TYPE_ERROR,             "log errors"               },
-  {"warnings",  LOG_TYPE_WARNING,           "log warningss"            },
+  {"warnings",  LOG_TYPE_WARNING,           "log warnings"             },
 
   {"ok",        LOG_TYPE_FILE_OK,           "log stored/restored files"},
   {"unknown",   LOG_TYPE_FILE_TYPE_UNKNOWN, "log unknown files"        },
@@ -291,7 +291,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,0,globalOptions.compressMinFileSize,         DEFAULT_COMPRESS_MIN_FILE_SIZE,0,INT_MAX,COMMAND_LINE_BYTES_UNITS, "minimal size of file for compression"                                     ),
 
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,0,jobOptions.cryptAlgorithm,                 CRYPT_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,        "select crypt algorithm to use"                                            ),
-  CMD_OPTION_ENUM         ("crypt-asymmetric",             'a',0,0,jobOptions.cryptType,                      CRYPT_TYPE_SYMMETRIC,CRYPT_TYPE_ASYMMETRIC,                        "use asymetric encryption"                                                 ),
+  CMD_OPTION_ENUM         ("crypt-asymmetric",             'a',0,0,jobOptions.cryptType,                      CRYPT_TYPE_SYMMETRIC,CRYPT_TYPE_ASYMMETRIC,                        "use asymmetric encryption"                                                ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,0,&globalOptions.cryptPassword,              NULL,cmdOptionParsePassword,NULL,                                  "crypt password (use with care!)","password"                               ),
   CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,0,&jobOptions.cryptPublicKeyFileName,        NULL,cmdOptionParseString,NULL,                                    "public key for encryption","file name"                                    ),
   CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,0,&jobOptions.cryptPrivateKeyFileName,       NULL,cmdOptionParseString,NULL,                                    "private key for decryption","file name"                                   ),
@@ -303,7 +303,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("ssh-login-name",               0,  0,0,&defaultSSHServer.loginName,               NULL,cmdOptionParseString,NULL,                                    "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,0,&defaultSSHServer.password,                NULL,cmdOptionParsePassword,NULL,                                  "ssh password (use with care!)","password"                                 ),
   CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,0,&defaultSSHServer.publicKeyFileName,       NULL,cmdOptionParseString,NULL,                                    "ssh public key file name","file name"                                     ),
-  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,0,&defaultSSHServer.privateKeyFileName,      NULL,cmdOptionParseString,NULL,                                    "ssh privat key file name","file name"                                     ),
+  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,0,&defaultSSHServer.privateKeyFileName,      NULL,cmdOptionParseString,NULL,                                    "ssh private key file name","file name"                                    ),
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                FALSE,                                                             "run in daemon mode"                                                       ),
   CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                              FALSE,                                                             "do not detach in daemon mode"                                             ),
@@ -370,7 +370,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-bar-on-dvd",                0,  1,0,jobOptions.noBAROnDVDFlag,                 FALSE,                                                             "do not store a copy of BAR on DVDs"                                       ),
   CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,0,jobOptions.stopOnErrorFlag,                FALSE,                                                             "immediately stop on error"                                                ),
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,         FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
-  CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                   FALSE,                                                             "surpress any output"                                                      ),
+  CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                   FALSE,                                                             "suppress any output"                                                      ),
   CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                1,0,3,NULL,                                                        "verbosity level"                                                          ),
 
   CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                               FALSE,                                                             "output version"                                                           ),
