@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -730,7 +730,7 @@ class TabStatus
       });
 
       widgetButtonTogglePause = Widgets.newButton(composite,null,"Continue");
-      Widgets.layout(widgetButtonTogglePause,0,2,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT); // how to calculate correct max. width? ,0,0,Widgets.getTextSize(widgetButtonTogglePause,new String[]{"Pause","Continue"}));
+      Widgets.layout(widgetButtonTogglePause,0,2,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT); // how to calculate correct max. width? ,0,0,Widgets.getTextSize(widgetButtonTogglePause,new String[]{"Pause","Continue"}));
       widgetButtonTogglePause.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -758,6 +758,8 @@ class TabStatus
       });
 
       widgetButtonQuit = Widgets.newButton(composite,null,"Quit");
+//      Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+//      Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E);//,0,0,0,0,60,SWT.DEFAULT);
       Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonQuit.addSelectionListener(new SelectionListener()
       {

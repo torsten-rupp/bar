@@ -51,6 +51,7 @@ public class TableLayout extends Layout
 
   private int     rows,columns;
   private int     rowSizeHints[],columnSizeHints[];
+  private int     rowSizeMin[],columnSizeMin[];
   private boolean rowExpandFlags[],columnExpandFlags[];
   private Point[] sizes;
   private int     totalWidth,totalHeight;
@@ -334,19 +335,16 @@ if (debug) System.err.println("composite="+composite+" rectangle="+rectangle);
     fixedHeight = 0;
     for (int i = 0; i < columns; i++)
     {
-//      fixedWidth += Math.max(columnSizeHints[i],1)+((i < columns-1)?verticalSpacing:0);
-//      if (!columnExpandFlags[i]) fixedWidth += columnSizeHints[i];
-      if (columnWeights[i] == 0.0) fixedWidth += columnSizeHints[i];
+      if (columnWeights[i] == 0.0) fixedWidth += Math.max(columnSizeHints[i],columnSizeMin[i]);
+//      else                         fixedWidth += columnSizeMin[i];
       fixedWidth += ((i < columns-1)?verticalSpacing:0);
     }
     for (int i = 0; i < rows; i++)
     {
-//      fixedHeight += Math.max(rowSizeHints[i],1)+((i < rows-1)?horizontalSpacing:0);
-//      if (!rowExpandFlags[i]) fixedHeight += rowSizeHints[i];
-      if (rowWeights[i] == 0.0) fixedHeight += rowSizeHints[i];
+      if (rowWeights[i] == 0.0) fixedHeight += Math.max(rowSizeHints[i],rowSizeMin[i]);
+//      else                      fixedHeight += rowSizeMin[i];
       fixedHeight += ((i < rows-1)?horizontalSpacing:0);
     }
-//fixedHeight = (rows-1)*horizontalSpacing;
 if (debug) System.err.println("fixedWidth="+fixedWidth+" fixedHeight="+fixedHeight);
 
     // calculate row/column sizes
@@ -362,14 +360,18 @@ if (debug) { System.err.print("row weights: "); for (int i = 0; i < rowWeights.l
       if (rowWeights[i] > 0.0)
       {
         /* Note: to avoid rounding errors calculate sum of row sizes by sum of weights, then round to integer */
-        rowSizes[i] = (int)Math.round(variableSize*(weightSum+rowWeights[i]))-sizeSum;
+        rowSizes[i] = Math.max((int)Math.round(variableSize*(weightSum+rowWeights[i]))-sizeSum,
+                               rowSizeMin[i]
+                              );
 
         sizeSum   += rowSizes[i];
         weightSum += rowWeights[i];
       }
       else
       {
-        rowSizes[i] = rowSizeHints[i];
+        rowSizes[i] = Math.max(rowSizeHints[i],
+                               rowSizeMin[i]
+                              );
       }
     }
 if (debug) { System.err.print("row sizes: ");for (int i = 0; i < rows;    i++) System.err.print(" "+rowSizes[i]   +(rowExpandFlags[i]   ?"*":""));System.err.println(); }
@@ -385,14 +387,18 @@ if (debug) { System.err.print("column weights: "); for (int i = 0; i < columnWei
       if (columnWeights[i] > 0.0)
       {
         /* Note: to avoid rounding errors calculate sum of column sizes by sum of weights, then round to integer */
-        columnSizes[i] = (int)Math.round(variableSize*(weightSum+columnWeights[i]))-sizeSum;
+        columnSizes[i] = Math.max((int)Math.round(variableSize*(weightSum+columnWeights[i]))-sizeSum,
+                                  columnSizeMin[i]
+                                 );
 
         sizeSum   += columnSizes[i];
         weightSum += columnWeights[i];
       }
       else
       {
-        columnSizes[i] = columnSizeHints[i];
+        columnSizes[i] = Math.max(columnSizeHints[i],
+                                  columnSizeMin[i]
+                                 );
       }
     }
 if (debug) { System.err.print("column size: ");for (int i = 0; i < columns; i++) System.err.print(" "+columnSizes[i]+(columnExpandFlags[i]?"*":""));System.err.println(); }
@@ -519,6 +525,8 @@ if (debug) System.err.println("rows="+rows+" columns="+columns);
     // calculate row/columns hint sizes, max. width/height
     rowSizeHints    = new int[rows   ];
     columnSizeHints = new int[columns];
+    rowSizeMin      = new int[rows   ];
+    columnSizeMin   = new int[columns];
     for (int i = 0; i < children.length; i++)
     {
       TableLayoutData tableLayoutData = (TableLayoutData)children[i].getLayoutData();
@@ -559,34 +567,31 @@ if (debug) System.err.println("rows="+rows+" columns="+columns);
       // expand row/column size if required (if not expand flag set and expand value>0)
       for (int z = tableLayoutData.row; z < Math.min(tableLayoutData.row+1/* only this row; tableLayoutData.rowSpawn*/,rows); z++)
       {
-//        if (addHeight > 0)
-        {
-          rowSizeHints[z] = Math.max(rowSizeHints[z]+addHeight,height);
-        }
-        rowSizeHints[z] = Math.max(rowSizeHints[z],tableLayoutData.minHeight);
+        rowSizeHints[z] = Math.max(rowSizeHints[z]+addHeight,height);
+//        rowSizeHints[z] = Math.max(rowSizeHints[z],tableLayoutData.minHeight);
+        rowSizeMin[z] = Math.max(rowSizeMin[z],tableLayoutData.minHeight);
       }
       for (int z = tableLayoutData.column; z < Math.min(tableLayoutData.column+1/* only this column; tableLayoutData.columnSpawn*/,columns); z++)
       {
-//        if (addWidth > 0)
-        {
-          columnSizeHints[z] = Math.max(columnSizeHints[z]+addWidth,width);
-        }
-        columnSizeHints[z] = Math.max(columnSizeHints[z],tableLayoutData.minWidth);
+        columnSizeHints[z] = Math.max(columnSizeHints[z]+addWidth,width);
+//        columnSizeHints[z] = Math.max(columnSizeHints[z],tableLayoutData.minWidth);
+        columnSizeMin[z] = Math.max(columnSizeMin[z],tableLayoutData.minWidth);
       }
     }
 if (debug) { System.err.print("row size hints   : ");for (int i = 0; i < rows;    i++) System.err.print(" "+rowSizeHints   [i]+(rowExpandFlags[i]   ?"*":""));System.err.println(); }
 if (debug) { System.err.print("column size hints: ");for (int i = 0; i < columns; i++) System.err.print(" "+columnSizeHints[i]+(columnExpandFlags[i]?"*":""));System.err.println(); }
+if (debug) { System.err.print("column size min  : ");for (int i = 0; i < columns; i++) System.err.print(" "+columnSizeMin[i]);System.err.println(); }
 
     // calculate total width/height
     totalWidth  = marginLeft+marginRight;
     totalHeight = marginTop +marginBottom;
     for (int i = 0; i < rows; i++)
     {
-      totalHeight += rowSizeHints[i]+((i < rows-1)?horizontalSpacing:0);
+      totalHeight += Math.max(rowSizeHints[i],  rowSizeMin[i]   )+((i < rows   -1)?horizontalSpacing:0);
     }
     for (int i = 0; i < columns; i++)
     {
-      totalWidth += columnSizeHints[i]+((i < columns-1)?verticalSpacing:0);
+      totalWidth += Math.max(columnSizeHints[i],columnSizeMin[i])+((i < columns-1)?verticalSpacing  :0);
     }
 if (debug) { System.err.println("total width/height: "+totalWidth+"/"+totalHeight); }
   }
