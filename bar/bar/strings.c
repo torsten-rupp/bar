@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -2519,6 +2519,47 @@ String String_replaceChar(String string, ulong index, ulong length, char ch)
 
   String_remove(string,index,length);
   String_insertChar(string,index,ch);
+
+  return string;
+}
+
+String String_join(String string, const String joinString, char joinChar)
+{
+  CHECK_VALID(string);
+  CHECK_VALID(joinString);
+
+  if (!String_empty(string)) String_appendChar(string,joinChar);
+  String_append(string,joinString);
+
+  return string;
+}
+
+String String_joinCString(String string, const char *s, char joinChar)
+{
+  CHECK_VALID(string);
+
+  if (!String_empty(string)) String_appendChar(string,joinChar);
+  String_appendCString(string,s);
+
+  return string;
+}
+
+String String_joinBuffer(String string, const char *buffer, ulong bufferLength, char joinChar)
+{
+  CHECK_VALID(string);
+
+  if (!String_empty(string)) String_appendChar(string,joinChar);
+  String_appendBuffer(string,buffer,bufferLength);
+
+  return string;
+}
+
+String String_joinChar(String string, char ch, char joinChar)
+{
+  CHECK_VALID(string);
+
+  if (!String_empty(string)) String_appendChar(string,joinChar);
+  String_appendChar(string,ch);
 
   return string;
 }

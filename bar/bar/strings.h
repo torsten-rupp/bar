@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -279,6 +279,23 @@ String String_replace(String string, ulong index, ulong length, const String ins
 String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength);
 String String_replaceCString(String string, ulong index, ulong length, const char *s);
 String String_replaceChar(String string, ulong index, ulong length, char ch);
+
+/***********************************************************************\
+* Name   : String_join, String_joinCString, String_joinBuffer
+* Purpose: join strings with separator char
+* Input  : string              - string
+*          joinString/s/buffer - string to join
+*          ch                  - character to join
+*          joinChar            - separator character
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+String String_join(String string, const String joinString, char joinChar);
+String String_joinCString(String string, const char *s, char joinChar);
+String String_joinBuffer(String string, const char *buffer, ulong bufferLength, char joinChar);
+String String_joinChar(String string, char ch, char joinChar);
 
 /***********************************************************************\
 * Name   : String_length
