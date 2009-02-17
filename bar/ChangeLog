@@ -1,3 +1,23 @@
+2009-02-?? 0.1?
+  * added several days to schedule days in configuration,
+    e. g. specify "Mon,Tue,Sat"
+  * barcontrol: fixed quit (internal threads blocked quit)
+  * barcontrol: changed names of buttons in file tree
+  * barcontrol: added button to open all included directories
+    in file tree list (green directory symbol at the botton
+    right side)
+  * barcontrol: added function to detect sizes of directories;
+    when "directory info" checkbox is enabled and a
+    sub-directory is opened the sizes of the directories are
+    detected in the background
+  * internal change in protocol bar/barcontrol
+  * fixed some lost strings
+  * improved speed: inline some function calls
+
+2009-02-14 0.10a
+  * fixed layout of login dialog
+  * fixed missing barcontrol.bat.in in distribution
+
 2009-02-11 0.10
   * fixed some not freed resources
   * fixed error message when password is not given or wrong
