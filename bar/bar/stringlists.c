@@ -1,15 +1,14 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/stringlists.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: 
 * Systems :
 *
 \***********************************************************************/
 
-#ifndef __XYZ__
-#define __XYZ__
+#define __STRINGLISTS_IMPLEMENATION__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -126,20 +125,6 @@ void StringList_move(StringList *fromStringList, StringList *toStringList)
   assert(toStringList != NULL);
 
   List_move(fromStringList,toStringList,NULL,NULL,NULL);
-}
-
-bool StringList_empty(const StringList *stringList)
-{
-  assert(stringList != NULL);
-
-  return List_empty(stringList);
-}
-
-ulong StringList_count(const StringList *stringList)
-{
-  assert(stringList != NULL);
-
-  return List_count(stringList);
 }
 
 void StringList_insert(StringList *stringList, const String string, StringNode *nextStringNode)
@@ -358,7 +343,5 @@ void StringList_print(const StringList *stringList)
 #ifdef __cplusplus
   }
 #endif
-
-#endif /* __XYZ__ */
 
 /* end of file */

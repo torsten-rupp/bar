@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -56,6 +56,8 @@
 
 #define SESSION_ID_LENGTH 64                   // max. length of session id
 
+#define MAX_NETWORK_CLIENT_THREADS 3           // number of threads for a client
+
 /***************************** Datatypes *******************************/
 
 /* job states */
@@ -70,6 +72,7 @@ typedef enum
   JOB_STATE_ABORTED
 } JobStates;
 
+/* job node */
 typedef struct JobNode
 {
   LIST_NODE_HEADER(struct JobNode);
@@ -103,7 +106,6 @@ typedef struct JobNode
   struct
   {
     Errors            error;                          // error code
-//    uint64            startDateTime;                  // start time (timestamp)
     ulong             estimatedRestTime;              // estimated rest running time [s]
     ulong             doneFiles;                      // number of processed files
     uint64            doneBytes;                      // sum of processed bytes
@@ -129,7 +131,7 @@ typedef struct JobNode
   } runningInfo;
 } JobNode;
 
-// list with enqueued jobs
+/* list with enqueued jobs */
 typedef struct
 {
   LIST_HEADER(JobNode);
@@ -137,6 +139,25 @@ typedef struct
   Semaphore lock;
   uint      lastJobId;
 } JobList;
+
+/* directory info node */
+typedef struct DirectoryInfoNode
+{
+  LIST_NODE_HEADER(struct DirectoryInfoNode);
+
+  String          pathName;
+  uint64          fileCount;
+  uint64          totalFileSize;
+  StringList      pathNameList;
+  bool            directoryOpenFlag;
+  DirectoryHandle directoryHandle;
+} DirectoryInfoNode;
+
+/* directory info list */
+typedef struct
+{
+  LIST_HEADER(DirectoryInfoNode);
+} DirectoryInfoList;
 
 /* session id */
 typedef byte SessionId[SESSION_ID_LENGTH];
@@ -184,7 +205,7 @@ typedef struct
       SocketHandle socketHandle;
 
       /* thread */
-      Thread       thread;
+      Thread       threads[MAX_NETWORK_CLIENT_THREADS];
       MsgQueue     commandMsgQueue;
       bool         exitFlag;
     } network;
@@ -193,6 +214,7 @@ typedef struct
   PatternList         includePatternList;
   PatternList         excludePatternList;
   JobOptions          jobOptions;
+  DirectoryInfoList   directoryInfoList;
 } ClientInfo;
 
 /* client node */
@@ -204,6 +226,7 @@ typedef struct ClientNode
   String     commandString;
 } ClientNode;
 
+/* client list */
 typedef struct
 {
   LIST_HEADER(ClientNode);
@@ -438,7 +461,6 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
   assert(jobNode != NULL);
 
   jobNode->runningInfo.error              = ERROR_NONE;
-//  jobNode->runningInfo.startDateTime      = 0LL;
   jobNode->runningInfo.estimatedRestTime  = 0;
   jobNode->runningInfo.doneFiles          = 0L;
   jobNode->runningInfo.doneBytes          = 0LL;
@@ -450,14 +472,19 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
   jobNode->runningInfo.errorBytes         = 0LL;
   jobNode->runningInfo.archiveBytes       = 0LL;
   jobNode->runningInfo.compressionRatio   = 0.0;
-  jobNode->runningInfo.fileName           = String_new();
   jobNode->runningInfo.fileDoneBytes      = 0LL;
   jobNode->runningInfo.fileTotalBytes     = 0LL;
-  jobNode->runningInfo.storageName        = String_new();
   jobNode->runningInfo.storageDoneBytes   = 0LL;
   jobNode->runningInfo.storageTotalBytes  = 0LL;
   jobNode->runningInfo.volumeNumber       = 0;
   jobNode->runningInfo.volumeProgress     = 0.0;
+
+  String_clear(jobNode->runningInfo.fileName   );
+  String_clear(jobNode->runningInfo.storageName);
+
+  Misc_performanceFilterClear(&jobNode->runningInfo.filesPerSecond       );
+  Misc_performanceFilterClear(&jobNode->runningInfo.bytesPerSecond       );
+  Misc_performanceFilterClear(&jobNode->runningInfo.storageBytesPerSecond);
 }
 
 /***********************************************************************\
@@ -507,6 +534,9 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   jobNode->requestedVolumeNumber          = 0;
   jobNode->volumeNumber                   = 0;
 
+  jobNode->runningInfo.fileName           = String_new();
+  jobNode->runningInfo.storageName        = String_new();
+
   Misc_performanceFilterInit(&jobNode->runningInfo.filesPerSecond,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecond,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecond,10*60);
@@ -529,6 +559,7 @@ LOCAL void freeJobNode(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   String_delete(jobNode->runningInfo.fileName);
   String_delete(jobNode->runningInfo.storageName);
   Misc_performanceFilterDone(&jobNode->runningInfo.storageBytesPerSecond);
@@ -950,12 +981,12 @@ LOCAL Errors rereadJobFiles(const char *jobsDirectory)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL StringNode *deleteJobFileEntries(StringList *stringList, 
+LOCAL StringNode *deleteJobFileEntries(StringList *stringList,
                                        const char *name
                                       )
 {
   StringNode *nextNode;
-  
+
   StringNode *stringNode;
   String     s;
 
@@ -1043,7 +1074,7 @@ LOCAL Errors updateJobFile(JobNode *jobNode)
     /* delete old entries, get position for insert new entries */
     nextNode = deleteJobFileEntries(&jobFileList,CONFIG_VALUES[z].name);
 
-    /* insert new entries */      
+    /* insert new entries */
     ConfigValue_formatInit(&configValueFormat,
                            &CONFIG_VALUES[z],
                            CONFIG_VALUE_FORMAT_MODE_LINE,
@@ -1309,12 +1340,23 @@ LOCAL bool storageRequestVolume(JobNode *jobNode,
 
 LOCAL void jobThreadEntry(void)
 {
-  JobNode *jobNode;
+  JobNode      *jobNode;
+  String       archiveName;
+  PatternList  includePatternList,excludePatternList;
+  JobOptions   jobOptions;
+  ArchiveTypes archiveType;
+
+  /* initialize variables */
+  archiveName = String_new();
+  PatternList_init(&includePatternList);
+  PatternList_init(&excludePatternList);
 
   while (!quitFlag)
   {
-    /* get next job */
+    /* lock */
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
+
+    /* get next job */
     do
     {
       jobNode = jobList.head;
@@ -1325,15 +1367,25 @@ LOCAL void jobThreadEntry(void)
       if (jobNode == NULL) Semaphore_waitModified(&jobList.lock);
     }
     while (!quitFlag && (jobNode == NULL));
-    if (jobNode != NULL)
+    if (quitFlag)
     {
-      jobNode->state = JOB_STATE_RUNNING;
+      Semaphore_unlock(&jobList.lock);
+      break;
     }
-    Semaphore_unlock(&jobList.lock);    /* unlock is ok; job is protected by running state */
-    if (quitFlag) break;
+    assert(jobNode != NULL);
+
+    /* get copy of mandatory job data */
+    String_set(archiveName,jobNode->archiveName);
+    PatternList_clear(&includePatternList); PatternList_copy(&jobNode->includePatternList,&includePatternList);
+    PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList);
+    initJobOptions(&jobOptions); copyJobOptions(&jobNode->jobOptions,&jobOptions);
+    archiveType = jobNode->archiveType,
+
+    /* unlock is ok; job is now protected by running state */
+    jobNode->state = JOB_STATE_RUNNING;
+    Semaphore_unlock(&jobList.lock);
 
     /* run job */
-//    jobNode->runningInfo.startDateTime = Misc_getCurrentDateTime();
 #ifdef SIMULATOR
 {
   int z;
@@ -1366,17 +1418,18 @@ LOCAL void jobThreadEntry(void)
   }
 }
 #else
+    /* run job */
     logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------");
     switch (jobNode->type)
     {
       case JOB_TYPE_BACKUP:
         /* create archive */
-        logMessage(LOG_TYPE_ALWAYS,"start create '%s'",String_cString(jobNode->fileName));
-        jobNode->runningInfo.error = Command_create(String_cString(jobNode->archiveName),
-                                                    &jobNode->includePatternList,
-                                                    &jobNode->excludePatternList,
-                                                    &jobNode->jobOptions,
-                                                    jobNode->archiveType,
+        logMessage(LOG_TYPE_ALWAYS,"start create '%s'",String_cString(archiveName));
+        jobNode->runningInfo.error = Command_create(String_cString(archiveName),
+                                                    &includePatternList,
+                                                    &excludePatternList,
+                                                    &jobOptions,
+                                                    archiveType,
                                                     (CreateStatusInfoFunction)updateCreateStatus,
                                                     jobNode,
                                                     (StorageRequestVolumeFunction)storageRequestVolume,
@@ -1384,26 +1437,26 @@ LOCAL void jobThreadEntry(void)
                                                     &pauseFlag,
                                                     &jobNode->requestedAbortFlag
                                                    );
-        logMessage(LOG_TYPE_ALWAYS,"done create '%s' (error: %s)",String_cString(jobNode->fileName),Errors_getText(jobNode->runningInfo.error));
+        logMessage(LOG_TYPE_ALWAYS,"done create '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
         break;
       case JOB_TYPE_RESTORE:
         {
           StringList archiveFileNameList;
 
-          logMessage(LOG_TYPE_ALWAYS,"start restore");
+          logMessage(LOG_TYPE_ALWAYS,"start restore '%s'",String_cString(archiveName));
           StringList_init(&archiveFileNameList);
-          StringList_append(&archiveFileNameList,jobNode->archiveName);
+          StringList_append(&archiveFileNameList,archiveName);
           jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
-                                                       &jobNode->includePatternList,
-                                                       &jobNode->excludePatternList,
-                                                       &jobNode->jobOptions,
+                                                       &includePatternList,
+                                                       &excludePatternList,
+                                                       &jobOptions,
                                                        (RestoreStatusInfoFunction)updateRestoreStatus,
                                                        jobNode,
                                                        &pauseFlag,
                                                        &jobNode->requestedAbortFlag
                                                       );
           StringList_done(&archiveFileNameList);
-          logMessage(LOG_TYPE_ALWAYS,"done restore (error: %s)",Errors_getText(jobNode->runningInfo.error));
+          logMessage(LOG_TYPE_ALWAYS,"done restore '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
         }
         break;
       #ifndef NDEBUG
@@ -1416,6 +1469,12 @@ LOCAL void jobThreadEntry(void)
 
 #endif /* SIMULATOR */
 
+    /* free resources */
+    freeJobOptions(&jobOptions);
+    PatternList_clear(&excludePatternList);
+    PatternList_clear(&includePatternList);
+
+    /* lock */
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     /* done job */
@@ -1436,8 +1495,14 @@ LOCAL void jobThreadEntry(void)
     /* store schedule info */
     writeJobFileScheduleInfo(jobNode);
 
+    /* unlock */
     Semaphore_unlock(&jobList.lock);
   }
+
+  /* free resources */
+  PatternList_done(&excludePatternList);
+  PatternList_done(&includePatternList);
+  String_delete(archiveName);  
 }
 
 /*---------------------------------------------------------------------*/
@@ -1496,12 +1561,12 @@ LOCAL void schedulerThreadEntry(void)
           scheduleNode = jobNode->scheduleList.head;
           while ((scheduleNode != NULL) && (executeScheduleNode == NULL))
           {
-            if (   ((scheduleNode->year    == SCHEDULE_ANY) || (scheduleNode->year    == year   ))
-                && ((scheduleNode->month   == SCHEDULE_ANY) || (scheduleNode->month   == month  ))
-                && ((scheduleNode->day     == SCHEDULE_ANY) || (scheduleNode->day     == day    ))
-                && ((scheduleNode->hour    == SCHEDULE_ANY) || (scheduleNode->hour    == hour   ))
-                && ((scheduleNode->minute  == SCHEDULE_ANY) || (scheduleNode->minute  == minute ))
-                && ((scheduleNode->weekDay == SCHEDULE_ANY) || (scheduleNode->weekDay == weekDay))
+            if (   ((scheduleNode->year     == SCHEDULE_ANY    ) || (scheduleNode->year   == year  )      )
+                && ((scheduleNode->month    == SCHEDULE_ANY    ) || (scheduleNode->month  == month )      )
+                && ((scheduleNode->day      == SCHEDULE_ANY    ) || (scheduleNode->day    == day   )      )
+                && ((scheduleNode->hour     == SCHEDULE_ANY    ) || (scheduleNode->hour   == hour  )      )
+                && ((scheduleNode->minute   == SCHEDULE_ANY    ) || (scheduleNode->minute == minute)      )
+                && ((scheduleNode->weekDays == SCHEDULE_ANY_DAY) || IN_SET(scheduleNode->weekDays,weekDay))
                 && scheduleNode->enabled
                )
             {
@@ -1693,48 +1758,168 @@ LOCAL const char *getJobStateText(JobStates jobState)
 }
 
 /***********************************************************************\
-* Name   : getTotalSubDirectorySize
-* Purpose: get total size of files in sub-directory
-* Input  : subDirectory - path name
+* Name   : newDirectoryInfo
+* Purpose: create new directory info
+* Input  : pathName  - path name
 * Output : -
-* Return : total size of files in sub-directory (in bytes)
+* Return : directory info node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint64 getTotalSubDirectorySize(const String subDirectory)
+LOCAL DirectoryInfoNode *newDirectoryInfo(const String pathName)
 {
-  uint64          totalSize;
-  StringList      pathNameList;
+  DirectoryInfoNode *directoryInfoNode;
+
+  assert(pathName != NULL);
+
+  /* allocate job node */
+  directoryInfoNode = LIST_NEW_NODE(DirectoryInfoNode);
+  if (directoryInfoNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  /* init directory info node */
+  directoryInfoNode->pathName          = String_duplicate(pathName);
+  directoryInfoNode->fileCount         = 0LL;
+  directoryInfoNode->totalFileSize     = 0LL;
+  directoryInfoNode->directoryOpenFlag = FALSE;
+
+  /* init path name list */
+  StringList_init(&directoryInfoNode->pathNameList);
+  StringList_append(&directoryInfoNode->pathNameList,pathName);
+
+  return directoryInfoNode;
+}
+
+/***********************************************************************\
+* Name   : freeDirectoryInfoNode
+* Purpose: free directory info node
+* Input  : directoryInfoNode - directory info node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeDirectoryInfoNode(DirectoryInfoNode *directoryInfoNode)
+{
+  assert(directoryInfoNode != NULL);
+
+  if (directoryInfoNode->directoryOpenFlag)
+  {
+    File_closeDirectory(&directoryInfoNode->directoryHandle);
+  }
+  StringList_done(&directoryInfoNode->pathNameList);
+  String_delete(directoryInfoNode->pathName);
+}
+
+/***********************************************************************\
+* Name   : findJobById
+* Purpose: find job by id
+* Input  : jobId - job id
+* Output : -
+* Return : job node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL DirectoryInfoNode *findDirectoryInfo(DirectoryInfoList *directoryInfoList, const String pathName)
+{
+  DirectoryInfoNode *directoryInfoNode;
+
+  assert(directoryInfoList != NULL);
+  assert(pathName != NULL);
+
+  directoryInfoNode = directoryInfoList->head;
+  while ((directoryInfoNode != NULL) && !String_equals(directoryInfoNode->pathName,pathName))
+  {
+    directoryInfoNode = directoryInfoNode->next;
+  }
+
+  return directoryInfoNode;
+}
+
+/***********************************************************************\
+* Name   : getDirectoryInfo
+* Purpose: get directory info: number of files, total file size
+* Input  : directory - path name
+*          timeout   - timeout [ms] or -1 for no timeout
+* Output : fileCount     - number of files
+*          totalFileSize - total file size (bytes)
+*          timeoutFlag   - TRUE iff timeout, FALSE otherwise
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
+                            long              timeout,
+                            uint64            *fileCount,
+                            uint64            *totalFileSize,
+                            bool              *timeoutFlag
+                           )
+{
+  uint64          startTimestamp;
   String          pathName;
   DirectoryHandle directoryHandle;
   String          fileName;
   FileInfo        fileInfo;
   Errors          error;
+uint n;
 
-  totalSize = 0;
+  assert(directoryInfoNode != NULL);
+  assert(fileCount != NULL);
+  assert(totalFileSize != NULL);
 
-  StringList_init(&pathNameList);
-  StringList_append(&pathNameList,String_duplicate(subDirectory));
+  /* get start timestamp */
+  startTimestamp = Misc_getTimestamp();
+
+fprintf(stderr,"%s,%d: ---------------- start %s timeout=%d %llu %llu\n",__FILE__,__LINE__,
+String_cString(directoryInfoNode->pathName),
+timeout,
+directoryInfoNode->fileCount,
+directoryInfoNode->totalFileSize
+);
+n=0;
   pathName = String_new();
   fileName = String_new();
-  while (!StringList_empty(&pathNameList))
-  {
-    pathName = StringList_getFirst(&pathNameList,pathName);
-
-    error = File_openDirectory(&directoryHandle,pathName);
-    if (error != ERROR_NONE)
+  if (timeoutFlag != NULL) (*timeoutFlag) = FALSE;
+  while (   (   !StringList_empty(&directoryInfoNode->pathNameList)
+             || directoryInfoNode->directoryOpenFlag
+            )
+         && ((timeoutFlag == NULL) || !(*timeoutFlag))
+         && !quitFlag
+        )
+  { 
+    if (!directoryInfoNode->directoryOpenFlag)
     {
-      continue;
-    }
+      /* process FIFO for deep-first search; this keep the directory list shorter */
+      StringList_getLast(&directoryInfoNode->pathNameList,pathName);
 
-    while (!File_endOfDirectory(&directoryHandle))
-    {
-      error = File_readDirectory(&directoryHandle,fileName);
+      /* open diretory for reading */
+      error = File_openDirectory(&directoryInfoNode->directoryHandle,pathName);
       if (error != ERROR_NONE)
       {
         continue;
       }
+      directoryInfoNode->directoryOpenFlag = TRUE;
+    }
 
+    /* read directory content */
+    while (   !File_endOfDirectory(&directoryInfoNode->directoryHandle)
+           && ((timeoutFlag == NULL) || !(*timeoutFlag))
+           && !quitFlag
+          )
+    {
+      /* read next directory entry */
+      error = File_readDirectory(&directoryInfoNode->directoryHandle,fileName);
+      if (error != ERROR_NONE)
+      {
+        continue;
+      }
+      directoryInfoNode->fileCount++;
+if ((directoryInfoNode->fileCount%10000)==0)
+{
+ fprintf(stderr,"%s,%d: %s count=%llu listcount=%d\n",__FILE__,__LINE__,String_cString(pathName),directoryInfoNode->fileCount,directoryInfoNode->pathNameList.count);
+}
       error = File_getFileInfo(fileName,&fileInfo);
       if (error != ERROR_NONE)
       {
@@ -1744,25 +1929,52 @@ LOCAL uint64 getTotalSubDirectorySize(const String subDirectory)
       switch (File_getType(fileName))
       {
         case FILE_TYPE_FILE:
-          totalSize += fileInfo.size;
+          directoryInfoNode->totalFileSize += fileInfo.size;
+n++;
           break;
         case FILE_TYPE_DIRECTORY:
-          StringList_append(&pathNameList,String_duplicate(fileName));
+          StringList_append(&directoryInfoNode->pathNameList,fileName);
           break;
         case FILE_TYPE_LINK:
           break;
         default:
           break;
       }
+
+      /* check for timeout */
+      if ((timeout >= 0) && (timeoutFlag != NULL))
+      {
+        (*timeoutFlag) = (Misc_getTimestamp() >= (startTimestamp+timeout*1000));
+      }
     }
 
-    File_closeDirectory(&directoryHandle);
+    if ((timeoutFlag == NULL) || !(*timeoutFlag))
+    {
+      /* close diretory */
+      directoryInfoNode->directoryOpenFlag = FALSE;
+      File_closeDirectory(&directoryInfoNode->directoryHandle);
+    }
+
+    /* check for timeout */
+    if ((timeout >= 0) && (timeoutFlag != NULL))
+    {
+      (*timeoutFlag) = (Misc_getTimestamp() >= (startTimestamp+timeout*1000));
+    }
   }
   String_delete(pathName);
   String_delete(fileName);
-  StringList_done(&pathNameList);
 
-  return totalSize;
+  /* get values */
+  (*fileCount)     = directoryInfoNode->fileCount;
+  (*totalFileSize) = directoryInfoNode->totalFileSize;
+  
+fprintf(stderr,"%s,%d: done %s timeout=%d %llu %llu n=%u\n",__FILE__,__LINE__,
+String_cString(directoryInfoNode->pathName),
+timeout,
+directoryInfoNode->fileCount,
+directoryInfoNode->totalFileSize,
+n
+);
 }
 
 /*---------------------------------------------------------------------*/
@@ -1948,8 +2160,6 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  bool                   totalSizeFlag;
-  uint64                 totalSize;
   Errors                 error;
   StorageDirectoryHandle storageDirectoryHandle;
   String                 fileName;
@@ -1964,7 +2174,6 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected path name");
     return;
   }
-  totalSizeFlag = ((argumentCount >= 2) && String_toBoolean(arguments[1],0,NULL,NULL,0,NULL,0));
 
   /* open directory */
   error = Storage_openDirectory(&storageDirectoryHandle,
@@ -1995,17 +2204,8 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
                     );
           break;
         case FILE_TYPE_DIRECTORY:
-          if (totalSizeFlag)
-          {
-            totalSize = getTotalSubDirectorySize(fileName);
-          }
-          else
-          {
-            totalSize = 0;
-          }
           sendResult(clientInfo,id,FALSE,0,
-                     "DIRECTORY %llu %llu %'S",
-                     totalSize,
+                     "DIRECTORY %llu %'S",
                      fileInfo.timeModified,
                      fileName
                     );
@@ -2042,6 +2242,44 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
   Storage_closeDirectory(&storageDirectoryHandle);
 
   sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  long              timeout;
+  DirectoryInfoNode *directoryInfoNode;
+  uint64            fileCount;
+  uint64            totalFileSize;
+  bool              timeoutFlag;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get path name */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected file name");
+    return;
+  }
+  timeout = (argumentCount >= 2)?String_toInteger(arguments[1],0,NULL,NULL,0):0L;
+
+  /* find/create directory info */
+  directoryInfoNode = findDirectoryInfo(&clientInfo->directoryInfoList,arguments[0]);
+  if (directoryInfoNode == NULL)
+  {
+    directoryInfoNode = newDirectoryInfo(arguments[0]);
+    List_append(&clientInfo->directoryInfoList,directoryInfoNode);
+  }
+
+  /* get total size of directoy/file */
+  getDirectoryInfo(directoryInfoNode,
+                   timeout,
+                   &fileCount,
+                   &totalFileSize,
+                   &timeoutFlag
+                  );
+
+  sendResult(clientInfo,id,TRUE,0,"%llu %llu %d",fileCount,totalFileSize,timeoutFlag?1:0);
 }
 
 LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -2974,6 +3212,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   JobNode      *jobNode;
   String       line;
   ScheduleNode *scheduleNode;
+  String       names;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -3032,19 +3271,22 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
       String_appendCString(line,"*");
     }
     String_appendChar(line,' ');
-    if (scheduleNode->weekDay != SCHEDULE_ANY)
+    if (scheduleNode->weekDays != SCHEDULE_ANY_DAY)
     {
-      switch (scheduleNode->weekDay)
-      {
-        case WEEKDAY_MON: String_appendCString(line,"Mon"); break;
-        case WEEKDAY_TUE: String_appendCString(line,"Tue"); break;
-        case WEEKDAY_WED: String_appendCString(line,"Wed"); break;
-        case WEEKDAY_THU: String_appendCString(line,"Thu"); break;
-        case WEEKDAY_FRI: String_appendCString(line,"Fri"); break;
-        case WEEKDAY_SAT: String_appendCString(line,"Sat"); break;
-        case WEEKDAY_SUN: String_appendCString(line,"Sun"); break;
-      }
+      names = String_new();
+
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
+
+      String_append(line,names);
       String_appendChar(line,' ');
+
+      String_delete(names);
     }
     else
     {
@@ -3190,7 +3432,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   }
 
   /* parse schedule */
-  scheduleNode = parseSchedule(s);  
+  scheduleNode = parseSchedule(s);
   if (scheduleNode == NULL)
   {
     sendResult(clientInfo,id,TRUE,ERROR_PARSING,"cannot parse schedule '%S'",s);
@@ -3571,7 +3813,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory");
     return;
-  } 
+  }
   initJobOptions(&jobOptions);
   jobOptions.directory = String_duplicate(arguments[1]);
   PatternList_init(&includePatternList);
@@ -3636,6 +3878,7 @@ SERVER_COMMANDS[] =
   { "ERROR_INFO",            "i",   serverCommand_errorInfo,           AUTHORIZATION_STATE_OK      },
   { "DEVICE_LIST",           "",    serverCommand_deviceList,          AUTHORIZATION_STATE_OK      },
   { "FILE_LIST",             "S",   serverCommand_fileList,            AUTHORIZATION_STATE_OK      },
+  { "DIRECTORY_INFO",        "S",   serverCommand_directoryInfo,       AUTHORIZATION_STATE_OK      },
   { "JOB_LIST",              "",    serverCommand_jobList,             AUTHORIZATION_STATE_OK      },
   { "JOB_INFO",              "i",   serverCommand_jobInfo,             AUTHORIZATION_STATE_OK      },
   { "JOB_NEW",               "S",   serverCommand_jobNew,              AUTHORIZATION_STATE_OK      },
@@ -3939,6 +4182,8 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
                              SocketHandle socketHandle
                             )
 {
+  uint z;
+
   assert(clientInfo != NULL);
 
   /* initialize */
@@ -3953,14 +4198,18 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   PatternList_init(&clientInfo->includePatternList);
   PatternList_init(&clientInfo->excludePatternList);
   initJobOptions(&clientInfo->jobOptions);
+  List_init(&clientInfo->directoryInfoList);
 
   if (!MsgQueue_init(&clientInfo->network.commandMsgQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialise client command message queue!");
   }
-  if (!Thread_init(&clientInfo->network.thread,"Client",0,networkClientThread,clientInfo))
+  for (z = 0; z < MAX_NETWORK_CLIENT_THREADS; z++)
   {
-    HALT_FATAL_ERROR("Cannot initialise client thread!");
+    if (!Thread_init(&clientInfo->network.threads[z],"Client",0,networkClientThread,clientInfo))
+    {
+      HALT_FATAL_ERROR("Cannot initialise client thread!");
+    }
   }
 
   /* create and send session id */
@@ -3979,6 +4228,8 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
 
 LOCAL void doneClient(ClientInfo *clientInfo)
 {
+  int z;
+
   assert(clientInfo != NULL);
 
   switch (clientInfo->type)
@@ -3989,12 +4240,19 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       /* stop client thread */
       clientInfo->network.exitFlag = TRUE;
       MsgQueue_setEndOfMsg(&clientInfo->network.commandMsgQueue);
-      Thread_join(&clientInfo->network.thread);
+      for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
+      {
+        Thread_join(&clientInfo->network.threads[z]);
+      }
 
       /* free resources */
       MsgQueue_done(&clientInfo->network.commandMsgQueue,(MsgQueueMsgFreeFunction)freeCommandMsg,NULL);
       String_delete(clientInfo->network.name);
-      Thread_done(&clientInfo->network.thread);
+      for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
+      {
+        Thread_done(&clientInfo->network.threads[z]);
+      }
+      List_done(&clientInfo->directoryInfoList,(ListNodeFreeFunction)freeDirectoryInfoNode,NULL);
       break;
     default:
       #ifndef NDEBUG
@@ -4108,6 +4366,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
     else if (String_equalsCString(command,"QUIT"))
     {
       quitFlag = TRUE;
+fprintf(stderr,"%s,%d: QQQQQQQQQQQQit\n",__FILE__,__LINE__);
       sendResult(clientInfo,0,TRUE,0,"ok");
     }
   #endif /* not NDEBUG */

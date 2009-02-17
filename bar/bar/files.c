@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -1347,7 +1347,10 @@ Errors File_getFileInfo(const String fileName,
     fileInfo->type        = FILE_TYPE_SPECIAL;
     fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
   }
-  else                                fileInfo->type = FILE_TYPE_UNKNOWN;
+  else
+  {
+    fileInfo->type        = FILE_TYPE_UNKNOWN;
+  }
   fileInfo->size            = fileStat.st_size;
   fileInfo->timeLastAccess  = fileStat.st_atime;
   fileInfo->timeModified    = fileStat.st_mtime;

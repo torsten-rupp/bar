@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1470,24 +1470,24 @@ void initJobOptions(JobOptions *jobOptions)
   memset(jobOptions,0,sizeof(JobOptions));
 }
 
-void copyJobOptions(const JobOptions *sourceJobOptions, JobOptions *destinationJobOptions)
+void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions)
 {
-  assert(sourceJobOptions != NULL);
-  assert(destinationJobOptions != NULL);
+  assert(fromJobOptions != NULL);
+  assert(toJobOptions != NULL);
 
-  memcpy(destinationJobOptions,sourceJobOptions,sizeof(JobOptions));
-  destinationJobOptions->incrementalListFileName      = String_duplicate(sourceJobOptions->incrementalListFileName);
-  destinationJobOptions->directory                    = String_duplicate(sourceJobOptions->directory);
-  destinationJobOptions->cryptPassword                = Password_duplicate(sourceJobOptions->cryptPassword);
-  destinationJobOptions->cryptPublicKeyFileName       = String_duplicate(sourceJobOptions->cryptPublicKeyFileName);
-  destinationJobOptions->cryptPrivateKeyFileName      = String_duplicate(sourceJobOptions->cryptPrivateKeyFileName);
-  destinationJobOptions->ftpServer.loginName          = String_duplicate(sourceJobOptions->ftpServer.loginName);
-  destinationJobOptions->ftpServer.password           = Password_duplicate(sourceJobOptions->ftpServer.password);
-  destinationJobOptions->sshServer.loginName          = String_duplicate(sourceJobOptions->sshServer.loginName);
-  destinationJobOptions->sshServer.password           = Password_duplicate(sourceJobOptions->sshServer.password);
-  destinationJobOptions->sshServer.publicKeyFileName  = String_duplicate(sourceJobOptions->sshServer.publicKeyFileName);
-  destinationJobOptions->sshServer.privateKeyFileName = String_duplicate(sourceJobOptions->sshServer.privateKeyFileName);
-  destinationJobOptions->deviceName                   = String_duplicate(sourceJobOptions->deviceName);
+  memcpy(toJobOptions,fromJobOptions,sizeof(JobOptions));
+  toJobOptions->incrementalListFileName      = String_duplicate(fromJobOptions->incrementalListFileName);
+  toJobOptions->directory                    = String_duplicate(fromJobOptions->directory);
+  toJobOptions->cryptPassword                = Password_duplicate(fromJobOptions->cryptPassword);
+  toJobOptions->cryptPublicKeyFileName       = String_duplicate(fromJobOptions->cryptPublicKeyFileName);
+  toJobOptions->cryptPrivateKeyFileName      = String_duplicate(fromJobOptions->cryptPrivateKeyFileName);
+  toJobOptions->ftpServer.loginName          = String_duplicate(fromJobOptions->ftpServer.loginName);
+  toJobOptions->ftpServer.password           = Password_duplicate(fromJobOptions->ftpServer.password);
+  toJobOptions->sshServer.loginName          = String_duplicate(fromJobOptions->sshServer.loginName);
+  toJobOptions->sshServer.password           = Password_duplicate(fromJobOptions->sshServer.password);
+  toJobOptions->sshServer.publicKeyFileName  = String_duplicate(fromJobOptions->sshServer.publicKeyFileName);
+  toJobOptions->sshServer.privateKeyFileName = String_duplicate(fromJobOptions->sshServer.privateKeyFileName);
+  toJobOptions->deviceName                   = String_duplicate(fromJobOptions->deviceName);
 }
 
 void freeJobOptions(JobOptions *jobOptions)
@@ -1865,39 +1865,58 @@ LOCAL bool parseScheduleMonth(const String s, int *month)
 }
 
 /***********************************************************************\
-* Name   : parseScheduleWeekDay
+* Name   : parseScheduleWeekDays
 * Purpose: parse week day
 * Input  : s - string to parse
-* Output : weekday - week day
+* Output : weekDays - week days
 * Return : TRUE iff week day parsed
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseScheduleWeekDay(const String s, int *weekday)
+LOCAL bool parseScheduleWeekDays(const String s, ulong *weekDays)
 {
-  String name;
+  String          names;
+  StringTokenizer stringTokenizer;
+  String          name;
 
   assert(s != NULL);
-  assert(weekday != NULL);
+  assert(weekDays != NULL);
 
-  name = String_toLower(String_duplicate(s));
   if (String_equalsCString(s,"*"))
   {
-    (*weekday) = SCHEDULE_ANY;
+    (*weekDays) = SCHEDULE_ANY_DAY;
   }
-  else if (String_equalsCString(name,"mon")) (*weekday) = WEEKDAY_MON;
-  else if (String_equalsCString(name,"tue")) (*weekday) = WEEKDAY_TUE;
-  else if (String_equalsCString(name,"wed")) (*weekday) = WEEKDAY_WED;
-  else if (String_equalsCString(name,"thu")) (*weekday) = WEEKDAY_THU;
-  else if (String_equalsCString(name,"fri")) (*weekday) = WEEKDAY_FRI;
-  else if (String_equalsCString(name,"sat")) (*weekday) = WEEKDAY_SAT;
-  else if (String_equalsCString(name,"sun")) (*weekday) = WEEKDAY_SUN;
   else
   {
-    String_delete(name);
-    return FALSE;
+    SET_CLEAR(*weekDays);
+
+    names = String_toLower(String_duplicate(s));
+    String_initTokenizer(&stringTokenizer,
+                         names,
+                         STRING_BEGIN,
+                         ",",
+                         STRING_QUOTES,
+                         TRUE
+                        );
+    while (String_getNextToken(&stringTokenizer,&name,NULL))
+    {
+      if      (String_equalsCString(name,"mon")) SET_ADD(*weekDays,WEEKDAY_MON);
+      else if (String_equalsCString(name,"tue")) SET_ADD(*weekDays,WEEKDAY_TUE);
+      else if (String_equalsCString(name,"wed")) SET_ADD(*weekDays,WEEKDAY_WED);
+      else if (String_equalsCString(name,"thu")) SET_ADD(*weekDays,WEEKDAY_THU);
+      else if (String_equalsCString(name,"fri")) SET_ADD(*weekDays,WEEKDAY_FRI);
+      else if (String_equalsCString(name,"sat")) SET_ADD(*weekDays,WEEKDAY_SAT);
+      else if (String_equalsCString(name,"sun")) SET_ADD(*weekDays,WEEKDAY_SUN);
+      else
+      {
+        String_doneTokenizer(&stringTokenizer);
+        String_delete(names);
+        return FALSE;
+      }
+    }
+    String_doneTokenizer(&stringTokenizer);
+    String_delete(names);
   }
-  String_delete(name);
 
   return TRUE;
 }
@@ -1957,7 +1976,7 @@ ScheduleNode *parseSchedule(const String s)
   scheduleNode->day         = SCHEDULE_ANY;
   scheduleNode->hour        = SCHEDULE_ANY;
   scheduleNode->minute      = SCHEDULE_ANY;
-  scheduleNode->weekDay     = SCHEDULE_ANY;
+  scheduleNode->weekDays    = SCHEDULE_ANY_DAY;
   scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
   scheduleNode->enabled     = FALSE;
 
@@ -1979,7 +1998,7 @@ ScheduleNode *parseSchedule(const String s)
   }
   if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
   {
-    if (!parseScheduleWeekDay(s0,&scheduleNode->weekDay)) errorFlag = TRUE;
+    if (!parseScheduleWeekDays(s0,&scheduleNode->weekDays)) errorFlag = TRUE;
     parseScheduleNumber(s1,&scheduleNode->hour  );
     parseScheduleNumber(s2,&scheduleNode->minute);
   }
@@ -2065,6 +2084,7 @@ void configValueFormatDoneSchedule(void **formatUserData, void *userData)
 bool configValueFormatSchedule(void **formatUserData, void *userData, String line)
 {
   ScheduleNode *scheduleNode;
+  String       names;
 
   assert(formatUserData != NULL);
 
@@ -2101,24 +2121,22 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
     }
     String_appendChar(line,' ');
 
-    if (scheduleNode->weekDay != SCHEDULE_ANY)
+    if (scheduleNode->weekDays != SCHEDULE_ANY_DAY)
     {
-      switch (scheduleNode->weekDay)
-      {
-        case WEEKDAY_MON: String_appendCString(line,"Mon"); break;
-        case WEEKDAY_TUE: String_appendCString(line,"Tue"); break;
-        case WEEKDAY_WED: String_appendCString(line,"Wed"); break;
-        case WEEKDAY_THU: String_appendCString(line,"Thu"); break;
-        case WEEKDAY_FRI: String_appendCString(line,"Fri"); break;
-        case WEEKDAY_SAT: String_appendCString(line,"Sat"); break;
-        case WEEKDAY_SUN: String_appendCString(line,"Sun"); break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break;
-        #endif /* NDEBUG */
-      }
+      names = String_new();
+
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
+      if (IN_SET(scheduleNode->weekDays,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
+
+      String_append(line,names);
       String_appendChar(line,' ');
+
+      String_delete(names);
     }
 
     if (scheduleNode->hour != SCHEDULE_ANY)

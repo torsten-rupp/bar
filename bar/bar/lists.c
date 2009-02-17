@@ -1,12 +1,14 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/lists.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
 *
 \***********************************************************************/
+
+#define __LISTS_IMPLEMENATION__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -213,26 +215,6 @@ void List_move(void *fromList,
     List_remove(fromList,node);
     List_insert(toList,node,toListNextNode);
   }
-}
-
-bool List_empty(const void *list)
-{
-  assert(list != NULL);
-  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
-         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
-        );
-
-  return (((List*)list)->count == 0);
-}
-
-unsigned long List_count(const void *list)
-{
-  assert(list != NULL);
-  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
-         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
-        );
-
-  return ((List*)list)->count;
 }
 
 void List_insert(void *list,

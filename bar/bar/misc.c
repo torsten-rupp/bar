@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -715,6 +715,26 @@ void Misc_performanceFilterDone(PerformanceFilter *performanceFilter)
   assert(performanceFilter->performanceValues != NULL);
 
   free(performanceFilter->performanceValues);
+}
+
+void Misc_performanceFilterClear(PerformanceFilter *performanceFilter)
+{
+  uint z;
+
+  assert(performanceFilter != NULL);
+  assert(performanceFilter->performanceValues != NULL);
+
+  performanceFilter->performanceValues[0].timeStamp = Misc_getTimestamp()/1000L;
+  performanceFilter->performanceValues[0].value     = 0.0;
+  for (z = 1; z < performanceFilter->maxSeconds; z++)
+  {
+    performanceFilter->performanceValues[z].timeStamp = 0;
+    performanceFilter->performanceValues[z].value     = 0.0;
+  }
+  performanceFilter->seconds = 0;
+  performanceFilter->index   = 0;
+  performanceFilter->average = 0;
+  performanceFilter->n       = 0;
 }
 
 void Misc_performanceFilterAdd(PerformanceFilter *performanceFilter,

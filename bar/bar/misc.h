@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -332,6 +332,17 @@ void Misc_performanceFilterInit(PerformanceFilter *performanceFilter,
 \***********************************************************************/
 
 void Misc_performanceFilterDone(PerformanceFilter *performanceFilter);
+
+/***********************************************************************\
+* Name   : Misc_performanceFilterClear
+* Purpose: clear performance filter
+* Input  : performanceFilter - performance filter variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_performanceFilterClear(PerformanceFilter *performanceFilter);
 
 /***********************************************************************\
 * Name   : Misc_performanceFilterAdd

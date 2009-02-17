@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -27,6 +27,7 @@
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
+#include "misc.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -84,6 +85,31 @@ typedef enum
 } ArchiveTypes;
 
 #define SCHEDULE_ANY -1
+/*
+#define SCHEDULE_ANY_MONTH \
+  (  SET_VALUE(MONTH_JAN) \
+   | SET_VALUE(MONTH_FEB) \
+   | SET_VALUE(MONTH_MAR) \
+   | SET_VALUE(MONTH_APR) \
+   | SET_VALUE(MONTH_MAY) \
+   | SET_VALUE(MONTH_JUN) \
+   | SET_VALUE(MONTH_JUL) \
+   | SET_VALUE(MONTH_AUG) \
+   | SET_VALUE(MONTH_SEP) \
+   | SET_VALUE(MONTH_OCT) \
+   | SET_VALUE(MONTH_NOV) \
+   | SET_VALUE(MONTH_DEC) \
+  )
+*/
+#define SCHEDULE_ANY_DAY \
+  (  SET_VALUE(WEEKDAY_MON) \
+   | SET_VALUE(WEEKDAY_TUE) \
+   | SET_VALUE(WEEKDAY_WED) \
+   | SET_VALUE(WEEKDAY_THU) \
+   | SET_VALUE(WEEKDAY_FRI) \
+   | SET_VALUE(WEEKDAY_SAT) \
+   | SET_VALUE(WEEKDAY_SUN) \
+  )
 
 /***************************** Datatypes *******************************/
 
@@ -247,7 +273,7 @@ typedef struct ScheduleNode
   int          day;
   int          hour;
   int          minute;
-  int          weekDay;
+  ulong        weekDays;
   ArchiveTypes archiveType;
   bool         enabled;
 } ScheduleNode;
@@ -313,14 +339,6 @@ extern String        tmpDirectory;
                        ((n)>                1024LL)?"KB": \
                        "bytes" \
                       )
-
-#define DAY_ADD(days,day)    ((days) |=  (1 << (day)))
-#define DAY_REM(days,day)    ((days) &= ~(1 << (day)))
-#define DAY_TEST(days,day)   (((days) & (1 << (day))) != 0)
-
-#define MONTH_ADD(months,month)  ((months) |=  (1 << (month)))
-#define MONTH_REM(months,month)  ((months) &= ~(1 << (month)))
-#define MONTH_TEST(months,month) (((months) &  (1 << (month))) != 0)
 
 /***************************** Forwards ********************************/
 
@@ -435,14 +453,14 @@ void initJobOptions(JobOptions *jobOptions);
 /***********************************************************************\
 * Name   : copyJobOptions
 * Purpose: copy job options structure
-* Input  : sourceJobOptions      - source job options
-*          destinationJobOptions - destination job options variable
+* Input  : fromJobOptions - source job options
+*          toJobOptions   - destination job options variable
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void copyJobOptions(const JobOptions *sourceJobOptions, JobOptions *destinationJobOptions);
+void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions);
 
 /***********************************************************************\
 * Name   : freeJobOptions

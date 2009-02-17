@@ -127,12 +127,14 @@ typedef void               void32;
 
 /****************************** Macros *********************************/
 #define GLOBAL extern
-#undef LOCAL
+#define LOCAL static
 
-#ifndef DEBUG
-  #define LOCAL static
+#ifdef NDEBUG
+  #define INLINE static inline
+  #define LOCAL_INLINE static inline
 #else
-  #define LOCAL
+  #define INLINE
+  #define LOCAL_INLINE static
 #endif
 
 #define UNUSED_VARIABLE(s) (void)s
@@ -140,6 +142,23 @@ typedef void               void32;
 #define SIZE_OF_ARRAY(a) (sizeof(a)/sizeof(a[0]))
 
 #define ALIGN(n,alignment) (((alignment)>0)?(((n)+(alignment)-1) & ~((alignment)-1)):(n))
+
+/* set macros */
+#define SET_CLEAR(set) \
+  do { \
+    (set) = 0; \
+  } while (0)
+#define SET_VALUE(element) \
+  (1 << (element))
+#define SET_ADD(set,element) \
+  do { \
+    (set) |= SET_VALUE(element); \
+  } while (0)
+#define SET_REM(set,element) \
+  do { \
+    (set) &= ~(SET_VALUE(element)); \
+  } while (0)
+#define IN_SET(set,element) (((set) & SET_VALUE(element)) == SET_VALUE(element))
 
 /* mathematicl macros */
 #ifndef __cplusplus

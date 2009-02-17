@@ -1,12 +1,14 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
 *
 \***********************************************************************/
+
+#define __STRINGS_IMPLEMENATION__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -28,6 +30,10 @@
 /****************** Conditional compilation switches *******************/
 #define HALT_ON_INSUFFICIENT_MEMORY
 #define _FILL_MEMORY
+
+#define MAX_STRINGS_CHECK
+#define WARN_MAX_STRINGS       2000
+#define WARN_MAX_STRINGS_DELTA  500
 
 /***************************** Constants *******************************/
 #define STRING_START_LENGTH 64   // string start length
@@ -77,16 +83,6 @@ typedef struct
   char             conversionChar;
 } FormatToken;
 
-struct __String
-{
-  ulong length;
-  ulong maxLength;
-  char  *data;
-  #ifndef NDEBUG
-    ulong checkSum;
-  #endif /* not NDEBUG */
-};
-
 #ifndef NDEBUG
   typedef struct DebugStringNode
   {
@@ -111,42 +107,12 @@ struct __String
   pthread_mutex_t debugStringLock;
   DebugStringList debugAllocStringList;
   DebugStringList debugFreeStringList;
+  #ifdef MAX_STRINGS_CHECK
+    ulong debugMaxStringNextWarningCount;
+  #endif /* MAX_STRINGS_CHECK */
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
-
-#ifndef NDEBUG
-  #define CHECK_VALID(string) \
-    do { \
-      if (string != NULL) \
-      { \
-        if (((ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data) != (string)->checkSum) \
-        { \
-          HALT_INTERNAL_ERROR("Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!",\
-                              (string)->checkSum,\
-                              string,\
-                              (ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data,\
-                              (string)->length,\
-                              (string)->maxLength\
-                             ); \
-        } \
-      } \
-    } while (0)
-  #define UPDATE_VALID(string) \
-    do { \
-      if (string != NULL) \
-      { \
-        (string)->checkSum = (ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data; \
-        } \
-    } while (0)
-#else /* NDEBUG */
-  #define CHECK_VALID(string) \
-    do { \
-    } while (0)
-  #define UPDATE_VALID(string) \
-    do { \
-    } while (0)
-#endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
 
@@ -162,6 +128,9 @@ LOCAL void debugStringInit(void)
   pthread_mutex_init(&debugStringLock,NULL);
   List_init(&debugAllocStringList);
   List_init(&debugFreeStringList);
+  #ifdef MAX_STRINGS_CHECK
+    debugMaxStringNextWarningCount = WARN_MAX_STRINGS;
+  #endif /* MAX_STRINGS_CHECK */
 }
 #endif /* not NDEBUG */
 
@@ -286,7 +255,7 @@ LOCAL inline void assignTmpString(struct __String *toString, struct __String *fr
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void ensureStringLength(struct __String *string, ulong newLength)
+LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
 {
   char  *newData;
   ulong newMaxLength;
@@ -1676,6 +1645,9 @@ String __String_new(const char *fileName, ulong lineNb)
   struct __String *string;
   #ifndef NDEBUG
     DebugStringNode *debugStringNode;;
+    #ifdef MAX_STRINGS_CHECK
+      ulong debugStringCount;
+    #endif /* MAX_STRINGS_CHECK */
   #endif /* not NDEBUG */
 
   string = allocString();
@@ -1688,6 +1660,8 @@ String __String_new(const char *fileName, ulong lineNb)
     pthread_once(&debugStringInitFlag,debugStringInit);
 
     pthread_mutex_lock(&debugStringLock);
+
+    /* find string in free-list */
     debugStringNode = debugFreeStringList.head;
     while ((debugStringNode != NULL) && (debugStringNode->string != string))
     {
@@ -1705,13 +1679,30 @@ String __String_new(const char *fileName, ulong lineNb)
         HALT_INSUFFICIENT_MEMORY();
       }
     }
+
+    /* init string node */
     debugStringNode->fileName     = fileName;
     debugStringNode->lineNb       = lineNb;
     debugStringNode->prevFileName = NULL;
     debugStringNode->prevLineNb   = 0;
-    debugStringNode->string   = string;
+    debugStringNode->string       = string;
+
+    /* add string to allocated-list */
     List_append(&debugAllocStringList,debugStringNode);
+    #ifdef MAX_STRINGS_CHECK
+      debugStringCount = List_count(&debugAllocStringList);
+      if (debugStringCount > debugMaxStringNextWarningCount)
+      {
+        fprintf(stderr,"DEBUG WARNING: %lu strings allocated!\n",debugStringCount);
+        debugMaxStringNextWarningCount += WARN_MAX_STRINGS_DELTA;
+//String_debugPrintAllocated();
+      }
+    #endif /* MAX_STRINGS_CHECK */
+
     pthread_mutex_unlock(&debugStringLock);
+
+    #ifdef MAX_STRINGS_CHECK
+    #endif /* MAX_STRINGS_CHECK */
   #endif /* not NDEBUG */
 
   UPDATE_VALID(string);
@@ -1878,6 +1869,8 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
 
   #ifndef NDEBUG
     pthread_mutex_lock(&debugStringLock);
+
+    /* find string in free-list to check for duplicate free */
     debugStringNode = debugFreeStringList.head;
     while ((debugStringNode != NULL) && (debugStringNode->string != string))
     {
@@ -1896,6 +1889,7 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
              );
       HALT_INTERNAL_ERROR("");
     }
+
     pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
 
@@ -2562,56 +2556,6 @@ String String_joinChar(String string, char ch, char joinChar)
   String_appendChar(string,ch);
 
   return string;
-}
-
-ulong String_length(const String string)
-{
-  CHECK_VALID(string);
-
-  return (string != NULL)?string->length:0;
-}
-
-bool String_empty(const String string)
-{
-  CHECK_VALID(string);
-
-  return (string != NULL)?(string->length == 0):TRUE;
-}
-
-char String_index(const String string, ulong index)
-{
-  char ch;
-
-  CHECK_VALID(string);
-
-  if (string != NULL)
-  {
-    if      (index == STRING_END)
-    {
-      ch = (string->length > 0)?string->data[string->length-1]:'\0';
-    }
-    else if (index < string->length)
-    {
-      ch = string->data[index];
-    }
-    else
-    {
-      ch = '\0';
-    }
-  }
-  else
-  {
-    ch = '\0';
-  }
-
-  return ch;
-}
-
-const char *String_cString(const String string)
-{
-  CHECK_VALID(string);
-
-  return (string != NULL)?&string->data[0]:NULL;
 }
 
 int String_compare(const String          string1,
@@ -3888,13 +3832,10 @@ char* String_toCString(const String string)
 }
 
 #ifndef NDEBUG
-void String_debug(void)
+void String_debugPrintAllocated(void)
 {
   DebugStringNode *debugStringNode;
 
-  pthread_once(&debugStringInitFlag,debugStringInit);
-
-  pthread_mutex_lock(&debugStringLock);
   for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
   {
     fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %ld\n",
@@ -3904,6 +3845,14 @@ void String_debug(void)
             debugStringNode->lineNb
            );
   }
+}
+
+void String_debug(void)
+{
+  pthread_once(&debugStringInitFlag,debugStringInit);
+
+  pthread_mutex_lock(&debugStringLock);
+  String_debugPrintAllocated();
   pthread_mutex_unlock(&debugStringLock);
 }
 
@@ -3912,6 +3861,7 @@ void String_debugDone(void)
   pthread_once(&debugStringInitFlag,debugStringInit);
 
   pthread_mutex_lock(&debugStringLock);
+  debugMaxStringNextWarningCount = 0LL;
   List_done(&debugFreeStringList,NULL,NULL);
   List_done(&debugFreeStringList,NULL,NULL);
   pthread_mutex_unlock(&debugStringLock);

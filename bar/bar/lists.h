@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/lists.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -252,7 +252,18 @@ void List_move(void *fromList,
 * Notes  : -
 \***********************************************************************/
 
-bool List_empty(const void *list);
+INLINE bool List_empty(const void *list);
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+INLINE bool List_empty(const void *list)
+{
+  assert(list != NULL);
+  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
+         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+        );
+
+  return (((List*)list)->count == 0);
+}
+#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : List_count
@@ -263,7 +274,18 @@ bool List_empty(const void *list);
 * Notes  : -
 \***********************************************************************/
 
-unsigned long List_count(const void *list);
+INLINE unsigned long List_count(const void *list);
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+INLINE unsigned long List_count(const void *list)
+{
+  assert(list != NULL);
+  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
+         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+        );
+
+  return ((List*)list)->count;
+}
+#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : List_ins

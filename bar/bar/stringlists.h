@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/stringlists.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems: all
@@ -128,7 +128,15 @@ void StringList_move(StringList *fromStringList, StringList *toStringList);
 * Notes  : -
 \***********************************************************************/
 
-bool StringList_empty(const StringList *stringList);
+INLINE bool StringList_empty(const StringList *stringList);
+#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENATION__)
+INLINE bool StringList_empty(const StringList *stringList)
+{
+  assert(stringList != NULL);
+
+  return List_empty(stringList);
+}
+#endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : StringList_count
@@ -139,7 +147,15 @@ bool StringList_empty(const StringList *stringList);
 * Notes  : -
 \***********************************************************************/
 
-ulong StringList_count(const StringList *stringList);
+INLINE ulong StringList_count(const StringList *stringList);
+#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENATION__)
+INLINE ulong StringList_count(const StringList *stringList)
+{
+  assert(stringList != NULL);
+
+  return List_count(stringList);
+}
+#endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : StringList_insert/StringList_insertCString/
