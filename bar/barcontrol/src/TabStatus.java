@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -758,15 +758,16 @@ class TabStatus
       });
 
       widgetButtonQuit = Widgets.newButton(composite,null,"Quit");
-//      Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
-//      Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E);//,0,0,0,0,60,SWT.DEFAULT);
       Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonQuit.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-          shell.close();
+
+          // send close-evemnt to shell
+          Event event = new Event();
+          shell.notifyListeners(SWT.Close,event);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {

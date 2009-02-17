@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.ListIterator;
 
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
@@ -46,6 +47,7 @@ import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.events.MouseTrackListener;
 import org.eclipse.swt.events.PaintEvent;
@@ -122,29 +124,29 @@ class TabJobs
 
     FileTreeData(String name, FileTypes type, long size, long datetime, String title)
     {
-      this.name     = name;
-      this.type     = type;
-      this.size     = size;
-      this.datetime = datetime;
-      this.title    = title;
+      this.name               = name;
+      this.type               = type;
+      this.size               = size;
+      this.datetime           = datetime;
+      this.title              = title;
     }
 
     FileTreeData(String name, FileTypes type, long datetime, String title)
     {
-      this.name     = name;
-      this.type     = type;
-      this.size     = 0;
-      this.datetime = datetime;
-      this.title    = title;
+      this.name               = name;
+      this.type               = type;
+      this.size               = 0;
+      this.datetime           = datetime;
+      this.title              = title;
     }
 
     FileTreeData(String name, FileTypes type, String title)
     {
-      this.name     = name;
-      this.type     = type;
-      this.size     = 0;
-      this.datetime = 0;
-      this.title    = title;
+      this.name               = name;
+      this.type               = type;
+      this.size               = 0;
+      this.datetime           = 0;
+      this.title              = title;
     }
 
     public String toString()
@@ -182,7 +184,7 @@ class TabJobs
     /** compare file tree data without take care about type
      * @param fileTreeData1, fileTreeData2 file tree data to compare
      * @return -1 iff fileTreeData1 < fileTreeData2,
-                0 iff fileTreeData1 = fileTreeData2, 
+                0 iff fileTreeData1 = fileTreeData2,
                 1 iff fileTreeData1 > fileTreeData2
      */
     private int compareWithoutType(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
@@ -209,7 +211,7 @@ class TabJobs
     /** compare file tree data
      * @param fileTreeData1, fileTreeData2 file tree data to compare
      * @return -1 iff fileTreeData1 < fileTreeData2,
-                0 iff fileTreeData1 = fileTreeData2, 
+                0 iff fileTreeData1 = fileTreeData2,
                 1 iff fileTreeData1 > fileTreeData2
      */
     public int compare(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
@@ -244,39 +246,279 @@ class TabJobs
     }
   }
 
+  /** Background thread to get directory file size of tree items.
+      This thread get the number of files and total size of a
+      directories and update the file-tree widget entries. Requests
+      are sorted by the depth of the directory and the timeout to
+      read the contents. Requests with timeout are reinserted in
+      the internal sorted list with an increasing timeout. This
+      make sure short running requests are processed first.
+   */
+  class DirectoryInfoThread extends Thread
+  {
+    /** directory info request structure
+     */
+    class DirectoryInfoRequest
+    {
+      String   name;
+      int      depth;
+      int      timeout;
+      TreeItem treeItem;
+
+      /** create directory info request
+       * @param treeItem tree item
+       * @param timeout timeout [ms] or -1 for no timeout
+       */
+      DirectoryInfoRequest(String name, TreeItem treeItem, int timeout)
+      {
+        this.name     = name;
+        this.depth    = name.split(File.separator).length;
+        this.timeout  = timeout;
+        this.treeItem = treeItem;
+      }
+
+      public String toString()
+      {
+      return "DirectoryInfoRequest {"+name+", "+depth+", "+timeout+"}";
+      }
+    };
+
+    /* timeouts to get directory information */
+    private final int DEFAULT_TIMEOUT = 1*1000;
+    private final int TIMEOUT_DETLA   = 2*1000;
+    private final int MAX_TIMEOUT     = 5*1000;
+
+    /* variables */
+    private Display                          display;
+    private LinkedList<DirectoryInfoRequest> directoryInfoRequestList;
+
+    /** create tree item size thread
+     * @param display display
+     */
+    DirectoryInfoThread(Display display)
+    {
+      this.display                  = display;
+      this.directoryInfoRequestList = new LinkedList<DirectoryInfoRequest>();
+      setDaemon(true);
+    }
+
+    public void run()
+    {
+      for (;;)
+      {
+        // get next directory info request
+        final DirectoryInfoRequest directoryInfoRequest;
+        synchronized(directoryInfoRequestList)
+        {
+          /* get next request */
+          while (directoryInfoRequestList.size() == 0)
+          {
+            try
+            {
+              directoryInfoRequestList.wait();
+            }
+            catch (InterruptedException exception)
+            {
+              /* ignored */
+            }
+          }
+          directoryInfoRequest = directoryInfoRequestList.remove();
+        }
+Dprintf.dprintf("directoryInfoRequest=%s\n",directoryInfoRequest);
+
+        if (directoryInfoFlag)
+        {
+          // check if disposed tree item
+          final Object[] disposedData = new Object[]{null};
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              TreeItem treeItem = directoryInfoRequest.treeItem;
+              disposedData[0] = (Boolean)treeItem.isDisposed();
+            }
+          });
+          if ((Boolean)disposedData[0])
+          {
+            /* disposed -> skip */
+            continue;
+          }
+
+          /* get file count, size */
+  //Dprintf.dprintf("get file size for %s\n",directoryInfoRequest);
+          String[] result = new String[1];
+          Object[] data   = new Object[3];
+          if (   (BARServer.executeCommand("DIRECTORY_INFO "+StringParser.escape(directoryInfoRequest.name)+" "+directoryInfoRequest.timeout,result) != Errors.NONE)
+              || !StringParser.parse(result[0],"%ld %ld %d",data,StringParser.QUOTE_CHARS)
+             )
+          {
+            /* command execution fail or parsing error; ignore request */
+            continue;
+          }
+          final long    count       = (Long)data[0];
+          final long    size        = (Long)data[1];
+          final boolean timeoutFlag = (((Integer)data[2]) != 0);
+
+          /* update view */
+//Dprintf.dprintf("name=%s count=%d size=%d timeout=%s\n",directoryInfoRequest.name,count,size,timeoutFlag);
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              TreeItem treeItem = directoryInfoRequest.treeItem;
+              if (!treeItem.isDisposed())
+              {
+                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+
+                fileTreeData.size = size;
+
+//Dprintf.dprintf("update %s\n",treeItem.isDisposed());
+                treeItem.setText(2,Units.formatByteSize(size));
+                treeItem.setForeground(2,timeoutFlag?COLOR_RED:COLOR_BLACK);
+              }
+            }
+          });
+
+          if (timeoutFlag)
+          {
+            /* timeout -> increase timmeout and re-insert in list if not beyond max. timeout */
+            if (directoryInfoRequest.timeout+TIMEOUT_DETLA <= MAX_TIMEOUT)
+            {
+              directoryInfoRequest.timeout += TIMEOUT_DETLA;
+            }
+            add(directoryInfoRequest);
+          }
+        }
+      }
+    }
+
+
+    private int getIndex(DirectoryInfoRequest directoryInfoRequest)
+    {
+//Dprintf.dprintf("find index %d: %s\n",directoryInfoRequestList.size(),directoryInfoRequest);
+      /* find new position in list */
+      ListIterator<DirectoryInfoRequest> listIterator = directoryInfoRequestList.listIterator();
+      boolean                            foundFlag = false;
+      int                                index = 0;
+      while (listIterator.hasNext() && !foundFlag)
+      {
+        index = listIterator.nextIndex();
+
+        DirectoryInfoRequest nextDirectoryInfoRequest = listIterator.next();
+        foundFlag = (   (directoryInfoRequest.depth > nextDirectoryInfoRequest.depth)
+                     || (directoryInfoRequest.timeout < nextDirectoryInfoRequest.timeout)
+                    );
+      }
+//Dprintf.dprintf("found index=%d\n",index);
+
+      return index;
+    }
+
+    private void add(DirectoryInfoRequest directoryInfoRequest)
+    {
+      synchronized(directoryInfoRequestList)
+      {
+        int index = getIndex(directoryInfoRequest);
+        directoryInfoRequestList.add(index,directoryInfoRequest);
+        directoryInfoRequestList.notifyAll();
+//Dprintf.dprintf("list: \n");
+int l=1000;
+for (DirectoryInfoRequest x : directoryInfoRequestList)
+{
+//Dprintf.dprintf("  %d: %s",l,x);
+assert(x.depth<=l);
+l=x.depth;
+}
+      }
+    }
+
+    /** add directory info request
+     * @param name path name
+     * @param treeItem tree item
+     * @param timeout timeout [ms]
+     */
+    public void add(String name, TreeItem treeItem, int timeout)
+    {
+      DirectoryInfoRequest directoryInfoRequest = new DirectoryInfoRequest(name,treeItem,timeout);
+      add(directoryInfoRequest);
+    }
+
+    /** add directory info request with default timeout
+     * @param name path name
+     * @param treeItem tree item
+     */
+    public void add(String name, TreeItem treeItem)
+    {
+      add(name,treeItem,DEFAULT_TIMEOUT);
+    }
+
+    /** clear all directory info requests
+     * @param treeItem tree item
+     */
+    public void clear()
+    {
+      synchronized(directoryInfoRequestList)
+      {
+        directoryInfoRequestList.clear();
+      }
+    }
+  }
+
   /** schedule data
    */
   class ScheduleData
   {
     final static int ANY = -1;
+    final static int MON = 0;
+    final static int TUE = 1;
+    final static int WED = 2;
+    final static int THU = 3;
+    final static int FRI = 4;
+    final static int SAT = 5;
+    final static int SUN = 6;
 
     int     year,month,day;
-    String  weekDay;
+    int     weekDays;
     int     hour,minute;
     boolean enabled;
     String  type;
 
+    /** create schedule data
+     */
     ScheduleData()
     {
-      this.year    = ScheduleData.ANY;
-      this.month   = ScheduleData.ANY;
-      this.day     = ScheduleData.ANY;
-      this.weekDay = "*";
-      this.hour    = ScheduleData.ANY;
-      this.minute  = ScheduleData.ANY;
-      this.enabled = false;
-      this.type    = "*";
+      this.year     = ScheduleData.ANY;
+      this.month    = ScheduleData.ANY;
+      this.day      = ScheduleData.ANY;
+      this.weekDays = ScheduleData.ANY;
+      this.hour     = ScheduleData.ANY;
+      this.minute   = ScheduleData.ANY;
+      this.enabled  = false;
+      this.type     = "*";
     }
 
-    ScheduleData(String year, String month, String day, String weekDay, String hour, String minute, boolean enabled, String type)
+    /** create schedule data
+     * @param year year string
+     * @param month month string
+     * @param day day string
+     * @param weekDays week days string; values separated by ','
+     * @param hour hour string
+     * @param minute minute string
+     * @param enabled enabled state
+     * @param type type string
+     */
+    ScheduleData(String year, String month, String day, String weekDays, String hour, String minute, boolean enabled, String type)
     {
       setDate(year,month,day);
-      this.weekDay = getValidString(weekDay,new String[]{"*","Mon","Tue","Wed","Thu","Fri","Sat","Sun"},"*");
+      setWeekDays(weekDays);
       setTime(hour,minute);
       this.enabled = enabled;
       this.type    = getValidString(type,new String[]{"*","full","incremental"},"*");;
     }
 
+    /** get year value
+     * @return year string
+     */
     String getYear()
     {
       assert (year == ANY) || (year >= 1);
@@ -284,6 +526,9 @@ class TabJobs
       return (year != ANY)?Integer.toString(year):"*";
     }
 
+    /** get month value
+     * @return month string
+     */
     String getMonth()
     {
       assert (month == ANY) || ((month >= 1) && (month <= 12));
@@ -307,6 +552,9 @@ class TabJobs
       }
     }
 
+    /** get day value
+     * @return day string
+     */
     String getDay()
     {
       assert (day == ANY) || ((day >= 1) && (day <= 31));
@@ -314,6 +562,45 @@ class TabJobs
       return (day != ANY)?Integer.toString(day):"*";
     }
 
+    /** get week days value
+     * @return week days string
+     */
+    String getWeekDays()
+    {
+      assert    (weekDays == ANY)
+             || ((weekDays & ~(  (1 << ScheduleData.MON)
+                               | (1 << ScheduleData.TUE)
+                               | (1 << ScheduleData.WED)
+                               | (1 << ScheduleData.THU)
+                               | (1 << ScheduleData.FRI)
+                               | (1 << ScheduleData.SAT)
+                               | (1 << ScheduleData.SUN)
+                              )) == 0
+                );
+
+      if (weekDays == ANY)
+      {
+        return "*";
+      }
+      else
+      {
+        StringBuffer stringBuffer = new StringBuffer();
+
+        if ((weekDays & (1 << ScheduleData.MON)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Mon"); }
+        if ((weekDays & (1 << ScheduleData.TUE)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Tue"); }
+        if ((weekDays & (1 << ScheduleData.WED)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Wed"); }
+        if ((weekDays & (1 << ScheduleData.THU)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Thu"); }
+        if ((weekDays & (1 << ScheduleData.FRI)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Fri"); }
+        if ((weekDays & (1 << ScheduleData.SAT)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Sat"); }
+        if ((weekDays & (1 << ScheduleData.SUN)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Sun"); }
+
+        return stringBuffer.toString();
+      }
+    }
+
+    /** get date value
+     * @return date string
+     */
     String getDate()
     {
       StringBuffer date = new StringBuffer();
@@ -327,6 +614,9 @@ class TabJobs
       return date.toString();
     }
 
+    /** get hour value
+     * @return hour string
+     */
     String getHour()
     {
       assert (hour   == ANY) || ((hour   >= 0) && (hour   <= 23));
@@ -334,6 +624,9 @@ class TabJobs
       return (hour != ANY)?Integer.toString(hour):"*";
     }
 
+    /** get minute value
+     * @return minute string
+     */
     String getMinute()
     {
       assert (minute == ANY) || ((minute >= 0) && (minute <= 59));
@@ -341,6 +634,9 @@ class TabJobs
       return (minute != ANY)?Integer.toString(minute):"*";
     }
 
+    /** get time value
+     * @return time string
+     */
     String getTime()
     {
       StringBuffer time = new StringBuffer();
@@ -352,11 +648,27 @@ class TabJobs
       return time.toString();
     }
 
+    /** get enable value
+     * @return enable value
+     */
     String getEnabled()
     {
       return enabled?"yes":"no";
     }
 
+    /** get type
+     * @return type
+     */
+    String getType()
+    {
+      return type;
+    }
+
+    /** set date
+     * @param year year value
+     * @param month month value
+     * @param day day value
+     */
     void setDate(String year, String month, String day)
     {
       this.year = !year.equals("*")?Integer.parseInt(year):ANY;
@@ -387,20 +699,119 @@ class TabJobs
       this.day = !day.equals("*")?Integer.parseInt(day):ANY;
     }
 
+    /** set week days
+     * @param weekDays week days string; values separated by ','
+     */
+    void setWeekDays(String weekDays)
+    {
+      if (weekDays.equals("*"))
+      {
+        this.weekDays = ScheduleData.ANY;
+      }
+      else
+      {
+        for (String name : weekDays.split(","))
+        {
+          if      (name.toLowerCase().equals("mon")) this.weekDays |= (1 << ScheduleData.MON);
+          else if (name.toLowerCase().equals("tue")) this.weekDays |= (1 << ScheduleData.TUE);
+          else if (name.toLowerCase().equals("wed")) this.weekDays |= (1 << ScheduleData.WED);
+          else if (name.toLowerCase().equals("thu")) this.weekDays |= (1 << ScheduleData.THU);
+          else if (name.toLowerCase().equals("fri")) this.weekDays |= (1 << ScheduleData.FRI);
+          else if (name.toLowerCase().equals("sat")) this.weekDays |= (1 << ScheduleData.SAT);
+          else if (name.toLowerCase().equals("sun")) this.weekDays |= (1 << ScheduleData.SUN);
+        }
+      }
+    }
+
+    /** set week days
+     * @param monFlag true for Monday
+     * @param tueFlag true for Tuesday
+     * @param wedFlag true for Wednesday
+     * @param thuFlag true for Thursday
+     * @param friFlag true for Friday
+     * @param satFlag true for Saturday
+     * @param SunFlag true for Sunday
+     */
+    void setWeekDays(boolean monFlag,
+                     boolean tueFlag,
+                     boolean wedFlag,
+                     boolean thuFlag,
+                     boolean friFlag,
+                     boolean satFlag,
+                     boolean SunFlag
+                    )
+    {
+
+      if (   monFlag
+          && tueFlag
+          && wedFlag
+          && thuFlag
+          && friFlag
+          && satFlag
+          && SunFlag
+         )
+      {
+        this.weekDays = ScheduleData.ANY;
+      }
+      else
+      {
+        this.weekDays = 0;
+        if (monFlag) this.weekDays |= (1 << ScheduleData.MON);
+        if (tueFlag) this.weekDays |= (1 << ScheduleData.TUE);
+        if (wedFlag) this.weekDays |= (1 << ScheduleData.WED);
+        if (thuFlag) this.weekDays |= (1 << ScheduleData.THU);
+        if (friFlag) this.weekDays |= (1 << ScheduleData.FRI);
+        if (satFlag) this.weekDays |= (1 << ScheduleData.SAT);
+        if (SunFlag) this.weekDays |= (1 << ScheduleData.SUN);
+      }
+    }
+
+    /** set time
+     * @param hour hour value
+     * @param minute minute value
+     */
     void setTime(String hour, String minute)
     {
       this.hour   = !hour.equals  ("*")?Integer.parseInt(hour  ):ANY;
       this.minute = !minute.equals("*")?Integer.parseInt(minute):ANY;
     }
 
-    public String toString()
+    /** check if week day enabled
+     * @param weekDay week data
+     * @return TRUE iff enabled
+     */
+    boolean weekDayIsEnabled(int weekDay)
     {
-      return "File {"+getDate()+", "+weekDay+", "+getTime()+", "+enabled+", "+type+"}";
+      assert(   (weekDay == ScheduleData.MON)
+             || (weekDay == ScheduleData.TUE)
+             || (weekDay == ScheduleData.WED)
+             || (weekDay == ScheduleData.THU)
+             || (weekDay == ScheduleData.FRI)
+             || (weekDay == ScheduleData.SAT)
+             || (weekDay == ScheduleData.SUN)
+            );
+
+      return (weekDays == ScheduleData.ANY) || ((weekDays & (1 << weekDay)) != 0);
     }
 
-    /** 
-     * @param 
-     * @return 
+    /** check if enabled
+     * @return TRUE iff enabled
+     */
+    boolean isEnabled()
+    {
+      return enabled;
+    }
+
+    /** convert data to string
+     */
+    public String toString()
+    {
+      return "File {"+getDate()+", "+getWeekDays()+", "+getTime()+", "+enabled+", "+type+"}";
+    }
+
+    /**
+     * @param
+     * @return
      */
     private String getValidString(String string, String[] validStrings, String defaultString)
     {
@@ -459,7 +870,7 @@ class TabJobs
     /** compare schedule data
      * @param scheduleData1, scheduleData2 file tree data to compare
      * @return -1 iff scheduleData1 < scheduleData2,
-                0 iff scheduleData1 = scheduleData2, 
+                0 iff scheduleData1 = scheduleData2,
                 1 iff scheduleData1 > scheduleData2
      */
     public int compare(ScheduleData scheduleData1, ScheduleData scheduleData2)
@@ -472,11 +883,8 @@ class TabJobs
 
           return date1.compareTo(date2);
         case SORTMODE_WEEKDAY:
-          int index1 = indexOfWeekDay(scheduleData1.weekDay.toLowerCase());
-          int index2 = indexOfWeekDay(scheduleData2.weekDay.toLowerCase());
-
-          if      (index1 < index2) return -1;
-          else if (index1 > index2) return  1;
+          if      (scheduleData1.weekDays < scheduleData2.weekDays) return -1;
+          else if (scheduleData1.weekDays > scheduleData2.weekDays) return  1;
           else                      return  0;
         case SORTMODE_TIME:
           String time1 = scheduleData1.hour+":"+scheduleData1.minute;
@@ -511,7 +919,9 @@ class TabJobs
   }
 
   // colors
+  private final Color  COLOR_BLACK;
   private final Color  COLOR_WHITE;
+  private final Color  COLOR_RED;
   private final Color  COLOR_MODIFIED;
 
   // images
@@ -574,14 +984,15 @@ class TabJobs
   private BARVariable  ecc                     = new BARVariable(false);
 
   // variables
-  private     HashMap<String,Integer>  jobIds           = new HashMap<String,Integer>();
-  private     String                   selectedJobName  = null;
-  private     int                      selectedJobId    = 0;
-  private     HashSet<String>          includedPatterns = new HashSet<String>();
-  private     HashSet<String>          excludedPatterns = new HashSet<String>();
-  private     LinkedList<ScheduleData> scheduleList     = new LinkedList<ScheduleData>();
-
-  private     SimpleDateFormat         simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  private     DirectoryInfoThread      directoryInfoThread;
+  private     boolean                  directoryInfoFlag = false;
+  private     HashMap<String,Integer>  jobIds            = new HashMap<String,Integer>();
+  private     String                   selectedJobName   = null;
+  private     int                      selectedJobId     = 0;
+  private     HashSet<String>          includedPatterns  = new HashSet<String>();
+  private     HashSet<String>          excludedPatterns  = new HashSet<String>();
+  private     LinkedList<ScheduleData> scheduleList      = new LinkedList<ScheduleData>();
+  private     SimpleDateFormat         simpleDateFormat  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   TabJobs(TabFolder parentTabFolder, int accelerator)
   {
@@ -594,6 +1005,7 @@ class TabJobs
     Combo       combo;
     TreeColumn  treeColumn;
     TreeItem    treeItem;
+    Control     control;
     Text        text;
     Spinner     spinner;
     TableColumn tableColumn;
@@ -603,7 +1015,9 @@ class TabJobs
     display = shell.getDisplay();
 
     // get colors
+    COLOR_BLACK    = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
     COLOR_WHITE    = shell.getDisplay().getSystemColor(SWT.COLOR_WHITE);
+    COLOR_RED      = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
     COLOR_MODIFIED = new Color(null,0xFF,0xA0,0xA0);
 
     // get images
@@ -619,6 +1033,10 @@ class TabJobs
 
     // get cursors
     waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
+
+    // start tree item size thread
+    directoryInfoThread = new DirectoryInfoThread(display);
+    directoryInfoThread.start();
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,"Jobs"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
@@ -740,10 +1158,10 @@ class TabJobs
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
-        composite.setLayout(new TableLayout(1.0,1.0));
+        composite.setLayout(new TableLayout(1.0,new double[]{1.0,1.0,1.0,0.0,0.0,0.0}));
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
-          button = Widgets.newButton(composite,null,"*");
+          button = Widgets.newButton(composite,null,"None");
           Widgets.layout(button,0,0,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -771,7 +1189,7 @@ class TabJobs
             }
           });
 
-          button = Widgets.newButton(composite,null,"+");
+          button = Widgets.newButton(composite,null,"Include");
           Widgets.layout(button,0,1,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -799,7 +1217,7 @@ class TabJobs
             }
           });
 
-          button = Widgets.newButton(composite,null,"-");
+          button = Widgets.newButton(composite,null,"Exclude");
           Widgets.layout(button,0,2,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -821,6 +1239,37 @@ class TabJobs
                   case SOCKET:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                 }
               }
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+
+          control = Widgets.newSpacer(composite);
+          Widgets.layout(control,0,3,TableLayoutData.NONE,0,0,30,0);
+
+          button = Widgets.newButton(composite,null,IMAGE_DIRECTORY_INCLUDED);
+          Widgets.layout(button,0,4,TableLayoutData.E,0,0,2,0);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              openIncludedDirectories();
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+
+          button = Widgets.newCheckbox(composite,null,"directory info");
+          Widgets.layout(button,0,5,TableLayoutData.E,0,0,2,0);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button  widget = (Button)selectionEvent.widget;
+              directoryInfoFlag = widget.getSelection();
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1133,7 +1582,7 @@ throw new Error("NYI");
         }
 
         composite = Widgets.newComposite(tab,SWT.NONE);
-        composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,1.0,0.0}));
+        composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0,0.0}));
         Widgets.layout(composite,3,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,null,"symmetric");
@@ -1190,10 +1639,13 @@ throw new Error("NYI");
             }
           });
 
+          control = Widgets.newSpacer(composite);
+          Widgets.layout(control,0,2,TableLayoutData.NONE,0,0,5,0);
+
           label = Widgets.newLabel(composite,"Public key:");
-          Widgets.layout(label,0,2,TableLayoutData.W);
+          Widgets.layout(label,0,3,TableLayoutData.W);
           widgetCryptPublicKeyFileName = Widgets.newText(composite,null);
-          Widgets.layout(widgetCryptPublicKeyFileName,0,3,TableLayoutData.WE);
+          Widgets.layout(widgetCryptPublicKeyFileName,0,4,TableLayoutData.WE);
           widgetCryptPublicKeyFileName.addModifyListener(new ModifyListener()
           {
             public void modifyText(ModifyEvent modifyEvent)
@@ -1241,7 +1693,7 @@ throw new Error("NYI");
           Widgets.addModifyListener(new WidgetListener(widgetCryptPublicKeyFileName,cryptPublicKeyFileName));
 
           widgetCryptPublicKeyFileNameSelect = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
-          Widgets.layout(widgetCryptPublicKeyFileNameSelect,0,4,TableLayoutData.DEFAULT);
+          Widgets.layout(widgetCryptPublicKeyFileNameSelect,0,5,TableLayoutData.DEFAULT);
           widgetCryptPublicKeyFileNameSelect.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -2407,7 +2859,7 @@ throw new Error("NYI");
           }
         }
 
-        // destination device 
+        // destination device
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
         Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N);
@@ -2585,7 +3037,7 @@ throw new Error("NYI");
         };
         tableColumn = Widgets.addTableColumn(widgetScheduleList,0,"Date",     SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,1,"Week day", SWT.LEFT,100,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,1,"Week day", SWT.LEFT,250,true );
         synchronized(scheduleList)
         {
           Widgets.sortTableColumn(widgetScheduleList,tableColumn,new ScheduleDataComparator(widgetScheduleList,tableColumn));
@@ -2685,58 +3137,6 @@ throw new Error("NYI");
     this.tabStatus = tabStatus;
   }
 
-  /** add root devices
-   */
-  private void addRootDevices()
-  {
-    TreeItem treeItem = Widgets.addTreeItem(widgetFileTree,new FileTreeData("/",FileTypes.DIRECTORY,"/"),true);
-    treeItem.setText("/");
-    treeItem.setImage(IMAGE_DIRECTORY);
-    widgetFileTree.addListener(SWT.Expand,new Listener()
-    {
-      public void handleEvent(final Event event)
-      {
-        final TreeItem treeItem = (TreeItem)event.item;
-        updateFileList(treeItem);
-      }
-    });
-    widgetFileTree.addListener(SWT.Collapse,new Listener()
-    {
-      public void handleEvent(final Event event)
-      {
-        final TreeItem treeItem = (TreeItem)event.item;
-        treeItem.removeAll();
-        new TreeItem(treeItem,SWT.NONE);
-      }
-    });
-    widgetFileTree.addListener(SWT.MouseDoubleClick,new Listener()
-    {
-      public void handleEvent(final Event event)
-      {
-        TreeItem treeItem = widgetFileTree.getItem(new Point(event.x,event.y));
-        if (treeItem != null)
-        {
-          FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-          if (fileTreeData.type == FileTypes.DIRECTORY)
-          {
-            Event treeEvent = new Event();
-            treeEvent.item = treeItem;
-            if (treeItem.getExpanded())
-            {
-              widgetFileTree.notifyListeners(SWT.Collapse,treeEvent);
-              treeItem.setExpanded(false);
-            }
-            else
-            {
-              widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
-              treeItem.setExpanded(true);
-            }
-          }
-        }
-      }
-    });
-  }
-
   /** get archive name
    * @return archive name
    *   ftp://<name>:<password>@<host>/<file name>
@@ -2785,186 +3185,53 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** find index for insert of tree item in sorted list of tree items
-   * @param treeItem tree item
-   * @param fileTreeData data of tree item
-   * @return index in tree item
-   */
-  private int findFilesTreeIndex(TreeItem treeItem, FileTreeData fileTreeData)
+  private void clearJobData()
   {
-    TreeItem               subTreeItems[] = treeItem.getItems();
-    FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
-
-    int index = 0;
-    while (   (index < subTreeItems.length)
-           && (fileTreeDataComparator.compare(fileTreeData,(FileTreeData)subTreeItems[index].getData()) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
+// NYI: rest?
+    widgetIncludedPatterns.removeAll();
+    widgetExcludedPatterns.removeAll();
   }
 
-  /** update file list of tree item
-   * @param treeItem tree item to update
+  /** update job data
+   * @param name name of job
    */
-  private void updateFileList(TreeItem treeItem)
+  private void updateJobData()
   {
-    FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-    TreeItem     subTreeItem;
-
-    shell.setCursor(waitCursor);
-
-    treeItem.removeAll();
-
     ArrayList<String> result = new ArrayList<String>();
-    int errorCode = BARServer.executeCommand("FILE_LIST file://"+StringParser.escape(fileTreeData.name),result);
-    if (errorCode == Errors.NONE)
+    Object[]          data;
+
+    // clear
+    clearJobData();
+
+    if (selectedJobId > 0)
     {
-      for (String line : result)
-      {
-        Object data[] = new Object[10];
-        if      (StringParser.parse(line,"FILE %ld %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               size
-               date/time
-               name
-          */
-          long   size     = (Long  )data[0];
-          long   datetime = (Long  )data[1];
-          String name     = (String)data[2];
+      // get job data
+      skipUnreadable.set(BARServer.getBooleanOption(selectedJobId,"skip-unreadable"));
+      overwriteFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-files"));
 
-          fileTreeData = new FileTreeData(name,FileTypes.FILE,size,datetime,new File(name).getName());
+      parseArchiveName(BARServer.getStringOption(selectedJobId,"archive-name"));
+      archiveType.set(BARServer.getStringOption(selectedJobId,"archive-type"));
+      archivePartSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"archive-part-size")));
+      archivePartSizeFlag.set(archivePartSize.getLong() > 0);
+      compressAlgorithm.set(BARServer.getStringOption(selectedJobId,"compress-algorithm"));
+      cryptAlgorithm.set(BARServer.getStringOption(selectedJobId,"crypt-algorithm"));
+      cryptType.set(BARServer.getStringOption(selectedJobId,"crypt-type"));
+      cryptPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"crypt-public-key"));
+      incrementalListFileName.set(BARServer.getStringOption(selectedJobId,"incremental-list-file"));
+      overwriteArchiveFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-archive-files"));
+      sshPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"ssh-public-key"));
+      sshPrivateKeyFileName.set(BARServer.getStringOption(selectedJobId,"ssh-private-key"));
+/* NYI ???
+      maxBandWidth.set(Units.parseByteSize(BARServer.getStringOption(jobId,"max-band-width")));
+      maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
+*/
+      volumeSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"volume-size")));
+      ecc.set(BARServer.getBooleanOption(selectedJobId,"ecc"));
 
-          Image image;
-          if      (includedPatterns.contains(name))
-            image = IMAGE_FILE_INCLUDED;
-          else if (excludedPatterns.contains(name))
-            image = IMAGE_FILE_EXCLUDED;
-          else
-            image = IMAGE_FILE;
-
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"FILE");
-          subTreeItem.setText(2,Long.toString(size));
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-          subTreeItem.setImage(image);
-        }
-        else if (StringParser.parse(line,"DIRECTORY %ld %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               size
-               date/time
-               name
-          */
-          long   size     = (Long  )data[0];
-          long   datetime = (Long  )data[1];
-          String name     = (String)data[2];
-
-          fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,new File(name).getName());
-
-          Image image;
-          if      (includedPatterns.contains(name))
-            image = IMAGE_DIRECTORY_INCLUDED;
-          else if (excludedPatterns.contains(name))
-            image = IMAGE_DIRECTORY_EXCLUDED;
-          else
-            image = IMAGE_DIRECTORY;
-
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"DIR");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-          subTreeItem.setImage(image);
-        }
-        else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               date/time
-               name
-          */
-          long   datetime = (Long  )data[0];
-          String name     = (String)data[1];
-
-          fileTreeData = new FileTreeData(name,FileTypes.LINK,0,datetime,new File(name).getName());
-
-          Image image;
-          if      (includedPatterns.contains(name))
-            image = IMAGE_LINK_INCLUDED;
-          else if (excludedPatterns.contains(name))
-            image = IMAGE_LINK_EXCLUDED;
-          else
-            image = IMAGE_LINK;
-
-
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"LINK");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-          subTreeItem.setImage(image);
-        }
-        else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               date/time
-               name
-          */
-          long   datetime = (Long  )data[0];
-          String name     = (String)data[1];
-
-          fileTreeData = new FileTreeData(name,FileTypes.SPECIAL,0,datetime,name);
-
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"SPECIAL");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        }
-        else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               name
-          */
-          String name = (String)data[0];
-
-          fileTreeData = new FileTreeData(name,FileTypes.DEVICE,name);
-
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"DEVICE");
-        }
-        else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               name
-          */
-          String name = (String)data[0];
-
-          fileTreeData = new FileTreeData(name,FileTypes.SOCKET,name);
-
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"SOCKET");
-        }
-      }
+      updatePatternList(PatternTypes.INCLUDE);
+      updatePatternList(PatternTypes.EXCLUDE);
     }
-    else
-    {
-       Dialogs.error(shell,"Cannot get file list (error: "+result.get(0)+")");
-    }
-
-    shell.setCursor(null);
   }
-
-  //-----------------------------------------------------------------------
 
   /** find index for insert of job in sorted job list
    * @param jobs jobs
@@ -3222,6 +3489,334 @@ throw new Error("NYI");
       Widgets.setEnabled(widgetTabFolder,false);
       clear();
     }
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** add root devices
+   */
+  private void addRootDevices()
+  {
+    TreeItem treeItem = Widgets.addTreeItem(widgetFileTree,new FileTreeData("/",FileTypes.DIRECTORY,"/"),true);
+    treeItem.setText("/");
+    treeItem.setImage(IMAGE_DIRECTORY);
+    widgetFileTree.addListener(SWT.Expand,new Listener()
+    {
+      public void handleEvent(final Event event)
+      {
+        final TreeItem treeItem = (TreeItem)event.item;
+        updateFileTree(treeItem);
+      }
+    });
+    widgetFileTree.addListener(SWT.Collapse,new Listener()
+    {
+      public void handleEvent(final Event event)
+      {
+        final TreeItem treeItem = (TreeItem)event.item;
+        treeItem.removeAll();
+        new TreeItem(treeItem,SWT.NONE);
+      }
+    });
+    widgetFileTree.addMouseListener(new MouseListener()
+    {
+      public void mouseDoubleClick(final MouseEvent mouseEvent)
+      {
+        TreeItem treeItem = widgetFileTree.getItem(new Point(mouseEvent.x,mouseEvent.y));
+        if (treeItem != null)
+        {
+          FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+          if (fileTreeData.type == FileTypes.DIRECTORY)
+          {
+            Event treeEvent = new Event();
+            treeEvent.item = treeItem;
+            if (treeItem.getExpanded())
+            {
+              widgetFileTree.notifyListeners(SWT.Collapse,treeEvent);
+              treeItem.setExpanded(false);
+            }
+            else
+            {
+              widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
+              treeItem.setExpanded(true);
+            }
+          }
+        }
+      }
+
+      public void mouseDown(final MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseUp(final MouseEvent mouseEvent)
+      {
+      }
+    });
+  }
+
+  /** clear file tree, close all sub-directories
+   */
+  private void clearFileTree()
+  {
+    // close all directories
+    for (TreeItem treeItem : widgetFileTree.getItems())
+    {
+      treeItem.removeAll();
+      new TreeItem(treeItem,SWT.NONE);
+    }
+
+    // clear directory info requests
+    directoryInfoThread.clear();
+  }
+
+  /** find tree item
+   * @param name name of tree item
+   * @return tree item or null if not found
+   */
+  private TreeItem findTreeItem(TreeItem treeItems[], String name)
+  {
+    for (TreeItem treeItem : treeItems)
+    {
+      FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+
+      if ((fileTreeData != null) && fileTreeData.name.equals(name))
+      {
+        return treeItem;
+      }
+    }
+
+    return null;
+  }
+
+  /** open all included sub-directories
+   */
+  private void openIncludedDirectories()
+  {
+    // open all included directories
+    for (String pattern : widgetIncludedPatterns.getItems())
+    {
+      TreeItem[] treeItems = widgetFileTree.getItems();
+
+      StringBuffer name = new StringBuffer();
+      for (String part : pattern.split(File.separator))
+      {
+        // expand name
+        if ((name.length() == 0) || (name.charAt(name.length()-1) != File.separatorChar)) name.append(File.separatorChar);
+        name.append(part);
+
+        TreeItem treeItem = findTreeItem(treeItems,name.toString());
+        if (treeItem != null)
+        {
+          // open sub-directory
+          if (!treeItem.getExpanded())
+          {
+//Dprintf.dprintf("open %s\n",treeItem);
+            Event treeEvent = new Event();
+            treeEvent.item = treeItem;
+            widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
+            treeItem.setExpanded(true);
+          }
+
+          // get sub-directory items
+          treeItems = treeItem.getItems();
+        }
+        else
+        {
+          break;
+        }
+      }
+    }
+  }
+
+  /** find index for insert of tree item in sorted list of tree items
+   * @param treeItem tree item
+   * @param fileTreeData data of tree item
+   * @return index in tree item
+   */
+  private int findFilesTreeIndex(TreeItem treeItem, FileTreeData fileTreeData)
+  {
+    TreeItem               subTreeItems[]         = treeItem.getItems();
+    FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
+
+    int index = 0;
+    while (   (index < subTreeItems.length)
+           && (fileTreeDataComparator.compare(fileTreeData,(FileTreeData)subTreeItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
+
+  /** update file list of tree item
+   * @param treeItem tree item to update
+   */
+  private void updateFileTree(TreeItem treeItem)
+  {
+    FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+    TreeItem     subTreeItem;
+
+    shell.setCursor(waitCursor);
+
+    treeItem.removeAll();
+
+    ArrayList<String> fileListResult = new ArrayList<String>();
+    int errorCode = BARServer.executeCommand("FILE_LIST file://"+StringParser.escape(fileTreeData.name),fileListResult);
+    if (errorCode == Errors.NONE)
+    {
+      for (String line : fileListResult)
+      {
+        Object data[] = new Object[10];
+        if      (StringParser.parse(line,"FILE %ld %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               size
+               date/time
+               name
+          */
+          long   size     = (Long  )data[0];
+          long   datetime = (Long  )data[1];
+          String name     = (String)data[2];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.FILE,size,datetime,new File(name).getName());
+
+          // add entry
+          Image image;
+          if      (includedPatterns.contains(name))
+            image = IMAGE_FILE_INCLUDED;
+          else if (excludedPatterns.contains(name))
+            image = IMAGE_FILE_EXCLUDED;
+          else
+            image = IMAGE_FILE;
+
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"FILE");
+          subTreeItem.setText(2,Units.formatByteSize(size));
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+          subTreeItem.setImage(image);
+        }
+        else if (StringParser.parse(line,"DIRECTORY %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               date/time
+               name
+          */
+          long   datetime = (Long  )data[0];
+          String name     = (String)data[1];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,new File(name).getName());
+
+          // add entry
+          Image   image;
+          if      (includedPatterns.contains(name))
+            image = IMAGE_DIRECTORY_INCLUDED;
+          else if (excludedPatterns.contains(name))
+            image = IMAGE_DIRECTORY_EXCLUDED;
+          else
+            image = IMAGE_DIRECTORY;
+
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"DIR");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+          subTreeItem.setImage(image);
+
+          // request directory info
+          directoryInfoThread.add(name,subTreeItem);
+        }
+        else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               date/time
+               name
+          */
+          long   datetime = (Long  )data[0];
+          String name     = (String)data[1];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.LINK,0,datetime,new File(name).getName());
+
+          // add entry
+          Image image;
+          if      (includedPatterns.contains(name))
+            image = IMAGE_LINK_INCLUDED;
+          else if (excludedPatterns.contains(name))
+            image = IMAGE_LINK_EXCLUDED;
+          else
+            image = IMAGE_LINK;
+
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"LINK");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+          subTreeItem.setImage(image);
+        }
+        else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               date/time
+               name
+          */
+          long   datetime = (Long  )data[0];
+          String name     = (String)data[1];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.SPECIAL,0,datetime,name);
+
+          // add entry
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"SPECIAL");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+        }
+        else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               name
+          */
+          String name = (String)data[0];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.DEVICE,name);
+
+          // add entry
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"DEVICE");
+        }
+        else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               name
+          */
+          String name = (String)data[0];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.SOCKET,name);
+
+          // add entry
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"SOCKET");
+        }
+      }
+    }
+    else
+    {
+Dprintf.dprintf("fileListResult=%s\n",fileListResult);
+       Dialogs.error(shell,"Cannot get file list (error: "+fileListResult.get(0)+")");
+    }
+
+    shell.setCursor(null);
   }
 
   //-----------------------------------------------------------------------
@@ -3536,7 +4131,7 @@ throw new Error("NYI");
      * Note: must be implented because Java serializaion API cannot read
      *       inner classes without reading outer classes, too!
      * @param in stream
-     * @return 
+     * @return
      */
     private void readObject(java.io.ObjectInputStream in)
       throws IOException, ClassNotFoundException
@@ -3759,7 +4354,7 @@ throw new Error("NYI");
         });
         dropTarget = new DropTarget(widgetFileName,DND.DROP_MOVE|DND.DROP_COPY);
         dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance(),StorageNamePartTransfer.getInstance()});
-	dropTarget.addDropListener(new DropTargetAdapter()
+        dropTarget.addDropListener(new DropTargetAdapter()
         {
           public void dragLeave(DropTargetEvent dropTargetEvent)
           {
@@ -3793,20 +4388,20 @@ throw new Error("NYI");
               dropTargetEvent.detail = DND.DROP_NONE;
             }
           }
-	});
+        });
         widgetFileName.addPaintListener(new PaintListener()
         {
           public void paintControl(PaintEvent paintEvent)
           {
             redraw(paintEvent);
           }
-        }); 
+        });
 
         label = Widgets.newLabel(composite,Widgets.loadImage(display,"trashcan.gif"),SWT.BORDER);
         Widgets.layout(label,0,2,TableLayoutData.NONE);
         dropTarget = new DropTarget(label,DND.DROP_MOVE);
         dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance(),StorageNamePartTransfer.getInstance()});
-	dropTarget.addDropListener(new DropTargetAdapter()
+        dropTarget.addDropListener(new DropTargetAdapter()
         {
           public void dragLeave(DropTargetEvent dropTargetEvent)
           {
@@ -3836,7 +4431,7 @@ throw new Error("NYI");
               dropTargetEvent.detail = DND.DROP_NONE;
             }
           }
-	});
+        });
 
         label = Widgets.newLabel(composite,"Example:");
         Widgets.layout(label,1,0,TableLayoutData.W);
@@ -4463,25 +5058,25 @@ throw new Error("NYI");
         {
 //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
           // get data
-          String  year    = (String)data[0];
-          String  month   = (String)data[1];
-          String  day     = (String)data[2];
-          String  weekDay = (String)data[3];
-          String  hour    = (String)data[4];
-          String  minute  = (String)data[5];
-          boolean enabled = (Boolean)data[6];
-          String  type    = (String)data[7];
+          String  year     = (String)data[0];
+          String  month    = (String)data[1];
+          String  day      = (String)data[2];
+          String  weekDays = (String)data[3];
+          String  hour     = (String)data[4];
+          String  minute   = (String)data[5];
+          boolean enabled  = (Boolean)data[6];
+          String  type     = (String)data[7];
 
-          ScheduleData scheduleData = new ScheduleData(year,month,day,weekDay,hour,minute,enabled,type);
+          ScheduleData scheduleData = new ScheduleData(year,month,day,weekDays,hour,minute,enabled,type);
 
           scheduleList.add(scheduleData);
           TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
           tableItem.setData(scheduleData);
           tableItem.setText(0,scheduleData.getDate());
-          tableItem.setText(1,scheduleData.weekDay);
+          tableItem.setText(1,scheduleData.getWeekDays());
           tableItem.setText(2,scheduleData.getTime());
           tableItem.setText(3,scheduleData.getEnabled());
-          tableItem.setText(4,scheduleData.type);
+          tableItem.setText(4,scheduleData.getType());
         }
       }
     }
@@ -4506,10 +5101,11 @@ throw new Error("NYI");
     final Shell dialog = Dialogs.open(shell,title,300,70,new double[]{1.0,0.0},1.0);
 
     // create widgets
-    final Combo  widgetYear,widgetMonth,widgetDay,widgetWeekDay;
-    final Combo  widgetHour,widgetMinute;
-    final Button widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetEnabled;
-    final Button widgetAdd;
+    final Combo    widgetYear,widgetMonth,widgetDay;
+    final Button[] widgetWeekDays = new Button[7];
+    final Combo    widgetHour,widgetMinute;
+    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetEnabled;
+    final Button   widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
@@ -4535,18 +5131,48 @@ throw new Error("NYI");
         widgetDay.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
         widgetDay.setText(scheduleData.getDay()); if (widgetDay.getText().equals("")) widgetDay.setText("*");
         Widgets.layout(widgetDay,0,2,TableLayoutData.W);
-
-        widgetWeekDay = Widgets.newOptionMenu(subComposite,null);
-        widgetWeekDay.setItems(new String[]{"*","Mon","Tue","Wed","Thu","Fri","Sat","Sun"});
-        widgetWeekDay.setText(scheduleData.weekDay); if (widgetWeekDay.getText().equals("")) widgetWeekDay.setText("*");
-        Widgets.layout(widgetWeekDay,0,3,TableLayoutData.W);
       }
 
-      label = Widgets.newLabel(composite,"Time:");
+      label = Widgets.newLabel(composite,"Week days:");
       Widgets.layout(label,1,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+      {
+        widgetWeekDays[ScheduleData.MON] = Widgets.newCheckbox(subComposite,null,"Mon");
+        Widgets.layout(widgetWeekDays[ScheduleData.MON],0,0,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.MON].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.MON));
+
+        widgetWeekDays[ScheduleData.TUE] = Widgets.newCheckbox(subComposite,null,"Tue");
+        Widgets.layout(widgetWeekDays[ScheduleData.TUE],0,1,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.TUE].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.TUE));
+
+        widgetWeekDays[ScheduleData.WED] = Widgets.newCheckbox(subComposite,null,"Wed");
+        Widgets.layout(widgetWeekDays[ScheduleData.WED],0,2,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.WED].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.WED));
+
+        widgetWeekDays[ScheduleData.THU] = Widgets.newCheckbox(subComposite,null,"Thu");
+        Widgets.layout(widgetWeekDays[ScheduleData.THU],0,3,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.THU].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.THU));
+
+        widgetWeekDays[ScheduleData.FRI] = Widgets.newCheckbox(subComposite,null,"Fri");
+        Widgets.layout(widgetWeekDays[ScheduleData.FRI],0,4,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.FRI].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.FRI));
+
+        widgetWeekDays[ScheduleData.SAT] = Widgets.newCheckbox(subComposite,null,"Sat");
+        Widgets.layout(widgetWeekDays[ScheduleData.SAT],0,5,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.SAT].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SAT));
+
+        widgetWeekDays[ScheduleData.SUN] = Widgets.newCheckbox(subComposite,null,"Sun");
+        Widgets.layout(widgetWeekDays[ScheduleData.SUN],0,6,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.SUN].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SUN));
+      }
+
+      label = Widgets.newLabel(composite,"Time:");
+      Widgets.layout(label,2,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
       {
         widgetHour = Widgets.newOptionMenu(subComposite,null);
         widgetHour.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
@@ -4560,10 +5186,10 @@ throw new Error("NYI");
       }
 
       label = Widgets.newLabel(composite,"Type:");
-      Widgets.layout(label,2,0,TableLayoutData.W);
+      Widgets.layout(label,3,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
-      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,3,1,TableLayoutData.WE);
       {
         widgetTypeDefault = Widgets.newRadio(subComposite,null,"*");
         Widgets.layout(widgetTypeDefault,0,0,TableLayoutData.W);
@@ -4583,10 +5209,10 @@ throw new Error("NYI");
       }
 
       label = Widgets.newLabel(composite,"Options:");
-      Widgets.layout(label,3,0,TableLayoutData.W);
+      Widgets.layout(label,4,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
-      Widgets.layout(subComposite,3,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,4,1,TableLayoutData.WE);
       {
         widgetEnabled = Widgets.newCheckbox(subComposite,null,"enabled");
         Widgets.layout(widgetEnabled,0,0,TableLayoutData.W);
@@ -4637,7 +5263,14 @@ throw new Error("NYI");
       {
         Button widget = (Button)selectionEvent.widget;
         scheduleData.setDate(widgetYear.getText(),widgetMonth.getText(),widgetDay.getText());
-        scheduleData.weekDay = widgetWeekDay.getText();
+        scheduleData.setWeekDays(widgetWeekDays[ScheduleData.MON].getSelection(),
+                                 widgetWeekDays[ScheduleData.TUE].getSelection(),
+                                 widgetWeekDays[ScheduleData.WED].getSelection(),
+                                 widgetWeekDays[ScheduleData.THU].getSelection(),
+                                 widgetWeekDays[ScheduleData.FRI].getSelection(),
+                                 widgetWeekDays[ScheduleData.SAT].getSelection(),
+                                 widgetWeekDays[ScheduleData.SUN].getSelection()
+                                );
         scheduleData.setTime(widgetHour.getText(),widgetMinute.getText());
         scheduleData.enabled = widgetEnabled.getSelection();
         if      (widgetTypeNormal.getSelection())      scheduleData.type = "normal";
@@ -4664,16 +5297,23 @@ throw new Error("NYI");
     ScheduleData scheduleData = new ScheduleData();
     if (scheduleEdit(scheduleData,"New schedule","Add"))
     {
-      BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+scheduleData.getDate()+" "+scheduleData.weekDay+" "+scheduleData.getTime()+" "+scheduleData.getEnabled()+" "+scheduleData.type);
+      BARServer.executeCommand("SCHEDULE_ADD "+
+                               selectedJobId+" "+
+                               scheduleData.getDate()+" "+
+                               scheduleData.getWeekDays()+" "+
+                               scheduleData.getTime()+" "+
+                               scheduleData.getEnabled()+" "+
+                               scheduleData.getType()
+                              );
 
       scheduleList.add(scheduleData);
       TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
       tableItem.setData(scheduleData);
       tableItem.setText(0,scheduleData.getDate());
-      tableItem.setText(1,scheduleData.weekDay);
+      tableItem.setText(1,scheduleData.getWeekDays());
       tableItem.setText(2,scheduleData.getTime());
       tableItem.setText(3,scheduleData.getEnabled());
-      tableItem.setText(4,scheduleData.type);   
+      tableItem.setText(4,scheduleData.getType());
     }
   }
 
@@ -4694,17 +5334,24 @@ throw new Error("NYI");
         BARServer.executeCommand("SCHEDULE_CLEAR "+selectedJobId);
         for (ScheduleData data : scheduleList)
         {
-          BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+data.getDate()+" "+data.weekDay+" "+data.getTime()+" "+data.getEnabled()+" "+data.type);
+          BARServer.executeCommand("SCHEDULE_ADD "+
+                                   selectedJobId+" "+
+                                   data.getDate()+" "+
+                                   data.getWeekDays()+" "+
+                                   data.getTime()+" "+
+                                   data.getEnabled()+" "+
+                                   data.getType()
+                                  );
         }
-        
+
         tableItem.dispose();
         tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
         tableItem.setData(scheduleData);
         tableItem.setText(0,scheduleData.getDate());
-        tableItem.setText(1,scheduleData.weekDay);
+        tableItem.setText(1,scheduleData.getWeekDays());
         tableItem.setText(2,scheduleData.getTime());
-        tableItem.setText(3,scheduleData.getEnabled());   
-        tableItem.setText(4,scheduleData.type);   
+        tableItem.setText(3,scheduleData.getEnabled());
+        tableItem.setText(4,scheduleData.getType());
       }
     }
   }
@@ -4727,7 +5374,14 @@ throw new Error("NYI");
       BARServer.executeCommand("SCHEDULE_CLEAR "+selectedJobId);
       for (ScheduleData data : scheduleList)
       {
-        BARServer.executeCommand("SCHEDULE_ADD "+selectedJobId+" "+data.getDate()+" "+data.weekDay+" "+data.getTime()+" "+data.getEnabled()+" "+data.type);
+        BARServer.executeCommand("SCHEDULE_ADD "+
+                                 selectedJobId+" "+
+                                 data.getDate()+" "+
+                                 data.getWeekDays()+" "+
+                                 data.getTime()+" "+
+                                 data.getEnabled()+" "+
+                                 data.getType()
+                                );
       }
 
       tableItem.dispose();
@@ -4736,59 +5390,12 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  private void clearJobData()
-  {
-// NYI: rest?
-    widgetIncludedPatterns.removeAll();
-    widgetExcludedPatterns.removeAll();
-  }
-
-  /** update job data
-   * @param name name of job
-   */
-  private void updateJobData()
-  {
-    ArrayList<String> result = new ArrayList<String>();
-    Object[]          data;
-
-    // clear
-    clearJobData();
-
-    if (selectedJobId > 0)
-    {
-      // get job data
-      skipUnreadable.set(BARServer.getBooleanOption(selectedJobId,"skip-unreadable"));
-      overwriteFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-files"));
-
-      parseArchiveName(BARServer.getStringOption(selectedJobId,"archive-name"));
-      archiveType.set(BARServer.getStringOption(selectedJobId,"archive-type"));
-      archivePartSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"archive-part-size")));
-      archivePartSizeFlag.set(archivePartSize.getLong() > 0);
-      compressAlgorithm.set(BARServer.getStringOption(selectedJobId,"compress-algorithm"));
-      cryptAlgorithm.set(BARServer.getStringOption(selectedJobId,"crypt-algorithm"));
-      cryptType.set(BARServer.getStringOption(selectedJobId,"crypt-type"));
-      cryptPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"crypt-public-key"));
-      incrementalListFileName.set(BARServer.getStringOption(selectedJobId,"incremental-list-file"));
-      overwriteArchiveFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-archive-files"));
-      sshPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"ssh-public-key"));
-      sshPrivateKeyFileName.set(BARServer.getStringOption(selectedJobId,"ssh-private-key"));
-/* NYI ???
-      maxBandWidth.set(Units.parseByteSize(BARServer.getStringOption(jobId,"max-band-width")));
-      maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
-*/
-      volumeSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"volume-size")));
-      ecc.set(BARServer.getBooleanOption(selectedJobId,"ecc"));
-
-      updatePatternList(PatternTypes.INCLUDE);
-      updatePatternList(PatternTypes.EXCLUDE);
-    }
-  }
-
   /** clear all data
    */
   private void clear()
   {
     clearJobData();
+    clearFileTree();
     clearScheduleList();
   }
 

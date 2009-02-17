@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -89,6 +89,7 @@ SOURCES        = src/BARControl.java \
                  src/TabJobs.java \
                  src/TabRestore.java \
                  src/BARServer.java \
+                 src/Settings.java \
                  \
                  src/TableLayout.java \
                  src/TableLayoutData.java \
@@ -99,7 +100,9 @@ SOURCES        = src/BARControl.java \
                  src/StringParser.java \
                  src/Dprintf.java \
 
-OTHER_SOURCES  = barcontrol.xml \
+OTHER_SOURCES  = barcontrol.in \
+                 barcontrol.bat.in \
+                 barcontrol.xml \
                  jar.txt \
 
 OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).class) \
@@ -244,7 +247,6 @@ ifneq ($(DIRECTORY),)
 	$(INSTALL) -m 664 \
                    Makefile.in \
                    barcontrol.cfg \
-                   barcontrol.in \
                    $(DIRECTORY)/barcontrol
 	$(INSTALL) -m 664 \
                    $(sort $(SOURCES)) \

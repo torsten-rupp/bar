@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -293,8 +293,7 @@ class Widgets
 
   /** create empty space
    * @param composite composite
-   * @param width,height size of empty space
-   * @return canvas space
+   * @return control space control
    */
   static Control newSpacer(Composite composite)
   {
@@ -435,6 +434,25 @@ class Widgets
 
     button = new Button(composite,SWT.PUSH);
     button.setImage(image);
+    button.setData(data);
+
+    return button;
+  }
+
+  /** create new button with image
+   * @param composite composite
+   * @param object object
+   * @param image image
+   * @param text text
+   * @return new button
+   */
+  static Button newButton(Composite composite, Object data, Image image, String text)
+  {
+    Button button;
+
+    button = new Button(composite,SWT.PUSH);
+    button.setImage(image);
+    button.setText(text);
     button.setData(data);
 
     return button;
@@ -1121,6 +1139,76 @@ private static void printTree(Tree tree)
   static MenuItem addMenuItem(Menu menu, String text)
   {
     return addMenuItem(menu,text,0);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param accelerator accelerator key or 0
+   * @return new menu item
+   */
+  static MenuItem addMenuCheckbox(Menu menu, String text, int accelerator)
+  {
+    if (accelerator != 0)
+    {
+      char key = (char)(accelerator & SWT.KEY_MASK);
+      int index = text.indexOf(key);
+      if (index >= 0)
+      {
+        text = text.substring(0,index)+'&'+text.substring(index);
+      }
+      text = text+"\t"+acceleratorToText(accelerator);
+    }
+    MenuItem menuItem = new MenuItem(menu,SWT.CHECK);
+    menuItem.setText(text);
+    if (accelerator != 0) menuItem.setAccelerator(accelerator);
+
+    return menuItem;
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @return new menu item
+   */
+  static MenuItem addMenuCheckbox(Menu menu, String text)
+  {
+    return addMenuCheckbox(menu,text,0);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param accelerator accelerator key or 0
+   * @return new menu item
+   */
+  static MenuItem addMenuRadio(Menu menu, String text, int accelerator)
+  {
+    if (accelerator != 0)
+    {
+      char key = (char)(accelerator & SWT.KEY_MASK);
+      int index = text.indexOf(key);
+      if (index >= 0)
+      {
+        text = text.substring(0,index)+'&'+text.substring(index);
+      }
+      text = text+"\t"+acceleratorToText(accelerator);
+    }
+    MenuItem menuItem = new MenuItem(menu,SWT.RADIO);
+    menuItem.setText(text);
+    if (accelerator != 0) menuItem.setAccelerator(accelerator);
+
+    return menuItem;
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @return new menu item
+   */
+  static MenuItem addMenuRadio(Menu menu, String text)
+  {
+    return addMenuRadio(menu,text,0);
   }
 
   /** add new menu separator

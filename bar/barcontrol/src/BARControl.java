@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -11,10 +11,6 @@
 /****************************** Imports ********************************/
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileReader;
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -762,7 +758,7 @@ class Units
     if      (n >= 1024*1024*1024) return "GB";
     else if (n >=      1024*1024) return "MB";
     else if (n >=           1024) return "KB";
-    else                          return "";
+    else                          return "B";
   }
 
   public static long parseByteSize(String string)
@@ -816,58 +812,10 @@ public class BARControl
 
     LoginData(String serverName, int port, int tlsPort)
     {
-      this.serverName = serverName;
-      this.password   = null;
-      this.port       = port;
-      this.tlsPort    = tlsPort;
-
-      /* read $HOME/.bar/.barcontrol.cfg */
-      File barControlConfig = new File(System.getProperty("user.home")+File.separator+".bar"+File.separator+"barcontrol.cfg");
-      if (barControlConfig.exists())
-      {
-        BufferedReader input = null;
-        try
-        {
-          input = new BufferedReader(new FileReader(barControlConfig));
-          String line;
-          while ((line = input.readLine()) != null)
-          {
-            Object[] data = new Object[1];
-
-            if      (StringParser.parse(line,"server = %S",data,StringParser.QUOTE_CHARS))
-            {
-              serverName = (String)data[0];
-            }
-            else if (StringParser.parse(line,"server-password = %S",data,StringParser.QUOTE_CHARS))
-            {
-              password = (String)data[0];
-            }
-            else if (StringParser.parse(line,"server-port = %d",data,StringParser.QUOTE_CHARS))
-            {
-              port = (Integer)data[0];
-            }
-            else if (StringParser.parse(line,"server-tls-port = %d",data,StringParser.QUOTE_CHARS))
-            {
-              tlsPort = (Integer)data[0];
-            }
-//else {  System.err.println("BARControl.java"+", "+6090+": "+line); }
-          }
-          input.close();
-        }
-        catch (IOException exception)
-        {
-        }
-        finally
-        {
-          try
-          {
-            if (input != null) input.close();
-          }
-          catch (IOException exception)
-          {
-          }
-        }
-      }
+      this.serverName = !serverName.equals("")?serverName:Settings.serverName;
+      this.password   = Settings.serverPassword;
+      this.port       = (port != 0)?port:Settings.serverPort;
+      this.tlsPort    = (port != 0)?tlsPort:Settings.serverTLSPort;
     }
   }
 
@@ -1049,7 +997,7 @@ public class BARControl
     final Text   widgetPassword;
     final Button widgetLoginButton;
     composite = new Composite(dialog,SWT.NONE);
-    tableLayout = new TableLayout(null,new double[]{1,0},4);
+    tableLayout = new TableLayout(null,new double[]{0.0,1.0},2);
     composite.setLayout(tableLayout);
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
     {
@@ -1073,7 +1021,7 @@ public class BARControl
 
     // buttons
     composite = new Composite(dialog,SWT.NONE);
-    composite.setLayout(new TableLayout());
+    composite.setLayout(new TableLayout(0.0,1.0));
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
     {
       widgetLoginButton = new Button(composite,SWT.CENTER);
@@ -1199,69 +1147,75 @@ public class BARControl
 
     // create menu
     menuBar = Widgets.newMenuBar(shell);
+
     menu = Widgets.addMenu(menuBar,"Program");
-    menuItem = Widgets.addMenuItem(menu,"Start",SWT.CTRL+'S');
-    menuItem.addSelectionListener(new SelectionListener()
     {
-      public void widgetSelected(SelectionEvent selectionEvent)
+      menuItem = Widgets.addMenuItem(menu,"Start",SWT.CTRL+'S');
+      menuItem.addSelectionListener(new SelectionListener()
       {
-        MenuItem widget = (MenuItem)selectionEvent.widget;
-        Widgets.notify(tabStatus.widgetButtonStart);
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.notify(tabStatus.widgetButtonStart);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      menuItem = Widgets.addMenuItem(menu,"Abort",SWT.CTRL+'A');
+      menuItem.addSelectionListener(new SelectionListener()
       {
-      }
-    });
-    menuItem = Widgets.addMenuItem(menu,"Abort",SWT.CTRL+'A');
-    menuItem.addSelectionListener(new SelectionListener()
-    {
-      public void widgetSelected(SelectionEvent selectionEvent)
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.notify(tabStatus.widgetButtonAbort);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      menuItem = Widgets.addMenuItem(menu,"Toggle pause/continue",SWT.CTRL+'P');
+      menuItem.addSelectionListener(new SelectionListener()
       {
-        MenuItem widget = (MenuItem)selectionEvent.widget;
-        Widgets.notify(tabStatus.widgetButtonAbort);
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.notify(tabStatus.widgetButtonTogglePause);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      Widgets.addMenuSeparator(menu);
+      menuItem = Widgets.addMenuItem(menu,"Quit",SWT.CTRL+'Q');
+      menuItem.addSelectionListener(new SelectionListener()
       {
-      }
-    });
-    menuItem = Widgets.addMenuItem(menu,"Toggle pause/continue",SWT.CTRL+'P');
-    menuItem.addSelectionListener(new SelectionListener()
-    {
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        MenuItem widget = (MenuItem)selectionEvent.widget;
-        Widgets.notify(tabStatus.widgetButtonTogglePause);
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-    });
-    Widgets.addMenuSeparator(menu);
-    menuItem = Widgets.addMenuItem(menu,"Quit",SWT.CTRL+'Q');
-    menuItem.addSelectionListener(new SelectionListener()
-    {
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        MenuItem widget = (MenuItem)selectionEvent.widget;
-        Widgets.notify(tabStatus.widgetButtonQuit);
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-    });
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.notify(tabStatus.widgetButtonQuit);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
     menu = Widgets.addMenu(menuBar,"Help");
-    menuItem = Widgets.addMenuItem(menu,"About");
-    menuItem.addSelectionListener(new SelectionListener()
     {
-      public void widgetSelected(SelectionEvent selectionEvent)
+      menuItem = Widgets.addMenuItem(menu,"About");
+      menuItem.addSelectionListener(new SelectionListener()
       {
-        MenuItem widget = (MenuItem)selectionEvent.widget;
-        Dialogs.info(shell,"About","BAR control.\n\nWritten by Torsten Rupp.\n\nThanx to Matthias Albert.");
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-    });
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Dialogs.info(shell,"About","BAR control.\n\nWritten by Torsten Rupp.\n\nThanx to Matthias Albert.");
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
   }
 
   /** run application
@@ -1276,6 +1230,15 @@ public class BARControl
 //Dialogs.error(shell,"test ddddddddddddddddddddddddd");
 //Dialogs.confirm(shell,"Test","test ddddddddddddddddddddddddd");
 //Dialogs.select(shell,"Test","test ddddddddddddddddddddddddd",new String[]{"1","2","3"},0);
+
+    // add close listener
+    shell.addListener(SWT.Close,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        shell.dispose();
+      }
+    });
 
     // SWT event loop
     while (!shell.isDisposed())
@@ -1292,6 +1255,9 @@ public class BARControl
   {
     try
     {
+      // load settings
+      Settings.load();
+
       // parse arguments
       parseArguments(args);
 
@@ -1351,6 +1317,9 @@ public class BARControl
 
       // disconnect
       BARServer.disconnect();
+
+      // save settings
+      Settings.save();
     }
     catch (org.eclipse.swt.SWTException exception)
     {

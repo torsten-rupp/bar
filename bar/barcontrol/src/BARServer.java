@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -313,6 +313,7 @@ class ReadThread extends Thread
   ReadThread(BufferedReader input)
   {
     this.input = input;
+    setDaemon(true);
 
     quitFlag = false;
   }
@@ -683,6 +684,8 @@ class BARServer
     {
       // flush data (ignore errors)
       executeCommand("JOB_FLUSH");
+
+//output.write("QUIT"); output.write('\n'); output.flush();
 
       // close connection
       socket.close();

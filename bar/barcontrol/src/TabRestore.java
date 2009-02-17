@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -77,6 +77,7 @@ abstract class BackgroundTask
         backgroundTask.run(busyDialog,userData);
       }
     });
+    thread.setDaemon(true);
     thread.start();
   }
 
