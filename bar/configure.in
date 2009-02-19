@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.22 $
+dnl $Revision: 1.23 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -109,6 +109,9 @@ AC_CANONICAL_HOST
 dnl AC_PRESERVE_HELP_ORDER
 
 dnl ----------------------- substitute settings ------------------------
+
+AC_SUBST(VERSION_MAJOR)                     dnl version major number
+AC_SUBST(VERSION_MINOR)                     dnl version minor number
 
 AC_SUBST(PLATFORM)                          dnl platform
 
@@ -432,6 +435,9 @@ AC_CHECK_FUNC(libssh2_channel_send_keepalive,AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KE
 AC_CHECK_FUNC(libssh2_sftp_seek2,            AC_DEFINE(HAVE_SSH2_SFTP_SEEK2,            1,[SSH2 has libssh2_sftp_seek2() function.]))
 
 dnl -------------------------------- misc ------------------------------
+
+VERSION_MAJOR=`cat version|grep MAJOR|sed 's/.*=//g'`
+VERSION_MINOR=`cat version|grep MINOR|sed 's/.*=//g'`
 
 AC_DEFINE_UNQUOTED(CONFIG_DIR,"$CONFIG_DIR",[configuration directory])
 AC_DEFINE_UNQUOTED(TLS_DIR,   "$TLS_DIR",   [TLS directory])

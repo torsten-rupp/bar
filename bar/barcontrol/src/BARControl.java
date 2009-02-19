@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -1209,7 +1209,7 @@ public class BARControl
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
-          Dialogs.info(shell,"About","BAR control.\n\nWritten by Torsten Rupp.\n\nThanx to Matthias Albert.");
+          Dialogs.info(shell,"About","BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+".\n\nWritten by Torsten Rupp.\n\nThanx to Matthias Albert.");
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {

@@ -13,6 +13,7 @@
   * internal change in protocol bar/barcontrol
   * fixed some lost strings
   * improved speed: inline some function calls
+  * barcontrol: added version number in about-dialog
 
 2009-02-14 0.10a
   * fixed layout of login dialog

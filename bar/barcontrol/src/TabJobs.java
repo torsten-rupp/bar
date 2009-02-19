@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -3812,7 +3812,7 @@ throw new Error("NYI");
     }
     else
     {
-Dprintf.dprintf("fileListResult=%s\n",fileListResult);
+Dprintf.dprintf("fileListResult=%s errorCode=%d\n",fileListResult,errorCode);
        Dialogs.error(shell,"Cannot get file list (error: "+fileListResult.get(0)+")");
     }
 
