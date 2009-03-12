@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -54,7 +54,8 @@ LOCAL const char *DEFAULT_FALSE_STRINGS[] =
   "off",
 };
 
-#define DEBUG_FILL_BYTE 0xFE
+#define DEBUG_FILL_BYTE     0xFE
+#define DEBUG_MAX_FREE_LIST 4000
 
 /***************************** Datatypes *******************************/
 typedef enum
@@ -1661,7 +1662,7 @@ String __String_new(const char *fileName, ulong lineNb)
 
     pthread_mutex_lock(&debugStringLock);
 
-    /* find string in free-list */
+    /* find string in free-list; reuse or allocate new debug node */
     debugStringNode = debugFreeStringList.head;
     while ((debugStringNode != NULL) && (debugStringNode->string != string))
     {
@@ -1868,6 +1869,8 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
   CHECK_VALID(string);
 
   #ifndef NDEBUG
+    pthread_once(&debugStringInitFlag,debugStringInit);
+
     pthread_mutex_lock(&debugStringLock);
 
     /* find string in free-list to check for duplicate free */
@@ -1901,6 +1904,8 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
       pthread_once(&debugStringInitFlag,debugStringInit);
 
       pthread_mutex_lock(&debugStringLock);
+
+      /* add string to free-list, shorten list */
       debugStringNode = debugAllocStringList.head;
       while ((debugStringNode != NULL) && (debugStringNode->string != string))
       {
@@ -1912,6 +1917,12 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
         debugStringNode->prevFileName = fileName;
         debugStringNode->prevLineNb   = lineNb;
         List_append(&debugFreeStringList,debugStringNode);
+
+        while (debugFreeStringList.count > DEBUG_MAX_FREE_LIST)
+        {
+          debugStringNode = (DebugStringNode*)List_getFirst(&debugFreeStringList);
+          LIST_DELETE_NODE(debugStringNode);
+        }
       }
       else
       {
@@ -1922,6 +1933,7 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
                );
         HALT_INTERNAL_ERROR("");
       }
+
       pthread_mutex_unlock(&debugStringLock);
     #endif /* not NDEBUG */
 
@@ -2230,30 +2242,6 @@ String String_appendSub(String string, const String fromString, ulong fromIndex,
   return string;
 }
 
-String String_appendBuffer(String string, const char *buffer, ulong bufferLength)
-{
-  ulong n;
-
-  CHECK_VALID(string);
-
-  if (string != NULL)
-  {
-    assert(string->data != NULL);
-    if (buffer != NULL)
-    {
-      n = string->length+bufferLength;
-      ensureStringLength(string,n);
-      memcpy(&string->data[string->length],buffer,bufferLength);
-      string->data[n] = '\0';
-      string->length = n;
-    }
-
-    UPDATE_VALID(string);
-  }
-
-  return string;
-}
-
 String String_appendCString(String string, const char *s)
 {
   CHECK_VALID(string);
@@ -2273,13 +2261,44 @@ String String_appendCString(String string, const char *s)
 
 String String_appendChar(String string, char ch)
 {
+  ulong n;
+
   CHECK_VALID(string);
 
   if (string != NULL)
   {
     assert(string->data != NULL);
+    n = string->length+1;
+    ensureStringLength(string,n);
+    string->data[string->length] = ch;
+    string->data[n] = '\0';
+    string->length = n;
 
-    String_appendBuffer(string,&ch,1);
+    UPDATE_VALID(string);
+  }
+
+  return string;
+}
+
+String String_appendBuffer(String string, const char *buffer, ulong bufferLength)
+{
+  ulong n;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+    if (buffer != NULL)
+    {
+      n = string->length+bufferLength;
+      ensureStringLength(string,n);
+      memcpy(&string->data[string->length],buffer,bufferLength);
+      string->data[n] = '\0';
+      string->length = n;
+    }
+
+    UPDATE_VALID(string);
   }
 
   return string;
@@ -2371,6 +2390,37 @@ String String_insertSub(String string, ulong index, const String fromString, ulo
   return string;
 }
 
+String String_insertCString(String string, ulong index, const char *s)
+{
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    if (s != NULL)
+    {
+      String_insertBuffer(string,index,s,strlen(s));
+    }
+  }
+
+  return string;
+}
+
+String String_insertChar(String string, ulong index, char ch)
+{
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    String_insertBuffer(string,index,&ch,1);
+  }
+
+  return string;
+}
+
 String String_insertBuffer(String string, ulong index, const char *buffer, ulong bufferLength)
 {
   ulong n;
@@ -2403,37 +2453,6 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
     }
 
     UPDATE_VALID(string);
-  }
-
-  return string;
-}
-
-String String_insertCString(String string, ulong index, const char *s)
-{
-  CHECK_VALID(string);
-
-  if (string != NULL)
-  {
-    assert(string->data != NULL);
-
-    if (s != NULL)
-    {
-      String_insertBuffer(string,index,s,strlen(s));
-    }
-  }
-
-  return string;
-}
-
-String String_insertChar(String string, ulong index, char ch)
-{
-  CHECK_VALID(string);
-
-  if (string != NULL)
-  {
-    assert(string->data != NULL);
-
-    String_insertBuffer(string,index,&ch,1);
   }
 
   return string;
@@ -2487,16 +2506,6 @@ String String_replace(String string, ulong index, ulong length, const String ins
   return string;
 }
 
-String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength)
-{
-  CHECK_VALID(string);
-
-  String_remove(string,index,length);
-  String_insertBuffer(string,index,buffer,bufferLength);
-
-  return string;
-}
-
 String String_replaceCString(String string, ulong index, ulong length, const char *s)
 {
   CHECK_VALID(string);
@@ -2513,6 +2522,16 @@ String String_replaceChar(String string, ulong index, ulong length, char ch)
 
   String_remove(string,index,length);
   String_insertChar(string,index,ch);
+
+  return string;
+}
+
+String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength)
+{
+  CHECK_VALID(string);
+
+  String_remove(string,index,length);
+  String_insertBuffer(string,index,buffer,bufferLength);
 
   return string;
 }
@@ -2538,22 +2557,22 @@ String String_joinCString(String string, const char *s, char joinChar)
   return string;
 }
 
-String String_joinBuffer(String string, const char *buffer, ulong bufferLength, char joinChar)
-{
-  CHECK_VALID(string);
-
-  if (!String_empty(string)) String_appendChar(string,joinChar);
-  String_appendBuffer(string,buffer,bufferLength);
-
-  return string;
-}
-
 String String_joinChar(String string, char ch, char joinChar)
 {
   CHECK_VALID(string);
 
   if (!String_empty(string)) String_appendChar(string,joinChar);
   String_appendChar(string,ch);
+
+  return string;
+}
+
+String String_joinBuffer(String string, const char *buffer, ulong bufferLength, char joinChar)
+{
+  CHECK_VALID(string);
+
+  if (!String_empty(string)) String_appendChar(string,joinChar);
+  String_appendBuffer(string,buffer,bufferLength);
 
   return string;
 }
@@ -2636,41 +2655,6 @@ bool String_equals(const String string1, const String string2)
   return equalFlag;
 }
 
-bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength)
-{
-  bool  equalFlag;
-  ulong z;
-
-  assert(string != NULL);
-  assert(buffer != NULL);
-
-  if ((string != NULL) && (buffer != NULL))
-  {
-    CHECK_VALID(string);
-
-    if (string->length == bufferLength)
-    {
-      equalFlag = TRUE;
-      z         = 0;
-      while (equalFlag && (z < string->length))
-      {
-        equalFlag = (string->data[z] == buffer[z]);
-        z++;
-      }
-    }
-    else
-    {
-      equalFlag = FALSE;
-    }
-  }
-  else
-  {
-    equalFlag = (string == NULL) && (bufferLength == 0);
-  }
-
-  return equalFlag;
-}
-
 bool String_equalsCString(const String string, const char *s)
 {
   bool equalFlag;
@@ -2718,6 +2702,41 @@ bool String_equalsChar(const String string, char ch)
   return equalFlag;
 }
 
+bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength)
+{
+  bool  equalFlag;
+  ulong z;
+
+  assert(string != NULL);
+  assert(buffer != NULL);
+
+  if ((string != NULL) && (buffer != NULL))
+  {
+    CHECK_VALID(string);
+
+    if (string->length == bufferLength)
+    {
+      equalFlag = TRUE;
+      z         = 0;
+      while (equalFlag && (z < string->length))
+      {
+        equalFlag = (string->data[z] == buffer[z]);
+        z++;
+      }
+    }
+    else
+    {
+      equalFlag = FALSE;
+    }
+  }
+  else
+  {
+    equalFlag = (string == NULL) && (bufferLength == 0);
+  }
+
+  return equalFlag;
+}
+
 bool String_subEquals(const String string1, const String string2, long index, ulong length)
 {
   long  i;
@@ -2754,46 +2773,6 @@ bool String_subEquals(const String string1, const String string2, long index, ul
   else
   {
     equalFlag = (string1 == NULL) && (string2 == NULL);
-  }
-
-  return equalFlag;
-}
-
-bool String_subEqualsBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length)
-{
-  long  i;
-  bool  equalFlag;
-  ulong z;
-
-  assert(string != NULL);
-  assert(buffer != NULL);
-
-  if ((string != NULL) && (buffer != NULL))
-  {
-    CHECK_VALID(string);
-
-    i = (index != STRING_END)?index:(long)string->length-(long)length;
-    if (   (i >= 0)
-        && ((i+length) <= string->length)
-        && (length <= bufferLength)
-       )
-    {
-      equalFlag = TRUE;
-      z         = 0;
-      while (equalFlag && (z < length))
-      {
-        equalFlag = (string->data[i+z] == buffer[z]);
-        z++;
-      }
-    }
-    else
-    {
-      equalFlag = FALSE;
-    }
-  }
-  else
-  {
-    equalFlag = (string == NULL) && (bufferLength == 0);
   }
 
   return equalFlag;
@@ -2841,6 +2820,46 @@ bool String_subEqualsChar(const String string, char ch, long index)
   else
   {
     equalFlag = FALSE;
+  }
+
+  return equalFlag;
+}
+
+bool String_subEqualsBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length)
+{
+  long  i;
+  bool  equalFlag;
+  ulong z;
+
+  assert(string != NULL);
+  assert(buffer != NULL);
+
+  if ((string != NULL) && (buffer != NULL))
+  {
+    CHECK_VALID(string);
+
+    i = (index != STRING_END)?index:(long)string->length-(long)length;
+    if (   (i >= 0)
+        && ((i+length) <= string->length)
+        && (length <= bufferLength)
+       )
+    {
+      equalFlag = TRUE;
+      z         = 0;
+      while (equalFlag && (z < length))
+      {
+        equalFlag = (string->data[i+z] == buffer[z]);
+        z++;
+      }
+    }
+    else
+    {
+      equalFlag = FALSE;
+    }
+  }
+  else
+  {
+    equalFlag = (string == NULL) && (bufferLength == 0);
   }
 
   return equalFlag;

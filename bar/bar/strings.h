@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -235,7 +235,7 @@ String String_setChar(String string, char ch);
 String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 
 /***********************************************************************\
-* Name   : String_sub
+* Name   : String_sub, String_subCString, String_subBuffer
 * Purpose: get sub-string from string
 * Input  : string/buffer - string/buffer to set
 *          fromString    - string to get sub-string from
@@ -252,8 +252,8 @@ char *String_subCString(char *s, const String fromString, ulong index, long leng
 char *String_subBuffer(char *buffer, const String fromString, ulong index, long length);
 
 /***********************************************************************\
-* Name   : String_append, String_appendSub, String_appendBuffer,
-*          String_appendCString, String_appendChar
+* Name   : String_append, String_appendSub, String_appendCString,
+*          String_appendChar, String_appendBuffer
 * Purpose: append to string
 * Input  : string                - string
 *          appendString/s/buffer - string to append
@@ -266,13 +266,13 @@ char *String_subBuffer(char *buffer, const String fromString, ulong index, long 
 
 String String_append(String string, String appendString);
 String String_appendSub(String string, const String fromString, ulong fromIndex, long fromLength);
-String String_appendBuffer(String string, const char *buffer, ulong bufferLength);
 String String_appendCString(String string, const char *s);
 String String_appendChar(String string, char ch);
+String String_appendBuffer(String string, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : String_insert, String_insertSub, String_insertCString,
-*          String_insertChar
+*          String_insertChar, String_insertBuffer
 * Purpose: insert into string
 * Input  : string                - string
 *          index                 - index where to insert
@@ -286,9 +286,9 @@ String String_appendChar(String string, char ch);
 
 String String_insert(String string, ulong index, const String insertString);
 String String_insertSub(String string, ulong index, const String fromString, ulong fromIndex, long fromLength);
-String String_insertBuffer(String string, ulong index, const char *buffer, ulong bufferLength);
 String String_insertCString(String string, ulong index, const char *s);
 String String_insertChar(String string, ulong index, char ch);
+String String_insertBuffer(String string, ulong index, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : String_remove
@@ -305,7 +305,8 @@ String String_insertChar(String string, ulong index, char ch);
 String String_remove(String string, ulong index, ulong length);
 
 /***********************************************************************\
-* Name   : String_replace, String_replaceCString, String_replaceChar
+* Name   : String_replace, String_replaceCString, String_replaceChar,
+*          String_replaceBuffer
 * Purpose: replace part of string with other string
 * Input  : string                - string                
 *          index                 - index where to insert 
@@ -319,12 +320,13 @@ String String_remove(String string, ulong index, ulong length);
 \***********************************************************************/
 
 String String_replace(String string, ulong index, ulong length, const String insertString);
-String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength);
 String String_replaceCString(String string, ulong index, ulong length, const char *s);
 String String_replaceChar(String string, ulong index, ulong length, char ch);
+String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
-* Name   : String_join, String_joinCString, String_joinBuffer
+* Name   : String_join, String_joinCString, String_joinChar,
+*          String_joinBuffer
 * Purpose: join strings with separator char
 * Input  : string              - string
 *          joinString/s/buffer - string to join
@@ -337,8 +339,8 @@ String String_replaceChar(String string, ulong index, ulong length, char ch);
 
 String String_join(String string, const String joinString, char joinChar);
 String String_joinCString(String string, const char *s, char joinChar);
-String String_joinBuffer(String string, const char *buffer, ulong bufferLength, char joinChar);
 String String_joinChar(String string, char ch, char joinChar);
+String String_joinBuffer(String string, const char *buffer, ulong bufferLength, char joinChar);
 
 /***********************************************************************\
 * Name   : String_length
@@ -460,8 +462,8 @@ int String_compare(const String          string1,
                   );
 
 /***********************************************************************\
-* Name   : String_equals, String_equalsBuffer, String_equalsCString
-*          String_equalsChar
+* Name   : String_equals, String_equalsCString, String_equalsChar
+*          String_equalsBuffer
 * Purpose: check if strings are equal
 * Input  : string1,string2            - strings to compare
 *          string/buffer/bufferLength - string/buffer to compare
@@ -473,13 +475,13 @@ int String_compare(const String          string1,
 \***********************************************************************/
 
 bool String_equals(const String string1, const String string2);
-bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength);
 bool String_equalsCString(const String string, const char *s);
 bool String_equalsChar(const String string, char ch);
+bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
-* Name   : String_subEquals, String_subEqualsBuffer,
-*          String_subEqualsCString, String_subEqualsChar
+* Name   : String_subEquals, String_subEqualsCString,
+*          String_subEqualsChar, String_subEqualsBuffer
 * Purpose: check if string2 is equal to string1 at some position
 * Input  : string1,string2            - strings to compare
 *          string/buffer/bufferLength - string/buffer to compare
@@ -493,12 +495,13 @@ bool String_equalsChar(const String string, char ch);
 \***********************************************************************/
 
 bool String_subEquals(const String string1, const String string2, long index, ulong length);
-bool String_subEqualsBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length);
 bool String_subEqualsCString(const String string, const char *s, long index, ulong length);
 bool String_subEqualsChar(const String string, char ch, long index);
+bool String_subEqualsBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length);
 
 /***********************************************************************\
-* Name   : String_find, String_findCString, String_findChar
+* Name   : String_find, String_findCString, String_findChar,
+*          String_findLast, String_findLastCString, String_findLastChar
 * Purpose: find string in string
 * Input  : string - string
 *          index - index to start search (0..n-1)
