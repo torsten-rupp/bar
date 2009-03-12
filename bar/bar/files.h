@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -68,6 +68,7 @@ typedef enum
 /* file i/o handle */
 typedef struct
 {
+  String name;
   FILE   *file;
   uint64 index;
   uint64 size;
