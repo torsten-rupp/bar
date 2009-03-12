@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -32,6 +32,10 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+/* file name extensions */
+#define FILE_NAME_EXTENSION_ARCHIVE_FILE     ".bar"
+#define FILE_NAME_EXTENSION_INCREMENTAL_FILE ".bid"
 
 /* program exit codes */
 typedef enum
