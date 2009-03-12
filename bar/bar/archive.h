@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -85,12 +85,12 @@ typedef struct
   {
     struct
     {
-      FileHandle           fileHandle;                     // file handle
-      bool                   fileOpenFlag;                   // TRUE iff file is open
+      FileHandle         fileHandle;                     // file handle
+      bool               openFlag;                       // TRUE iff archive file is open
     } file;
     struct
     {
-      StorageFileHandle    storageFileHandle;              // storage file handle
+      StorageFileHandle  storageFileHandle;              // storage file handle
     } storageFile;
   };
   const ChunkIO          *chunkIO;

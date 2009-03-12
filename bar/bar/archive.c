@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -398,7 +398,7 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
   newPartFlag = FALSE;
   if (archiveInfo->jobOptions->archivePartSize > 0)
   {
-    if (archiveInfo->file.fileOpenFlag)
+    if (archiveInfo->file.openFlag)
     {
       /* get file size */
       fileSize = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
@@ -691,7 +691,7 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
 
   assert(archiveInfo != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
-  assert(!archiveInfo->file.fileOpenFlag);
+  assert(!archiveInfo->file.openFlag);
 
   /* get output filename */
   error = File_getTmpFileName(archiveInfo->fileName,NULL,tmpDirectory);
@@ -729,7 +729,8 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
     }
   }
 
-  archiveInfo->file.fileOpenFlag = TRUE;
+  /* mark archive file "open" */
+  archiveInfo->file.openFlag = TRUE;
 
   return ERROR_NONE;
 }
@@ -753,16 +754,16 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
 
   assert(archiveInfo != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
-  assert(archiveInfo->file.fileOpenFlag);
+  assert(archiveInfo->file.openFlag);
 
   /* get size of archive */
   fileSize = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
 
-  if (archiveInfo->file.fileOpenFlag)
+  if (archiveInfo->file.openFlag)
   {
     /* close file */
     File_close(&archiveInfo->file.fileHandle);
-    archiveInfo->file.fileOpenFlag = FALSE;
+    archiveInfo->file.openFlag = FALSE;
   }
 
   /* call back new archive created */
@@ -821,7 +822,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
   }
 
   /* open file if needed */
-  if (!archiveInfo->file.fileOpenFlag)
+  if (!archiveInfo->file.openFlag)
   {
     /* create file */
     error = openArchiveFile(archiveInfo);
@@ -1018,7 +1019,7 @@ LOCAL Errors writeDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMo
     if (!archiveFileInfo->file.createdFlag || (length > 0))
     {
       /* open file if needed */
-      if (!archiveFileInfo->archiveInfo->file.fileOpenFlag)
+      if (!archiveFileInfo->archiveInfo->file.openFlag)
       {
         /* create file */
         error = openArchiveFile(archiveFileInfo->archiveInfo);
@@ -1245,7 +1246,7 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
 
   archiveInfo->ioType                  = ARCHIVE_IO_TYPE_FILE;
   archiveInfo->fileName                = String_new();
-  archiveInfo->file.fileOpenFlag       = FALSE;
+  archiveInfo->file.openFlag           = FALSE;
 
   archiveInfo->chunkIO                 = &CHUNK_IO_FILE;
   archiveInfo->chunkIOUserData         = &archiveInfo->file.fileHandle;
@@ -1402,7 +1403,7 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      if (archiveInfo->file.fileOpenFlag)
+      if (archiveInfo->file.openFlag)
       {
         closeArchiveFile(archiveInfo,TRUE);
       }
@@ -3687,8 +3688,21 @@ uint64 Archive_getSize(ArchiveFileInfo *archiveFileInfo)
   assert(archiveFileInfo != NULL);
   assert(archiveFileInfo->archiveInfo != NULL);
 
-//  return (archiveFileInfo->archiveInfo->fileOpenFlag)?archiveFileInfo->archiveInfo->chunkIO->getSize(&archiveFileInfo->archiveInfo->chunkIOUserData):0LL;
-  return archiveFileInfo->archiveInfo->chunkIO->getSize(&archiveFileInfo->archiveInfo->chunkIOUserData);
+  switch (archiveFileInfo->archiveInfo->ioType)
+  {
+    case ARCHIVE_IO_TYPE_FILE:
+      return (archiveFileInfo->archiveInfo->file.openFlag)?archiveFileInfo->archiveInfo->chunkIO->getSize(archiveFileInfo->archiveInfo->chunkIOUserData):0LL;
+      break;
+    case ARCHIVE_IO_TYPE_STORAGE_FILE:
+      return archiveFileInfo->archiveInfo->chunkIO->getSize(archiveFileInfo->archiveInfo->chunkIOUserData);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        return 0LL; /* not reached */
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
 }
 
 #ifdef __cplusplus
