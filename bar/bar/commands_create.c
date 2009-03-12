@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -56,7 +56,7 @@
 
 typedef enum
 {
-  FORMAT_MODE_FILE_NAME,
+  FORMAT_MODE_ARCHIVE_FILE_NAME,
   FORMAT_MODE_PATTERN,
 } FormatModes;
 
@@ -669,6 +669,314 @@ LOCAL String formatArchiveFileName(String       fileName,
 {
   TextMacro textMacros[2];
 
+  bool      partNumberFlag;
+  struct tm tmStruct;
+  long      i,j;
+  char      format[4];
+  char      buffer[256];
+  size_t    length;
+  ulong     divisor;
+  ulong     n;
+  int       z;
+  int       d;
+
+  /* expand named macros */
+  switch (archiveType)
+  {
+    case ARCHIVE_TYPE_NORMAL:      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","normal");      break;
+    case ARCHIVE_TYPE_FULL:        TEXT_MACRO_N_CSTRING(textMacros[0],"%type","full");        break;
+    case ARCHIVE_TYPE_INCREMENTAL: TEXT_MACRO_N_CSTRING(textMacros[0],"%type","incremental"); break;
+    case ARCHIVE_TYPE_UNKNOWN:     TEXT_MACRO_N_CSTRING(textMacros[0],"%type","unknown");     break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+      #endif /* NDEBUG */
+  }
+  switch (formatMode)
+  {
+    case FORMAT_MODE_ARCHIVE_FILE_NAME:
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%last",lastPartFlag?"-last":"");
+      Misc_expandMacros(fileName,String_cString(templateFileName),textMacros,SIZE_OF_ARRAY(textMacros));
+      break;
+    case FORMAT_MODE_PATTERN:
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%last","(-last){0,1}");
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+      #endif /* NDEBUG */
+  }
+
+  /* expand time macros, part number */
+  localtime_r(&time,&tmStruct);
+  partNumberFlag = FALSE;
+  i = 0;
+  while (i < String_length(fileName))
+  {
+    switch (String_index(fileName,i))
+    {
+      case '%':
+        if ((i+1) < String_length(fileName))
+        {
+          switch (String_index(fileName,i+1))
+          {
+            case '%':
+              /* %% */
+              String_remove(fileName,i,1);
+              i += 1;
+              break;
+            case '#':
+              /* %# */
+              String_remove(fileName,i,1);
+              i += 1;
+              break;
+            default:
+              /* format time part */
+              switch (String_index(fileName,i+1))
+              {
+                case 'E':
+                case 'O':
+                  /* %Ex, %Ox */
+                  format[0] = '%';
+                  format[1] = String_index(fileName,i+1);
+                  format[2] = String_index(fileName,i+2);
+                  format[3] = '\0';
+
+                  String_remove(fileName,i,3);
+                  break;
+                default:
+                  /* %x */
+                  format[0] = '%';
+                  format[1] = String_index(fileName,i+1);
+                  format[2] = '\0';
+
+                  String_remove(fileName,i,2);
+                  break;
+              }
+              length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
+
+              /* insert in string */
+              switch (formatMode)
+              {
+                case FORMAT_MODE_ARCHIVE_FILE_NAME:
+                  String_insertBuffer(fileName,i,buffer,length);
+                  i += length;
+                  break;
+                case FORMAT_MODE_PATTERN:
+                  for (z = 0 ; z < length; z++)
+                  {
+                    if (strchr("*+?{}():[].^$|",buffer[z]) != NULL)
+                    {
+                      String_insertChar(fileName,i,'\\');
+                      i += 1;
+                    }
+                    String_insertChar(fileName,i,buffer[z]);
+                    i += 1;
+                  }
+                  break;
+                #ifndef NDEBUG
+                  default:
+                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    break; /* not reached */
+                  #endif /* NDEBUG */
+              }
+              break;
+          }
+        }
+        else
+        {
+          /* % at end of string */
+          i += 1;
+        }      
+        break;
+      case '#':
+        /* #... */
+        switch (formatMode)
+        {
+          case FORMAT_MODE_ARCHIVE_FILE_NAME:
+            if (partNumber != ARCHIVE_PART_NUMBER_NONE)
+            {
+              /* find #...# and get max. divisor for part number */
+              divisor = 1;
+              j = i+1;
+              while ((j < String_length(fileName) && String_index(fileName,j) == '#'))
+              {
+                j++;
+                if (divisor < 1000000000) divisor*=10;
+              }
+
+              /* replace #...# by part number */     
+              n = partNumber;
+              z = 0;
+              while (divisor > 0)
+              {
+                d = n/divisor; n = n%divisor; divisor = divisor/10;
+                if (z < sizeof(buffer)-1)
+                {
+                  buffer[z] = '0'+d; z++;
+                }
+              }
+              buffer[z] = '\0';
+              String_replaceCString(fileName,i,j-i,buffer);
+              i = j;
+
+              partNumberFlag = TRUE;
+            }
+            else
+            {
+              i += 1;
+            }       
+            break;
+          case FORMAT_MODE_PATTERN:
+            /* replace by "." */
+            String_replaceChar(fileName,i,1,'.');
+            i += 1;
+            break;
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; /* not reached */
+            #endif /* NDEBUG */
+        }
+        break;
+      default:
+        i += 1;
+        break;
+    }
+  }
+
+  /* append part number if multipart mode and there is no part number in format string */
+  if ((partNumber != ARCHIVE_PART_NUMBER_NONE) && !partNumberFlag)
+  {
+    switch (formatMode)
+    {
+      case FORMAT_MODE_ARCHIVE_FILE_NAME:
+        String_format(fileName,".%06d",partNumber);
+        break;
+      case FORMAT_MODE_PATTERN:
+        String_appendCString(fileName,"......");
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+        #endif /* NDEBUG */
+    }
+  }
+
+  return fileName;
+}
+
+LOCAL String formatIncrementalFileName(String       fileName,
+                                       const String templateFileName
+                                      )
+{
+  #define SEPARATOR_CHARS "-_"
+
+  long i;
+  char ch;
+
+  /* remove all macros and leading and tailing separator characters */
+  String_clear(fileName);
+  i = 0;
+  while (i < String_length(templateFileName))
+  {
+    ch = String_index(templateFileName,i);
+    switch (ch)
+    {
+      case '%':
+        i++;
+        if (i < String_length(templateFileName))
+        {
+          /* removed previous separator characters */
+          String_trimRight(fileName,SEPARATOR_CHARS);
+
+          ch = String_index(templateFileName,i);
+          switch (ch)
+          {
+            case '%':
+              /* %% */
+              String_appendChar(fileName,'%');
+              i++;
+              break;
+            case '#':
+              /* %# */
+              String_appendChar(fileName,'#');
+              i++;
+              break;
+            default:
+              /* discard %xyz */
+              if (isalpha(ch))
+              {
+                while (   (i < String_length(templateFileName))
+                       && isalpha(ch)
+                      )
+                {
+                  i++;
+                  ch = String_index(templateFileName,i);
+                }
+              }
+
+              /* discard following separator characters */
+              if (strchr(SEPARATOR_CHARS,ch) != NULL)
+              {
+                while (   (i < String_length(templateFileName))
+                       && (strchr(SEPARATOR_CHARS,ch) != NULL)
+                      )
+                {
+                  i++;
+                  ch = String_index(templateFileName,i);
+                }
+              }
+              break;
+          }
+        }
+        break;
+      case '#':
+        i++;
+        break;
+      default:
+        String_appendChar(fileName,ch);
+        i++;
+        break;
+    }
+  }
+
+  /* replace or add file name extension */
+  if (String_subEqualsCString(fileName,
+                              FILE_NAME_EXTENSION_ARCHIVE_FILE,
+                              String_length(fileName)-strlen(FILE_NAME_EXTENSION_ARCHIVE_FILE),
+                              strlen(FILE_NAME_EXTENSION_ARCHIVE_FILE)
+                             )
+     )
+  {
+    String_replaceCString(fileName,
+                          String_length(fileName)-strlen(FILE_NAME_EXTENSION_ARCHIVE_FILE),
+                          strlen(FILE_NAME_EXTENSION_ARCHIVE_FILE),
+                          FILE_NAME_EXTENSION_INCREMENTAL_FILE
+                         );
+  }
+  else
+  {
+    String_appendCString(fileName,FILE_NAME_EXTENSION_INCREMENTAL_FILE);
+  }
+
+  return fileName;
+}
+
+LOCAL String formatArchiveFileNameold(String       fileName,
+                                   FormatModes  formatMode,
+                                   ArchiveTypes archiveType,
+                                   const String templateFileName,
+                                   time_t       time,
+                                   int          partNumber,
+                                   bool         lastPartFlag
+                                  )
+{
+  TextMacro textMacros[2];
+
   String    string;
   bool      partNumberFlag;
   struct tm tmStruct;
@@ -696,7 +1004,7 @@ LOCAL String formatArchiveFileName(String       fileName,
   }
   switch (formatMode)
   {
-    case FORMAT_MODE_FILE_NAME:
+    case FORMAT_MODE_ARCHIVE_FILE_NAME:
       TEXT_MACRO_N_CSTRING(textMacros[1],"%last",lastPartFlag?"-last":"");
       break;
     case FORMAT_MODE_PATTERN:
@@ -710,7 +1018,7 @@ LOCAL String formatArchiveFileName(String       fileName,
   }
   switch (formatMode)
   {
-    case FORMAT_MODE_FILE_NAME:
+    case FORMAT_MODE_ARCHIVE_FILE_NAME:
       Misc_expandMacros(fileName,String_cString(templateFileName),textMacros,SIZE_OF_ARRAY(textMacros));
       break;
     case FORMAT_MODE_PATTERN:
@@ -776,7 +1084,7 @@ LOCAL String formatArchiveFileName(String       fileName,
               /* insert in string */
               switch (formatMode)
               {
-                case FORMAT_MODE_FILE_NAME:
+                case FORMAT_MODE_ARCHIVE_FILE_NAME:
                   String_insertBuffer(fileName,i,buffer,length);
                   i += length;
                   break;
@@ -811,7 +1119,7 @@ LOCAL String formatArchiveFileName(String       fileName,
         /* #... */
         switch (formatMode)
         {
-          case FORMAT_MODE_FILE_NAME:
+          case FORMAT_MODE_ARCHIVE_FILE_NAME:
             if (partNumber != ARCHIVE_PART_NUMBER_NONE)
             {
               /* find #...# and get max. divisor for part number */
@@ -868,7 +1176,7 @@ LOCAL String formatArchiveFileName(String       fileName,
   {
     switch (formatMode)
     {
-      case FORMAT_MODE_FILE_NAME:
+      case FORMAT_MODE_ARCHIVE_FILE_NAME:
         String_format(fileName,".%06d",partNumber);
         break;
       case FORMAT_MODE_PATTERN:
@@ -1018,14 +1326,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                 {
                   Misc_udelay(500*1000);
                 }
-  /*
-  xx++;
-  if ((xx%1000)==0)
-  {
-  // String_debug();
-  fprintf(stderr,"%s,%d: %lu xx=%lu\n",__FILE__,__LINE__,StringList_count(&nameList),xx);
-  }
-  */
+
                 /* read next directory entry */
                 error = File_readDirectory(&directoryHandle,fileName);
                 if (error != ERROR_NONE)
@@ -1139,13 +1440,16 @@ LOCAL void collectorThread(CreateInfo *createInfo)
   String          fileName;
   FileInfo        fileInfo;
   DirectoryHandle directoryHandle;
+ulong n=0;
+uint64 t0,t1;
 
   assert(createInfo != NULL);
   assert(createInfo->includePatternList != NULL);
   assert(createInfo->excludePatternList != NULL);
 
   StringList_init(&nameList);
-  name = String_new();
+  name     = String_new();
+  fileName = String_new();
 
   includePatternNode = createInfo->includePatternList->head;
   while (   (createInfo->failError == ERROR_NONE)
@@ -1153,7 +1457,6 @@ LOCAL void collectorThread(CreateInfo *createInfo)
          && (includePatternNode != NULL)
         )
   {
-#if 1
     /* pause */
     while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
     {
@@ -1197,6 +1500,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
       name = StringList_getLast(&nameList,name);
 
       /* read file info */
+t0=Misc_getTimestamp();
       error = File_getFileInfo(name,&fileInfo);
       if (error != ERROR_NONE)
       {
@@ -1206,13 +1510,18 @@ LOCAL void collectorThread(CreateInfo *createInfo)
         updateStatusInfo(createInfo);
         continue;
       }
+t1=Misc_getTimestamp();
+if (t1>t0+200*1000) fprintf(stderr,"%s,%d: warn1 %llu %lu\n",__FILE__,__LINE__,t1-t0,n);
 
+t0=Misc_getTimestamp();
       if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
           || (   checkIsIncluded(includePatternNode,name)
               && !checkIsExcluded(createInfo->excludePatternList,name)
              )
          )
       {
+t1=Misc_getTimestamp();
+if (t1>t0+200*1000) fprintf(stderr,"%s,%d: warn2 %llu %lu\n",__FILE__,__LINE__,t1-t0,n);
         switch (fileInfo.type)
         {
           case FILE_TYPE_FILE:
@@ -1235,11 +1544,13 @@ LOCAL void collectorThread(CreateInfo *createInfo)
             }
 
             /* open directory contents */
+t0=Misc_getTimestamp();
             error = File_openDirectory(&directoryHandle,name);
             if (error == ERROR_NONE)
             {
+t1=Misc_getTimestamp();
+if (t1>t0+200*1000) fprintf(stderr,"%s,%d: warn3 %llu %lu\n",__FILE__,__LINE__,t1-t0,n);
               /* read directory contents */
-              fileName = String_new();
               while (   (createInfo->failError == ERROR_NONE)
                      && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
                      && !File_endOfDirectory(&directoryHandle)
@@ -1252,6 +1563,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                 }
 
                 /* read next directory entry */
+t0=Misc_getTimestamp();
                 error = File_readDirectory(&directoryHandle,fileName);
                 if (error != ERROR_NONE)
                 {
@@ -1262,12 +1574,16 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   updateStatusInfo(createInfo);
                   continue;
                 }
+n++; if ((n%10000)==0) fprintf(stderr,"%s,%d: n=%lu\n",__FILE__,__LINE__,n);
+t1=Misc_getTimestamp();
+if (t1>t0+200*1000) fprintf(stderr,"%s,%d: warn4 %llu %lu\n",__FILE__,__LINE__,t1-t0,n);
 
                 if (   checkIsIncluded(includePatternNode,fileName)
                     && !checkIsExcluded(createInfo->excludePatternList,fileName)
                    )
                 {
                   /* read file info */
+t0=Misc_getTimestamp();
                   error = File_getFileInfo(fileName,&fileInfo);
                   if (error != ERROR_NONE)
                   {
@@ -1277,6 +1593,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                     updateStatusInfo(createInfo);
                     continue;
                   }
+t1=Misc_getTimestamp();
+if (t1>t0+200*1000) fprintf(stderr,"%s,%d: warn5 %llu %lu\n",__FILE__,__LINE__,t1-t0,n);
 
                   /* detect file type */
                   switch (fileInfo.type)
@@ -1322,7 +1640,6 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   updateStatusInfo(createInfo);
                 }
               }
-              String_delete(fileName);
 
               /* close directory */
               File_closeDirectory(&directoryHandle);
@@ -1372,13 +1689,11 @@ LOCAL void collectorThread(CreateInfo *createInfo)
 
     /* next include pattern */
     includePatternNode = includePatternNode->next;
-#else
-sleep(1);
-#endif /* 0 */
   }
   MsgQueue_setEndOfMsg(&createInfo->fileMsgQueue);
 
   /* free resoures */
+  String_delete(fileName);
   String_delete(name);
   StringList_done(&nameList);
 
@@ -1465,7 +1780,7 @@ LOCAL Errors storeArchiveFile(String fileName,
 
   /* get destination file name */
   destinationName = formatArchiveFileName(String_new(),
-                                          FORMAT_MODE_FILE_NAME,
+                                          FORMAT_MODE_ARCHIVE_FILE_NAME,
                                           createInfo->archiveType,
                                           createInfo->archiveFileName,
                                           createInfo->startTime,
@@ -1976,15 +2291,9 @@ Errors Command_create(const char                   *storageName,
     }
     else
     {
-      formatArchiveFileName(incrementalListFileName,
-                            FORMAT_MODE_FILE_NAME,
-                            createInfo.archiveType,
-                            createInfo.archiveFileName,
-                            createInfo.startTime,
-                            ARCHIVE_PART_NUMBER_NONE,
-                            FALSE
-                           );
-      String_appendCString(incrementalListFileName,".bid");
+      formatIncrementalFileName(incrementalListFileName,
+                                createInfo.archiveFileName
+                               );
     }
     Dictionary_init(&createInfo.filesDictionary,NULL,NULL);
     storeIncrementalFileInfoFlag = TRUE;
