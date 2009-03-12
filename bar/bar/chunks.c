@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/chunks.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems: all
@@ -666,6 +666,7 @@ void Chunk_tell(ChunkInfo *chunkInfo, uint64 *index)
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkInfo->io->tell != NULL);
   assert(index != NULL);
 
   #ifndef NDEBUG
@@ -681,6 +682,7 @@ Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index)
 {
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkInfo->io->seek != NULL);
 
   chunkInfo->index = index;
   return chunkInfo->io->seek(chunkInfo->ioUserData,chunkInfo->offset + CHUNK_HEADER_SIZE + index);
@@ -829,6 +831,8 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkInfo->io->tell != NULL);
+  assert(chunkInfo->io->seek != NULL);
 
   switch (chunkInfo->mode)
   {
@@ -974,6 +978,8 @@ Errors Chunk_update(ChunkInfo  *chunkInfo,
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkInfo->io->tell != NULL);
+  assert(chunkInfo->io->seek != NULL);
 
   /* get current offset */
   error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
@@ -1022,6 +1028,7 @@ Errors Chunk_readData(ChunkInfo *chunkInfo,
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkInfo->io->read != NULL);
 
   if (size > (chunkInfo->size - chunkInfo->index))
   {
@@ -1055,6 +1062,7 @@ Errors Chunk_writeData(ChunkInfo  *chunkInfo,
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkInfo->io->write != NULL);
 
   error = chunkInfo->io->write(chunkInfo->ioUserData,data,size);
   if (error != ERROR_NONE)
@@ -1081,6 +1089,8 @@ Errors Chunk_skipData(ChunkInfo *chunkInfo,
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkInfo->io->tell != NULL);
+  assert(chunkInfo->io->seek != NULL);
 
   error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
   if (error != ERROR_NONE)

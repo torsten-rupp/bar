@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/StringParser.java,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -12,9 +12,6 @@
 import java.lang.Integer;
 import java.lang.Long;
 import java.lang.String;
-//import java.lang.System;
-//import java.util.LinkedList;
-//import java.util.ArrayList;
 
 /****************************** Classes ********************************/
 
@@ -60,6 +57,12 @@ class StringParser
     char         conversionChar;
   }
 
+  /** get next format token
+   * @param format format string
+   * @param formatIndex index in format string
+   * @param formatToken format token
+   * @return next format string index
+   */
   private static int getNextFormatToken(String format, int formatIndex, FormatToken formatToken)
   {
     formatToken.token            = new StringBuffer();
@@ -220,6 +223,29 @@ class StringParser
     return formatIndex;
   }
 
+  /** get quote char
+   * Note:
+   *   Supported format specifieres
+   *     i,d,u           - decimal
+   *     o               - octal
+   *     x,X             - hexa-decimal
+   *     c               - character
+   *     e,E,f,F,g,G,a,A - float/double
+   *     s               - string
+   *     S               - string with quotes
+   *     y               - boolean
+   *   Supported options:
+   *     #,0,-, ,+  - flags
+   *     1-9        - width
+   *     .          - precision
+   *     <x>s, <x>S - quoting character <x>
+   *     h,l,j,z,t  - length modifier
+   * @param string string
+   * @param index index in string
+   * @param formatToken format token
+   * @param string quote characters
+   * @return string quote character
+   */
   private static char getQuoteChar(String string, int index, FormatToken formatToken, String stringQuotes)
   {
     char stringQuote = '\0';
@@ -238,6 +264,13 @@ class StringParser
     return stringQuote;
   }
 
+  /** parse string
+   * @param string string to parse
+   * @param format format string (like printf)
+   * @param arguments parsed values
+   * @param stringQuotes string quote characters
+   * @return true iff parsed, false otherwise
+   */
   public static boolean parse(String string, String format, Object arguments[], String stringQuotes)
   {
     int          index,formatIndex;
@@ -443,7 +476,7 @@ class StringParser
               /* get data */
               buffer = new StringBuffer();
               while (   (index < string.length())
-                     && (formatToken.blankFlag || !Character.isSpaceChar((string.charAt(index))))
+                     && (formatToken.blankFlag || (formatIndex >= format.length()) || !Character.isSpaceChar((string.charAt(index))))
                      && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
@@ -527,7 +560,7 @@ class StringParser
               /* get data */
               buffer = new StringBuffer();
               while (   (index < string.length())
-                     && (formatToken.blankFlag || !Character.isSpaceChar(string.charAt(index)))
+                     && (formatToken.blankFlag || (formatIndex >= format.length())  || !Character.isSpaceChar(string.charAt(index)))
                      && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
@@ -607,44 +640,44 @@ class StringParser
               break;
             case 'y':
               {
-              /* get data */
-              buffer = new StringBuffer();
-              while (   (index < string.length())
-                     && !Character.isSpaceChar(string.charAt(index))
-                    )
-              {
-                buffer.append(string.charAt(index));
-                index++;
-              }
-
-              /* convert */
-              boolean foundFlag = false;
-              z = 0;
-              while (!foundFlag && (z < trueStrings.length))
-              {
-                if (trueStrings[z].contentEquals(buffer))
+                /* get data */
+                buffer = new StringBuffer();
+                while (   (index < string.length())
+                       && !Character.isSpaceChar(string.charAt(index))
+                      )
                 {
-                  arguments[argumentIndex] = true;
-                  foundFlag = true;
+                  buffer.append(string.charAt(index));
+                  index++;
                 }
-                z++;
-              }
-              z = 0;
-              while (!foundFlag && (z < falseStrings.length))
-              {
-                if (falseStrings[z].contentEquals(buffer))
-                {
-                  arguments[argumentIndex] = false;
-                  foundFlag = true;
-                }
-                z++;
-              }
 
-              if (!foundFlag)
-              {
-                return false;
-              }
-              argumentIndex++;
+                /* convert */
+                boolean foundFlag = false;
+                z = 0;
+                while (!foundFlag && (z < trueStrings.length))
+                {
+                  if (trueStrings[z].contentEquals(buffer))
+                  {
+                    arguments[argumentIndex] = true;
+                    foundFlag = true;
+                  }
+                  z++;
+                }
+                z = 0;
+                while (!foundFlag && (z < falseStrings.length))
+                {
+                  if (falseStrings[z].contentEquals(buffer))
+                  {
+                    arguments[argumentIndex] = false;
+                    foundFlag = true;
+                  }
+                  z++;
+                }
+
+                if (!foundFlag)
+                {
+                  return false;
+                }
+                argumentIndex++;
               }
               break;
             case '%':
@@ -673,11 +706,21 @@ class StringParser
     return true;
   }
 
+  /** parse string
+   * @param string string to parse
+   * @param format format string (like printf)
+   * @param arguments parsed values
+   * @return true iff parsed, false otherwise
+   */
   public static boolean parse(String string, String format, Object arguments[])
   {
     return parse(string,format,arguments,null);
   }
 
+  /** escape ' and \ in string, enclose in ' if needed
+   * @param string string to escape
+   * @return escaped string
+   */
   public static String escape(String string)
   {
     StringBuffer buffer = new StringBuffer();
@@ -705,6 +748,10 @@ class StringParser
     return buffer.toString();
   }
 
+  /** remove enclosing '
+   * @param string string to unescape
+   * @return unescaped string
+   */
   public static String unescape(String string)
   {
     if (string.startsWith("'") && string.endsWith("'"))

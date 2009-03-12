@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -559,7 +559,6 @@ LOCAL void freeJobNode(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   String_delete(jobNode->runningInfo.fileName);
   String_delete(jobNode->runningInfo.storageName);
   Misc_performanceFilterDone(&jobNode->runningInfo.storageBytesPerSecond);
@@ -1857,13 +1856,12 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
                             bool              *timeoutFlag
                            )
 {
-  uint64          startTimestamp;
-  String          pathName;
-  DirectoryHandle directoryHandle;
-  String          fileName;
-  FileInfo        fileInfo;
-  Errors          error;
-uint n;
+  uint64   startTimestamp;
+  String   pathName;
+  String   fileName;
+  FileInfo fileInfo;
+  Errors   error;
+//uint n;
 
   assert(directoryInfoNode != NULL);
   assert(fileCount != NULL);
@@ -1872,13 +1870,6 @@ uint n;
   /* get start timestamp */
   startTimestamp = Misc_getTimestamp();
 
-fprintf(stderr,"%s,%d: ---------------- start %s timeout=%d %llu %llu\n",__FILE__,__LINE__,
-String_cString(directoryInfoNode->pathName),
-timeout,
-directoryInfoNode->fileCount,
-directoryInfoNode->totalFileSize
-);
-n=0;
   pathName = String_new();
   fileName = String_new();
   if (timeoutFlag != NULL) (*timeoutFlag) = FALSE;
@@ -1916,10 +1907,6 @@ n=0;
         continue;
       }
       directoryInfoNode->fileCount++;
-if ((directoryInfoNode->fileCount%10000)==0)
-{
- fprintf(stderr,"%s,%d: %s count=%llu listcount=%d\n",__FILE__,__LINE__,String_cString(pathName),directoryInfoNode->fileCount,directoryInfoNode->pathNameList.count);
-}
       error = File_getFileInfo(fileName,&fileInfo);
       if (error != ERROR_NONE)
       {
@@ -1930,7 +1917,6 @@ if ((directoryInfoNode->fileCount%10000)==0)
       {
         case FILE_TYPE_FILE:
           directoryInfoNode->totalFileSize += fileInfo.size;
-n++;
           break;
         case FILE_TYPE_DIRECTORY:
           StringList_append(&directoryInfoNode->pathNameList,fileName);
@@ -1967,14 +1953,6 @@ n++;
   /* get values */
   (*fileCount)     = directoryInfoNode->fileCount;
   (*totalFileSize) = directoryInfoNode->totalFileSize;
-  
-fprintf(stderr,"%s,%d: done %s timeout=%d %llu %llu n=%u\n",__FILE__,__LINE__,
-String_cString(directoryInfoNode->pathName),
-timeout,
-directoryInfoNode->fileCount,
-directoryInfoNode->totalFileSize,
-n
-);
 }
 
 /*---------------------------------------------------------------------*/
@@ -3373,50 +3351,59 @@ LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const St
 
 LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  String       s;
   uint         jobId;
-  JobNode      *jobNode;
+  String       s;
   ScheduleNode *scheduleNode;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   /* initialise variables */
-  s = String_new();
 
-  /* get job id, date, weekday, time */
+  /* get job id, date, weekday, time, type */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
-    String_delete(s);
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected date");
-    String_delete(s);
     return;
   }
   if (argumentCount < 3)
   {
-    String_delete(s);
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected week day");
     return;
   }
   if (argumentCount < 4)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected time");
-    String_delete(s);
     return;
   }
   if (argumentCount < 5)
   {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected enable/disable");
+    return;
+  }
+  if (argumentCount < 6)
+  {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type");
+    return;
+  }
+
+  /* parse schedule */
+  s = String_format(String_new(),"%S %S %S %S %S",arguments[1],arguments[2],arguments[3],arguments[4],arguments[5]);
+  scheduleNode = parseSchedule(s);
+  if (scheduleNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_PARSING,"cannot parse schedule '%S'",s);
     String_delete(s);
     return;
   }
-  String_format(s,"%S %S %S %S",arguments[1],arguments[2],arguments[3],arguments[4]);
+  String_delete(s);
 
   /* lock */
   Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -3427,19 +3414,9 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   {
     sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
     Semaphore_unlock(&jobList.lock);
-    String_delete(s);
     return;
   }
 
-  /* parse schedule */
-  scheduleNode = parseSchedule(s);
-  if (scheduleNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_PARSING,"cannot parse schedule '%S'",s);
-    Semaphore_unlock(&jobList.lock);
-    String_delete(s);
-    return;
-  }
   /* add to schedule list */
   List_append(&jobNode->scheduleList,scheduleNode);
   jobNode->modifiedFlag = TRUE;
@@ -3449,7 +3426,6 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   Semaphore_unlock(&jobList.lock);
 
   /* free resources */
-  String_delete(s);
 }
 
 LOCAL void serverCommand_passwordClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4366,7 +4342,6 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
     else if (String_equalsCString(command,"QUIT"))
     {
       quitFlag = TRUE;
-fprintf(stderr,"%s,%d: QQQQQQQQQQQQit\n",__FILE__,__LINE__);
       sendResult(clientInfo,0,TRUE,0,"ok");
     }
   #endif /* not NDEBUG */
@@ -4557,7 +4532,6 @@ Errors Server_run(uint             port,
   while (!quitFlag)
   {
     /* wait for command */
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
     FD_ZERO(&selectSet);
     if (serverFlag   ) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
     if (serverTLSFlag) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
@@ -4568,7 +4542,6 @@ Errors Server_run(uint             port,
       clientNode = clientNode->next;
     }
     select(FD_SETSIZE,&selectSet,NULL,NULL,NULL);
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
     /* connect new clients */
     if (serverFlag && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
@@ -4645,7 +4618,6 @@ Errors Server_run(uint             port,
             error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
           }
           while ((error == ERROR_NONE) && (receivedBytes > 0));
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
           clientNode = clientNode->next;
         }

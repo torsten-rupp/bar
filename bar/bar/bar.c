@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1980,7 +1980,7 @@ ScheduleNode *parseSchedule(const String s)
   scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
   scheduleNode->enabled     = FALSE;
 
-  /* parse schedule: date, weekday, time, type, enabled */
+  /* parse schedule. Format: date [weekday] time enabled [type] */
   errorFlag = FALSE;
   s0 = String_new();
   s1 = String_new();

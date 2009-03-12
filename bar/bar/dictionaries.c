@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/dictionaries.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: hash table functions
 * Systems: all
@@ -80,7 +80,7 @@ LOCAL const uint TABLE_SIZES[] =
 * Notes  : -
 \***********************************************************************/
 
-LOCAL inline ulong modulo(ulong n, ulong m)
+LOCAL_INLINE ulong modulo(ulong n, ulong m)
 {
   return n%m;
 }
@@ -94,7 +94,7 @@ LOCAL inline ulong modulo(ulong n, ulong m)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL inline ulong addModulo(ulong n, uint d, ulong m)
+LOCAL_INLINE ulong addModulo(ulong n, uint d, ulong m)
 {
   return (n+d)%m;
 }
@@ -108,7 +108,7 @@ LOCAL inline ulong addModulo(ulong n, uint d, ulong m)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL inline ulong subModulo(ulong n, uint d, ulong m)
+LOCAL_INLINE ulong subModulo(ulong n, uint d, ulong m)
 {
   return (n+m-d)%m;
 }
@@ -123,7 +123,7 @@ LOCAL inline ulong subModulo(ulong n, uint d, ulong m)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL inline ulong rotHash(ulong hash, int n)
+LOCAL_INLINE ulong rotHash(ulong hash, int n)
 {
   uint shift;
 
@@ -181,7 +181,7 @@ LOCAL ulong calculateHash(const void *keyData, ulong keyLength)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL inline bool equalsEntry(const DictionaryEntry     *entry,
+LOCAL_INLINE bool equalsEntry(const DictionaryEntry     *entry,
                               ulong                     hash,
                               const void                *keyData,
                               ulong                     keyLength,
