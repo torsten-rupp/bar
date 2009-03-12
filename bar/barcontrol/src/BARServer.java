@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -331,7 +331,17 @@ class ReadThread extends Thread
         // next line
         line = input.readLine();
 //Dprintf.dprintf("line=%s\n",line);
-        if (line == null) break;
+        if (line == null)
+        {
+          if (!quitFlag)
+          {
+            throw new CommunicationError("disconnected");
+          }
+          else
+          {
+            break;
+          }
+        }
         if (debug) System.err.println("Network: received '"+line+"'");
 
         // parse: line format <id> <error code> <completed flag> <data>
@@ -684,14 +694,11 @@ class BARServer
     {
       // flush data (ignore errors)
       executeCommand("JOB_FLUSH");
-
 //output.write("QUIT"); output.write('\n'); output.flush();
 
-      // close connection
-      socket.close();
-
-      // wait until read thread stopped
+      // close connection, wait until read thread stopped
       readThread.quit();
+      socket.close();
       try
       {
         readThread.join();
@@ -734,8 +741,6 @@ class BARServer
         readThread.commandRemove(command);
         throw new CommunicationError("i/o error (error: "+exception.getMessage()+")");
       }
-
-      // wait for first result
     }
 
     return command;
@@ -810,7 +815,7 @@ class BARServer
       }
     }
 
-    // wait
+    // wait until completed
     while (!command.waitCompleted(250))
     {
       if (indicator != null)
