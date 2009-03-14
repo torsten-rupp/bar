@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all
@@ -82,27 +82,29 @@ sub writeJavaFile($)
 
 sub writeCPrefix()
 {
-  print CFILE_HANDLE "#define GET_ERROR_CODE(error)      (((error) & $ERROR_CODE_MASK) >> $ERROR_CODE_SHIFT)\n";
-  print CFILE_HANDLE "#define GET_ERROR_TEXTINDEX(error) (((error) & $ERROR_TEXTINDEX_MASK) >> $ERROR_TEXTINDEX_SHIFT)\n";
-  print CFILE_HANDLE "#define GET_ERROR_TEXT(error)      ((GET_ERROR_TEXTINDEX(error)>0)?errorTexts[GET_ERROR_TEXTINDEX(error)-1].text:\"unknown\")\n";
-  print CFILE_HANDLE "#define GET_ERRNO(error)           ((long)((error) & $ERROR_ERRNO_MASK) >> $ERROR_ERRNO_SHIFT)\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "#define ERROR_CPDE GET_ERROR_CODE(error)\n";
-  print CFILE_HANDLE "#define ERROR_TEXT GET_ERROR_TEXT(error)\n";
-  print CFILE_HANDLE "#define ERRNO      GET_ERRNO(error)\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "unsigned int Errors_getCode(Errors error)\n";
-  print CFILE_HANDLE "{\n";
-  print CFILE_HANDLE "  return GET_ERROR_CODE(error);\n";
-  print CFILE_HANDLE "}\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "const char *Errors_getText(Errors error)\n";
-  print CFILE_HANDLE "{\n";
-  print CFILE_HANDLE "  static char errorText[$MAX_ERRORTEXT_LENGTH];\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "  strcpy(errorText,\"unknown\");\n";
-  print CFILE_HANDLE "  switch (GET_ERROR_CODE(error))\n";
-  print CFILE_HANDLE "  {\n";
+  print CFILE_HANDLE "\
+#define GET_ERROR_CODE(error)      (((error) & $ERROR_CODE_MASK) >> $ERROR_CODE_SHIFT)
+#define GET_ERROR_TEXTINDEX(error) (((error) & $ERROR_TEXTINDEX_MASK) >> $ERROR_TEXTINDEX_SHIFT)
+#define GET_ERROR_TEXT(error)      ((GET_ERROR_TEXTINDEX(error)>0)?errorTexts[GET_ERROR_TEXTINDEX(error)-1].text:\"unknown\")
+#define GET_ERRNO(error)           ((long)((error) & $ERROR_ERRNO_MASK) >> $ERROR_ERRNO_SHIFT)
+
+#define ERROR_CPDE GET_ERROR_CODE(error)
+#define ERROR_TEXT GET_ERROR_TEXT(error)
+#define ERRNO      GET_ERRNO(error)
+
+unsigned int Errors_getCode(Errors error)
+{
+  return GET_ERROR_CODE(error);
+}
+
+const char *Errors_getText(Errors error)
+{
+  static char errorText[$MAX_ERRORTEXT_LENGTH];
+
+  strcpy(errorText,\"unknown\");
+  switch (GET_ERROR_CODE(error))
+  {
+";
 }
 
 sub writeCPostfix()
@@ -111,29 +113,35 @@ sub writeCPostfix()
   {
     writeCFile("    default: return \"$defaultText\";\n");
   }
-  print CFILE_HANDLE "  }\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "  return errorText;\n";
-  print CFILE_HANDLE "}\n";
+  print CFILE_HANDLE "\
+  }
+
+  return errorText;
+}
+";
 }
 
 sub writeHPrefix()
 {
-  print HFILE_HANDLE "typedef enum\n";
-  print HFILE_HANDLE "{\n";
-  print HFILE_HANDLE "  ".$PREFIX."NONE = 0,\n";
+  print HFILE_HANDLE "\
+typedef enum
+{
+  ".$PREFIX."NONE = 0,
+";
 }
 
 sub writeHPostfix()
 {
-  print HFILE_HANDLE "  ".$PREFIX."UNKNOWN = $errorNumber\n";
-  print HFILE_HANDLE "} Errors;\n";
-  print HFILE_HANDLE "\n";
-  print HFILE_HANDLE "const int _Errors_textToIndex(const char *text);\n";
-  print HFILE_HANDLE "unsigned int Errors_getCode(Errors error);\n";
-  print HFILE_HANDLE "const char *Errors_getText(Errors error);\n";
-  print HFILE_HANDLE "\n";
-  print HFILE_HANDLE "#endif /* __ARCHIVE_FORMAT__ */\n";
+  print HFILE_HANDLE "\
+  ".$PREFIX."UNKNOWN = $errorNumber
+} Errors;
+
+const int _Errors_textToIndex(const char *text);
+unsigned int Errors_getCode(Errors error);
+const char *Errors_getText(Errors error);
+
+#endif /* __ARCHIVE_FORMAT__ */
+";
 }
 
 sub writeJavaPrefix()
@@ -159,72 +167,76 @@ GetOptions("c=s" => \$cFileName,
 if ($cFileName ne "")
 {
   open(CFILE_HANDLE,"> $cFileName");
-  print CFILE_HANDLE "#include <stdlib.h>\n";
-  print CFILE_HANDLE "#include <stdio.h>\n";
-  print CFILE_HANDLE "#include <string.h>\n";
-  print CFILE_HANDLE "#include <limits.h>\n";
-  print CFILE_HANDLE "#include <ctype.h>\n";
-  print CFILE_HANDLE "#include <errno.h>\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "#include \"errors.h\"\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "typedef struct\n";
-  print CFILE_HANDLE "{\n";
-  print CFILE_HANDLE "  int  id;\n";
-  print CFILE_HANDLE "  char text[$MAX_ERRORTEXT_LENGTH];\n";
-  print CFILE_HANDLE "} ErrorText;\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "static ErrorText errorTexts[$ERROR_TEXTINDEX_MAX_COUNT];\n";
-  print CFILE_HANDLE "static int       errorTextCount = 0;\n";
-  print CFILE_HANDLE "static int       errorTextId    = 0;\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "const int _Errors_textToIndex(const char *text)\n";
-  print CFILE_HANDLE "{\n";
-  print CFILE_HANDLE "  int index;\n";
-  print CFILE_HANDLE "  int minId;\n";
-  print CFILE_HANDLE "  int z,i;\n";
-  print CFILE_HANDLE "\n";
-  print CFILE_HANDLE "  errorTextId++;\n";
-  print CFILE_HANDLE "  if (errorTextCount < $ERROR_TEXTINDEX_MAX_COUNT)\n";
-  print CFILE_HANDLE "  {\n";
-  print CFILE_HANDLE "    index = errorTextCount;\n";
-  print CFILE_HANDLE "    errorTextCount++;\n";
-  print CFILE_HANDLE "  }\n";
-  print CFILE_HANDLE "  else\n";
-  print CFILE_HANDLE "  {\n";
-  print CFILE_HANDLE "    index = 0;\n";
-  print CFILE_HANDLE "    minId = INT_MAX;\n";
-  print CFILE_HANDLE "    for (z = 0; z < $ERROR_TEXTINDEX_MAX_COUNT; z++)\n";
-  print CFILE_HANDLE "    {\n";
-  print CFILE_HANDLE "      if (errorTexts[z].id < minId)\n";
-  print CFILE_HANDLE "      {\n";
-  print CFILE_HANDLE "        index = z;\n";
-  print CFILE_HANDLE "        minId = errorTexts[z].id;\n";
-  print CFILE_HANDLE "      }\n";
-  print CFILE_HANDLE "    }\n";
-  print CFILE_HANDLE "  }\n";
-  print CFILE_HANDLE "  z = 0;\n";
-  print CFILE_HANDLE "  i = 0;\n";
-  print CFILE_HANDLE "  while ((z < strlen(text)) && (i < $MAX_ERRORTEXT_LENGTH-1-1))\n";
-  print CFILE_HANDLE "  {\n";
-  print CFILE_HANDLE "    if (!iscntrl(text[z])) { errorTexts[index].text[i] = text[z]; i++; }\n";
-  print CFILE_HANDLE "    z++;\n";
-  print CFILE_HANDLE "  }\n";
-  print CFILE_HANDLE "  errorTexts[index].text[i] = '\\0';\n";
-  print CFILE_HANDLE "  errorTexts[errorTextCount].id = errorTextId;\n";
-  print CFILE_HANDLE "  return index+1;\n";
-  print CFILE_HANDLE "}\n";
-  print CFILE_HANDLE "\n";
+  print CFILE_HANDLE "\
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <limits.h>
+#include <ctype.h>
+#include <errno.h>
+
+#include \"errors.h\"
+
+typedef struct
+{
+  int  id;
+  char text[$MAX_ERRORTEXT_LENGTH];
+} ErrorText;
+
+static ErrorText errorTexts[$ERROR_TEXTINDEX_MAX_COUNT];
+static int       errorTextCount = 0;
+static int       errorTextId    = 0;
+
+const int _Errors_textToIndex(const char *text)
+{
+  int index;
+  int minId;
+  int z,i;
+
+  errorTextId++;
+  if (errorTextCount < $ERROR_TEXTINDEX_MAX_COUNT)
+  {
+    index = errorTextCount;
+    errorTextCount++;
+  }
+  else
+  {
+    index = 0;
+    minId = INT_MAX;
+    for (z = 0; z < $ERROR_TEXTINDEX_MAX_COUNT; z++)
+    {
+      if (errorTexts[z].id < minId)
+      {
+        index = z;
+        minId = errorTexts[z].id;
+      }
+    }
+  }
+  z = 0;
+  i = 0;
+  while ((z < strlen(text)) && (i < $MAX_ERRORTEXT_LENGTH-1-1))
+  {
+    if (!iscntrl(text[z])) { errorTexts[index].text[i] = text[z]; i++; }
+    z++;
+  }
+  errorTexts[index].text[i] = '\\0';
+  errorTexts[errorTextCount].id = errorTextId;
+  return index+1;
+}
+
+";
 }
 if ($hFileName ne "")
 {
   open(HFILE_HANDLE,"> $hFileName");
-  print HFILE_HANDLE "#ifndef __ERRORS__\n";
-  print HFILE_HANDLE "#define __ERRORS__\n";
-  print HFILE_HANDLE "\n";
-  print HFILE_HANDLE "#define ERROR(code,errno)       ((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) |                                                                                   (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK))\n";
-  print HFILE_HANDLE "#define ERRORX(code,errno,text) ((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) | ((_Errors_textToIndex(text) << $ERROR_TEXTINDEX_SHIFT) & $ERROR_TEXTINDEX_MASK) | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK))\n";
-  print HFILE_HANDLE "\n";
+  print HFILE_HANDLE "\
+#ifndef __ERRORS__
+#define __ERRORS__
+
+#define ERROR(code,errno)       ((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) |                                                                                   (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK))
+#define ERRORX(code,errno,text) ((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) | ((_Errors_textToIndex(text) << $ERROR_TEXTINDEX_SHIFT) & $ERROR_TEXTINDEX_MASK) | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK))
+
+";
   writeHPrefix();
 }
 if ($javaFileName ne "")

@@ -1,6 +1,6 @@
-2009-02-?? 0.1?
-  * added several days to schedule days in configuration,
-    e. g. specify "Mon,Tue,Sat"
+2009-03-14 0.11
+  * added selection of multiple days to schedule days
+    configuration, e. g. you can specify "Mon,Tue,Sat"
   * barcontrol: fixed quit (internal threads blocked quit)
   * barcontrol: changed names of buttons in file tree
   * barcontrol: added button to open all included directories
@@ -14,6 +14,19 @@
   * fixed some lost strings
   * improved speed: inline some function calls
   * barcontrol: added version number in about-dialog
+  * fixed parsing of schedule data (type was missing)
+  * fixed detection of size of current archive (was always 0)
+  * new scheme to build a incremental file name from an 
+    archive file name if no incremental file name is given:
+      - dicard all %-macros
+      - dicard all #
+      - remove - and _ between macros
+      - replace file name extension .bar by .bid
+    A name like backup/system-%type-%a-####%last.bar will
+    be transformed to backup/system.bid
+  * improved error messages
+  * fixed debug function in string library: limit number of
+    entries in string-free-list.
 
 2009-02-14 0.10a
   * fixed layout of login dialog

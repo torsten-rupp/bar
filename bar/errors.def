@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/errors.def,v $
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # $Author: torsten $
 # Contents: Backup ARchiver errors definition
 # Systems: all
@@ -96,6 +96,11 @@ ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
 ERROR IO_ERROR
   strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
 
 ERROR READ_FILE                      "read file fail"
 ERROR WRITE_FILE                     "write file fail"
@@ -128,6 +133,11 @@ ERROR CORRUPT_INCREMENTAL_FILE       "corrupt incremental file"
 ERROR HOST_NOT_FOUND                 "host not found"
 ERROR CONNECT_FAIL
   strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
 
 ERROR NO_LOGIN_NAME                  "no login name given"
 ERROR NO_PASSWORD                    "no password given"

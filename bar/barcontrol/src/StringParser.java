@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/StringParser.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -15,10 +15,16 @@ import java.lang.String;
 
 /****************************** Classes ********************************/
 
+/** scanf-like string parser
+ */
 class StringParser
 {
+  /** quoting characters for string values
+   */
   public static String QUOTE_CHARS = "'\"";
 
+  /** specifier length modifiers
+   */
   private static enum LengthTypes
   {
     INTEGER,
@@ -26,6 +32,8 @@ class StringParser
     DOUBLE
   };
 
+  /** boolean true/false values
+   */
   private static String trueStrings[] = 
   {
     "1",
@@ -41,6 +49,8 @@ class StringParser
     "off",
   };
 
+  /** format token
+   */
   private static class FormatToken
   {
     StringBuffer token;
@@ -280,7 +290,6 @@ class StringParser
     char         ch;
     int          z;
 
-//System.err.println("StringParser.java"+", "+105+": "+string+" -- "+format);
     index         = 0;
     formatIndex   = 0;
     argumentIndex = 0;
@@ -296,7 +305,6 @@ class StringParser
         formatIndex++;
       }
 
-//System.err.println("StringParser.java"+", "+121+": "+string.substring(index)+"--"+format.substring(formatIndex));
       if (formatIndex < format.length())
       {
         if (format.charAt(formatIndex) == '%')
@@ -307,7 +315,6 @@ class StringParser
           {
             return false;
           }
-//System.err.println("StringParser.java"+", "+128+": "+formatIndex+": "+formatToken.conversionChar);
 
           /* parse string and store values */
           switch (formatToken.conversionChar)
@@ -717,22 +724,24 @@ class StringParser
     return parse(string,format,arguments,null);
   }
 
-  /** escape ' and \ in string, enclose in ' if needed
+  /** escape ' and \ in string, enclose in "
    * @param string string to escape
+   * @param enclosingQuotes true to add enclosing quotes "
+   * @param quote quote character
    * @return escaped string
    */
-  public static String escape(String string)
+  public static String escape(String string, boolean enclosingQuotes, char quote)
   {
     StringBuffer buffer = new StringBuffer();
 
+    if (enclosingQuotes) buffer.append(quote);
     for (int index = 0; index < string.length(); index++)
     {
       char ch = string.charAt(index);
 
-      if      (ch == '\'')
+      if      (ch == quote)
       {
-        buffer.append("\\");
-        buffer.append('\'');
+        buffer.append("\\"+quote);
       }
       else if (ch == '\\')
       {
@@ -743,18 +752,51 @@ class StringParser
         buffer.append(ch);
       }
     }
-    if (buffer.length() == 0) buffer.append("''");
+    if (enclosingQuotes) buffer.append(quote);
 
     return buffer.toString();
   }
 
-  /** remove enclosing '
+  /** escape ' and \ in string, enclose in "
+   * @param string string to escape
+   * @param enclosingQuotes true to add enclosing quotes "
+   * @return escaped string
+   */
+  public static String escape(String string, boolean enclosingQuotes)
+  {
+    return escape(string,enclosingQuotes,'"');
+  }
+
+  /** escape ' and \ in string, enclose in "
+   * @param string string to escape
+   * @param quote quote character
+   * @return escaped string
+   */
+  public static String escape(String string, char quote)
+  {
+    return escape(string,true,quote);
+  }
+
+  /** escape ' and \ in string, enclose in "
+   * @param string string to escape
+   * @return escaped string
+   */
+  public static String escape(String string)
+  {
+    return escape(string,true);
+  }
+
+  /** remove enclosing ' or "
    * @param string string to unescape
    * @return unescaped string
    */
   public static String unescape(String string)
   {
-    if (string.startsWith("'") && string.endsWith("'"))
+    if      (string.startsWith("\"") && string.endsWith("\""))
+    {
+      return string.substring(1,string.length()-1);
+    }
+    else if (string.startsWith("'") && string.endsWith("'"))
     {
       return string.substring(1,string.length()-1);
     }
