@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.49 $
+# $Revision: 1.50 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -25,7 +25,9 @@ MAN_DIR         = @MAN_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
-CERTTOOL = @CERTTOOL@
+CERTTOOL = 
+#@CERTTOOL@
+OPENSSL  = @OPENSSL@
 KEYTOOL  = @KEYTOOL@
 
 TXT2MAN  = @TXT2MAN@
@@ -38,9 +40,11 @@ CP         = cp
 DIFF       = diff
 ECHO       = echo
 ECHO_NO_LF = echo -n
+EPM        = @EPM@
 GREP       = grep
 INSTALL    = @INSTALL@
 MKDIR      = mkdir
+MV         = mv
 PERL       = @PERL@
 RMDIR      = rmdir
 RMF        = rm -f
@@ -98,6 +102,7 @@ endif
 	$(RMF) $(TARGETS)
 	$(RMRF) $(DISTRIBUTION_NAME)
 	$(RMF) $(DISTRIBUTION_NAME).tgz
+	$(RMRF) tmp
 
 distclean: clean
 	-$(MAKE) -C bar distclean
@@ -142,14 +147,36 @@ ifneq ($(CERTTOOL),)
           --outfile $@ \
           1>/dev/null 2>/dev/null
 endif
+ifneq ($(OPENSSL),)
+	$(OPENSSL) \
+          genrsa \
+          -out $@ \
+          1024 \
+          1>/dev/null 2>/dev/null
+endif
 
 bar-ca.pem: bar-key.pem
 ifneq ($(CERTTOOL),)
 	$(CERTTOOL) \
           --generate-self-signed \
-          --template ssl/ca.tmpl \
+          --template ssl/certtool/ca.tmpl \
           --load-privkey bar-key.pem \
           --outfile $@ \
+          1>/dev/null 2>/dev/null
+endif
+ifneq ($(OPENSSL),)
+	$(OPENSSL) \
+          req \
+          -new \
+          -config ssl/openssl/ca.tmpl \
+          -x509 \
+          -nodes \
+          -sha1 \
+          -days 365 \
+          -key bar-key.pem \
+          -keyform PEM \
+          -out $@ \
+          -outform PEM \
           1>/dev/null 2>/dev/null
 endif
 
@@ -160,16 +187,38 @@ ifneq ($(CERTTOOL),)
           --outfile $@ \
           1>/dev/null 2>/dev/null
 endif
+ifneq ($(OPENSSL),)
+	$(OPENSSL) \
+          genrsa \
+          -out $@ \
+          1024 \
+          1>/dev/null 2>/dev/null
+endif
 
 bar-server-cert.pem: bar-server-key.pem
 ifneq ($(CERTTOOL),)
 	$(CERTTOOL) \
           --generate-certificate \
-          --template ssl/server.tmpl \
+          --template ssl/certtool/server.tmpl \
           --load-privkey bar-server-key.pem \
           --load-ca-certificate bar-ca.pem \
           --load-ca-privkey bar-key.pem \
           --outfile $@ \
+          1>/dev/null 2>/dev/null
+endif
+ifneq ($(OPENSSL),)
+	$(OPENSSL) \
+          req \
+          -new \
+          -config ssl/openssl/server.tmpl \
+          -x509 \
+          -nodes \
+          -sha1 \
+          -days 365 \
+          -key bar-server-key.pem \
+          -keyform PEM \
+          -out $@ \
+          -outform PEM \
           1>/dev/null 2>/dev/null
 endif
 
@@ -330,9 +379,9 @@ $(DISTRIBUTION_NAME).tar.bz2:
 	$(INSTALL) -m 664 \
                    configure.in \
                    Makefile.in \
+                   epm.list.in \
                    version \
                    ToDo \
-                   README \
                    ChangeLog \
                    $(DISTRIBUTION_NAME)
 	$(MAKE) -C bar dist DIRECTORY="../$(DISTRIBUTION_NAME)"
@@ -361,11 +410,48 @@ $(DISTRIBUTION_NAME).tar.bz2:
 	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/doc
 	$(INSTALL) -m 664 \
+                   doc/README \
                    doc/*.txt \
                    doc/bar.7 \
                    $(DISTRIBUTION_NAME)/doc
 	#
 	$(TAR) cjf $@ $(DISTRIBUTION_NAME)
 	$(RMRF) $(DISTRIBUTION_NAME)
+
+# create RPM
+.PHONY: rpm
+rpm: bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm
+
+bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm: epm.list
+ifneq ($(EPM),)
+	$(INSTALL) -d tmp/package
+	$(EPM) \
+          -f rpm \
+          --output-dir packageTmp \
+          bar \
+          epm.list
+	$(MV) packageTmp/*rpm $@
+	$(RMRF) tmp/package
+else
+	$(ECHO) "No EPM installed. Cannot create RPM package."
+endif
+
+# create DEB
+.PHONY: deb
+deb: bar-$(VERSION_MAJOR).$(VERSION_MINOR).deb
+
+bar-$(VERSION_MAJOR).$(VERSION_MINOR).deb: epm.list
+ifneq ($(EPM),)
+	$(INSTALL) -d tmp/package
+	$(EPM) \
+          -f deb \
+          --output-dir packageTmp \
+          bar \
+          epm.list
+	$(MV) packageTmp/*rpm $@
+	$(RMRF) tmp/package
+else
+	$(ECHO) "No EPM installed. Cannot create DEB package."
+endif
 
 # end of file
