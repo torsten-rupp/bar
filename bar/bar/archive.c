@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -3685,16 +3685,19 @@ Errors Archive_readFileData(ArchiveFileInfo *archiveFileInfo, void *buffer, ulon
 
 uint64 Archive_getSize(ArchiveFileInfo *archiveFileInfo)
 {
+  uint64 size;
+
   assert(archiveFileInfo != NULL);
   assert(archiveFileInfo->archiveInfo != NULL);
 
+  size = 0LL;
   switch (archiveFileInfo->archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      return (archiveFileInfo->archiveInfo->file.openFlag)?archiveFileInfo->archiveInfo->chunkIO->getSize(archiveFileInfo->archiveInfo->chunkIOUserData):0LL;
+      size = (archiveFileInfo->archiveInfo->file.openFlag)?archiveFileInfo->archiveInfo->chunkIO->getSize(archiveFileInfo->archiveInfo->chunkIOUserData):0LL;
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      return archiveFileInfo->archiveInfo->chunkIO->getSize(archiveFileInfo->archiveInfo->chunkIOUserData);
+      size = archiveFileInfo->archiveInfo->chunkIO->getSize(archiveFileInfo->archiveInfo->chunkIOUserData);
       break;
     #ifndef NDEBUG
       default:
@@ -3703,6 +3706,8 @@ uint64 Archive_getSize(ArchiveFileInfo *archiveFileInfo)
         break; /* not reached */
     #endif /* NDEBUG */
   }
+
+  return size;
 }
 
 #ifdef __cplusplus
