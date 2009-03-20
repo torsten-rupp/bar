@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -4426,7 +4426,7 @@ Errors Server_run(uint             port,
 
   if (Password_empty(password))
   {
-    printWarning("No server password set - start without any password!\n",caFileName);
+    printWarning("No server password set - start without any password!\n");
   }
 
   /* initialise variables */
