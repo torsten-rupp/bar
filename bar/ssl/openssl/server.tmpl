@@ -1,6 +1,7 @@
 [ req ]
 distinguished_name     = req_distinguished_name
 attributes             = req_attributes
+x509_extensions        = v3_ca
 prompt                 = no
 
 [ req_distinguished_name ]
@@ -13,3 +14,8 @@ CN                     = BAR server
 emailAddress           = none
 
 [ req_attributes ]
+
+[ v3_ca ]
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+basicConstraints       = CA:true
