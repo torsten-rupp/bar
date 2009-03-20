@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
+#include <signal.h>
 #ifdef HAVE_SSH2
   #include <libssh2.h>
 #endif /* HAVE_SSH2 */
@@ -88,6 +89,11 @@ Errors Network_initAll(void)
     gnutls_global_init();
     gnutls_global_set_log_level(10);
   #endif /* HAVE_GNU_TLS */
+
+  /* ignore SIGPIPE which may triggered in some socket read/write
+     operations if the socket is closed
+  */
+  signal(SIGPIPE,SIG_IGN);
 
   return ERROR_NONE;
 }
@@ -732,12 +738,14 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
 
   serverSocketHandle->type = serverType;
 
+  // create socket
   serverSocketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
   if (serverSocketHandle->handle == -1)
   {
     return ERROR(CONNECT_FAIL,errno);
   }
 
+  // reuse address
   n = 1;
   if (setsockopt(serverSocketHandle->handle,SOL_SOCKET,SO_REUSEADDR,&n,sizeof(int)) != 0)
   {
@@ -746,6 +754,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
     return error;
   }
 
+  // bind and listen socket
   socketAddress.sin_family      = AF_INET;
   socketAddress.sin_addr.s_addr = INADDR_ANY;
   socketAddress.sin_port        = htons(serverPort);
@@ -767,6 +776,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
       break;
     case SERVER_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
+        // check if all key files exists and can be read
         if ((caFileName == NULL) || !File_isFileCString(caFileName) || !File_isReadableCString(caFileName))
         {
           close(serverSocketHandle->handle);
@@ -783,11 +793,15 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           return ERROR_NO_TLS_KEY;
         }
 
+        // init certificate and key
         if (gnutls_certificate_allocate_credentials(&serverSocketHandle->gnuTLSCredentials) != 0)
         {
           close(serverSocketHandle->handle);
           return ERROR_INIT_TLS;
         }
+
+#if 0
+NYI: how to do certificate verification?
         result = gnutls_certificate_set_x509_trust_file(serverSocketHandle->gnuTLSCredentials,
                                                         caFileName,
                                                         GNUTLS_X509_FMT_PEM
@@ -798,6 +812,8 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CA;
         }
+#endif /* 0 */
+
         result = gnutls_certificate_set_x509_key_file(serverSocketHandle->gnuTLSCredentials,
                                                       certFileName,
                                                       keyFileName,
@@ -819,7 +835,9 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           close(serverSocketHandle->handle);
           return ERROR_INIT_TLS;
         }
-        gnutls_certificate_set_dh_params(serverSocketHandle->gnuTLSCredentials,serverSocketHandle->gnuTLSDHParams);
+        gnutls_certificate_set_dh_params(serverSocketHandle->gnuTLSCredentials,
+                                         serverSocketHandle->gnuTLSDHParams
+                                        );
       #else /* not HAVE_GNU_TLS */
         UNUSED_VARIABLE(caFileName);
         UNUSED_VARIABLE(certFileName);
@@ -877,6 +895,8 @@ Errors Network_accept(SocketHandle             *socketHandle,
   Errors             error;
   int                result;
 
+//unsigned int status;
+
   assert(socketHandle != NULL);
   assert(serverSocketHandle != NULL);
 
@@ -917,18 +937,32 @@ Errors Network_accept(SocketHandle             *socketHandle,
           return ERROR_INIT_TLS;
         }
 
-        if (gnutls_credentials_set(socketHandle->gnuTLS.session,GNUTLS_CRD_CERTIFICATE,serverSocketHandle->gnuTLSCredentials) != 0)
+        if (gnutls_credentials_set(socketHandle->gnuTLS.session,
+                                   GNUTLS_CRD_CERTIFICATE,
+                                   serverSocketHandle->gnuTLSCredentials
+                                  ) != 0
+           )
         {
           gnutls_deinit(socketHandle->gnuTLS.session);
           close(socketHandle->handle);
           return ERROR_INIT_TLS;
         }
 
-        gnutls_certificate_server_set_request(socketHandle->gnuTLS.session,GNUTLS_CERT_REQUEST);
+#if 0
+NYI: how to enable client authentication?
+NYI: how to do certificate verification?
+        gnutls_certificate_server_set_request(socketHandle->gnuTLS.session,
+                                              GNUTLS_CERT_REQUEST
+                                             );
 //        gnutls_certificate_server_set_request(socketHandle->gnuTLS.session,GNUTLS_CERT_REQUIRE);
+#endif /* 0 */
 
-        gnutls_dh_set_prime_bits(socketHandle->gnuTLS.session,DH_BITS);
-        gnutls_transport_set_ptr(socketHandle->gnuTLS.session,(gnutls_transport_ptr_t)(long)socketHandle->handle);
+        gnutls_dh_set_prime_bits(socketHandle->gnuTLS.session,
+                                 DH_BITS
+                                );
+        gnutls_transport_set_ptr(socketHandle->gnuTLS.session,
+                                 (gnutls_transport_ptr_t)(long)socketHandle->handle
+                                );
 
         /* do handshake */
         result = gnutls_handshake(socketHandle->gnuTLS.session);
@@ -936,8 +970,21 @@ Errors Network_accept(SocketHandle             *socketHandle,
         {
           gnutls_deinit(socketHandle->gnuTLS.session);
           close(socketHandle->handle);
-          return ERROR_TLS_HANDSHAKE;
+gnutls_perror(result);
+          return ERRORX(TLS_HANDSHAKE,result,gnutls_strerror(result));
         }
+
+#if 0
+NYI: how to enable client authentication?
+        result = gnutls_certificate_verify_peers2(socketHandle->gnuTLS.session,&status);
+        if (result < 0)
+        {
+          gnutls_deinit(socketHandle->gnuTLS.session);
+          close(socketHandle->handle);
+gnutls_perror(result);
+          return ERRORX(TLS_HANDSHAKE,result,gnutls_strerror(result));
+        }
+#endif /* 0 */
       #else /* not HAVE_GNU_TLS */
         UNUSED_VARIABLE(result);
         return ERROR_FUNCTION_NOT_SUPPORTED;
