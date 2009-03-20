@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.50 $
+# $Revision: 1.51 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -25,8 +25,7 @@ MAN_DIR         = @MAN_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
-CERTTOOL = 
-#@CERTTOOL@
+CERTTOOL = @CERTTOOL@
 OPENSSL  = @OPENSSL@
 KEYTOOL  = @KEYTOOL@
 
@@ -140,6 +139,7 @@ keys: $(KEY_FILES)
 clean_keys:
 	$(RMF) $(KEY_FILES)
 
+ifeq (0,1)
 bar-key.pem:
 ifneq ($(CERTTOOL),)
 	$(CERTTOOL) \
@@ -169,14 +169,10 @@ ifneq ($(OPENSSL),)
           req \
           -new \
           -config ssl/openssl/ca.tmpl \
+          -key bar-key.pem \
           -x509 \
           -nodes \
-          -sha1 \
-          -days 365 \
-          -key bar-key.pem \
-          -keyform PEM \
           -out $@ \
-          -outform PEM \
           1>/dev/null 2>/dev/null
 endif
 
@@ -209,21 +205,16 @@ endif
 ifneq ($(OPENSSL),)
 	$(OPENSSL) \
           req \
-          -new \
           -config ssl/openssl/server.tmpl \
+          -new \
+          -key bar-server-key.pem \
           -x509 \
           -nodes \
-          -sha1 \
-          -days 365 \
-          -key bar-server-key.pem \
-          -keyform PEM \
-          -out $@ \
-          -outform PEM \
-          1>/dev/null 2>/dev/null
+          -out $@
 endif
 
 # create Java SSL key
-bar.jks: bar-key.pem
+bar.jks: bar-server-cert.pem
 ifneq ($(KEYTOOL),)
 	$(RMF) $@
 	$(KEYTOOL) \
@@ -232,9 +223,16 @@ ifneq ($(KEYTOOL),)
           -keypass not_needed \
           -storepass not_needed \
           -noprompt \
-          -file bar-ca.pem \
+          -file bar-server-cert.pem \
           -keystore $@
 endif
+endif
+
+
+bar-key.pem bar-ca.pem bar-server-key.pem bar-server-cert.pem bar.jks:
+	bar/bar-keygen \
+          --private-directory=. \
+          --certs-directory=.
 
 # create documentation
 .PHONY: doc
