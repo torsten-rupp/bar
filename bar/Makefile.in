@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.52 $
+# $Revision: 1.53 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -73,8 +73,8 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 TARGETS              = bar/bar \
                        bar/bar-keygen \
                        $(if $(findstring $(ENABLE_GUI),yes),barcontrol/barcontrol) \
-                       \
-                       doc/bar.7 \
+
+MAN                  = doc/bar.7 \
 
 OTHER_SOURCES        = errors.pl \
                        errors.def \
@@ -99,6 +99,9 @@ ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol clean
 endif
 	$(RMF) $(TARGETS)
+ifneq ($(TXT2MAN),)
+	$(RMF) $(MAN)
+endif
 	$(RMRF) $(DISTRIBUTION_NAME)
 	$(RMF) $(DISTRIBUTION_NAME).tgz
 	$(RMRF) tmp
@@ -110,6 +113,7 @@ ifeq ($(ENABLE_GUI),yes)
 endif
 	$(RMF) Makefile
 	$(RMF) src/Config.java
+	$(RMF) epm.list
 	$(RMF) config.status
 	$(RMF) config.log
 
@@ -339,6 +343,7 @@ $(DISTRIBUTION_NAME).tar.bz2:
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/doc
 	$(INSTALL) -m 664 \
                    doc/README \
+                   doc/COPYING \
                    doc/*.txt \
                    doc/bar.7 \
                    $(DISTRIBUTION_NAME)/doc
@@ -357,10 +362,10 @@ ifneq ($(EPM),)
 	$(INSTALL) -d tmp/package
 	$(EPM) \
           -f rpm \
-          --output-dir packageTmp \
+          --output-dir tmp/package \
           bar \
           epm.list
-	$(MV) packageTmp/*rpm $@
+	$(MV) tmp/package/*rpm $@
 	$(RMRF) tmp/package
 else
 	$(ECHO) "No EPM installed. Cannot create RPM package."
@@ -375,10 +380,10 @@ ifneq ($(EPM),)
 	$(INSTALL) -d tmp/package
 	$(EPM) \
           -f deb \
-          --output-dir packageTmp \
+          --output-dir tmp/package \
           bar \
           epm.list
-	$(MV) packageTmp/*rpm $@
+	$(MV) tmp/package/*deb $@
 	$(RMRF) tmp/package
 else
 	$(ECHO) "No EPM installed. Cannot create DEB package."

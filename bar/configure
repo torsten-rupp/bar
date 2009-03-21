@@ -310,7 +310,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os VERSION_MAJOR VERSION_MINOR PLATFORM ENABLE_DEBUG ENABLE_GUI INSTALL_DIR INSTALL_BIN_DIR CONFIG_DIR TLS_DIR MAN_DIR CC LD STRIP CC_FLAGS CC_WARN_FLAGS CC_OPTIMIZE CC_DEFINES CC_INCLUDES LD_FLAGS LIBRARY_PATHS LIBRARIES STATIC_LIBRARIES JAVA JAVAC JAR JAVA_FLAGS JAVAC_FLAGS SWT_DIR LAUNCH4J_DIR CERTOOL OPENSSL KEYTOOL TXT2MAN PERL INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA EPM LAUNCH4J CERTTOOL CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os VERSION_MAJOR VERSION_MINOR PLATFORM ENABLE_DEBUG ENABLE_GUI INSTALL_DIR INSTALL_BIN_DIR CONFIG_DIR TLS_DIR MAN_DIR CC LD STRIP CC_FLAGS CC_WARN_FLAGS CC_OPTIMIZE CC_DEFINES CC_INCLUDES LD_FLAGS LIBRARY_PATHS LIBRARIES STATIC_LIBRARIES JAVA JAVAC JAR JAVA_FLAGS JAVAC_FLAGS SWT_DIR LAUNCH4J_DIR CERTOOL OPENSSL KEYTOOL TXT2MAN EPM_VERSION_3 EPM_VERSION_4 PERL INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA EPM LAUNCH4J CERTTOOL CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1417,6 +1417,7 @@ host_os=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\3/'`
 
 
 
+
 CC_FLAGS=""
 CC_DEFINES=""
 CC_OPTIMIZE=""
@@ -1864,6 +1865,34 @@ fi
 
   test -n "$EPM" && break
 done
+
+
+  echo "$as_me:$LINENO: checking $EPM version" >&5
+echo $ECHO_N "checking $EPM version... $ECHO_C" >&6
+if test "${ac_cv_prog_epm_version+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+      if   test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v4\"`"; then
+        ac_cv_prog_epm_version=4.x
+        EPM_VERSION_4=1
+        EPM_VERSION_3=
+      elif test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v3\"`"; then
+        ac_cv_prog_epm_version=3.x
+        EPM_VERSION_4=
+        EPM_VERSION_3=1
+      else
+        { echo "$as_me:$LINENO: WARNING: Cannot detect version of EPM - assume version 4 or newer" >&5
+echo "$as_me: WARNING: Cannot detect version of EPM - assume version 4 or newer" >&2;}
+        ac_cv_prog_epm_version=4.x
+        EPM_VERSION_4=1
+        EPM_VERSION_3=
+      fi
+
+
+fi
+echo "$as_me:$LINENO: result: $ac_cv_prog_epm_version" >&5
+echo "${ECHO_T}$ac_cv_prog_epm_version" >&6
 
 
 CC_DEFINES="$CC_DEFINES"
@@ -8525,6 +8554,8 @@ s,@CERTOOL@,$CERTOOL,;t t
 s,@OPENSSL@,$OPENSSL,;t t
 s,@KEYTOOL@,$KEYTOOL,;t t
 s,@TXT2MAN@,$TXT2MAN,;t t
+s,@EPM_VERSION_3@,$EPM_VERSION_3,;t t
+s,@EPM_VERSION_4@,$EPM_VERSION_4,;t t
 s,@PERL@,$PERL,;t t
 s,@INSTALL_PROGRAM@,$INSTALL_PROGRAM,;t t
 s,@INSTALL_SCRIPT@,$INSTALL_SCRIPT,;t t
