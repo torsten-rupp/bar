@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.51 $
+# $Revision: 1.52 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -113,6 +113,8 @@ endif
 	$(RMF) config.status
 	$(RMF) config.log
 
+# ----------------------------------------------------------------------------
+
 # create bar
 .PHONY: bar
 bar bar/bar:
@@ -132,107 +134,24 @@ else
 	@$(ECHO) "ERROR: GUI components not configured - cannot be built."
 endif
 
-# create SSL certificates
+# ----------------------------------------------------------------------------
+
+# create SSL keys and certificates
 .PHONY: keys clean_keys
-keys: $(KEY_FILES)
+keys: bar/bar-keygen
+	bar/bar-keygen \
+          --private-directory=. \
+          --certs-directory=.
 
 clean_keys:
 	$(RMF) $(KEY_FILES)
 
-ifeq (0,1)
-bar-key.pem:
-ifneq ($(CERTTOOL),)
-	$(CERTTOOL) \
-          --generate-privkey \
-          --outfile $@ \
-          1>/dev/null 2>/dev/null
-endif
-ifneq ($(OPENSSL),)
-	$(OPENSSL) \
-          genrsa \
-          -out $@ \
-          1024 \
-          1>/dev/null 2>/dev/null
-endif
-
-bar-ca.pem: bar-key.pem
-ifneq ($(CERTTOOL),)
-	$(CERTTOOL) \
-          --generate-self-signed \
-          --template ssl/certtool/ca.tmpl \
-          --load-privkey bar-key.pem \
-          --outfile $@ \
-          1>/dev/null 2>/dev/null
-endif
-ifneq ($(OPENSSL),)
-	$(OPENSSL) \
-          req \
-          -new \
-          -config ssl/openssl/ca.tmpl \
-          -key bar-key.pem \
-          -x509 \
-          -nodes \
-          -out $@ \
-          1>/dev/null 2>/dev/null
-endif
-
-bar-server-key.pem:
-ifneq ($(CERTTOOL),)
-	$(CERTTOOL) \
-          --generate-privkey \
-          --outfile $@ \
-          1>/dev/null 2>/dev/null
-endif
-ifneq ($(OPENSSL),)
-	$(OPENSSL) \
-          genrsa \
-          -out $@ \
-          1024 \
-          1>/dev/null 2>/dev/null
-endif
-
-bar-server-cert.pem: bar-server-key.pem
-ifneq ($(CERTTOOL),)
-	$(CERTTOOL) \
-          --generate-certificate \
-          --template ssl/certtool/server.tmpl \
-          --load-privkey bar-server-key.pem \
-          --load-ca-certificate bar-ca.pem \
-          --load-ca-privkey bar-key.pem \
-          --outfile $@ \
-          1>/dev/null 2>/dev/null
-endif
-ifneq ($(OPENSSL),)
-	$(OPENSSL) \
-          req \
-          -config ssl/openssl/server.tmpl \
-          -new \
-          -key bar-server-key.pem \
-          -x509 \
-          -nodes \
-          -out $@
-endif
-
-# create Java SSL key
-bar.jks: bar-server-cert.pem
-ifneq ($(KEYTOOL),)
-	$(RMF) $@
-	$(KEYTOOL) \
-          -import \
-          -trustcacerts \
-          -keypass not_needed \
-          -storepass not_needed \
-          -noprompt \
-          -file bar-server-cert.pem \
-          -keystore $@
-endif
-endif
-
-
-bar-key.pem bar-ca.pem bar-server-key.pem bar-server-cert.pem bar.jks:
+$(KEY_FILES): bar/bar-keygen
 	bar/bar-keygen \
           --private-directory=. \
           --certs-directory=.
+
+# ----------------------------------------------------------------------------
 
 # create documentation
 .PHONY: doc
@@ -250,6 +169,8 @@ ifneq ($(TXT2MAN),)
 else
 	$(ECHO) txt2man not available - cannot create man page.
 endif
+
+# ----------------------------------------------------------------------------
 
 # install/uninstall
 .PHONY: install install_keys uninstall
@@ -331,6 +252,8 @@ uninstall:
           $(RMF) "$(MAN_DIR)/man7/bar.7"; \
         fi
 
+# ----------------------------------------------------------------------------
+
 # run server
 .PHONY: barserver barserver_ssl
 barserver:
@@ -364,6 +287,8 @@ memcheck:
 memcheck_extended:
 	@$(MAKE) -C bar memcheck_extended
 
+# ----------------------------------------------------------------------------
+
 # create distribution
 .PHONY: dist $(DISTRIBUTION_NAME).tar.bz2
 dist: $(DISTRIBUTION_NAME).tar.bz2
@@ -392,9 +317,14 @@ $(DISTRIBUTION_NAME).tar.bz2:
                    $(DISTRIBUTION_NAME)/bin
 	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/ssl
+	$(INSTALL) -d $(DISTRIBUTION_NAME)/ssl/certtool
 	$(INSTALL) -m 664 \
-                   ssl/*.tmpl \
-                   $(DISTRIBUTION_NAME)/ssl
+                   ssl/certtool/*.tmpl \
+                   $(DISTRIBUTION_NAME)/ssl/certtool
+	$(INSTALL) -d $(DISTRIBUTION_NAME)/ssl/openssl
+	$(INSTALL) -m 664 \
+                   ssl/openssl/*.tmpl \
+                   $(DISTRIBUTION_NAME)/ssl/openssl
 	#
 	$(INSTALL) -d $(DISTRIBUTION_NAME)/scripts
 	$(INSTALL) -m 664 \
@@ -415,6 +345,8 @@ $(DISTRIBUTION_NAME).tar.bz2:
 	#
 	$(TAR) cjf $@ $(DISTRIBUTION_NAME)
 	$(RMRF) $(DISTRIBUTION_NAME)
+
+# ----------------------------------------------------------------------------
 
 # create RPM
 .PHONY: rpm
