@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -174,12 +174,14 @@ bar-keygen: bar-keygen.in
 	$(CAT) bar-keygen.in | \
         ( \
           while IFS="" read -r line; do \
-            if   test "$$line" = "@CA.TEMPL@"; then \
-              $(CAT) ../ssl/ca.tmpl; \
-            elif test "$$line" = "@CLIENT.TEMPL@"; then \
-              $(CAT) ../ssl/client.tmpl; \
-            elif test "$$line" = "@SERVER.TEMPL@"; then \
-              $(CAT) ../ssl/server.tmpl; \
+            if   test "$$line" = "@CERTTOOL/CA.TEMPL@"; then \
+              $(CAT) ../ssl/certtool/ca.tmpl; \
+            elif test "$$line" = "@CERTTOOL/SERVER.TEMPL@"; then \
+              $(CAT) ../ssl/certtool/server.tmpl; \
+            elif test "$$line" = "@OPENSSL/CA.TEMPL@"; then \
+              $(CAT) ../ssl/openssl/ca.tmpl; \
+            elif test "$$line" = "@OPENSSL/SERVER.TEMPL@"; then \
+              $(CAT) ../ssl/openssl/server.tmpl; \
             else \
               line=`$(ECHO) "$$line"|$(SED) 's|\@DESTDIR\@|$(DESTDIR)|g'`; \
               line=`$(ECHO) "$$line"|$(SED) 's|\@TLS_DIR\@|$(TLS_DIR)|g'`; \

@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.23 $
+dnl $Revision: 1.24 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -151,6 +151,7 @@ AC_SUBST(SWT_DIR)                           dnl SWT directory
 AC_SUBST(LAUNCH4J_DIR)                      dnl launch4j directory
 
 AC_SUBST(CERTOOL)                           dnl GNU TLS certtool
+AC_SUBST(OPENSSL)                           dnl OpenSSL key tool
 AC_SUBST(KEYTOOL)                           dnl Java keytool
 
 AC_SUBST(TXT2MAN)                           dnl text-to-man page tool
@@ -290,6 +291,7 @@ AC_PROG_INSTALL
 if test -z "$INSTALL"; then
   AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
 fi
+AC_PATH_PROGS(EPM,epm)
 
 CC_DEFINES="$CC_DEFINES"
 if test "$ENABLE_DEBUG" = "yes"; then
@@ -334,6 +336,7 @@ if test "$ENABLE_GUI" = "yes"; then
 fi
 
 AC_PATH_PROGS(CERTTOOL,certtool)
+AC_PATH_PROGS(OPENSSL,openssl)
 AC_PATH_PROGS(KEYTOOL,keytool)
 
 AC_PATH_PROGS(TXT2MAN,txt2man)
@@ -491,6 +494,9 @@ AC_CONFIG_FILES(barcontrol/Makefile)
 
 dnl config files
 AC_CONFIG_FILES(barcontrol/src/Config.java)
+
+dnl epm file
+AC_CONFIG_FILES(epm.list)
 
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";
