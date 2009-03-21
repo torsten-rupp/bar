@@ -22,4 +22,4 @@ ToDo
 - clear internal performance arrays before next job is started
 - avoid negative bytes/s in performance monitor
 - multiple instances of backup threads
-
+- check ssl certificates

@@ -1,4 +1,4 @@
-2009-03-14 0.11
+2009-03-?? 0.11
   * added selection of multiple days to schedule days
     configuration, e. g. you can specify "Mon,Tue,Sat"
   * barcontrol: fixed quit (internal threads blocked quit)
@@ -27,6 +27,9 @@
   * improved error messages
   * fixed debug function in string library: limit number of
     entries in string-free-list.
+  * fixed problem with "broken pipe" error in network code
+  * added support for openssl command in bar-keygen
+  * fixed generating Java SSL key
 
 2009-02-14 0.10a
   * fixed layout of login dialog
