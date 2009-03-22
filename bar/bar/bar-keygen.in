@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # $Author: torsten $
 # Contents: generate BAR server keys (PEM files)
 # Systems: Unix
@@ -319,7 +319,7 @@ $CERTTOOL --help 1>/dev/null
 if test $? -ne 127; then
   CERTTOOL_OK=1
 else
-  CERTTOOL_OK=
+  CERTTOOL_OK=0
 fi
 $OPENSSL version 1>/dev/null
 if test $? -ne 127; then
@@ -351,14 +351,14 @@ if test -z "$tmpDir"; then
 fi
 
 # create template files
-if test $CERTTOOL_OK; then
+if   test $CERTTOOL_OK -eq 1; then
   $CAT <<EOT > $tmpDir/ca.tmpl
 @CERTTOOL/CA.TEMPL@
 EOT
   $CAT <<EOT > $tmpDir/server.tmpl
 @CERTTOOL/SERVER.TEMPL@
 EOT
-else
+elif test $OPENSSL_OK -eq 1; then
   $CAT <<EOT > $tmpDir/ca.tmpl
 @OPENSSL/CA.TEMPL@
 EOT
@@ -413,14 +413,13 @@ fi
 
 # create bar-key.pem
 print "Create '$privateDir/bar-key.pem'..."
-if test $CERTOOL_OK; then
+if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-privkey \
     --outfile "$privateDir/bar-key.pem" \
     1>/dev/null 2>/dev/null
   rc=$?
-fi
-if test $OPENSSL_OK; then
+elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     genrsa \
     -out $privateDir/bar-key.pem \
@@ -437,7 +436,7 @@ println "OK"
 
 # create bar-ca.pem
 print "Create '$certsDir/bar-ca.pem'..."
-if test $CERTOOL_OK; then
+if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-self-signed \
     --template $tmpDir/ca.tmpl \
@@ -445,8 +444,7 @@ if test $CERTOOL_OK; then
     --outfile "$certsDir/bar-ca.pem" \
     1>/dev/null 2>/dev/null
   rc=$?
-fi
-if test $OPENSSL_OK; then
+elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     req \
     -new \
@@ -456,6 +454,7 @@ if test $OPENSSL_OK; then
     -nodes \
     -out "$certsDir/bar-ca.pem" \
     1>/dev/null 2>/dev/null
+  rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
@@ -466,19 +465,19 @@ println "OK"
 
 # create bar-server-key.pem
 print "Create '$privateDir/bar-server-key.pem'..."
-if test $CERTOOL_OK; then
+if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-privkey \
     --outfile "$privateDir/bar-server-key.pem" \
     1>/dev/null 2>/dev/null
   rc=$?
-fi
-if test $OPENSSL_OK; then
+elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     genrsa \
     -out "$privateDir/bar-server-key.pem" \
     1024 \
     1>/dev/null 2>/dev/null
+  rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
@@ -489,7 +488,7 @@ println "OK"
 
 # create bar-server-cert.pem
 print "Create '$certsDir/bar-server-cert.pem'..."
-if test $CERTOOL_OK; then
+if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-certificate \
     --template $tmpDir/server.tmpl \
@@ -499,17 +498,17 @@ if test $CERTOOL_OK; then
     --outfile "$certsDir/bar-server-cert.pem" \
     1>/dev/null 2>/dev/null
   rc=$?
-fi
-if test $OPENSSL_OK; then
+elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     req \
     -config ssl/openssl/server.tmpl \
     -new \
-    -key "$private/bar-server-key.pem" \
+    -key "$privateDir/bar-server-key.pem" \
     -x509 \
     -nodes \
     -out "$certsDir/bar-server-cert.pem" \
     1>/dev/null 2>/dev/null
+  rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
@@ -520,7 +519,7 @@ println "OK"
 
 # create Java key
 print "Create '$privateDir/bar.jks'..."
-if test $KEYTOOL_OK; then
+if test $KEYTOOL_OK -eq 1; then
   $RMF $privateDir/bar.jks
   $KEYTOOL \
     -import \
@@ -531,6 +530,7 @@ if test $KEYTOOL_OK; then
     -file "$certsDir/bar-server-cert.pem" \
     -keystore "$privateDir/bar.jks" \
     1>/dev/null 2>/dev/null
+  rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
