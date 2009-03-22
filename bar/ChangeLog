@@ -4,7 +4,7 @@
   * barcontrol: fixed quit (internal threads blocked quit)
   * barcontrol: changed names of buttons in file tree
   * barcontrol: added button to open all included directories
-    in file tree list (green directory symbol at the botton
+    in file tree list (green directory symbol at the bottom
     right side)
   * barcontrol: added function to detect sizes of directories;
     when "directory info" checkbox is enabled and a
@@ -18,8 +18,8 @@
   * fixed detection of size of current archive (was always 0)
   * new scheme to build a incremental file name from an 
     archive file name if no incremental file name is given:
-      - dicard all %-macros
-      - dicard all #
+      - discard all %-macros
+      - discard all #
       - remove - and _ between macros
       - replace file name extension .bar by .bid
     A name like backup/system-%type-%a-####%last.bar will
@@ -102,7 +102,7 @@
   * barcontrol: change FTP field names, added password field
   * fixed problem when writing incremental file list and current
     directory is not writable: create the temporary file in the same
-    diretory like the destination file
+    directory like the destination file
   * removed some debug code
   * barcontrol: fixed error handling when authorization fail
   * barcontrol: fixed internal protocol data parser when data contain
@@ -160,7 +160,7 @@
   * fixed test
 
 2008-11-18 0.09
-  * implemented a Java frontend! This replaces the TclTk frontend -
+  * implemented a Java front end! This replaces the TclTk front end -
     please enjoy!
   * fixed bug in server password authorization: password was not
     checked until end
@@ -175,7 +175,7 @@
   * improved estimation of files/s, bytes/s, stored bytes/s and rest
     time
   * fixed input of password via SSH_ASKPASS
-  * fixed exitcode on create archive
+  * fixed exit code on create archive
 
 2008-08-17 0.07b
   * added option --long-format
@@ -213,7 +213,7 @@
   * fixed static linkage
   * support none bz2
   * TclTk TLS package is now optional
-  * import suport for non-ssh, non-crypt, non-bz2
+  * import support for non-ssh, non-crypt, non-bz2
   * added option --no-bar-on-dvd; store by default a copy of BAR
     executable on created DVDs
   * fixed wrong string when creating DVD
@@ -231,7 +231,7 @@
     standard archive (without an incremental list)
   * added options --full and --incremental to barcontrol.tcl.
     With these options the settings in a configuration can be
-    overwritten, e. g. usefull to make incremental backups
+    overwritten, e. g. useful to make incremental backups
     (define full-backup in configuration file; use --incremental
     to create a incremental backup on-the-fly)
   * do not write bid-file if archive cannot be stored
@@ -289,7 +289,7 @@
   * started FAQ
 
 2007-11-26 0.02a
-  * bugfix
+  * bug fix
 
 2007-11-25 0.02
   * implemented DVD support
