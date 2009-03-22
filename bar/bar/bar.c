@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -299,7 +299,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("ftp-login-name",               0,  0,0,&defaultFTPServer.loginName,               NULL,cmdOptionParseString,NULL,                                    "ftp login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,0,&defaultFTPServer.password,                NULL,cmdOptionParsePassword,NULL,                                  "ftp password (use with care!)","password"                                 ),
 
-  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,0,defaultSSHServer.port,                     22,0,65535,NULL,                                                   "ssh port (default: 22)"                                                   ),
+  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,0,defaultSSHServer.port,                     22,0,65535,NULL,                                                   "ssh port"                                                                 ),
   CMD_OPTION_SPECIAL      ("ssh-login-name",               0,  0,0,&defaultSSHServer.loginName,               NULL,cmdOptionParseString,NULL,                                    "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,0,&defaultSSHServer.password,                NULL,cmdOptionParsePassword,NULL,                                  "ssh password (use with care!)","password"                                 ),
   CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,0,&defaultSSHServer.publicKeyFileName,       NULL,cmdOptionParseString,NULL,                                    "ssh public key file name","file name"                                     ),

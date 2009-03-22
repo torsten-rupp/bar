@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.55 $
+# $Revision: 1.56 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -149,10 +149,7 @@ endif
 
 # create SSL keys and certificates
 .PHONY: keys clean_keys
-keys: bar/bar-keygen
-	bar/bar-keygen \
-          --private-directory=. \
-          --certs-directory=.
+keys: $(KEY_FILES)
 
 clean_keys:
 	$(RMF) $(KEY_FILES)
