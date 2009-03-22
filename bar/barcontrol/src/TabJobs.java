@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -324,7 +324,6 @@ class TabJobs
           }
           directoryInfoRequest = directoryInfoRequestList.remove();
         }
-Dprintf.dprintf("directoryInfoRequest=%s\n",directoryInfoRequest);
 
         if (directoryInfoFlag)
         {

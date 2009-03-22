@@ -100,6 +100,20 @@ Install ssh2:
   make install
   ldconfig
 
+Debian packages:
+  gcc
+  zlib
+  zlib1g-dev
+  libbz2-dev
+  libssl-dev
+  libssh2-1-dev
+  libgcrypt11-dev
+  libgnutls-dev
+  gnutls-bin
+  openjdk-6-jdk
+  make
+  epm
+
 Then install BAR with:
   ./configure
   make
