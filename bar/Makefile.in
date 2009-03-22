@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.54 $
+# $Revision: 1.55 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -42,6 +42,7 @@ ECHO_NO_LF = echo -n
 EPM        = @EPM@
 GREP       = grep
 INSTALL    = @INSTALL@
+MD5SUM     = @MD5SUM@
 MKDIR      = mkdir
 MV         = mv
 PERL       = @PERL@
@@ -356,6 +357,10 @@ $(DISTRIBUTION_NAME).tar.bz2:
 	#
 	$(TAR) cjf $@ $(DISTRIBUTION_NAME)
 	$(RMRF) $(DISTRIBUTION_NAME)
+	#
+ifneq ($(MD5SUM),)
+	$(MD5SUM) $@
+endif
 
 # ----------------------------------------------------------------------------
 
@@ -379,6 +384,9 @@ ifneq ($(EPM),)
           epm.list
 	$(MV) tmp/package/*rpm $@
 	$(RMRF) tmp/package
+ifneq ($(MD5SUM),)
+	$(MD5SUM) $@
+endif
 else
 	$(ECHO) "No EPM installed. Cannot create RPM package."
 endif
@@ -404,6 +412,9 @@ ifneq ($(EPM),)
           epm.list
 	$(MV) tmp/package/*deb $@
 	$(RMRF) tmp/package
+ifneq ($(MD5SUM),)
+	$(MD5SUM) $@
+endif
 else
 	$(ECHO) "No EPM installed. Cannot create DEB package."
 endif
@@ -418,6 +429,9 @@ ifneq ($(EPM),)
           epm.list
 	$(MV) tmp/package/*deb $@
 	$(RMRF) tmp/package
+ifneq ($(MD5SUM),)
+	$(MD5SUM) $@
+endif
 else
 	$(ECHO) "No EPM installed. Cannot create DEB package."
 endif
