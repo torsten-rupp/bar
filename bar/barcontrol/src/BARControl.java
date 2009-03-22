@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -103,6 +103,9 @@ class BARVariable
   private String           string;
   private String           enumeration[];
 
+  /** create BAR variable
+   * @param b/l/d/string/enumeration value
+   */
   BARVariable(boolean b)
   {
     this.type = BARVariableTypes.BOOLEAN;
@@ -129,11 +132,17 @@ class BARVariable
     this.enumeration = enumeration;
   }
 
+  /** get variable type
+   * @return type
+   */
   BARVariableTypes getType()
   {
     return type;
   }
 
+  /** get boolean value
+   * @return true or false
+   */
   boolean getBoolean()
   {
     assert type == BARVariableTypes.BOOLEAN;
@@ -141,6 +150,9 @@ class BARVariable
     return b;
   }
 
+  /** get long value
+   * @return value
+   */
   long getLong()
   {
     assert type == BARVariableTypes.LONG;
@@ -148,6 +160,9 @@ class BARVariable
     return l;
   }
 
+  /** get double value
+   * @return value
+   */
   double getDouble()
   {
     assert type == BARVariableTypes.DOUBLE;
@@ -155,6 +170,9 @@ class BARVariable
     return d;
   }
 
+  /** get string value
+   * @return value
+   */
   String getString()
   {
     assert (type == BARVariableTypes.STRING) || (type == BARVariableTypes.ENUMERATION);
@@ -162,6 +180,9 @@ class BARVariable
     return string;
   }
 
+  /** set boolean value
+   * @param b value
+   */
   void set(boolean b)
   {
     assert type == BARVariableTypes.BOOLEAN;
@@ -170,6 +191,9 @@ class BARVariable
     Widgets.modified(this);
   }
 
+  /** set long value
+   * @param l value
+   */
   void set(long l)
   {
     assert type == BARVariableTypes.LONG;
@@ -178,6 +202,9 @@ class BARVariable
     Widgets.modified(this);
   }
 
+  /** set double value
+   * @param d value
+   */
   void set(double d)
   {
     assert type == BARVariableTypes.DOUBLE;
@@ -186,6 +213,9 @@ class BARVariable
     Widgets.modified(this);
   }
 
+  /** set string value
+   * @param string value
+   */
   void set(String string)
   {
     assert (type == BARVariableTypes.STRING) || (type == BARVariableTypes.ENUMERATION);
@@ -211,12 +241,19 @@ class BARVariable
     Widgets.modified(this);
   }
 
+  /** compare string values
+   * @param value
+   * @return true iff equal
+   */
   public boolean equals(String value)
   {
     String s = toString();
     return (s != null)?s.equals(value):(value == null);
   }
 
+  /** convert to string
+   * @return string
+   */
   public String toString()
   {
     switch (type)
@@ -241,33 +278,54 @@ class WidgetListener
   // cached text for widget
   private String cachedText = null;
 
+  /** create widget listener
+   */
   WidgetListener()
   {
     this.control  = null;
     this.variable = null;
   }
 
+  /** create widget listener
+   * @param control control widget
+   * @param variable BAR variable
+   */
   WidgetListener(Control control, BARVariable variable)
   {
     this.control  = control;
     this.variable = variable;
   }
 
+  /** set control widget
+   * @param control control widget
+   */
   void setControl(Control control)
   {
     this.control = control;
   }
 
+  /** set variable
+   * @param variable BAR variable
+   * @return 
+   */
   void setVariable(BARVariable variable)
   {
     this.variable = variable;
   }
 
+  /** compare variables
+   * @param variable variable
+   * @return true iff equal
+   */
   public boolean equals(Object variable)
   {
     return (this.variable != null) && this.variable.equals(variable);
   }
 
+  /** nofity modify variable
+   * @param control control widget
+   * @param variable BAR variable
+   */
   void modified(Control control, BARVariable variable)
   {
     if      (control instanceof Label)
@@ -400,16 +458,24 @@ class WidgetListener
     }
   }
 
+  /** nofity modify variable
+   * @param variable BAR variable
+   */
   public void modified(BARVariable variable)
   {
     modified(control,variable);
   }
 
+  /** nofity modify variable
+   */
   public void modified()
   {
     modified(variable);
   }
 
+  /** get string of varable
+   * @param variable BAR variable
+   */
   String getString(BARVariable variable)
   {
     return null;
@@ -737,6 +803,10 @@ class ArchiveNameParts
  */
 class Units
 {
+  /** get byte size string
+   * @param n byte value
+   * @return string
+   */
   public static String getByteSize(double n)
   {
     if      (n >= 1024*1024*1024) return String.format("%.1f",n/(1024*1024*1024));
@@ -745,6 +815,10 @@ class Units
     else                          return String.format("%d"  ,(long)n           );
   }
 
+  /** get byte size unit
+   * @param n byte value
+   * @return unit
+   */
   public static String getByteUnit(double n)
   {
     if      (n >= 1024*1024*1024) return "GBytes";
@@ -753,6 +827,10 @@ class Units
     else                          return "bytes";
   }
 
+  /** get byte size short unit
+   * @param n byte value
+   * @return unit
+   */
   public static String getByteShortUnit(double n)
   {
     if      (n >= 1024*1024*1024) return "GB";
@@ -761,6 +839,10 @@ class Units
     else                          return "B";
   }
 
+  /** parse byte size string
+   * @param string string to parse
+   * @return byte value
+   */
   public static long parseByteSize(String string)
   {
     string = string.toUpperCase();
@@ -795,6 +877,10 @@ class Units
     }
   }
 
+  /** format byte size
+   * @param n byte value
+   * @return string with unit
+   */
   public static String formatByteSize(long n)
   {
     return getByteSize(n)+getByteShortUnit(n);
@@ -825,10 +911,11 @@ public class BARControl
   final static int    DEFAULT_SERVER_TLS_PORT = 38524;
 
   // --------------------------- variables --------------------------------
-  private String     serverName      = DEFAULT_SERVER_NAME;
-  private int        serverPort      = DEFAULT_SERVER_PORT;
-  private int        serverTLSPort   = DEFAULT_SERVER_TLS_PORT;
-  private boolean    loginDialogFlag = false;
+  private String     serverName        = DEFAULT_SERVER_NAME;
+  private int        serverPort        = DEFAULT_SERVER_PORT;
+  private int        serverTLSPort     = DEFAULT_SERVER_TLS_PORT;
+  private boolean    loginDialogFlag   = false;
+  private String     serverKeyFileName = null;
 
   private boolean    debug = false;
 
@@ -851,10 +938,11 @@ public class BARControl
   {
     System.out.println("barcontrol usage: <options> --");
     System.out.println("");
-    System.out.println("Options: -p|--port=<n>  - server port");
-    System.out.println("         --tls-port=<n> - TLS server port");
-    System.out.println("         --login-dialog - force to open login dialog");
-    System.out.println("         -h|--help      - print this help");
+    System.out.println("Options: -p|--port=<n>          - server port");
+    System.out.println("         --tls-port=<n>         - TLS server port");
+    System.out.println("         --login-dialog         - force to open login dialog");
+    System.out.println("         --key-file=<file name> - key file name");
+    System.out.println("         -h|--help              - print this help");
   }
 
   /** parse arguments
@@ -950,6 +1038,20 @@ public class BARControl
       {
         loginDialogFlag = true;
         z += 1;
+      }
+      else if (args[z].startsWith("--key-file="))
+      {
+        serverKeyFileName = args[z].substring(args[z].indexOf('=')+1);
+        z += 1;
+      }
+      else if (args[z].equals("--key-file"))
+      {
+        if ((z+1) >= args.length)
+        {
+          throw new Error("Expected value for option --key-file!");
+        }
+        serverKeyFileName = args[z+1];
+        z += 2;
       }
       else if (args[z].equals("--debug"))
       {
@@ -1267,12 +1369,12 @@ public class BARControl
       // connect to server
       LoginData loginData = new LoginData(serverName,serverPort,serverTLSPort);
       boolean connectOkFlag = false;
-      if (!loginData.serverName.equals("") && !loginData.password.equals("") && !loginDialogFlag)
+      if ((loginData.serverName != null) && !loginData.serverName.equals("") && (loginData.password != null) && !loginData.password.equals("") && !loginDialogFlag)
       {
         // connect to server with preset data
         try
         {
-          BARServer.connect(loginData.serverName,loginData.port,loginData.tlsPort,loginData.password);
+          BARServer.connect(loginData.serverName,loginData.port,loginData.tlsPort,loginData.password,serverKeyFileName);
           connectOkFlag = true;
         }
         catch (ConnectionError error)
@@ -1295,7 +1397,7 @@ public class BARControl
         // connect to server
         try
         {
-          BARServer.connect(loginData.serverName,loginData.port,loginData.tlsPort,loginData.password);
+          BARServer.connect(loginData.serverName,loginData.port,loginData.tlsPort,loginData.password,serverKeyFileName);
           connectOkFlag = true;
         }
         catch (ConnectionError error)
