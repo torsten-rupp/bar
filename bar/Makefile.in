@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.53 $
+# $Revision: 1.54 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -91,9 +91,15 @@ SCRIPTS              = scripts/barserver-SuSE \
 #------------------------------ dependencies ---------------------------------
 
 .PHONY: all clean distclean
-all: $(TARGETS) keys
+all: \
+  $(TARGETS) \
+  $(MAN)\
+  $(KEY_FILES)
 
-clean: clean_keys
+clean: \
+  clean_keys \
+  clean_rpm \
+  clean_deb
 	-$(MAKE) -C bar clean
 ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol clean
@@ -354,8 +360,12 @@ $(DISTRIBUTION_NAME).tar.bz2:
 # ----------------------------------------------------------------------------
 
 # create RPM
-.PHONY: rpm
-rpm: bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm
+.PHONY: rpm clean_rpm
+rpm: \
+  bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm
+
+clean_rpm:
+	$(RMF) bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm
 
 bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm: epm.list
 ifneq ($(EPM),)
@@ -363,6 +373,8 @@ ifneq ($(EPM),)
 	$(EPM) \
           -f rpm \
           --output-dir tmp/package \
+          PACKAGE_CMD=1 \
+          PACKAGE_GUI=1 \
           bar \
           epm.list
 	$(MV) tmp/package/*rpm $@
@@ -373,7 +385,13 @@ endif
 
 # create DEB
 .PHONY: deb
-deb: bar-$(VERSION_MAJOR).$(VERSION_MINOR).deb
+deb: \
+  bar-$(VERSION_MAJOR).$(VERSION_MINOR).deb \
+  bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).deb
+
+clean_deb:
+	$(RMF) bar-$(VERSION_MAJOR).$(VERSION_MINOR).deb
+	$(RMF) bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).deb
 
 bar-$(VERSION_MAJOR).$(VERSION_MINOR).deb: epm.list
 ifneq ($(EPM),)
@@ -381,7 +399,22 @@ ifneq ($(EPM),)
 	$(EPM) \
           -f deb \
           --output-dir tmp/package \
+          PACKAGE_CMD=1 \
           bar \
+          epm.list
+	$(MV) tmp/package/*deb $@
+	$(RMRF) tmp/package
+else
+	$(ECHO) "No EPM installed. Cannot create DEB package."
+endif
+bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).deb: epm.list
+ifneq ($(EPM),)
+	$(INSTALL) -d tmp/package
+	$(EPM) \
+          -f deb \
+          --output-dir tmp/package \
+          PACKAGE_GUI=1 \
+          bar-gui \
           epm.list
 	$(MV) tmp/package/*deb $@
 	$(RMRF) tmp/package
