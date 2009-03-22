@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.25 $
+dnl $Revision: 1.26 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -321,6 +321,8 @@ if test -z "$INSTALL"; then
 fi
 AC_PATH_PROGS(EPM,epm)
 AC_PROG_EPM_VERSION
+
+AC_PATH_PROGS(MD5SUM,md5sum)
 
 CC_DEFINES="$CC_DEFINES"
 if test "$ENABLE_DEBUG" = "yes"; then
