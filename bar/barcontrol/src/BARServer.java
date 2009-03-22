@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -489,7 +489,7 @@ class BARServer
    * @param tlsPort TLS port number of 0
    * @param serverPassword server password
    */
-  public static void connect(String hostname, int port, int tlsPort, String serverPassword)
+  public static void connect(String hostname, int port, int tlsPort, String serverPassword, String serverKeyFileName)
   {
     final int TIMEOUT = 20;
 
@@ -504,12 +504,23 @@ class BARServer
     if ((socket == null) && (tlsPort != 0))
     {
       // get all possible bar.jks file names
-      String[] javaSSLKeyFileNames = new String[]
+      String[] javaSSLKeyFileNames;
+      if (serverKeyFileName != null)
       {
-        JAVA_SSL_KEY_FILE_NAME,
-        System.getProperty("user.home")+File.separator+".bar"+File.separator+JAVA_SSL_KEY_FILE_NAME,
-        Config.CONFIG_DIR+File.separator+JAVA_SSL_KEY_FILE_NAME
-      };
+        javaSSLKeyFileNames = new String[]
+        {
+          serverKeyFileName
+        };
+      }
+      else
+      {
+        javaSSLKeyFileNames = new String[]
+        {
+          JAVA_SSL_KEY_FILE_NAME,
+          System.getProperty("user.home")+File.separator+".bar"+File.separator+JAVA_SSL_KEY_FILE_NAME,
+          Config.CONFIG_DIR+File.separator+JAVA_SSL_KEY_FILE_NAME
+        };
+      }
 
       // try to connect with key
       for (String javaSSLKeyFileName : javaSSLKeyFileNames)
@@ -526,6 +537,9 @@ class BARServer
             sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
             sslSocket        = (SSLSocket)sslSocketFactory.createSocket(hostname,tlsPort);
             sslSocket.startHandshake();
+
+//java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
+//Dprintf.dprintf("serverCerts=%s\n",serverCerts);
 
             input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
             output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
@@ -555,7 +569,6 @@ class BARServer
           }
           catch (Exception exception)
           {
-    //        exception.printStackTrace();
             errorMessage = exception.getMessage();
           }
         }
@@ -605,7 +618,10 @@ class BARServer
       String line;
 
       line = input.readLine();
-      assert line != null;
+      if (line == null)
+      {
+        throw new CommunicationError("No result from server");
+      }
       String data[] = line.split(" ",2);
       assert data.length == 2;
       assert data[0].equals("SESSION");
