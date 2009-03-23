@@ -41,6 +41,7 @@ for making automated backups in the background.
 * Java for graphical frontend (see below)
 * SWT 3.4 (optional)
 * ANT and launch4j (optional)
+* EPM (optional)
 
 --- Installation
 
@@ -100,6 +101,9 @@ Install ssh2:
   make install
   ldconfig
 
+  Note: newer versions of libssh2 already include the seek-patch.
+  Note: the keepalive patch is optional
+
 Debian packages:
   gcc
   zlib
@@ -114,7 +118,7 @@ Debian packages:
   make
   epm
 
-Then install BAR with:
+Then compile and install BAR with:
   ./configure
   make
   make install
