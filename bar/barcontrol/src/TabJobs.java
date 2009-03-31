@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -4912,31 +4912,7 @@ throw new Error("NYI");
 
   /** edit storage file name
    */
-  //  private void storageFileNameEdit()
-  void storageFileNameEdit()
-  {
-    Composite composite;
-    Label     label;
-    Button    button;
-    Composite subComposite;
-
-    assert selectedJobId != 0;
-
-    // create dialog
-    final Shell dialog = Dialogs.open(shell,"Edit storage file name",SWT.DEFAULT,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
-
-    // create widgets
-    final StorageFileNameEditor storageFileNameEditor;
-    final Button                widgetSave;
-    composite = Widgets.newComposite(dialog,SWT.NONE);
-    composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
-    storageFileNameEditor = new StorageFileNameEditor(composite,storageFileName.getString());
-
-    Dialogs.run(dialog);
-  }
-
-  void storageFileNameEdit2()
+  private void storageFileNameEdit()
   {
     Composite composite;
     Label     label;
