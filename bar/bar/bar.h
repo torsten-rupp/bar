@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -182,7 +182,7 @@ typedef struct
   String imageCommand;                  // command to create dvd image
   String eccPreProcessCommand;          // command to execute before ECC calculation
   String eccPostProcessCommand;         // command to execute after ECC calculation
-  String eccCommand;                    // command for ECC calculatin
+  String eccCommand;                    // command for ECC calculation
   String writePreProcessCommand;        // command to execute before writing dvd
   String writePostProcessCommand;       // command to execute after writing dvd
   String writeCommand;                  // command to write dvd
@@ -202,7 +202,7 @@ typedef struct
   String imageCommand;                  // command to create volume image
   String eccPreProcessCommand;          // command to execute before ECC calculation
   String eccPostProcessCommand;         // command to execute after ECC calculation
-  String eccCommand;                    // command for ECC calculatin
+  String eccCommand;                    // command for ECC calculation
   String writePreProcessCommand;        // command to execute before writing volume
   String writePostProcessCommand;       // command to execute after writing volume
   String writeCommand;                  // command to write volume

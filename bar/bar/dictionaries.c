@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/dictionaries.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: hash table functions
 * Systems: all
@@ -71,6 +71,7 @@ LOCAL const uint TABLE_SIZES[] =
   extern "C" {
 #endif
 
+#if COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING
 /***********************************************************************\
 * Name   : modulo
 * Purpose: n mod m
@@ -112,6 +113,7 @@ LOCAL_INLINE ulong subModulo(ulong n, uint d, ulong m)
 {
   return (n+m-d)%m;
 }
+#endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING */
 
 /***********************************************************************\
 * Name   : rotHash
@@ -148,6 +150,8 @@ LOCAL ulong calculateHash(const void *keyData, ulong keyLength)
   ulong      hashBytes[4];
   const byte *p;
   uint       z;
+
+  assert(keyData != NULL);
 
   p = (const byte*)keyData;
 
@@ -190,6 +194,7 @@ LOCAL_INLINE bool equalsEntry(const DictionaryEntry     *entry,
                              )
 {
   assert(entry != NULL);
+  assert(keyData != NULL);
 
   if ((hash == entry->hash) && (entry->keyLength == keyLength))
   {
@@ -237,6 +242,9 @@ LOCAL int findEntryIndex(DictionaryEntryTable      *entryTable,
 {
   uint z,i;
   int  entryIndex;
+
+  assert(entryTable != NULL);
+  assert(keyData != NULL);
 
   for (z = 0; z <= entryTable->sizeIndex; z++)
   {
@@ -337,6 +345,8 @@ LOCAL int findFreeEntryIndex(DictionaryEntryTable *entryTable,
   uint z,i;
   int  entryIndex;
 
+  assert(entryTable != NULL);
+
   for (z = 0; z <= entryTable->sizeIndex; z++)
   {
     #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_LINEAR_PROBING
@@ -410,6 +420,7 @@ LOCAL bool findEntry(Dictionary           *dictionary,
   int  i;
 
   assert(dictionary != NULL);
+  assert(keyData != NULL);
   assert(dictionaryEntryTable != NULL);
   assert(index != NULL);
 
@@ -495,6 +506,9 @@ LOCAL bool findFreeEntry(Dictionary           *dictionary,
 
 LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint newSize)
 {
+  assert(entries != NULL);
+  assert(newSize > oldSize);
+
   entries = realloc(entries,newSize*sizeof(DictionaryEntry));
   if (entries != NULL)
   {
@@ -528,6 +542,7 @@ bool Dictionary_init(Dictionary                *dictionary,
   }
   dictionary->entryTables[0].sizeIndex  = 0;
   dictionary->entryTables[0].entryCount = 0;
+//fprintf(stderr,"%s,%d: init entries %p\n",__FILE__,__LINE__,dictionary->entryTables[0].entries);
 
   dictionary->dictionaryCompareFunction = dictionaryCompareFunction;
   dictionary->dictionaryCompareUserData = dictionaryCompareUserData;
@@ -548,6 +563,8 @@ void Dictionary_done(Dictionary             *dictionary,
 
   for (z = 0; z < dictionary->entryTableCount; z++)
   {
+    assert(dictionary->entryTables[z].entries != NULL);
+
     for (index = 0; index < TABLE_SIZES[dictionary->entryTables[z].sizeIndex]; index++)
     {
       if (dictionary->entryTables[z].entries[index].data != NULL)
@@ -581,6 +598,8 @@ void Dictionary_clear(Dictionary             *dictionary,
 
   for (z = 0; z < dictionary->entryTableCount; z++)
   {
+    assert(dictionary->entryTables[z].entries != NULL);
+
     for (index = 0; index < TABLE_SIZES[dictionary->entryTables[z].sizeIndex]; index++)
     {
       if (dictionary->entryTables[z].entries[index].data != NULL)
@@ -642,6 +661,9 @@ bool Dictionary_add(Dictionary *dictionary,
   /* update entry */
   if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&entryIndex))
   {
+    assert(dictionaryEntryTable->entries != NULL);
+
+    // allocate/resize data memory
     if (dictionaryEntryTable->entries[entryIndex].length != length)
     {
       newData = realloc(dictionaryEntryTable->entries[entryIndex].data,length);
@@ -652,45 +674,62 @@ bool Dictionary_add(Dictionary *dictionary,
       dictionaryEntryTable->entries[entryIndex].data   = newData;
       dictionaryEntryTable->entries[entryIndex].length = length;
     }
+
+    // copy data
     memcpy(dictionaryEntryTable->entries[entryIndex].data,data,length);
+
     return TRUE;
   }
 
   /* add entry in existing table */
   if (findFreeEntry(dictionary,hash,&dictionaryEntryTable,&entryIndex))
   {   
+    assert(dictionaryEntryTable->entries != NULL);
+
+    // allocate key memory
     dictionaryEntryTable->entries[entryIndex].keyData = malloc(keyLength);
     if (dictionaryEntryTable->entries[entryIndex].keyData == NULL)
     {
       return FALSE;
     }
+
+    // allocate data memory
     dictionaryEntryTable->entries[entryIndex].data = malloc(length);
     if (dictionaryEntryTable->entries[entryIndex].data == NULL)
     {
       free(dictionaryEntryTable->entries[entryIndex].keyData);
       return FALSE;
     }
+
+    // copy key data
     dictionaryEntryTable->entries[entryIndex].hash = hash;
     memcpy(dictionaryEntryTable->entries[entryIndex].keyData,keyData,keyLength);
     dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
+
+    // copy data
     memcpy(dictionaryEntryTable->entries[entryIndex].data,data,length);
     dictionaryEntryTable->entries[entryIndex].length = length;
+
     dictionaryEntryTable->entryCount++;
 
     return TRUE;
   }
 
-  /* find table which can be resized and new entry can be stored in extended table, store in extended table */
+  /* find a table which can be resized and where new entry can be
+     stored in extended table, store entry in extended table
+  */
   dictionaryEntryTable = NULL;
   z = 0;
   while ((z < dictionary->entryTableCount) && (dictionaryEntryTable == NULL))
   {
+    assert(dictionary->entryTables != NULL);
+
     tableIndex = (hash+z)%dictionary->entryTableCount;
     newSizeIndex = dictionary->entryTables[tableIndex].sizeIndex+1;
     while ((newSizeIndex < SIZE_OF_ARRAY(TABLE_SIZES)) && (dictionaryEntryTable == NULL))
     {
-      entryIndex = 0;
       #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_LINEAR_PROBING
+        entryIndex = 0;
         i = 0;
         while ((i < LINEAR_PROBING_COUNT) && (entryIndex < TABLE_SIZES[dictionary->entryTables[tableIndex].sizeIndex]))
         {
@@ -714,6 +753,7 @@ bool Dictionary_add(Dictionary *dictionary,
         }
       #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING */
       #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_REHASH
+        entryIndex = 0;
         i = 0;
         while ((i < REHASHING_COUNT) && (entryIndex < TABLE_SIZES[dictionary->entryTables[tableIndex].sizeIndex]))
         {
@@ -723,6 +763,7 @@ bool Dictionary_add(Dictionary *dictionary,
       #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_REHASH */
       if (entryIndex >= TABLE_SIZES[dictionary->entryTables[tableIndex].sizeIndex])
       {
+//fprintf(stderr,"%s,%d: vor grow %p\n",__FILE__,__LINE__,dictionary->entryTables[tableIndex].entries);
         newEntries = growTable(dictionary->entryTables[tableIndex].entries,
                                TABLE_SIZES[dictionary->entryTables[tableIndex].sizeIndex],
                                TABLE_SIZES[newSizeIndex]
@@ -734,6 +775,7 @@ bool Dictionary_add(Dictionary *dictionary,
 
           dictionaryEntryTable = &dictionary->entryTables[tableIndex];
         }
+//fprintf(stderr,"%s,%d: nach grow %p\n",__FILE__,__LINE__,dictionary->entryTables[tableIndex].entries);
       }
       newSizeIndex++;
     }
@@ -741,22 +783,32 @@ bool Dictionary_add(Dictionary *dictionary,
   }
   if (dictionaryEntryTable != NULL)
   {   
+    assert(dictionaryEntryTable->entries != NULL);
+
+    // allocate key memory
     dictionaryEntryTable->entries[entryIndex].keyData = malloc(keyLength);
     if (dictionaryEntryTable->entries[entryIndex].keyData == NULL)
     {
       return FALSE;
     }
+
+    // allocate data memory
     dictionaryEntryTable->entries[entryIndex].data = malloc(length);
     if (dictionaryEntryTable->entries[entryIndex].data == NULL)
     {
       free(dictionaryEntryTable->entries[entryIndex].keyData);
       return FALSE;
     }
+
+    // clopy key data
     dictionaryEntryTable->entries[entryIndex].hash = hash;
     memcpy(dictionaryEntryTable->entries[entryIndex].keyData,keyData,keyLength);
     dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
+
+    // copy data
     memcpy(dictionaryEntryTable->entries[entryIndex].data,data,length);
     dictionaryEntryTable->entries[entryIndex].length = length;
+
     dictionaryEntryTable->entryCount++;
 
     return TRUE;
@@ -771,6 +823,7 @@ bool Dictionary_add(Dictionary *dictionary,
   entryTables = (DictionaryEntryTable*)realloc(dictionary->entryTables,(dictionary->entryTableCount+1)*sizeof(DictionaryEntryTable));
   if (entryTables == NULL)
   {
+    free(newEntries);
     return FALSE;
   }
   entryTables[dictionary->entryTableCount].entries    = newEntries;
@@ -820,6 +873,7 @@ void Dictionary_rem(Dictionary             *dictionary,
   /* remove entry */
   if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&index))
   {
+    assert(dictionaryEntryTable->entries != NULL);
     assert(dictionaryEntryTable->entryCount > 0);
 
     if (dictionaryFreeFunction != NULL)
@@ -831,7 +885,12 @@ void Dictionary_rem(Dictionary             *dictionary,
     }
     free(dictionaryEntryTable->entries[index].data);
     free(dictionaryEntryTable->entries[index].keyData);
-    dictionaryEntryTable->entries[index].data = NULL;
+
+    dictionaryEntryTable->entries[index].data      = NULL;
+    dictionaryEntryTable->entries[index].length    = 0;
+    dictionaryEntryTable->entries[index].keyData   = NULL;
+    dictionaryEntryTable->entries[index].keyLength = 0;
+
     dictionaryEntryTable->entryCount--;
   }
 }
@@ -853,6 +912,8 @@ bool Dictionary_find(Dictionary *dictionary,
 
   if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&index))
   {
+    assert(dictionaryEntryTable->entries != NULL);
+
     if (data   != NULL) (*data)   = dictionaryEntryTable->entries[index].data;
     if (length != NULL) (*length) = dictionaryEntryTable->entries[index].length;
     return TRUE;
@@ -912,9 +973,12 @@ bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
   foundFlag = FALSE;
   if (dictionaryIterator->i < dictionaryIterator->dictionary->entryTableCount)
   {
+    assert(dictionaryIterator->dictionary->entryTables != NULL);
+
     do
     {
       /* get entry */
+      assert(dictionaryIterator->dictionary->entryTables[dictionaryIterator->i].entries != NULL);
       dictionaryEntry = &dictionaryIterator->dictionary->entryTables[dictionaryIterator->i].entries[dictionaryIterator->j];
 
       /* check if used/empty */

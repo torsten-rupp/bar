@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -38,10 +38,23 @@
 
 /***************************** Datatypes *******************************/
 
+/* storage modes */
+typedef enum
+{
+  STORAGE_REQUEST_VOLUME_NONE,
+
+  STORAGE_REQUEST_VOLUME_OK,
+  STORAGE_REQUEST_VOLUME_FAIL,
+  STORAGE_REQUEST_VOLUME_UNLOAD,
+  STORAGE_REQUEST_VOLUME_ABORTED,
+
+  STORAGE_REQUEST_VOLUME_UNKNOWN,
+} StorageRequestResults;
+
 /* request new volume call-back */
-typedef bool(*StorageRequestVolumeFunction)(void *userData,
-                                            uint volumeNumber
-                                           );
+typedef StorageRequestResults(*StorageRequestVolumeFunction)(void *userData,
+                                                             uint volumeNumber
+                                                            );
 
 /* status info data */
 typedef struct
@@ -185,7 +198,6 @@ typedef struct
     // dvd storage
     struct
     {
-//      DVD        dvd;                                  // device
       String     name;                                 // device name
       uint       steps;                                // total number of steps to create dvd
       String     directory;                            // temporary directory for dvd files
@@ -303,13 +315,13 @@ void Storage_doneAll(void);
 * Output : storageSpecifier - storage specific data (can be NULL)
 * Return : storage type
 * Notes  : storage types support:
-*            ftp:
-*            ssh:
-*            scp:
-*            sftp:
-*            dvd:
-*            device:
-*            file:
+*            ftp://
+*            ssh://
+*            scp://
+*            sftp://
+*            dvd://
+*            device://
+*            file://
 *            plain file name
 \***********************************************************************/
 
@@ -366,7 +378,7 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
                               );
 
 /***********************************************************************\
-* Name   : Storage_parseDevicepecifier
+* Name   : Storage_parseDeviceSpecifier
 * Purpose: parse device specifier:
 *            [//<device name>/]<file name>
 * Input  : deviceSpecifier   - device specifier string
@@ -500,6 +512,17 @@ uint Storage_getVolumeNumber(const StorageFileHandle *storageFileHandle);
 void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
                              uint              volumeNumber
                             );
+
+/***********************************************************************\
+* Name   : Storage_unloadVolume
+* Purpose: unload volume
+* Input  : storageFileHandle - storage file handle
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle);
 
 /***********************************************************************\
 * Name   : Storage_create

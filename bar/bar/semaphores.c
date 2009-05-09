@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/semaphores.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -231,6 +231,7 @@ LOCAL void waitModified(Semaphore *semaphore)
         // signal that read-lock count become 0
         SIGNAL(DEBUG_READ,"READ0 (wait)",&semaphore->readLockZero);
       }
+      SIGNAL(DEBUG_READ_WRITE,"MODIFIED",&semaphore->modified);
 
       // wait for modification
       WAIT(DEBUG_READ,"MODIFIED",&semaphore->modified,&semaphore->lock); 
@@ -255,6 +256,7 @@ LOCAL void waitModified(Semaphore *semaphore)
       assert(semaphore->writeLockCount > 0);
       semaphore->writeLockCount--;
       semaphore->lockType = SEMAPHORE_LOCK_TYPE_NONE;
+      SIGNAL(DEBUG_READ_WRITE,"MODIFIED",&semaphore->modified);
 
       // wait for modification
       WAIT(DEBUG_READ_WRITE,"MODIFIED",&semaphore->modified,&semaphore->lock);

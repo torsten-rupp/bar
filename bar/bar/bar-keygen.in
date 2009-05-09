@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # $Author: torsten $
 # Contents: generate BAR server keys (PEM files)
 # Systems: Unix
@@ -315,13 +315,13 @@ done
 ## exit $EXITCODE_INVALID_ARGUMENT
 
 # check keytools
-$CERTTOOL --help 1>/dev/null
+$CERTTOOL --help 1>/dev/null 2>/dev/null
 if test $? -ne 127; then
   CERTTOOL_OK=1
 else
   CERTTOOL_OK=0
 fi
-$OPENSSL version 1>/dev/null
+$OPENSSL version 1>/dev/null 2>/dev/null
 if test $? -ne 127; then
   OPENSSL_OK=1
 else

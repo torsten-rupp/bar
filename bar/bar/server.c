@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -101,6 +101,7 @@ typedef struct JobNode
   bool         requestedAbortFlag;             // request abort
   uint         requestedVolumeNumber;          // requested volume number
   uint         volumeNumber;                   // loaded volume number
+  bool         volumeUnloadFlag;               // TRUE to unload volume
 
   /* running info */
   struct
@@ -128,6 +129,7 @@ typedef struct JobNode
     uint64            storageTotalBytes;              // current storage file bytes total
     uint              volumeNumber;                   // current volume number
     double            volumeProgress;                 // current volume progress
+    String            message;                        // message text
   } runningInfo;
 } JobNode;
 
@@ -304,7 +306,7 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
 {
-  {"none",      CRYPT_ALGORITHM_NONE,     },
+  {"none",CRYPT_ALGORITHM_NONE},
 
   #ifdef HAVE_GCRYPT
     {"3DES",      CRYPT_ALGORITHM_3DES      },
@@ -320,6 +322,8 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] =
 {
+  {"none",CRYPT_TYPE_NONE},
+
   #ifdef HAVE_GCRYPT
     {"symmetric", CRYPT_TYPE_SYMMETRIC },
     {"asymmetric",CRYPT_TYPE_ASYMMETRIC},
@@ -364,11 +368,12 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",        JobNode,jobOptions.sshServer.privateKeyFileName),
 
   CONFIG_STRUCT_VALUE_INTEGER64("volume-size",            JobNode,jobOptions.device.volumeSize,          0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",      JobNode,jobOptions.waitFirstVolumeFlag         ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                    JobNode,jobOptions.errorCorrectionCodesFlag    ),
 
   CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",        JobNode,jobOptions.skipUnreadableFlag          ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files",JobNode,jobOptions.overwriteArchiveFilesFlag   ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",        JobNode,jobOptions.overwriteFilesFlag          ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                    JobNode,jobOptions.errorCorrectionCodesFlag    ),
 
   CONFIG_STRUCT_VALUE_SPECIAL  ("include",                JobNode,includePatternList,                    configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                    configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
@@ -481,6 +486,7 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
 
   String_clear(jobNode->runningInfo.fileName   );
   String_clear(jobNode->runningInfo.storageName);
+  String_clear(jobNode->runningInfo.message    );
 
   Misc_performanceFilterClear(&jobNode->runningInfo.filesPerSecond       );
   Misc_performanceFilterClear(&jobNode->runningInfo.bytesPerSecond       );
@@ -533,9 +539,11 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   jobNode->requestedAbortFlag             = FALSE;
   jobNode->requestedVolumeNumber          = 0;
   jobNode->volumeNumber                   = 0;
+  jobNode->volumeUnloadFlag               = FALSE;
 
   jobNode->runningInfo.fileName           = String_new();
   jobNode->runningInfo.storageName        = String_new();
+  jobNode->runningInfo.message            = String_new();
 
   Misc_performanceFilterInit(&jobNode->runningInfo.filesPerSecond,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecond,       10*60);
@@ -559,6 +567,7 @@ LOCAL void freeJobNode(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
+  String_delete(jobNode->runningInfo.message);
   String_delete(jobNode->runningInfo.fileName);
   String_delete(jobNode->runningInfo.storageName);
   Misc_performanceFilterDone(&jobNode->runningInfo.storageBytesPerSecond);
@@ -814,7 +823,6 @@ LOCAL bool readJobFile(JobNode *jobNode)
     /* parse line */
     if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-//      String_unquote(String_trim(String_sub(value,line,nextIndex,STRING_END),STRING_WHITE_SPACES),STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
                              CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
@@ -1085,8 +1093,6 @@ LOCAL Errors updateJobFile(JobNode *jobNode)
     }
     ConfigValue_formatDone(&configValueFormat);
   }
-//StringList_print(&jobFileList);
-//  return ERROR_NONE;
 
   /* write file */
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPENMODE_CREATE);
@@ -1292,14 +1298,16 @@ filesPerSecond,bytesPerSecond,estimatedRestTime);
 * Input  : jobNode      - job node
 *          volumeNumber - volume number
 * Output : -
-* Return : TRUE if volume loaded, FALSE otherwise
+* Return : request result; see StorageRequestResults
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool storageRequestVolume(JobNode *jobNode,
-                                uint    volumeNumber
-                               )
+LOCAL StorageRequestResults storageRequestVolume(JobNode *jobNode,
+                                                 uint    volumeNumber
+                                                )
 {
+  StorageRequestResults storageRequestResult;
+
   assert(jobNode != NULL);
 
   /* lock */
@@ -1309,23 +1317,38 @@ LOCAL bool storageRequestVolume(JobNode *jobNode,
 
   /* request volume */
   jobNode->requestedVolumeNumber = volumeNumber;
+  String_format(String_clear(jobNode->runningInfo.message),"Please insert DVD #%d",volumeNumber);
 
   /* wait until volume is available or job is aborted */
   assert(jobNode->state == JOB_STATE_RUNNING);
   jobNode->state = JOB_STATE_REQUEST_VOLUME;
+
+  storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
   do
   {
     Semaphore_waitModified(&jobList.lock);
+
+    if      (jobNode->volumeUnloadFlag)
+    {
+      storageRequestResult = STORAGE_REQUEST_VOLUME_UNLOAD;
+      jobNode->volumeUnloadFlag = FALSE;
+    }
+    else if (jobNode->volumeNumber == jobNode->requestedVolumeNumber)
+    {
+      storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+    }
+    else if (jobNode->requestedAbortFlag)
+    {
+      storageRequestResult = STORAGE_REQUEST_VOLUME_ABORTED;
+    }
   }
-  while (   !jobNode->requestedAbortFlag
-         && (jobNode->volumeNumber != jobNode->requestedVolumeNumber)
-        );
+  while (storageRequestResult == STORAGE_REQUEST_VOLUME_NONE);
   jobNode->state = JOB_STATE_RUNNING;
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
 
-  return (jobNode->volumeNumber == jobNode->requestedVolumeNumber);
+  return storageRequestResult;
 }
 
 /***********************************************************************\
@@ -2015,7 +2038,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const String arg
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get id */
+  /* get job id */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id");
@@ -2487,13 +2510,14 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
 
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  uint    jobId;
-  JobNode *jobNode;
+  uint       jobId;
+  JobNode    *jobNode;
+  const char *message;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get id */
+  /* get job id */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
@@ -2514,10 +2538,22 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   /* format result */
   if (jobNode != NULL)
   {
+    if      (jobNode->runningInfo.error != ERROR_NONE)
+    {
+      message = Errors_getText(jobNode->runningInfo.error);
+    }
+    else if (CHECK_JOB_IS_RUNNING(jobNode) && !String_empty(jobNode->runningInfo.message))
+    {
+      message = String_cString(jobNode->runningInfo.message);
+    }
+    else
+    {
+      message = "";
+    }
     sendResult(clientInfo,id,TRUE,0,
                "%'s %'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %f %d",
                getJobStateText(jobNode->state),
-               (jobNode->runningInfo.error != ERROR_NONE)?Errors_getText(jobNode->runningInfo.error):"",
+               message,
                jobNode->runningInfo.doneFiles,
                jobNode->runningInfo.doneBytes,
                jobNode->runningInfo.totalFiles,
@@ -2621,7 +2657,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get id */
+  /* get job id */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
@@ -2683,7 +2719,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get id */
+  /* get job id */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
@@ -2737,7 +2773,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get id */
+  /* get job id */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
@@ -2796,7 +2832,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get id */
+  /* get job id */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
@@ -3474,7 +3510,7 @@ LOCAL void serverCommand_passwordAdd(ClientInfo *clientInfo, uint id, const Stri
   Password_done(&password);
 }
 
-LOCAL void serverCommand_volume(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint    jobId;
   uint    volumeNumber;
@@ -3483,7 +3519,7 @@ LOCAL void serverCommand_volume(ClientInfo *clientInfo, uint id, const String ar
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get id */
+  /* get job id */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
@@ -3512,6 +3548,46 @@ LOCAL void serverCommand_volume(ClientInfo *clientInfo, uint id, const String ar
   if (jobNode != NULL)
   {
     jobNode->volumeNumber = volumeNumber;
+    sendResult(clientInfo,id,TRUE,0,"");
+  }
+  else
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+  }
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+}
+
+LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = jobList.head;
+  while ((jobNode != NULL) && (jobNode->id != jobId))
+  {
+    jobNode = jobNode->next;
+  }
+
+  if (jobNode != NULL)
+  {
+    jobNode->volumeUnloadFlag = TRUE;
     sendResult(clientInfo,id,TRUE,0,"");
   }
   else
@@ -3877,7 +3953,8 @@ SERVER_COMMANDS[] =
   { "OPTION_GET",            "s",   serverCommand_optionGet,           AUTHORIZATION_STATE_OK      },
   { "OPTION_SET",            "s S", serverCommand_optionSet,           AUTHORIZATION_STATE_OK      },
   { "OPTION_DELETE",         "s S", serverCommand_optionDelete,        AUTHORIZATION_STATE_OK      },
-  { "VOLUME",                "S i", serverCommand_volume,              AUTHORIZATION_STATE_OK      },
+  { "VOLUME_LOAD",           "i i", serverCommand_volumeLoad,          AUTHORIZATION_STATE_OK      },
+  { "VOLUME_UNLOAD",         "",    serverCommand_volumeUnload,        AUTHORIZATION_STATE_OK      },
   { "ARCHIVE_LIST",          "S S", serverCommand_archiveList,         AUTHORIZATION_STATE_OK      },
   { "RESTORE",               "S S", serverCommand_restore,             AUTHORIZATION_STATE_OK      },
   #ifndef NDEBUG
@@ -3953,7 +4030,7 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
   /* initialize tokenizer */
   String_initTokenizer(&stringTokenizer,string,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,TRUE);
 
-  /* get id */
+  /* get command id */
   if (!String_getNextToken(&stringTokenizer,&token,NULL))
   {
     String_doneTokenizer(&stringTokenizer);

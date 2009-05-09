@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/dictionaries.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: hash table functions
 * Systems: all
@@ -27,26 +27,29 @@
 /* dictionary compare function */
 typedef int(*DictionaryCompareFunction)(void *userData, const void *data0, const void *data1, ulong length);
 
+// dictionary entry
 typedef struct
 {
-  ulong hash;
+  ulong hash;                                // hash code
   void  *keyData;                            // key data
   ulong keyLength;                           // length of key data
   void  *data;                               // data of entry
   ulong length;                              // length of data in entry
 } DictionaryEntry;
 
+// table with dictionary entries
 typedef struct
 {
-  DictionaryEntry *entries;
-  uint            sizeIndex; 
-  uint            entryCount;
+  DictionaryEntry *entries;                              // entries array
+  uint            sizeIndex;                             // array size index (see TABLE_SIZES)
+  uint            entryCount;                            // number of entries in array
 } DictionaryEntryTable;
 
+// dictionary
 typedef struct
 {
-  DictionaryEntryTable      *entryTables;
-  uint                      entryTableCount;
+  DictionaryEntryTable      *entryTables;                // tables array
+  uint                      entryTableCount;             // number of tables
   DictionaryCompareFunction dictionaryCompareFunction;
   void                      *dictionaryCompareUserData;
 } Dictionary;

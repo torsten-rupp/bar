@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -548,6 +548,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("device-write-command",         &currentDevice,offsetof(Device,writeCommand)            ),
 
   CONFIG_VALUE_BOOLEAN  ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                 ),
+  CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                      ),
 
   CONFIG_VALUE_SET      ("log",                          &logTypes,-1,                                           CONFIG_VALUE_LOG_TYPES),
   CONFIG_VALUE_CSTRING  ("log-file",                     &logFileName,-1                                         ),
@@ -558,7 +559,6 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_BOOLEAN  ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                       ),
   CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",      &jobOptions.overwriteArchiveFilesFlag,-1                ),
   CONFIG_VALUE_BOOLEAN  ("overwrite-files",              &jobOptions.overwriteFilesFlag,-1                       ),
-  CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                      ),
   CONFIG_VALUE_BOOLEAN  ("no-bar-on-dvd",                &jobOptions.noBAROnDVDFlag,-1                           ),
   CONFIG_VALUE_BOOLEAN  ("quiet",                        &globalOptions.quietFlag,-1                             ),
   CONFIG_VALUE_INTEGER  ("verbose",                      &globalOptions.verboseLevel,-1,                         0,3,NULL),
@@ -2011,14 +2011,25 @@ ScheduleNode *parseSchedule(const String s)
   {
     errorFlag = TRUE;
   }
+//fprintf(stderr,"%s,%d: s=%s b=%p\n",__FILE__,__LINE__,String_cString(s),&b);
   if (String_parse(s,nextIndex,"%y",&nextIndex,&b))
   {
+/* It seems gcc has a bug in option -fno-schedule-insns2: if -O2 is used this
+   option is enabled. Then either the program crashes with a SigSegV or parsing
+   boolean values here fail. It seems the address of 'b' is not received in the
+   function. Because this problem disappear when -fno-schedule-insns2 is given
+   it looks like the gcc do some rearrangements in the generated machine code
+   which is not valid anymore. How can this be tracked down? Is this problem
+   known?
+*/
+if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string value fail - C compiler bug?");
     scheduleNode->enabled = b;
   }
   else
   {
     errorFlag = TRUE;
   }
+//fprintf(stderr,"%s,%d: scheduleNode->enabled=%d %p\n",__FILE__,__LINE__,scheduleNode->enabled,&b);
   if (nextIndex != STRING_END)
   {
     if (String_parse(s,nextIndex,"%S",&nextIndex,s0))

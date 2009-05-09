@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -2620,7 +2620,10 @@ Errors Command_create(const char                   *storageName,
   Storage_done(&createInfo.storageFileHandle);
 
   /* write incremental list */
-  if (storeIncrementalFileInfoFlag && (createInfo.failError == ERROR_NONE))
+  if (   storeIncrementalFileInfoFlag
+      && (createInfo.failError == ERROR_NONE)
+      && ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
+     )
   {
     printInfo(1,"Write incremental list '%s'...",String_cString(incrementalListFileName));
     error = writeIncrementalList(incrementalListFileName,

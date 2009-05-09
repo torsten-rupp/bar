@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -22,6 +22,7 @@
 #include "patternlists.h"
 #include "compress.h"
 #include "crypt.h"
+#include "storage.h"
 
 /****************** Conditional compilation switches *******************/
 

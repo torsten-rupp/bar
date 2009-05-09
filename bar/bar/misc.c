@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -21,6 +21,7 @@
 #include <time.h>
 #include <sys/ioctl.h>
 #include <termios.h>
+#include <errno.h>
 #include <assert.h>
 
 #include "global.h"
@@ -464,16 +465,18 @@ stringNode = stringNode->next;
     /* create i/o pipes */
     if (pipe(pipeStdin) != 0)
     {
+      error = ERRORX(EXEC_FAIL,errno,String_cString(commandLine));
       printError("Execute extern command '%s' fail!\n",
                  String_cString(command)
                 );
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(commandLine);
-      return ERROR_EXEC_FAIL;
+      return error;
     }
     if (pipe(pipeStdout) != 0)
     {
+      error = ERRORX(EXEC_FAIL,errno,String_cString(commandLine));
       printError("Execute extern command '%s' fail!\n",
                  String_cString(command)
                 );
@@ -482,10 +485,11 @@ stringNode = stringNode->next;
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(commandLine);
-      return ERROR_EXEC_FAIL;
+      return error;
     }
     if (pipe(pipeStderr) != 0)
     {
+      error = ERRORX(EXEC_FAIL,errno,String_cString(commandLine));
       printError("Execute extern command '%s' fail!\n",
                  String_cString(command)
                 );
@@ -496,7 +500,7 @@ stringNode = stringNode->next;
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(commandLine);
-      return ERROR_EXEC_FAIL;
+      return error;
     }
 
     /* do fork to start separated process */
@@ -536,6 +540,7 @@ stringNode = stringNode->next;
       {
         assert(z < n);
         arguments[z] = String_cString(stringNode->string); z++;
+//fprintf(stderr,"%s,%d: arg %d=%s\n",__FILE__,__LINE__,z,arguments[z]);
         stringNode = stringNode->next;
       }
       assert(z < n);
@@ -548,6 +553,7 @@ HALT_INTERNAL_ERROR("not reachable");
     }
     else if (pid < 0)
     {
+      error = ERRORX(EXEC_FAIL,errno,String_cString(commandLine));
       printInfo(3,"FAIL!\n");
       printError("Execute extern command '%s' fail!\n",
                  String_cString(command)
@@ -562,7 +568,7 @@ HALT_INTERNAL_ERROR("not reachable");
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(commandLine);
-      return ERROR_EXEC_FAIL;
+      return error;
     }
 
     /* close unused pipe handles (the pipe is duplicated by fork(), thus there are two open ends of the pipe) */
@@ -619,28 +625,30 @@ error = ERROR_NONE;
       printInfo(3,"ok (exitcode %d)\n",exitcode);
       if (exitcode != 0)
       {
+        error = ERRORX(EXEC_FAIL,exitcode,String_cString(commandLine));
         printError("Execute external command '%s' fail (exitcode: %d)!\n",
-                   String_cString(command),
+                   String_cString(commandLine),
                    exitcode
                   );
         StringList_done(&argumentList);
         String_delete(command);
         String_delete(commandLine);
-        return ERROR(EXEC_FAIL,exitcode);
+        return error;
       }
     }
     else if (WIFSIGNALED(status))
     {
       terminateSignal = WTERMSIG(status);
+      error = ERRORX(EXEC_FAIL,terminateSignal,String_cString(commandLine));
       printInfo(3,"FAIL (signal %d)\n",terminateSignal);
       printError("Execute external command '%s' fail (signal: %d)!\n",
-                 String_cString(command),
+                 String_cString(commandLine),
                  terminateSignal
                 );
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(commandLine);
-      return ERROR(EXEC_FAIL,terminateSignal);
+      return error;
     }
     else
     {

@@ -1,19 +1,23 @@
-#***********************************************************************
-#
-# $Source: /home/torsten/cvs/bar/errors.def,v $
-# $Revision: 1.20 $
-# $Author: torsten $
-# Contents: Backup ARchiver errors definition
-# Systems: all
-#
-#***********************************************************************
+//***********************************************************************
+//
+// $Source: /home/torsten/cvs/bar/errors.def,v $
+// $Revision: 1.21 $
+// $Author: torsten $
+// Contents: Backup ARchiver errors definition
+// Systems: all
+//
+//***********************************************************************
 
+INCLUDE "config.h"
+
+#ifdef HAVE_LIBSSH2
 INCLUDE "libssh2.h"
+#endif
 
 NONE    "none"
 DEFAULT "unknown"
 
-# general
+// general
 ERROR INSUFFICIENT_MEMORY            "insufficient memory"
 ERROR INIT                           "init fail"
 ERROR INVALID_ARGUMENT               "invalid argument"
@@ -23,10 +27,10 @@ ERROR FUNCTION_NOT_SUPPORTED         "function not supported"
 ERROR STILL_NOT_IMPLEMENTED          "function still not implemented"
 ERROR DAEMON_FAIL                    "run as daemon fail"
 
-# patterns
+// patterns
 ERROR INVALID_PATTERN                "init pattern matching"
 
-# TLS/SSL
+// TLS/SSL
 ERROR INIT_TLS                       "init TLS (SSL) fail"
 ERROR NO_TLS_CA                      "no TLS (SSL) certificate authority file 'bar-ca.pem'"
 ERROR NO_TLS_CERTIFICATE             "no TLS (SSL) certificate file 'bar-server-cert.pem'"
@@ -41,35 +45,35 @@ ERROR SSH_SESSION_FAIL               "initialize SSH session fail"
 ERROR SSH_AUTHENTIFICATION           "SSH authentification fail"
 ERROR SSH                            ERROR_TEXT
 
-#  switch (ERRNO)
-#  {
-#    case LIBSSH2_ERROR_SCP_PROTOCOL: 
-#      strncpy(errorText,"ssh protocol error",sizeof(errorText));
-#      break;
-#    default:
-#      snprintf(errorText,sizeof(errorText),"unknown ssh error (code %d)",(int)ERRNO);
-#      break;
-#  }
+//  switch (ERRNO)
+//  {
+//    case LIBSSH2_ERROR_SCP_PROTOCOL: 
+//      strncpy(errorText,"ssh protocol error",sizeof(errorText));
+//      break;
+//    default:
+//      snprintf(errorText,sizeof(errorText),"unknown ssh error (code %d)",(int)ERRNO);
+//      break;
+//  }
 
-# FTP
+// FTP
 ERROR INVALID_FTP_SPECIFIER          "invalid FTP specifier"
 ERROR FTP_SESSION_FAIL               "initialize FTP session fail"
 ERROR NO_FTP_PASSWORD                "no FTP password given"
 ERROR INVALID_FTP_PASSWORD           "invalid FTP password"
 ERROR FTP_AUTHENTIFICATION           "invalid FTP user/password"
-#ERROR FTP_CREATE                     "create FTP file fail"
-#ERROR FTP_READ                       "read FTP file fail"
-#ERROR FTP_WRITE                      "write FTP file fail"
-#ERROR FTP_DELETE                     "delete FTP file fail"
+//ERROR FTP_CREATE                     "create FTP file fail"
+//ERROR FTP_READ                       "read FTP file fail"
+//ERROR FTP_WRITE                      "write FTP file fail"
+//ERROR FTP_DELETE                     "delete FTP file fail"
 
-# compress
+// compress
 ERROR INIT_COMPRESS                  "init compress fail"
 ERROR COMPRESS_ERROR                 "compress fail"
 ERROR DEFLATE_ERROR                  "deflate fail"
 ERROR INFLATE_ERROR                  "inflate fail"
 ERROR COMPRESS_EOF                   "end of compressed file"
 
-# crypt
+// crypt
 ERROR UNSUPPORTED_BLOCK_SIZE         "unsupported block size"
 ERROR INIT_CRYPT                     "init crypt fail"
 ERROR NO_CRYPT_PASSWORD              "no password given for cipher"
@@ -90,7 +94,7 @@ ERROR KEY_ENCRYPT_FAIL               "key encryption fail"
 ERROR KEY_DECRYPT_FAIL               "key decryption fail"
 ERROR WRONG_PRIVATE_KEY              "wrong private key"
 
-# file i/o
+// file i/o
 ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
@@ -110,7 +114,7 @@ ERROR PARSE_DEVICE_LIST              "error parsing device list"
 ERROR FILE_EXITS                     "file already exists"
 ERROR FILE_NOT_FOUND                 "file not found"
 
-# archive
+// archive
 ERROR END_OF_ARCHIVE                 "end of archive"
 ERROR NO_FILE_ENTRY                  "no file entry"
 ERROR NO_FILE_DATA                   "no data entry"
@@ -124,12 +128,12 @@ ERROR WRONG_FILE_TYPE                "wrong file type"
 ERROR FILES_DIFFER                   "files differ"
 ERROR CORRUPT_DATA                   "corrupt data or invalid password"
 
-# incremental files
+// incremental files
 ERROR NOT_AN_INCREMENTAL_FILE        "invalid incremental file"
 ERROR WRONG_INCREMENTAL_FILE_VERSION "wrong incremental file version"
 ERROR CORRUPT_INCREMENTAL_FILE       "corrupt incremental file"
 
-# network
+// network
 ERROR HOST_NOT_FOUND                 "host not found"
 ERROR CONNECT_FAIL
   strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
@@ -147,15 +151,21 @@ ERROR NETWORK_EXECUTE_FAIL           "execute command fail"
 ERROR NO_RESPONSE                    "no response from remote program"
 ERROR INVALID_RESPONSE               "invalid response from remote program"
 
-# device
+// device
 ERROR INVALID_DEVICE_SPECIFIER       "invalid device specifier"
 ERROR LOAD_VOLUME_FAIL               "load volume fail"
 
-# exec
+// exec
 ERROR FORK_FAIL                      "fork for execute external program fail"
-ERROR EXEC_FAIL                      "execute external program fail"
+ERROR EXEC_FAIL
+  strncpy(errorText,"execute external program fail",sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
 
-# BARControl protocol
+// BARControl protocol
 ERROR PARSING                        "error parsing data"
 ERROR EXPECTED_PARAMETER             "expected parameter"
 ERROR UNKNOWN_VALUE                  "unknown value"
@@ -163,4 +173,4 @@ ERROR AUTHORIZATION                  "authorization error"
 ERROR JOB_NOT_FOUND                  "job not found"
 ERROR JOB                            "job error"
 
-# end of file
+// end of file

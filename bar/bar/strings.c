@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1431,11 +1431,13 @@ LOCAL bool parseString(const struct __String *string,
               index++;
             }
             buffer[z] = '\0';
+//fprintf(stderr,"%s,%d: buffer=%s\n",__FILE__,__LINE__,buffer);
 
             /* convert */
             if (z > 0)
             {
               value.b = va_arg(arguments,bool*);
+//fprintf(stderr,"%s,%d: %p %d %d\n",__FILE__,__LINE__,value.b,sizeof(*value.b),*value.b);
               foundFlag = FALSE;
               z = 0;
               while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS)))
@@ -1457,6 +1459,7 @@ LOCAL bool parseString(const struct __String *string,
                 }
                 z++;
               }
+//if ((*value.b != 0) && (*value.b != 1)) HALT(1,"x");
 
               if (!foundFlag)
               {

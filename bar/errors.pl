@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all
@@ -254,7 +254,7 @@ while ($line=<STDIN>)
 {
   chop $line;
   $lineNb++;
-  if (($line =~ /^\s*$/) || ($line =~ /^\s*#/)) { next; }
+  if (($line =~ /^\s*$/) || ($line =~ /^\s*\/\//)) { next; }
 #print "$line\n";
 
   if    ($line =~ /^ERROR\s+(\w+)\s+"(.*)"\s*$/)
@@ -304,6 +304,10 @@ while ($line=<STDIN>)
   elsif ($line =~ /^DEFAULT\s+"(.*)"\s*$/)
   {
     $defaultText=$1;
+  }
+  elsif ($line =~ /^\s*#/)
+  {
+    writeCFile("$line\n");
   }
   else
   {
