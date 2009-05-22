@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -534,179 +534,134 @@ class ArchiveNameParts
     deviceName    = "";
     fileName      = "";
 
-    if       (archiveName.startsWith("ftp:"))
+    if       (archiveName.startsWith("ftp://"))
     {
       // ftp
       type = "ftp";
 
-      String specifier = archiveName.substring(4);
-      if (specifier.startsWith("//"))
+      String specifier = archiveName.substring(6);
+      Object[] data = new Object[2];
+      int index = 0;
+      if      (StringParser.parse(specifier.substring(index),"%s:%s@",data,StringParser.QUOTE_CHARS))
       {
-        Object[] data = new Object[2];
-
-        int index = 2;
-        if      (StringParser.parse(specifier.substring(index),"%s:%s@",data,StringParser.QUOTE_CHARS))
-        {
-          loginName     = (String)data[0];
-          loginPassword = (String)data[1];
-          index = specifier.indexOf('@')+1;
-        }
-        else if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
-        {
-          loginName = (String)data[0];
-          index = specifier.indexOf('@')+1;
-        }
-        if (StringParser.parse(specifier.substring(index),"%s/%s",data,StringParser.QUOTE_CHARS))
-        {
-          hostName = (String)data[0];
-          fileName = (String)data[1];
-        }
-        else
-        {
-          fileName = specifier;
-        }
+        loginName     = (String)data[0];
+        loginPassword = (String)data[1];
+        index = specifier.indexOf('@')+1;
+      }
+      else if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
+      {
+        loginName = (String)data[0];
+        index = specifier.indexOf('@')+1;
+      }
+      if (StringParser.parse(specifier.substring(index),"%s/%s",data,StringParser.QUOTE_CHARS))
+      {
+        hostName = (String)data[0];
+        fileName = (String)data[1];
       }
       else
       {
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("scp:"))
+    else if (archiveName.startsWith("scp://"))
     {
       // scp
       type = "scp";
 
-      String specifier = archiveName.substring(4);
-      if (specifier.startsWith("//"))
+      String specifier = archiveName.substring(6);
+      Object[] data = new Object[3];
+      int index = 0;
+      if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
       {
-        Object[] data = new Object[3];
-
-        int index = 2;
-        if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
-        {
-          loginName = (String)data[0];
-          index = specifier.indexOf('@')+1;
-        }
-        if      (StringParser.parse(specifier.substring(index),"%s:%d/%s",data,StringParser.QUOTE_CHARS))
-        {
-          hostName = (String)data[0];
-          hostPort = (Integer)data[1];
-          fileName = (String)data[2];
-        }
-        else if (StringParser.parse(specifier.substring(2),"%s/%s",data,StringParser.QUOTE_CHARS))
-        {
-          hostName = (String)data[0];
-          fileName = (String)data[1];
-        }
-        else
-        {
-          fileName = specifier;
-        }
+        loginName = (String)data[0];
+        index = specifier.indexOf('@')+1;
+      }
+      if      (StringParser.parse(specifier.substring(index),"%s:%d/%s",data,StringParser.QUOTE_CHARS))
+      {
+        hostName = (String)data[0];
+        hostPort = (Integer)data[1];
+        fileName = (String)data[2];
+      }
+      else if (StringParser.parse(specifier.substring(index),"%s/%s",data,StringParser.QUOTE_CHARS))
+      {
+        hostName = (String)data[0];
+        fileName = (String)data[1];
       }
       else
       {
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("sftp:"))
+    else if (archiveName.startsWith("sftp://"))
     {
       // sftp
       type = "sftp";
 
-      String specifier = archiveName.substring(5);
-      if (specifier.startsWith("//"))
+      String specifier = archiveName.substring(7);
+      Object[] data = new Object[3];
+      int index = 0;
+      if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
       {
-        Object[] data = new Object[3];
-
-        int index = 2;
-        if (StringParser.parse(specifier.substring(index),"%s@",data,StringParser.QUOTE_CHARS))
-        {
-          loginName = (String)data[0];
-          index = specifier.indexOf('@')+1;
-        }
-        if      (StringParser.parse(specifier.substring(index),"%s:%d/%s",data,StringParser.QUOTE_CHARS))
-        {
-          hostName = (String)data[0];
-          hostPort = (Integer)data[1];
-          fileName = (String)data[2];
-        }
-        else if (StringParser.parse(specifier.substring(2),"%s/%s",data,StringParser.QUOTE_CHARS))
-        {
-          hostName = (String)data[0];
-          fileName = (String)data[1];
-        }
-        else
-        {
-          fileName = specifier;
-        }
+        loginName = (String)data[0];
+        index = specifier.indexOf('@')+1;
+      }
+      if      (StringParser.parse(specifier.substring(index),"%s:%d/%s",data,StringParser.QUOTE_CHARS))
+      {
+        hostName = (String)data[0];
+        hostPort = (Integer)data[1];
+        fileName = (String)data[2];
+      }
+      else if (StringParser.parse(specifier.substring(index),"%s/%s",data,StringParser.QUOTE_CHARS))
+      {
+        hostName = (String)data[0];
+        fileName = (String)data[1];
       }
       else
       {
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("dvd:"))
+    else if (archiveName.startsWith("dvd://"))
     {
       // dvd
       type = "dvd";
 
-      String specifier = archiveName.substring(4);
-      if (specifier.startsWith("//"))
+      String specifier = archiveName.substring(6);
+      Object[] data = new Object[2];
+      if (StringParser.parse(specifier,"%S:%S",data,StringParser.QUOTE_CHARS))
       {
-        Object[] data = new Object[2];
-        if (StringParser.parse(specifier,"%s/%s",data,StringParser.QUOTE_CHARS))
-        {
-          deviceName = (String)data[0];
-          fileName = (String)data[1];
-        }
-        else
-        {
-          fileName = specifier;
-        }
+        deviceName = (String)data[0];
+        fileName   = (String)data[1];
       }
       else
       {
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("device:"))
+    else if (archiveName.startsWith("device://"))
     {
       // dvd
       type = "device";
 
-      String specifier = archiveName.substring(7);
-      if (specifier.startsWith("//"))
+      String specifier = archiveName.substring(9);
+      Object[] data = new Object[2];
+      if (StringParser.parse(specifier,"%S:%S",data,StringParser.QUOTE_CHARS))
       {
-        Object[] data = new Object[2];
-        if (StringParser.parse(specifier,"%s/%s",data,StringParser.QUOTE_CHARS))
-        {
-          deviceName = (String)data[0];
-          fileName   = (String)data[1];
-        }
-        else
-        {
-          fileName = specifier;
-        }
+        deviceName = (String)data[0];
+        fileName   = (String)data[1];
       }
       else
       {
         fileName = specifier;
       }
     }
-    else if (archiveName.startsWith("file:"))
+    else if (archiveName.startsWith("file://"))
     {
       // file
       type = "filesystem";
 
-      String specifier = archiveName.substring(5);
-      if (specifier.startsWith("//"))
-      {
-        fileName = specifier.substring(1);
-      }
-      else
-      {
-        fileName = specifier;
-      }
+      String specifier = archiveName.substring(7);
+      fileName = specifier.substring(2);
     }
     else
     {
@@ -727,10 +682,9 @@ class ArchiveNameParts
 
     if      (type.equals("ftp"))
     {
-      archiveNameBuffer.append("ftp:");
+      archiveNameBuffer.append("ftp://");
       if (!loginName.equals("") || !hostName.equals(""))
       {
-        archiveNameBuffer.append("//");
         if (!loginName.equals("") || !loginPassword.equals(""))
         {
           if (!loginName.equals("")) archiveNameBuffer.append(loginName);
@@ -743,10 +697,9 @@ class ArchiveNameParts
     }
     else if (type.equals("scp"))
     {
-      archiveNameBuffer.append("scp:");
+      archiveNameBuffer.append("scp://");
       if (!loginName.equals("") || !hostName.equals(""))
       {
-        archiveNameBuffer.append("//");
         if (!loginName.equals("")) { archiveNameBuffer.append(loginName); archiveNameBuffer.append('@'); }
         if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
         if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
@@ -755,10 +708,9 @@ class ArchiveNameParts
     }
     else if (type.equals("sftp"))
     {
-      archiveNameBuffer.append("sftp:");
+      archiveNameBuffer.append("sftp://");
       if (!loginName.equals("") || !hostName.equals(""))
       {
-        archiveNameBuffer.append("//");
         if (!loginName.equals("")) { archiveNameBuffer.append(loginName); archiveNameBuffer.append('@'); }
         if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
         if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
@@ -767,22 +719,20 @@ class ArchiveNameParts
     }
     else if (type.equals("dvd"))
     {
-      archiveNameBuffer.append("dvd:");
+      archiveNameBuffer.append("dvd://");
       if (!deviceName.equals(""))
       {
-        archiveNameBuffer.append("//");
-        if (!hostName.equals("")) { archiveNameBuffer.append(deviceName); }
-        archiveNameBuffer.append('/');
+        archiveNameBuffer.append(deviceName);
+        archiveNameBuffer.append(':');
       }
     }
     else if (type.equals("device"))
     {
-      archiveNameBuffer.append("device:");
+      archiveNameBuffer.append("device://");
       if (!deviceName.equals(""))
       {
-        archiveNameBuffer.append("//");
-        if (!hostName.equals("")) { archiveNameBuffer.append(deviceName); }
-        archiveNameBuffer.append('/');
+        archiveNameBuffer.append(deviceName);
+        archiveNameBuffer.append(':');
       }
     }
     archiveNameBuffer.append(fileName);
@@ -840,7 +790,7 @@ class Units
   }
 
   /** parse byte size string
-   * @param string string to parse
+   * @param string string to parse (<n>(%|B|M|MB|G|GB)
    * @return byte value
    */
   public static long parseByteSize(String string)
@@ -870,6 +820,10 @@ class Units
     else if (string.endsWith("K"))
     {
       return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024);
+    }
+    else if (string.endsWith("B"))
+    {
+      return (long)Double.parseDouble(string.substring(0,string.length()-1));
     }
     else
     {

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -964,7 +964,7 @@ l=x.depth;
   private BARVariable  archivePartSize         = new BARVariable(0);
   private BARVariable  compressAlgorithm       = new BARVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9"});
   private BARVariable  cryptAlgorithm          = new BARVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
-  private BARVariable  cryptType               = new BARVariable(new String[]{"","symmetric","asymmetric"});
+  private BARVariable  cryptType               = new BARVariable(new String[]{"none","symmetric","asymmetric"});
   private BARVariable  cryptPublicKeyFileName  = new BARVariable("");
   private BARVariable  incrementalListFileName = new BARVariable("");
   private BARVariable  storageType             = new BARVariable(new String[]{"filesystem","ftp","scp","sftp","dvd","device"});
@@ -981,6 +981,7 @@ l=x.depth;
   private BARVariable  maxBandWidth            = new BARVariable(0);
   private BARVariable  volumeSize              = new BARVariable(0);
   private BARVariable  ecc                     = new BARVariable(false);
+  private BARVariable  waitFirstVolume         = new BARVariable(false);
 
   // variables
   private     DirectoryInfoThread      directoryInfoThread;
@@ -2691,7 +2692,7 @@ throw new Error("NYI");
         // destination dvd
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,7,1,TableLayoutData.WE); //|TableLayoutData.N);
+        Widgets.layout(composite,7,1,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, BARVariable variable)
@@ -2835,7 +2836,7 @@ throw new Error("NYI");
           }
 
           label = Widgets.newLabel(composite,"Options:");
-          Widgets.layout(label,3,0,TableLayoutData.W);
+          Widgets.layout(label,3,0,TableLayoutData.NW);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(subComposite,3,1,TableLayoutData.WE);
           {
@@ -2855,6 +2856,23 @@ throw new Error("NYI");
               }
             });
             Widgets.addModifyListener(new WidgetListener(button,ecc));
+
+            button = Widgets.newCheckbox(subComposite,null,"wait for first volume");
+            Widgets.layout(button,1,0,TableLayoutData.W);
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button  widget      = (Button)selectionEvent.widget;
+                boolean checkedFlag = widget.getSelection();
+                waitFirstVolume.set(checkedFlag);
+                BARServer.setOption(selectedJobId,"wait-first-volume",checkedFlag);
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            Widgets.addModifyListener(new WidgetListener(button,waitFirstVolume));
           }
         }
 
@@ -3173,13 +3191,13 @@ throw new Error("NYI");
   {
     ArchiveNameParts archiveNameParts = new ArchiveNameParts(name);
 
-    storageType.set         (archiveNameParts.type);
-    storageLoginName.set    (archiveNameParts.loginName);
+    storageType.set         (archiveNameParts.type         );
+    storageLoginName.set    (archiveNameParts.loginName    );
     storageLoginPassword.set(archiveNameParts.loginPassword);
-    storageHostName.set     (archiveNameParts.hostName);
-    storageHostPort.set     (archiveNameParts.hostPort);
-    storageDeviceName.set   (archiveNameParts.deviceName);
-    storageFileName.set     (archiveNameParts.fileName);
+    storageHostName.set     (archiveNameParts.hostName     );
+    storageHostPort.set     (archiveNameParts.hostPort     );
+    storageDeviceName.set   (archiveNameParts.deviceName   );
+    storageFileName.set     (archiveNameParts.fileName     );
   }
 
   //-----------------------------------------------------------------------
@@ -3226,6 +3244,7 @@ throw new Error("NYI");
 */
       volumeSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"volume-size")));
       ecc.set(BARServer.getBooleanOption(selectedJobId,"ecc"));
+      waitFirstVolume.set(BARServer.getBooleanOption(selectedJobId,"wait-first-volume"));
 
       updatePatternList(PatternTypes.INCLUDE);
       updatePatternList(PatternTypes.EXCLUDE);
@@ -3811,7 +3830,7 @@ throw new Error("NYI");
     }
     else
     {
-Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTreeData.name,fileListResult,errorCode);
+//Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTreeData.name,fileListResult,errorCode);
        Dialogs.error(shell,"Cannot get file list (error: "+fileListResult.get(0)+")");
     }
 

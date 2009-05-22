@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Dialogs.java,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -608,7 +608,7 @@ class Dialogs
         button = new Button(composite,SWT.CENTER);
         button.setText(text);
         button.setData(n);
-        button.setLayoutData(new TableLayoutData(0,n,TableLayoutData.WE,0,0,0,0,textWidth,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,n,TableLayoutData.WE,0,0,0,0,textWidth+20,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)

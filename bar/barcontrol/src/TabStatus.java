@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -279,6 +279,7 @@ class TabStatus
   private BARVariable volumeProgress        = new BARVariable(0.0);
   private BARVariable totalFilesProgress    = new BARVariable(0.0);
   private BARVariable totalBytesProgress    = new BARVariable(0.0);
+  private BARVariable requestedVolumeNumber = new BARVariable(0);
   private BARVariable message               = new BARVariable("");
 
   // variables
@@ -751,6 +752,7 @@ class TabStatus
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
+          volume();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -899,10 +901,8 @@ class TabStatus
                  <lastExecutedDateTime>
                  <estimatedRestTime>
               */
-    //System.err.println("BARControl.java"+", "+1357+": "+line);
               if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
               {
-    //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[9]);
                 // get data
                 int    id                   = (Integer)data[0];
                 String name                 = (String )data[1];
@@ -1023,7 +1023,7 @@ class TabStatus
              filesPerSecond.set       ((Double)data[10]);
              bytesPerSecond.set       ((Double)data[11]);
              storageBytesPerSecond.set((Double)data[12]);
-    //         archiveBytes.set((Long)data[13]);
+//             archiveBytes.set((Long)data[13]);
              ratio.set                ((Double)data[14]);
 
              fileName.set             ((String)data[15]);
@@ -1031,14 +1031,15 @@ class TabStatus
              storageName.set          ((String)data[18]);
              storageProgress.set      (getProgress((Long)data[19],(Long)data[20]));
              volumeNumber.set         ((Long  )data[21]);
-             volumeProgress.set       ((Double)data[22]);
+             volumeProgress.set       ((Double)data[22]*100.0);
              totalFilesProgress.set   (getProgress((Long)data[ 2],(Long)data[ 4]));
              totalBytesProgress.set   (getProgress((Long)data[ 3],(Long)data[ 5]));
+             requestedVolumeNumber.set((Integer)data[23]);
              message.set              ((String)data[ 1]);
 
              widgetButtonStart.setEnabled(!state.equals("running") && !state.equals("waiting") && !state.equals("pause"));
-             widgetButtonAbort.setEnabled(state.equals("waiting") || state.equals("running"));
-    //         widgetButtonVolume.setEnabled(state.equals("running"));
+             widgetButtonAbort.setEnabled(state.equals("waiting") || state.equals("running")  || state.equals("request volume"));
+             widgetButtonVolume.setEnabled(state.equals("request volume"));
           }
           else { Dprintf.dprintf("unexecpted "+result[0]); }
         }
@@ -1098,6 +1099,26 @@ class TabStatus
     {
       case RUNNING: BARServer.executeCommand("PAUSE"   ); break;
       case PAUSE:   BARServer.executeCommand("CONTINUE"); break;
+    }
+  }
+
+  /** new volume
+   */
+  private void volume()
+  {
+    assert selectedJobData != null;
+
+    long volumeNumber = requestedVolumeNumber.getLong();
+    switch (Dialogs.select(shell,"Volume request","Load volume number "+volumeNumber+".",new String[]{"OK","Unload tray","Cancel"},0))
+    {
+      case 0:
+        BARServer.executeCommand("VOLUME_LOAD "+selectedJobData.id+" "+volumeNumber);
+        break;
+      case 1:
+        BARServer.executeCommand("VOLUME_UNLOAD "+selectedJobData.id);
+        break;
+      case 2:
+        break;
     }
   }
 }
