@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/passwords.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -137,7 +137,8 @@ void Password_done(Password *password);
 \***********************************************************************/
 
 Password *Password_new(void);
-//Password *Password_newCString(const char *s);
+Password *Password_newString(const String string);
+Password *Password_newCString(const char *s);
 
 /***********************************************************************\
 * Name   : Password_duplicate

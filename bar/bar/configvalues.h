@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/bar/configvalues.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: config file entry parser
 * Systems: all
@@ -42,14 +42,14 @@ typedef enum
   CONFIG_VALUE_TYPE_SPECIAL
 } ConfigValueTypes;
 
-/* configu value unit */
+/* config value unit */
 typedef struct
 {
   const char *name;
   uint64     factor;
 } ConfigValueUnit;
 
-/* configu value select value */
+/* config value select value */
 typedef struct
 {
   const char *name;
@@ -63,7 +63,7 @@ typedef struct
   int        value;
 } ConfigValueSet;
 
-/* configu value variable */
+/* config value variable */
 typedef union
 {
   void   *pointer;
@@ -80,7 +80,7 @@ typedef union
   void   *special;
 } ConfigVariable;
 
-/* configu value definition */
+/* config value definition */
 typedef struct
 {
   const char       *name;                         // name of config value

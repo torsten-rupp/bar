@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -70,8 +70,8 @@ typedef struct
   void                   *archiveNewFileUserData;        // user data for new archive file call back function
   JobOptions             *jobOptions;
 
-  CryptTypes             cryptType;                      // crypt type
-  PasswordModes          passwordMode;                   // password mode (PASSWORD_MODE_DEFAULT for using settings in jobOptions)
+  CryptTypes             cryptType;                      // crypt type (symmetric/asymmetric; see CryptTypes)
+//  PasswordModes          passwordMode;                   // password mode (PASSWORD_MODE_DEFAULT for using settings in jobOptions)
   Password               *cryptPassword;                 // cryption password for encryption/decryption
   CryptKey               cryptKey;                       // public/private key for encryption/decryption of random key used for asymmetric encryption
   void                   *cryptKeyData;                  // encrypted random key used for asymmetric encryption
@@ -212,25 +212,25 @@ void Archive_doneAll(void);
 
 /***********************************************************************\
 * Name   : Archive_clearCryptPasswords
-* Purpose: clear crypt passwords (except default passwords)
+* Purpose: clear decrypt passwords (except default passwords)
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Archive_clearCryptPasswords(void);
+void Archive_clearDecryptPasswords(void);
 
 /***********************************************************************\
-* Name   : Archive_appendCryptPassword
-* Purpose: append password to crypt password list
+* Name   : Archive_appendDecryptPassword
+* Purpose: append password to decrypt password list
 * Input  : password - password
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Archive_appendCryptPassword(const Password *password);
+void Archive_appendDecryptPassword(const Password *password);
 
 /***********************************************************************\
 * Name   : Archive_create
@@ -240,6 +240,7 @@ void Archive_appendCryptPassword(const Password *password);
 *                                   file 
 *          archiveNewFileUserData - user data for call back
 *          options                - option settings
+*          passwordMode           - password mode
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -257,16 +258,14 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
 * Input  : archiveInfo     - archive info block
 *          archiveFileName - archive file name
 *          jobOptions      - option settings
-*          passwordMode    - password mode
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_open(ArchiveInfo   *archiveInfo,
-                    const String  archiveFileName,
-                    JobOptions    *jobOptions,
-                    PasswordModes passwordMode
+Errors Archive_open(ArchiveInfo  *archiveInfo,
+                    const String archiveFileName,
+                    JobOptions   *jobOptions
                    );
 
 /***********************************************************************\

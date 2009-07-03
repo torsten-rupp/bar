@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -94,6 +94,11 @@ typedef struct JobNode
   uint64       lastExecutedDateTime;           // last execution date/time (timestamp)
   uint64       lastCheckDateTime;              // last check date/time (timestamp)
 
+  /* job data */
+  Password     *ftpPassword;                   // FTP password if password mode is 'ask'
+  Password     *sshPassword;                   // SSH password if password mode is 'ask'
+  Password     *cryptPassword;                 // crypt password if password mode is 'ask'
+
   /* job info */
   uint         id;                             // unique job id
   JobStates    state;                          // current state of job
@@ -106,30 +111,30 @@ typedef struct JobNode
   /* running info */
   struct
   {
-    Errors            error;                          // error code
-    ulong             estimatedRestTime;              // estimated rest running time [s]
-    ulong             doneFiles;                      // number of processed files
-    uint64            doneBytes;                      // sum of processed bytes
-    ulong             totalFiles;                     // number of total files
-    uint64            totalBytes;                     // sum of total bytes
-    ulong             skippedFiles;                   // number of skipped files
-    uint64            skippedBytes;                   // sum of skippped bytes
-    ulong             errorFiles;                     // number of files with errors
-    uint64            errorBytes;                     // sum of bytes of files with errors
-    PerformanceFilter filesPerSecond;                 // average processed files per second
-    PerformanceFilter bytesPerSecond;                 // average processed bytes per second
-    PerformanceFilter storageBytesPerSecond;          // average processed storage bytes per second
-    uint64            archiveBytes;                   // number of bytes stored in archive
-    double            compressionRatio;               // compression ratio: saved "space" [%]
-    String            fileName;                       // current file
-    uint64            fileDoneBytes;                  // current file bytes done
-    uint64            fileTotalBytes;                 // current file bytes total
-    String            storageName;                    // current storage file
-    uint64            storageDoneBytes;               // current storage file bytes done
-    uint64            storageTotalBytes;              // current storage file bytes total
-    uint              volumeNumber;                   // current volume number
-    double            volumeProgress;                 // current volume progress
-    String            message;                        // message text
+    Errors            error;                   // error code
+    ulong             estimatedRestTime;       // estimated rest running time [s]
+    ulong             doneFiles;               // number of processed files
+    uint64            doneBytes;               // sum of processed bytes
+    ulong             totalFiles;              // number of total files
+    uint64            totalBytes;              // sum of total bytes
+    ulong             skippedFiles;            // number of skipped files
+    uint64            skippedBytes;            // sum of skippped bytes
+    ulong             errorFiles;              // number of files with errors
+    uint64            errorBytes;              // sum of bytes of files with errors
+    PerformanceFilter filesPerSecond;          // average processed files per second
+    PerformanceFilter bytesPerSecond;          // average processed bytes per second
+    PerformanceFilter storageBytesPerSecond;   // average processed storage bytes per second
+    uint64            archiveBytes;            // number of bytes stored in archive
+    double            compressionRatio;        // compression ratio: saved "space" [%]
+    String            fileName;                // current file
+    uint64            fileDoneBytes;           // current file bytes done
+    uint64            fileTotalBytes;          // current file bytes total
+    String            storageName;             // current storage file
+    uint64            storageDoneBytes;        // current storage file bytes done
+    uint64            storageTotalBytes;       // current storage file bytes total
+    uint              volumeNumber;            // current volume number
+    double            volumeProgress;          // current volume progress
+    String            message;                 // message text
   } runningInfo;
 } JobNode;
 
@@ -355,15 +360,15 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",        JobNode,jobOptions.cryptAlgorithm,             CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-type",             JobNode,jobOptions.cryptType,                  CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-password-mode",    JobNode,jobOptions.cryptPasswordMode,          CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",         JobNode,jobOptions.cryptPassword,              configValueParsePassword,NULL,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",         JobNode,jobOptions.cryptPassword,              configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("crypt-public-key",       JobNode,jobOptions.cryptPublicKeyFileName      ),
 
   CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",         JobNode,jobOptions.ftpServer.loginName         ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",           JobNode,jobOptions.ftpServer.password,         configValueParsePassword,NULL,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",           JobNode,jobOptions.ftpServer.password,         configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",               JobNode,jobOptions.sshServer.port,             0,65535,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",         JobNode,jobOptions.sshServer.loginName         ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",           JobNode,jobOptions.sshServer.password ,        configValueParsePassword,NULL,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",           JobNode,jobOptions.sshServer.password ,        configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("ssh-public-key",         JobNode,jobOptions.sshServer.publicKeyFileName ),
   CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",        JobNode,jobOptions.sshServer.privateKeyFileName),
 
@@ -533,6 +538,10 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   jobNode->lastExecutedDateTime           = 0LL;
   jobNode->lastCheckDateTime              = 0LL;
 
+  jobNode->ftpPassword                    = NULL;
+  jobNode->sshPassword                    = NULL;
+  jobNode->cryptPassword                  = NULL;
+
   jobNode->id                             = getNewJobId();
   jobNode->state                          = JOB_STATE_NONE;
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
@@ -574,6 +583,10 @@ LOCAL void freeJobNode(JobNode *jobNode)
   Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecond);
   Misc_performanceFilterDone(&jobNode->runningInfo.filesPerSecond);
 
+  if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
+  if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
+  if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
+
   List_done(&jobNode->scheduleList,NULL,NULL);
   PatternList_done(&jobNode->excludePatternList);
   PatternList_done(&jobNode->includePatternList);
@@ -598,6 +611,66 @@ LOCAL void deleteJob(JobNode *jobNode)
 
   freeJobNode(jobNode);
   LIST_DELETE_NODE(jobNode);
+}
+
+/***********************************************************************\
+* Name   : startJob
+* Purpose: start job (store running data)
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void startJob(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  jobNode->state = JOB_STATE_RUNNING;
+}
+
+/***********************************************************************\
+* Name   : doneJob
+* Purpose: done job (store running data, free job data, e. g. passwords)
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneJob(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
+  if      (jobNode->requestedAbortFlag)
+  {
+    jobNode->state = JOB_STATE_ABORTED;
+  }
+  else if (jobNode->runningInfo.error != ERROR_NONE)
+  {
+    jobNode->state = JOB_STATE_ERROR;
+  }
+  else
+  {
+    jobNode->state = JOB_STATE_DONE;
+  }
+
+  if (jobNode->cryptPassword != NULL)
+  {
+    Password_delete(jobNode->cryptPassword);
+    jobNode->cryptPassword = NULL;
+  }
+  if (jobNode->sshPassword != NULL)
+  {
+    Password_delete(jobNode->sshPassword);
+    jobNode->sshPassword = NULL;
+  }
+  if (jobNode->ftpPassword != NULL)
+  {
+    Password_delete(jobNode->ftpPassword);
+    jobNode->ftpPassword = NULL;
+  }
 }
 
 /***********************************************************************\
@@ -1367,6 +1440,7 @@ LOCAL void jobThreadEntry(void)
   PatternList  includePatternList,excludePatternList;
   JobOptions   jobOptions;
   ArchiveTypes archiveType;
+  StringList   archiveFileNameList;
 
   /* initialize variables */
   archiveName = String_new();
@@ -1396,6 +1470,9 @@ LOCAL void jobThreadEntry(void)
     }
     assert(jobNode != NULL);
 
+    /* start job */
+    startJob(jobNode);
+
     /* get copy of mandatory job data */
     String_set(archiveName,jobNode->archiveName);
     PatternList_clear(&includePatternList); PatternList_copy(&jobNode->includePatternList,&includePatternList);
@@ -1404,7 +1481,6 @@ LOCAL void jobThreadEntry(void)
     archiveType = jobNode->archiveType,
 
     /* unlock is ok; job is now protected by running state */
-    jobNode->state = JOB_STATE_RUNNING;
     Semaphore_unlock(&jobList.lock);
 
     /* run job */
@@ -1462,24 +1538,20 @@ LOCAL void jobThreadEntry(void)
         logMessage(LOG_TYPE_ALWAYS,"done create '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
         break;
       case JOB_TYPE_RESTORE:
-        {
-          StringList archiveFileNameList;
-
-          logMessage(LOG_TYPE_ALWAYS,"start restore '%s'",String_cString(archiveName));
-          StringList_init(&archiveFileNameList);
-          StringList_append(&archiveFileNameList,archiveName);
-          jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
-                                                       &includePatternList,
-                                                       &excludePatternList,
-                                                       &jobOptions,
-                                                       (RestoreStatusInfoFunction)updateRestoreStatus,
-                                                       jobNode,
-                                                       &pauseFlag,
-                                                       &jobNode->requestedAbortFlag
-                                                      );
-          StringList_done(&archiveFileNameList);
-          logMessage(LOG_TYPE_ALWAYS,"done restore '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
-        }
+        logMessage(LOG_TYPE_ALWAYS,"start restore '%s'",String_cString(archiveName));
+        StringList_init(&archiveFileNameList);
+        StringList_append(&archiveFileNameList,archiveName);
+        jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
+                                                     &includePatternList,
+                                                     &excludePatternList,
+                                                     &jobOptions,
+                                                     (RestoreStatusInfoFunction)updateRestoreStatus,
+                                                     jobNode,
+                                                     &pauseFlag,
+                                                     &jobNode->requestedAbortFlag
+                                                    );
+        StringList_done(&archiveFileNameList);
+        logMessage(LOG_TYPE_ALWAYS,"done restore '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
         break;
       #ifndef NDEBUG
         default:
@@ -1500,19 +1572,7 @@ LOCAL void jobThreadEntry(void)
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     /* done job */
-    jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
-    if      (jobNode->requestedAbortFlag)
-    {
-      jobNode->state = JOB_STATE_ABORTED;
-    }
-    else if (jobNode->runningInfo.error != ERROR_NONE)
-    {
-      jobNode->state = JOB_STATE_ERROR;
-    }
-    else
-    {
-      jobNode->state = JOB_STATE_DONE;
-    }
+    doneJob(jobNode);
 
     /* store schedule info */
     writeJobFileScheduleInfo(jobNode);
@@ -3464,7 +3524,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   /* free resources */
 }
 
-LOCAL void serverCommand_passwordClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -3472,15 +3532,15 @@ LOCAL void serverCommand_passwordClear(ClientInfo *clientInfo, uint id, const St
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  /* clear schedule list */
-  Archive_clearCryptPasswords();
+  /* clear decrypt password list */
+  Archive_clearDecryptPasswords();
   sendResult(clientInfo,id,TRUE,0,"");
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_passwordAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   Password password;
 
@@ -3490,24 +3550,153 @@ LOCAL void serverCommand_passwordAdd(ClientInfo *clientInfo, uint id, const Stri
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  /* initialise variables */
-  Password_init(&password);
-
   /* get password */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
-    Password_done(&password);
     return;
   }
 
-  /* add to password list */
+  /* add to decrypt password list */
+  Password_init(&password);
   Password_setString(&password,arguments[0]);
-  Archive_appendCryptPassword(&password);
+  Archive_appendDecryptPassword(&password);
   sendResult(clientInfo,id,TRUE,0,"");
 
   /* free resources */
   Password_done(&password);
+}
+
+LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint     jobId;
+  Password *password;
+  JobNode  *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
+    return;
+  }
+  password = Password_newString(arguments[1]);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* set password */
+  jobNode->ftpPassword = password;
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint     jobId;
+  Password *password;
+  JobNode  *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
+    return;
+  }
+  password = Password_newString(arguments[1]);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* set password */
+  jobNode->sshPassword = password;
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint     jobId;
+  Password *password;
+  JobNode  *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
+    return;
+  }
+  password = Password_newString(arguments[1]);
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* set password */
+  jobNode->cryptPassword = password;
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
 LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3621,8 +3810,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   /* open archive */
   error = Archive_open(&archiveInfo,
                        archiveName,
-                       &clientInfo->jobOptions,
-                       PASSWORD_MODE_CONFIG
+                       &clientInfo->jobOptions
                       );
   if (error != ERROR_NONE)
   {
@@ -3922,43 +4110,46 @@ const struct
 }
 SERVER_COMMANDS[] =
 {
-  { "AUTHORIZE",             "S",   serverCommand_authorize,           AUTHORIZATION_STATE_WAITING },
-  { "ABORT",                 "i",   serverCommand_abort,               AUTHORIZATION_STATE_OK      },
-  { "STATUS",                "",    serverCommand_status,              AUTHORIZATION_STATE_OK      },
-  { "PAUSE",                 "",    serverCommand_pause ,              AUTHORIZATION_STATE_OK      },
-  { "CONTINUE",              "",    serverCommand_continue,            AUTHORIZATION_STATE_OK      },
-  { "ERROR_INFO",            "i",   serverCommand_errorInfo,           AUTHORIZATION_STATE_OK      },
-  { "DEVICE_LIST",           "",    serverCommand_deviceList,          AUTHORIZATION_STATE_OK      },
-  { "FILE_LIST",             "S",   serverCommand_fileList,            AUTHORIZATION_STATE_OK      },
-  { "DIRECTORY_INFO",        "S",   serverCommand_directoryInfo,       AUTHORIZATION_STATE_OK      },
-  { "JOB_LIST",              "",    serverCommand_jobList,             AUTHORIZATION_STATE_OK      },
-  { "JOB_INFO",              "i",   serverCommand_jobInfo,             AUTHORIZATION_STATE_OK      },
-  { "JOB_NEW",               "S",   serverCommand_jobNew,              AUTHORIZATION_STATE_OK      },
-  { "JOB_RENAME",            "i S", serverCommand_jobRename,           AUTHORIZATION_STATE_OK      },
-  { "JOB_DELETE",            "i",   serverCommand_jobDelete,           AUTHORIZATION_STATE_OK      },
-  { "JOB_START",             "i",   serverCommand_jobStart,            AUTHORIZATION_STATE_OK      },
-  { "JOB_ABORT",             "i",   serverCommand_jobAbort,            AUTHORIZATION_STATE_OK      },
-  { "JOB_FLUSH",             "",    serverCommand_jobFlush,            AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_PATTERNS_LIST", "i",   serverCommand_includePatternsList, AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_PATTERNS_CLEAR","i",   serverCommand_includePatternsClear,AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_PATTERNS_ADD",  "i S", serverCommand_includePatternsAdd,  AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_PATTERNS_LIST", "i",   serverCommand_excludePatternsList, AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_PATTERNS_CLEAR","i",   serverCommand_excludePatternsClear,AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_PATTERNS_ADD",  "i S", serverCommand_excludePatternsAdd,  AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_LIST",         "i",   serverCommand_scheduleList,        AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_CLEAR",        "i",   serverCommand_scheduleClear,       AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_ADD",          "i S", serverCommand_scheduleAdd,         AUTHORIZATION_STATE_OK      },
-  { "PASSWORD_CLEAR",        "",    serverCommand_passwordClear,       AUTHORIZATION_STATE_OK      },
-  { "PASSWORD_ADD",          "S",   serverCommand_passwordAdd,         AUTHORIZATION_STATE_OK      },
-  { "OPTION_GET",            "s",   serverCommand_optionGet,           AUTHORIZATION_STATE_OK      },
-  { "OPTION_SET",            "s S", serverCommand_optionSet,           AUTHORIZATION_STATE_OK      },
-  { "OPTION_DELETE",         "s S", serverCommand_optionDelete,        AUTHORIZATION_STATE_OK      },
-  { "VOLUME_LOAD",           "i i", serverCommand_volumeLoad,          AUTHORIZATION_STATE_OK      },
-  { "VOLUME_UNLOAD",         "",    serverCommand_volumeUnload,        AUTHORIZATION_STATE_OK      },
-  { "ARCHIVE_LIST",          "S S", serverCommand_archiveList,         AUTHORIZATION_STATE_OK      },
-  { "RESTORE",               "S S", serverCommand_restore,             AUTHORIZATION_STATE_OK      },
+  { "AUTHORIZE",             "S",  serverCommand_authorize,            AUTHORIZATION_STATE_WAITING },
+  { "ABORT",                 "i",  serverCommand_abort,                AUTHORIZATION_STATE_OK      },
+  { "STATUS",                "",   serverCommand_status,               AUTHORIZATION_STATE_OK      },
+  { "PAUSE",                 "",   serverCommand_pause ,               AUTHORIZATION_STATE_OK      },
+  { "CONTINUE",              "",   serverCommand_continue,             AUTHORIZATION_STATE_OK      },
+  { "ERROR_INFO",            "i",  serverCommand_errorInfo,            AUTHORIZATION_STATE_OK      },
+  { "DEVICE_LIST",           "",   serverCommand_deviceList,           AUTHORIZATION_STATE_OK      },
+  { "FILE_LIST",             "S",  serverCommand_fileList,             AUTHORIZATION_STATE_OK      },
+  { "DIRECTORY_INFO",        "S",  serverCommand_directoryInfo,        AUTHORIZATION_STATE_OK      },
+  { "JOB_LIST",              "",   serverCommand_jobList,              AUTHORIZATION_STATE_OK      },
+  { "JOB_INFO",              "i",  serverCommand_jobInfo,              AUTHORIZATION_STATE_OK      },
+  { "JOB_NEW",               "S",  serverCommand_jobNew,               AUTHORIZATION_STATE_OK      },
+  { "JOB_RENAME",            "i S",serverCommand_jobRename,            AUTHORIZATION_STATE_OK      },
+  { "JOB_DELETE",            "i",  serverCommand_jobDelete,            AUTHORIZATION_STATE_OK      },
+  { "JOB_START",             "i",  serverCommand_jobStart,             AUTHORIZATION_STATE_OK      },
+  { "JOB_ABORT",             "i",  serverCommand_jobAbort,             AUTHORIZATION_STATE_OK      },
+  { "JOB_FLUSH",             "",   serverCommand_jobFlush,             AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_PATTERNS_LIST", "i",  serverCommand_includePatternsList,  AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_PATTERNS_CLEAR","i",  serverCommand_includePatternsClear, AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_PATTERNS_ADD",  "i S",serverCommand_includePatternsAdd,   AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_PATTERNS_LIST", "i",  serverCommand_excludePatternsList,  AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_PATTERNS_CLEAR","i",  serverCommand_excludePatternsClear, AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_PATTERNS_ADD",  "i S",serverCommand_excludePatternsAdd,   AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST",         "i",  serverCommand_scheduleList,         AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_CLEAR",        "i",  serverCommand_scheduleClear,        AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_ADD",          "i S",serverCommand_scheduleAdd,          AUTHORIZATION_STATE_OK      },
+  { "OPTION_GET",            "s",  serverCommand_optionGet,            AUTHORIZATION_STATE_OK      },
+  { "OPTION_SET",            "s S",serverCommand_optionSet,            AUTHORIZATION_STATE_OK      },
+  { "OPTION_DELETE",         "s S",serverCommand_optionDelete,         AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_CLEAR","",   serverCommand_decryptPasswordsClear,AUTHORIZATION_STATE_OK      },
+  { "DECRYTP_PASSWORD_ADD",  "i S",serverCommand_decryptPasswordAdd,   AUTHORIZATION_STATE_OK      },
+  { "FTP_PASSWORD",          "i S",serverCommand_ftpPassword,          AUTHORIZATION_STATE_OK      },
+  { "SSH_PASSWORD",          "i S",serverCommand_sshPassword,          AUTHORIZATION_STATE_OK      },
+  { "CRYPT_PASSWORD",        "S",  serverCommand_cryptPassword,        AUTHORIZATION_STATE_OK      },
+  { "VOLUME_LOAD",           "i i",serverCommand_volumeLoad,           AUTHORIZATION_STATE_OK      },
+  { "VOLUME_UNLOAD",         "",   serverCommand_volumeUnload,         AUTHORIZATION_STATE_OK      },
+  { "ARCHIVE_LIST",          "S S",serverCommand_archiveList,          AUTHORIZATION_STATE_OK      },
+  { "RESTORE",               "S S",serverCommand_restore,              AUTHORIZATION_STATE_OK      },
   #ifndef NDEBUG
-  { "DEBUG_MEMORY_INFO",     "",    serverCommand_debugMemoryInfo,     AUTHORIZATION_STATE_OK      },
+  { "DEBUG_MEMORY_INFO",     "",   serverCommand_debugMemoryInfo,      AUTHORIZATION_STATE_OK      },
   #endif /* NDEBUG */
 };
 

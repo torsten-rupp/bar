@@ -23,3 +23,5 @@ ToDo
 - avoid negative bytes/s in performance monitor
 - multiple instances of backup threads
 - check ssl certificates
+- fix progress bar update when writing a DVD
+- support lzma

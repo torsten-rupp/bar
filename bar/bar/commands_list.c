@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -985,8 +985,7 @@ remoteBarFlag=FALSE;
           /* open archive */
           error = Archive_open(&archiveInfo,
                                archiveFileName,
-                               jobOptions,
-                               PASSWORD_MODE_DEFAULT
+                               jobOptions
                               );
           if (error != ERROR_NONE)
           {

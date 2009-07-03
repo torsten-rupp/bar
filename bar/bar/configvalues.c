@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/bar/configvalues.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -914,6 +914,29 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
                                               );
         }
       }
+      else
+      {
+        if (configValueFormat->configValue->offset >= 0)
+        {
+          if (variable != NULL)
+          {
+            configValueFormat->formatUserData = (byte*)variable+configValueFormat->configValue->offset;
+          }
+          else
+          {
+            assert(configValueFormat->configValue->variable.reference != NULL);
+            if ((*configValueFormat->configValue->variable.reference) != NULL)
+            {
+              configValueFormat->formatUserData = (byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset;
+            }
+          }
+        }
+        else
+        {
+          assert(configValueFormat->configValue->variable.special != NULL);
+          configValueFormat->formatUserData = configValueFormat->configValue->variable.special;
+        }
+      }
       break;
     #ifndef NDEBUG
       default:
@@ -1346,6 +1369,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_SPECIAL:
+#if 0
         if (configValueFormat->configValue->specialValue.format != NULL)
         {
           if (configValueFormat->configValue->offset >= 0)
@@ -1381,6 +1405,19 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
                                                                                                     line
                                                                                                    );
           }
+        }
+        else
+        {
+          configValueFormat->endOfDataFlag = TRUE;
+        }
+        if (configValueFormat->endOfDataFlag) return FALSE;
+#endif /* 0 */
+        if (configValueFormat->configValue->specialValue.format != NULL)
+        {
+          configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
+                                                                                                  configValueFormat->configValue->specialValue.userData,
+                                                                                                  line
+                                                                                                 );
         }
         else
         {

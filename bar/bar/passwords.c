@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/passwords.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -146,6 +146,32 @@ Password *Password_new(void)
     HALT_INSUFFICIENT_MEMORY();
   }
   Password_init(password);
+
+  return password;
+}
+
+Password *Password_newString(const String string)
+{
+  Password *password;
+
+  password = Password_new();
+  if (password != NULL)
+  {
+    Password_setString(password,string);
+  }
+
+  return password;
+}
+
+Password *Password_newCString(const char *s)
+{
+  Password *password;
+
+  password = Password_new();
+  if (password != NULL)
+  {
+    Password_setCString(password,s);
+  }
 
   return password;
 }
