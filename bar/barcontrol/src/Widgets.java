@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -48,6 +48,407 @@ import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.swt.widgets.Widget;
 
 /****************************** Classes ********************************/
+
+/** widget variable types
+ */
+enum WidgetVariableTypes
+{
+  BOOLEAN,
+  LONG,
+  DOUBLE,
+  STRING,
+  ENUMERATION,
+};
+
+/** widget variable
+ */
+class WidgetVariable
+{
+  private WidgetVariableTypes type;
+  private boolean             b;
+  private long                l;
+  private double              d;
+  private String              string;
+  private String              enumeration[];
+
+  /** create BAR variable
+   * @param b/l/d/string/enumeration value
+   */
+  WidgetVariable(boolean b)
+  {
+    this.type = WidgetVariableTypes.BOOLEAN;
+    this.b    = b;
+  }
+  WidgetVariable(long l)
+  {
+    this.type = WidgetVariableTypes.LONG;
+    this.l    = l;
+  }
+  WidgetVariable(double d)
+  {
+    this.type = WidgetVariableTypes.DOUBLE;
+    this.d    = d;
+  }
+  WidgetVariable(String string)
+  {
+    this.type   = WidgetVariableTypes.STRING;
+    this.string = string;
+  }
+  WidgetVariable(String enumeration[])
+  {
+    this.type        = WidgetVariableTypes.ENUMERATION;
+    this.enumeration = enumeration;
+  }
+
+  /** get variable type
+   * @return type
+   */
+  WidgetVariableTypes getType()
+  {
+    return type;
+  }
+
+  /** get boolean value
+   * @return true or false
+   */
+  boolean getBoolean()
+  {
+    assert type == WidgetVariableTypes.BOOLEAN;
+
+    return b;
+  }
+
+  /** get long value
+   * @return value
+   */
+  long getLong()
+  {
+    assert type == WidgetVariableTypes.LONG;
+
+    return l;
+  }
+
+  /** get double value
+   * @return value
+   */
+  double getDouble()
+  {
+    assert type == WidgetVariableTypes.DOUBLE;
+
+    return d;
+  }
+
+  /** get string value
+   * @return value
+   */
+  String getString()
+  {
+    assert (type == WidgetVariableTypes.STRING) || (type == WidgetVariableTypes.ENUMERATION);
+
+    return string;
+  }
+
+  /** set boolean value
+   * @param b value
+   */
+  void set(boolean b)
+  {
+    assert type == WidgetVariableTypes.BOOLEAN;
+
+    this.b = b;
+    Widgets.modified(this);
+  }
+
+  /** set long value
+   * @param l value
+   */
+  void set(long l)
+  {
+    assert type == WidgetVariableTypes.LONG;
+
+    this.l = l;
+    Widgets.modified(this);
+  }
+
+  /** set double value
+   * @param d value
+   */
+  void set(double d)
+  {
+    assert type == WidgetVariableTypes.DOUBLE;
+
+    this.d = d;
+    Widgets.modified(this);
+  }
+
+  /** set string value
+   * @param string value
+   */
+  void set(String string)
+  {
+    assert (type == WidgetVariableTypes.STRING) || (type == WidgetVariableTypes.ENUMERATION);
+
+    switch (type)
+    {
+      case STRING:
+        this.string = string;
+        break;
+      case ENUMERATION:
+        boolean OKFlag = false;
+        for (String s : enumeration)
+        {
+          if (s.equals(string))
+          {
+            OKFlag = true;
+          }
+        }
+        if (!OKFlag) throw new Error("Unknown enumeration value '"+string+"'");
+        this.string = string;
+        break;
+    }
+    Widgets.modified(this);
+  }
+
+  /** compare string values
+   * @param value
+   * @return true iff equal
+   */
+  public boolean equals(String value)
+  {
+    String s = toString();
+    return (s != null)?s.equals(value):(value == null);
+  }
+
+  /** convert to string
+   * @return string
+   */
+  public String toString()
+  {
+    switch (type)
+    {
+      case BOOLEAN:     return Boolean.toString(b);
+      case LONG:        return Long.toString(l);
+      case DOUBLE:      return Double.toString(d);
+      case STRING:      return string;
+      case ENUMERATION: return string;
+    }
+    return "";
+  }
+}
+
+/** widget listener
+ */
+class WidgetListener
+{
+  private WidgetVariable variable;
+  private Control        control;
+
+  // cached text for widget
+  private String cachedText = null;
+
+  /** create widget listener
+   */
+  WidgetListener()
+  {
+    this.control  = null;
+    this.variable = null;
+  }
+
+  /** create widget listener
+   * @param control control widget
+   * @param variable BAR variable
+   */
+  WidgetListener(Control control, WidgetVariable variable)
+  {
+    this.control  = control;
+    this.variable = variable;
+  }
+
+  /** set control widget
+   * @param control control widget
+   */
+  void setControl(Control control)
+  {
+    this.control = control;
+  }
+
+  /** set variable
+   * @param variable BAR variable
+   * @return 
+   */
+  void setVariable(WidgetVariable variable)
+  {
+    this.variable = variable;
+  }
+
+  /** compare variables
+   * @param variable variable
+   * @return true iff equal
+   */
+  public boolean equals(Object variable)
+  {
+    return (this.variable != null) && this.variable.equals(variable);
+  }
+
+  /** nofity modify variable
+   * @param control control widget
+   * @param variable BAR variable
+   */
+  void modified(Control control, WidgetVariable variable)
+  {
+    if      (control instanceof Label)
+    {
+      String text = getString(variable);
+      if (text == null)
+      {
+        switch (variable.getType())
+        {
+          case LONG:   text = Long.toString(variable.getLong()); break; 
+          case DOUBLE: text = Double.toString(variable.getDouble()); break; 
+          case STRING: text = variable.getString(); break; 
+        }
+      }
+      if (!text.equals(cachedText))
+      {
+        ((Label)control).setText(text);
+        control.getParent().layout(true,true);
+        cachedText = text;
+      }
+    }
+    else if (control instanceof Button)
+    {
+      if      ((((Button)control).getStyle() & SWT.PUSH) == SWT.PUSH)
+      {
+        String text = getString(variable);
+        if (text == null)
+        {
+          switch (variable.getType())
+          {
+            case LONG:   text = Long.toString(variable.getLong()); break; 
+            case DOUBLE: text = Double.toString(variable.getDouble()); break; 
+            case STRING: text = variable.getString(); break; 
+          }
+        }
+        if (!text.equals(cachedText))
+        {
+          ((Button)control).setText(text);
+          control.getParent().layout();
+          cachedText = text;
+        }
+      }
+      else if ((((Button)control).getStyle() & SWT.CHECK) == SWT.CHECK)
+      {
+        boolean selection = false;
+        switch (variable.getType())
+        {
+          case BOOLEAN: selection = variable.getBoolean(); break;
+          case LONG:    selection = (variable.getLong() != 0); break; 
+          case DOUBLE:  selection = (variable.getDouble() != 0); break; 
+        }
+        ((Button)control).setSelection(selection);
+      }
+      else if ((((Button)control).getStyle() & SWT.RADIO) == SWT.RADIO)
+      {
+        boolean selection = false;
+        switch (variable.getType())
+        {
+          case BOOLEAN: selection = variable.getBoolean(); break;
+          case LONG:    selection = (variable.getLong() != 0); break; 
+          case DOUBLE:  selection = (variable.getDouble() != 0); break; 
+        }
+        ((Button)control).setSelection(selection);
+      }
+    }
+    else if (control instanceof Combo)
+    {
+      String text = getString(variable);
+      if (text == null)
+      {
+        switch (variable.getType())
+        {
+          case BOOLEAN:     text = Boolean.toString(variable.getBoolean()); break;
+          case LONG:        text = Long.toString(variable.getLong()); break; 
+          case DOUBLE:      text = Double.toString(variable.getDouble()); break; 
+          case STRING:      text = variable.getString(); break;
+          case ENUMERATION: text = variable.getString(); break;
+        }
+      }
+      assert text != null;
+      if (!text.equals(cachedText))
+      {
+        ((Combo)control).setText(text);
+        control.getParent().layout();
+        cachedText = text;
+      }
+    }
+    else if (control instanceof Text)
+    {
+      String text = getString(variable);
+      if (text == null)
+      {
+        switch (variable.getType())
+        {
+          case LONG:   text = Long.toString(variable.getLong()); break; 
+          case DOUBLE: text = Double.toString(variable.getDouble()); break; 
+          case STRING: text = variable.getString(); break; 
+        }
+      }
+      if (!text.equals(cachedText))
+      {
+        ((Text)control).setText(text);
+        control.getParent().layout();
+        cachedText = text;
+      }
+    }
+    else if (control instanceof Spinner)
+    {
+      int n = 0;
+      switch (variable.getType())
+      {
+        case LONG:   n = (int)variable.getLong(); break; 
+        case DOUBLE: n = (int)variable.getDouble(); break; 
+      }
+      ((Spinner)control).setSelection(n);
+    }
+    else if (control instanceof ProgressBar)
+    {
+      double value = 0;
+      switch (variable.getType())
+      {
+        case LONG:   value = (double)variable.getLong(); break; 
+        case DOUBLE: value = variable.getDouble(); break; 
+      }
+      ((ProgressBar)control).setSelection(value);
+    }
+    else
+    {
+      throw new InternalError("Unknown widget '"+control+"' in wiget listener!");
+    }
+  }
+
+  /** notify modify variable
+   * @param variable BAR variable
+   */
+  public void modified(WidgetVariable variable)
+  {
+    modified(control,variable);
+  }
+
+  /** notify modify variable
+   */
+  public void modified()
+  {
+    modified(variable);
+  }
+
+  /** get string of varable
+   * @param variable BAR variable
+   */
+  String getString(WidgetVariable variable)
+  {
+    return null;
+  }
+}
 
 class Widgets
 {

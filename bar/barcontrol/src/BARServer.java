@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -733,6 +733,11 @@ class BARServer
     }
   }
 
+  /** start running command
+   * @param commandString command to start
+   * @param processResult process result handler
+   * @return command
+   */
   public static Command runCommand(String commandString, ProcessResult processResult)
   {
     Command command;
@@ -762,6 +767,10 @@ class BARServer
     return command;
   }
 
+  /** start running command
+   * @param commandString command to start
+   * @return command
+   */
   public static Command runCommand(String commandString)
   {
     return runCommand(commandString,null);
@@ -770,7 +779,7 @@ class BARServer
   /** abort command execution
    * @param command command to abort
    * @param result result (String[] or ArrayList)
-   * @return error code
+   * @return Errors.NONE or error code
    */
   static void abortCommand(Command command)
   {
@@ -788,7 +797,7 @@ class BARServer
   /** execute command
    * @param command command to send to BAR server
    * @param result result (String[] or ArrayList)
-   * @return 0 or error code
+   * @return Errors.NONE or error code
    */
   public static int executeCommand(String commandString, Object result, Indicator indicator)
   {
@@ -871,7 +880,7 @@ class BARServer
   /** execute command
    * @param command command to send to BAR server
    * @param result result (String[] or ArrayList)
-   * @return 0 or error code
+   * @return Errors.NONE or error code
    */
   public static int executeCommand(String command, Object result)
   {
@@ -880,7 +889,7 @@ class BARServer
 
   /** execute command
    * @param command command to send to BAR server
-   * @return 0 or error code
+   * @return Errors.NONE or error code
    */
   public static int executeCommand(String command)
   {

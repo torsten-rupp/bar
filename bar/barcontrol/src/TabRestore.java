@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -1228,7 +1228,7 @@ class TabRestore
                     if (password != null)
                     {
                       String[] result = new String[1];
-                      BARServer.executeCommand("PASSWORD_ADD "+StringParser.escape(password),result);
+                      BARServer.executeCommand("DECRYPT_PASSWORD_ADD "+StringParser.escape(password),result);
                       tryAgainFlag[0] = true;
                     }
                   }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/StringParser.java,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -55,11 +55,11 @@ class StringParser
   {
     StringBuffer token;
     int          length;
-    boolean      alternateFlag;
-    boolean      zeroPaddingFlag;
-    boolean      leftAdjustedFlag;
-    boolean      blankFlag;
-    boolean      signFlag;
+    boolean      alternateFlag;            // #: not used
+    boolean      zeroPaddingFlag;          // 0: pad numbers with 0
+    boolean      leftAdjustedFlag;         // -: format left adjusted
+    boolean      blankFlag;                // ' '/+: pad numbers with spaces/get string with spaces
+    boolean      greedyFlag;               // *: get all characters of string if last format token
     int          width;
     int          precision;
     LengthTypes  lengthType;
@@ -68,6 +68,23 @@ class StringParser
   }
 
   /** get next format token
+   * Note:
+   *   Supported format specifieres
+   *     i,d,u           - decimal
+   *     o               - octal
+   *     x,X             - hexa-decimal
+   *     c               - character
+   *     e,E,f,F,g,G,a,A - float/double
+   *     s               - string
+   *     S               - string with quotes
+   *     y               - boolean
+   *   Supported options:
+   *     #,0,-, ,+,*     - flags
+   *     1-9             - width
+   *     .               - precision
+   *     <x>s, <x>S      - quoting character <x>
+   *     h,l,j,z,t       - length modifier
+   *     <char>s,<char>S - quote char
    * @param format format string
    * @param formatIndex index in format string
    * @param formatToken format token
@@ -81,7 +98,7 @@ class StringParser
     formatToken.zeroPaddingFlag  = false;
     formatToken.leftAdjustedFlag = false;
     formatToken.blankFlag        = false;
-    formatToken.signFlag         = false;
+    formatToken.greedyFlag       = false;
     formatToken.width            = 0;
     formatToken.precision        = 0;
     formatToken.lengthType       = LengthTypes.INTEGER;
@@ -104,6 +121,7 @@ class StringParser
                || (format.charAt(formatIndex) == '-')
                || (format.charAt(formatIndex) == ' ')
                || (format.charAt(formatIndex) == '+')
+               || (format.charAt(formatIndex) == '*')
               )
           )
     {
@@ -115,6 +133,7 @@ class StringParser
         case '-': formatToken.leftAdjustedFlag = true; break;
         case ' ': formatToken.blankFlag        = true; break;
         case '+': formatToken.blankFlag        = true; break;
+        case '*': formatToken.greedyFlag       = true; break;
         default:
           return -1;
       }
@@ -234,22 +253,6 @@ class StringParser
   }
 
   /** get quote char
-   * Note:
-   *   Supported format specifieres
-   *     i,d,u           - decimal
-   *     o               - octal
-   *     x,X             - hexa-decimal
-   *     c               - character
-   *     e,E,f,F,g,G,a,A - float/double
-   *     s               - string
-   *     S               - string with quotes
-   *     y               - boolean
-   *   Supported options:
-   *     #,0,-, ,+  - flags
-   *     1-9        - width
-   *     .          - precision
-   *     <x>s, <x>S - quoting character <x>
-   *     h,l,j,z,t  - length modifier
    * @param string string
    * @param index index in string
    * @param formatToken format token
@@ -276,21 +279,21 @@ class StringParser
 
   /** parse string
    * @param string string to parse
+   * @param index start index for parsing
    * @param format format string (like printf)
    * @param arguments parsed values
    * @param stringQuotes string quote characters
-   * @return true iff parsed, false otherwise
+   * @return index of first not parsed character or -1 on error
    */
-  public static boolean parse(String string, String format, Object arguments[], String stringQuotes)
+  public static int parse(String string, int index, String format, Object arguments[], String stringQuotes)
   {
-    int          index,formatIndex;
+    int          formatIndex;
     int          argumentIndex;
     FormatToken  formatToken = new FormatToken();
     StringBuffer buffer;
     char         ch;
     int          z;
 
-    index         = 0;
     formatIndex   = 0;
     argumentIndex = 0;
     while (formatIndex < format.length())
@@ -313,7 +316,7 @@ class StringParser
           formatIndex = getNextFormatToken(format,formatIndex,formatToken);
           if (formatIndex < 0)
           {
-            return false;
+            return -1;
           }
 
           /* parse string and store values */
@@ -338,7 +341,7 @@ class StringParser
               }
               if (buffer.length() <= 0)
               {
-                return false;
+                return -1;
               }
 
               /* convert */
@@ -365,7 +368,7 @@ class StringParser
               }
               else
               {
-                return false;
+                return -1;
               }
 
               /* convert */
@@ -385,7 +388,7 @@ class StringParser
               }
               if (buffer.length() <= 0)
               {
-                return false;
+                return -1;
               }
 
               /* convert */
@@ -419,7 +422,7 @@ class StringParser
               }
               if (buffer.length() <= 0)
               {
-                return false;
+                return -1;
               }
 
               /* convert */
@@ -472,7 +475,7 @@ class StringParser
               }
               if (buffer.length() <= 0)
               {
-                return false;
+                return -1;
               }
 
               /* convert */
@@ -483,7 +486,7 @@ class StringParser
               /* get data */
               buffer = new StringBuffer();
               while (   (index < string.length())
-                     && (formatToken.blankFlag || (formatIndex >= format.length()) || !Character.isSpaceChar((string.charAt(index))))
+                     && (formatToken.blankFlag || ((formatIndex >= format.length()) && formatToken.greedyFlag) || !Character.isSpaceChar((string.charAt(index))))
                      && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
@@ -567,7 +570,7 @@ class StringParser
               /* get data */
               buffer = new StringBuffer();
               while (   (index < string.length())
-                     && (formatToken.blankFlag || (formatIndex >= format.length())  || !Character.isSpaceChar(string.charAt(index)))
+                     && (formatToken.blankFlag || ((formatIndex >= format.length()) && formatToken.greedyFlag) || !Character.isSpaceChar(string.charAt(index)))
                      && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
@@ -682,7 +685,7 @@ class StringParser
 
                 if (!foundFlag)
                 {
-                  return false;
+                  return -1;
                 }
                 argumentIndex++;
               }
@@ -690,19 +693,19 @@ class StringParser
             case '%':
               if ((index >= string.length()) || (string.charAt(index) != '%'))
               {
-                return false;
+                return -1;
               }
               index++;
               break;
             default:
-              return false;
+              return -1;
           }
         }
         else
         {
           if ((index >= string.length()) || (string.charAt(index) != format.charAt(formatIndex)))
           {
-            return false;
+            return -1;
           }
           index++;
           formatIndex++;
@@ -710,14 +713,36 @@ class StringParser
       }
     }
 
-    return true;
+    return index;
   }
 
   /** parse string
    * @param string string to parse
    * @param format format string (like printf)
    * @param arguments parsed values
-   * @return true iff parsed, false otherwise
+   * @return index of first not parsed character
+   */
+  public static int parse(String string, int index, String format, Object arguments[])
+  {
+    return parse(string,index,format,arguments,null);
+  }
+
+  /** parse string
+   * @param string string to parse
+   * @param format format string (like printf)
+   * @param arguments parsed values
+   * @return true iff string parse, false otherwise
+   */
+  public static boolean parse(String string, String format, Object arguments[], String stringQuotes)
+  {
+    return parse(string,0,format,arguments,stringQuotes) >= string.length();
+  }
+
+  /** parse string
+   * @param string string to parse
+   * @param format format string (like printf)
+   * @param arguments parsed values
+   * @return true iff string parse, false otherwise
    */
   public static boolean parse(String string, String format, Object arguments[])
   {

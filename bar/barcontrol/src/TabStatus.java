@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -256,31 +256,31 @@ class TabStatus
   public  Button      widgetButtonQuit;
 
   // BAR variables
-  private BARVariable doneFiles             = new BARVariable(0);
-  private BARVariable doneBytes             = new BARVariable(0);
-  private BARVariable storedBytes           = new BARVariable(0);
-  private BARVariable skippedFiles          = new BARVariable(0);
-  private BARVariable skippedBytes          = new BARVariable(0);
-  private BARVariable errorFiles            = new BARVariable(0);
-  private BARVariable errorBytes            = new BARVariable(0);
-  private BARVariable totalFiles            = new BARVariable(0);
-  private BARVariable totalBytes            = new BARVariable(0);
+  private WidgetVariable doneFiles             = new WidgetVariable(0);
+  private WidgetVariable doneBytes             = new WidgetVariable(0);
+  private WidgetVariable storedBytes           = new WidgetVariable(0);
+  private WidgetVariable skippedFiles          = new WidgetVariable(0);
+  private WidgetVariable skippedBytes          = new WidgetVariable(0);
+  private WidgetVariable errorFiles            = new WidgetVariable(0);
+  private WidgetVariable errorBytes            = new WidgetVariable(0);
+  private WidgetVariable totalFiles            = new WidgetVariable(0);
+  private WidgetVariable totalBytes            = new WidgetVariable(0);
 
-  private BARVariable filesPerSecond        = new BARVariable(0.0); 
-  private BARVariable bytesPerSecond        = new BARVariable(0.0);
-  private BARVariable storageBytesPerSecond = new BARVariable(0.0);
-  private BARVariable ratio                 = new BARVariable(0.0);
+  private WidgetVariable filesPerSecond        = new WidgetVariable(0.0); 
+  private WidgetVariable bytesPerSecond        = new WidgetVariable(0.0);
+  private WidgetVariable storageBytesPerSecond = new WidgetVariable(0.0);
+  private WidgetVariable ratio                 = new WidgetVariable(0.0);
 
-  private BARVariable fileName              = new BARVariable("");
-  private BARVariable fileProgress          = new BARVariable(0.0);
-  private BARVariable storageName           = new BARVariable("");
-  private BARVariable storageProgress       = new BARVariable(0.0);
-  private BARVariable volumeNumber          = new BARVariable(0);
-  private BARVariable volumeProgress        = new BARVariable(0.0);
-  private BARVariable totalFilesProgress    = new BARVariable(0.0);
-  private BARVariable totalBytesProgress    = new BARVariable(0.0);
-  private BARVariable requestedVolumeNumber = new BARVariable(0);
-  private BARVariable message               = new BARVariable("");
+  private WidgetVariable fileName              = new WidgetVariable("");
+  private WidgetVariable fileProgress          = new WidgetVariable(0.0);
+  private WidgetVariable storageName           = new WidgetVariable("");
+  private WidgetVariable storageProgress       = new WidgetVariable(0.0);
+  private WidgetVariable volumeNumber          = new WidgetVariable(0);
+  private WidgetVariable volumeProgress        = new WidgetVariable(0.0);
+  private WidgetVariable totalFilesProgress    = new WidgetVariable(0.0);
+  private WidgetVariable totalBytesProgress    = new WidgetVariable(0.0);
+  private WidgetVariable requestedVolumeNumber = new WidgetVariable(0);
+  private WidgetVariable message               = new WidgetVariable("");
 
   // variables
   private HashMap<String,JobData> jobList = new HashMap<String,JobData> ();
@@ -416,7 +416,7 @@ class TabStatus
       Widgets.layout(label,0,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetListener(label,doneBytes)
       {
-        public String getString(BARVariable variable)
+        public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());
         }
@@ -425,7 +425,7 @@ class TabStatus
       Widgets.layout(label,0,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetListener(label,doneBytes)
       {
-        public String getString(BARVariable variable)
+        public String getString(WidgetVariable variable)
         {
           return Units.getByteUnit(variable.getLong());
         }
@@ -445,7 +445,7 @@ class TabStatus
       Widgets.layout(label,1,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetListener(label,storedBytes)
       {
-        public String getString(BARVariable variable)
+        public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());
         }
@@ -454,7 +454,7 @@ class TabStatus
       Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetListener(label,storedBytes)
       {
-        public String getString(BARVariable variable)
+        public String getString(WidgetVariable variable)
         {
           return Units.getByteUnit(variable.getLong());
         }
@@ -470,7 +470,7 @@ class TabStatus
         Widgets.layout(label,0,1,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetListener(label,ratio)
         {
-          public String getString(BARVariable variable)
+          public String getString(WidgetVariable variable)
           {
             return String.format("%.1f",variable.getDouble());
           }
@@ -487,7 +487,7 @@ class TabStatus
         Widgets.layout(label,0,0,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetListener(label,storageBytesPerSecond)
         {
-          public String getString(BARVariable variable)
+          public String getString(WidgetVariable variable)
           {
             return Units.getByteSize(variable.getDouble());
           }
@@ -496,7 +496,7 @@ class TabStatus
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
         Widgets.addModifyListener(new WidgetListener(label,storageBytesPerSecond)
         {
-          public String getString(BARVariable variable)
+          public String getString(WidgetVariable variable)
           {
             return Units.getByteUnit(variable.getDouble())+"/s";
           }
@@ -522,7 +522,7 @@ class TabStatus
       Widgets.layout(label,2,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetListener(label,skippedBytes)
       {
-        public String getString(BARVariable variable)
+        public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());
         }
@@ -531,7 +531,7 @@ class TabStatus
       Widgets.layout(label,2,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetListener(label,skippedBytes)
       {
-        public String getString(BARVariable variable)
+        public String getString(WidgetVariable variable)
         {
           return Units.getByteUnit(variable.getLong());
         }
@@ -556,7 +556,7 @@ class TabStatus
       Widgets.layout(label,3,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetListener(label,errorBytes)
       {
-        public String getString(BARVariable variable)
+        public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());
         }
@@ -565,7 +565,7 @@ class TabStatus
       Widgets.layout(label,3,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetListener(label,errorBytes)
       {
-        public String getString(BARVariable variable)
+        public String getString(WidgetVariable variable)
         {
           return Units.getByteUnit(variable.getLong());
         }
@@ -590,7 +590,7 @@ class TabStatus
       Widgets.layout(label,4,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetListener(label,totalBytes)
       {
-        public String getString(BARVariable variable)
+        public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());
         }
@@ -599,7 +599,7 @@ class TabStatus
       Widgets.layout(label,4,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetListener(label,totalBytes)
       {
-        public String getString(BARVariable variable)
+        public String getString(WidgetVariable variable)
         {
           return Units.getByteUnit(variable.getLong());
         }
@@ -613,7 +613,7 @@ class TabStatus
         Widgets.layout(label,0,0,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetListener(label,filesPerSecond)
         {
-          public String getString(BARVariable variable)
+          public String getString(WidgetVariable variable)
           {
             return String.format("%.1f",variable.getDouble());
           }
@@ -630,7 +630,7 @@ class TabStatus
         Widgets.layout(label,0,0,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
         {
-          public String getString(BARVariable variable)
+          public String getString(WidgetVariable variable)
           {
             return Units.getByteSize(variable.getDouble());
           }
@@ -639,7 +639,7 @@ class TabStatus
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
         Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
         {
-          public String getString(BARVariable variable)
+          public String getString(WidgetVariable variable)
           {
             return Units.getByteUnit(variable.getDouble())+"/s";
           }
@@ -1061,22 +1061,29 @@ class TabStatus
    */
   private void jobStart()
   {
+    int mode;
+    int errorCode;
+
     assert selectedJobData != null;
 
-    switch (Dialogs.select(shell,"Confirmation","Start job '"+selectedJobData.name+"'?",new String[]{"Normal","Full","Incremental","Cancel"},2))
+    mode = Dialogs.select(shell,"Confirmation","Start job '"+selectedJobData.name+"'?",new String[]{"Normal","Full","Incremental","Cancel"},2);
+
+    errorCode = Errors.UNKNOWN;
+    switch (mode)
     {
       case 0:
-        BARServer.executeCommand("JOB_START "+selectedJobData.id+" normal");
+        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" normal");
         break;
       case 1:
-        BARServer.executeCommand("JOB_START "+selectedJobData.id+" full");
+        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" full");
         break;
       case 2:
-        BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
+        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
         break;
       case 3:
         break;
     }
+Dprintf.dprintf("----------------------- errorCode=%d\n",errorCode);
   }
 
   /** abort selected job

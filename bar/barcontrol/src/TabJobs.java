@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -951,37 +951,40 @@ l=x.depth;
   private Combo        widgetArchivePartSize;
   private Text         widgetCryptPublicKeyFileName;
   private Button       widgetCryptPublicKeyFileNameSelect;
+  private Text         widgetCryptPassword1,widgetCryptPassword2;
   private Combo        widgetFTPMaxBandWidth;
   private Combo        widgetSCPSFTPMaxBandWidth;
   private Table        widgetScheduleList;
 
   // BAR variables
-  private BARVariable  skipUnreadable          = new BARVariable(false);
-  private BARVariable  overwriteFiles          = new BARVariable(false);
+  private WidgetVariable  skipUnreadable          = new WidgetVariable(false);
+  private WidgetVariable  overwriteFiles          = new WidgetVariable(false);
 
-  private BARVariable  archiveType             = new BARVariable(new String[]{"normal","full","incremental"});
-  private BARVariable  archivePartSizeFlag     = new BARVariable(false);
-  private BARVariable  archivePartSize         = new BARVariable(0);
-  private BARVariable  compressAlgorithm       = new BARVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9"});
-  private BARVariable  cryptAlgorithm          = new BARVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
-  private BARVariable  cryptType               = new BARVariable(new String[]{"none","symmetric","asymmetric"});
-  private BARVariable  cryptPublicKeyFileName  = new BARVariable("");
-  private BARVariable  incrementalListFileName = new BARVariable("");
-  private BARVariable  storageType             = new BARVariable(new String[]{"filesystem","ftp","scp","sftp","dvd","device"});
-  private BARVariable  storageHostName         = new BARVariable("");
-  private BARVariable  storageHostPort         = new BARVariable(0);
-  private BARVariable  storageLoginName        = new BARVariable("");
-  private BARVariable  storageLoginPassword    = new BARVariable("");
-  private BARVariable  storageDeviceName       = new BARVariable("");
-  private BARVariable  storageFileName         = new BARVariable("");
-  private BARVariable  overwriteArchiveFiles   = new BARVariable(false);
-  private BARVariable  sshPublicKeyFileName    = new BARVariable("");
-  private BARVariable  sshPrivateKeyFileName   = new BARVariable("");
-  private BARVariable  maxBandWidthFlag        = new BARVariable(false);
-  private BARVariable  maxBandWidth            = new BARVariable(0);
-  private BARVariable  volumeSize              = new BARVariable(0);
-  private BARVariable  ecc                     = new BARVariable(false);
-  private BARVariable  waitFirstVolume         = new BARVariable(false);
+  private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental"});
+  private WidgetVariable  archivePartSizeFlag     = new WidgetVariable(false);
+  private WidgetVariable  archivePartSize         = new WidgetVariable(0);
+  private WidgetVariable  compressAlgorithm       = new WidgetVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9"});
+  private WidgetVariable  cryptAlgorithm          = new WidgetVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
+  private WidgetVariable  cryptType               = new WidgetVariable(new String[]{"none","symmetric","asymmetric"});
+  private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable("");
+  private WidgetVariable  cryptPasswordMode       = new WidgetVariable(new String[]{"default","ask","config"});
+  private WidgetVariable  cryptPassword           = new WidgetVariable("");
+  private WidgetVariable  incrementalListFileName = new WidgetVariable("");
+  private WidgetVariable  storageType             = new WidgetVariable(new String[]{"filesystem","ftp","scp","sftp","dvd","device"});
+  private WidgetVariable  storageHostName         = new WidgetVariable("");
+  private WidgetVariable  storageHostPort         = new WidgetVariable(0);
+  private WidgetVariable  storageLoginName        = new WidgetVariable("");
+  private WidgetVariable  storageLoginPassword    = new WidgetVariable("");
+  private WidgetVariable  storageDeviceName       = new WidgetVariable("");
+  private WidgetVariable  storageFileName         = new WidgetVariable("");
+  private WidgetVariable  overwriteArchiveFiles   = new WidgetVariable(false);
+  private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable("");
+  private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable("");
+  private WidgetVariable  maxBandWidthFlag        = new WidgetVariable(false);
+  private WidgetVariable  maxBandWidth            = new WidgetVariable(0);
+  private WidgetVariable  volumeSize              = new WidgetVariable(0);
+  private WidgetVariable  ecc                     = new WidgetVariable(false);
+  private WidgetVariable  waitFirstVolume         = new WidgetVariable(false);
 
   // variables
   private     DirectoryInfoThread      directoryInfoThread;
@@ -996,7 +999,7 @@ l=x.depth;
 
   TabJobs(TabFolder parentTabFolder, int accelerator)
   {
-    Display     display;
+final    Display     display;
     Composite   tab;
     Group       group;
     Composite   composite,subComposite;
@@ -1424,7 +1427,7 @@ l=x.depth;
           });
           Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
           {
-            public void modified(Control control, BARVariable archivePartSizeFlag)
+            public void modified(Control control, WidgetVariable archivePartSizeFlag)
             {
               ((Button)control).setSelection(!archivePartSizeFlag.getBoolean());
               widgetArchivePartSize.setEnabled(!archivePartSizeFlag.getBoolean());
@@ -1446,7 +1449,7 @@ l=x.depth;
           });
           Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
           {
-            public void modified(Control control, BARVariable archivePartSizeFlag)
+            public void modified(Control control, WidgetVariable archivePartSizeFlag)
             {
               ((Button)control).setSelection(archivePartSizeFlag.getBoolean());
               widgetArchivePartSize.setEnabled(archivePartSizeFlag.getBoolean());
@@ -1522,7 +1525,7 @@ l=x.depth;
           });
           Widgets.addModifyListener(new WidgetListener(widgetArchivePartSize,archivePartSize)
           {
-            public String getString(BARVariable variable)
+            public String getString(WidgetVariable variable)
             {
               return Units.formatByteSize(variable.getLong());
             }
@@ -1603,7 +1606,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,cryptType)
           {
-            public void modified(Control control, BARVariable cryptType)
+            public void modified(Control control, WidgetVariable cryptType)
             {
               boolean asymmetricFlag = cryptType.equals("asymmetric");
               Widgets.setEnabled(widgetCryptPublicKeyFileName,asymmetricFlag);
@@ -1630,7 +1633,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,cryptType)
           {
-            public void modified(Control control, BARVariable cryptType)
+            public void modified(Control control, WidgetVariable cryptType)
             {
               boolean asymmetricFlag = cryptType.equals("asymmetric");
               Widgets.setEnabled(widgetCryptPublicKeyFileName,asymmetricFlag);
@@ -1652,14 +1655,8 @@ throw new Error("NYI");
             {
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
-              try
-              {
-                String s = widget.getText();
-                if (cryptPublicKeyFileName.getString().equals(s)) color = COLOR_WHITE;
-              }
-              catch (NumberFormatException exception)
-              {
-              }
+              String s = widget.getText();
+              if (cryptPublicKeyFileName.getString().equals(s)) color = COLOR_WHITE;
               widget.setBackground(color);
             }
           });
@@ -1718,12 +1715,204 @@ throw new Error("NYI");
           });
         }
 
-        // archive type
-        label = Widgets.newLabel(tab,"Mode:");
+        // password
+        label = Widgets.newLabel(tab,"Password:");
         Widgets.layout(label,4,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab,SWT.NONE);
-        composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,1.0,0.0}));
+        composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,1.0,0.0,1.0}));
         Widgets.layout(composite,4,1,TableLayoutData.WE);
+        {
+          button = Widgets.newRadio(composite,null,"default");
+          Widgets.layout(button,0,0,TableLayoutData.W);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              Widgets.setEnabled(widgetCryptPassword1,false);
+              Widgets.setEnabled(widgetCryptPassword2,false);
+              cryptPasswordMode.set("default");
+              BARServer.setOption(selectedJobId,"crypt-password-mode","default");
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+          Widgets.addModifyListener(new WidgetListener(button,cryptPasswordMode)
+          {
+            public void modified(Control control, WidgetVariable cryptPasswordMode)
+            {
+              boolean configFlag = cryptPasswordMode.equals("config");
+              Widgets.setEnabled(widgetCryptPassword1,configFlag);
+              Widgets.setEnabled(widgetCryptPassword2,configFlag);
+              ((Button)control).setSelection(cryptPasswordMode.equals("default"));
+            }
+          });
+
+          button = Widgets.newRadio(composite,null,"ask");
+          Widgets.layout(button,0,1,TableLayoutData.W);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              Widgets.setEnabled(widgetCryptPassword1,false);
+              Widgets.setEnabled(widgetCryptPassword2,false);
+              cryptPasswordMode.set("ask");
+              BARServer.setOption(selectedJobId,"crypt-password-mode","ask");
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+          Widgets.addModifyListener(new WidgetListener(button,cryptPasswordMode)
+          {
+            public void modified(Control control, WidgetVariable cryptPasswordMode)
+            {
+              boolean configFlag = cryptPasswordMode.equals("config");
+              Widgets.setEnabled(widgetCryptPassword1,configFlag);
+              Widgets.setEnabled(widgetCryptPassword2,configFlag);
+              ((Button)control).setSelection(cryptPasswordMode.equals("ask"));
+            }
+          });
+
+          button = Widgets.newRadio(composite,null,"this");
+          Widgets.layout(button,0,2,TableLayoutData.W);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              Widgets.setEnabled(widgetCryptPassword1,true);
+              Widgets.setEnabled(widgetCryptPassword2,true);
+              cryptPasswordMode.set("config");
+              BARServer.setOption(selectedJobId,"crypt-password-mode","config");
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+          Widgets.addModifyListener(new WidgetListener(button,cryptPasswordMode)
+          {
+            public void modified(Control control, WidgetVariable cryptPasswordMode)
+            {
+              boolean configFlag = cryptPasswordMode.equals("config");
+              Widgets.setEnabled(widgetCryptPassword1,configFlag);
+              Widgets.setEnabled(widgetCryptPassword2,configFlag);
+              ((Button)control).setSelection(cryptPasswordMode.equals("config"));
+            }
+          });
+
+          widgetCryptPassword1 = Widgets.newPassword(composite,null);
+          Widgets.layout(widgetCryptPassword1,0,3,TableLayoutData.WE);
+          widgetCryptPassword1.addModifyListener(new ModifyListener()
+          {
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
+              String s = widget.getText();
+              if (cryptPassword.getString().equals(s)) color = COLOR_WHITE;
+              widget.setBackground(color);
+            }
+          });
+          widgetCryptPassword1.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              String string1 = widgetCryptPassword1.getText();
+              String string2 = widgetCryptPassword2.getText();
+              if (string1.equals(string2))
+              {
+                cryptPassword.set(string1);
+                BARServer.setOption(selectedJobId,"crypt-password",string1);
+              }
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+throw new Error("NYI");
+            }
+          });
+          widgetCryptPassword1.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              String string1 = widgetCryptPassword1.getText();
+              String string2 = widgetCryptPassword2.getText();
+              if (string1.equals(string2))
+              {
+                cryptPassword.set(string1);
+                BARServer.setOption(selectedJobId,"crypt-password",string1);
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetListener(widgetCryptPassword1,cryptPassword));
+
+          label = Widgets.newLabel(composite,"Repeat:");
+          Widgets.layout(label,0,4,TableLayoutData.W);
+
+          widgetCryptPassword2 = Widgets.newPassword(composite,null);
+          Widgets.layout(widgetCryptPassword2,0,5,TableLayoutData.WE);
+          widgetCryptPassword2.addModifyListener(new ModifyListener()
+          {
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
+              String s = widget.getText();
+              if (cryptPassword.getString().equals(s)) color = COLOR_WHITE;
+              widget.setBackground(color);
+            }
+          });
+          widgetCryptPassword2.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              String string1 = widgetCryptPassword1.getText();
+              String string2 = widgetCryptPassword2.getText();
+              if (string1.equals(string2))
+              {
+                cryptPassword.set(string1);
+                BARServer.setOption(selectedJobId,"crypt-password",string1);
+              }
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+throw new Error("NYI");
+            }
+          });
+          widgetCryptPassword2.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              String string1 = widgetCryptPassword1.getText();
+              String string2 = widgetCryptPassword2.getText();
+              if (string1.equals(string2))
+              {
+                cryptPassword.set(string1);
+                BARServer.setOption(selectedJobId,"crypt-password",string1);
+              }
+              else
+              {
+                Dialogs.error(shell,"Crypt passwords are not equal!");
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetListener(widgetCryptPassword2,cryptPassword));
+        }
+
+        // archive type
+        label = Widgets.newLabel(tab,"Mode:");
+        Widgets.layout(label,5,0,TableLayoutData.W);
+        composite = Widgets.newComposite(tab,SWT.NONE);
+        composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,0.0,1.0,0.0}));
+        Widgets.layout(composite,5,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,null,"normal");
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -1741,7 +1930,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,archiveType)
           {
-            public void modified(Control control, BARVariable archiveType)
+            public void modified(Control control, WidgetVariable archiveType)
             {
               ((Button)control).setSelection(archiveType.equals("normal"));
             }
@@ -1763,7 +1952,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,archiveType)
           {
-            public void modified(Control control, BARVariable archiveType)
+            public void modified(Control control, WidgetVariable archiveType)
             {
               ((Button)control).setSelection(archiveType.equals("full"));
             }
@@ -1785,28 +1974,27 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,archiveType)
           {
-            public void modified(Control control, BARVariable archiveType)
+            public void modified(Control control, WidgetVariable archiveType)
             {
               ((Button)control).setSelection(archiveType.equals("incremental"));
             }
           });
 
+          control = Widgets.newSpacer(composite);
+          Widgets.layout(control,0,3,TableLayoutData.NONE,0,0,5,0);
+
+          label = Widgets.newLabel(composite,"Incremental file:");
+          Widgets.layout(label,0,4,TableLayoutData.W);
           text = Widgets.newText(composite,null);
-          Widgets.layout(text,0,3,TableLayoutData.WE);
+          Widgets.layout(text,0,5,TableLayoutData.WE);
           text.addModifyListener(new ModifyListener()
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
-              try
-              {
-                String s = widget.getText();
-                if (incrementalListFileName.getString().equals(s)) color = COLOR_WHITE;
-              }
-              catch (NumberFormatException exception)
-              {
-              }
+              String s = widget.getText();
+              if (incrementalListFileName.getString().equals(s)) color = COLOR_WHITE;
               widget.setBackground(color);
             }
           });
@@ -1840,7 +2028,7 @@ throw new Error("NYI");
           Widgets.addModifyListener(new WidgetListener(text,incrementalListFileName));
 
           button = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
-          Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
+          Widgets.layout(button,0,6,TableLayoutData.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -1866,10 +2054,10 @@ throw new Error("NYI");
 
         // file name
         label = Widgets.newLabel(tab,"File name:");
-        Widgets.layout(label,5,0,TableLayoutData.W);
+        Widgets.layout(label,6,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab,SWT.NONE);
         composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
-        Widgets.layout(composite,5,1,TableLayoutData.WE);
+        Widgets.layout(composite,6,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite,null);
           Widgets.layout(text,0,0,TableLayoutData.WE);
@@ -1879,14 +2067,8 @@ throw new Error("NYI");
             {
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
-              try
-              {
-                String s = widget.getText();
-                if (storageFileName.getString().equals(s)) color = COLOR_WHITE;
-              }
-              catch (NumberFormatException exception)
-              {
-              }
+              String s = widget.getText();
+              if (storageFileName.getString().equals(s)) color = COLOR_WHITE;
               widget.setBackground(color);
             }
           });
@@ -1938,9 +2120,9 @@ throw new Error("NYI");
 
         // destination
         label = Widgets.newLabel(tab,"Destination:");
-        Widgets.layout(label,6,0,TableLayoutData.W);
+        Widgets.layout(label,7,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab,SWT.NONE);
-        Widgets.layout(composite,6,1,TableLayoutData.WE);
+        Widgets.layout(composite,7,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,null,"File system");
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -1958,7 +2140,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,storageType)
           {
-            public void modified(Control control, BARVariable storageType)
+            public void modified(Control control, WidgetVariable storageType)
             {
               ((Button)control).setSelection(storageType.equals("filesystem"));
             }
@@ -1980,7 +2162,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,storageType)
           {
-            public void modified(Control control, BARVariable storageType)
+            public void modified(Control control, WidgetVariable storageType)
             {
               ((Button)control).setSelection(storageType.equals("ftp"));
             }
@@ -2002,7 +2184,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,storageType)
           {
-            public void modified(Control control, BARVariable storageType)
+            public void modified(Control control, WidgetVariable storageType)
             {
               ((Button)control).setSelection(storageType.equals("scp"));
             }
@@ -2024,7 +2206,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,storageType)
           {
-            public void modified(Control control, BARVariable storageType)
+            public void modified(Control control, WidgetVariable storageType)
             {
               ((Button)control).setSelection(storageType.equals("sftp"));
             }
@@ -2046,7 +2228,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,storageType)
           {
-            public void modified(Control control, BARVariable storageType)
+            public void modified(Control control, WidgetVariable storageType)
             {
               ((Button)control).setSelection(storageType.equals("dvd"));
             }
@@ -2068,7 +2250,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(button,storageType)
           {
-            public void modified(Control control, BARVariable storageType)
+            public void modified(Control control, WidgetVariable storageType)
             {
               ((Button)control).setSelection(storageType.equals("device"));
             }
@@ -2078,10 +2260,10 @@ throw new Error("NYI");
         // destination file system
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{1.0}));
-        Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,8,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
-          public void modified(Control control, BARVariable variable)
+          public void modified(Control control, WidgetVariable variable)
           {
             Widgets.setVisible(control,variable.equals("filesystem"));
           }
@@ -2109,10 +2291,10 @@ throw new Error("NYI");
         // destination ftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,1.0));
-        Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,8,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
-          public void modified(Control control, BARVariable variable)
+          public void modified(Control control, WidgetVariable variable)
           {
             Widgets.setVisible(control,variable.equals("ftp"));
           }
@@ -2134,14 +2316,8 @@ throw new Error("NYI");
               {
                 Text  widget = (Text)modifyEvent.widget;
                 Color color  = COLOR_MODIFIED;
-                try
-                {
-                  String s = widget.getText();
-                  if (storageLoginName.getString().equals(s)) color = COLOR_WHITE;
-                }
-                catch (NumberFormatException exception)
-                {
-                }
+                String s = widget.getText();
+                if (storageLoginName.getString().equals(s)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -2183,14 +2359,8 @@ throw new Error("NYI");
               {
                 Text  widget = (Text)modifyEvent.widget;
                 Color color  = COLOR_MODIFIED;
-                try
-                {
-                  String s = widget.getText();
-                  if (storageHostName.getString().equals(s)) color = COLOR_WHITE;
-                }
-                catch (NumberFormatException exception)
-                {
-                }
+                String s = widget.getText();
+                if (storageHostName.getString().equals(s)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -2232,14 +2402,8 @@ throw new Error("NYI");
               {
                 Text  widget = (Text)modifyEvent.widget;
                 Color color  = COLOR_MODIFIED;
-                try
-                {
-                  String s = widget.getText();
-                  if (storageLoginPassword.getString().equals(s)) color = COLOR_WHITE;
-                }
-                catch (NumberFormatException exception)
-                {
-                }
+                String s = widget.getText();
+                if (storageLoginPassword.getString().equals(s)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -2294,7 +2458,7 @@ throw new Error("NYI");
             });
             Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
             {
-              public void modified(Control control, BARVariable archivePartSizeFlag)
+              public void modified(Control control, WidgetVariable archivePartSizeFlag)
               {
                 ((Button)control).setSelection(!maxBandWidthFlag.getBoolean());
                 widgetFTPMaxBandWidth.setEnabled(!maxBandWidthFlag.getBoolean());
@@ -2316,7 +2480,7 @@ throw new Error("NYI");
             });
             Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
             {
-              public void modified(Control control, BARVariable archivePartSizeFlag)
+              public void modified(Control control, WidgetVariable archivePartSizeFlag)
               {
                 ((Button)control).setSelection(maxBandWidthFlag.getBoolean());
                 widgetFTPMaxBandWidth.setEnabled(maxBandWidthFlag.getBoolean());
@@ -2333,10 +2497,10 @@ throw new Error("NYI");
         // destination scp/sftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,8,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
-          public void modified(Control control, BARVariable variable)
+          public void modified(Control control, WidgetVariable variable)
           {
             Widgets.setVisible(control,variable.equals("scp") || variable.equals("sftp"));
           }
@@ -2360,14 +2524,8 @@ throw new Error("NYI");
               {
                 Text  widget = (Text)modifyEvent.widget;
                 Color color  = COLOR_MODIFIED;
-                try
-                {
-                  String s = widget.getText();
-                  if (storageLoginName.getString().equals(s)) color = COLOR_WHITE;
-                }
-                catch (NumberFormatException exception)
-                {
-                }
+                String s = widget.getText();
+                if (storageLoginName.getString().equals(s)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -2538,14 +2696,8 @@ throw new Error("NYI");
             {
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
-              try
-              {
-                String s = widget.getText();
-                if (sshPublicKeyFileName.getString().equals(s)) color = COLOR_WHITE;
-              }
-              catch (NumberFormatException exception)
-              {
-              }
+              String s = widget.getText();
+              if (sshPublicKeyFileName.getString().equals(s)) color = COLOR_WHITE;
               widget.setBackground(color);
             }
           });
@@ -2588,14 +2740,8 @@ throw new Error("NYI");
             {
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
-              try
-              {
-                String s = widget.getText();
-                if (sshPrivateKeyFileName.getString().equals(s)) color = COLOR_WHITE;
-              }
-              catch (NumberFormatException exception)
-              {
-              }
+              String s = widget.getText();
+              if (sshPrivateKeyFileName.getString().equals(s)) color = COLOR_WHITE;
               widget.setBackground(color);
             }
           });
@@ -2651,7 +2797,7 @@ throw new Error("NYI");
             });
             Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
             {
-              public void modified(Control control, BARVariable archivePartSizeFlag)
+              public void modified(Control control, WidgetVariable archivePartSizeFlag)
               {
                 ((Button)control).setSelection(!maxBandWidthFlag.getBoolean());
                 widgetSCPSFTPMaxBandWidth.setEnabled(!maxBandWidthFlag.getBoolean());
@@ -2675,7 +2821,7 @@ throw new Error("NYI");
             });
             Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
             {
-              public void modified(Control control, BARVariable archivePartSizeFlag)
+              public void modified(Control control, WidgetVariable archivePartSizeFlag)
               {
                 ((Button)control).setSelection(!maxBandWidthFlag.getBoolean());
                 widgetSCPSFTPMaxBandWidth.setEnabled(!maxBandWidthFlag.getBoolean());
@@ -2692,10 +2838,10 @@ throw new Error("NYI");
         // destination dvd
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,7,1,TableLayoutData.WE);
+        Widgets.layout(composite,8,1,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
-          public void modified(Control control, BARVariable variable)
+          public void modified(Control control, WidgetVariable variable)
           {
             Widgets.setVisible(control,variable.equals("dvd"));
           }
@@ -2713,14 +2859,8 @@ throw new Error("NYI");
             {
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
-              try
-              {
-                String s = widget.getText();
-                if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
-              }
-              catch (NumberFormatException exception)
-              {
-              }
+              String s = widget.getText();
+              if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
               widget.setBackground(color);
             }
           });
@@ -2825,7 +2965,7 @@ throw new Error("NYI");
             });
             Widgets.addModifyListener(new WidgetListener(combo,volumeSize)
             {
-              public String getString(BARVariable variable)
+              public String getString(WidgetVariable variable)
               {
                 return Units.formatByteSize(variable.getLong());
               }
@@ -2879,10 +3019,10 @@ throw new Error("NYI");
         // destination device
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,7,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,8,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
-          public void modified(Control control, BARVariable variable)
+          public void modified(Control control, WidgetVariable variable)
           {
             Widgets.setVisible(control,variable.equals("device"));
           }
@@ -2899,14 +3039,8 @@ throw new Error("NYI");
             {
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
-              try
-              {
-                String s = widget.getText();
-                if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
-              }
-              catch (NumberFormatException exception)
-              {
-              }
+              String s = widget.getText();
+              if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
               widget.setBackground(color);
             }
           });
@@ -3011,7 +3145,7 @@ throw new Error("NYI");
             });
             Widgets.addModifyListener(new WidgetListener(combo,volumeSize)
             {
-              public String getString(BARVariable variable)
+              public String getString(WidgetVariable variable)
               {
                 return Units.formatByteSize(variable.getLong());
               }
@@ -3234,6 +3368,8 @@ throw new Error("NYI");
       cryptAlgorithm.set(BARServer.getStringOption(selectedJobId,"crypt-algorithm"));
       cryptType.set(BARServer.getStringOption(selectedJobId,"crypt-type"));
       cryptPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"crypt-public-key"));
+      cryptPasswordMode.set(BARServer.getStringOption(selectedJobId,"crypt-password-mode"));
+      cryptPassword.set(BARServer.getStringOption(selectedJobId,"crypt-password"));
       incrementalListFileName.set(BARServer.getStringOption(selectedJobId,"incremental-list-file"));
       overwriteArchiveFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-archive-files"));
       sshPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"ssh-public-key"));
