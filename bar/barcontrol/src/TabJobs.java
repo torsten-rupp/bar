@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -1983,73 +1983,6 @@ throw new Error("NYI");
           control = Widgets.newSpacer(composite);
           Widgets.layout(control,0,3,TableLayoutData.NONE,0,0,5,0);
 
-          label = Widgets.newLabel(composite,"Incremental file:");
-          Widgets.layout(label,0,4,TableLayoutData.W);
-          text = Widgets.newText(composite,null);
-          Widgets.layout(text,0,5,TableLayoutData.WE);
-          text.addModifyListener(new ModifyListener()
-          {
-            public void modifyText(ModifyEvent modifyEvent)
-            {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (incrementalListFileName.getString().equals(s)) color = COLOR_WHITE;
-              widget.setBackground(color);
-            }
-          });
-          text.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-              Text   widget = (Text)selectionEvent.widget;
-              String string = widget.getText();
-              incrementalListFileName.set(string);
-              BARServer.setOption(selectedJobId,"incremental-list-file",string);
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-throw new Error("NYI");
-            }
-          });
-          text.addFocusListener(new FocusListener()
-          {
-            public void focusGained(FocusEvent focusEvent)
-            {
-            }
-            public void focusLost(FocusEvent focusEvent)
-            {
-              Text   widget = (Text)focusEvent.widget;
-              String string = widget.getText();
-              incrementalListFileName.set(string);
-              BARServer.setOption(selectedJobId,"incremental-list-file",string);
-            }
-          });
-          Widgets.addModifyListener(new WidgetListener(text,incrementalListFileName));
-
-          button = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
-          Widgets.layout(button,0,6,TableLayoutData.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
-          {
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button widget   = (Button)selectionEvent.widget;
-              String fileName = Dialogs.fileSave(shell,
-                                                 "Select incremental file",
-                                                 incrementalListFileName.getString(),
-                                                 new String[]{"BAR incremental data","*.bid",
-                                                              "All files","*",
-                                                             }
-                                                );
-              if (fileName != null)
-              {
-                incrementalListFileName.set(fileName);
-              }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-          });
         }
 
         // file name
@@ -2118,11 +2051,85 @@ throw new Error("NYI");
           });
         }
 
-        // destination
-        label = Widgets.newLabel(tab,"Destination:");
+        // incremental file name
+        label = Widgets.newLabel(tab,"Incremental file name:");
         Widgets.layout(label,7,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab,SWT.NONE);
+        composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
         Widgets.layout(composite,7,1,TableLayoutData.WE);
+        {
+          text = Widgets.newText(composite,null);
+          Widgets.layout(text,0,0,TableLayoutData.WE);
+          text.addModifyListener(new ModifyListener()
+          {
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
+              String s = widget.getText();
+              if (incrementalListFileName.getString().equals(s)) color = COLOR_WHITE;
+              widget.setBackground(color);
+            }
+          });
+          text.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              Text   widget = (Text)selectionEvent.widget;
+              String string = widget.getText();
+              incrementalListFileName.set(string);
+              BARServer.setOption(selectedJobId,"incremental-list-file",string);
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+  throw new Error("NYI");
+            }
+          });
+          text.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Text   widget = (Text)focusEvent.widget;
+              String string = widget.getText();
+              incrementalListFileName.set(string);
+              BARServer.setOption(selectedJobId,"incremental-list-file",string);
+            }
+          });
+          Widgets.addModifyListener(new WidgetListener(text,incrementalListFileName));
+
+          button = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
+          Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget   = (Button)selectionEvent.widget;
+              String fileName = Dialogs.fileSave(shell,
+                                                 "Select incremental file",
+                                                 incrementalListFileName.getString(),
+                                                 new String[]{"BAR incremental data","*.bid",
+                                                              "All files","*",
+                                                             }
+                                                );
+              if (fileName != null)
+              {
+                incrementalListFileName.set(fileName);
+              }
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+        }
+
+        // destination
+        label = Widgets.newLabel(tab,"Destination:");
+        Widgets.layout(label,8,0,TableLayoutData.W);
+        composite = Widgets.newComposite(tab,SWT.NONE);
+        Widgets.layout(composite,8,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,null,"File system");
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -2260,7 +2267,7 @@ throw new Error("NYI");
         // destination file system
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{1.0}));
-        Widgets.layout(composite,8,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,9,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -2291,7 +2298,7 @@ throw new Error("NYI");
         // destination ftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,1.0));
-        Widgets.layout(composite,8,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,9,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -2497,7 +2504,7 @@ throw new Error("NYI");
         // destination scp/sftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,8,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,9,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -2838,7 +2845,7 @@ throw new Error("NYI");
         // destination dvd
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,8,1,TableLayoutData.WE);
+        Widgets.layout(composite,9,1,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -3019,7 +3026,7 @@ throw new Error("NYI");
         // destination device
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,8,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,9,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
