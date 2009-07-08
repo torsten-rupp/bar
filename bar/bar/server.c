@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -337,9 +337,9 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] =
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] =
 {
-  {"default",   PASSWORD_MODE_DEFAULT,    },
-  {"ask",       PASSWORD_MODE_ASK,        },
-  {"config",    PASSWORD_MODE_CONFIG,     },
+  {"default",PASSWORD_MODE_DEFAULT,},
+  {"ask",    PASSWORD_MODE_ASK,    },
+  {"config", PASSWORD_MODE_CONFIG, },
 };
 
 LOCAL const ConfigValue CONFIG_VALUES[] =
@@ -438,6 +438,30 @@ LOCAL const char *getArchiveTypeName(ArchiveTypes archiveType)
   }
 
   return (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES))?CONFIG_VALUE_ARCHIVE_TYPES[z].name:"";
+}
+
+/***********************************************************************\
+* Name   : getCryptPasswordModeName
+* Purpose: get crypt password mode name
+* Input  : passwordMode - password mode
+* Output : -
+* Return : name
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
+{
+  int z;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))
+         && (passwordMode != CONFIG_VALUE_PASSWORD_MODES[z].value)
+        )
+  {
+    z++;
+  }
+
+  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))?CONFIG_VALUE_PASSWORD_MODES[z].name:"";
 }
 
 /***********************************************************************\
@@ -642,6 +666,7 @@ LOCAL void doneJob(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
+  /* set execution time, state */
   jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
   if      (jobNode->requestedAbortFlag)
   {
@@ -656,17 +681,18 @@ LOCAL void doneJob(JobNode *jobNode)
     jobNode->state = JOB_STATE_DONE;
   }
 
+  /* clear passwords */
   if (jobNode->cryptPassword != NULL)
   {
     Password_delete(jobNode->cryptPassword);
     jobNode->cryptPassword = NULL;
   }
-  if (jobNode->sshPassword != NULL)
+  if (jobNode->cryptPassword != NULL)
   {
     Password_delete(jobNode->sshPassword);
     jobNode->sshPassword = NULL;
   }
-  if (jobNode->ftpPassword != NULL)
+  if (jobNode->cryptPassword != NULL)
   {
     Password_delete(jobNode->ftpPassword);
     jobNode->ftpPassword = NULL;
@@ -1230,6 +1256,44 @@ LOCAL void updateAllJobFiles(void)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : getCryptPassword
+* Purpose: get crypt password
+* Input  : userData      - job info
+*          password      - crypt password variable
+*          fileName      - file name
+*          validateFlag  - TRUE to validate input, FALSE otherwise
+*          weakCheckFlag - TRUE for weak password checking, FALSE
+*                          otherwise (print warning if password seems to
+*                          be a weak password)
+* Output : password - crypt password
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getCryptPassword(void         *userData,
+                              Password     *password,
+                              const String fileName,
+                              bool         validateFlag,
+                              bool         weakCheckFlag
+                             )
+{
+  UNUSED_VARIABLE(fileName);
+  UNUSED_VARIABLE(validateFlag);
+  UNUSED_VARIABLE(weakCheckFlag);
+
+fprintf(stderr,"%s,%d: xxxxxxxxxxxxxxxxxxxx %p\n",__FILE__,__LINE__,((JobNode*)userData)->cryptPassword);
+  if (((JobNode*)userData)->cryptPassword != NULL)
+  {
+    Password_set(password,((JobNode*)userData)->cryptPassword);
+    return ERROR_NONE;
+  }
+  else
+  {
+    return ERROR_NO_CRYPT_PASSWORD;
+  }
+}
+
+/***********************************************************************\
 * Name   : updateCreateStatus
 * Purpose: update create status
 * Input  : jobNode          - job node
@@ -1528,6 +1592,8 @@ LOCAL void jobThreadEntry(void)
                                                     &excludePatternList,
                                                     &jobOptions,
                                                     archiveType,
+                                                    getCryptPassword,
+                                                    jobNode,
                                                     (CreateStatusInfoFunction)updateCreateStatus,
                                                     jobNode,
                                                     (StorageRequestVolumeFunction)storageRequestVolume,
@@ -1545,6 +1611,8 @@ LOCAL void jobThreadEntry(void)
                                                      &includePatternList,
                                                      &excludePatternList,
                                                      &jobOptions,
+                                                     getCryptPassword,
+                                                     jobNode,
                                                      (RestoreStatusInfoFunction)updateRestoreStatus,
                                                      jobNode,
                                                      &pauseFlag,
@@ -2548,7 +2616,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   while (jobNode != NULL)
   {
     sendResult(clientInfo,id,FALSE,0,
-               "%u %'S %'s %s %llu %'s %'s %'s %llu %lu",
+               "%u %'S %'s %s %llu %'s %'s %'s %'s %llu %lu",
                jobNode->id,
                jobNode->name,
                getJobStateText(jobNode->state),
@@ -2557,6 +2625,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
                Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm),
                Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm),
                Crypt_getTypeName(jobNode->jobOptions.cryptType),
+               getCryptPasswordModeName(jobNode->jobOptions.cryptPasswordMode),
                jobNode->lastExecutedDateTime,
                jobNode->runningInfo.estimatedRestTime
               );
@@ -3691,6 +3760,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
   }
 
   /* set password */
+  if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
   jobNode->cryptPassword = password;
 
   /* unlock */
@@ -3810,7 +3880,9 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   /* open archive */
   error = Archive_open(&archiveInfo,
                        archiveName,
-                       &clientInfo->jobOptions
+                       &clientInfo->jobOptions,
+                       NULL,
+                       NULL
                       );
   if (error != ERROR_NONE)
   {
@@ -4074,6 +4146,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
                           NULL,
                           NULL,
                           NULL,
+                          NULL,
+                          NULL,
                           NULL
                          );
   sendResult(clientInfo,id,TRUE,error,Errors_getText(error));
@@ -4140,7 +4214,7 @@ SERVER_COMMANDS[] =
   { "OPTION_SET",            "s S",serverCommand_optionSet,            AUTHORIZATION_STATE_OK      },
   { "OPTION_DELETE",         "s S",serverCommand_optionDelete,         AUTHORIZATION_STATE_OK      },
   { "DECRYPT_PASSWORD_CLEAR","",   serverCommand_decryptPasswordsClear,AUTHORIZATION_STATE_OK      },
-  { "DECRYTP_PASSWORD_ADD",  "i S",serverCommand_decryptPasswordAdd,   AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_ADD",  "i S",serverCommand_decryptPasswordAdd,   AUTHORIZATION_STATE_OK      },
   { "FTP_PASSWORD",          "i S",serverCommand_ftpPassword,          AUTHORIZATION_STATE_OK      },
   { "SSH_PASSWORD",          "i S",serverCommand_sshPassword,          AUTHORIZATION_STATE_OK      },
   { "CRYPT_PASSWORD",        "S",  serverCommand_cryptPassword,        AUTHORIZATION_STATE_OK      },
@@ -4737,6 +4811,7 @@ Errors Server_run(uint             port,
        )
     {
       #ifdef HAVE_GNU_TLS
+fprintf(stderr,"%s,%d: caFileName=%s certFileName=%s keyFileName=%s\n",__FILE__,__LINE__,caFileName,certFileName,keyFileName);
         error = Network_initServer(&serverTLSSocketHandle,
                                    tlsPort,
                                    SERVER_TYPE_TLS,
