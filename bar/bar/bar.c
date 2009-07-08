@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1582,7 +1582,8 @@ void getDevice(const String     name,
   device->writeCommand            = (jobOptions->device.writeCommand            != NULL)?jobOptions->device.writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :globalOptions.defaultDevice->writeCommand           );
 }
 
-Errors inputCryptPassword(Password     *password,
+Errors inputCryptPassword(void         *userData,
+                          Password     *password,
                           const String fileName,
                           bool         validateFlag,
                           bool         weakCheckFlag
@@ -1592,6 +1593,8 @@ Errors inputCryptPassword(Password     *password,
 
   assert(password != NULL);
   assert(fileName != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   error = ERROR_UNKNOWN;
   switch (globalOptions.runMode)
@@ -2569,6 +2572,8 @@ int main(int argc, const char *argv[])
                                  &excludePatternList,
                                  &jobOptions,
                                  ARCHIVE_TYPE_NORMAL,
+                                 inputCryptPassword,
+                                 NULL,
                                  NULL,
                                  NULL,
                                  NULL,
@@ -2599,21 +2604,27 @@ int main(int argc, const char *argv[])
               error = Command_list(&fileNameList,
                                    &includePatternList,
                                    &excludePatternList,
-                                   &jobOptions
+                                   &jobOptions,
+                                   inputCryptPassword,
+                                   NULL
                                   );
               break;
             case COMMAND_TEST:
               error = Command_test(&fileNameList,
                                    &includePatternList,
                                    &excludePatternList,
-                                   &jobOptions
+                                   &jobOptions,
+                                   inputCryptPassword,
+                                   NULL
                                   );
               break;
             case COMMAND_COMPARE:
               error = Command_compare(&fileNameList,
                                       &includePatternList,
                                       &excludePatternList,
-                                      &jobOptions
+                                      &jobOptions,
+                                      inputCryptPassword,
+                                      NULL
                                      );
               break;
             case COMMAND_RESTORE:
@@ -2621,6 +2632,8 @@ int main(int argc, const char *argv[])
                                       &includePatternList,
                                       &excludePatternList,
                                       &jobOptions,
+                                      inputCryptPassword,
+                                      NULL,
                                       NULL,
                                       NULL,
                                       NULL,
@@ -2684,7 +2697,7 @@ int main(int argc, const char *argv[])
 
           /* input crypt password for private key encryption */
           Password_init(&cryptPassword);
-          error = inputCryptPassword(&cryptPassword,privateKeyFileName,TRUE,FALSE);
+          error = inputCryptPassword(NULL,&cryptPassword,privateKeyFileName,TRUE,FALSE);
           if (error != ERROR_NONE)
           {
             printError("No password given for private key!\n");

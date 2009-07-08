@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -66,28 +66,35 @@ typedef void(*RestoreStatusInfoFunction)(Errors                  error,
 /***********************************************************************\
 * Name   : Command_restore
 * Purpose: restore archive content
-* Input  : archiveFileNameList      - list with archive files
-*          includePatternList       - include list
-*          excludePatternList       - exclude list
-*          jobOptions               - job options
-*          createStatusInfoFunction - status info call back function
-*                                     (can be NULL)
-*          createStatusInfoUserData - user data for status info function
-*          pauseFlag                - pause flag (can be NULL)
-*          requestedAbortFlag       - request abort flag (can be NULL)
+* Input  : archiveFileNameList              - list with archive files 
+*          includePatternList               - include list            
+*          excludePatternList               - exclude list            
+*          jobOptions                       - job options             
+*          archiveGetCryptPasswordFunction  - get password call back
+*          archiveGetCryptPasswordUserData  - user data for get password
+*                                             call back
+*          createStatusInfoFunction         - status info call back
+*                                             function (can be NULL)                      
+*          createStatusInfoUserData         - user data for status info
+*                                             function 
+*          pauseFlag                        - pause flag (can be NULL)           
+*          requestedAbortFlag               - request abort flag (can be
+*                                             NULL)   
 * Output : -
 * Return : ERROR_NONE if all files restored, otherwise error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_restore(StringList                *archiveFileNameList,
-                       PatternList               *includePatternList,
-                       PatternList               *excludePatternList,
-                       JobOptions                *jobOptions,
-                       RestoreStatusInfoFunction restoreStatusInfoFunction,
-                       void                      *restoreStatusInfoUserData,
-                       bool                      *pauseFlag,
-                       bool                      *requestedAbortFlag
+Errors Command_restore(StringList                      *archiveFileNameList,
+                       PatternList                     *includePatternList,
+                       PatternList                     *excludePatternList,
+                       JobOptions                      *jobOptions,
+                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                       void                            *archiveGetCryptPasswordUserData,
+                       RestoreStatusInfoFunction       restoreStatusInfoFunction,
+                       void                            *restoreStatusInfoUserData,
+                       bool                            *pauseFlag,
+                       bool                            *requestedAbortFlag
                       );
 
 #ifdef __cplusplus

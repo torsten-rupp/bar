@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -208,7 +208,7 @@ LOCAL void printHeader(const String archiveFileName)
     Misc_expandMacros(String_clear(string),template,MACROS,SIZE_OF_ARRAY(MACROS));
     printInfo(0,"%s\n",String_cString(string));
     printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
-  }    
+  }
 
   String_delete(string);
 }
@@ -934,10 +934,12 @@ LOCAL void printList(void)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_list(StringList  *archiveFileNameList,
-                    PatternList *includePatternList,
-                    PatternList *excludePatternList,
-                    JobOptions  *jobOptions
+Errors Command_list(StringList                      *archiveFileNameList,
+                    PatternList                     *includePatternList,
+                    PatternList                     *excludePatternList,
+                    JobOptions                      *jobOptions,
+                    ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                    void                            *archiveGetCryptPasswordUserData
                    )
 {
   String       archiveFileName;
@@ -985,7 +987,9 @@ remoteBarFlag=FALSE;
           /* open archive */
           error = Archive_open(&archiveInfo,
                                archiveFileName,
-                               jobOptions
+                               jobOptions,
+                               archiveGetCryptPasswordFunction,
+                               archiveGetCryptPasswordUserData
                               );
           if (error != ERROR_NONE)
           {

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -48,58 +48,83 @@ typedef enum
 /***********************************************************************\
 * Name   : ArchiveNewFileFunction
 * Purpose: call back when archive file is created/written
-* Input  : fileName     - archive file name
+* Input  : userData     - user data
+*          fileName     - archive file name
 *          partNumber   - part number or -1 if no parts
 *          lastPartFlag - TRUE iff last archive part, FALSE otherwise
-*          userData     - user data
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveNewFileFunction)(String fileName,
+typedef Errors(*ArchiveNewFileFunction)(void   *userData,
+                                        String fileName,
                                         uint64 length,
                                         int    partNumber,
-                                        bool   lastPartFlag,
-                                        void   *userData
+                                        bool   lastPartFlag
                                        );
+
+/***********************************************************************\
+* Name   : ArchiveGetCryptPasswordFunction
+* Purpose: call back to get crypt password for archive file
+* Input  : userData      - user data
+*          password      - crypt password variable
+*          fileName      - file name
+*          validateFlag  - TRUE to validate input, FALSE otherwise
+*          weakCheckFlag - TRUE for weak password checking, FALSE
+*                          otherwise (print warning if password seems to
+*                          be a weak password)
+* Output : password - crypt password
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
+                                                 Password     *password,
+                                                 const String fileName,
+                                                 bool         validateFlag,
+                                                 bool         weakCheckFlag
+                                                );
+
 
 typedef struct
 {
-  ArchiveNewFileFunction archiveNewFileFunction;         // new archive file call back function
-  void                   *archiveNewFileUserData;        // user data for new archive file call back function
-  JobOptions             *jobOptions;
+  ArchiveNewFileFunction          archiveNewFileFunction;            // call back for new archive file               
+  void                            *archiveNewFileUserData;           // user data for call back for new archive file 
+  ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;   // call back to get crypt password
+  void                            *archiveGetCryptPasswordUserData;  // user data for call back to get crypt password
+  JobOptions                      *jobOptions;
 
-  CryptTypes             cryptType;                      // crypt type (symmetric/asymmetric; see CryptTypes)
-//  PasswordModes          passwordMode;                   // password mode (PASSWORD_MODE_DEFAULT for using settings in jobOptions)
-  Password               *cryptPassword;                 // cryption password for encryption/decryption
-  CryptKey               cryptKey;                       // public/private key for encryption/decryption of random key used for asymmetric encryption
-  void                   *cryptKeyData;                  // encrypted random key used for asymmetric encryption
-  uint                   cryptKeyDataLength;             // length of encrypted random key
+  CryptTypes                      cryptType;                         // crypt type (symmetric/asymmetric; see CryptTypes)
+//  PasswordModes                   passwordMode;                      // password mode (PASSWORD_MODE_DEFAULT for using settings in jobOptions)
+  Password                        *cryptPassword;                    // cryption password for encryption/decryption
+  CryptKey                        cryptKey;                          // public/private key for encryption/decryption of random key used for asymmetric encryption
+  void                            *cryptKeyData;                     // encrypted random key used for asymmetric encryption
+  uint                            cryptKeyDataLength;                // length of encrypted random key
 
-  uint                   blockLength;                    // block length for file entry/file data (depend on used crypt algorithm)
+  uint                            blockLength;                       // block length for file entry/file data (depend on used crypt algorithm)
 
-  String                 fileName;                       // file name
-  ArchiveIOTypes         ioType;                         // i/o type
+  String                          fileName;                          // file name
+  ArchiveIOTypes                  ioType;                            // i/o type
   union
   {
     struct
     {
-      FileHandle         fileHandle;                     // file handle
-      bool               openFlag;                       // TRUE iff archive file is open
+      FileHandle                  fileHandle;                        // file handle
+      bool                        openFlag;                          // TRUE iff archive file is open
     } file;
     struct
     {
-      StorageFileHandle  storageFileHandle;              // storage file handle
+      StorageFileHandle           storageFileHandle;                 // storage file handle
     } storageFile;
   };
-  const ChunkIO          *chunkIO;
-  void                   *chunkIOUserData;
+  const ChunkIO                   *chunkIO;
+  void                            *chunkIOUserData;
 
-  uint                   partNumber;                     // file part number
+  uint                            partNumber;                        // file part number
 
-  bool                   nextChunkHeaderReadFlag;        // TRUE iff next chunk header read
-  ChunkHeader            nextChunkHeader;                // next chunk header
+  bool                            nextChunkHeaderReadFlag;           // TRUE iff next chunk header read
+  ChunkHeader                     nextChunkHeader;                   // next chunk header
 } ArchiveInfo;
 
 typedef struct
@@ -193,7 +218,7 @@ typedef struct
 * Purpose: init archive functions
 * Input  : -
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -235,37 +260,49 @@ void Archive_appendDecryptPassword(const Password *password);
 /***********************************************************************\
 * Name   : Archive_create
 * Purpose: create archive
-* Input  : archiveInfo            - archive info block
-*          archiveNewFileFunction - call back for creating new archive
-*                                   file 
-*          archiveNewFileUserData - user data for call back
-*          options                - option settings
-*          passwordMode           - password mode
+* Input  : archiveInfo                 - archive info block
+*          jobOptions                  - job option settings
+*          archiveNewFileFunction      - call back for creating new
+*                                        archive file 
+*          archiveNewFileUserData      - user data for call back
+*          archiveGetCryptPassword     - get password call back
+*          archiveGetCryptPasswordData - user data for get password call
+*                                        back
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_create(ArchiveInfo            *archiveInfo,
-                      ArchiveNewFileFunction archiveNewFileFunction,
-                      void                   *archiveNewFileUserData,
-                      JobOptions             *jobOptions
+Errors Archive_create(ArchiveInfo                     *archiveInfo,
+                      JobOptions                      *jobOptions,
+                      ArchiveNewFileFunction          archiveNewFileFunction,
+                      void                            *archiveNewFileUserData,
+                      ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
+                      void                            *archiveGetCryptPasswordData
                      );
 
 /***********************************************************************\
 * Name   : Archive_open
 * Purpose: open archive
-* Input  : archiveInfo     - archive info block
-*          archiveFileName - archive file name
-*          jobOptions      - option settings
+* Input  : archiveInfo                 - archive info block  
+*          archiveFileName             - archive file name   
+*          jobOptions                  - option settings     
+*          archiveNewFileFunction      - call back for creating new
+*                                        archive file 
+*          archiveNewFileUserData      - user data for call back
+*          archiveGetCryptPassword     - get password call back
+*          archiveGetCryptPasswordData - user data for get password call
+*                                        back
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_open(ArchiveInfo  *archiveInfo,
-                    const String archiveFileName,
-                    JobOptions   *jobOptions
+Errors Archive_open(ArchiveInfo                     *archiveInfo,
+                    const String                    archiveFileName,
+                    JobOptions                      *jobOptions,
+                    ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
+                    void                            *archiveGetCryptPasswordData
                    );
 
 /***********************************************************************\
@@ -273,7 +310,7 @@ Errors Archive_open(ArchiveInfo  *archiveInfo,
 * Purpose: close archive
 * Input  : archiveInfo - archive info block
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -298,7 +335,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo);
 *          name            - file name
 *          fileInfo        - file info
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -316,7 +353,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
 *          name            - directory name
 *          fileInfo        - file info
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -335,7 +372,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
 *          destinationName - name of referenced file
 *          fileInfo        - file info
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -354,7 +391,7 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
 *          name            - special device name
 *          fileInfo        - file info
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -370,7 +407,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo     *archiveInfo,
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
 * Output : FileTypes - file type
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -391,7 +428,7 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
 *          cryptType         - used crypt type (can be NULL)
 *          fragmentOffset    - fragment offset (can be NULL)
 *          fragmentSize      - fragment size in bytes (can be NULL)
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -415,7 +452,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 *          cryptType      - used crypt type (can be NULL)
 *          directoryName  - directory name
 *          fileInfo       - file info
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -437,7 +474,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
 *          linkName        - link name
 *          destinationName - name of referenced file
 *          fileInfo        - file info
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -459,7 +496,7 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
 *          cryptType      - used crypt type (can be NULL)
 *          name           - link name
 *          fileInfo       - file info
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -476,7 +513,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
 * Purpose: clsoe file in archive
 * Input  : archiveFileInfo - archive file info block
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -489,7 +526,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo);
 *          buffer          - data buffer
 *          length          - length of data buffer
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -505,7 +542,7 @@ Errors Archive_writeFileData(ArchiveFileInfo *archiveFileInfo,
 *          buffer          - data buffer
 *          length          - length of data buffer
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 

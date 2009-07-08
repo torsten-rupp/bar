@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -72,36 +72,45 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 /***********************************************************************\
 * Name   : Command_create
 * Purpose: create archive
-* Input  : archiveFileName              - archive file name
-*          includeList                  - include list
-*          excludeList                  - exclude list
-*          jobOptions                   - job options
-*          createStatusInfoFunction     - status info call back function
-*                                         (can be NULL)
-*          createStatusInfoUserData     - user data for status info
-*                                         function
-*          storageRequestVolumeFunction - request volume call back
-*                                         function
-*          storageRequestVolumeUserData - user data for request volume
-*          pauseFlag                    - pause flag (can be NULL)
-*          requestedAbortFlag           - request abort flag (can be
-*                                         NULL)
+* Input  : archiveFileName                  - archive file name
+*          includeList                      - include list
+*          excludeList                      - exclude list
+*          jobOptions                       - job options
+*          archiveType                      - archive type; see
+*                                             ArchiveTypes (normal/full/
+*                                             incremental)
+*          archiveGetCryptPasswordFunction  - get password call back
+*          archiveGetCryptPasswordUserData  - user data for get password
+*                                             call back
+*          createStatusInfoFunction         - status info call back
+*                                             function (can be NULL)
+*          createStatusInfoUserData         - user data for status info
+*                                             function
+*          storageRequestVolumeFunction     - request volume call back
+*                                             function
+*          storageRequestVolumeUserData     - user data for request
+*                                             volume
+*          pauseFlag                        - pause flag (can be NULL)
+*          requestedAbortFlag               - request abort flag (can be
+*                                             NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_create(const char                   *archiveFileName,
-                      PatternList                  *includePatternList,
-                      PatternList                  *excludePatternList,
-                      JobOptions                   *jobOptions,
-                      ArchiveTypes                 archiveType,
-                      CreateStatusInfoFunction     createStatusInfoFunction,
-                      void                         *createStatusInfoUserData,
-                      StorageRequestVolumeFunction storageRequestVolumeFunction,
-                      void                         *storageRequestVolumeUserData,
-                      bool                         *pauseFlag,
-                      bool                         *requestedAbortFlag
+Errors Command_create(const char                      *archiveFileName,
+                      PatternList                     *includePatternList,
+                      PatternList                     *excludePatternList,
+                      JobOptions                      *jobOptions,
+                      ArchiveTypes                    archiveType,
+                      ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                      void                            *archiveGetCryptPasswordUserData,
+                      CreateStatusInfoFunction        createStatusInfoFunction,
+                      void                            *createStatusInfoUserData,
+                      StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                      void                            *storageRequestVolumeUserData,
+                      bool                            *pauseFlag,
+                      bool                            *requestedAbortFlag
                      );
 
 #ifdef __cplusplus

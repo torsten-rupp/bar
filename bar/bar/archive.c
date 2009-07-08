@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -81,11 +81,13 @@ typedef struct
 /* password handle */
 typedef struct
 {
-  String             fileName;
-  PasswordModes      passwordMode;
-  const Password     *cryptPassword;
-  const PasswordNode *passwordNode;
-  bool               inputFlag;
+  String                          fileName;       
+  PasswordModes                   passwordMode;   
+  const Password                  *cryptPassword; 
+  const PasswordNode              *passwordNode;  
+  ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;
+  void                            *archiveGetCryptPasswordUserData;
+  bool                            inputFlag;
 } PasswordHandle;
 
 /***************************** Variables *******************************/
@@ -126,17 +128,22 @@ LOCAL void freePasswordNode(PasswordNode *passwordNode, void *userData)
 /***********************************************************************\
 * Name   : getCryptPassword
 * Purpose: get crypt password if password not set
-* Input  : fileName     - file name
-*          jobOptions   - job options
-*          passwordMode - password mode
+* Input  : fileName                        - file name
+*          jobOptions                      - job options
+*          passwordMode                    - password mode
+*          archiveGetCryptPasswordFunction - get password call back
+*          archiveGetCryptPasswordUserData - user data for get password
+*                                            call back
 * Output : -
 * Return : password or NULL if no password given
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Password *getCryptPassword(const String     fileName,
-                                 const JobOptions *jobOptions,
-                                 PasswordModes    passwordMode
+LOCAL Password *getCryptPassword(const String                    fileName,
+                                 const JobOptions                *jobOptions,
+                                 PasswordModes                   passwordMode,
+                                 ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                                 void                            *archiveGetCryptPasswordUserData
                                 )
 {
   Password *password;
@@ -155,29 +162,43 @@ LOCAL Password *getCryptPassword(const String     fileName,
       }
       else
       {
+        if (archiveGetCryptPasswordFunction != NULL)
+        {
+          password = Password_new();
+          if (password == NULL)
+          {
+            return NULL;
+          }
+          error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,password,fileName,TRUE,TRUE);
+          if (error != ERROR_NONE)
+          {
+            Password_delete(password);
+            return NULL;
+          }
+        }
+        else
+        {
+          return NULL;
+        }
+      }
+      break;
+    case PASSWORD_MODE_ASK:
+      if (archiveGetCryptPasswordFunction != NULL)
+      {
         password = Password_new();
         if (password == NULL)
         {
           return NULL;
         }
-        error = inputCryptPassword(password,fileName,TRUE,TRUE);
+        error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,password,fileName,TRUE,TRUE);
         if (error != ERROR_NONE)
         {
           Password_delete(password);
           return NULL;
         }
       }
-      break;
-    case PASSWORD_MODE_ASK:
-      password = Password_new();
-      if (password == NULL)
+      else
       {
-        return NULL;
-      }
-      error = inputCryptPassword(password,fileName,TRUE,TRUE);
-      if (error != ERROR_NONE)
-      {
-        Password_delete(password);
         return NULL;
       }
       break;
@@ -188,15 +209,22 @@ LOCAL Password *getCryptPassword(const String     fileName,
       }
       else
       {
-        password = Password_new();
-        if (password == NULL)
+        if (archiveGetCryptPasswordFunction != NULL)
         {
-          return NULL;
+          password = Password_new();
+          if (password == NULL)
+          {
+            return NULL;
+          }
+          error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,password,fileName,TRUE,TRUE);
+          if (error != ERROR_NONE)
+          {
+            Password_delete(password);
+            return NULL;
+          }
         }
-        error = inputCryptPassword(password,fileName,TRUE,TRUE);
-        if (error != ERROR_NONE)
+        else
         {
-          Password_delete(password);
           return NULL;
         }
       }
@@ -260,28 +288,35 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
               )
           )
   {
-    /* input password */
-    password = Password_new();
-    if (password == NULL)
+    if (passwordHandle->archiveGetCryptPasswordFunction != NULL)
+    {
+      /* input password */
+      password = Password_new();
+      if (password == NULL)
+      {
+        return NULL;
+      }
+      error = passwordHandle->archiveGetCryptPasswordFunction(passwordHandle->archiveGetCryptPasswordUserData,password,passwordHandle->fileName,FALSE,FALSE);
+      if (error != ERROR_NONE)
+      {
+        Password_delete(password);
+        return NULL;
+      }
+
+      /* add to password list */
+      Archive_appendDecryptPassword(password);
+
+      /* next password is: none */
+      passwordHandle->inputFlag = TRUE;
+    }
+    else
     {
       return NULL;
     }
-    error = inputCryptPassword(password,passwordHandle->fileName,FALSE,FALSE);
-    if (error != ERROR_NONE)
-    {
-      Password_delete(password);
-      return NULL;
-    }
-
-    /* add to password list */
-    Archive_appendDecryptPassword(password);
-
-    /* next password is: none */
-    passwordHandle->inputFlag = TRUE;
   }
   else
   {
-    password = NULL;
+    return NULL;
   }
 
   return password;
@@ -290,27 +325,34 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 /***********************************************************************\
 * Name   : getFirstDecryptPassword
 * Purpose: get first decrypt password
-* Input  : fileName     - file name
-*          jobOptions   - job options
-*          passwordMode - password mode
+* Input  : fileName                        - file name
+*          jobOptions                      - job options
+*          passwordMode                    - password mode
+*          archiveGetCryptPasswordFunction - get password call back
+*          archiveGetCryptPasswordUserData - user data for get password
+*                                            call back
 * Output : passwordHandle - intialized password handle
 * Return : password or NULL if no more passwords
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const Password *getFirstDecryptPassword(PasswordHandle   *passwordHandle,
-                                              const String     fileName,
-                                              const JobOptions *jobOptions,
-                                              PasswordModes    passwordMode
+LOCAL const Password *getFirstDecryptPassword(PasswordHandle                  *passwordHandle, 
+                                              const String                    fileName,        
+                                              const JobOptions                *jobOptions,     
+                                              PasswordModes                   passwordMode,
+                                              ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                                              void                            *archiveGetCryptPasswordUserData
                                              )
 {
   assert(passwordHandle != NULL);
 
-  passwordHandle->fileName      = fileName;
-  passwordHandle->passwordMode  = (passwordMode != PASSWORD_MODE_DEFAULT)?passwordMode:jobOptions->cryptPasswordMode;
-  passwordHandle->cryptPassword = jobOptions->cryptPassword;
-  passwordHandle->passwordNode  = decryptPasswordList.head;
-  passwordHandle->inputFlag     = FALSE;
+  passwordHandle->fileName                        = fileName;                                                                           
+  passwordHandle->passwordMode                    = (passwordMode != PASSWORD_MODE_DEFAULT)?passwordMode:jobOptions->cryptPasswordMode; 
+  passwordHandle->cryptPassword                   = jobOptions->cryptPassword;                                                          
+  passwordHandle->passwordNode                    = decryptPasswordList.head;                                                           
+  passwordHandle->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
+  passwordHandle->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
+  passwordHandle->inputFlag                       = FALSE;
 
   return getNextDecryptPassword(passwordHandle);
 }
@@ -320,7 +362,7 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle   *passwordHandle,
 * Purpose: read next chunk header
 * Input  : archiveInfo - archive info block
 * Output : chunkHeader - read chunk header
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -428,7 +470,7 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
 * Input  : archiveInfo - archive info block
 *          chunkHeader - key chunk header
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -480,7 +522,7 @@ LOCAL Errors readHeader(ArchiveInfo       *archiveInfo,
 * Input  : archiveInfo - archive info block
 *          chunkHeader - key chunk header
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -562,7 +604,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
 * Purpose: write header
 * Input  : archiveInfo - archive info block
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -617,7 +659,7 @@ LOCAL Errors writeHeader(ArchiveInfo *archiveInfo)
 * Purpose: write new encryption key
 * Input  : archiveInfo - archive info block
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -681,7 +723,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
 * Purpose: create and open new archive file
 * Input  : archiveInfo - archive info block
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -741,7 +783,7 @@ LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
 * Input  : archiveInfo  - archive info block
 *          lastPartFlag - TRUE iff last archive part, FALSE otherwise
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -769,11 +811,11 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
   /* call back new archive created */
   if (archiveInfo->archiveNewFileFunction != NULL)
   {
-    error = archiveInfo->archiveNewFileFunction(archiveInfo->fileName,
+    error = archiveInfo->archiveNewFileFunction(archiveInfo->archiveNewFileUserData,
+                                                archiveInfo->fileName,
                                                 fileSize,
                                                 (archiveInfo->jobOptions->archivePartSize > 0)?archiveInfo->partNumber:ARCHIVE_PART_NUMBER_NONE,
-                                                lastPartFlag,
-                                                archiveInfo->archiveNewFileUserData
+                                                lastPartFlag
                                                );
     if (error != ERROR_NONE)
     {
@@ -841,7 +883,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
 * Input  : archiveFileInfo - archive file info block
 *          blockModes      - block write mode; see BlockModes
 * Output : -
-* Return : ERROR_NONE or errorcode
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1206,10 +1248,12 @@ void Archive_appendDecryptPassword(const Password *password)
   List_append(&decryptPasswordList,passwordNode);
 }
 
-Errors Archive_create(ArchiveInfo            *archiveInfo,
-                      ArchiveNewFileFunction archiveNewFileFunction,
-                      void                   *archiveNewFileUserData,
-                      JobOptions             *jobOptions
+Errors Archive_create(ArchiveInfo                     *archiveInfo,
+                      JobOptions                      *jobOptions,
+                      ArchiveNewFileFunction          archiveNewFileFunction,
+                      void                            *archiveNewFileUserData,
+                      ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                      void                            *archiveGetCryptPasswordUserData
                      )
 {
   Errors error;
@@ -1234,26 +1278,28 @@ Errors Archive_create(ArchiveInfo            *archiveInfo,
 
   /* init */
 
-  archiveInfo->archiveNewFileFunction  = archiveNewFileFunction;
-  archiveInfo->archiveNewFileUserData  = archiveNewFileUserData;
-  archiveInfo->jobOptions              = jobOptions;
-//  archiveInfo->passwordMode            = passwordMode;
+  archiveInfo->archiveNewFileFunction          = archiveNewFileFunction;
+  archiveInfo->archiveNewFileUserData          = archiveNewFileUserData;
+  archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
+  archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
+  archiveInfo->jobOptions                      = jobOptions;
+//  archiveInfo->passwordMode                    = passwordMode;
 
-  archiveInfo->cryptPassword           = NULL;
-  archiveInfo->cryptType               = (jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE)?jobOptions->cryptType:CRYPT_TYPE_NONE;
-  archiveInfo->cryptKeyData            = NULL;
-  archiveInfo->cryptKeyDataLength      = 0;
+  archiveInfo->cryptPassword                   = NULL;
+  archiveInfo->cryptType                       = (jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE)?jobOptions->cryptType:CRYPT_TYPE_NONE;
+  archiveInfo->cryptKeyData                    = NULL;
+  archiveInfo->cryptKeyDataLength              = 0;
 
-  archiveInfo->ioType                  = ARCHIVE_IO_TYPE_FILE;
-  archiveInfo->fileName                = String_new();
-  archiveInfo->file.openFlag           = FALSE;
+  archiveInfo->ioType                          = ARCHIVE_IO_TYPE_FILE;
+  archiveInfo->fileName                        = String_new();
+  archiveInfo->file.openFlag                   = FALSE;
 
-  archiveInfo->chunkIO                 = &CHUNK_IO_FILE;
-  archiveInfo->chunkIOUserData         = &archiveInfo->file.fileHandle;
+  archiveInfo->chunkIO                         = &CHUNK_IO_FILE;
+  archiveInfo->chunkIOUserData                 = &archiveInfo->file.fileHandle;
 
-  archiveInfo->partNumber              = 0;
+  archiveInfo->partNumber                      = 0;
 
-  archiveInfo->nextChunkHeaderReadFlag = FALSE;
+  archiveInfo->nextChunkHeaderReadFlag         = FALSE;
 
   /* init key (if asymmetric encryption used) */
   if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -1328,9 +1374,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   return ERROR_NONE;
 }
 
-Errors Archive_open(ArchiveInfo  *archiveInfo,
-                    const String archiveFileName,
-                    JobOptions   *jobOptions
+Errors Archive_open(ArchiveInfo                     *archiveInfo,
+                    const String                    archiveFileName,
+                    JobOptions                      *jobOptions,
+                    ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                    void                            *archiveGetCryptPasswordUserData
                    )
 {
   String fileName;
@@ -1343,25 +1391,27 @@ Errors Archive_open(ArchiveInfo  *archiveInfo,
   fileName = String_new();
 
   /* init */
-  archiveInfo->archiveNewFileFunction  = NULL;
-  archiveInfo->archiveNewFileUserData  = NULL;
-  archiveInfo->jobOptions              = jobOptions;
-//  archiveInfo->passwordMode            = passwordMode;
+  archiveInfo->archiveNewFileFunction          = NULL;
+  archiveInfo->archiveNewFileUserData          = NULL;
+  archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
+  archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
+  archiveInfo->jobOptions                      = jobOptions;
+//  archiveInfo->passwordMode                    = passwordMode;
 
-  archiveInfo->cryptPassword           = NULL;
-  archiveInfo->cryptType               = CRYPT_TYPE_NONE;
-  archiveInfo->cryptKeyData            = NULL;
-  archiveInfo->cryptKeyDataLength      = 0;
+  archiveInfo->cryptPassword                   = NULL;
+  archiveInfo->cryptType                       = CRYPT_TYPE_NONE;
+  archiveInfo->cryptKeyData                    = NULL;
+  archiveInfo->cryptKeyDataLength              = 0;
 
-  archiveInfo->ioType                  = ARCHIVE_IO_TYPE_STORAGE_FILE;
-  archiveInfo->fileName                = String_duplicate(archiveFileName);
+  archiveInfo->ioType                          = ARCHIVE_IO_TYPE_STORAGE_FILE;
+  archiveInfo->fileName                        = String_duplicate(archiveFileName);
 
-  archiveInfo->chunkIO                 = &CHUNK_IO_STORAGE_FILE;
-  archiveInfo->chunkIOUserData         = &archiveInfo->storageFile.storageFileHandle;
+  archiveInfo->chunkIO                         = &CHUNK_IO_STORAGE_FILE;
+  archiveInfo->chunkIOUserData                 = &archiveInfo->storageFile.storageFileHandle;
 
-  archiveInfo->partNumber              = 0;
+  archiveInfo->partNumber                      = 0;
 
-  archiveInfo->nextChunkHeaderReadFlag = FALSE;
+  archiveInfo->nextChunkHeaderReadFlag         = FALSE;
 
   error = Storage_init(&archiveInfo->storageFile.storageFileHandle,
                        archiveFileName,
@@ -1481,7 +1531,9 @@ bool Archive_eof(ArchiveInfo *archiveInfo)
         password = getFirstDecryptPassword(&passwordHandle,
                                            archiveInfo->fileName,
                                            archiveInfo->jobOptions,
-                                           archiveInfo->jobOptions->cryptPasswordMode
+                                           archiveInfo->jobOptions->cryptPasswordMode,
+                                           archiveInfo->archiveGetCryptPasswordFunction,
+                                           archiveInfo->archiveGetCryptPasswordUserData
                                           );
         while (   !decryptedFlag
                && (password != NULL)
@@ -1565,7 +1617,9 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
   {
     archiveInfo->cryptPassword = getCryptPassword(archiveInfo->fileName,
                                                   archiveInfo->jobOptions,
-                                                  archiveInfo->jobOptions->cryptPasswordMode
+                                                  archiveInfo->jobOptions->cryptPasswordMode,
+                                                  archiveInfo->archiveGetCryptPasswordFunction,
+                                                  archiveInfo->archiveGetCryptPasswordUserData
                                                  );
     if (archiveInfo->cryptPassword == NULL)
     {
@@ -1741,7 +1795,9 @@ Errors Archive_newDirectoryEntry(ArchiveInfo     *archiveInfo,
   {
     archiveInfo->cryptPassword = getCryptPassword(archiveInfo->fileName,
                                                   archiveInfo->jobOptions,
-                                                  archiveInfo->jobOptions->cryptPasswordMode
+                                                  archiveInfo->jobOptions->cryptPasswordMode,
+                                                  archiveInfo->archiveGetCryptPasswordFunction,
+                                                  archiveInfo->archiveGetCryptPasswordUserData
                                                  );
     if (archiveInfo->cryptPassword == NULL)
     {
@@ -1879,7 +1935,9 @@ Errors Archive_newLinkEntry(ArchiveInfo     *archiveInfo,
   {
     archiveInfo->cryptPassword = getCryptPassword(archiveInfo->fileName,
                                                   archiveInfo->jobOptions,
-                                                  archiveInfo->jobOptions->cryptPasswordMode
+                                                  archiveInfo->jobOptions->cryptPasswordMode,
+                                                  archiveInfo->archiveGetCryptPasswordFunction,
+                                                  archiveInfo->archiveGetCryptPasswordUserData
                                                  );
     if (archiveInfo->cryptPassword == NULL)
     {
@@ -2023,7 +2081,9 @@ Errors Archive_newSpecialEntry(ArchiveInfo     *archiveInfo,
   {
     archiveInfo->cryptPassword = getCryptPassword(archiveInfo->fileName,
                                                   archiveInfo->jobOptions,
-                                                  archiveInfo->jobOptions->cryptPasswordMode
+                                                  archiveInfo->jobOptions->cryptPasswordMode,
+                                                  archiveInfo->archiveGetCryptPasswordFunction,
+                                                  archiveInfo->archiveGetCryptPasswordUserData
                                                  );
     if (archiveInfo->cryptPassword == NULL)
     {
@@ -2203,7 +2263,9 @@ Errors Archive_getNextFileType(ArchiveInfo     *archiveInfo,
         password = getFirstDecryptPassword(&passwordHandle,
                                            archiveInfo->fileName,
                                            archiveInfo->jobOptions,
-                                           archiveInfo->jobOptions->cryptPasswordMode
+                                           archiveInfo->jobOptions->cryptPasswordMode,
+                                           archiveInfo->archiveGetCryptPasswordFunction,
+                                           archiveInfo->archiveGetCryptPasswordUserData
                                           );
         while (   !decryptedFlag
                && (password != NULL)
@@ -2418,7 +2480,9 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
       password = getFirstDecryptPassword(&passwordHandle,
                                          archiveInfo->fileName,
                                          archiveInfo->jobOptions,
-                                         archiveInfo->jobOptions->cryptPasswordMode
+                                         archiveInfo->jobOptions->cryptPasswordMode,
+                                         archiveInfo->archiveGetCryptPasswordFunction,
+                                         archiveInfo->archiveGetCryptPasswordUserData
                                         );
     }
     passwordFlag  = (password != NULL);
@@ -2734,7 +2798,9 @@ Errors Archive_readDirectoryEntry(ArchiveInfo     *archiveInfo,
       password = getFirstDecryptPassword(&passwordHandle,
                                          archiveInfo->fileName,
                                          archiveInfo->jobOptions,
-                                         archiveInfo->jobOptions->cryptPasswordMode
+                                         archiveInfo->jobOptions->cryptPasswordMode,
+                                         archiveInfo->archiveGetCryptPasswordFunction,
+                                         archiveInfo->archiveGetCryptPasswordUserData
                                         );
     }
     passwordFlag  = (password != NULL);
@@ -2976,7 +3042,9 @@ Errors Archive_readLinkEntry(ArchiveInfo     *archiveInfo,
       password = getFirstDecryptPassword(&passwordHandle,
                                          archiveInfo->fileName,
                                          archiveInfo->jobOptions,
-                                         archiveInfo->jobOptions->cryptPasswordMode
+                                         archiveInfo->jobOptions->cryptPasswordMode,
+                                         archiveInfo->archiveGetCryptPasswordFunction,
+                                         archiveInfo->archiveGetCryptPasswordUserData
                                         );
     }
     passwordFlag  = (password != NULL);
@@ -3219,7 +3287,9 @@ Errors Archive_readSpecialEntry(ArchiveInfo     *archiveInfo,
       password = getFirstDecryptPassword(&passwordHandle,
                                          archiveInfo->fileName,
                                          archiveInfo->jobOptions,
-                                         archiveInfo->jobOptions->cryptPasswordMode
+                                         archiveInfo->jobOptions->cryptPasswordMode,
+                                         archiveInfo->archiveGetCryptPasswordFunction,
+                                         archiveInfo->archiveGetCryptPasswordUserData
                                         );
     }
     passwordFlag  = (password != NULL);

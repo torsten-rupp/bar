@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -145,14 +145,16 @@ LOCAL void updateStatusInfo(const RestoreInfo *restoreInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_restore(StringList                *archiveFileNameList,
-                       PatternList               *includePatternList,
-                       PatternList               *excludePatternList,
-                       JobOptions                *jobOptions,
-                       RestoreStatusInfoFunction restoreStatusInfoFunction,
-                       void                      *restoreStatusInfoUserData,
-                       bool                      *pauseFlag,
-                       bool                      *requestedAbortFlag
+Errors Command_restore(StringList                      *archiveFileNameList,
+                       PatternList                     *includePatternList,
+                       PatternList                     *excludePatternList,
+                       JobOptions                      *jobOptions,
+                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                       void                            *archiveGetCryptPasswordUserData,
+                       RestoreStatusInfoFunction       restoreStatusInfoFunction,
+                       void                            *restoreStatusInfoUserData,
+                       bool                            *pauseFlag,
+                       bool                            *requestedAbortFlag
                       )
 {
   RestoreInfo       restoreInfo;
@@ -218,7 +220,9 @@ Errors Command_restore(StringList                *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         jobOptions
+                         jobOptions,
+                         archiveGetCryptPasswordFunction,
+                         archiveGetCryptPasswordUserData
                         );
     if (error != ERROR_NONE)
     {

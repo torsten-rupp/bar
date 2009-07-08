@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1531,11 +1531,11 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors storeArchiveFile(String fileName,
+LOCAL Errors storeArchiveFile(void   *userData,
+                              String fileName,
                               uint64 fileSize,
                               int    partNumber,
-                              bool   lastPartFlag,
-                              void   *userData
+                              bool   lastPartFlag
                              )
 {
   CreateInfo *createInfo = (CreateInfo*)userData;
@@ -1920,17 +1920,19 @@ LOCAL void storageThread(CreateInfo *createInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_create(const char                   *storageName,
-                      PatternList                  *includePatternList,
-                      PatternList                  *excludePatternList,
-                      JobOptions                   *jobOptions,
-                      ArchiveTypes                 archiveType,
-                      CreateStatusInfoFunction     createStatusInfoFunction,
-                      void                         *createStatusInfoUserData,
-                      StorageRequestVolumeFunction storageRequestVolumeFunction,
-                      void                         *storageRequestVolumeUserData,
-                      bool                         *pauseFlag,
-                      bool                         *requestedAbortFlag
+Errors Command_create(const char                      *storageName,
+                      PatternList                     *includePatternList,
+                      PatternList                     *excludePatternList,
+                      JobOptions                      *jobOptions,
+                      ArchiveTypes                    archiveType,
+                      ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                      void                            *archiveGetCryptPasswordUserData,
+                      CreateStatusInfoFunction        createStatusInfoFunction,
+                      void                            *createStatusInfoUserData,
+                      StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                      void                            *storageRequestVolumeUserData,
+                      bool                            *pauseFlag,
+                      bool                            *requestedAbortFlag
                      )
 {
   CreateInfo      createInfo;
@@ -2025,10 +2027,6 @@ Errors Command_create(const char                   *storageName,
                       );
   if (error != ERROR_NONE)
   {
-    printError("Cannot create storage '%s' (error: %s)\n",
-               String_cString(createInfo.storageName),
-               Errors_getText(error)
-              );
     Semaphore_done(&createInfo.storageSemaphore);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
     MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
@@ -2100,9 +2098,11 @@ Errors Command_create(const char                   *storageName,
 
   /* create new archive */
   error = Archive_create(&archiveInfo,
+                         jobOptions,
                          storeArchiveFile,
                          &createInfo,
-                         jobOptions
+                         archiveGetCryptPasswordFunction,
+                         archiveGetCryptPasswordUserData
                         );
   if (error != ERROR_NONE)
   {

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -45,19 +45,24 @@
 /***********************************************************************\
 * Name   : Command_list
 * Purpose: list content of archive(s)
-* Input  : fileNameList - list with archive files
-*          includeList  - include list
-*          excludeList  - exclude list
-*          jobOptiosn   - job options
+* Input  : fileNameList                     - list with archive files
+*          includeList                      - include list
+*          excludeList                      - exclude list
+*          jobOptions                       - job options
+*          archiveGetCryptPasswordFunction  - get password call back
+*          archiveGetCryptPasswordUserData  - user data for get password
+*                                             call back
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_list(StringList  *archiveFileNameList,
-                    PatternList *includePatternList,
-                    PatternList *excludePatternList,
-                    JobOptions  *joboptions
+Errors Command_list(StringList                      *archiveFileNameList,
+                    PatternList                     *includePatternList,
+                    PatternList                     *excludePatternList,
+                    JobOptions                      *jobOptions,
+                    ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                    void                            *archiveGetCryptPasswordUserData
                    );
 
 #ifdef __cplusplus

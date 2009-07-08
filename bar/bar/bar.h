@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -301,11 +301,11 @@ typedef struct
 
   PatternTypes        patternType;
 
-  CompressAlgorithms  compressAlgorithm;
-  CryptTypes          cryptType;
-  CryptAlgorithms     cryptAlgorithm;
-  PasswordModes       cryptPasswordMode;
-  Password            *cryptPassword;
+  CompressAlgorithms  compressAlgorithm;               // compress algorithm to use
+  CryptTypes          cryptType;                       // crypt type (symmetric, asymmetric)
+  CryptAlgorithms     cryptAlgorithm;                  // crypt algorithm to use
+  PasswordModes       cryptPasswordMode;               // crypt password mode
+  Password            *cryptPassword;                  // crypt password
   String              cryptPublicKeyFileName;
   String              cryptPrivateKeyFileName;
 
@@ -528,7 +528,8 @@ void getDevice(const String     name,
 /***********************************************************************\
 * Name   : inputCryptPassword
 * Purpose: input crypt password
-* Input  : password      - crypt password variable
+* Input  : userData      - (not used)
+*          password      - crypt password variable
 *          fileName      - file name
 *          validateFlag  - TRUE to validate input, FALSE otherwise
 *          weakCheckFlag - TRUE for weak password checking, FALSE
@@ -539,7 +540,8 @@ void getDevice(const String     name,
 * Notes  : -
 \***********************************************************************/
 
-Errors inputCryptPassword(Password     *password,
+Errors inputCryptPassword(void         *userData,
+                          Password     *password,
                           const String fileName,
                           bool         validateFlag,
                           bool         weakCheckFlag

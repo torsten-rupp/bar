@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_compare.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive compare function
 * Systems : all
@@ -87,10 +87,12 @@ LOCAL ulong compare(const void *p0, const void *p1, ulong length)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_compare(StringList  *archiveFileNameList,
-                       PatternList *includePatternList,
-                       PatternList *excludePatternList,
-                       JobOptions  *jobOptions
+Errors Command_compare(StringList                      *archiveFileNameList,
+                       PatternList                     *includePatternList,
+                       PatternList                     *excludePatternList,
+                       JobOptions                      *jobOptions,
+                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                       void                            *archiveGetCryptPasswordUserData
                       )
 {
   byte             *archiveBuffer,*fileBuffer;
@@ -134,7 +136,9 @@ Errors Command_compare(StringList  *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         jobOptions
+                         jobOptions,
+                         archiveGetCryptPasswordFunction,
+                         archiveGetCryptPasswordUserData
                         );
     if (error != ERROR_NONE)
     {

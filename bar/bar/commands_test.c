@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_test.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -57,10 +57,12 @@
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_test(StringList  *archiveFileNameList,
-                    PatternList *includePatternList,
-                    PatternList *excludePatternList,
-                    JobOptions  *jobOptions
+Errors Command_test(StringList                      *archiveFileNameList,
+                    PatternList                     *includePatternList,
+                    PatternList                     *excludePatternList,
+                    JobOptions                      *jobOptions,
+                    ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                    void                            *archiveGetCryptPasswordUserData
                    )
 {
   byte             *archiveBuffer,*fileBuffer;
@@ -102,7 +104,9 @@ Errors Command_test(StringList  *archiveFileNameList,
     /* open archive */
     error = Archive_open(&archiveInfo,
                          archiveFileName,
-                         jobOptions
+                         jobOptions,
+                         archiveGetCryptPasswordFunction,
+                         archiveGetCryptPasswordUserData
                         );
     if (error != ERROR_NONE)
     {
