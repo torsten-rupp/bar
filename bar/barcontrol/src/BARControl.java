@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -11,9 +11,11 @@
 /****************************** Imports ********************************/
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.security.KeyStore;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -631,6 +633,33 @@ public class BARControl
         z += 1;
       }
     }
+
+    // check arguments
+    if (serverKeyFileName != null)
+    {
+      // check if JKS file readable
+      try
+      {
+        KeyStore keyStore = java.security.KeyStore.getInstance("JKS");
+        keyStore.load(new java.io.FileInputStream(serverKeyFileName),null);
+      }
+      catch (java.security.NoSuchAlgorithmException exception)
+      {
+        throw new Error(exception.getMessage());
+      }
+      catch (java.security.cert.CertificateException exception)
+      {
+        throw new Error(exception.getMessage());
+      }
+      catch (java.security.KeyStoreException exception)
+      {
+        throw new Error(exception.getMessage());
+      }
+      catch (IOException exception)
+      {
+        throw new Error("not a JKS file '"+serverKeyFileName+"'");
+      }
+    }
   }
 
   /** server/password dialog
@@ -829,13 +858,52 @@ public class BARControl
         {
         }
       });
-      menuItem = Widgets.addMenuItem(menu,"Toggle pause/continue",SWT.CTRL+'P');
+      menuItem = Widgets.addMenuItem(menu,"Pause 10min",SWT.NONE);
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
-          Widgets.notify(tabStatus.widgetButtonTogglePause);
+          tabStatus.jobPause(10*60);
+//          Widgets.notify(tabStatus.widgetButtonPause);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      menuItem = Widgets.addMenuItem(menu,"Pause 60min",SWT.CTRL+'P');
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          tabStatus.jobPause(60*60);
+//          Widgets.notify(tabStatus.widgetButtonPause);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      menuItem = Widgets.addMenuItem(menu,"Pause 120min",SWT.NONE);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          tabStatus.jobPause(120*60);
+//          Widgets.notify(tabStatus.widgetButtonPause);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      menuItem = Widgets.addMenuItem(menu,"Toggle suspend/continue",SWT.CTRL+'S');
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.notify(tabStatus.widgetButtonSuspendContinue);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -878,13 +946,8 @@ public class BARControl
   private void run()
   {
     // set window size, manage window (approximate height according to height of a text line)
-    shell.setSize(800,600+5*(Widgets.getTextHeight(shell)+4));
+    shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
     shell.open();
-
-//Dialogs.info(shell,"Test","test ddddddddddddddddddddddddd");
-//Dialogs.error(shell,"test ddddddddddddddddddddddddd");
-//Dialogs.confirm(shell,"Test","test ddddddddddddddddddddddddd");
-//Dialogs.select(shell,"Test","test ddddddddddddddddddddddddd",new String[]{"1","2","3"},0);
 
     // add close listener
     shell.addListener(SWT.Close,new Listener()
@@ -927,7 +990,12 @@ public class BARControl
         // connect to server with preset data
         try
         {
-          BARServer.connect(loginData.serverName,loginData.port,loginData.tlsPort,loginData.password,serverKeyFileName);
+          BARServer.connect(loginData.serverName,
+                            loginData.port,
+                            loginData.tlsPort,
+                            loginData.password,
+                            serverKeyFileName
+                           );
           connectOkFlag = true;
         }
         catch (ConnectionError error)

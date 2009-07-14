@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -504,7 +504,7 @@ class BARServer
     if ((socket == null) && (tlsPort != 0))
     {
       // get all possible bar.jks file names
-      String[] javaSSLKeyFileNames;
+      String[] javaSSLKeyFileNames = null;
       if (serverKeyFileName != null)
       {
         javaSSLKeyFileNames = new String[]
@@ -526,9 +526,10 @@ class BARServer
       for (String javaSSLKeyFileName : javaSSLKeyFileNames)
       {
         File file = new File(javaSSLKeyFileName);
-        if (file.exists() && file.isFile())
+        if (file.exists() && file.isFile() && file.canRead())
         {
           System.setProperty("javax.net.ssl.trustStore",javaSSLKeyFileName);
+//Dprintf.dprintf("javaSSLKeyFileName=%s\n",javaSSLKeyFileName);
           try
           {
             SSLSocket        sslSocket;
