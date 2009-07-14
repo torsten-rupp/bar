@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Dialogs.java,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -290,7 +290,7 @@ class Dialogs
     {
       button = new Button(composite,SWT.CENTER);
       button.setText("Close");
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -357,7 +357,7 @@ class Dialogs
       button = new Button(composite,SWT.CENTER);
       button.setText("Close");
       button.setFocus();
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -419,7 +419,7 @@ class Dialogs
       button = new Button(composite,SWT.CENTER);
       button.setText(yesText);
       if (defaultValue == true) button.setFocus();
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT));
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -436,7 +436,7 @@ class Dialogs
       button = new Button(composite,SWT.CENTER);
       button.setText(noText);
       if (defaultValue == false) button.setFocus();
-      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT));
+      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -639,7 +639,7 @@ class Dialogs
    * @param CancelText cancel button text
    * @return password or null on cancel
    */
-  static String password(Shell parentShell, String title, String message, String text, String okText, String cancelText)
+  static String password(Shell parentShell, String title, String message, String text1, final String text2, String okText, String cancelText)
   {
     int             row;
     TableLayoutData tableLayoutData;
@@ -649,11 +649,11 @@ class Dialogs
 
     final String[] result = new String[1];
 
-    final Shell dialog = open(parentShell,title,250,SWT.DEFAULT);
+    final Shell dialog = open(parentShell,title,450,SWT.DEFAULT);
     dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
     // password
-    final Text   widgetText;
+    final Text   widgetPassword1,widgetPassword2;
     final Button widgetOkButton;
     row = 0;
     if (message != null)
@@ -668,28 +668,54 @@ class Dialogs
     composite.setLayoutData(new TableLayoutData(row+0,0,TableLayoutData.WE));
     {
       label = new Label(composite,SWT.LEFT);
-      label.setText(text);
+      label.setText(text1);
       label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
 
-      widgetText = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
-      widgetText.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
+      widgetPassword1 = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+      widgetPassword1.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+
+      if (text2 != null)
+      {
+        label = new Label(composite,SWT.LEFT);
+        label.setText(text2);
+        label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
+
+        widgetPassword2 = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+        widgetPassword2.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+      }
+      else
+      {
+        widgetPassword2 = null;
+      }
     }
+    row++;
 
     // buttons
     composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(0.0,1.0));
-    composite.setLayoutData(new TableLayoutData(row+1,0,TableLayoutData.WE));
+    composite.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE,0,0,4));
     {
       widgetOkButton = new Button(composite,SWT.CENTER);
       widgetOkButton.setText(okText);
-      widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT));
+      widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
       widgetOkButton.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-
-          close(dialog,widgetText.getText());
+          String password1 = widgetPassword1.getText();
+          if (text2 != null)
+          {
+            String password2 = widgetPassword2.getText();
+            if (password1.equals(password2))
+            {
+              close(dialog,password1);
+            }
+          }
+          else
+          {
+            close(dialog,password1);
+          }
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -698,7 +724,7 @@ class Dialogs
 
       button = new Button(composite,SWT.CENTER);
       button.setText(cancelText);
-      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT));
+      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -714,7 +740,7 @@ class Dialogs
     }
 
     // install handlers
-    widgetText.addSelectionListener(new SelectionListener()
+    widgetPassword1.addSelectionListener(new SelectionListener()
     {
       public void widgetSelected(SelectionEvent selectionEvent)
       {
@@ -723,9 +749,31 @@ class Dialogs
       {
         Text widget = (Text)selectionEvent.widget;
 
-        widgetOkButton.forceFocus();
+        if (text2 != null)
+        {
+          widgetPassword2.forceFocus();
+        }
+        else
+        {
+          widgetOkButton.forceFocus();
+        }
       }
     });
+    if (text2 != null)
+    {
+      widgetPassword2.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          Text widget = (Text)selectionEvent.widget;
+
+          widgetOkButton.forceFocus();
+        }
+      });
+    }
 
     return (String)run(dialog,null);
   }
@@ -736,9 +784,20 @@ class Dialogs
    * @param text text
    * @return password or null on cancel
    */
+  static String password(Shell parentShell, String title, String message, String text1, String text2)
+  {
+    return password(parentShell,title,message,text1,text2,"OK","Cancel");
+  }
+
+  /** password dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text
+   * @return password or null on cancel
+   */
   static String password(Shell parentShell, String title, String message, String text)
   {
-    return password(parentShell,title,message,text,"OK","Cancel");
+    return password(parentShell,title,message,text,null,"OK","Cancel");
   }
 
   /** password dialog
@@ -749,7 +808,7 @@ class Dialogs
    */
   static String password(Shell parentShell, String title, String text)
   {
-    return password(parentShell,title,null,text);
+    return password(parentShell,title,null,text,null);
   }
 
   /** password dialog
