@@ -35,9 +35,10 @@ public class TableLayoutData
    * @param style style flags
    * @param rowSpawn,columnSpawn row/column spawn (1..n)
    * @param padX,padY padding X/Z
-   * @param width,height min./max. width/height
+   * @param minWidth,minHeight min. width/height
+   * @param maxWidth,maxHeight max. width/height
    */
-  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height)
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int minWidth, int minHeight, int maxWidth, int maxHeight)
   {
     this.row         = row;
     this.column      = column;
@@ -46,10 +47,22 @@ public class TableLayoutData
     this.columnSpawn = Math.max(1,columnSpawn);
     this.padX        = padX;
     this.padY        = padY;
-    this.minWidth    = width;
-    this.minHeight   = height;
-    this.maxWidth    = width;
-    this.maxHeight   = height;
+    this.minWidth    = minWidth;
+    this.minHeight   = minHeight;
+    this.maxWidth    = maxWidth;
+    this.maxHeight   = maxHeight;
+  }
+
+  /** create table layout data
+   * @param row,column row/column (0..n)
+   * @param style style flags
+   * @param rowSpawn,columnSpawn row/column spawn (1..n)
+   * @param padX,padY padding X/Z
+   * @param width,height min./max. width/height
+   */
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height)
+  {
+    this(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,SWT.DEFAULT,SWT.DEFAULT);
   }
 
   /** create table layout data
@@ -60,13 +73,7 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY)
   {
-    this.row         = row;
-    this.column      = column;
-    this.style       = style;
-    this.rowSpawn    = Math.max(1,rowSpawn);
-    this.columnSpawn = Math.max(1,columnSpawn);
-    this.padX        = padX;
-    this.padY        = padY;
+    this(row,column,style,rowSpawn,columnSpawn,padX,padY,SWT.DEFAULT,SWT.DEFAULT);
   }
 
   /** create table layout data
@@ -77,13 +84,7 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int pad)
   {
-    this.row         = row;
-    this.column      = column;
-    this.style       = style;
-    this.rowSpawn    = Math.max(1,rowSpawn);
-    this.columnSpawn = Math.max(1,columnSpawn);
-    this.padX        = pad;
-    this.padY        = pad;
+    this(row,column,style,rowSpawn,columnSpawn,pad,pad);
   }
 
   /** create table layout data
@@ -93,13 +94,7 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn)
   {
-    this.row         = row;
-    this.column      = column;
-    this.style       = style;
-    this.rowSpawn    = Math.max(1,rowSpawn);
-    this.columnSpawn = Math.max(1,columnSpawn);
-    this.padX        = 0;
-    this.padY        = 0;
+    this(row,column,style,rowSpawn,columnSpawn,0);
   }
 
   /** create table layout data
@@ -108,13 +103,7 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column, int style)
   {
-    this.row         = row;
-    this.column      = column;
-    this.style       = style;
-    this.rowSpawn    = 1;
-    this.columnSpawn = 1;
-    this.padX        = 0;
-    this.padY        = 0;
+    this(row,column,style,1,1);
   }
 
   /** create table layout data
@@ -122,13 +111,7 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column)
   {
-    this.row         = row;
-    this.column      = column;
-    this.style       = DEFAULT;
-    this.rowSpawn    = 1;
-    this.columnSpawn = 1;
-    this.padX        = 0;
-    this.padY        = 0;
+    this(row,column,DEFAULT);
   }
 
   public String toString()

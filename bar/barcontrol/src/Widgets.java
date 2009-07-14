@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -466,16 +466,26 @@ class Widgets
    * @param style SWT style flags
    * @param rowSpawn,columnSpan row/column spawn (0..n)
    * @param padX,padY padding X/Y
+   * @param minWidth,minHeight min. width/height
+   * @param maxWidth,maxHeight max. width/height
+   */
+  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int minWidth, int minHeight, int maxWidth, int maxHeight)
+  {
+    TableLayoutData tableLayoutData = new TableLayoutData(row,column,style,rowSpawn,columnSpawn,padX,padY,minWidth,minHeight,maxWidth,maxHeight);
+    control.setLayoutData(tableLayoutData);
+  }
+
+  /** layout widget
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
+   * @param rowSpawn,columnSpan row/column spawn (0..n)
+   * @param padX,padY padding X/Y
    * @param width,height min. width/height
    */
   static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height)
   {
-    TableLayoutData tableLayoutData = new TableLayoutData(row,column,style,rowSpawn,columnSpawn,padX,padY); //,width,height);
-    tableLayoutData.minWidth  = width;
-    tableLayoutData.minHeight = height;
-    tableLayoutData.maxWidth  = width;
-    tableLayoutData.maxHeight = height;
-    control.setLayoutData(tableLayoutData);
+    layout(control,row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,SWT.DEFAULT,SWT.DEFAULT);
   }
 
   /** layout widget
