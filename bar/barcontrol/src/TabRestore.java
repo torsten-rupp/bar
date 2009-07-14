@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -1224,7 +1224,7 @@ class TabRestore
                                                        "Crypt password",
                                                        "Archive: "+archiveName,
                                                        "Crypt password"
-                                                       );
+                                                      );
                     if (password != null)
                     {
                       String[] result = new String[1];

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -59,6 +59,14 @@
 #define MAX_NETWORK_CLIENT_THREADS 3           // number of threads for a client
 
 /***************************** Datatypes *******************************/
+
+/* server states */
+typedef enum
+{
+  SERVER_STATE_RUNNING,
+  SERVER_STATE_PAUSE,
+  SERVER_STATE_SUSPENDED,
+} ServerStates;
 
 /* job states */
 typedef enum
@@ -307,6 +315,18 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
     {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
     {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
   #endif /* HAVE_BZ2 */
+
+  #ifdef HAVE_LZMA
+    {"lzma1",COMPRESS_ALGORITHM_LZMA_1},
+    {"lzma2",COMPRESS_ALGORITHM_LZMA_2},
+    {"lzma3",COMPRESS_ALGORITHM_LZMA_3},
+    {"lzma4",COMPRESS_ALGORITHM_LZMA_4},
+    {"lzma5",COMPRESS_ALGORITHM_LZMA_5},
+    {"lzma6",COMPRESS_ALGORITHM_LZMA_6},
+    {"lzma7",COMPRESS_ALGORITHM_LZMA_7},
+    {"lzma8",COMPRESS_ALGORITHM_LZMA_8},
+    {"lzma9",COMPRESS_ALGORITHM_LZMA_9},
+  #endif /* HAVE_LZMA */
 };
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
@@ -393,8 +413,12 @@ LOCAL const JobOptions *serverDefaultJobOptions;
 LOCAL JobList          jobList;
 LOCAL Thread           jobThread;
 LOCAL Thread           schedulerThread;
+LOCAL Thread           pauseThread;
 LOCAL ClientList       clientList;
+LOCAL Semaphore        serverStateLock;
+LOCAL ServerStates     serverState;
 LOCAL bool             pauseFlag;
+LOCAL uint64           pauseEndTimestamp;
 LOCAL bool             quitFlag;
 
 /****************************** Macros *********************************/
@@ -585,6 +609,119 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   resetJobRunningInfo(jobNode);
 
   return jobNode;
+}
+
+/***********************************************************************\
+* Name   : copyScheduleNode
+* Purpose: copy allocated schedule node
+* Input  : scheduleNode - schedule node
+* Output : -
+* Return : copied schedule node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ScheduleNode *copyScheduleNode(ScheduleNode *scheduleNode,
+                                     void         *userData
+                                    )
+{
+  ScheduleNode *newScheduleNode;
+
+  assert(scheduleNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  /* allocate pattern node */
+  newScheduleNode = LIST_NEW_NODE(ScheduleNode);
+  if (newScheduleNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  newScheduleNode->year        = scheduleNode->year;
+  newScheduleNode->month       = scheduleNode->month;
+  newScheduleNode->day         = scheduleNode->day;
+  newScheduleNode->hour        = scheduleNode->hour;
+  newScheduleNode->minute      = scheduleNode->minute;
+  newScheduleNode->weekDays    = scheduleNode->weekDays;
+  newScheduleNode->archiveType = scheduleNode->archiveType;
+  newScheduleNode->enabled     = scheduleNode->enabled;
+
+  return newScheduleNode;
+}
+
+/***********************************************************************\
+* Name   : copyJob
+* Purpose: copy job
+* Input  : jobNode  - job node
+*          fileName - file name or NULL
+*          name     - name of job
+* Output : -
+* Return : job node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL JobNode *copyJob(JobNode      *jobNode,
+                       const String fileName
+                      )
+{
+  Errors     error;
+  FileHandle fileHandle;
+  JobNode    *newJobNode;
+
+  /* create empty file */
+  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+  if (error != ERROR_NONE)
+  {
+    File_deleteFileName(fileName);
+    return NULL;
+  }
+  File_close(&fileHandle);
+
+  /* allocate job node */
+  newJobNode = LIST_NEW_NODE(JobNode);
+  if (newJobNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  /* init job node */
+  newJobNode->fileName                       = String_duplicate(fileName);
+  newJobNode->timeModified                   = 0LL;
+
+  newJobNode->type                           = jobNode->type;
+  newJobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
+  newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
+  PatternList_init(&newJobNode->includePatternList); PatternList_copy(&newJobNode->includePatternList,&jobNode->includePatternList);
+  PatternList_init(&newJobNode->excludePatternList); PatternList_copy(&newJobNode->excludePatternList,&jobNode->excludePatternList);
+  List_init(&newJobNode->scheduleList); List_copy(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,NULL,(ListNodeCopyFunction)copyScheduleNode,NULL);
+  initJobOptions(&newJobNode->jobOptions); copyJobOptions(&newJobNode->jobOptions,&newJobNode->jobOptions);
+  newJobNode->modifiedFlag                   = TRUE;
+
+  newJobNode->lastExecutedDateTime           = 0LL;
+  newJobNode->lastCheckDateTime              = 0LL;
+
+  newJobNode->ftpPassword                    = NULL;
+  newJobNode->sshPassword                    = NULL;
+  newJobNode->cryptPassword                  = NULL;
+
+  newJobNode->id                             = getNewJobId();
+  newJobNode->state                          = JOB_STATE_NONE;
+  newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
+  newJobNode->requestedAbortFlag             = FALSE;
+  newJobNode->requestedVolumeNumber          = 0;
+  newJobNode->volumeNumber                   = 0;
+  newJobNode->volumeUnloadFlag               = FALSE;
+
+  newJobNode->runningInfo.fileName           = String_new();
+  newJobNode->runningInfo.storageName        = String_new();
+  newJobNode->runningInfo.message            = String_new();
+
+  Misc_performanceFilterInit(&newJobNode->runningInfo.filesPerSecond,       10*60);
+  Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecond,       10*60);
+  Misc_performanceFilterInit(&newJobNode->runningInfo.storageBytesPerSecond,10*60);
+
+  resetJobRunningInfo(newJobNode);
+
+  return newJobNode;
 }
 
 /***********************************************************************\
@@ -1652,7 +1789,7 @@ LOCAL void jobThreadEntry(void)
   /* free resources */
   PatternList_done(&excludePatternList);
   PatternList_done(&includePatternList);
-  String_delete(archiveName);  
+  String_delete(archiveName);
 }
 
 /*---------------------------------------------------------------------*/
@@ -1751,6 +1888,38 @@ LOCAL void schedulerThreadEntry(void)
       jobNode = jobNode->next;
     }
     Semaphore_unlock(&jobList.lock);
+
+    /* sleep 1min, check update and quit flag */
+    z = 0;
+    while ((z < 60) && !quitFlag)
+    {
+      Misc_udelay(10LL*1000LL*1000LL);
+      z+=10;
+    }
+  }
+}
+
+/*---------------------------------------------------------------------*/
+
+LOCAL void pauseThreadEntry(void)
+{
+  uint64 nowTimestamp;
+  int    z;
+
+  while (!quitFlag)
+  {
+    /* decrement pause time, continue */
+    Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+    if (serverState == SERVER_STATE_PAUSE)
+    {
+      nowTimestamp = Misc_getCurrentDateTime();
+      if (nowTimestamp > pauseEndTimestamp)
+      {
+        serverState = SERVER_STATE_RUNNING;
+        pauseFlag   = FALSE;
+      }
+    }
+    Semaphore_unlock(&serverStateLock);
 
     /* sleep 1min, check update and quit flag */
     z = 0;
@@ -2030,7 +2199,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
          && ((timeoutFlag == NULL) || !(*timeoutFlag))
          && !quitFlag
         )
-  { 
+  {
     if (!directoryInfoNode->directoryOpenFlag)
     {
       /* process FIFO for deep-first search; this keep the directory list shorter */
@@ -2183,6 +2352,8 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const String arg
 
 LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  uint64 nowTimestamp;
+
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
@@ -2190,13 +2361,49 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const String ar
   UNUSED_VARIABLE(argumentCount);
 
   /* format result */
-  sendResult(clientInfo,id,TRUE,0,
-             "%s",
-             pauseFlag?"pause":"ok"
-            );
+  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ);
+  switch (serverState)
+  {
+    case SERVER_STATE_RUNNING:
+      sendResult(clientInfo,id,TRUE,0,"running");
+      break;
+    case SERVER_STATE_PAUSE:
+      nowTimestamp = Misc_getCurrentDateTime();
+      sendResult(clientInfo,id,TRUE,0,"pause %llu",(pauseEndTimestamp > nowTimestamp)?pauseEndTimestamp-nowTimestamp:0LL);
+      break;
+    case SERVER_STATE_SUSPENDED:
+      sendResult(clientInfo,id,TRUE,0,"suspended");
+      break;
+  }
+  Semaphore_unlock(&serverStateLock);
 }
 
 LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint pauseTime;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get pause time */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pause time");
+    return;
+  }
+  pauseTime = (uint)String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* set pause time */
+  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+  serverState       = SERVER_STATE_PAUSE;
+  pauseFlag         = TRUE;
+  pauseEndTimestamp = Misc_getCurrentDateTime()+(uint64)pauseTime;
+  Semaphore_unlock(&serverStateLock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
+}
+
+LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -2204,7 +2411,11 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const String arg
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  pauseFlag = TRUE;
+  /* set suspend */
+  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+  serverState = SERVER_STATE_SUSPENDED;
+  pauseFlag   = TRUE;
+  Semaphore_unlock(&serverStateLock);
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
@@ -2217,7 +2428,11 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const String 
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  pauseFlag = FALSE;
+  /* clear pause/suspend */
+  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+  serverState = SERVER_STATE_RUNNING;
+  pauseFlag   = FALSE;
+  Semaphore_unlock(&serverStateLock);
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
@@ -2773,6 +2988,70 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
 
   /* free resources */
   File_deleteFileName(fileName);
+}
+
+LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint    jobId;
+  String  name;
+  JobNode *jobNode;
+  String  fileName;
+  Errors  error;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id */
+  if (argumentCount < 1)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name");
+    return;
+  }
+  name = arguments[1];
+  if (File_exists(name))
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(arguments[1]));
+    return;
+  }
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* find job */
+  jobNode = findJobById(jobId);
+  if (jobNode == NULL)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+
+  /* copy job */
+  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
+  error = File_copy(jobNode->fileName,fileName);
+  if (error != ERROR_NONE)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_JOB,"error duplicating job #%d: %s",jobId,Errors_getText(error));
+    Semaphore_unlock(&jobList.lock);
+    File_deleteFileName(fileName);
+    return;
+  }
+  File_deleteFileName(fileName);
+
+  /* store new file name */
+//  File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobsDirectory),name);
+//  String_set(jobNode->name,name);
+
+  /* unlock */
+  Semaphore_unlock(&jobList.lock);
+
+  sendResult(clientInfo,id,TRUE,0,"");
 }
 
 LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4187,7 +4466,8 @@ SERVER_COMMANDS[] =
   { "AUTHORIZE",             "S",  serverCommand_authorize,            AUTHORIZATION_STATE_WAITING },
   { "ABORT",                 "i",  serverCommand_abort,                AUTHORIZATION_STATE_OK      },
   { "STATUS",                "",   serverCommand_status,               AUTHORIZATION_STATE_OK      },
-  { "PAUSE",                 "",   serverCommand_pause ,               AUTHORIZATION_STATE_OK      },
+  { "PAUSE",                 "i",  serverCommand_pause,                AUTHORIZATION_STATE_OK      },
+  { "SUSPEND",               "",   serverCommand_suspend,              AUTHORIZATION_STATE_OK      },
   { "CONTINUE",              "",   serverCommand_continue,             AUTHORIZATION_STATE_OK      },
   { "ERROR_INFO",            "i",  serverCommand_errorInfo,            AUTHORIZATION_STATE_OK      },
   { "DEVICE_LIST",           "",   serverCommand_deviceList,           AUTHORIZATION_STATE_OK      },
@@ -4196,6 +4476,7 @@ SERVER_COMMANDS[] =
   { "JOB_LIST",              "",   serverCommand_jobList,              AUTHORIZATION_STATE_OK      },
   { "JOB_INFO",              "i",  serverCommand_jobInfo,              AUTHORIZATION_STATE_OK      },
   { "JOB_NEW",               "S",  serverCommand_jobNew,               AUTHORIZATION_STATE_OK      },
+  { "JOB_COPY",              "i S",serverCommand_jobCopy,              AUTHORIZATION_STATE_OK      },
   { "JOB_RENAME",            "i S",serverCommand_jobRename,            AUTHORIZATION_STATE_OK      },
   { "JOB_DELETE",            "i",  serverCommand_jobDelete,            AUTHORIZATION_STATE_OK      },
   { "JOB_START",             "i",  serverCommand_jobStart,             AUTHORIZATION_STATE_OK      },
@@ -4777,7 +5058,10 @@ Errors Server_run(uint             port,
   serverDefaultJobOptions = defaultJobOptions;
   List_init(&jobList);
   List_init(&clientList);
+  Semaphore_init(&serverStateLock);
+  serverState             = SERVER_STATE_RUNNING;
   pauseFlag               = FALSE;
+  pauseEndTimestamp       = 0LL;
   quitFlag                = FALSE;
 
   /* init server sockets */
@@ -4811,7 +5095,6 @@ Errors Server_run(uint             port,
        )
     {
       #ifdef HAVE_GNU_TLS
-fprintf(stderr,"%s,%d: caFileName=%s certFileName=%s keyFileName=%s\n",__FILE__,__LINE__,caFileName,certFileName,keyFileName);
         error = Network_initServer(&serverTLSSocketHandle,
                                    tlsPort,
                                    SERVER_TYPE_TLS,
@@ -4868,6 +5151,10 @@ fprintf(stderr,"%s,%d: caFileName=%s certFileName=%s keyFileName=%s\n",__FILE__,
   if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadEntry,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialise scheduler thread!");
+  }
+  if (!Thread_init(&pauseThread,"BAR pause",globalOptions.niceLevel,pauseThreadEntry,NULL))
+  {
+    HALT_FATAL_ERROR("Cannot initialise pause thread!");
   }
 
   /* run server */
@@ -5008,6 +5295,7 @@ fprintf(stderr,"%s,%d: caFileName=%s certFileName=%s keyFileName=%s\n",__FILE__,
   String_delete(clientName);
 
   /* wait for thread exit */
+  Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);
 
@@ -5016,8 +5304,10 @@ fprintf(stderr,"%s,%d: caFileName=%s certFileName=%s keyFileName=%s\n",__FILE__,
   if (serverTLSFlag) Network_doneServer(&serverTLSSocketHandle);
 
   /* free resources */
+  Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
   Thread_done(&jobThread);
+  Semaphore_done(&serverStateLock);
   List_done(&clientList,(ListNodeFreeFunction)freeClientNode,NULL);
   List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);
 

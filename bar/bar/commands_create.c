@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1284,8 +1284,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
       error = File_getFileInfo(name,&fileInfo);
       if (error != ERROR_NONE)
       {
-        logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
         printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
+        logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
         createInfo->statusInfo.errorFiles++;
         updateStatusInfo(createInfo);
         continue;
@@ -1338,8 +1338,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                 error = File_readDirectory(&directoryHandle,fileName);
                 if (error != ERROR_NONE)
                 {
-                  logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
                   printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
+                  logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
                   createInfo->statusInfo.errorFiles++;
                   createInfo->statusInfo.errorBytes += fileInfo.size;
                   updateStatusInfo(createInfo);
@@ -1354,8 +1354,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   error = File_getFileInfo(fileName,&fileInfo);
                   if (error != ERROR_NONE)
                   {
-                    logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
                     printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Errors_getText(error));
+                    logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
                     createInfo->statusInfo.errorFiles++;
                     updateStatusInfo(createInfo);
                     continue;
@@ -1390,8 +1390,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                       }
                       break;
                     default:
-                      logMessage(LOG_TYPE_FILE_TYPE_UNKNOWN,"unknown type '%s'",String_cString(fileName));
                       printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
+                      logMessage(LOG_TYPE_FILE_TYPE_UNKNOWN,"unknown type '%s'",String_cString(fileName));
                       createInfo->statusInfo.errorFiles++;
                       createInfo->statusInfo.errorBytes += fileInfo.size;
                       updateStatusInfo(createInfo);
@@ -1411,8 +1411,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
             }
             else
             {
-              logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
               printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
+              logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
               createInfo->statusInfo.errorFiles++;
               updateStatusInfo(createInfo);
             }
@@ -1432,8 +1432,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
             }
             break;
           default:
-            logMessage(LOG_TYPE_FILE_TYPE_UNKNOWN,"unknown type '%s'",String_cString(name));
             printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
+            logMessage(LOG_TYPE_FILE_TYPE_UNKNOWN,"unknown type '%s'",String_cString(name));
             createInfo->statusInfo.errorFiles++;
             createInfo->statusInfo.errorBytes += fileInfo.size;
             updateStatusInfo(createInfo);
@@ -1774,8 +1774,8 @@ LOCAL void storageThread(CreateInfo *createInfo)
 
           if (error == ERROR_NONE)
           {
-            logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageName));
             printInfo(0,"ok\n");
+            logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageName));
           }
         }
         while (   (error != ERROR_NONE)
@@ -2179,6 +2179,7 @@ Errors Command_create(const char                      *storageName,
                 {
                   printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
                   logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
+                  createInfo.statusInfo.errorFiles++;
                 }
                 else
                 {
@@ -2189,6 +2190,7 @@ Errors Command_create(const char                      *storageName,
                             );
                   createInfo.failError = error;
                 }
+                updateStatusInfo(&createInfo);
                 continue;
               }
 
@@ -2202,6 +2204,8 @@ Errors Command_create(const char                      *storageName,
                   {
                     printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
                     logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
+                    createInfo.statusInfo.errorFiles++;
+                    createInfo.statusInfo.errorBytes += fileInfo.size;
                   }
                   else
                   {
@@ -2212,6 +2216,7 @@ Errors Command_create(const char                      *storageName,
                               );
                     createInfo.failError = error;
                   }
+                  updateStatusInfo(&createInfo);
                   continue;
                 }
 
@@ -2229,6 +2234,7 @@ Errors Command_create(const char                      *storageName,
                              Errors_getText(error)
                             );
                   createInfo.failError = error;
+                  updateStatusInfo(&createInfo);
                   break;
                 }
                 String_set(createInfo.statusInfo.fileName,fileName);
@@ -2279,6 +2285,7 @@ Errors Command_create(const char                      *storageName,
                   File_close(&fileHandle);
                   Archive_closeEntry(&archiveFileInfo);
                   createInfo.failError = error;
+                  updateStatusInfo(&createInfo);
                   break;
                 }
 
@@ -2294,6 +2301,7 @@ Errors Command_create(const char                      *storageName,
                              Errors_getText(error)
                             );
                   createInfo.failError = error;
+                  updateStatusInfo(&createInfo);
                   break;
                 }
 
@@ -2305,8 +2313,8 @@ Errors Command_create(const char                      *storageName,
                 {
                   ratio = 0;
                 }
-                printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
 
+                printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
                 logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
                 createInfo.statusInfo.doneFiles++;
                 updateStatusInfo(&createInfo);
@@ -2335,6 +2343,7 @@ Errors Command_create(const char                      *storageName,
                 {
                   printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
                   logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
+                  createInfo.statusInfo.errorFiles++;
                 }
                 else
                 {
@@ -2345,6 +2354,7 @@ Errors Command_create(const char                      *storageName,
                             );
                   createInfo.failError = error;
                 }
+                updateStatusInfo(&createInfo);
                 continue;
               }
 
@@ -2365,6 +2375,7 @@ Errors Command_create(const char                      *storageName,
                             );
                   logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
                   createInfo.failError = error;
+                  updateStatusInfo(&createInfo);
                   break;
                 }
 
@@ -2377,11 +2388,11 @@ Errors Command_create(const char                      *storageName,
                              Errors_getText(error)
                             );
                   createInfo.failError = error;
+                  updateStatusInfo(&createInfo);
                   break;
                 }
 
                 printInfo(1,"ok\n");
-
                 logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
                 createInfo.statusInfo.doneFiles++;
                 updateStatusInfo(&createInfo);
@@ -2411,6 +2422,7 @@ Errors Command_create(const char                      *storageName,
                 {
                   printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
                   logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
+                  createInfo.statusInfo.errorFiles++;
                 }
                 else
                 {
@@ -2421,6 +2433,7 @@ Errors Command_create(const char                      *storageName,
                             );
                   createInfo.failError = error;
                 }
+                updateStatusInfo(&createInfo);
                 continue;
               }
 
@@ -2435,6 +2448,8 @@ Errors Command_create(const char                      *storageName,
                   {
                     printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
                     logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
+                    createInfo.statusInfo.errorFiles++;
+                    createInfo.statusInfo.errorBytes += fileInfo.size;
                   }
                   else
                   {
@@ -2446,6 +2461,7 @@ Errors Command_create(const char                      *storageName,
                     String_delete(name);
                     createInfo.failError = error;
                   }
+                  updateStatusInfo(&createInfo);
                   continue;
                 }
 
@@ -2465,6 +2481,7 @@ Errors Command_create(const char                      *storageName,
                             );
                   String_delete(name);
                   createInfo.failError = error;
+                  updateStatusInfo(&createInfo);
                   break;
                 }
 
@@ -2477,11 +2494,11 @@ Errors Command_create(const char                      *storageName,
                              Errors_getText(error)
                             );
                   createInfo.failError = error;
+                  updateStatusInfo(&createInfo);
                   break;
                 }
 
                 printInfo(1,"ok\n");
-
                 logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
                 createInfo.statusInfo.doneFiles++;
                 updateStatusInfo(&createInfo);
@@ -2513,6 +2530,7 @@ Errors Command_create(const char                      *storageName,
                 {
                   printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
                   logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
+                  createInfo.statusInfo.errorFiles++;
                 }
                 else
                 {
@@ -2523,6 +2541,7 @@ Errors Command_create(const char                      *storageName,
                             );
                   createInfo.failError = error;
                 }
+                updateStatusInfo(&createInfo);
                 continue;
               }
 
@@ -2542,6 +2561,7 @@ Errors Command_create(const char                      *storageName,
                              Errors_getText(error)
                             );
                   createInfo.failError = error;
+                  updateStatusInfo(&createInfo);
                   break;
                 }
 
@@ -2554,11 +2574,11 @@ Errors Command_create(const char                      *storageName,
                              Errors_getText(error)
                             );
                   createInfo.failError = error;
+                  updateStatusInfo(&createInfo);
                   break;
                 }
 
                 printInfo(1,"ok\n");
-
                 logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
                 createInfo.statusInfo.doneFiles++;
                 updateStatusInfo(&createInfo);
@@ -2588,6 +2608,8 @@ Errors Command_create(const char                      *storageName,
       {
         printInfo(1,"skipped (reason: own created file)\n");
         logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"skipped '%s'",String_cString(fileName));
+        createInfo.statusInfo.skippedFiles++;
+        updateStatusInfo(&createInfo);
       }
 
 // NYI: is this really useful? (avoid that sum-collector-thread is slower than file-collector-thread)
@@ -2650,8 +2672,8 @@ Errors Command_create(const char                      *storageName,
 
       return error;
     }
-    printInfo(1,"ok\n");
 
+    printInfo(1,"ok\n");
     logMessage(LOG_TYPE_ALWAYS,"create incremental file '%s'",String_cString(incrementalListFileName));
   }
 

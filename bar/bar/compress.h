@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/compress.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -20,6 +20,9 @@
 #ifdef HAVE_BZ2
   #include <bzlib.h>
 #endif /* HAVE_BZ2 */
+#ifdef HAVE_LZMA
+  #include <lzma.h>
+#endif /* HAVE_LZMA */
 #include <assert.h>
 
 #include "global.h"
@@ -69,6 +72,16 @@ typedef enum
   COMPRESS_ALGORITHM_BZIP2_8,
   COMPRESS_ALGORITHM_BZIP2_9,
 
+  COMPRESS_ALGORITHM_LZMA_1,
+  COMPRESS_ALGORITHM_LZMA_2,
+  COMPRESS_ALGORITHM_LZMA_3,
+  COMPRESS_ALGORITHM_LZMA_4,
+  COMPRESS_ALGORITHM_LZMA_5,
+  COMPRESS_ALGORITHM_LZMA_6,
+  COMPRESS_ALGORITHM_LZMA_7,
+  COMPRESS_ALGORITHM_LZMA_8,
+  COMPRESS_ALGORITHM_LZMA_9,
+
   COMPRESS_ALGORITHM_UNKNOWN=0xFFFF,
 } CompressAlgorithms;
 
@@ -108,6 +121,13 @@ typedef struct
         bz_stream stream;
       } bzlib;
     #endif /* HAVE_BZ2 */
+    #ifdef HAVE_LZMA
+      struct
+      {
+        uint        compressionLevel;
+        lzma_stream stream;
+      } lzmalib;
+    #endif /* HAVE_LZMA */
   };
 
   byte               *dataBuffer;               // buffer for uncompressed data

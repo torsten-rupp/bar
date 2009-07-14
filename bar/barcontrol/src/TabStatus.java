@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -59,6 +59,7 @@ class TabStatus
   {
     RUNNING,
     PAUSE,
+    SUSPEND,
   };
 
   /** job data
@@ -73,6 +74,7 @@ class TabStatus
     String compressAlgorithm;
     String cryptAlgorithm;
     String cryptType;
+    String cryptPasswordMode;
     long   lastExecutedDateTime;
     long   estimatedRestTime;
 
@@ -80,7 +82,7 @@ class TabStatus
 
     /** create job data
      */
-    JobData(int id, String name, String state, String type, long archivePartSize, String compressAlgorithm, String cryptAlgorithm, String cryptType, long lastExecutedDateTime, long estimatedRestTime)
+    JobData(int id, String name, String state, String type, long archivePartSize, String compressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
     {
       this.id                   = id;
       this.name                 = name;
@@ -90,6 +92,7 @@ class TabStatus
       this.compressAlgorithm    = compressAlgorithm;
       this.cryptAlgorithm       = cryptAlgorithm;
       this.cryptType            = cryptType;
+      this.cryptPasswordMode    = cryptPasswordMode;
       this.lastExecutedDateTime = lastExecutedDateTime;
       this.estimatedRestTime    = estimatedRestTime;
     }
@@ -251,7 +254,8 @@ class TabStatus
   private Group       widgetSelectedJob;
   public  Button      widgetButtonStart;
   public  Button      widgetButtonAbort;
-  public  Button      widgetButtonTogglePause;
+  public  Button      widgetButtonPause;
+  public  Button      widgetButtonSuspendContinue;
   private Button      widgetButtonVolume;
   public  Button      widgetButtonQuit;
 
@@ -375,17 +379,17 @@ class TabStatus
     };
     tableColumn = Widgets.addTableColumn(widgetJobList,0,"#",             SWT.RIGHT, 30,false);
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,1,"Name",          SWT.LEFT, 100,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,1,"Name",          SWT.LEFT,  80,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,2,"State",         SWT.LEFT,  60,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,2,"State",         SWT.LEFT,  90,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,3,"Type",          SWT.LEFT,  80,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,3,"Type",          SWT.LEFT,  90,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn = Widgets.addTableColumn(widgetJobList,4,"Part size",     SWT.RIGHT,  0,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn = Widgets.addTableColumn(widgetJobList,5,"Compress",      SWT.LEFT,  80,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,6,"Crypt",         SWT.LEFT,  70,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,6,"Crypt",         SWT.LEFT, 100,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn = Widgets.addTableColumn(widgetJobList,7,"Last executed", SWT.LEFT, 150,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
@@ -730,14 +734,28 @@ class TabStatus
         }
       });
 
-      widgetButtonTogglePause = Widgets.newButton(composite,null,"Continue");
-      Widgets.layout(widgetButtonTogglePause,0,2,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT); // how to calculate correct max. width? ,0,0,Widgets.getTextSize(widgetButtonTogglePause,new String[]{"Pause","Continue"}));
-      widgetButtonTogglePause.addSelectionListener(new SelectionListener()
+      widgetButtonPause = Widgets.newButton(composite,null,"Pause");
+      Widgets.layout(widgetButtonPause,0,2,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{"Puase [xxxxs]"}));
+      widgetButtonPause.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-          jobTogglePause();
+          jobPause(60*60);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      widgetButtonSuspendContinue = Widgets.newButton(composite,null,"Continue");
+      Widgets.layout(widgetButtonSuspendContinue,0,3,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{"Suspend","Continue"}));
+      widgetButtonSuspendContinue.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          jobSuspendContinue();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -745,7 +763,7 @@ class TabStatus
       });
 
       widgetButtonVolume = Widgets.newButton(composite,null,"Volume");
-      Widgets.layout(widgetButtonVolume,0,3,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetButtonVolume,0,4,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonVolume.setEnabled(false);
       widgetButtonVolume.addSelectionListener(new SelectionListener()
       {
@@ -760,7 +778,7 @@ class TabStatus
       });
 
       widgetButtonQuit = Widgets.newButton(composite,null,"Quit");
-      Widgets.layout(widgetButtonQuit,0,4,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetButtonQuit,0,5,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonQuit.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -807,14 +825,30 @@ class TabStatus
     String[] result = new String[1];
     if (BARServer.executeCommand("STATUS",result) != 0) return;
 
-    if (result[0].equals("pause"))
+    Object[] data = new Object[1];
+    if      (StringParser.parse(result[0],"pause %ld",data,StringParser.QUOTE_CHARS))
     {
+      final long pauseTime = (Long)data[0];
+
       status = States.PAUSE;
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          widgetButtonTogglePause.setText("Continue");
+          widgetButtonPause.setText(String.format("Pause [%3dmin]",(pauseTime > 0)?(pauseTime+59)/60:1));
+          widgetButtonSuspendContinue.setText("Continue");
+        }
+      });
+    }
+    else if (StringParser.parse(result[0],"suspended",data,StringParser.QUOTE_CHARS))
+    {
+      status = States.SUSPEND;
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          widgetButtonPause.setText("Pause");
+          widgetButtonSuspendContinue.setText("Continue");
         }
       });
     }
@@ -825,7 +859,8 @@ class TabStatus
       {
         public void run()
         {
-          widgetButtonTogglePause.setText("Pause");
+          widgetButtonPause.setText("Pause");
+          widgetButtonSuspendContinue.setText("Suspend");
         }
       });
     }
@@ -888,7 +923,7 @@ class TabStatus
             boolean[]   tableItemFlags = new boolean[tableItems.length];
             for (String line : result)
             {
-              Object data[] = new Object[10];
+              Object data[] = new Object[11];
               /* format:
                  <id>
                  <name>
@@ -897,11 +932,12 @@ class TabStatus
                  <archivePartSize>
                  <compressAlgorithm>
                  <cryptAlgorithm>
-                 <cryptTyp>
+                 <cryptType>
+                 <cryptPasswordMode>
                  <lastExecutedDateTime>
                  <estimatedRestTime>
               */
-              if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+              if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
               {
                 // get data
                 int    id                   = (Integer)data[0];
@@ -912,8 +948,9 @@ class TabStatus
                 String compressAlgorithm    = (String )data[5];
                 String cryptAlgorithm       = (String )data[6];
                 String cryptType            = (String )data[7];
-                long   lastExecutedDateTime = (Long   )data[8];
-                long   estimatedRestTime    = (Long   )data[9];
+                String cryptPasswordMode    = (String )data[8];
+                long   lastExecutedDateTime = (Long   )data[9];
+                long   estimatedRestTime    = (Long   )data[10];
 
                 // get/create table item
                 TableItem tableItem;
@@ -925,6 +962,7 @@ class TabStatus
                                                 compressAlgorithm,
                                                 cryptAlgorithm,
                                                 cryptType,
+                                                cryptPasswordMode,
                                                 lastExecutedDateTime,
                                                 estimatedRestTime
                                                );
@@ -943,7 +981,7 @@ class TabStatus
                 jobList.put(name,jobData);
                 tableItem.setText(0,Integer.toString(jobData.id));
                 tableItem.setText(1,jobData.name);
-                tableItem.setText(2,(status != States.PAUSE)?jobData.state:"pause");
+                tableItem.setText(2,(status == States.RUNNING)?jobData.state:"suspended");
                 tableItem.setText(3,jobData.type);
                 tableItem.setText(4,Units.formatByteSize(jobData.archivePartSize));
                 tableItem.setText(5,jobData.compressAlgorithm);
@@ -1066,9 +1104,37 @@ class TabStatus
 
     assert selectedJobData != null;
 
-    mode = Dialogs.select(shell,"Confirmation","Start job '"+selectedJobData.name+"'?",new String[]{"Normal","Full","Incremental","Cancel"},2);
-
     errorCode = Errors.UNKNOWN;
+
+    // get job mode
+    mode = Dialogs.select(shell,
+                          "Confirmation","Start job '"+selectedJobData.name+"'?",
+                          new String[]{"Normal","Full","Incremental","Cancel"},
+                          2
+                         );
+    if ((mode != 0) && (mode != 1) && (mode != 2))
+    {
+      return;
+    }
+
+    if (selectedJobData.cryptPasswordMode.equals("ask"))
+    {
+      // set crypt password
+      String password = Dialogs.password(shell,
+                                         "Crypt password",
+                                         null,
+                                         "Crypt password:",
+                                         "Verify:"
+                                        );
+      if (password == null)
+      {
+        return;
+      }
+
+      errorCode = BARServer.executeCommand("CRYPT_PASSWORD "+selectedJobData.id+" "+StringParser.escape(password));
+    }
+
+    // start
     switch (mode)
     {
       case 0:
@@ -1083,7 +1149,7 @@ class TabStatus
       case 3:
         break;
     }
-Dprintf.dprintf("----------------------- errorCode=%d\n",errorCode);
+  Dprintf.dprintf("----------------------- errorCode=%d\n",errorCode);
   }
 
   /** abort selected job
@@ -1098,16 +1164,26 @@ Dprintf.dprintf("----------------------- errorCode=%d\n",errorCode);
     }
   }
 
-  /** toggle pause all jobs
+  /** pause all jobs for 60min
+   * @param pauseTime pause time [s]
    */
-  private void jobTogglePause()
+  public void jobPause(long pauseTime)
+  {
+    BARServer.executeCommand("PAUSE "+pauseTime);
+  }
+
+  /** suspend/continue paused jobs
+   */
+  private void jobSuspendContinue()
   {
     switch (status)
     {
-      case RUNNING: BARServer.executeCommand("PAUSE"   ); break;
-      case PAUSE:   BARServer.executeCommand("CONTINUE"); break;
+      case RUNNING: BARServer.executeCommand("SUSPEND" ); break;
+      case PAUSE:
+      case SUSPEND: BARServer.executeCommand("CONTINUE"); break;
     }
   }
+
 
   /** new volume
    */

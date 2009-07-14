@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -963,7 +963,7 @@ l=x.depth;
   private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental"});
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable(0);
-  private WidgetVariable  compressAlgorithm       = new WidgetVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9"});
+  private WidgetVariable  compressAlgorithm       = new WidgetVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
   private WidgetVariable  cryptAlgorithm          = new WidgetVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
   private WidgetVariable  cryptType               = new WidgetVariable(new String[]{"none","symmetric","asymmetric"});
   private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable("");
@@ -1089,8 +1089,25 @@ final    Display     display;
         }
       });
 
-      button = Widgets.newButton(composite,null,"Rename");
+      button = Widgets.newButton(composite,null,"Copy");
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          if (selectedJobId > 0)
+          {
+            jobCopy();
+          }
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      button = Widgets.newButton(composite,null,"Rename");
+      Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -1107,7 +1124,7 @@ final    Display     display;
       });
 
       button = Widgets.newButton(composite,null,"Delete");
-      Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
+      Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -1539,7 +1556,7 @@ final    Display     display;
         Widgets.layout(composite,1,1,TableLayoutData.WE);
         {
           combo = Widgets.newOptionMenu(composite,null);
-          combo.setItems(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9"});
+          combo.setItems(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
           Widgets.layout(combo,0,0,TableLayoutData.W);
           combo.addSelectionListener(new SelectionListener()
           {
@@ -3429,7 +3446,7 @@ throw new Error("NYI");
       widgetJobList.removeAll();
       for (String line : result)
       {
-        Object data[] = new Object[10];
+        Object data[] = new Object[11];
         /* format:
            <id>
            <name>
@@ -3439,11 +3456,12 @@ throw new Error("NYI");
            <compressAlgorithm>
            <cryptAlgorithm>
            <cryptType>
+           <cryptPasswordMode>
            <lastExecutedDateTime>
            <estimatedRestTime>
         */
   //System.err.println("BARControl.java"+", "+1357+": "+line);
-        if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+        if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
         {
   //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
           // get data
@@ -3529,12 +3547,117 @@ throw new Error("NYI");
         {
           try
           {
-            BARServer.executeCommand("JOB_NEW "+StringParser.escape(jobName));
-            updateJobList();
+            String[] result = new String[1];
+            int errorCode = BARServer.executeCommand("JOB_NEW "+StringParser.escape(jobName),result);
+            if (errorCode == Errors.NONE)
+            {
+              updateJobList();
+              selectJob(jobName);
+            }
+            else
+            {
+              Dialogs.error(shell,"Cannot create new job:\n\n"+result[0]);
+            }
           }
           catch (CommunicationError error)
           {
             Dialogs.error(shell,"Cannot create new job:\n\n"+error.getMessage());
+          }
+        }
+        widget.getShell().close();
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+
+    Dialogs.run(dialog);
+  }
+
+  /** copy job
+   */
+  private void jobCopy()
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    final Shell dialog = Dialogs.open(shell,"Copy job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Text   widgetJobName;
+    final Button widgetCopy;
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    {
+      label = Widgets.newLabel(composite,"Name:");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      widgetJobName = Widgets.newText(composite,null);
+      Widgets.layout(widgetJobName,0,1,TableLayoutData.WE);
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    {
+      widgetCopy = Widgets.newButton(composite,null,"Copy");
+      Widgets.layout(widgetCopy,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,null,"Cancel");
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          widget.getShell().close();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    // add selection listeners
+    widgetJobName.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetCopy.forceFocus();
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+    });
+    widgetCopy.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget  = (Button)selectionEvent.widget;
+        String jobName = widgetJobName.getText();
+        if (!jobName.equals(""))
+        {
+          try
+          {
+            String[] result = new String[1];
+            int errorCode = BARServer.executeCommand("JOB_COPY "+selectedJobId+" "+StringParser.escape(jobName),result);
+            if (errorCode == Errors.NONE)
+            {
+              updateJobList();
+              selectJob(jobName);
+            }
+            else
+            {
+              Dialogs.error(shell,"Cannot copy job:\n\n"+result[0]);
+            }
+          }
+          catch (CommunicationError error)
+          {
+            Dialogs.error(shell,"Cannot copy job:\n\n"+error.getMessage());
           }
         }
         widget.getShell().close();
@@ -3623,8 +3746,24 @@ throw new Error("NYI");
         String newJobName = widgetNewJobName.getText();
         if (!newJobName.equals(""))
         {
-          BARServer.executeCommand("JOB_RENAME "+selectedJobId+" "+StringParser.escape(newJobName));
-          updateJobList();
+          try
+          {
+            String[] result = new String[1];
+            int errorCode = BARServer.executeCommand("JOB_RENAME "+selectedJobId+" "+StringParser.escape(newJobName),result);
+            if (errorCode == Errors.NONE)
+            {
+              updateJobList();
+              selectJob(newJobName);
+            }
+            else
+            {
+              Dialogs.error(shell,"Cannot rename job:\n\n"+result[0]);
+            }
+          }
+          catch (CommunicationError error)
+          {
+            Dialogs.error(shell,"Cannot rename job:\n\n"+error.getMessage());
+          }
         }
         widget.getShell().close();
       }
@@ -3645,10 +3784,25 @@ throw new Error("NYI");
 
     if (Dialogs.confirm(shell,"Delete job '"+selectedJobName+"'?"))
     {
-      BARServer.executeCommand("JOB_DELETE "+selectedJobId);
-      updateJobList();
-      Widgets.setEnabled(widgetTabFolder,false);
-      clear();
+      try
+      {
+        String[] result = new String[1];
+        int errorCode = BARServer.executeCommand("JOB_DELETE "+selectedJobId);
+        if (errorCode == Errors.NONE)
+        {
+          updateJobList();
+          Widgets.setEnabled(widgetTabFolder,false);
+          clear();
+        }
+        else
+        {
+          Dialogs.error(shell,"Cannot delete job:\n\n"+result[0]);
+        }
+      }
+      catch (CommunicationError error)
+      {
+        Dialogs.error(shell,"Cannot delete job:\n\n"+error.getMessage());
+      }
     }
   }
 

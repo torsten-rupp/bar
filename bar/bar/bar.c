@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -217,6 +217,18 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS[] =
     {"bzip8",COMPRESS_ALGORITHM_BZIP2_8,"BZIP2 compression level 8"},
     {"bzip9",COMPRESS_ALGORITHM_BZIP2_9,"BZIP2 compression level 9"},
   #endif /* HAVE_BZ2 */
+
+  #ifdef HAVE_LZMA
+    {"lzma1",COMPRESS_ALGORITHM_LZMA_1,"LZMA compression level 1"},
+    {"lzma2",COMPRESS_ALGORITHM_LZMA_2,"LZMA compression level 2"},
+    {"lzma3",COMPRESS_ALGORITHM_LZMA_3,"LZMA compression level 3"},
+    {"lzma4",COMPRESS_ALGORITHM_LZMA_4,"LZMA compression level 4"},
+    {"lzma5",COMPRESS_ALGORITHM_LZMA_5,"LZMA compression level 5"},
+    {"lzma6",COMPRESS_ALGORITHM_LZMA_6,"LZMA compression level 6"},
+    {"lzma7",COMPRESS_ALGORITHM_LZMA_7,"LZMA compression level 7"},
+    {"lzma8",COMPRESS_ALGORITHM_LZMA_8,"LZMA compression level 8"},
+    {"lzma9",COMPRESS_ALGORITHM_LZMA_9,"LZMA compression level 9"},
+  #endif /* HAVE_LZMA */
 };
 
 LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
@@ -426,6 +438,18 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
     {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
     {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
   #endif /* HAVE_BZ2 */
+
+  #ifdef HAVE_LZMA
+    {"lzma1",COMPRESS_ALGORITHM_LZMA_1},
+    {"lzma2",COMPRESS_ALGORITHM_LZMA_2},
+    {"lzma3",COMPRESS_ALGORITHM_LZMA_3},
+    {"lzma4",COMPRESS_ALGORITHM_LZMA_4},
+    {"lzma5",COMPRESS_ALGORITHM_LZMA_5},
+    {"lzma6",COMPRESS_ALGORITHM_LZMA_6},
+    {"lzma7",COMPRESS_ALGORITHM_LZMA_7},
+    {"lzma8",COMPRESS_ALGORITHM_LZMA_8},
+    {"lzma9",COMPRESS_ALGORITHM_LZMA_9},
+  #endif /* HAVE_LZMA */
 };
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =

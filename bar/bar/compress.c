@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/compress.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -20,6 +20,9 @@
 #ifdef HAVE_BZ2
   #include <bzlib.h>
 #endif /* HAVE_BZ2 */
+#ifdef HAVE_LZMA
+  #include <lzma.h>
+#endif /* HAVE_LZMA */
 #include <assert.h>
 
 #include "global.h"
@@ -58,6 +61,16 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
   { "bzip7", COMPRESS_ALGORITHM_BZIP2_7 },
   { "bzip8", COMPRESS_ALGORITHM_BZIP2_8 },
   { "bzip9", COMPRESS_ALGORITHM_BZIP2_9 },
+
+  { "lzma1", COMPRESS_ALGORITHM_LZMA_1 },
+  { "lzma2", COMPRESS_ALGORITHM_LZMA_2 },
+  { "lzma3", COMPRESS_ALGORITHM_LZMA_3 },
+  { "lzma4", COMPRESS_ALGORITHM_LZMA_4 },
+  { "lzma5", COMPRESS_ALGORITHM_LZMA_5 },
+  { "lzma6", COMPRESS_ALGORITHM_LZMA_6 },
+  { "lzma7", COMPRESS_ALGORITHM_LZMA_7 },
+  { "lzma8", COMPRESS_ALGORITHM_LZMA_8 },
+  { "lzma9", COMPRESS_ALGORITHM_LZMA_9 },
 };
 
 /***************************** Datatypes *******************************/
@@ -275,6 +288,79 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
       break;
+    case COMPRESS_ALGORITHM_LZMA_1:
+    case COMPRESS_ALGORITHM_LZMA_2:
+    case COMPRESS_ALGORITHM_LZMA_3:
+    case COMPRESS_ALGORITHM_LZMA_4:
+    case COMPRESS_ALGORITHM_LZMA_5:
+    case COMPRESS_ALGORITHM_LZMA_6:
+    case COMPRESS_ALGORITHM_LZMA_7:
+    case COMPRESS_ALGORITHM_LZMA_8:
+    case COMPRESS_ALGORITHM_LZMA_9:
+      #ifdef HAVE_LZMA
+        {
+          lzma_ret lzmaResult;
+
+          if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
+              && !compressInfo->endOfDataFlag                                             // not end-of-data
+             )
+          {
+            /* compress available data */
+            if      (compressInfo->dataBufferLength > 0)  // data available
+            {
+              /* compress */
+              maxDataBytes     = compressInfo->dataBufferLength;
+              maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
+              compressInfo->lzmalib.stream.next_in   = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferIndex);
+              compressInfo->lzmalib.stream.avail_in  = maxDataBytes;
+              compressInfo->lzmalib.stream.next_out  = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
+              compressInfo->lzmalib.stream.avail_out = maxCompressBytes;
+              lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
+              if (lzmaResult != LZMA_OK)
+              {
+                return ERROR_COMPRESS_ERROR;
+              }
+              compressInfo->compressState = COMPRESS_STATE_RUNNING;
+              compressInfo->compressBufferLength += maxCompressBytes-compressInfo->lzmalib.stream.avail_out;
+
+              /* shift data buffer */
+              n = maxDataBytes-compressInfo->lzmalib.stream.avail_in;
+              memmove(compressInfo->dataBuffer,compressInfo->dataBuffer+n,compressInfo->dataBufferLength-n);
+              compressInfo->dataBufferLength -= n;
+            }
+          }
+          if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
+              && !compressInfo->endOfDataFlag                                             // not end-of-data
+             )
+          {
+            /* finish compress, flush internal compress buffers */
+            if (   (compressInfo->flushFlag)                                // flush data requested
+                && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
+               )
+            {
+              /* compress with flush */
+              maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
+              compressInfo->lzmalib.stream.next_in   = NULL;
+              compressInfo->lzmalib.stream.avail_in  = 0;
+              compressInfo->lzmalib.stream.next_out  = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
+              compressInfo->lzmalib.stream.avail_out = maxCompressBytes;
+              lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_FINISH);
+              if      (lzmaResult == LZMA_STREAM_END)
+              {
+                compressInfo->endOfDataFlag = TRUE;
+              }
+              else if (lzmaResult != LZMA_OK)
+              {
+                return ERROR_COMPRESS_ERROR;
+              }
+              compressInfo->compressBufferLength += maxCompressBytes-compressInfo->lzmalib.stream.avail_out;
+            }
+          }
+        }
+      #else /* not HAVE_LZMA */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZMA */
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -347,7 +433,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
     case COMPRESS_ALGORITHM_ZIP_9:
       #ifdef HAVE_Z
         {
-          int zlibError;
+          int zlibResult;
 
           if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in buffer
           {
@@ -366,13 +452,13 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 compressInfo->zlib.stream.avail_in  = maxCompressBytes;
                 compressInfo->zlib.stream.next_out  = compressInfo->dataBuffer+compressInfo->dataBufferLength;
                 compressInfo->zlib.stream.avail_out = maxDataBytes;
-                zlibError = inflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
-                if      (zlibError == Z_STREAM_END)
+                zlibResult = inflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
+                if      (zlibResult == Z_STREAM_END)
                 {
                   compressInfo->endOfDataFlag = TRUE;
                 }
-                else if (   (zlibError != Z_OK)
-                         && (zlibError != Z_BUF_ERROR)
+                else if (   (zlibResult != Z_OK)
+                         && (zlibResult != Z_BUF_ERROR)
                         )
                 {
                   return ERROR_COMPRESS_ERROR;
@@ -402,13 +488,13 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 compressInfo->zlib.stream.avail_in  = 0;
                 compressInfo->zlib.stream.next_out  = compressInfo->dataBuffer+compressInfo->dataBufferLength;
                 compressInfo->zlib.stream.avail_out = maxDataBytes;
-                zlibError = inflate(&compressInfo->zlib.stream,Z_FINISH);
-                if      (zlibError == Z_STREAM_END)
+                zlibResult = inflate(&compressInfo->zlib.stream,Z_FINISH);
+                if      (zlibResult == Z_STREAM_END)
                 {
                   compressInfo->endOfDataFlag = TRUE;
                 }
-                else if (   (zlibError != Z_OK)
-                         && (zlibError != Z_BUF_ERROR)
+                else if (   (zlibResult != Z_OK)
+                         && (zlibResult != Z_BUF_ERROR)
                         )
                 {
                   return ERROR_COMPRESS_ERROR;
@@ -433,7 +519,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
     case COMPRESS_ALGORITHM_BZIP2_9:
       #ifdef HAVE_BZ2
         {
-          int bzlibError;
+          int bzlibResult;
 
           if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in buffer
           {
@@ -452,12 +538,12 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 compressInfo->bzlib.stream.avail_in  = maxCompressBytes;
                 compressInfo->bzlib.stream.next_out  = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferLength);
                 compressInfo->bzlib.stream.avail_out = maxDataBytes;
-                bzlibError = BZ2_bzDecompress(&compressInfo->bzlib.stream);
-                if      (bzlibError == BZ_STREAM_END)
+                bzlibResult = BZ2_bzDecompress(&compressInfo->bzlib.stream);
+                if      (bzlibResult == BZ_STREAM_END)
                 {
                   compressInfo->endOfDataFlag = TRUE;
                 }
-                else if (bzlibError != BZ_OK)
+                else if (bzlibResult != BZ_OK)
                 {
                   return ERROR_COMPRESS_ERROR;
                 }
@@ -486,12 +572,12 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 compressInfo->bzlib.stream.avail_in  = 0;
                 compressInfo->bzlib.stream.next_out  = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferLength);
                 compressInfo->bzlib.stream.avail_out = maxDataBytes;
-                bzlibError = BZ2_bzDecompress(&compressInfo->bzlib.stream);
-                if      (bzlibError == BZ_STREAM_END)
+                bzlibResult = BZ2_bzDecompress(&compressInfo->bzlib.stream);
+                if      (bzlibResult == BZ_STREAM_END)
                 {
                   compressInfo->endOfDataFlag = TRUE;
                 }
-                else if (bzlibError != BZ_RUN_OK)
+                else if (bzlibResult != BZ_RUN_OK)
                 {
                   return ERROR_COMPRESS_ERROR;
                 }
@@ -503,6 +589,88 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #else /* not HAVE_BZ2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
+      break;
+    case COMPRESS_ALGORITHM_LZMA_1:
+    case COMPRESS_ALGORITHM_LZMA_2:
+    case COMPRESS_ALGORITHM_LZMA_3:
+    case COMPRESS_ALGORITHM_LZMA_4:
+    case COMPRESS_ALGORITHM_LZMA_5:
+    case COMPRESS_ALGORITHM_LZMA_6:
+    case COMPRESS_ALGORITHM_LZMA_7:
+    case COMPRESS_ALGORITHM_LZMA_8:
+    case COMPRESS_ALGORITHM_LZMA_9:
+      #ifdef HAVE_LZMA
+        {
+          lzma_ret lzmaResult;
+
+          if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in buffer
+          {
+            compressInfo->dataBufferIndex  = 0;
+            compressInfo->dataBufferLength = 0;
+
+            if (!compressInfo->endOfDataFlag)
+            {
+              /* decompress available data */
+              if      (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
+              {
+                /* decompress */
+                maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
+                maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
+                compressInfo->lzmalib.stream.next_in   = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferIndex);
+                compressInfo->lzmalib.stream.avail_in  = maxCompressBytes;
+                compressInfo->lzmalib.stream.next_out  = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferLength);
+                compressInfo->lzmalib.stream.avail_out = maxDataBytes;
+                lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
+                if      (lzmaResult == LZMA_STREAM_END)
+                {
+                  compressInfo->endOfDataFlag = TRUE;
+                }
+                else if (lzmaResult != LZMA_OK)
+                {
+                  return ERROR_COMPRESS_ERROR;
+                }
+                compressInfo->compressState = COMPRESS_STATE_RUNNING;
+                compressInfo->compressBufferIndex += maxCompressBytes-compressInfo->lzmalib.stream.avail_in;
+                compressInfo->dataBufferLength += maxDataBytes-compressInfo->lzmalib.stream.avail_out;
+              }
+            }
+          }
+          if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in buffer
+          {
+            compressInfo->dataBufferIndex  = 0;
+            compressInfo->dataBufferLength = 0;
+
+            if (!compressInfo->endOfDataFlag)
+            {
+              /* finish decompress, flush internal decompress buffers */
+              if (   (compressInfo->flushFlag)                                // flush data requested
+                  && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
+                 )
+              {
+                /* decompress with flush */
+                maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
+                maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
+                compressInfo->lzmalib.stream.next_in   = NULL;
+                compressInfo->lzmalib.stream.avail_in  = 0;
+                compressInfo->lzmalib.stream.next_out  = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferLength);
+                compressInfo->lzmalib.stream.avail_out = maxDataBytes;
+                lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_FINISH);
+                if      (lzmaResult == LZMA_STREAM_END)
+                {
+                  compressInfo->endOfDataFlag = TRUE;
+                }
+                else if (lzmaResult != LZMA_OK)
+                {
+                  return ERROR_COMPRESS_ERROR;
+                }
+                compressInfo->dataBufferLength += maxDataBytes-compressInfo->lzmalib.stream.avail_out;
+              }
+            }
+          }
+        }
+      #else /* not HAVE_LZMA */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZMA */
       break;
     default:
       #ifndef NDEBUG
@@ -741,6 +909,69 @@ Errors Compress_new(CompressInfo       *compressInfo,
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
       break;
+    case COMPRESS_ALGORITHM_LZMA_1:
+    case COMPRESS_ALGORITHM_LZMA_2:
+    case COMPRESS_ALGORITHM_LZMA_3:
+    case COMPRESS_ALGORITHM_LZMA_4:
+    case COMPRESS_ALGORITHM_LZMA_5:
+    case COMPRESS_ALGORITHM_LZMA_6:
+    case COMPRESS_ALGORITHM_LZMA_7:
+    case COMPRESS_ALGORITHM_LZMA_8:
+    case COMPRESS_ALGORITHM_LZMA_9:
+      #ifdef HAVE_LZMA
+        {
+          lzma_stream streamInit = LZMA_STREAM_INIT;
+
+          compressInfo->lzmalib.compressionLevel = 0;
+          switch (compressAlgorithm)
+          {
+            case COMPRESS_ALGORITHM_LZMA_1: compressInfo->lzmalib.compressionLevel = 1; break;
+            case COMPRESS_ALGORITHM_LZMA_2: compressInfo->lzmalib.compressionLevel = 2; break;
+            case COMPRESS_ALGORITHM_LZMA_3: compressInfo->lzmalib.compressionLevel = 3; break;
+            case COMPRESS_ALGORITHM_LZMA_4: compressInfo->lzmalib.compressionLevel = 4; break;
+            case COMPRESS_ALGORITHM_LZMA_5: compressInfo->lzmalib.compressionLevel = 5; break;
+            case COMPRESS_ALGORITHM_LZMA_6: compressInfo->lzmalib.compressionLevel = 6; break;
+            case COMPRESS_ALGORITHM_LZMA_7: compressInfo->lzmalib.compressionLevel = 7; break;
+            case COMPRESS_ALGORITHM_LZMA_8: compressInfo->lzmalib.compressionLevel = 8; break;
+            case COMPRESS_ALGORITHM_LZMA_9: compressInfo->lzmalib.compressionLevel = 9; break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break;
+          }
+          compressInfo->lzmalib.stream.allocator = NULL;
+          switch (compressMode)
+          {
+            case COMPRESS_MODE_DEFLATE:
+              compressInfo->lzmalib.stream = streamInit;
+              if (lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE) != LZMA_OK)
+              {
+                free(compressInfo->compressBuffer);
+                free(compressInfo->dataBuffer);
+                return ERROR_INIT_COMPRESS;
+              }
+              break;
+            case COMPRESS_MODE_INFLATE:
+              compressInfo->lzmalib.stream = streamInit;
+              if (lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0) != LZMA_OK)
+              {
+                free(compressInfo->compressBuffer);
+                free(compressInfo->dataBuffer);
+                return ERROR_INIT_COMPRESS;
+              }
+              break;
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break; /* not reached */
+            #endif /* NDEBUG */
+          }
+        }
+      #else /* not HAVE_LZMA */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZMA */
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -816,6 +1047,20 @@ void Compress_delete(CompressInfo *compressInfo)
       #else /* not HAVE_BZ2 */
       #endif /* HAVE_BZ2 */
       break;
+    case COMPRESS_ALGORITHM_LZMA_1:
+    case COMPRESS_ALGORITHM_LZMA_2:
+    case COMPRESS_ALGORITHM_LZMA_3:
+    case COMPRESS_ALGORITHM_LZMA_4:
+    case COMPRESS_ALGORITHM_LZMA_5:
+    case COMPRESS_ALGORITHM_LZMA_6:
+    case COMPRESS_ALGORITHM_LZMA_7:
+    case COMPRESS_ALGORITHM_LZMA_8:
+    case COMPRESS_ALGORITHM_LZMA_9:
+      #ifdef HAVE_LZMA
+        lzma_end(&compressInfo->lzmalib.stream);
+      #else /* not HAVE_LZMA */
+      #endif /* HAVE_LZMA */
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -856,16 +1101,16 @@ Errors Compress_reset(CompressInfo *compressInfo)
     case COMPRESS_ALGORITHM_ZIP_9:
       #ifdef HAVE_Z
         {
-          int zlibError;
+          int zlibResult;
 
-          zlibError = Z_ERRNO;
+          zlibResult = Z_ERRNO;
           switch (compressInfo->compressMode)
           {
             case COMPRESS_MODE_DEFLATE:
-              zlibError = deflateReset(&compressInfo->zlib.stream);
+              zlibResult = deflateReset(&compressInfo->zlib.stream);
               break;
             case COMPRESS_MODE_INFLATE:
-              zlibError = inflateReset(&compressInfo->zlib.stream);
+              zlibResult = inflateReset(&compressInfo->zlib.stream);
               break;
             #ifndef NDEBUG
               default:
@@ -873,7 +1118,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
                 break; /* not reached */
             #endif /* NDEBUG */
           }
-          if ((zlibError != Z_OK) && (zlibError != Z_STREAM_END))
+          if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
           {
             return ERROR_COMPRESS_ERROR;
           }
@@ -893,18 +1138,18 @@ Errors Compress_reset(CompressInfo *compressInfo)
     case COMPRESS_ALGORITHM_BZIP2_9:
       #ifdef HAVE_BZ2
         {
-          int bzlibError;
+          int bzlibResult;
 
-          bzlibError = BZ_PARAM_ERROR;
+          bzlibResult = BZ_PARAM_ERROR;
           switch (compressInfo->compressMode)
           {
             case COMPRESS_MODE_DEFLATE:
               BZ2_bzCompressEnd(&compressInfo->bzlib.stream);
-              bzlibError = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
+              bzlibResult = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
               break;
             case COMPRESS_MODE_INFLATE:
               BZ2_bzDecompressEnd(&compressInfo->bzlib.stream);
-              bzlibError = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
+              bzlibResult = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
               break;
             #ifndef NDEBUG
               default:
@@ -912,7 +1157,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
                 break; /* not reached */
             #endif /* NDEBUG */
           }
-          if (bzlibError != BZ_OK)
+          if (bzlibResult != BZ_OK)
           {
             return ERROR_COMPRESS_ERROR;
           }
@@ -920,6 +1165,48 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #else /* not HAVE_BZ2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
+      break;
+    case COMPRESS_ALGORITHM_LZMA_1:
+    case COMPRESS_ALGORITHM_LZMA_2:
+    case COMPRESS_ALGORITHM_LZMA_3:
+    case COMPRESS_ALGORITHM_LZMA_4:
+    case COMPRESS_ALGORITHM_LZMA_5:
+    case COMPRESS_ALGORITHM_LZMA_6:
+    case COMPRESS_ALGORITHM_LZMA_7:
+    case COMPRESS_ALGORITHM_LZMA_8:
+    case COMPRESS_ALGORITHM_LZMA_9:
+      #ifdef HAVE_LZMA
+        {
+          lzma_stream streamInit = LZMA_STREAM_INIT;
+          int         lzmalibResult;
+
+          lzmalibResult = LZMA_PROG_ERROR;
+          switch (compressInfo->compressMode)
+          {
+            case COMPRESS_MODE_DEFLATE:
+              lzma_end(&compressInfo->lzmalib.stream);
+              compressInfo->lzmalib.stream = streamInit;
+              lzmalibResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
+              break;
+            case COMPRESS_MODE_INFLATE:
+              lzma_end(&compressInfo->lzmalib.stream);
+              compressInfo->lzmalib.stream = streamInit;
+              lzmalibResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
+              break;
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break; /* not reached */
+            #endif /* NDEBUG */
+          }
+          if (lzmalibResult != LZMA_OK)
+          {
+            return ERROR_COMPRESS_ERROR;
+          }
+        }
+      #else /* not HAVE_LZMA */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZMA */
       break;
     default:
       #ifndef NDEBUG
@@ -1030,7 +1317,6 @@ Errors Compress_flush(CompressInfo *compressInfo)
   assert(compressInfo != NULL);
 
   compressInfo->flushFlag = TRUE;
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
@@ -1077,6 +1363,21 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo)
       #else /* not HAVE_BZ2 */
         length = 0LL;
       #endif /* HAVE_BZ2 */
+      break;
+    case COMPRESS_ALGORITHM_LZMA_1:
+    case COMPRESS_ALGORITHM_LZMA_2:
+    case COMPRESS_ALGORITHM_LZMA_3:
+    case COMPRESS_ALGORITHM_LZMA_4:
+    case COMPRESS_ALGORITHM_LZMA_5:
+    case COMPRESS_ALGORITHM_LZMA_6:
+    case COMPRESS_ALGORITHM_LZMA_7:
+    case COMPRESS_ALGORITHM_LZMA_8:
+    case COMPRESS_ALGORITHM_LZMA_9:
+      #ifdef HAVE_LZMA
+        length = (uint64)compressInfo->lzmalib.stream.total_in;
+      #else /* not HAVE_LZMA */
+        length = 0LL;
+      #endif /* HAVE_LZMA */
       break;
     default:
       #ifndef NDEBUG
@@ -1130,6 +1431,21 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
       #else /* not HAVE_BZ2 */
         length = 0LL;
       #endif /* HAVE_BZ2 */
+      break;
+    case COMPRESS_ALGORITHM_LZMA_1:
+    case COMPRESS_ALGORITHM_LZMA_2:
+    case COMPRESS_ALGORITHM_LZMA_3:
+    case COMPRESS_ALGORITHM_LZMA_4:
+    case COMPRESS_ALGORITHM_LZMA_5:
+    case COMPRESS_ALGORITHM_LZMA_6:
+    case COMPRESS_ALGORITHM_LZMA_7:
+    case COMPRESS_ALGORITHM_LZMA_8:
+    case COMPRESS_ALGORITHM_LZMA_9:
+      #ifdef HAVE_LZMA
+        length = (uint64)compressInfo->lzmalib.stream.total_out;
+      #else /* not HAVE_LZMA */
+        length = 0LL;
+      #endif /* HAVE_LZMA */
       break;
     default:
       #ifndef NDEBUG

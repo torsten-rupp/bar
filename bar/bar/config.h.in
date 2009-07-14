@@ -40,6 +40,9 @@
 /* defined if long long data type available */
 #undef HAVE_LONG_LONG
 
+/* lzma installed */
+#undef HAVE_LZMA
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
