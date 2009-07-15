@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.56 $
+# $Revision: 1.57 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -305,6 +305,7 @@ $(DISTRIBUTION_NAME).tar.bz2:
 	$(INSTALL) -d $(DISTRIBUTION_NAME)
 	$(INSTALL) -m 775 \
                    configure \
+                   download-third-party-packages.sh \
                    $(OTHER_SOURCES) \
                    $(DISTRIBUTION_NAME)
 	$(INSTALL) -m 664 \
