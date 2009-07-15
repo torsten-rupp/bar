@@ -17,7 +17,9 @@ if test "$1" != "--clean"; then
   # bzip2
   (
    cd $tmpDirectory
-   $WGET 'http://www.bzip.org/1.0.5/bzip2-1.0.5.tar.gz'
+   if test ! -f bzip2-1.0.5.tar.gz; then
+     $WGET 'http://www.bzip.org/1.0.5/bzip2-1.0.5.tar.gz'
+   fi
    $TAR xzf bzip2-1.0.5.tar.gz
   )
   $LN -f -s $tmpDirectory/bzip2-1.0.5 bzip2
@@ -25,7 +27,9 @@ if test "$1" != "--clean"; then
   # lzma
   (
    cd $tmpDirectory
-   $WGET 'http://tukaani.org/xz/xz-4.999.8beta.tar.gz'
+   if test ! -f xz-4.999.8beta.tar.gz; then
+     $WGET 'http://tukaani.org/xz/xz-4.999.8beta.tar.gz'
+   fi
    $TAR xzf xz-4.999.8beta.tar.gz
   )
   $LN -f -s $tmpDirectory/xz-4.999.8beta xz
@@ -33,8 +37,12 @@ if test "$1" != "--clean"; then
   # gcrypt
   (
    cd $tmpDirectory
-   $WGET 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.7.tar.bz2'
-   $WGET 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.4.4.tar.bz2'
+   if test ! -f libgpg-error-1.7.tar.bz2; then
+     $WGET 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.7.tar.bz2'
+   fi
+   if test ! -f libgcrypt-1.4.4.tar.bz2; then
+     $WGET 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.4.4.tar.bz2'
+   fi
    $TAR xjf libgpg-error-1.7.tar.bz2
    $TAR xjf libgcrypt-1.4.4.tar.bz2
   )
@@ -44,8 +52,12 @@ if test "$1" != "--clean"; then
   # ftplib
   (
    cd $tmpDirectory
-   $WGET 'http://www.nbpfaus.net/~pfau/ftplib/ftplib-3.1-src.tar.gz'
-   $WGET 'http://nbpfaus.net/~pfau/ftplib/ftplib-3.1-1.patch'
+   if test ! -f ftplib-3.1-src.tar.gz; then
+     $WGET 'http://www.nbpfaus.net/~pfau/ftplib/ftplib-3.1-src.tar.gz'
+   fi
+   if test ! -f ftplib-3.1-1.patch; then
+     $WGET 'http://nbpfaus.net/~pfau/ftplib/ftplib-3.1-1.patch'
+   fi
    $TAR xzf ftplib-3.1-src.tar.gz
    (cd ftplib-3.1; patch -p3 < ../ftplib-3.1-1.patch)
   )
@@ -54,7 +66,9 @@ if test "$1" != "--clean"; then
   # libssh2
   (
    cd $tmpDirectory
-   $WGET 'http://prdownloads.sourceforge.net/libssh2/libssh2-1.1.tar.gz?download'
+   if test ! -f libssh2-1.1.tar.gz; then
+     $WGET 'http://prdownloads.sourceforge.net/libssh2/libssh2-1.1.tar.gz?download'
+   fi
    $TAR xzf libssh2-1.1.tar.gz
   )
   $LN -f -s $tmpDirectory/libssh2-1.1 libssh2
@@ -62,7 +76,9 @@ if test "$1" != "--clean"; then
   # gnutls
   (
    cd $tmpDirectory
-   $WGET 'ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.8.1.tar.bz2'
+   if test ! -f gnutls-2.8.1.tar.bz2; then
+     $WGET 'ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.8.1.tar.bz2'
+   fi
    $TAR xjf gnutls-2.8.1.tar.bz2
   )
   $LN -f -s $tmpDirectory/gnutls-2.8.1 gnutls
@@ -95,6 +111,7 @@ else
   # gnutls
   $RMF $tmpDirectory/gnutls-2.8.1.tar.bz2
   $RMRF $tmpDirectory/gnutls-2.8.1
+  $RMF gnutls
 fi
 
 exit 0
