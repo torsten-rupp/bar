@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/compress.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -311,9 +311,9 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               /* compress */
               maxDataBytes     = compressInfo->dataBufferLength;
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
-              compressInfo->lzmalib.stream.next_in   = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferIndex);
+              compressInfo->lzmalib.stream.next_in   = (uint8_t*)(compressInfo->dataBuffer+compressInfo->dataBufferIndex);
               compressInfo->lzmalib.stream.avail_in  = maxDataBytes;
-              compressInfo->lzmalib.stream.next_out  = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
+              compressInfo->lzmalib.stream.next_out  = (uint8_t*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
               compressInfo->lzmalib.stream.avail_out = maxCompressBytes;
               lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
               if (lzmaResult != LZMA_OK)
@@ -342,7 +342,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
               compressInfo->lzmalib.stream.next_in   = NULL;
               compressInfo->lzmalib.stream.avail_in  = 0;
-              compressInfo->lzmalib.stream.next_out  = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
+              compressInfo->lzmalib.stream.next_out  = (uint8_t*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
               compressInfo->lzmalib.stream.avail_out = maxCompressBytes;
               lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_FINISH);
               if      (lzmaResult == LZMA_STREAM_END)
@@ -616,9 +616,9 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 /* decompress */
                 maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
                 maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
-                compressInfo->lzmalib.stream.next_in   = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferIndex);
+                compressInfo->lzmalib.stream.next_in   = (uint8_t*)(compressInfo->compressBuffer+compressInfo->compressBufferIndex);
                 compressInfo->lzmalib.stream.avail_in  = maxCompressBytes;
-                compressInfo->lzmalib.stream.next_out  = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferLength);
+                compressInfo->lzmalib.stream.next_out  = (uint8_t*)(compressInfo->dataBuffer+compressInfo->dataBufferLength);
                 compressInfo->lzmalib.stream.avail_out = maxDataBytes;
                 lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
                 if      (lzmaResult == LZMA_STREAM_END)
@@ -652,7 +652,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
                 compressInfo->lzmalib.stream.next_in   = NULL;
                 compressInfo->lzmalib.stream.avail_in  = 0;
-                compressInfo->lzmalib.stream.next_out  = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferLength);
+                compressInfo->lzmalib.stream.next_out  = (uint8_t*)(compressInfo->dataBuffer+compressInfo->dataBufferLength);
                 compressInfo->lzmalib.stream.avail_out = maxDataBytes;
                 lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_FINISH);
                 if      (lzmaResult == LZMA_STREAM_END)

@@ -1,3 +1,17 @@
+2009-07-08 0.13
+  * barcontrol: added check if JDK key file is valid
+  * barcontrol: improved password dialog
+  * barcontrol: added password dialog when crypt password mode
+    is "ask"
+  * fixed statics of skipped/error files
+  * barcontrol; added pause button with timeout (default
+    60min)
+  * added support for lzma compression
+  * added script for simple download of additional packages
+  * added support to build additional packages when compiling
+    bar (extract packages to specific sub-directories or use
+    links)
+
 2009-05-24 0.12
   * disabled -fschedule-insns2 optimization. This cause with my
     gcc 3.3 a problem in String_parse() when a boolean value
