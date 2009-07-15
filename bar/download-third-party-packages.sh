@@ -1,17 +1,18 @@
 #!/bin/sh
 
 LN="ln"
+MKDIR="mkdir"
 RMF="rm -f"
 RMRF="rm -rf"
 TAR="tar"
 WGET="wget"
 
-tmpDirectory="tmp"
+tmpDirectory="packages"
 
 cwd=`pwd`
 
 if test "$1" != "--clean"; then
-  mkdir $tmpDirectory 2>/dev/null
+  $MKDIR $tmpDirectory 2>/dev/null
 
   # bzip2
   (
@@ -62,7 +63,7 @@ if test "$1" != "--clean"; then
   (
    cd $tmpDirectory
    $WGET 'ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.8.1.tar.bz2'
-   $TAR xzf gnutls-2.8.1.tar.bz2
+   $TAR xjf gnutls-2.8.1.tar.bz2
   )
   $LN -f -s $tmpDirectory/gnutls-2.8.1 gnutls
 else
