@@ -1,5 +1,6 @@
 #!/bin/sh
 
+ECHO="echo"
 LN="ln"
 MKDIR="mkdir"
 RMF="rm -f"
@@ -7,11 +8,29 @@ RMRF="rm -rf"
 TAR="tar"
 WGET="wget"
 
+# parse arguments
+helpFlag=0
+cleanFlag=0
+while test $# != 0; do
+  if   test "$1" = "--help"; then
+    helpFlag=1
+  elif test "$1" = "--clean"; then
+    cleanFlag=1
+  else
+    $ECHO >&2 "ERROR: unknown option '$1'"
+    exit 1
+  fi
+  shift
+done
+if test $helpFlag -eq 1; then
+  $ECHO "download-third-party-packages.sh [--clean] [--help]"
+  exit 0
+fi
+
+# run
 tmpDirectory="packages"
-
 cwd=`pwd`
-
-if test "$1" != "--clean"; then
+if test $cleanFlag -eq 0; then
   $MKDIR $tmpDirectory 2>/dev/null
 
   # bzip2

@@ -310,7 +310,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os VERSION_MAJOR VERSION_MINOR PLATFORM ENABLE_DEBUG ENABLE_GUI ENABLE_BZIP2 ENABLE_LZMA ENABLE_GCRYPT ENABLE_FTP ENABLE_SSH ENABLE_TLS INSTALL_DIR INSTALL_BIN_DIR CONFIG_DIR TLS_DIR MAN_DIR CC LD STRIP CC_FLAGS CC_WARN_FLAGS CC_OPTIMIZE CC_DEFINES CC_INCLUDES LD_FLAGS LIBRARY_PATHS LIBRARIES STATIC_LIBRARIES JAVA JAVAC JAR JAVA_FLAGS JAVAC_FLAGS SWT_DIR LAUNCH4J_DIR CERTOOL OPENSSL KEYTOOL TXT2MAN EPM_VERSION_3 EPM_VERSION_4 PERL INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA EPM MD5SUM LAUNCH4J CERTTOOL CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os VERSION_MAJOR VERSION_MINOR PLATFORM ENABLE_DEBUG ENABLE_GUI ENABLE_BZIP2 ENABLE_LZMA ENABLE_GCRYPT ENABLE_FTP ENABLE_SSH ENABLE_TLS HAVE_BZ2 HAVE_LZMA HAVE_GCRYPT INSTALL_DIR INSTALL_BIN_DIR CONFIG_DIR TLS_DIR MAN_DIR CC LD STRIP CC_FLAGS CC_WARN_FLAGS CC_OPTIMIZE CC_DEFINES CC_INCLUDES LD_FLAGS LIBRARY_PATHS LIBRARIES STATIC_LIBRARIES JAVA JAVAC JAR JAVA_FLAGS JAVAC_FLAGS SWT_DIR LAUNCH4J_DIR CERTOOL OPENSSL KEYTOOL TXT2MAN EPM_VERSION_3 EPM_VERSION_4 PERL INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA EPM MD5SUM LAUNCH4J CERTTOOL CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1399,6 +1399,7 @@ host=$ac_cv_host
 host_cpu=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\1/'`
 host_vendor=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\2/'`
 host_os=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\3/'`
+
 
 
 
@@ -4894,6 +4895,132 @@ echo "$as_me: error: pthread library not found" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
+echo "$as_me:$LINENO: checking for library containing dlopen" >&5
+echo $ECHO_N "checking for library containing dlopen... $ECHO_C" >&6
+if test "${ac_cv_search_dlopen+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+ac_cv_search_dlopen=no
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char dlopen ();
+int
+main ()
+{
+dlopen ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_dlopen="none required"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+if test "$ac_cv_search_dlopen" = no; then
+  for ac_lib in dl; do
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char dlopen ();
+int
+main ()
+{
+dlopen ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_dlopen="-l$ac_lib"
+break
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+  done
+fi
+LIBS=$ac_func_search_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_search_dlopen" >&5
+echo "${ECHO_T}$ac_cv_search_dlopen" >&6
+if test "$ac_cv_search_dlopen" != no; then
+  test "$ac_cv_search_dlopen" = "none required" || LIBS="$ac_cv_search_dlopen $LIBS"
+  LIBRARIES="$LIBRARIES dl"
+fi
+
 
 if test $ENABLE_LINK_DYNAMIC = "yes"; then
   echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
@@ -5162,11 +5289,35 @@ fi
 if test $ENABLE_BZIP2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
 
+    mkdir tmp 2>/dev/null
+    cwd=`pwd`
+
+
   echo $ECHO_N "Compile bzip2... $ECHO_C" >&6
 
-    cwd=`pwd`
-    (cd bzip2; make && make install PREFIX=$cwd/tmp) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+    result=1
+    if test $result -eq 1; then
+      (cd bzip2; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (make)" >&5
+echo "${ECHO_T}fail (make)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd bzip2; make install PREFIX=$cwd/tmp) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (make)" >&5
+echo "${ECHO_T}fail (make)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      echo "$as_me:$LINENO: result: done" >&5
+echo "${ECHO_T}done" >&6
+    fi
+
+    if test $result -eq 1; then
       HAVE_BZ2=1
       CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
@@ -5176,12 +5327,6 @@ cat >>confdefs.h <<\_ACEOF
 #define HAVE_BZ2 1
 _ACEOF
 
-
-      echo "$as_me:$LINENO: result: done" >&5
-echo "${ECHO_T}done" >&6
-    else
-      echo "$as_me:$LINENO: result: fail" >&5
-echo "${ECHO_T}fail" >&6
     fi
   else
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -5453,11 +5598,43 @@ fi
 if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
 
+    mkdir tmp 2>/dev/null
+    cwd=`pwd`
+
+
   echo $ECHO_N "Compile xz utils... $ECHO_C" >&6
 
-    cwd=`pwd`
-    (cd xz; ./configure --prefix=$cwd/tmp && make && make install) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+    result=1
+    if test $result -eq 1; then
+      (cd xz; ./configure --prefix=$cwd/tmp) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (configure)" >&5
+echo "${ECHO_T}fail (configure)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd xz; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (make)" >&5
+echo "${ECHO_T}fail (make)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd xz; make install) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (install)" >&5
+echo "${ECHO_T}fail (install)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      echo "$as_me:$LINENO: result: done" >&5
+echo "${ECHO_T}done" >&6
+    fi
+
+    if test $result -eq 1; then
       HAVE_LZMA=1
       CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
@@ -5467,12 +5644,6 @@ cat >>confdefs.h <<\_ACEOF
 #define HAVE_LZMA 1
 _ACEOF
 
-
-      echo "$as_me:$LINENO: result: done" >&5
-echo "${ECHO_T}done" >&6
-    else
-      echo "$as_me:$LINENO: result: fail" >&5
-echo "${ECHO_T}fail" >&6
     fi
   else
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -5742,41 +5913,88 @@ fi
 fi
 
 if test $ENABLE_GCRYPT = "yes"; then
-  if test \( -d libgpg -o -d "`readlink libgpg`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
+  if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
+
+    mkdir tmp 2>/dev/null
+    cwd=`pwd`
+
 
   echo $ECHO_N "Compile gpg-error... $ECHO_C" >&6
 
-    cwd=`pwd`
-    (cd libgpg; ./configure --prefix=$cwd/tmp && make && make install) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+    result1=1
+    if test $result1 -eq 1; then
+      (cd libgpg-error; ./configure --prefix=$cwd/tmp) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (configure)" >&5
+echo "${ECHO_T}fail (configure)" >&6
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      (cd libgpg-error; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (configure)" >&5
+echo "${ECHO_T}fail (configure)" >&6
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      (cd libgpg-error; make install) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (install)" >&5
+echo "${ECHO_T}fail (install)" >&6
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
       echo "$as_me:$LINENO: result: done" >&5
 echo "${ECHO_T}done" >&6
+    fi
 
 
   echo $ECHO_N "Compile gcrypt... $ECHO_C" >&6
 
-      (cd libgcrypt; ./configure --prefix=$cwd/tmp --with-gpg-error-prefix=$cwd/tmp && make && make install) 1>/dev/null 2>/dev/null
-      if test $? -eq 0; then
-        HAVE_GCRYPT=1
-        HAVE_GPG_ERROR=1
-        CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
-        LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
-        STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error gcrypt"
+    result2=1
+    if test $result2 -eq 1; then
+      (cd libgcrypt; ./configure --prefix=$cwd/tmp) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (configure)" >&5
+echo "${ECHO_T}fail (configure)" >&6
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      (cd libgcrypt; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (make)" >&5
+echo "${ECHO_T}fail (make)" >&6
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      (cd libgcrypt; make install) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (install)" >&5
+echo "${ECHO_T}fail (install)" >&6
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      echo "$as_me:$LINENO: result: done" >&5
+echo "${ECHO_T}done" >&6
+    fi
+
+    if test $result1 -eq 1 -a $result2 -eq 1; then
+      HAVE_GCRYPT=1
+      HAVE_GPG_ERROR=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error gcrypt"
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_GCRYPT 1
 _ACEOF
 
-
-        echo "$as_me:$LINENO: result: done" >&5
-echo "${ECHO_T}done" >&6
-      else
-        echo "$as_me:$LINENO: result: fail" >&5
-echo "${ECHO_T}fail" >&6
-      fi
-    else
-      echo "$as_me:$LINENO: result: fail" >&5
-echo "${ECHO_T}fail" >&6
     fi
   else
         echo "$as_me:$LINENO: checking for gcry_cipher_hd_t" >&5
@@ -6376,16 +6594,38 @@ fi
 if test $ENABLE_FTP = "yes"; then
   if test -d ftplib -o -d "`readlink ftplib`"; then
 
+    mkdir tmp 2>/dev/null
+    cwd=`pwd`
+
+
   echo $ECHO_N "Compile ftplib... $ECHO_C" >&6
 
-    cwd=`pwd`
-    (
-     cd ftplib
-     patch -N -p1 <$cwd/ftplib-3.1-without-perror.patch 1>/dev/null 2>/dev/null
-     cd linux
-     make && cp ftplib.h $cwd/tmp/include && cp libftp.a $cwd/tmp/lib
-    ) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+    result=1
+    if test $result -eq 1; then
+      (cd ftplib; patch -N -p1 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
+    fi
+    if test $result -eq 1; then
+      (cd ftplib/linux; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (make)" >&5
+echo "${ECHO_T}fail (make)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd ftplib/linux; cp ftplib.h $cwd/tmp/include && cp libftp.a $cwd/tmp/lib) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (install)" >&5
+echo "${ECHO_T}fail (install)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      echo "$as_me:$LINENO: result: done" >&5
+echo "${ECHO_T}done" >&6
+    fi
+
+    if test $result -eq 1; then
       HAVE_FTP=1
       CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
@@ -6395,12 +6635,6 @@ cat >>confdefs.h <<\_ACEOF
 #define HAVE_FTP 1
 _ACEOF
 
-
-      echo "$as_me:$LINENO: result: done" >&5
-echo "${ECHO_T}done" >&6
-    else
-      echo "$as_me:$LINENO: result: fail" >&5
-echo "${ECHO_T}fail" >&6
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -6672,15 +6906,46 @@ fi
 if test $ENABLE_SSH = "yes"; then
   if test -d libssh2 -o -d "`readlink libssh2`"; then
 
+    mkdir tmp 2>/dev/null
+    cwd=`pwd`
+
+
   echo $ECHO_N "Compile libssh2... $ECHO_C" >&6
 
-    cwd=`pwd`
-    (
-     cd libssh2
-     patch -N -p1 <$cwd/misc/libssh2-1.1-keepalive.patch 1>/dev/null 2>/dev/null
-     ./configure --prefix=$cwd/tmp && make && make install
-    ) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+    result=1
+    if test $result -eq 1; then
+      (cd libssh2; patch -N -p1 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
+    fi
+    if test $result -eq 1; then
+      (cd libssh2; ./configure --prefix=$cwd/tmp) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (configure)" >&5
+echo "${ECHO_T}fail (configure)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd libssh2; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (make)" >&5
+echo "${ECHO_T}fail (make)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd libssh2; make install) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (install)" >&5
+echo "${ECHO_T}fail (install)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      echo "$as_me:$LINENO: result: done" >&5
+echo "${ECHO_T}done" >&6
+    fi
+
+    if test $result -eq 1; then
       HAVE_SSH2=1
       CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
@@ -6690,12 +6955,6 @@ cat >>confdefs.h <<\_ACEOF
 #define HAVE_SSH2 1
 _ACEOF
 
-
-      echo "$as_me:$LINENO: result: done" >&5
-echo "${ECHO_T}done" >&6
-    else
-      echo "$as_me:$LINENO: result: fail" >&5
-echo "${ECHO_T}fail" >&6
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -6967,11 +7226,43 @@ fi
 if test $ENABLE_TLS = "yes"; then
   if test -d gnutls -o -d "`readlink gnutls`"; then
 
+    mkdir tmp 2>/dev/null
+    cwd=`pwd`
+
+
   echo $ECHO_N "Compile gnutls... $ECHO_C" >&6
 
-    cwd=`pwd`
-    (cd gnutls; ./configure --prefix=$cwd/tmp && make && make install) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+    result=1
+    if test $result -eq 1; then
+      (cd gnutls; ./configure --prefix=$cwd/tmp --with-included-libtasn1) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (configure)" >&5
+echo "${ECHO_T}fail (configure)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd gnutls; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (make)" >&5
+echo "${ECHO_T}fail (make)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd gnutls; make install) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        echo "$as_me:$LINENO: result: fail (install)" >&5
+echo "${ECHO_T}fail (install)" >&6
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      echo "$as_me:$LINENO: result: done" >&5
+echo "${ECHO_T}done" >&6
+    fi
+
+    if test $result -eq 1; then
       HAVE_GNU_TLS=1
       CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
@@ -6981,12 +7272,6 @@ cat >>confdefs.h <<\_ACEOF
 #define HAVE_GNU_TLS 1
 _ACEOF
 
-
-      echo "$as_me:$LINENO: result: done" >&5
-echo "${ECHO_T}done" >&6
-    else
-      echo "$as_me:$LINENO: result: fail" >&5
-echo "${ECHO_T}fail" >&6
     fi
   else
     echo "$as_me:$LINENO: checking for gnutls_session_t" >&5
@@ -9026,6 +9311,9 @@ s,@ENABLE_GCRYPT@,$ENABLE_GCRYPT,;t t
 s,@ENABLE_FTP@,$ENABLE_FTP,;t t
 s,@ENABLE_SSH@,$ENABLE_SSH,;t t
 s,@ENABLE_TLS@,$ENABLE_TLS,;t t
+s,@HAVE_BZ2@,$HAVE_BZ2,;t t
+s,@HAVE_LZMA@,$HAVE_LZMA,;t t
+s,@HAVE_GCRYPT@,$HAVE_GCRYPT,;t t
 s,@INSTALL_DIR@,$INSTALL_DIR,;t t
 s,@INSTALL_BIN_DIR@,$INSTALL_BIN_DIR,;t t
 s,@CONFIG_DIR@,$CONFIG_DIR,;t t

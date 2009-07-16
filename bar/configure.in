@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.28 $
+dnl $Revision: 1.29 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -155,6 +155,10 @@ AC_SUBST(ENABLE_GCRYPT)                     dnl "yes" for gcrypt support, "no" o
 AC_SUBST(ENABLE_FTP)                        dnl "yes" for ftp support, "no" otherwise
 AC_SUBST(ENABLE_SSH)                        dnl "yes" for ssh support, "no" otherwise
 AC_SUBST(ENABLE_TLS)                        dnl "yes" for tls support, "no" otherwise
+
+AC_SUBST(HAVE_BZ2)                          dnl "1" for bzip2 support, "" otherwise
+AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwise
+AC_SUBST(HAVE_GCRYPT)                       dnl "1" for gcrypt support, "" otherwise
 
 AC_SUBST(INSTALL_DIR)                       dnl installation directory
 AC_SUBST(INSTALL_BIN_DIR)                   dnl installation directory for binaries
@@ -421,6 +425,7 @@ AC_CHECK_SIZEOF(void *)
 
 AC_SEARCH_LIBS(round,m,,AC_ERROR([m library not found]))
 AC_SEARCH_LIBS(pthread_create,pthread,,AC_ERROR([pthread library not found]))
+AC_SEARCH_LIBS(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
 
 if test $ENABLE_LINK_DYNAMIC = "yes"; then
   AC_SEARCH_LIBS(zlibVersion,z,[HAVE_Z=1;LIBRARIES="$LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
@@ -431,19 +436,36 @@ fi
 if test $ENABLE_BZIP2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
     dnl compile bzip2 library
-    AC_MSG_COMPILE([bzip2])
+
+    mkdir tmp 2>/dev/null
     cwd=`pwd`
-    (cd bzip2; make && make install PREFIX=$cwd/tmp) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+
+    AC_MSG_COMPILE([bzip2])
+    result=1
+    if test $result -eq 1; then
+      (cd bzip2; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd bzip2; make install PREFIX=$cwd/tmp) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    if test $result -eq 1; then
       HAVE_BZ2=1
       CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES bz2"
       AC_DEFINE(HAVE_BZ2,1,[bzip2 installed (local)])
-
-      AC_MSG_RESULT([done])
-    else
-      AC_MSG_RESULT([fail])
     fi
   else
     dnl search for installed bzip2 library
@@ -458,19 +480,43 @@ fi
 if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
     dnl compile lzma library
-    AC_MSG_COMPILE([xz utils])
+
+    mkdir tmp 2>/dev/null
     cwd=`pwd`
-    (cd xz; ./configure --prefix=$cwd/tmp && make && make install) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+
+    AC_MSG_COMPILE([xz utils])
+    result=1
+    if test $result -eq 1; then
+      (cd xz; ./configure --prefix=$cwd/tmp) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (configure)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd xz; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd xz; make install) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (install)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    if test $result -eq 1; then
       HAVE_LZMA=1
       CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES lzma"
       AC_DEFINE(HAVE_LZMA,1,[lzma installed (local)])
-
-      AC_MSG_RESULT([done])
-    else
-      AC_MSG_RESULT([fail])
     fi
   else
     dnl search for installed lzma library
@@ -483,30 +529,73 @@ if test $ENABLE_LZMA = "yes"; then
 fi
 
 if test $ENABLE_GCRYPT = "yes"; then
-  if test \( -d libgpg -o -d "`readlink libgpg`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
+  if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
     dnl compile libgcrypt library
-    AC_MSG_COMPILE([gpg-error])
+
+    mkdir tmp 2>/dev/null
     cwd=`pwd`
-    (cd libgpg; ./configure --prefix=$cwd/tmp && make && make install) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
-      AC_MSG_RESULT([done])
 
-      AC_MSG_COMPILE([gcrypt])
-      (cd libgcrypt; ./configure --prefix=$cwd/tmp --with-gpg-error-prefix=$cwd/tmp && make && make install) 1>/dev/null 2>/dev/null
-      if test $? -eq 0; then
-        HAVE_GCRYPT=1
-        HAVE_GPG_ERROR=1
-        CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
-        LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
-        STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error gcrypt"
-        AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed (local)])
-
-        AC_MSG_RESULT([done])
-      else
-        AC_MSG_RESULT([fail])
+    AC_MSG_COMPILE([gpg-error])
+    result1=1
+    if test $result1 -eq 1; then
+      (cd libgpg-error; ./configure --prefix=$cwd/tmp) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (configure)])
+        result1=0
       fi
-    else
-      AC_MSG_RESULT([fail])
+    fi
+    if test $result1 -eq 1; then
+      (cd libgpg-error; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (configure)])
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      (cd libgpg-error; make install) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (install)])
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    AC_MSG_COMPILE([gcrypt])
+    result2=1
+    if test $result2 -eq 1; then
+      (cd libgcrypt; ./configure --prefix=$cwd/tmp) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (configure)])
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      (cd libgcrypt; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      (cd libgcrypt; make install) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (install)])
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    if test $result1 -eq 1 -a $result2 -eq 1; then
+      HAVE_GCRYPT=1
+      HAVE_GPG_ERROR=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error gcrypt"
+      AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed (local)])
     fi
   else
     dnl search for installed gpg-error/gcrypt library
@@ -528,24 +617,39 @@ fi
 if test $ENABLE_FTP = "yes"; then
   if test -d ftplib -o -d "`readlink ftplib`"; then
     dnl compile lzma library
-    AC_MSG_COMPILE([ftplib])
+
+    mkdir tmp 2>/dev/null
     cwd=`pwd`
-    (
-     cd ftplib
-     patch -N -p1 <$cwd/ftplib-3.1-without-perror.patch 1>/dev/null 2>/dev/null
-     cd linux
-     make && cp ftplib.h $cwd/tmp/include && cp libftp.a $cwd/tmp/lib
-    ) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+
+    AC_MSG_COMPILE([ftplib])
+    result=1
+    if test $result -eq 1; then
+      (cd ftplib; patch -N -p1 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
+    fi
+    if test $result -eq 1; then
+      (cd ftplib/linux; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd ftplib/linux; cp ftplib.h $cwd/tmp/include && cp libftp.a $cwd/tmp/lib) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (install)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    if test $result -eq 1; then
       HAVE_FTP=1
       CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES ftp"
       AC_DEFINE(HAVE_FTP,1,[ftplib installed (local)])
-
-      AC_MSG_RESULT([done])
-    else
-      AC_MSG_RESULT([fail])
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -559,23 +663,46 @@ fi
 if test $ENABLE_SSH = "yes"; then
   if test -d libssh2 -o -d "`readlink libssh2`"; then
     dnl compile lzma library
-    AC_MSG_COMPILE([libssh2])
+
+    mkdir tmp 2>/dev/null
     cwd=`pwd`
-    (
-     cd libssh2
-     patch -N -p1 <$cwd/misc/libssh2-1.1-keepalive.patch 1>/dev/null 2>/dev/null
-     ./configure --prefix=$cwd/tmp && make && make install
-    ) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+
+    AC_MSG_COMPILE([libssh2])
+    result=1
+    if test $result -eq 1; then
+      (cd libssh2; patch -N -p1 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
+    fi
+    if test $result -eq 1; then
+      (cd libssh2; ./configure --prefix=$cwd/tmp) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (configure)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd libssh2; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd libssh2; make install) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (install)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    if test $result -eq 1; then
       HAVE_SSH2=1
       CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2 crypto"
       AC_DEFINE(HAVE_SSH2,1,[ssh2 installed (local)])
-
-      AC_MSG_RESULT([done])
-    else
-      AC_MSG_RESULT([fail])
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -589,19 +716,43 @@ fi
 if test $ENABLE_TLS = "yes"; then
   if test -d gnutls -o -d "`readlink gnutls`"; then
     dnl compile gnutls library
-    AC_MSG_COMPILE([gnutls])
+
+    mkdir tmp 2>/dev/null
     cwd=`pwd`
-    (cd gnutls; ./configure --prefix=$cwd/tmp && make && make install) 1>/dev/null 2>/dev/null
-    if test $? -eq 0; then
+
+    AC_MSG_COMPILE([gnutls])
+    result=1
+    if test $result -eq 1; then
+      (cd gnutls; ./configure --prefix=$cwd/tmp --with-included-libtasn1) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (configure)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd gnutls; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd gnutls; make install) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (install)])
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    if test $result -eq 1; then
       HAVE_GNU_TLS=1
       CC_INCLUDES="$CC_INCLUDES $cwd/tmp/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/tmp/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls"
       AC_DEFINE(HAVE_GNU_TLS,1,[gnutls installed (local)])
-
-      AC_MSG_RESULT([done])
-    else
-      AC_MSG_RESULT([fail])
     fi
   else
     AC_CHECK_TYPE(gnutls_session_t,,AC_MSG_WARN([no or wrong version of gnutls. gnutls version >=2.0.1 needed. Disabled TLS support.]); ENABLE_TLS=no,[#include <gnutls/gnutls.h>])
