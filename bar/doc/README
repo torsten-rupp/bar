@@ -9,7 +9,7 @@ for making automated backups in the background.
 --- Features
 
 * can split archive files into pieces
-* compress of data with zlib or bzip2 algorithms
+* compress of data with zlib, bzip2 or lzma algorithms
 * encryption with gcrypt algrithms (AES,TWOFISH etc.)
 * asymmetric encryption with RSA
 * fast file format: can find and extract single files
@@ -28,7 +28,8 @@ for making automated backups in the background.
 * Unix system
 * PTHREADs library (mandatory)
 * zlib library (mandatory)
-* bzib2 library (optional)
+* bzib2 library from http://www.bzip.org (optional)
+* lzma library from http://tukaani.org/xz (optional)
 * gcrypt library from http://www.gnupg.org (optional)
 * gnutls library from http://www.gnu.org/software/gnutls
   (optional)
@@ -46,37 +47,129 @@ for making automated backups in the background.
 --- Installation
 
 If there is no binary package available for your system,
-install the packages from the following sources:
+you can compile bar by yourself. The following additional
+packages are mandatory:
 
-Install zlib:
+* http://www.zlib.net/zlib-1.2.3.tar.gz
+
+The following optional additional packages may be needed:
+
+* http://www.bzip.org/1.0.5/bzip2-1.0.5.tar.gz
+* http://tukaani.org/xz/xz-4.999.8beta.tar.gz
+* ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.7.tar.bz2
+* ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.4.4.tar.bz2
+* ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.8.1.tar.bz2
+* http://www.nbpfaus.net/~pfau/ftplib/ftplib-3.1-src.tar.gz
+* http://nbpfaus.net/~pfau/ftplib/ftplib-3.1-1.patch
+* http://prdownloads.sourceforge.net/libssh2/libssh2-1.1.tar.gz?download
+
+There are two ways to use the additional packages:
+
+1a)
+
+Extract the archives and place links in the bar build
+directory before executing the bar configure:
+
+zlib:
+  http://www.zlib.net/zlib-1.2.3.tar.gz
+
+  ln -s zlib-1.2.3 zlib
+
+bzip2:
+  http://www.bzip.org/1.0.5/bzip2-1.0.5.tar.gz
+
+  ln -s bzip2-1.0.5 bzip2
+
+lzma:
+  http://tukaani.org/xz/xz-4.999.8beta.tar.gz
+
+  ln -s xz-4.999.8beta xz
+
+gcrypt:
+  ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.7.tar.bz2
+  ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.4.4.tar.bz2
+
+  ln -s libgpg-error-1.7 libgpg
+  ln -s libgcrypt-1.4.4 libgcrypt
+
+gnutls:
+  ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.8.1.tar.bz2
+
+  ln -s gnutls-2.8.1 gnutls
+
+ftplib:
+  http://www.nbpfaus.net/~pfau/ftplib/ftplib-3.1-src.tar.gz
+  http://nbpfaus.net/~pfau/ftplib/ftplib-3.1-1.patch
+
+  cd ftplib-3.1; patch -p3 < ftplib-3.1-1.patch; cd ..
+  ln -s ftplib-3.1 ftplib
+
+ssh2:
+  http://prdownloads.sourceforge.net/libssh2/libssh2-1.1.tar.gz?download
+
+  ln -s sshftplib-3.1 ftplib
+
+You can also execute the following script to download all additional
+packages, extact them to a temporary directory and set the required
+links for bar: 
+
+  download-third-party-packages.sh
+
+Note: bar configure will build the additional packages
+      in a temporary directory and link the libraries
+      statically.
+
+1b)
+
+Install the additional packages on the system:
+
+zlib:
+  http://www.zlib.net/zlib-1.2.3.tar.gz
+
   tar xjf zlib-1.2.3.tar.bz2
   cd zlib-1.2.3
   ./configure
   make
   make install
 
-Install gcrypt:
-  tar xzf libgpg-error-1.4.tar.gz
-  cd libgpg-error-1.4
+bzip2:
+  http://www.bzip.org/1.0.5/bzip2-1.0.5.tar.gz
+
+  tar xzf bzip2-1.0.5.tar.gz
+  cd bzip2-1.0.5/
+  make
+  make install
+
+gcrypt:
+  ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.7.tar.bz2
+  ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.4.4.tar.bz2
+
+  tar xjf libgpg-error-1.7.tar.bz2
+  cd libgpg-error-1.7
   ./configure
   make
   make install
 
-  tar xzf libgcrypt-1.2.4.tar.gz
-  cd libgcrypt-1.2.4
+  tar xjf libgcrypt-1.4.4.tar.bz2
+  cd libgcrypt-1.4.4
   ./configure
   make
   make install
 
-Install gnutls:
-  tar xjf gnutls-2.0.1.tar.bz2
-  cd gnutls-2.0.1
+gnutls:
+  ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.8.1.tar.bz2
+
+  tar xjf gnutls-2.8.1.tar.bz2
+  cd gnutls-2.8.1
   ./configure
   make
   make install
   ldconfig
 
-Install ftplib:
+ftplib:
+  http://www.nbpfaus.net/~pfau/ftplib/ftplib-3.1-src.tar.gz
+  http://nbpfaus.net/~pfau/ftplib/ftplib-3.1-1.patch
+
   tar xzf ftplib-3.1-src.tar.gz
   cd ftplib-3.1
   patch -p3 < ftplib-3.1-1.patch
@@ -91,12 +184,13 @@ Install ftplib:
   ln -s libftp.so.3.1 libftp.so.3
   ldconfig
 
-Install ssh2:
-  tar xzf libssh2-0.18.tar.gz
-  cd libssh2-0.18
+ssh2:
+  http://prdownloads.sourceforge.net/libssh2/libssh2-1.1.tar.gz?download
+
+  tar xzf libssh2-1.1.tar.gz
+  cd libssh2-1.1
   ./configure
-  patch -p1 < <BAR source directory>/misc/libssh2-seek.patch
-  patch -p1 < <BAR source directory>/misc/libssh2-keepalive.patch
+  patch -p1 < <BAR source directory>/misc/libssh2-1.1-keepalive.patch
   make
   make install
   ldconfig
@@ -104,7 +198,20 @@ Install ssh2:
   Note: newer versions of libssh2 already include the seek-patch.
   Note: the keepalive patch is optional
 
-Debian packages:
+lzma:
+  http://tukaani.org/xz/xz-4.999.8beta.tar.gz
+
+  tar xzf xz-4.999.8beta.tar.gz
+  cd xz-4.999.8beta
+  configure
+  make
+  make install
+  make ldconfig
+
+1c)
+
+On a Debian system you can use the following packages:
+
   gcc
   zlib
   zlib1g-dev
@@ -118,7 +225,10 @@ Debian packages:
   make
   epm
 
+2)
+
 Then compile and install BAR with:
+
   ./configure
   make
   make install

@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.15 $
+# $Revision: 1.16 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -59,14 +59,14 @@ VERSION_MAJOR := $(shell $(CAT) ../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR := $(shell $(CAT) ../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 
 CRYPT_NAMES    = none
-ifeq (@ENABLE_GCRYPT@,yes)
+ifeq (@HAVE_GCRYPT@,1)
 CRYPT_NAMES    += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 endif
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
-ifeq (@ENABLE_BZIP2@,yes)
+ifeq (@HAVE_BZ2@,1)
 COMPRESS_NAMES += bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
 endif
-ifeq (@ENABLE_LZMA@,yes)
+ifeq (@HAVE_LZMA@,1)
 COMPRESS_NAMES += lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8 lzma9
 endif
 

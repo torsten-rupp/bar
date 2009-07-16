@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/compress.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -318,7 +318,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
               if (lzmaResult != LZMA_OK)
               {
-                return ERROR_COMPRESS_ERROR;
+                return ERROR(COMPRESS_ERROR,lzmaResult);
               }
               compressInfo->compressState = COMPRESS_STATE_RUNNING;
               compressInfo->compressBufferLength += maxCompressBytes-compressInfo->lzmalib.stream.avail_out;
@@ -351,7 +351,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               }
               else if (lzmaResult != LZMA_OK)
               {
-                return ERROR_COMPRESS_ERROR;
+                return ERROR(COMPRESS_ERROR,lzmaResult);
               }
               compressInfo->compressBufferLength += maxCompressBytes-compressInfo->lzmalib.stream.avail_out;
             }
