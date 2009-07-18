@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -983,7 +983,7 @@ class TabStatus
                 tableItem.setText(1,jobData.name);
                 tableItem.setText(2,(status == States.RUNNING)?jobData.state:"suspended");
                 tableItem.setText(3,jobData.type);
-                tableItem.setText(4,Units.formatByteSize(jobData.archivePartSize));
+                tableItem.setText(4,(jobData.archivePartSize > 0)?Units.formatByteSize(jobData.archivePartSize):"unlimited");
                 tableItem.setText(5,jobData.compressAlgorithm);
                 tableItem.setText(6,jobData.getCryptAlgorithm());
                 tableItem.setText(7,jobData.formatLastExecutedDateTime());
