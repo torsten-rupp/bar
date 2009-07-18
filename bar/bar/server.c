@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -663,18 +663,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
                        const String fileName
                       )
 {
-  Errors     error;
-  FileHandle fileHandle;
-  JobNode    *newJobNode;
-
-  /* create empty file */
-  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
-  if (error != ERROR_NONE)
-  {
-    File_deleteFileName(fileName);
-    return NULL;
-  }
-  File_close(&fileHandle);
+  JobNode *newJobNode;
 
   /* allocate job node */
   newJobNode = LIST_NEW_NODE(JobNode);
@@ -690,8 +679,8 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->type                           = jobNode->type;
   newJobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
-  PatternList_init(&newJobNode->includePatternList); PatternList_copy(&newJobNode->includePatternList,&jobNode->includePatternList);
-  PatternList_init(&newJobNode->excludePatternList); PatternList_copy(&newJobNode->excludePatternList,&jobNode->excludePatternList);
+  PatternList_init(&newJobNode->includePatternList); PatternList_copy(&jobNode->includePatternList,&newJobNode->includePatternList);
+  PatternList_init(&newJobNode->excludePatternList); PatternList_copy(&jobNode->excludePatternList,&newJobNode->excludePatternList);
   List_init(&newJobNode->scheduleList); List_copy(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,NULL,(ListNodeCopyFunction)copyScheduleNode,NULL);
   initJobOptions(&newJobNode->jobOptions); copyJobOptions(&newJobNode->jobOptions,&newJobNode->jobOptions);
   newJobNode->modifiedFlag                   = TRUE;
@@ -851,6 +840,28 @@ LOCAL JobNode *findJobById(int jobId)
 
   jobNode = jobList.head;
   while ((jobNode != NULL) && (jobNode->id != jobId))
+  {
+    jobNode = jobNode->next;
+  }
+
+  return jobNode;
+}
+
+/***********************************************************************\
+* Name   : findJobByName
+* Purpose: find job by name
+* Input  : naem - job name
+* Output : -
+* Return : job node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL JobNode *findJobByName(const String name)
+{
+  JobNode *jobNode;
+
+  jobNode = jobList.head;
+  while ((jobNode != NULL) && !String_equals(jobNode->name,name))
   {
     jobNode = jobNode->next;
   }
@@ -2933,10 +2944,11 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
 
 LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  String     name;
   String     fileName;
-  JobNode    *jobNode;
   FileHandle fileHandle;
   Errors     error;
+  JobNode    *jobNode;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -2947,19 +2959,27 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name");
     return;
   }
-  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),arguments[0]);
-  if (File_exists(fileName))
+  name = arguments[0];
+
+  /* lock */
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* check if job already exists */
+  if (findJobByName(name) != NULL)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(arguments[0]));
+    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+    Semaphore_unlock(&jobList.lock);
     return;
   }
 
-  /* create job file */
+  /* create empty job file */
+  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
   error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
   if (error != ERROR_NONE)
   {
     File_deleteFileName(fileName);
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(arguments[0]),Errors_getText(error));
+    sendResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Errors_getText(error));
+    Semaphore_unlock(&jobList.lock);
     return;
   }
   File_close(&fileHandle);
@@ -2971,12 +2991,10 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
     File_delete(fileName,FALSE);
     File_deleteFileName(fileName);
     sendResult(clientInfo,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"insufficient memory");
+    Semaphore_unlock(&jobList.lock);
     return;
   }
   copyJobOptions(serverDefaultJobOptions,&jobNode->jobOptions);
-
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   /* add new job to list */
   List_append(&jobList,jobNode);
@@ -2992,11 +3010,13 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
 
 LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  uint    jobId;
-  String  name;
-  JobNode *jobNode;
-  String  fileName;
-  Errors  error;
+  uint       jobId;
+  String     name;
+  JobNode    *jobNode;
+  String     fileName;
+  FileHandle fileHandle;
+  Errors     error;
+  JobNode    *newJobNode;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -3014,14 +3034,17 @@ LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String a
     return;
   }
   name = arguments[1];
-  if (File_exists(name))
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(arguments[1]));
-    return;
-  }
 
   /* lock */
   Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* check if job already exists */
+  if (findJobByName(name) != NULL)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -3032,21 +3055,31 @@ LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String a
     return;
   }
 
-  /* copy job */
+  /* create empty job file */
   fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
-  error = File_copy(jobNode->fileName,fileName);
+  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
   if (error != ERROR_NONE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"error duplicating job #%d: %s",jobId,Errors_getText(error));
-    Semaphore_unlock(&jobList.lock);
     File_deleteFileName(fileName);
+    sendResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Errors_getText(error));
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
+  File_close(&fileHandle);
+
+  /* copy job */
+  newJobNode = copyJob(jobNode,fileName);
+  if (newJobNode == NULL)
+  {
+    File_deleteFileName(fileName);
+    sendResult(clientInfo,id,TRUE,ERROR_JOB,"error copy job #%d",jobId);
+    Semaphore_unlock(&jobList.lock);
     return;
   }
   File_deleteFileName(fileName);
 
-  /* store new file name */
-//  File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobsDirectory),name);
-//  String_set(jobNode->name,name);
+  /* add new job to list */
+  List_append(&jobList,newJobNode);
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
@@ -3078,14 +3111,17 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
     return;
   }
   name = arguments[1];
-  if (File_exists(name))
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(arguments[1]));
-    return;
-  }
 
   /* lock */
   Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  /* check if job already exists */
+  if (findJobByName(name) != NULL)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+    Semaphore_unlock(&jobList.lock);
+    return;
+  }
 
   /* find job */
   jobNode = findJobById(jobId);
@@ -3101,9 +3137,9 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
   error = File_rename(jobNode->fileName,fileName);
   if (error != ERROR_NONE)
   {
+    File_deleteFileName(fileName);
     sendResult(clientInfo,id,TRUE,ERROR_JOB,"error renaming job #%d: %s",jobId,Errors_getText(error));
     Semaphore_unlock(&jobList.lock);
-    File_deleteFileName(fileName);
     return;
   }
   File_deleteFileName(fileName);
