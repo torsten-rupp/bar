@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -698,7 +698,7 @@ public class BARControl
       label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
 
       widgetPassword = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
-      if (loginData.password != null) widgetPassword.setText(loginData.password);
+//      if (loginData.password != null) widgetPassword.setText(loginData.password);
 //      widgetPassword.setSelection(0,loginData.password.length());
       widgetPassword.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE));
     }
