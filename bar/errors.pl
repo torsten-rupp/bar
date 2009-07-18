@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all
@@ -133,7 +133,7 @@ typedef enum
 sub writeHPostfix()
 {
   print HFILE_HANDLE "\
-  ".$PREFIX."UNKNOWN = $errorNumber
+  ".$PREFIX."UNKNOWN = ".($errorNumber+1)."
 } Errors;
 
 const int _Errors_textToIndex(const char *text);
