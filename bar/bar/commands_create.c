@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -75,6 +75,7 @@ typedef struct
   FileCast              cast;
 } IncrementalListInfo;
 
+/* create status info  */
 typedef struct
 {
   String                      storageName;
@@ -113,12 +114,14 @@ typedef struct
   CreateStatusInfo            statusInfo;                         // status info
 } CreateInfo;
 
+/* file message, send from collector thread -> main */
 typedef struct
 {
   String    fileName;
   FileTypes fileType;
 } FileMsg;
 
+/* storage messaeg, send from main -> storage thread */
 typedef struct
 {
   String fileName;
@@ -1721,7 +1724,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
             }
             continue;
           }
-          String_set(createInfo->statusInfo.storageName,storageMsg.destinationFileName);
+          String_set(createInfo->statusInfo.storageName,storageName);
 
           /* store data */
           File_seek(&fileHandle,0);
