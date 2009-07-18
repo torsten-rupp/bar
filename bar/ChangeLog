@@ -11,6 +11,8 @@
   * added support to build additional packages when compiling
     bar (extract packages to specific sub-directories or use
     links)
+  * barcontrol: added copy job
+  * barcontrol: check if job exists for new, copy, rename
 
 2009-05-24 0.12
   * disabled -fschedule-insns2 optimization. This cause with my
