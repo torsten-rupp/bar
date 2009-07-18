@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -226,6 +226,25 @@ endif
 runxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
 	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug --bar-server-debug $(OPTIONS)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+
+rundev: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --tls-port=39909 --key-file=../bar.jks $(OPTIONS)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+rundevdebug: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --tls-port=39909 --key-file=../bar.jks --debug $(OPTIONS)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+rundevxdebug: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --tls-port=39909 --key-file=../bar.jks --debug --bar-server-debug $(OPTIONS)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
