@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -424,7 +424,15 @@ Errors Storage_prepare(const String     storageName,
 *          fileName          - file name (without storage specifier
 *                              prefix)
 * Return : ERROR_NONE or errorcode
-* Notes  : -
+* Notes  : supported storage names:
+*            ftp://
+*            ssh://
+*            scp://
+*            sftp://
+*            dvd://
+*            device://
+*            file://
+*            plain file name
 \***********************************************************************/
 
 Errors Storage_init(StorageFileHandle            *storageFileHandle,

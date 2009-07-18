@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -3071,6 +3071,8 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             {
               length = size-writtenBytes;
             }
+            // workaround for libssh2-problem: it seems sending of blocks >=8k cause problems, e. g. corrupt ssh MAC
+            length = MIN(length,4*1024);
             do
             {
               n = libssh2_channel_write(storageFileHandle->scp.channel,
