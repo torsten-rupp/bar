@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -551,7 +551,7 @@ class TabStatus
       Widgets.layout(label,3,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,3,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,errorFiles));
+      Widgets.addModifyListener(new WidgetListener(label,errorBytes));
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,3,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
