@@ -1,4 +1,13 @@
-2009-07-08 0.13
+2009-07-19 0.12
+  * disabled -fschedule-insns2 optimization. This cause with my
+    gcc 3.3 a problem in String_parse() when a boolean value
+    should be read. It seems the address of variable become
+    wrong when -fno-schedule-insns2 is not given (thus
+    schedule-insns2 optimization is enabled). Is this a gcc
+    bug?
+  * added crypt password in jobs-storage-tab: password can be
+    default (read from configuration file), interactive input
+    (ask) or specified password
   * barcontrol: added check if JDK key file is valid
   * barcontrol: improved password dialog
   * barcontrol: added password dialog when crypt password mode
@@ -11,19 +20,8 @@
   * added support to build additional packages when compiling
     bar (extract packages to specific sub-directories or use
     links)
-  * barcontrol: added copy job
+  * barcontrol: added copy job button
   * barcontrol: check if job exists for new, copy, rename
-
-2009-05-24 0.12
-  * disabled -fschedule-insns2 optimization. This cause with my
-    gcc 3.3 a problem in String_parse() when a boolean value
-    should be read. It seems the address of variable become
-    wrong when -fno-schedule-insns2 is not given (thus
-    schedule-insns2 optimization is enabled). Is this a gcc
-    bug?
-  * added crypt password in jobs-storage-tab: password can be
-    default (read from configuration file), interactive input
-    (ask) or specified password
 
 2009-04-12 0.11b
   * barcontrol: improved volume dialog: unload tray button

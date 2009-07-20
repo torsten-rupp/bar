@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -1729,7 +1729,7 @@ Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
     Crypt_done(&archiveFileInfo->file.cryptInfoFileEntry);
     free(archiveFileInfo->file.buffer);
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
-    return ERROR_COMPRESS_ERROR;
+    return error;
   }
 
   /* init entry/dat file-chunks */
@@ -2463,7 +2463,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     free(archiveFileInfo->file.buffer);
     Chunk_done(&archiveFileInfo->file.chunkInfoFile);
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-    return ERROR_COMPRESS_ERROR;
+    return error;
   }
 
   /* try to read file entry with all passwords */

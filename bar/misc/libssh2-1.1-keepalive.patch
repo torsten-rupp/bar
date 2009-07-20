@@ -1,0 +1,50 @@
+diff -r -u libssh2-1.1/include/libssh2.h libssh2-1.1-with-keepalive-patch/include/libssh2.h
+--- libssh2-1.1/include/libssh2.h	2009-04-02 17:49:51.000000000 +0900
++++ libssh2-1.1-with-keepalive-patch/include/libssh2.h	2009-07-15 10:20:06.000000000 +0900
+@@ -642,6 +642,7 @@
+ LIBSSH2_API int libssh2_channel_send_eof(LIBSSH2_CHANNEL *channel);
+ LIBSSH2_API int libssh2_channel_eof(LIBSSH2_CHANNEL *channel);
+ LIBSSH2_API int libssh2_channel_wait_eof(LIBSSH2_CHANNEL *channel);
++LIBSSH2_API int libssh2_channel_send_keepalive(LIBSSH2_CHANNEL * channel);
+ LIBSSH2_API int libssh2_channel_close(LIBSSH2_CHANNEL *channel);
+ LIBSSH2_API int libssh2_channel_wait_closed(LIBSSH2_CHANNEL *channel);
+ LIBSSH2_API int libssh2_channel_free(LIBSSH2_CHANNEL *channel);
+Only in libssh2-1.1-with-keepalive-patch/include: libssh2.h.orig
+diff -r -u libssh2-1.1/src/channel.c libssh2-1.1-with-keepalive-patch/src/channel.c
+--- libssh2-1.1/src/channel.c	2009-03-31 17:50:03.000000000 +0900
++++ libssh2-1.1-with-keepalive-patch/src/channel.c	2009-07-15 11:23:58.000000000 +0900
+@@ -2287,6 +2287,34 @@
+     return rc;
+ }
+ 
++/* {{{ libssh2_channel_send_keepalive
++* Send keep alive message
++* Code from: http://sourceforge.net/mailarchive/forum.php?thread_name=E1JbEAr-0005ln-2C%40sc8-sf-web23.sourceforge.net&forum_name=libssh2-devel
++*/
++LIBSSH2_API int
++libssh2_channel_send_keepalive(LIBSSH2_CHANNEL * channel)
++{
++    LIBSSH2_SESSION *session = channel->session;
++    unsigned char packet[5]; /* packet_type(1) + channelno(4) */
++    int rc;
++
++    _libssh2_debug(session, LIBSSH2_DBG_CONN, "Sending Keepalive on channel %lu/%lu",
++    channel->local.id, channel->remote.id);
++    packet[0] = SSH_MSG_CHANNEL_FAILURE;
++    _libssh2_htonu32(packet + 1, channel->remote.id);
++    rc = _libssh2_transport_write(session, packet, 5);
++    if (rc == PACKET_EAGAIN) {
++        return PACKET_EAGAIN;
++    } else if (rc) {
++        libssh2_error(session, LIBSSH2_ERROR_SOCKET_SEND,"Unable to send Keepalive on channel", 0);
++        return -1;
++    }
++
++    return 0;
++}
++
++/* }}} */
++
+ static int
+ channel_close(LIBSSH2_CHANNEL * channel)
+ {

@@ -33,6 +33,16 @@ cwd=`pwd`
 if test $cleanFlag -eq 0; then
   $MKDIR $tmpDirectory 2>/dev/null
 
+  # zlib
+  (
+   cd $tmpDirectory
+   if test ! -f zlib-1.2.3.tar.gz; then
+     $WGET 'http://www.zlib.net/zlib-1.2.3.tar.gz'
+   fi
+   $TAR xzf zlib-1.2.3.tar.gz
+  )
+  $LN -f -s $tmpDirectory/zlib-1.2.3 zlib
+
   # bzip2
   (
    cd $tmpDirectory

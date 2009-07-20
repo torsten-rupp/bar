@@ -1,10 +1,10 @@
 BAR - BAckup aRchiver
 
-BAR is backup archiver program. It can create compressed
-and encrypted archives of files which can be stored on
-a harddisk, cd or dvd or directly on a server via ftp,
-scp or sftp. A server-mode and a scheduler is integrated
-for making automated backups in the background.
+BAR is backup archiver program. It can create compressed and
+encrypted archives of files which can be stored on a harddisk,
+cd or dvd or directly on a server via ftp, scp or sftp. A
+server-mode and a scheduler is integrated for making automated
+backups in the background.
 
 --- Features
 
@@ -46,13 +46,13 @@ for making automated backups in the background.
 
 --- Installation
 
-If there is no binary package available for your system,
-you can compile bar by yourself. The following additional
-packages are mandatory:
+If there is no binary package available for your system, you
+can compile bar by yourself. The following additional packages
+are mandatory:
 
 * http://www.zlib.net/zlib-1.2.3.tar.gz
 
-The following optional additional packages may be needed:
+The following additional packages are optional:
 
 * http://www.bzip.org/1.0.5/bzip2-1.0.5.tar.gz
 * http://tukaani.org/xz/xz-4.999.8beta.tar.gz
@@ -68,7 +68,7 @@ There are two ways to use the additional packages:
 1a)
 
 Extract the archives and place links in the bar build
-directory before executing the bar configure:
+directory before executing bar configure:
 
 zlib:
   http://www.zlib.net/zlib-1.2.3.tar.gz
@@ -109,15 +109,14 @@ ssh2:
 
   ln -s sshftplib-3.1 ftplib
 
-You can also execute the following script to download all additional
-packages, extact them to a temporary directory and set the required
-links for bar: 
+You can execute the supplied script to download (wget required) all
+additional packages, extract them to a temporary directory and set the
+required links for bar: 
 
   download-third-party-packages.sh
 
-Note: bar configure will build the additional packages
-      in a temporary directory and link the libraries
-      statically.
+Note: bar configure will build the additional packages into a temporary
+      directory and link the libraries statically.
 
 1b)
 
@@ -132,6 +131,8 @@ zlib:
   make
   make install
 
+  ldconfig
+
 bzip2:
   http://www.bzip.org/1.0.5/bzip2-1.0.5.tar.gz
 
@@ -139,6 +140,19 @@ bzip2:
   cd bzip2-1.0.5/
   make
   make install
+
+  ldconfig
+
+lzma:
+  http://tukaani.org/xz/xz-4.999.8beta.tar.gz
+
+  tar xzf xz-4.999.8beta.tar.gz
+  cd xz-4.999.8beta
+  ./configure
+  make
+  make install
+
+  ldconfig
 
 gcrypt:
   ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.7.tar.bz2
@@ -155,6 +169,8 @@ gcrypt:
   ./configure
   make
   make install
+
+  ldconfig
 
 gnutls:
   ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.8.1.tar.bz2
@@ -182,6 +198,7 @@ ftplib:
   cd /usr/local/lib
   ln -s libftp.so.3.1 libftp.so
   ln -s libftp.so.3.1 libftp.so.3
+
   ldconfig
 
 ssh2:
@@ -193,20 +210,11 @@ ssh2:
   patch -p1 < <BAR source directory>/misc/libssh2-1.1-keepalive.patch
   make
   make install
+
   ldconfig
 
-  Note: newer versions of libssh2 already include the seek-patch.
-  Note: the keepalive patch is optional
-
-lzma:
-  http://tukaani.org/xz/xz-4.999.8beta.tar.gz
-
-  tar xzf xz-4.999.8beta.tar.gz
-  cd xz-4.999.8beta
-  configure
-  make
-  make install
-  make ldconfig
+  Notes: - newer versions of libssh2 already include the seek-patch.
+         - the keepalive patch is optional
 
 1c)
 
@@ -225,6 +233,8 @@ On a Debian system you can use the following packages:
   make
   epm
 
+  Note: the xz utils may not be available a Debian package current.
+
 2)
 
 Then compile and install BAR with:
@@ -235,40 +245,39 @@ Then compile and install BAR with:
 
 --- Archive files and encryption
 
-For encryption the algorithms of the gcrypt library are
-used. The BAR archive files are not encrypted in a single
-block, instead each stored file is encrypted. The archive
-file structure is readable (an BAR archive is organized in
+For encryption the algorithms of the gcrypt library are used.
+The BAR archive files are not encrypted in a single block,
+instead each stored file is encrypted. The archive file
+structure is readable (an BAR archive is organized in
 "chunks"; see archiv_format.def if you are interested in
 details), thus everybody can detect e. g. how many files are
 stored in the archive, but nobody except the owner of the
 passphrase used for encryption can read the contents of the
-files nor the file meta data, e. g. file names (as long as
-the used encryption algorithm is not broken by someone).
+files nor the file meta data, e. g. file names (as long as the
+used encryption algorithm is not broken by someone).
 
 For asymmetric encryption a pair of keys with hybrit
 encryption is used: the file meta data and file data is
 encrypted with a symmetric algorithmis, e. g. AES or Twofish.
 The key for symmetric encryption is chosen from random data,
-encrypted asymmetric with the public key and stored in
-the BAR archive files, too. Those archives can only be
-read when the private key is available to decrypt the
-symmetric key. With asymmetric encryption BAR archives
-can be created without knowledge of the password needed
-for decryption.
+encrypted asymmetric with the public key and stored in the BAR
+archive files, too. Those archives can only be read when the
+private key is available to decrypt the symmetric key. With
+asymmetric encryption BAR archives can be created without
+knowledge of the password needed for decryption.
 
---- DVD
+--- Storage on a DVD
 
 For storing archive files on DVD an external program like
-"growisofs" is needed which is actually writing data to a
-DVD. BAR create the archive files in a temporary directory
-and then call the external tool for burning the DVD. The
-tool "growisofs" is recommented for storing archive files
-directly on DVD. An ISO image can also be created first e.
-g. with mkisofs. BAR support external pre- and
-post-processing commands when creating an ISO-image and
-burning a DVD. With these commands e. g. dvdisaster can be
-integrated into BAR to create RS-protected backup DVDs.
+"growisofs" is needed which is actually writing data to a DVD.
+BAR create the archive files in a temporary directory and then
+call the external tool for burning the DVD. The tool
+"growisofs" is recommented for storing archive files directly
+on DVD. An ISO image can also be created first e. g. with
+mkisofs. BAR support external pre- and post-processing
+commands when creating an ISO-image and burning a DVD. With
+these commands e. g. dvdisaster can be integrated into BAR to
+create RS-protected backup DVDs.
 
 The following external tools are needed with the default
 settings of BAR to create an DVD:
@@ -298,11 +307,10 @@ resp.
   java -jar barcontrol-windows.jar
 
 
-barcontrol ask for BAR server and the login password
-and then connect to the running BAR server either via
-TLS or a plain socket connection. barcontrol can edit
-jobs on a server, display the current status of jobs and
-start or stop jobs.
+barcontrol ask for BAR server and the login password and then
+connect to the running BAR server either via TLS or a plain
+socket connection. barcontrol can edit jobs on a server,
+display the current status of jobs and start or stop jobs.
 
 To use barcontrol the BAR server daemon have to be
 startet first. Either enter
@@ -314,12 +322,9 @@ or use the start-script 'barserver' from /etc/init.d.
 Please note that for a TLS connection the TSL keys and
 cerificate files have to be available.
 
-If you want to use a ssh tunnel to connect to the bar server
-connect the ssh tunnel to port number 38523 (plain
-connection) or 38524 (TLS connenction). e. g:
-
-
-
+Note: If you want to use a ssh tunnel to connect to the bar
+      server connect the ssh tunnel to port number 38523
+      (plain connection) or 38524 (TLS connenction).
 
 Install Java, SWT, launch4j:
 

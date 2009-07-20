@@ -1,0 +1,49 @@
+diff -ur libssh2-0.18/include/libssh2.h libssh2-0.18-with-keepalive/include/libssh2.h
+--- libssh2-0.18/include/libssh2.h	2007-11-11 19:41:52.000000000 +0900
++++ libssh2-0.18-with-keepalive/include/libssh2.h	2008-05-21 16:24:56.000000000 +0900
+@@ -445,6 +445,7 @@
+ LIBSSH2_API int libssh2_channel_send_eof(LIBSSH2_CHANNEL *channel);
+ LIBSSH2_API int libssh2_channel_eof(LIBSSH2_CHANNEL *channel);
+ LIBSSH2_API int libssh2_channel_wait_eof(LIBSSH2_CHANNEL *channel);
++LIBSSH2_API int libssh2_channel_send_keepalive(LIBSSH2_CHANNEL * channel);
+ LIBSSH2_API int libssh2_channel_close(LIBSSH2_CHANNEL *channel);
+ LIBSSH2_API int libssh2_channel_wait_closed(LIBSSH2_CHANNEL *channel);
+ LIBSSH2_API int libssh2_channel_free(LIBSSH2_CHANNEL *channel);
+diff -ur libssh2-0.18/src/channel.c libssh2-0.18-with-keepalive/src/channel.c
+--- libssh2-0.18/src/channel.c	2007-11-09 00:11:33.000000000 +0900
++++ libssh2-0.18-with-keepalive/src/channel.c	2008-05-21 16:24:37.000000000 +0900
+@@ -1896,6 +1896,34 @@
+ /* }}} */
+ 
+ 
++/* {{{ libssh2_channel_send_keepalive
++* Send keep alive message
++* Code from: http://sourceforge.net/mailarchive/forum.php?thread_name=E1JbEAr-0005ln-2C%40sc8-sf-web23.sourceforge.net&forum_name=libssh2-devel
++*/
++LIBSSH2_API int
++libssh2_channel_send_keepalive(LIBSSH2_CHANNEL * channel)
++{
++    LIBSSH2_SESSION *session = channel->session;
++    unsigned char packet[5]; /* packet_type(1) + channelno(4) */
++    int rc;
++
++    _libssh2_debug(session, LIBSSH2_DBG_CONN, "Sending Keepalive on channel %lu/%lu",
++    channel->local.id, channel->remote.id);
++    packet[0] = SSH_MSG_CHANNEL_FAILURE;
++    libssh2_htonu32(packet + 1, channel->remote.id);
++    rc = libssh2_packet_write(session, packet, 5);
++    if (rc == PACKET_EAGAIN) {
++        return PACKET_EAGAIN;
++    } else if (rc) {
++        libssh2_error(session, LIBSSH2_ERROR_SOCKET_SEND,"Unable to send Keepalive on channel", 0);
++        return -1;
++    }
++
++    return 0;
++}
++
++/* }}} */
++
+ /* {{{ libssh2_channel_close
+  * Close a channel
+  */
