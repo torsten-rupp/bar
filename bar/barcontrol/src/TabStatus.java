@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -1149,7 +1149,7 @@ class TabStatus
       case 3:
         break;
     }
-  Dprintf.dprintf("----------------------- errorCode=%d\n",errorCode);
+//  Dprintf.dprintf("----------------------- errorCode=%d\n",errorCode);
   }
 
   /** abort selected job
