@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
-* Contents: BARControl (frontend for BAR)
+* Contents: simple widgets functions
 * Systems: all
 *
 \***********************************************************************/
@@ -17,6 +17,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 
 import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
@@ -703,7 +705,7 @@ class Widgets
   }
 
   /** create empty space
-   * @param composite composite
+   * @param composite composite widget
    * @return control space control
    */
   static Control newSpacer(Composite composite)
@@ -714,7 +716,7 @@ class Widgets
   }
 
   /** create new label
-   * @param composite composite
+   * @param composite composite widget
    * @param text label text
    * @param style label style
    * @return new label
@@ -729,24 +731,8 @@ class Widgets
     return label;
   }
 
-  /** create new image label
-   * @param composite composite
-   * @param image image
-   * @param style label style
-   * @return new label
-   */
-  static Label newLabel(Composite composite, Image image, int style)
-  {
-    Label label;
-
-    label = new Label(composite,style);
-    label.setImage(image);
-
-    return label;
-  }
-
   /** create new label
-   * @param composite composite
+   * @param composite composite widget
    * @param text label text
    * @return new label
    */
@@ -756,17 +742,7 @@ class Widgets
   }
 
   /** create new label
-   * @param composite composite
-   * @param image image
-   * @return new label
-   */
-  static Label newLabel(Composite composite, Image image)
-  {
-    return newLabel(composite,image,SWT.LEFT);
-  }
-
-  /** create new label
-   * @param composite composite
+   * @param composite composite widget
    * @return new label
    */
   static Label newLabel(Composite composite)
@@ -774,8 +750,35 @@ class Widgets
     return newLabel(composite,"");
   }
 
+  /** create new image
+   * @param composite composite widget
+   * @param image image
+   * @param style label style
+   * @return new image
+   */
+  static Control newImage(Composite composite, Image image, int style)
+  {
+    Label label;
+
+    label = new Label(composite,style);
+    label.setImage(image);
+
+    return (Control)label;
+  }
+
+  /** create new image
+   * @param composite composite widget
+   * @param image image
+   * @return new image
+   */
+  static Control newImage(Composite composite, Image image)
+  {
+    return newImage(composite,image,SWT.LEFT);
+  }
+
+
   /** create new view
-   * @param composite composite
+   * @param composite composite widget
    * @return new view
    */
   static Label newView(Composite composite)
@@ -789,7 +792,7 @@ class Widgets
   }
 
   /** create new number view
-   * @param composite composite
+   * @param composite composite widget
    * @return new view
    */
   static Label newNumberView(Composite composite)
@@ -803,7 +806,7 @@ class Widgets
   }
 
   /** create new string view
-   * @param composite composite
+   * @param composite composite widget
    * @return new view
    */
   static Label newStringView(Composite composite)
@@ -817,95 +820,145 @@ class Widgets
   }
 
   /** create new button
-   * @param composite composite
-   * @param object object
+   * @param composite composite widget
    * @param text text
    * @return new button
    */
-  static Button newButton(Composite composite, Object data, String text)
+  static Button newButton(Composite composite, String text)
   {
     Button button;
 
     button = new Button(composite,SWT.PUSH);
     button.setText(text);
-    button.setData(data);
+//    button.setData(data);
 
     return button;
   }
 
   /** create new button with image
-   * @param composite composite
-   * @param object object
+   * @param composite composite widget
    * @param image image
    * @return new button
    */
-  static Button newButton(Composite composite, Object data, Image image)
+  static Button newButton(Composite composite, Image image)
   {
     Button button;
 
     button = new Button(composite,SWT.PUSH);
     button.setImage(image);
-    button.setData(data);
+//    button.setData(data);
 
     return button;
   }
 
   /** create new button with image
-   * @param composite composite
-   * @param object object
+   * @param composite composite widget
    * @param image image
    * @param text text
    * @return new button
    */
-  static Button newButton(Composite composite, Object data, Image image, String text)
+  static Button newButton(Composite composite, Image image, String text)
   {
     Button button;
 
     button = new Button(composite,SWT.PUSH);
     button.setImage(image);
     button.setText(text);
-    button.setData(data);
+//    button.setData(data);
 
     return button;
   }
 
   /** create new checkbox
-   * @param composite composite
-   * @param object object
+   * @param composite composite widget
    * @param text text
+   * @param variableReference variable reference
+   * @param value value for checkbox
    * @return new button
    */
-  static Button newCheckbox(Composite composite, Object data, String text)
+  static Button newCheckbox(Composite composite, String text, final Object[] variableReference, final Object value)
   {
     Button button;
 
     button = new Button(composite,SWT.CHECK);
     button.setText(text);
-    button.setData(data);
+    button.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget = (Button)selectionEvent.widget;
+        if (variableReference != null)
+        {
+          variableReference[0] = value;
+        }
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
 
     return button;
   }
 
-  /** create new radio button
-   * @param composite composite
+  /** create new checkbox
+   * @param composite composite widget
    * @param object object
    * @param text text
    * @return new button
    */
-  static Button newRadio(Composite composite, Object data, String text)
+  static Button newCheckbox(Composite composite, String text)
+  {
+    return newCheckbox(composite,text,null,null);
+  }
+
+  /** create new radio button
+   * @param composite composite widget
+   * @param text text
+   * @param variableReference variable reference
+   * @param value value for radio button
+   * @return new button
+   */
+  static Button newRadio(Composite composite, String text, final Object[] variableReference, final Object value)
   {
     Button button;
 
     button = new Button(composite,SWT.RADIO);
     button.setText(text);
-    button.setData(data);
+    button.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget = (Button)selectionEvent.widget;
+        if (variableReference != null)
+        {
+          variableReference[0] = value;
+        }
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+    if ((variableReference != null) && (variableReference[0] == value))
+    {
+      button.setSelection(true);
+    }
 
     return button;
   }
 
+  /** create new radio button
+   * @param composite composite widget
+   * @param text text
+   * @return new button
+   */
+  static Button newRadio(Composite composite, String text)
+  {
+    return newRadio(composite,text,null,null);
+  }
+
   /** create new text input widget (single line)
-   * @param composite composite
-   * @param object object
+   * @param composite composite widget
+   * @param data object data
    * @return new text widget
    */
   static Text newText(Composite composite, Object data)
@@ -918,9 +971,18 @@ class Widgets
     return text;
   }
 
+  /** create new text input widget (single line)
+   * @param composite composite widget
+   * @return new text widget
+   */
+  static Text newText(Composite composite)
+  {
+    return newText(composite,null);
+  }
+
   /** create new password input widget (single line)
-   * @param composite composite
-   * @param object object
+   * @param composite composite widget
+   * @param data object data
    * @return new text widget
    */
   static Text newPassword(Composite composite, Object data)
@@ -933,9 +995,18 @@ class Widgets
     return text;
   }
 
+  /** create new password input widget (single line)
+   * @param composite composite widget
+   * @return new text widget
+   */
+  static Text newPassword(Composite composite)
+  {
+    return newPassword(composite,null);
+  }
+
   /** create new list widget
-   * @param composite composite
-   * @param object object
+   * @param composite composite widget
+   * @param data object data
    * @return new list widget
    */
   static List newList(Composite composite, Object data)
@@ -948,9 +1019,18 @@ class Widgets
     return list;
   }
 
+  /** create new list widget
+   * @param composite composite widget
+   * @return new list widget
+   */
+  static List newList(Composite composite)
+  {
+    return newList(composite,null);
+  }
+
   /** new combo widget
-   * @param composite composite
-   * @param object object
+   * @param composite composite widget
+   * @param data object data
    * @return new combo widget
    */
   static Combo newCombo(Composite composite, Object data)
@@ -963,9 +1043,19 @@ class Widgets
     return combo;
   }
 
-  /** create new option menu
-   * @param composite composite
+  /** new combo widget
+   * @param composite composite widget
    * @param object object
+   * @return new combo widget
+   */
+  static Combo newCombo(Composite composite)
+  {
+    return newCombo(composite,null);
+  }
+
+  /** create new option menu
+   * @param composite composite widget
+   * @param data object data
    * @return new combo widget
    */
   static Combo newOptionMenu(Composite composite, Object data)
@@ -979,8 +1069,8 @@ class Widgets
   }
 
   /** create new spinner widget
-   * @param composite composite
-   * @param object object
+   * @param composite composite widget
+   * @param data object data
    * @return new spinner widget
    */
   static Spinner newSpinner(Composite composite, Object data)
@@ -993,10 +1083,19 @@ class Widgets
     return spinner;
   }
 
+  /** create new spinner widget
+   * @param composite composite widget
+   * @return new spinner widget
+   */
+  static Spinner newSpinner(Composite composite)
+  {
+    return newSpinner(composite,null);
+  }
+
   /** create new table widget
-   * @param composite composite
+   * @param composite composite widget
    * @param style style
-   * @param object object
+   * @param object object data
    * @return new table widget
    */
   static Table newTable(Composite composite, int style, Object data)
@@ -1009,6 +1108,16 @@ class Widgets
     table.setData(data);
 
     return table;
+  }
+
+  /** create new table widget
+   * @param composite composite widget
+   * @param style style
+   * @return new table widget
+   */
+  static Table newTable(Composite composite, int style)
+  {
+    return newTable(composite,style,null);
   }
 
   /** add column to table widget
@@ -1107,11 +1216,11 @@ class Widgets
   }
 
   /** new progress bar widget
-   * @param composite composite
-   * @param variable variable
+   * @param composite composite widget
+   * @param data object data
    * @return new progress bar widget
    */
-  static ProgressBar newProgressBar(Composite composite, Object variable)
+  static ProgressBar newProgressBar(Composite composite, Object data)
   {
     ProgressBar progressBar;
 
@@ -1119,23 +1228,46 @@ class Widgets
     progressBar.setMinimum(0);
     progressBar.setMaximum(100);
     progressBar.setSelection(0);
+    progressBar.setData(data);
 
     return progressBar;
   }
 
+  /** new progress bar widget
+   * @param composite composite widget
+   * @param variable variable
+   * @return new progress bar widget
+   */
+  static ProgressBar newProgressBar(Composite composite)
+  {
+    return newProgressBar(composite,null);
+  }
+
   /** new tree widget
-   * @param composite composite
-   * @param object object
+   * @param composite composite widget
+   * @param style style
+   * @param data object data
    * @return new tree widget
    */
-  static Tree newTree(Composite composite, int style, Object variable)
+  static Tree newTree(Composite composite, int style, Object data)
   {
     Tree tree;
 
     tree = new Tree(composite,style|SWT.BORDER|SWT.H_SCROLL|SWT.V_SCROLL);
     tree.setHeaderVisible(true);
+    tree.setData(data);
 
     return tree;
+  }
+
+  /** new tree widget
+   * @param composite composite widget
+   * @param style style
+   * @return new tree widget
+   */
+  static Tree newTree(Composite composite, int style)
+  {
+    return newTree(composite,style);
   }
 
   /** add column to tree widget
@@ -1407,8 +1539,8 @@ private static void printTree(Tree tree)
 //printTree(tree);
   }
 
-  /** create new sash widget
-   * @param composite parent composite
+  /** create new sash widget (pane)
+   * @param composite composite widget
    * @return new sash widget
    */
   static Sash newSash(Composite composite, int style)
@@ -1419,18 +1551,30 @@ private static void printTree(Tree tree)
   }
 
   /** create new sash form widget
-   * @param composite parent composite
+   * @param composite composite widget
    * @return new sash form widget
    */
-  static SashForm newSashForm(Composite composite)
+  static SashForm newSashForm(Composite composite, int style)
   {    
-    SashForm sashForm = new SashForm(composite,SWT.NONE);
+    SashForm sashForm = new SashForm(composite,style);
 
     return sashForm;
   }
 
+  /** create new pane widget
+   * @param composite composite widget
+   * @param style 
+   * @return new pane widget
+   */
+  static Pane newPane(Composite composite, int style, Pane prevPane)
+  {    
+    Pane sash = new Pane(composite,style,prevPane);
+
+    return sash;
+  }
+
   /** create new tab folder
-   * @param composite parent composite
+   * @param compositet composite
    * @return new tab folder widget
    */
   static TabFolder newTabFolder(Composite composite)
@@ -1479,7 +1623,7 @@ private static void printTree(Tree tree)
   }
 
   /** create new canvas widget
-   * @param composite parent composite
+   * @param composite composite
    * @param style style
    * @return new canvas widget
    */
@@ -1636,7 +1780,7 @@ private static void printTree(Tree tree)
   //-----------------------------------------------------------------------
 
   /** add new composite widget
-   * @param composite parent composite widget
+   * @param composite composite widget
    * @param style style
    * @param margin margin or 0
    * @return new composite widget
@@ -1653,7 +1797,7 @@ private static void printTree(Tree tree)
   }
 
   /** add new composite widget
-   * @param composite parent composite widget
+   * @param composite composite widget
    * @param style style
    * @return new composite widget
    */
@@ -1663,7 +1807,7 @@ private static void printTree(Tree tree)
   }
 
   /** add new group widget
-   * @param composite parent composite widget
+   * @param composite composite widget
    * @param title group title
    * @param style style
    * @param margin margin or 0
@@ -1682,7 +1826,7 @@ private static void printTree(Tree tree)
   }
 
   /** add new group widget
-   * @param composite parent composite widget
+   * @param composite composite widget
    * @param title group title
    * @param style style
    * @return new group widget

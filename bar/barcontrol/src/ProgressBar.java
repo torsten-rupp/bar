@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/ProgressBar.java,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: progress bar widget
 * Systems: all
@@ -23,8 +23,13 @@ import org.eclipse.swt.widgets.Composite;
 
 /****************************** Classes ********************************/
 
+/** progress bar with percentage view
+ */
 class ProgressBar extends Canvas
 {
+  // --------------------------- constants --------------------------------
+
+  // --------------------------- variables --------------------------------
   Color  barColor;
   Color  barSetColor;
   double minimum;
@@ -33,6 +38,14 @@ class ProgressBar extends Canvas
   Point  textSize;
   String text;
 
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
+
+  /** create progress bar
+   * @param composite parent composite widget
+   * @param style style flags
+   */
   ProgressBar(Composite composite, int style)
   {
     super(composite,SWT.NONE);
@@ -51,20 +64,80 @@ class ProgressBar extends Canvas
     {
       public void paintControl(PaintEvent paintEvent)
       {
-        ProgressBar.this.paintControl(paintEvent);
+        ProgressBar.this.paint(paintEvent);
       }
     });
 
     setSelection(0.0);
   }
 
-  void widgetDisposed(DisposeEvent disposeEvent)
+  /** compute size of pane
+   * @param wHint,hHint width/height hint
+   * @param changed TRUE iff no cache values should be used
+   * @return size
+   */
+  public Point computeSize(int wHint, int hHint, boolean changed)
+  {
+    GC gc;
+    int width,height;
+
+    width  = 0;
+    height = 0;
+
+    width  = textSize.x;
+    height = textSize.y;
+    if (wHint != SWT.DEFAULT) width  = wHint;
+    if (hHint != SWT.DEFAULT) height = hHint;         
+
+    return new Point(width,height);
+  }
+
+  /** set minimal progress value
+   * @param n value
+   */
+  public void setMinimum(double n)
+  {
+    this.minimum = n;
+  }
+
+  /** set maximal progress value
+   * @param n value
+   */
+  public void setMaximum(double n)
+  {
+    this.maximum = n;
+  }
+
+  /** set progress value
+   * @param n value
+   */
+  public void setSelection(double n)
+  {
+    GC gc;
+
+    value = Math.min(Math.max(((maximum-minimum)>0.0)?(n-minimum)/(maximum-minimum):0.0,minimum),maximum);
+
+    gc = new GC(this);
+    text = String.format("%.1f%%",value*100.0);
+    textSize = gc.stringExtent(text);
+    gc.dispose();
+
+    redraw();
+  }
+
+  /** free allocated resources
+   * @param disposeEvent dispose event
+   */
+  private void widgetDisposed(DisposeEvent disposeEvent)
   {
     barSetColor.dispose();
     barColor.dispose();
   }
 
-  void paintControl(PaintEvent paintEvent)
+  /** paint progress bar
+   * @param paintEvent paint event
+   */
+  private void paint(PaintEvent paintEvent)
   {
     GC        gc;
     Rectangle bounds;
@@ -95,46 +168,6 @@ class ProgressBar extends Canvas
     // draw percentage text
     gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_BLACK));
     gc.drawString(text,(w-textSize.x)/2,(h-textSize.y)/2,true);
-  }
-
-  public Point computeSize(int wHint, int hHint, boolean changed)
-  {
-    GC gc;
-    int width,height;
-
-    width  = 0;
-    height = 0;
-
-    width  = textSize.x;
-    height = textSize.y;
-    if (wHint != SWT.DEFAULT) width  = wHint;
-    if (hHint != SWT.DEFAULT) height = hHint;         
-
-    return new Point(width,height);
-  }
-
-  void setMinimum(double n)
-  {
-    this.minimum = n;
-  }
-
-  void setMaximum(double n)
-  {
-    this.maximum = n;
-  }
-
-  void setSelection(double n)
-  {
-    GC gc;
-
-    value = Math.min(Math.max(((maximum-minimum)>0.0)?(n-minimum)/(maximum-minimum):0.0,minimum),maximum);
-
-    gc = new GC(this);
-    text = String.format("%.1f%%",value*100.0);
-    textSize = gc.stringExtent(text);
-    gc.dispose();
-
-    redraw();
   }
 }
 

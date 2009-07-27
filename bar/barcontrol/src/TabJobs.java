@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -1075,7 +1075,7 @@ final    Display     display;
         }
       });
 
-      button = Widgets.newButton(composite,null,"New");
+      button = Widgets.newButton(composite,"New");
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -1089,7 +1089,7 @@ final    Display     display;
         }
       });
 
-      button = Widgets.newButton(composite,null,"Copy");
+      button = Widgets.newButton(composite,"Copy");
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -1106,7 +1106,7 @@ final    Display     display;
         }
       });
 
-      button = Widgets.newButton(composite,null,"Rename");
+      button = Widgets.newButton(composite,"Rename");
       Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -1123,7 +1123,7 @@ final    Display     display;
         }
       });
 
-      button = Widgets.newButton(composite,null,"Delete");
+      button = Widgets.newButton(composite,"Delete");
       Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -1181,7 +1181,7 @@ final    Display     display;
         composite.setLayout(new TableLayout(1.0,new double[]{1.0,1.0,1.0,0.0,0.0,0.0}));
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
-          button = Widgets.newButton(composite,null,"None");
+          button = Widgets.newButton(composite,"None");
           Widgets.layout(button,0,0,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1209,7 +1209,7 @@ final    Display     display;
             }
           });
 
-          button = Widgets.newButton(composite,null,"Include");
+          button = Widgets.newButton(composite,"Include");
           Widgets.layout(button,0,1,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1237,7 +1237,7 @@ final    Display     display;
             }
           });
 
-          button = Widgets.newButton(composite,null,"Exclude");
+          button = Widgets.newButton(composite,"Exclude");
           Widgets.layout(button,0,2,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1268,7 +1268,7 @@ final    Display     display;
           control = Widgets.newSpacer(composite);
           Widgets.layout(control,0,3,TableLayoutData.NONE,0,0,30,0);
 
-          button = Widgets.newButton(composite,null,IMAGE_DIRECTORY_INCLUDED);
+          button = Widgets.newButton(composite,IMAGE_DIRECTORY_INCLUDED);
           Widgets.layout(button,0,4,TableLayoutData.E,0,0,2,0);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1282,7 +1282,7 @@ final    Display     display;
             }
           });
 
-          button = Widgets.newCheckbox(composite,null,"directory info");
+          button = Widgets.newCheckbox(composite,"directory info");
           Widgets.layout(button,0,5,TableLayoutData.E,0,0,2,0);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1312,7 +1312,7 @@ final    Display     display;
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,1,TableLayoutData.W);
         {
-          button = Widgets.newButton(composite,null,"Add");
+          button = Widgets.newButton(composite,"Add");
           Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1329,7 +1329,7 @@ final    Display     display;
             }
           });
 
-          button = Widgets.newButton(composite,null,"Rem");
+          button = Widgets.newButton(composite,"Rem");
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1357,7 +1357,7 @@ final    Display     display;
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,3,1,TableLayoutData.W);
         {
-          button = Widgets.newButton(composite,null,"Add");
+          button = Widgets.newButton(composite,"Add");
           Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1374,7 +1374,7 @@ final    Display     display;
             }
           });
 
-          button = Widgets.newButton(composite,null,"Rem");
+          button = Widgets.newButton(composite,"Rem");
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1398,7 +1398,7 @@ final    Display     display;
         composite = Widgets.newComposite(tab,SWT.NONE);
         Widgets.layout(composite,4,1,TableLayoutData.WE);
         {
-          button = Widgets.newCheckbox(composite,null,"skip unreadable files");
+          button = Widgets.newCheckbox(composite,"skip unreadable files");
           Widgets.layout(button,0,0,TableLayoutData.NW);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1427,7 +1427,7 @@ final    Display     display;
         composite = Widgets.newComposite(tab,SWT.NONE);
         Widgets.layout(composite,0,1,TableLayoutData.WE);
         {
-          button = Widgets.newRadio(composite,null,"unlimited");
+          button = Widgets.newRadio(composite,"unlimited");
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1451,7 +1451,7 @@ final    Display     display;
             }
           });
 
-          button = Widgets.newRadio(composite,null,"limit to");
+          button = Widgets.newRadio(composite,"limit to");
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1605,7 +1605,7 @@ throw new Error("NYI");
         composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0,0.0}));
         Widgets.layout(composite,3,1,TableLayoutData.WE);
         {
-          button = Widgets.newRadio(composite,null,"symmetric");
+          button = Widgets.newRadio(composite,"symmetric");
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1632,7 +1632,7 @@ throw new Error("NYI");
             }
           });
 
-          button = Widgets.newRadio(composite,null,"asymmetric");
+          button = Widgets.newRadio(composite,"asymmetric");
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1706,7 +1706,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(widgetCryptPublicKeyFileName,cryptPublicKeyFileName));
 
-          widgetCryptPublicKeyFileNameSelect = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
+          widgetCryptPublicKeyFileNameSelect = Widgets.newButton(composite,IMAGE_DIRECTORY);
           Widgets.layout(widgetCryptPublicKeyFileNameSelect,0,5,TableLayoutData.DEFAULT);
           widgetCryptPublicKeyFileNameSelect.addSelectionListener(new SelectionListener()
           {
@@ -1739,7 +1739,7 @@ throw new Error("NYI");
         composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,1.0,0.0,1.0}));
         Widgets.layout(composite,4,1,TableLayoutData.WE);
         {
-          button = Widgets.newRadio(composite,null,"default");
+          button = Widgets.newRadio(composite,"default");
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1766,7 +1766,7 @@ throw new Error("NYI");
             }
           });
 
-          button = Widgets.newRadio(composite,null,"ask");
+          button = Widgets.newRadio(composite,"ask");
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1793,7 +1793,7 @@ throw new Error("NYI");
             }
           });
 
-          button = Widgets.newRadio(composite,null,"this");
+          button = Widgets.newRadio(composite,"this");
           Widgets.layout(button,0,2,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1931,7 +1931,7 @@ throw new Error("NYI");
         composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,0.0,1.0,0.0}));
         Widgets.layout(composite,5,1,TableLayoutData.WE);
         {
-          button = Widgets.newRadio(composite,null,"normal");
+          button = Widgets.newRadio(composite,"normal");
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1953,7 +1953,7 @@ throw new Error("NYI");
             }
           });
 
-          button = Widgets.newRadio(composite,null,"full");
+          button = Widgets.newRadio(composite,"full");
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1975,7 +1975,7 @@ throw new Error("NYI");
             }
           });
 
-          button = Widgets.newRadio(composite,null,"incremental");
+          button = Widgets.newRadio(composite,"incremental");
           Widgets.layout(button,0,2,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2049,7 +2049,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(text,storageFileName));
 
-          button = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
+          button = Widgets.newButton(composite,IMAGE_DIRECTORY);
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2117,7 +2117,7 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(text,incrementalListFileName));
 
-          button = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
+          button = Widgets.newButton(composite,IMAGE_DIRECTORY);
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2148,7 +2148,7 @@ throw new Error("NYI");
         composite = Widgets.newComposite(tab,SWT.NONE);
         Widgets.layout(composite,8,1,TableLayoutData.WE);
         {
-          button = Widgets.newRadio(composite,null,"File system");
+          button = Widgets.newRadio(composite,"File system");
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2170,7 +2170,7 @@ throw new Error("NYI");
             }
           });
 
-          button = Widgets.newRadio(composite,null,"ftp");
+          button = Widgets.newRadio(composite,"ftp");
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2192,7 +2192,7 @@ throw new Error("NYI");
             }
           });
 
-          button = Widgets.newRadio(composite,null,"scp");
+          button = Widgets.newRadio(composite,"scp");
           Widgets.layout(button,0,2,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2214,7 +2214,7 @@ throw new Error("NYI");
             }
           });
 
-          button = Widgets.newRadio(composite,null,"sftp");
+          button = Widgets.newRadio(composite,"sftp");
           Widgets.layout(button,0,3,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2236,7 +2236,7 @@ throw new Error("NYI");
             }
           });
 
-          button = Widgets.newRadio(composite,null,"DVD");
+          button = Widgets.newRadio(composite,"DVD");
           Widgets.layout(button,0,4,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2258,7 +2258,7 @@ throw new Error("NYI");
             }
           });
 
-          button = Widgets.newRadio(composite,null,"Device");
+          button = Widgets.newRadio(composite,"Device");
           Widgets.layout(button,0,5,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2294,7 +2294,7 @@ throw new Error("NYI");
         });
         Widgets.setVisible(composite,false);
         {
-          button = Widgets.newCheckbox(composite,null,"overwrite archive files");
+          button = Widgets.newCheckbox(composite,"overwrite archive files");
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2465,7 +2465,7 @@ throw new Error("NYI");
           composite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(composite,1,1,TableLayoutData.WE);
           {
-            button = Widgets.newRadio(composite,null,"unlimited");
+            button = Widgets.newRadio(composite,"unlimited");
             Widgets.layout(button,0,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
@@ -2489,7 +2489,7 @@ throw new Error("NYI");
               }
             });
 
-            button = Widgets.newRadio(composite,null,"limit to");
+            button = Widgets.newRadio(composite,"limit to");
             Widgets.layout(button,0,1,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
@@ -2804,7 +2804,7 @@ throw new Error("NYI");
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(subComposite,3,1,TableLayoutData.WE);
           {
-            button = Widgets.newRadio(subComposite,null,"unlimited");
+            button = Widgets.newRadio(subComposite,"unlimited");
             Widgets.layout(button,0,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
@@ -2828,7 +2828,7 @@ throw new Error("NYI");
               }
             });
 
-            button = Widgets.newRadio(subComposite,null,"limit to");
+            button = Widgets.newRadio(subComposite,"limit to");
             Widgets.layout(button,0,1,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
@@ -3004,7 +3004,7 @@ throw new Error("NYI");
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(subComposite,3,1,TableLayoutData.WE);
           {
-            button = Widgets.newCheckbox(subComposite,null,"add error-correction codes");
+            button = Widgets.newCheckbox(subComposite,"add error-correction codes");
             Widgets.layout(button,0,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
@@ -3021,7 +3021,7 @@ throw new Error("NYI");
             });
             Widgets.addModifyListener(new WidgetListener(button,ecc));
 
-            button = Widgets.newCheckbox(subComposite,null,"wait for first volume");
+            button = Widgets.newCheckbox(subComposite,"wait for first volume");
             Widgets.layout(button,1,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
@@ -3229,7 +3229,7 @@ throw new Error("NYI");
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
-          button = Widgets.newButton(composite,null,"Add");
+          button = Widgets.newButton(composite,"Add");
           Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3242,7 +3242,7 @@ throw new Error("NYI");
             {
             }
           });
-          button = Widgets.newButton(composite,null,"Edit");
+          button = Widgets.newButton(composite,"Edit");
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3255,7 +3255,7 @@ throw new Error("NYI");
             {
             }
           });
-          button = Widgets.newButton(composite,null,"Rem");
+          button = Widgets.newButton(composite,"Rem");
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3507,10 +3507,10 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
-      widgetAdd = Widgets.newButton(composite,null,"Add");
+      widgetAdd = Widgets.newButton(composite,"Add");
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
 
-      button = Widgets.newButton(composite,null,"Cancel");
+      button = Widgets.newButton(composite,"Cancel");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -3603,10 +3603,10 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
-      widgetCopy = Widgets.newButton(composite,null,"Copy");
+      widgetCopy = Widgets.newButton(composite,"Copy");
       Widgets.layout(widgetCopy,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
 
-      button = Widgets.newButton(composite,null,"Cancel");
+      button = Widgets.newButton(composite,"Cancel");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -3708,10 +3708,10 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
-      widgetRename = Widgets.newButton(composite,null,"Rename");
+      widgetRename = Widgets.newButton(composite,"Rename");
       Widgets.layout(widgetRename,0,0,TableLayoutData.W);
 
-      button = Widgets.newButton(composite,null,"Cancel");
+      button = Widgets.newButton(composite,"Cancel");
       Widgets.layout(button,0,1,TableLayoutData.E);
       button.addSelectionListener(new SelectionListener()
       {
@@ -4246,10 +4246,10 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
-      widgetAdd = Widgets.newButton(composite,null,buttonText);
+      widgetAdd = Widgets.newButton(composite,buttonText);
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
 
-      button = Widgets.newButton(composite,null,"Cancel");
+      button = Widgets.newButton(composite,"Cancel");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -4579,6 +4579,7 @@ throw new Error("NYI");
     {
       Composite  composite;
       Label      label;
+      Control    control;
       DragSource dragSource;
       DropTarget dropTarget;
 
@@ -4712,9 +4713,9 @@ throw new Error("NYI");
           }
         });
 
-        label = Widgets.newLabel(composite,Widgets.loadImage(display,"trashcan.gif"),SWT.BORDER);
-        Widgets.layout(label,0,2,TableLayoutData.NONE);
-        dropTarget = new DropTarget(label,DND.DROP_MOVE);
+        control = Widgets.newImage(composite,Widgets.loadImage(display,"trashcan.gif"),SWT.BORDER);
+        Widgets.layout(control,0,2,TableLayoutData.NONE);
+        dropTarget = new DropTarget(control,DND.DROP_MOVE);
         dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance(),StorageNamePartTransfer.getInstance()});
         dropTarget.addDropListener(new DropTargetAdapter()
         {
@@ -5253,10 +5254,10 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
-      widgetSave = Widgets.newButton(composite,null,"Save");
+      widgetSave = Widgets.newButton(composite,"Save");
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
 
-      button = Widgets.newButton(composite,null,"Cancel");
+      button = Widgets.newButton(composite,"Cancel");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -5430,31 +5431,31 @@ throw new Error("NYI");
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
-        widgetWeekDays[ScheduleData.MON] = Widgets.newCheckbox(subComposite,null,"Mon");
+        widgetWeekDays[ScheduleData.MON] = Widgets.newCheckbox(subComposite,"Mon");
         Widgets.layout(widgetWeekDays[ScheduleData.MON],0,0,TableLayoutData.W);
         widgetWeekDays[ScheduleData.MON].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.MON));
 
-        widgetWeekDays[ScheduleData.TUE] = Widgets.newCheckbox(subComposite,null,"Tue");
+        widgetWeekDays[ScheduleData.TUE] = Widgets.newCheckbox(subComposite,"Tue");
         Widgets.layout(widgetWeekDays[ScheduleData.TUE],0,1,TableLayoutData.W);
         widgetWeekDays[ScheduleData.TUE].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.TUE));
 
-        widgetWeekDays[ScheduleData.WED] = Widgets.newCheckbox(subComposite,null,"Wed");
+        widgetWeekDays[ScheduleData.WED] = Widgets.newCheckbox(subComposite,"Wed");
         Widgets.layout(widgetWeekDays[ScheduleData.WED],0,2,TableLayoutData.W);
         widgetWeekDays[ScheduleData.WED].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.WED));
 
-        widgetWeekDays[ScheduleData.THU] = Widgets.newCheckbox(subComposite,null,"Thu");
+        widgetWeekDays[ScheduleData.THU] = Widgets.newCheckbox(subComposite,"Thu");
         Widgets.layout(widgetWeekDays[ScheduleData.THU],0,3,TableLayoutData.W);
         widgetWeekDays[ScheduleData.THU].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.THU));
 
-        widgetWeekDays[ScheduleData.FRI] = Widgets.newCheckbox(subComposite,null,"Fri");
+        widgetWeekDays[ScheduleData.FRI] = Widgets.newCheckbox(subComposite,"Fri");
         Widgets.layout(widgetWeekDays[ScheduleData.FRI],0,4,TableLayoutData.W);
         widgetWeekDays[ScheduleData.FRI].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.FRI));
 
-        widgetWeekDays[ScheduleData.SAT] = Widgets.newCheckbox(subComposite,null,"Sat");
+        widgetWeekDays[ScheduleData.SAT] = Widgets.newCheckbox(subComposite,"Sat");
         Widgets.layout(widgetWeekDays[ScheduleData.SAT],0,5,TableLayoutData.W);
         widgetWeekDays[ScheduleData.SAT].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SAT));
 
-        widgetWeekDays[ScheduleData.SUN] = Widgets.newCheckbox(subComposite,null,"Sun");
+        widgetWeekDays[ScheduleData.SUN] = Widgets.newCheckbox(subComposite,"Sun");
         Widgets.layout(widgetWeekDays[ScheduleData.SUN],0,6,TableLayoutData.W);
         widgetWeekDays[ScheduleData.SUN].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SUN));
       }
@@ -5482,19 +5483,19 @@ throw new Error("NYI");
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,3,1,TableLayoutData.WE);
       {
-        widgetTypeDefault = Widgets.newRadio(subComposite,null,"*");
+        widgetTypeDefault = Widgets.newRadio(subComposite,"*");
         Widgets.layout(widgetTypeDefault,0,0,TableLayoutData.W);
         widgetTypeDefault.setSelection(scheduleData.type.equals("*"));
 
-        widgetTypeNormal = Widgets.newRadio(subComposite,null,"normal");
+        widgetTypeNormal = Widgets.newRadio(subComposite,"normal");
         Widgets.layout(widgetTypeNormal,0,1,TableLayoutData.W);
         widgetTypeNormal.setSelection(scheduleData.type.equals("normal"));
 
-        widgetTypeFull = Widgets.newRadio(subComposite,null,"full");
+        widgetTypeFull = Widgets.newRadio(subComposite,"full");
         Widgets.layout(widgetTypeFull,0,2,TableLayoutData.W);
         widgetTypeFull.setSelection(scheduleData.type.equals("full"));
 
-        widgetTypeIncremental = Widgets.newRadio(subComposite,null,"incremental");
+        widgetTypeIncremental = Widgets.newRadio(subComposite,"incremental");
         Widgets.layout(widgetTypeIncremental,0,3,TableLayoutData.W);
         widgetTypeIncremental.setSelection(scheduleData.type.equals("incremental"));
       }
@@ -5505,7 +5506,7 @@ throw new Error("NYI");
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,4,1,TableLayoutData.WE);
       {
-        widgetEnabled = Widgets.newCheckbox(subComposite,null,"enabled");
+        widgetEnabled = Widgets.newCheckbox(subComposite,"enabled");
         Widgets.layout(widgetEnabled,0,0,TableLayoutData.W);
         widgetEnabled.setSelection(scheduleData.enabled);
       }
@@ -5516,10 +5517,10 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
-      widgetAdd = Widgets.newButton(composite,null,buttonText);
+      widgetAdd = Widgets.newButton(composite,buttonText);
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
 
-      button = Widgets.newButton(composite,null,"Cancel");
+      button = Widgets.newButton(composite,"Cancel");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {

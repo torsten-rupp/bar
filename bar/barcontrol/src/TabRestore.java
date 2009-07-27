@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -468,7 +468,7 @@ class TabRestore
       });
 
 
-      button = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
+      button = Widgets.newButton(composite,IMAGE_DIRECTORY);
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -585,7 +585,7 @@ class TabRestore
     composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
-      widgetListButton = Widgets.newButton(composite,null,"List");
+      widgetListButton = Widgets.newButton(composite,"List");
       widgetListButton.setEnabled(false);
       Widgets.layout(widgetListButton,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetListButton.addSelectionListener(new SelectionListener()
@@ -602,7 +602,7 @@ class TabRestore
         }
       });
 
-      button = Widgets.newButton(composite,null,IMAGE_MARK_ALL);
+      button = Widgets.newButton(composite,IMAGE_MARK_ALL);
       Widgets.layout(button,0,1,TableLayoutData.E);
       button.addSelectionListener(new SelectionListener()
       {
@@ -617,7 +617,7 @@ class TabRestore
         }
       });
 
-      button = Widgets.newButton(composite,null,IMAGE_UNMARK_ALL);
+      button = Widgets.newButton(composite,IMAGE_UNMARK_ALL);
       Widgets.layout(button,0,2,TableLayoutData.E);
       button.addSelectionListener(new SelectionListener()
       {
@@ -719,7 +719,7 @@ class TabRestore
         }
       });
 
-      button = Widgets.newCheckbox(composite,null,"newest file only");
+      button = Widgets.newCheckbox(composite,"newest file only");
       button.setSelection(newestFileOnlyFlag);
       Widgets.layout(button,0,2,TableLayoutData.W);
       button.addSelectionListener(new SelectionListener()
@@ -738,7 +738,7 @@ class TabRestore
       control = Widgets.newSpacer(composite);
       Widgets.layout(control,0,3,TableLayoutData.WE,0,0,30,0);
 
-      button = Widgets.newButton(composite,null,IMAGE_MARK_ALL);
+      button = Widgets.newButton(composite,IMAGE_MARK_ALL);
       Widgets.layout(button,0,4,TableLayoutData.E);
       button.addSelectionListener(new SelectionListener()
       {
@@ -753,7 +753,7 @@ class TabRestore
         }
       });
 
-      button = Widgets.newButton(composite,null,IMAGE_UNMARK_ALL);
+      button = Widgets.newButton(composite,IMAGE_UNMARK_ALL);
       Widgets.layout(button,0,5,TableLayoutData.E);
       button.addSelectionListener(new SelectionListener()
       {
@@ -774,7 +774,7 @@ class TabRestore
     composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0}));
     Widgets.layout(composite,5,0,TableLayoutData.WE);
     {
-      widgetRestoreButton = Widgets.newButton(composite,null,"Restore");
+      widgetRestoreButton = Widgets.newButton(composite,"Restore");
       widgetRestoreButton.setEnabled(false);
       Widgets.layout(widgetRestoreButton,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
       widgetRestoreButton.addSelectionListener(new SelectionListener()
@@ -790,7 +790,7 @@ class TabRestore
         {
         }
       });
-      button = Widgets.newCheckbox(composite,null,"to");
+      button = Widgets.newCheckbox(composite,"to");
       Widgets.layout(button,0,1,TableLayoutData.W);
       button.addSelectionListener(new SelectionListener()
       {
@@ -808,7 +808,7 @@ class TabRestore
       widgetRestoreTo = Widgets.newText(composite,null);
       widgetRestoreTo.setEnabled(false);
       Widgets.layout(widgetRestoreTo,0,2,TableLayoutData.WE);
-      widgetRestoreToSelectButton = Widgets.newButton(composite,null,IMAGE_DIRECTORY);
+      widgetRestoreToSelectButton = Widgets.newButton(composite,IMAGE_DIRECTORY);
       widgetRestoreToSelectButton.setEnabled(false);
       Widgets.layout(widgetRestoreToSelectButton,0,3,TableLayoutData.DEFAULT);
       widgetRestoreToSelectButton.addSelectionListener(new SelectionListener()
