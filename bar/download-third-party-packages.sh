@@ -56,12 +56,14 @@ if test $cleanFlag -eq 0; then
   # lzma
   (
    cd $tmpDirectory
-   if test ! -f xz-4.999.8beta.tar.gz; then
-     $WGET 'http://tukaani.org/xz/xz-4.999.8beta.tar.gz'
+   fileName=`ls xz-*.tar.gz 2>/dev/null`
+   if test ! -f "$fileName"; then
+     fileName=`wget --quiet -O - 'http://tukaani.org/xz'|grep -E -e 'xz-.*\.tar\.gz'|sed 's|.*href="\(xz.*\.tar\.gz\)".*|\1|g'`     
+     $WGET "http://tukaani.org/xz/$fileName"
    fi
-   $TAR xzf xz-4.999.8beta.tar.gz
+   $TAR xzf $fileName
   )
-  $LN -f -s $tmpDirectory/xz-4.999.8beta xz
+  $LN -f -s `find $tmpDirectory -type d -name "xz-*"` xz
 
   # gcrypt
   (
@@ -118,8 +120,8 @@ else
   $RMF bzip2
 
   # lzma
-  $RMF $tmpDirectory/xz-4.999.8beta.tar.gz
-  $RMRF $tmpDirectory/xz-4.999.8beta
+  $RMF `find $tmpDirectory -type f -name "xz-*.tar.gz"`
+  $RMRF `find $tmpDirectory -type d -name "xz-*"`
   $RMF xz
 
   # gcrypt
