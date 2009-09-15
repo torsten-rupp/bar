@@ -1,3 +1,7 @@
+2009-08-?? 0.12a
+  * clean-up design of progress bars
+  * fixed layout of part-editor (canvas widget)
+
 2009-07-19 0.12
   * disabled -fschedule-insns2 optimization. This cause with my
     gcc 3.3 a problem in String_parse() when a boolean value

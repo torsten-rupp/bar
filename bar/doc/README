@@ -243,6 +243,23 @@ Then compile and install BAR with:
   make
   make install
 
+--- Compression
+
+For compression zip, bzip2 or lzma can be used. The compression
+algorithms offer different levels of compression ration and time.
+The following values give a rough impression for compression of
+some arbitary data:
+
+Type    Size   Ratio
+--------------------------
+Orignal 764M   -
+zip9    261M   65.9%
+bzip9   259M   66.1%
+lzma9   214M   72.0%
+
+The compression of lzma9 is better than for zip9 or bzip9, but
+the compression time is also increased significantly.
+
 --- Archive files and encryption
 
 For encryption the algorithms of the gcrypt library are used.
