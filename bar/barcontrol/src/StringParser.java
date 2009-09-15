@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/StringParser.java,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -11,6 +11,7 @@
 /****************************** Imports ********************************/
 import java.lang.Integer;
 import java.lang.Long;
+import java.lang.NumberFormatException;
 import java.lang.String;
 
 /****************************** Classes ********************************/
@@ -84,7 +85,6 @@ class StringParser
    *     .               - precision
    *     <x>s, <x>S      - quoting character <x>
    *     h,l,j,z,t       - length modifier
-   *     <char>s,<char>S - quote char
    * @param format format string
    * @param formatIndex index in format string
    * @param formatToken format token
@@ -345,19 +345,26 @@ class StringParser
               }
 
               /* convert */
-              switch (formatToken.lengthType)
+              try
               {
-                case INTEGER:
-                  arguments[argumentIndex] = Integer.parseInt(buffer.toString(),10);
-                  break;
-                case LONG:
-                  arguments[argumentIndex] = Long.parseLong(buffer.toString(),10);
-                  break;
-                case DOUBLE:
-                  arguments[argumentIndex] = Double.parseDouble(buffer.toString());
-                  break;
+                switch (formatToken.lengthType)
+                {
+                  case INTEGER:
+                    arguments[argumentIndex] = Integer.parseInt(buffer.toString(),10);
+                    break;
+                  case LONG:
+                    arguments[argumentIndex] = Long.parseLong(buffer.toString(),10);
+                    break;
+                  case DOUBLE:
+                    arguments[argumentIndex] = Double.parseDouble(buffer.toString());
+                    break;
+                }
+                argumentIndex++;
               }
-              argumentIndex++;
+              catch (NumberFormatException exception)
+              {
+                return -1;
+              }
               break;
             case 'c':
               /* get data */
@@ -392,18 +399,25 @@ class StringParser
               }
 
               /* convert */
-              switch (formatToken.lengthType)
+              try
               {
-                case INTEGER:
-                  arguments[argumentIndex] = Integer.parseInt(buffer.toString(),8);
-                  break;
-                case LONG:
-                  arguments[argumentIndex] = Long.parseLong(buffer.toString(),8);
-                  break;
-                case DOUBLE:
-                  break;
+                switch (formatToken.lengthType)
+                {
+                  case INTEGER:
+                    arguments[argumentIndex] = Integer.parseInt(buffer.toString(),8);
+                    break;
+                  case LONG:
+                    arguments[argumentIndex] = Long.parseLong(buffer.toString(),8);
+                    break;
+                  case DOUBLE:
+                    break;
+                }
+                argumentIndex++;
               }
-              argumentIndex++;
+              catch (NumberFormatException exception)
+              {
+                return -1;
+              }
               break;
             case 'x':
             case 'X':
@@ -426,18 +440,25 @@ class StringParser
               }
 
               /* convert */
-              switch (formatToken.lengthType)
+              try
               {
-                case INTEGER:
-                  arguments[argumentIndex] = Integer.parseInt(buffer.toString(),16);
-                  break;
-                case LONG:
-                  arguments[argumentIndex] = Long.parseLong(buffer.toString(),16);
-                  break;
-                case DOUBLE:
-                  break;
+                switch (formatToken.lengthType)
+                {
+                  case INTEGER:
+                    arguments[argumentIndex] = Integer.parseInt(buffer.toString(),16);
+                    break;
+                  case LONG:
+                    arguments[argumentIndex] = Long.parseLong(buffer.toString(),16);
+                    break;
+                  case DOUBLE:
+                    break;
+                }
+                argumentIndex++;
               }
-              argumentIndex++;
+              catch (NumberFormatException exception)
+              {
+                return -1;
+              }
               break;
             case 'e':
             case 'E':
@@ -479,8 +500,15 @@ class StringParser
               }
 
               /* convert */
-              arguments[argumentIndex] = Double.parseDouble(buffer.toString());
-              argumentIndex++;
+              try
+              {
+                arguments[argumentIndex] = Double.parseDouble(buffer.toString());
+                argumentIndex++;
+              }
+              catch (NumberFormatException exception)
+              {
+                return -1;
+              }
               break;
             case 's':
               /* get data */
