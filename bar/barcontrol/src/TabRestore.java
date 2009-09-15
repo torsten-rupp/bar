@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -437,7 +437,7 @@ class TabRestore
       label = Widgets.newLabel(composite,"Path:");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      widgetPath = Widgets.newCombo(composite,null);
+      widgetPath = Widgets.newCombo(composite);
       Widgets.layout(widgetPath,0,1,TableLayoutData.WE);
       widgetPath.addSelectionListener(new SelectionListener()
       {
@@ -492,7 +492,7 @@ class TabRestore
     }
 
     // archives tree
-    widgetArchiveFileTree = Widgets.newTree(widgetTab,SWT.CHECK,null);
+    widgetArchiveFileTree = Widgets.newTree(widgetTab,SWT.CHECK);
     Widgets.layout(widgetArchiveFileTree,1,0,TableLayoutData.NSWE);
     SelectionListener filesTreeColumnSelectionListener = new SelectionListener()
     {
@@ -634,7 +634,7 @@ class TabRestore
     }
 
     // file list
-    widgetFileList = Widgets.newTable(widgetTab,SWT.CHECK,this);
+    widgetFileList = Widgets.newTable(widgetTab,SWT.CHECK);
     Widgets.layout(widgetFileList,3,0,TableLayoutData.NSWE);
     SelectionListener fileListColumnSelectionListener = new SelectionListener()
     {
@@ -692,7 +692,7 @@ class TabRestore
     {
       label = Widgets.newLabel(composite,"Filter:");
       Widgets.layout(label,0,0,TableLayoutData.W);
-      widgetFilePattern = Widgets.newCombo(composite,null);
+      widgetFilePattern = Widgets.newCombo(composite);
       Widgets.layout(widgetFilePattern,0,1,TableLayoutData.WE);
       widgetFilePattern.addSelectionListener(new SelectionListener()
       {
@@ -805,7 +805,7 @@ class TabRestore
         {
         }
       });
-      widgetRestoreTo = Widgets.newText(composite,null);
+      widgetRestoreTo = Widgets.newText(composite);
       widgetRestoreTo.setEnabled(false);
       Widgets.layout(widgetRestoreTo,0,2,TableLayoutData.WE);
       widgetRestoreToSelectButton = Widgets.newButton(composite,IMAGE_DIRECTORY);

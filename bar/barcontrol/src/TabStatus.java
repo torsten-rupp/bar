@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -346,7 +346,7 @@ class TabStatus
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 
     // list with jobs
-    widgetJobList = Widgets.newTable(widgetTab,SWT.NONE,this);
+    widgetJobList = Widgets.newTable(widgetTab,SWT.NONE);
     Widgets.layout(widgetJobList,0,0,TableLayoutData.NSWE);
     widgetJobList.addSelectionListener(new SelectionListener()
     {
@@ -656,7 +656,7 @@ class TabStatus
       label = Widgets.newView(widgetSelectedJob);
       Widgets.layout(label,5,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetListener(label,fileName));
-      progressBar = Widgets.newProgressBar(widgetSelectedJob,null);
+      progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,6,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetListener(progressBar,fileProgress));
 
@@ -666,28 +666,28 @@ class TabStatus
       label = Widgets.newView(widgetSelectedJob);
       Widgets.layout(label,7,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetListener(label,storageName));
-      progressBar = Widgets.newProgressBar(widgetSelectedJob,null);
+      progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,8,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetListener(progressBar,storageProgress));
 
       // volume percentage
       label = Widgets.newLabel(widgetSelectedJob,"Volume:");
       Widgets.layout(label,9,0,TableLayoutData.W);
-      progressBar = Widgets.newProgressBar(widgetSelectedJob,null);
+      progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,9,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetListener(progressBar,volumeProgress));
 
       // total files percentage
       label = Widgets.newLabel(widgetSelectedJob,"Total files:");
       Widgets.layout(label,10,0,TableLayoutData.W);
-      progressBar = Widgets.newProgressBar(widgetSelectedJob,null);
+      progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,10,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetListener(progressBar,totalFilesProgress));
 
       // total bytes percentage
       label = Widgets.newLabel(widgetSelectedJob,"Total bytes:");
       Widgets.layout(label,11,0,TableLayoutData.W);
-      progressBar = Widgets.newProgressBar(widgetSelectedJob,null);
+      progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,11,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetListener(progressBar,totalBytesProgress));
 

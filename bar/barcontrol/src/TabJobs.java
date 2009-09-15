@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -1054,7 +1054,7 @@ final    Display     display;
       label = Widgets.newLabel(composite,"Name:");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      widgetJobList = Widgets.newOptionMenu(composite,null);
+      widgetJobList = Widgets.newOptionMenu(composite);
       Widgets.layout(widgetJobList,0,1,TableLayoutData.WE);
       widgetJobList.addSelectionListener(new SelectionListener()
       {
@@ -1150,7 +1150,7 @@ final    Display     display;
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // file tree
-        widgetFileTree = Widgets.newTree(tab,SWT.NONE,null);
+        widgetFileTree = Widgets.newTree(tab,SWT.NONE);
         Widgets.layout(widgetFileTree,0,0,TableLayoutData.NSWE);
         SelectionListener filesTreeColumnSelectionListener = new SelectionListener()
         {
@@ -1305,7 +1305,7 @@ final    Display     display;
         // included list
         label = Widgets.newLabel(tab,"Included:");
         Widgets.layout(label,0,0,TableLayoutData.NS);
-        widgetIncludedPatterns = Widgets.newList(tab,null);
+        widgetIncludedPatterns = Widgets.newList(tab);
         Widgets.layout(widgetIncludedPatterns,0,1,TableLayoutData.NSWE);
 
         // buttons
@@ -1350,7 +1350,7 @@ final    Display     display;
         // excluded list
         label = Widgets.newLabel(tab,"Excluded:");
         Widgets.layout(label,2,0,TableLayoutData.NS);
-        widgetExcludedPatterns = Widgets.newList(tab,null);
+        widgetExcludedPatterns = Widgets.newList(tab);
         Widgets.layout(widgetExcludedPatterns,2,1,TableLayoutData.NSWE);
 
         // buttons
@@ -1473,7 +1473,7 @@ final    Display     display;
             }
           });
 
-          widgetArchivePartSize = Widgets.newCombo(composite,null);
+          widgetArchivePartSize = Widgets.newCombo(composite);
           widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","256M","512M","1G","2G"});
           Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W);
           widgetArchivePartSize.addModifyListener(new ModifyListener()
@@ -1555,7 +1555,7 @@ final    Display     display;
         composite = Widgets.newComposite(tab,SWT.NONE);
         Widgets.layout(composite,1,1,TableLayoutData.WE);
         {
-          combo = Widgets.newOptionMenu(composite,null);
+          combo = Widgets.newOptionMenu(composite);
           combo.setItems(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
           Widgets.layout(combo,0,0,TableLayoutData.W);
           combo.addSelectionListener(new SelectionListener()
@@ -1581,7 +1581,7 @@ throw new Error("NYI");
         composite = Widgets.newComposite(tab,SWT.NONE);
         Widgets.layout(composite,2,1,TableLayoutData.WE);
         {
-          combo = Widgets.newOptionMenu(composite,null);
+          combo = Widgets.newOptionMenu(composite);
           combo.setItems(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
           Widgets.layout(combo,0,0,TableLayoutData.W);
           combo.addSelectionListener(new SelectionListener()
@@ -1664,7 +1664,7 @@ throw new Error("NYI");
 
           label = Widgets.newLabel(composite,"Public key:");
           Widgets.layout(label,0,3,TableLayoutData.W);
-          widgetCryptPublicKeyFileName = Widgets.newText(composite,null);
+          widgetCryptPublicKeyFileName = Widgets.newText(composite);
           Widgets.layout(widgetCryptPublicKeyFileName,0,4,TableLayoutData.WE);
           widgetCryptPublicKeyFileName.addModifyListener(new ModifyListener()
           {
@@ -1820,7 +1820,7 @@ throw new Error("NYI");
             }
           });
 
-          widgetCryptPassword1 = Widgets.newPassword(composite,null);
+          widgetCryptPassword1 = Widgets.newPassword(composite);
           Widgets.layout(widgetCryptPassword1,0,3,TableLayoutData.WE);
           widgetCryptPassword1.addModifyListener(new ModifyListener()
           {
@@ -1871,7 +1871,7 @@ throw new Error("NYI");
           label = Widgets.newLabel(composite,"Repeat:");
           Widgets.layout(label,0,4,TableLayoutData.W);
 
-          widgetCryptPassword2 = Widgets.newPassword(composite,null);
+          widgetCryptPassword2 = Widgets.newPassword(composite);
           Widgets.layout(widgetCryptPassword2,0,5,TableLayoutData.WE);
           widgetCryptPassword2.addModifyListener(new ModifyListener()
           {
@@ -2009,7 +2009,7 @@ throw new Error("NYI");
         composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
         Widgets.layout(composite,6,1,TableLayoutData.WE);
         {
-          text = Widgets.newText(composite,null);
+          text = Widgets.newText(composite);
           Widgets.layout(text,0,0,TableLayoutData.WE);
           text.addModifyListener(new ModifyListener()
           {
@@ -2075,7 +2075,7 @@ throw new Error("NYI");
         composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
         Widgets.layout(composite,7,1,TableLayoutData.WE);
         {
-          text = Widgets.newText(composite,null);
+          text = Widgets.newText(composite);
           Widgets.layout(text,0,0,TableLayoutData.WE);
           text.addModifyListener(new ModifyListener()
           {
@@ -2332,7 +2332,7 @@ throw new Error("NYI");
             label = Widgets.newLabel(composite,"User:");
             Widgets.layout(label,0,0,TableLayoutData.W);
 
-            text = Widgets.newText(composite,null);
+            text = Widgets.newText(composite);
             Widgets.layout(text,0,1,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -2375,7 +2375,7 @@ throw new Error("NYI");
             label = Widgets.newLabel(composite,"Host:");
             Widgets.layout(label,0,2,TableLayoutData.W);
 
-            text = Widgets.newText(composite,null);
+            text = Widgets.newText(composite);
             Widgets.layout(text,0,3,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -2418,7 +2418,7 @@ throw new Error("NYI");
             label = Widgets.newLabel(composite,"Password:");
             Widgets.layout(label,0,4,TableLayoutData.W);
 
-            text = Widgets.newPassword(composite,null);
+            text = Widgets.newPassword(composite);
             Widgets.layout(text,0,5,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -2540,7 +2540,7 @@ throw new Error("NYI");
             label = Widgets.newLabel(subComposite,"Login:");
             Widgets.layout(label,0,0,TableLayoutData.W);
 
-            text = Widgets.newText(subComposite,null);
+            text = Widgets.newText(subComposite);
             Widgets.layout(text,0,1,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -2583,7 +2583,7 @@ throw new Error("NYI");
             label = Widgets.newLabel(subComposite,"Host:");
             Widgets.layout(label,0,2,TableLayoutData.W);
 
-            text = Widgets.newText(subComposite,null);
+            text = Widgets.newText(subComposite);
             Widgets.layout(text,0,3,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -2626,7 +2626,7 @@ throw new Error("NYI");
             label = Widgets.newLabel(subComposite,"Port:");
             Widgets.layout(label,0,4,TableLayoutData.W);
 
-            text = Widgets.newText(subComposite,null);
+            text = Widgets.newText(subComposite);
             Widgets.layout(text,0,5,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -2712,7 +2712,7 @@ throw new Error("NYI");
 
           label = Widgets.newLabel(composite,"SSH public key:");
           Widgets.layout(label,1,0,TableLayoutData.W);
-          text = Widgets.newText(composite,null);
+          text = Widgets.newText(composite);
           Widgets.layout(text,1,1,TableLayoutData.WE);
           text.addModifyListener(new ModifyListener()
           {
@@ -2756,7 +2756,7 @@ throw new Error("NYI");
 
           label = Widgets.newLabel(composite,"SSH private key:");
           Widgets.layout(label,2,0,TableLayoutData.W);
-          text = Widgets.newText(composite,null);
+          text = Widgets.newText(composite);
           Widgets.layout(text,2,1,TableLayoutData.WE);
           text.addModifyListener(new ModifyListener()
           {
@@ -2875,7 +2875,7 @@ throw new Error("NYI");
           label = Widgets.newLabel(composite,"Device:");
           Widgets.layout(label,0,0,TableLayoutData.W);
 
-          text = Widgets.newText(composite,null);
+          text = Widgets.newText(composite);
           Widgets.layout(text,0,1,TableLayoutData.WE);
           text.addModifyListener(new ModifyListener()
           {
@@ -2920,7 +2920,7 @@ throw new Error("NYI");
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
-            combo = Widgets.newCombo(subComposite,null);
+            combo = Widgets.newCombo(subComposite);
             combo.setItems(new String[]{"2G","3G","3.6G","4G"});
             Widgets.layout(combo,0,0,TableLayoutData.W);
             combo.addModifyListener(new ModifyListener()
@@ -3055,7 +3055,7 @@ throw new Error("NYI");
         {
           label = Widgets.newLabel(composite,"Device:");
           Widgets.layout(label,0,0,TableLayoutData.W);
-          text = Widgets.newText(composite,null);
+          text = Widgets.newText(composite);
           Widgets.layout(text,0,1,TableLayoutData.WE);
           text.addModifyListener(new ModifyListener()
           {
@@ -3100,7 +3100,7 @@ throw new Error("NYI");
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
-            combo = Widgets.newCombo(subComposite,null);
+            combo = Widgets.newCombo(subComposite);
             combo.setItems(new String[]{"2G","3G","3.6G","4G"});
             Widgets.layout(combo,0,0,TableLayoutData.W);
             combo.addModifyListener(new ModifyListener()
@@ -3186,7 +3186,7 @@ throw new Error("NYI");
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // list
-        widgetScheduleList = Widgets.newTable(tab,SWT.NONE,this);
+        widgetScheduleList = Widgets.newTable(tab,SWT.NONE);
         Widgets.layout(widgetScheduleList,0,0,TableLayoutData.NSWE);
         widgetScheduleList.addListener(SWT.MouseDoubleClick,new Listener()
         {
@@ -3498,7 +3498,7 @@ throw new Error("NYI");
       label = Widgets.newLabel(composite,"Name:");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      widgetJobName = Widgets.newText(composite,null);
+      widgetJobName = Widgets.newText(composite);
       Widgets.layout(widgetJobName,0,1,TableLayoutData.WE);
     }
 
@@ -3594,7 +3594,7 @@ throw new Error("NYI");
       label = Widgets.newLabel(composite,"Name:");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      widgetJobName = Widgets.newText(composite,null);
+      widgetJobName = Widgets.newText(composite);
       Widgets.layout(widgetJobName,0,1,TableLayoutData.WE);
     }
 
@@ -3699,7 +3699,7 @@ throw new Error("NYI");
       label = Widgets.newLabel(composite,"New name:");
       Widgets.layout(label,1,0,TableLayoutData.W);
 
-      widgetNewJobName = Widgets.newText(composite,null);
+      widgetNewJobName = Widgets.newText(composite);
       Widgets.layout(widgetNewJobName,1,1,TableLayoutData.WE);
     }
 
@@ -4237,7 +4237,7 @@ throw new Error("NYI");
       label = Widgets.newLabel(composite,"Pattern:");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      widgetPattern = Widgets.newText(composite,null);
+      widgetPattern = Widgets.newText(composite);
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
     }
 
@@ -4470,11 +4470,18 @@ throw new Error("NYI");
 
     private static StorageNamePartTransfer instance = new StorageNamePartTransfer();
 
+    /** get storage name part transfer instance
+     * @return storage transfer instance
+     */
     public static StorageNamePartTransfer getInstance()
     {
       return instance;
     }
 
+    /** convert Java object to native data
+     * @param object object to convert
+     * @param transferData transfer data 
+     */
     public void javaToNative(Object object, TransferData transferData)
     {
       if (!validate(object) || !isSupportedType(transferData))
@@ -4501,7 +4508,11 @@ throw new Error("NYI");
       }
    }
 
-   public Object nativeToJava (TransferData transferData)
+  /** get native data from transfer and convert to object
+   * @param transferData transfer data
+   * @return object
+   */
+   public Object nativeToJava(TransferData transferData)
    {
      if (isSupportedType(transferData))
      {
@@ -4511,7 +4522,7 @@ throw new Error("NYI");
        StorageNamePart storageNamePart = null;
        try
        {
-         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream (buffer);
+         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(buffer);
          ObjectInputStream inputStream = new ObjectInputStream(byteArrayInputStream);
          storageNamePart = (StorageNamePart)inputStream.readObject();
          inputStream.close ();
@@ -4529,18 +4540,27 @@ throw new Error("NYI");
      }
 
      return null;
-    }
+   }
 
+    /** get type names
+     * @return names
+     */
     protected String[] getTypeNames()
     {
       return new String[]{NAME};
     }
 
+    /** get ids
+     * @return ids
+     */
     protected int[] getTypeIds()
     {
       return new int[]{ID};
     }
 
+    /** validate data
+     * @return true iff data OK, false otherwise
+     */
     protected boolean validate(Object object)
     {
       return (object != null && (object instanceof StorageNamePart));
@@ -4601,7 +4621,7 @@ throw new Error("NYI");
 
         widgetFileName = Widgets.newCanvas(composite,SWT.BORDER);
         widgetFileName.setBackground(composite.getDisplay().getSystemColor(SWT.COLOR_WHITE));
-        Widgets.layout(widgetFileName,0,1,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,24);
+        Widgets.layout(widgetFileName,0,1,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,16);
         widgetFileName.addMouseTrackListener(new MouseTrackListener()
         {
           public void mouseEnter(MouseEvent mouseEvent)
@@ -4763,7 +4783,7 @@ throw new Error("NYI");
         // column 1
         addDragAndDrop(composite,"-","text '-'",                          0, 0);
         addDragAndDrop(composite,".bar","text '.bar'",                    1, 0);
-        widgetText = Widgets.newText(composite,null);
+        widgetText = Widgets.newText(composite);
         addDragAndDrop(composite,"Text",widgetText,                       2, 0);
 
         addDragAndDrop(composite,"#","part number 1 digit",              4, 0);
@@ -5408,18 +5428,18 @@ throw new Error("NYI");
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,0,1,TableLayoutData.WE);
       {
-        widgetYear = Widgets.newOptionMenu(subComposite,null);
+        widgetYear = Widgets.newOptionMenu(subComposite);
         widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015"});
         widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
         if (widgetYear.getText().equals("")) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);
 
-        widgetMonth = Widgets.newOptionMenu(subComposite,null);
+        widgetMonth = Widgets.newOptionMenu(subComposite);
         widgetMonth.setItems(new String[]{"*","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
         widgetMonth.setText(scheduleData.getMonth()); if (widgetMonth.getText().equals("")) widgetMonth.setText("*");
         Widgets.layout(widgetMonth,0,1,TableLayoutData.W);
 
-        widgetDay = Widgets.newOptionMenu(subComposite,null);
+        widgetDay = Widgets.newOptionMenu(subComposite);
         widgetDay.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
         widgetDay.setText(scheduleData.getDay()); if (widgetDay.getText().equals("")) widgetDay.setText("*");
         Widgets.layout(widgetDay,0,2,TableLayoutData.W);
@@ -5466,12 +5486,12 @@ throw new Error("NYI");
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,2,1,TableLayoutData.WE);
       {
-        widgetHour = Widgets.newOptionMenu(subComposite,null);
+        widgetHour = Widgets.newOptionMenu(subComposite);
         widgetHour.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
         widgetHour.setText(scheduleData.getHour()); if (widgetHour.getText().equals("")) widgetHour.setText("*");
         Widgets.layout(widgetHour,0,0,TableLayoutData.W);
 
-        widgetMinute = Widgets.newOptionMenu(subComposite,null);
+        widgetMinute = Widgets.newOptionMenu(subComposite);
         widgetMinute.setItems(new String[]{"*","0","5","10","15","20","30","35","40","45","50","55"});
         widgetMinute.setText(scheduleData.getMinute()); if (widgetMinute.getText().equals("")) widgetMinute.setText("*");
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
