@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -4621,7 +4621,7 @@ throw new Error("NYI");
 
         widgetFileName = Widgets.newCanvas(composite,SWT.BORDER);
         widgetFileName.setBackground(composite.getDisplay().getSystemColor(SWT.COLOR_WHITE));
-        Widgets.layout(widgetFileName,0,1,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,16);
+        Widgets.layout(widgetFileName,0,1,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,Widgets.getTextHeight(widgetFileName)+5);
         widgetFileName.addMouseTrackListener(new MouseTrackListener()
         {
           public void mouseEnter(MouseEvent mouseEvent)
