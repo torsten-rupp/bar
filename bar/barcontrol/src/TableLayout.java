@@ -1,3 +1,14 @@
+/***********************************************************************\
+*
+* $Source: /home/torsten/cvs/bar/barcontrol/src/TableLayout.java,v $
+* $Revision: 1.9 $
+* $Author: torsten $
+* Contents:
+* Systems:
+*
+\***********************************************************************/
+
+/****************************** Imports ********************************/
 import java.lang.Math;
 import java.util.Arrays;
 
@@ -8,8 +19,12 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Layout;
 
+/****************************** Classes ********************************/
+
 public class TableLayout extends Layout
 {
+  // --------------------------- constants --------------------------------
+
   // layout constants
   public final static int NONE    = 0;
 
@@ -26,6 +41,8 @@ public class TableLayout extends Layout
   public final static int NSWE    = N|S|W|E;
 
   public final static int DEFAULT = 0;
+
+  // --------------------------- variables --------------------------------
 
   // weight of rows for shrinking/expanding
   public double rowWeight           = 0.0;
@@ -58,6 +75,10 @@ public class TableLayout extends Layout
 
   private final boolean debug = false;
 //  private final boolean debug = true;
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
 
   /** create table layout
    */
@@ -297,6 +318,8 @@ public class TableLayout extends Layout
     if (maxWidth  != SWT.DEFAULT) width  = Math.min(width, maxWidth );
     if (maxHeight != SWT.DEFAULT) height = Math.min(height,maxHeight);
     Point size = new Point(marginLeft+width+marginRight,marginTop+height+marginBottom);
+    if (size.x <= 0) size.x = 1;
+    if (size.y <= 0) size.y = 1;
 if (debug) System.err.println("computeSize done: "+composite+" size="+size+" #children="+children.length);
 if (debug) for (int i=0;i<children.length;i++) System.err.println("  "+children[i]+" "+children[i].computeSize(SWT.DEFAULT,SWT.DEFAULT,true));
 //Dprintf.dprintf("compu com=%s w=%d h=%d\n",composite,marginLeft+width+marginRight,marginTop+height+marginBottom);
@@ -406,15 +429,21 @@ if (debug) { System.err.print("column size: ");for (int i = 0; i < columns; i++)
     /* calculate row/column sizes sum */
     rowSizesSum    = new int[rows   ];
     columnSizesSum = new int[columns];
-    rowSizesSum[0] = 0;
-    for (int i = 1; i < rows; i++)
+    if (rows > 0)
     {
-      rowSizesSum[i] = rowSizesSum[i-1]+rowSizes[i-1]+horizontalSpacing;
+      rowSizesSum[0] = 0;
+      for (int i = 1; i < rows; i++)
+      {
+        rowSizesSum[i] = rowSizesSum[i-1]+rowSizes[i-1]+horizontalSpacing;
+      }
     }
-    columnSizesSum[0] = 0;
-    for (int i = 1; i < columns; i++)
+    if (columns > 0)
     {
-      columnSizesSum[i] = columnSizesSum[i-1]+columnSizes[i-1]+verticalSpacing;
+      columnSizesSum[0] = 0;
+      for (int i = 1; i < columns; i++)
+      {
+        columnSizesSum[i] = columnSizesSum[i-1]+columnSizes[i-1]+verticalSpacing;
+      }
     }
 
 if (debug) System.err.println("layout:");
@@ -439,13 +468,13 @@ if (debug) System.err.println("layout:");
       if      ((tableLayoutData.style & TableLayoutData.NS) == TableLayoutData.S) childY += (childHeight < height)?height-childHeight:0;
       else if ((tableLayoutData.style & TableLayoutData.NS) == 0) childY += (childHeight < height)?(height-childHeight)/2:0;
 if (debug) System.err.println(String.format("  %-30s: size=(%4d,%4d) row/col=(%2d,%2d): %4d,%4d+%4dx%4d (%4d,%4d)-(%4d,%4d)",
-                                 children[i],
-                                 sizes[i].x,sizes[i].y,
-                                 tableLayoutData.row,tableLayoutData.column,
-                                 childX,childY,childWidth,childHeight,
-                                 childX,childY,childX+childWidth,childY+childHeight
-                                )
-                  );
+                                            children[i],
+                                            sizes[i].x,sizes[i].y,
+                                            tableLayoutData.row,tableLayoutData.column,
+                                            childX,childY,childWidth,childHeight,
+                                            childX,childY,childX+childWidth,childY+childHeight
+                                           )
+                             );
 //"  "+children[i]+" size=("+sizes[i].x+","+sizes[i].y+") row="+tableLayoutData.row+" column="+tableLayoutData.column+": "+childX+","+childY+"+"+childWidth+"x"+childHeight+" ("+childX+","+childY+")-("+(childX+childWidth)+","+(childY+childHeight)+")");
       if (!tableLayoutData.exclude)  children[i].setBounds(childX,childY,childWidth,childHeight);
     }
@@ -498,7 +527,7 @@ if (debug) for (int i = 0; i < sizes.length; i++)
     }
 if (debug) System.err.println("rows="+rows+" columns="+columns);
 
-    // get expansion flags
+    // get row/column expansion flags
     rowExpandFlags    = new boolean[rows   ];
     columnExpandFlags = new boolean[columns];
     for (int i = 0; i < children.length; i++)

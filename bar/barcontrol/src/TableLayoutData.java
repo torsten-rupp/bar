@@ -1,7 +1,24 @@
+/***********************************************************************\
+*
+* $Source: /home/torsten/cvs/bar/barcontrol/src/TableLayoutData.java,v $
+* $Revision: 1.5 $
+* $Author: torsten $
+* Contents:
+* Systems:
+*
+\***********************************************************************/
+
+/****************************** Imports ********************************/
 import org.eclipse.swt.SWT;
+
+/****************************** Classes ********************************/
+
+/* end of file */
 
 public class TableLayoutData
 {
+  // --------------------------- constants --------------------------------
+
   public final static int NONE    = TableLayout.NONE;
 
   public final static int N       = TableLayout.N;
@@ -18,6 +35,8 @@ public class TableLayoutData
 
   public final static int DEFAULT = TableLayout.DEFAULT;
 
+  // --------------------------- variables --------------------------------
+
   // true iff widget should be exclued (not drawn)
   public int     minWidth  = SWT.DEFAULT;
   public int     minHeight = SWT.DEFAULT;
@@ -29,6 +48,10 @@ public class TableLayoutData
   protected int style;
   protected int rowSpawn,columnSpawn;
   protected int padX,padY;
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
 
   /** create table layout data
    * @param row,column row/column (0..n)
