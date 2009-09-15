@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/ProgressBar.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: progress bar widget
 * Systems: all
@@ -30,13 +30,18 @@ class ProgressBar extends Canvas
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
-  Color  barColor;
-  Color  barSetColor;
-  double minimum;
-  double maximum;
-  double value;
-  Point  textSize;
-  String text;
+  private double minimum;
+  private double maximum;
+  private double value;
+  private Point  textSize;
+  private String text;
+
+  private Color  colorBlack;
+  private Color  colorWhite;
+  private Color  colorNormalShadow;
+  private Color  colorHighlightShadow;
+  private Color  colorBar;
+  private Color  colorBarSet;
 
   // ------------------------ native functions ----------------------------
 
@@ -50,8 +55,12 @@ class ProgressBar extends Canvas
   {
     super(composite,SWT.NONE);
 
-    barColor    = getDisplay().getSystemColor(SWT.COLOR_WHITE);
-    barSetColor = new Color(null,0xAD,0xD8,0xE6);
+    this.colorBlack           = getDisplay().getSystemColor(SWT.COLOR_BLACK);
+    this.colorWhite           = getDisplay().getSystemColor(SWT.COLOR_WHITE);
+    this.colorNormalShadow    = getDisplay().getSystemColor(SWT.COLOR_WIDGET_NORMAL_SHADOW);
+    this.colorHighlightShadow = getDisplay().getSystemColor(SWT.COLOR_WIDGET_HIGHLIGHT_SHADOW);
+    this.colorBar             = getDisplay().getSystemColor(SWT.COLOR_WHITE);
+    this.colorBarSet          = new Color(null,0xAD,0xD8,0xE6);
 
     addDisposeListener(new DisposeListener()
     {
@@ -84,8 +93,8 @@ class ProgressBar extends Canvas
     width  = 0;
     height = 0;
 
-    width  = textSize.x;
-    height = textSize.y;
+    width  = 2+textSize.x+2;
+    height = 2+textSize.y+2;
     if (wHint != SWT.DEFAULT) width  = wHint;
     if (hHint != SWT.DEFAULT) height = hHint;         
 
@@ -130,8 +139,7 @@ class ProgressBar extends Canvas
    */
   private void widgetDisposed(DisposeEvent disposeEvent)
   {
-    barSetColor.dispose();
-    barColor.dispose();
+    colorBarSet.dispose();
   }
 
   /** paint progress bar
@@ -151,22 +159,23 @@ class ProgressBar extends Canvas
     h = bounds.height;
 
     // shadow
-    gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-    gc.drawLine(x,y,  x+w-1,y    );
-    gc.drawLine(x,y+1,x,    y+h-1);
+    gc.setForeground(colorNormalShadow);
+    gc.drawRectangle(x+0,y+0,w-2,h-2);
 
-    gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_WHITE));
-    gc.drawLine(x+1,  y+h-1,x+w-1,y+h-1);
-    gc.drawLine(x+w-1,y+1,  x+w-1,y+h-1);
+    gc.setForeground(colorHighlightShadow);
+    gc.drawLine(x+1  ,y+1  ,x+w-3,y+1  );
+    gc.drawLine(x+1  ,y+2  ,x+1  ,y+h-3);
+    gc.drawLine(x+0  ,y+h-1,x+w-1,y+h-1);
+    gc.drawLine(x+w-1,y+0  ,x+w-1,y+h-2);
 
     // draw bar
-    gc.setBackground(barColor);
-    gc.fillRectangle(x+1,y+1,w-2,h-2);
-    gc.setBackground(barSetColor);
-    gc.fillRectangle(x+1,y+1,(int)((double)w*value)-2,h-2);
+    gc.setBackground(colorBar);
+    gc.fillRectangle(x+2,y+2,w-4,h-4);
+    gc.setBackground(colorBarSet);
+    gc.fillRectangle(x+2,y+2,(int)((double)(w-4)*value),h-4);
 
     // draw percentage text
-    gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_BLACK));
+    gc.setForeground(colorBlack);
     gc.drawString(text,(w-textSize.x)/2,(h-textSize.y)/2,true);
   }
 }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Pane.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: pane widget
 * Systems: all
@@ -9,20 +9,21 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import org.eclipse.swt.events.DisposeEvent;
+import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.MouseMoveListener;
+import org.eclipse.swt.events.MouseTrackListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
-
-import org.eclipse.swt.widgets.Listener;
-import org.eclipse.swt.widgets.Event;
 
 /****************************** Classes ********************************/
 
@@ -39,13 +40,20 @@ class Pane extends Composite
   private final int OFFSET_Y      = 0;
 
   // --------------------------- variables --------------------------------
-  int     style;                 // style flags
-  Pane    prevPane;              // previous pane or null
-  Pane    nextPane;              // next pane or null
-  int     delta;                 // current pane delta
-  boolean dragFlag;              // TRUE iff drag slider in progress
-  int     dragStart;             // drag start value
-  int     dragDelta;             // current drag delta value
+  private int     style;                 // style flags
+  private Pane    prevPane;              // previous pane or null
+  private Pane    nextPane;              // next pane or null
+  private int     delta;                 // current pane delta
+  private boolean dragFlag;              // TRUE iff drag slider in progress
+  private int     dragStart;             // drag start value
+  private int     dragDelta;             // current drag delta value
+
+  private Color   colorGray;
+  private Color   colorWhite;
+  private Color   colorNormalShadow;
+  private Color   colorHighlightShadow;
+
+  private Cursor  cursor;
 
   // ------------------------ native functions ----------------------------
 
@@ -60,11 +68,18 @@ class Pane extends Composite
     super(parent,SWT.NONE);
 
     // initialize variables
-    this.style    = style;
-    this.prevPane = prevPane;
-    this.nextPane = null;
-    this.delta    = 0;
-    this.dragFlag = false;
+    this.style                = style;
+    this.prevPane             = prevPane;
+    this.nextPane             = null;
+    this.delta                = 0;
+    this.dragFlag             = false;
+
+    this.colorWhite           = getDisplay().getSystemColor(SWT.COLOR_WHITE);
+    this.colorGray            = getDisplay().getSystemColor(SWT.COLOR_GRAY);
+    this.colorNormalShadow    = getDisplay().getSystemColor(SWT.COLOR_WIDGET_NORMAL_SHADOW);
+    this.colorHighlightShadow = getDisplay().getSystemColor(SWT.COLOR_WIDGET_HIGHLIGHT_SHADOW);
+
+    this.cursor               = new Cursor(getDisplay(),SWT.CURSOR_SIZEWE);
    
     // add paint listener
     addPaintListener(new PaintListener()
@@ -75,7 +90,7 @@ class Pane extends Composite
       }
     });
 
-    // add mouse click/drag listeners
+    // add mouse listeners
     addMouseListener(new MouseListener()
     {
       public void mouseDoubleClick(MouseEvent mouseEvent)
@@ -102,6 +117,24 @@ class Pane extends Composite
         pane.dragDelta = 0;
       }
     });
+    addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+        Pane pane = Pane.this;
+
+        setCursor(pane.checkInside(mouseEvent.x,mouseEvent.y)?cursor:null);
+      }
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        Pane pane = Pane.this;
+
+        pane.setCursor(null);
+      }
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
     addMouseMoveListener(new MouseMoveListener()
     {
       public void mouseMove(MouseEvent mouseEvent)
@@ -113,6 +146,10 @@ class Pane extends Composite
         int       n;
         int       min,max;
 
+        // set cursor
+        setCursor(pane.checkInside(mouseEvent.x,mouseEvent.y)?cursor:null);
+
+        // drag
         if (pane.dragFlag)
         {
           size   = pane.computeSize(SWT.DEFAULT,SWT.DEFAULT,false);
@@ -203,6 +240,13 @@ class Pane extends Composite
     return "{pane@"+hashCode()+", "+delta+"}";
   }
 
+  /** free allocated resources
+   * @param disposeEvent dispose event
+   */
+  private void widgetDisposed(DisposeEvent disposeEvent)
+  {
+  }
+
   /** paint slider
    * @param paintEvent paint event
    */
@@ -212,46 +256,71 @@ class Pane extends Composite
     Rectangle bounds;
     int       x,y,w,h;
 
-    if (nextPane != null)
+    if (!isDisposed())
     {
-      gc     = paintEvent.gc;
-      bounds = getBounds();
-      w      = bounds.width;
-      h      = bounds.height;
-
-      if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+      if (nextPane != null)
       {
-        x = w-OFFSET_X-SLIDER_WIDTH;
-        y = h-OFFSET_Y-SLIDER_OFFSET-SLIDER_HEIGHT;
+        gc     = paintEvent.gc;
+        bounds = getBounds();
+        w      = bounds.width;
+        h      = bounds.height;
 
-        // vertical slider
-        gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_WHITE));
-        gc.drawLine(x+SLIDER_WIDTH/2-1,0,x+SLIDER_WIDTH/2-1,h-1);
-        gc.drawLine(x+SLIDER_WIDTH/2-1,0,x+SLIDER_WIDTH/2  ,0  );
-        gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-        gc.drawLine(x+SLIDER_WIDTH/2  ,1,x+SLIDER_WIDTH/2  ,h-1);
+        if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+        {
+          x = w-OFFSET_X-SLIDER_WIDTH;
+          y = h-OFFSET_Y-SLIDER_OFFSET-SLIDER_HEIGHT;
+
+          // vertical slider
+          gc.setForeground(colorHighlightShadow);
+          gc.drawLine(x+SLIDER_WIDTH/2-1,0,x+SLIDER_WIDTH/2-1,h-1);
+          gc.drawLine(x+SLIDER_WIDTH/2-1,0,x+SLIDER_WIDTH/2  ,0  );
+          gc.setForeground(colorNormalShadow);
+          gc.drawLine(x+SLIDER_WIDTH/2  ,1,x+SLIDER_WIDTH/2  ,h-1);
+        }
+        else
+        {
+          x = w-OFFSET_X-SLIDER_OFFSET-SLIDER_WIDTH;
+          y = h-OFFSET_Y-SLIDER_HEIGHT;
+
+          // horizonal slider
+          gc.setForeground(colorHighlightShadow);
+          gc.drawLine(0,y+SLIDER_HEIGHT/2-1,w-1,y+SLIDER_HEIGHT/2-1);
+          gc.drawLine(0,y+SLIDER_HEIGHT/2  ,1  ,y+SLIDER_HEIGHT/2  );
+          gc.setForeground(colorNormalShadow);
+          gc.drawLine(1,y+SLIDER_HEIGHT/2  ,w-1,y+SLIDER_HEIGHT/2  );
+        }
+
+        gc.setForeground(colorWhite);
+        gc.drawLine(x,y,  x+SLIDER_WIDTH,y                );
+        gc.drawLine(x,y+1,x             ,y+SLIDER_HEIGHT-1);
+        gc.setForeground(colorGray);
+        gc.fillRectangle(x+1,y+1,SLIDER_WIDTH-2,SLIDER_HEIGHT-2);
+        gc.setForeground(colorNormalShadow);
+        gc.drawLine(x+SLIDER_WIDTH-1,y+1              ,x+SLIDER_WIDTH-1,y+SLIDER_HEIGHT-1);
+        gc.drawLine(x+1             ,y+SLIDER_HEIGHT-1,x+SLIDER_WIDTH-2,y+SLIDER_HEIGHT-1);
       }
-      else
-      {
-        x = w-OFFSET_X-SLIDER_OFFSET-SLIDER_WIDTH;
-        y = h-OFFSET_Y-SLIDER_HEIGHT;
+    }
+  }
 
-        // horizonal slider
-        gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_WHITE));
-        gc.drawLine(0,y+SLIDER_HEIGHT/2-1,w-1,y+SLIDER_HEIGHT/2-1);
-        gc.drawLine(0,y+SLIDER_HEIGHT/2  ,1  ,y+SLIDER_HEIGHT/2  );
-        gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-        gc.drawLine(1,y+SLIDER_HEIGHT/2  ,w-1,y+SLIDER_HEIGHT/2  );
-      }
+  /** check if x,y is inside slider area
+   * @param x,y coordinates
+   * @return true iff x,y is inside slider area
+   */
+  private boolean checkInside(int x, int y)
+  {
+    Rectangle bounds = getBounds();
 
-      gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_WHITE));
-      gc.drawLine(x,y,  x+SLIDER_WIDTH,y                );
-      gc.drawLine(x,y+1,x             ,y+SLIDER_HEIGHT-1);
-      gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_GRAY));
-      gc.fillRectangle(x+1,y+1,SLIDER_WIDTH-2,SLIDER_HEIGHT-2);
-      gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-      gc.drawLine(x+SLIDER_WIDTH-1,y+1              ,x+SLIDER_WIDTH-1,y+SLIDER_HEIGHT-1);
-      gc.drawLine(x+1             ,y+SLIDER_HEIGHT-1,x+SLIDER_WIDTH-2,y+SLIDER_HEIGHT-1);
+    if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+    {
+      return (   (x >= (bounds.width -OFFSET_X-SLIDER_WIDTH))
+              && (x <= (bounds.width -OFFSET_X             ))
+             );
+    }
+    else
+    {
+      return (   (y >= (bounds.height-OFFSET_Y-SLIDER_HEIGHT))
+              && (y <= (bounds.height-OFFSET_Y              ))
+             );
     }
   }
 }
