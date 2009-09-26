@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Dialogs.java,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -175,14 +175,38 @@ class Dialogs
     close(dialog,null);
   }
 
+  /** show dialog
+   * @param dialog dialog shell
+   */
+  static void show(Shell dialog)
+  {
+    int x,y;
+
+    if (!dialog.isVisible())
+    {
+      // layout
+      dialog.pack();
+
+      // get location for dialog (keep 16/64 pixel away form right/bottom)
+      Display display = dialog.getParent().getDisplay();
+      Point cursorPoint = display.getCursorLocation();
+      Rectangle displayBounds = display.getBounds();
+      Rectangle bounds = dialog.getBounds();
+      x = Math.min(Math.max(cursorPoint.x-bounds.width /2,0),displayBounds.width -bounds.width -16);
+      y = Math.min(Math.max(cursorPoint.y-bounds.height/2,0),displayBounds.height-bounds.height-64);
+      dialog.setLocation(x,y);
+
+      // open dialog
+      dialog.open();
+    }
+  }
+
   /** run dialog
    * @param dialog dialog shell
    * @param escapeKeyReturnValue value to return on ESC key
    */
   static Object run(final Shell dialog, final Object escapeKeyReturnValue)
   {
-    int x,y;
-
     Display display = dialog.getParent().getDisplay();
 
     final Object[] result = new Object[1];
@@ -216,29 +240,18 @@ class Dialogs
     {
       public void handleEvent(Event event)
       {
-        Shell widget = (Shell)event.widget;
-
-        // get dialog result
-        result[0] = widget.getData();
+        // set escape result
+        result[0] = escapeKeyReturnValue;
 
         // close the dialog
         dialog.dispose();
       }
     });
 
-    // pack
-    dialog.pack();
-
-    // get location for dialog (keep 16/64 pixel away form right/bottom)
-    Point cursorPoint = display.getCursorLocation();
-    Rectangle displayBounds = display.getBounds();
-    Rectangle bounds = dialog.getBounds();
-    x = Math.min(Math.max(cursorPoint.x-bounds.width /2,0),displayBounds.width -bounds.width -16);
-    y = Math.min(Math.max(cursorPoint.y-bounds.height/2,0),displayBounds.height-bounds.height-64);
-    dialog.setLocation(x,y);
+    // show
+    show(dialog);
 
     // run dialog
-    dialog.open();
     while (!dialog.isDisposed())
     {
       if (!display.readAndDispatch()) display.sleep();
@@ -290,7 +303,7 @@ class Dialogs
     {
       button = new Button(composite,SWT.CENTER);
       button.setText("Close");
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -357,7 +370,7 @@ class Dialogs
       button = new Button(composite,SWT.CENTER);
       button.setText("Close");
       button.setFocus();
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -373,6 +386,16 @@ class Dialogs
     }
 
     run(dialog);
+  }
+
+  /** error dialog
+   * @param parentShell parent shell
+   * @param format format string
+   * @param arguments optional arguments
+   */
+  static void error(Shell parentShell, String format, Object... arguments)
+  {
+    error(parentShell,String.format(format,arguments));
   }
 
   /** confirmation dialog
@@ -419,7 +442,7 @@ class Dialogs
       button = new Button(composite,SWT.CENTER);
       button.setText(yesText);
       if (defaultValue == true) button.setFocus();
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -436,7 +459,7 @@ class Dialogs
       button = new Button(composite,SWT.CENTER);
       button.setText(noText);
       if (defaultValue == false) button.setFocus();
-      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -634,7 +657,8 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param message message to display
-   * @param text text
+   * @param text1 text
+   * @param text2 text (can be null)
    * @param okText OK button text
    * @param CancelText cancel button text
    * @return password or null on cancel
@@ -781,7 +805,8 @@ class Dialogs
   /** password dialog
    * @param parentShell parent shell
    * @param title title string
-   * @param text text
+   * @param text1 text
+   * @param text2 text (can be null)
    * @return password or null on cancel
    */
   static String password(Shell parentShell, String title, String message, String text1, String text2)
