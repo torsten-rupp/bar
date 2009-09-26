@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -851,7 +851,7 @@ class Widgets
   {
     Label label;
 
-    label = new Label(composite,SWT.LEFT|SWT.BORDER|SWT.WRAP);
+    label = new Label(composite,SWT.LEFT|SWT.BORDER);
     label.setText(text);
 
     return label;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -401,7 +401,7 @@ class TabStatus
     widgetSelectedJob.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,0.0,1.0,0.0,1.0,1.0},4));
     Widgets.layout(widgetSelectedJob,1,0,TableLayoutData.WE);
     {
-      // done files/bytes
+      // done files/bytes, files/s, bytes/s
       label = Widgets.newLabel(widgetSelectedJob,"Done:");
       Widgets.layout(label,0,0,TableLayoutData.W);
       label= Widgets.newNumberView(widgetSelectedJob);
@@ -434,6 +434,47 @@ class TabStatus
           return Units.getByteUnit(variable.getLong());
         }
       });
+
+      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+      Widgets.layout(composite,0,8,TableLayoutData.WE);
+      {
+        label = Widgets.newNumberView(composite);
+        Widgets.layout(label,0,0,TableLayoutData.WE);
+        Widgets.addModifyListener(new WidgetListener(label,filesPerSecond)
+        {
+          public String getString(WidgetVariable variable)
+          {
+            return String.format("%.1f",variable.getDouble());
+          }
+        });
+        label = Widgets.newLabel(composite,"files/s");
+        Widgets.layout(label,0,1,TableLayoutData.W);
+      }
+
+      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+      Widgets.layout(composite,0,9,TableLayoutData.WE);
+      {
+        label = Widgets.newNumberView(composite);
+        Widgets.layout(label,0,0,TableLayoutData.WE);
+        Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
+        {
+          public String getString(WidgetVariable variable)
+          {
+            return Units.getByteSize(variable.getDouble());
+          }
+        });
+        label = Widgets.newLabel(composite,"bytes/s");
+        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
+        Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
+        {
+          public String getString(WidgetVariable variable)
+          {
+            return Units.getByteUnit(variable.getDouble())+"/s";
+          }
+        });
+      }
 
       // stored files/bytes
       label = Widgets.newLabel(widgetSelectedJob,"Stored:");
@@ -575,7 +616,7 @@ class TabStatus
         }
       });
 
-      // total files/bytes, files/s, bytes/s
+      // total files/bytes
       label = Widgets.newLabel(widgetSelectedJob,"Total:");
       Widgets.layout(label,4,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
@@ -608,47 +649,6 @@ class TabStatus
           return Units.getByteUnit(variable.getLong());
         }
       });
-
-      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
-      composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
-      Widgets.layout(composite,4,8,TableLayoutData.WE);
-      {
-        label = Widgets.newNumberView(composite);
-        Widgets.layout(label,0,0,TableLayoutData.WE);
-        Widgets.addModifyListener(new WidgetListener(label,filesPerSecond)
-        {
-          public String getString(WidgetVariable variable)
-          {
-            return String.format("%.1f",variable.getDouble());
-          }
-        });
-        label = Widgets.newLabel(composite,"files/s");
-        Widgets.layout(label,0,1,TableLayoutData.W);
-      }
-
-      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
-      composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
-      Widgets.layout(composite,4,9,TableLayoutData.WE);
-      {
-        label = Widgets.newNumberView(composite);
-        Widgets.layout(label,0,0,TableLayoutData.WE);
-        Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
-        {
-          public String getString(WidgetVariable variable)
-          {
-            return Units.getByteSize(variable.getDouble());
-          }
-        });
-        label = Widgets.newLabel(composite,"bytes/s");
-        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
-        Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
-        {
-          public String getString(WidgetVariable variable)
-          {
-            return Units.getByteUnit(variable.getDouble())+"/s";
-          }
-        });
-      }
 
       // current file, file percentage
       label = Widgets.newLabel(widgetSelectedJob,"File:");
