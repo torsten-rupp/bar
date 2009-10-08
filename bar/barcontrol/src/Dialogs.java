@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Dialogs.java,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -240,8 +240,11 @@ class Dialogs
     {
       public void handleEvent(Event event)
       {
-        // set escape result
-        result[0] = escapeKeyReturnValue;
+        // get result
+        result[0] = dialog.getData();
+
+        // set escape result if no result set
+        if (result[0] == null) result[0] = escapeKeyReturnValue;
 
         // close the dialog
         dialog.dispose();
