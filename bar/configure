@@ -6098,6 +6098,7 @@ cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 #include <gcrypt.h>
 
+
 int
 main ()
 {
@@ -6143,13 +6144,8 @@ fi
 echo "$as_me:$LINENO: result: $ac_cv_type_gcry_cipher_hd_t" >&5
 echo "${ECHO_T}$ac_cv_type_gcry_cipher_hd_t" >&6
 if test $ac_cv_type_gcry_cipher_hd_t = yes; then
-  :
-else
-  { echo "$as_me:$LINENO: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support." >&5
-echo "$as_me: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support." >&2;}; ENABLE_GCRYPT=no
-fi
 
-    LIBRARIES="$LIBRARIES dl"
+        LIBRARIES="$LIBRARIES dl"
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
 echo $ECHO_N "checking for library containing gpg_strerror... $ECHO_C" >&6
@@ -6676,6 +6672,13 @@ _ACEOF
 fi
 
     fi
+
+
+else
+  { echo "$as_me:$LINENO: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support." >&5
+echo "$as_me: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support." >&2;}; ENABLE_GCRYPT=no
+fi
+
   fi
 fi
 

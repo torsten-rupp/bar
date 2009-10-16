@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.31 $
+dnl $Revision: 1.32 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -673,19 +673,26 @@ if test $ENABLE_GCRYPT = "yes"; then
       AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed (local)])
     fi
   else
-    dnl search for installed gpg-error/gcrypt library
-    AC_CHECK_TYPE(gcry_cipher_hd_t,,AC_MSG_WARN([no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support.]); ENABLE_GCRYPT=no,[#include <gcrypt.h>])
-    LIBRARIES="$LIBRARIES dl"
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
-    else
-      AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
-    fi
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
-    else
-      AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
-    fi
+    dnl check if suitable gcrypt is installed
+    AC_CHECK_TYPE(gcry_cipher_hd_t,
+      [
+        dnl search for installed gpg-error/gcrypt library
+        LIBRARIES="$LIBRARIES dl"
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+          AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
+        else
+          AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
+        fi
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+          AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
+        else
+          AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
+        fi
+      ],
+      [
+        AC_MSG_WARN([no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support.]); ENABLE_GCRYPT=no,[#include <gcrypt.h>]
+      ]
+    )
   fi
 fi
 
