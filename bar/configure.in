@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.30 $
+dnl $Revision: 1.31 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -98,6 +98,34 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
+AC_DEFUN([AC_JAVA_DATA_MODEL],
+[
+  AC_CACHE_CHECK(
+    [$JAVA data model],
+    ac_cv_prog_java_data_model,
+    [
+      cat << \EOF > Test.java
+class Test
+{
+  public static void main(String[[]] args)
+  {
+    System.out.println(System.getProperty("sun.arch.data.model"));
+  }
+}
+EOF
+      if AC_TRY_COMMAND($JAVAC $JAVAC_FLAGS Test.java) && test -s Test.class; then
+        ac_cv_prog_java_data_model=`$JAVA $JAVA_FLAGS Test`
+      else
+        ac_cv_prog_java_data_model=32
+      fi
+      AS_VAR_SET($1,$ac_cv_prog_java_data_model)
+
+      rm -f Test.java Test.class
+    ]
+  )
+  AC_PROVIDE([$0])dnl
+])
+
 AC_DEFUN([AC_PROG_EPM_VERSION],
 [
   AC_CACHE_CHECK(
@@ -105,16 +133,16 @@ AC_DEFUN([AC_PROG_EPM_VERSION],
     ac_cv_prog_epm_version,
     [
       if   test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v4\"`"; then
-        AS_VAR_SET(ac_cv_prog_epm_version,4.x)
+        ac_cv_prog_epm_version="4.x"
         EPM_VERSION_4=1
         EPM_VERSION_3=
       elif test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v3\"`"; then
-        AS_VAR_SET(ac_cv_prog_epm_version,3.x)
+        ac_cv_prog_epm_version="3.x"
         EPM_VERSION_4=
         EPM_VERSION_3=1
       else
         AC_MSG_WARN([Cannot detect version of EPM - assume version 4 or newer])
-        AS_VAR_SET(ac_cv_prog_epm_version,4.x)
+        ac_cv_prog_epm_version="4.x"
         EPM_VERSION_4=1
         EPM_VERSION_3=
       fi
@@ -188,6 +216,7 @@ AC_SUBST(JAR)                               dnl jar command
 
 AC_SUBST(JAVA_FLAGS)                        dnl java flags
 AC_SUBST(JAVAC_FLAGS)                       dnl java compiler flags
+AC_SUBST(JAVA_DATA_MODEL)                   dnl java data model (32 or 64)
 
 AC_SUBST(SWT_DIR)                           dnl SWT directory
 AC_SUBST(LAUNCH4J_DIR)                      dnl launch4j directory
@@ -381,6 +410,8 @@ if test "$ENABLE_GUI" = "yes"; then
     ENABLE_GUI="no"
   fi
   AC_PATH_PROGS(LAUNCH4J,launch4j)
+
+  AC_JAVA_DATA_MODEL(JAVA_DATA_MODEL)
 
   JAVA_FLAGS=""
   if test "$ENABLE_DEBUG" = "yes"; then
@@ -847,6 +878,8 @@ AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available in 
 
 AC_CHECK_FUNC(libssh2_channel_send_keepalive,AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,1,[SSH2 has libssh2_channel_send_keepalive()]))
 AC_CHECK_FUNC(libssh2_sftp_seek2,            AC_DEFINE(HAVE_SSH2_SFTP_SEEK2,            1,[SSH2 has libssh2_sftp_seek2() function.]))
+
+AC_CHECK_FUNC(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
 
 dnl -------------------------------- misc ------------------------------
 

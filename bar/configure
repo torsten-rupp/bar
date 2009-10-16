@@ -310,7 +310,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os VERSION_MAJOR VERSION_MINOR PLATFORM ENABLE_DEBUG ENABLE_GUI ENABLE_BZIP2 ENABLE_LZMA ENABLE_GCRYPT ENABLE_FTP ENABLE_SSH ENABLE_TLS HAVE_BZ2 HAVE_LZMA HAVE_GCRYPT INSTALL_DIR INSTALL_BIN_DIR CONFIG_DIR TLS_DIR MAN_DIR CC LD STRIP CC_FLAGS CC_WARN_FLAGS CC_OPTIMIZE CC_DEFINES CC_INCLUDES LD_FLAGS LIBRARY_PATHS LIBRARIES STATIC_LIBRARIES JAVA JAVAC JAR JAVA_FLAGS JAVAC_FLAGS SWT_DIR LAUNCH4J_DIR CERTOOL OPENSSL KEYTOOL TXT2MAN EPM_VERSION_3 EPM_VERSION_4 PERL INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA EPM MD5SUM LAUNCH4J CERTTOOL CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os VERSION_MAJOR VERSION_MINOR PLATFORM ENABLE_DEBUG ENABLE_GUI ENABLE_BZIP2 ENABLE_LZMA ENABLE_GCRYPT ENABLE_FTP ENABLE_SSH ENABLE_TLS HAVE_BZ2 HAVE_LZMA HAVE_GCRYPT INSTALL_DIR INSTALL_BIN_DIR CONFIG_DIR TLS_DIR MAN_DIR CC LD STRIP CC_FLAGS CC_WARN_FLAGS CC_OPTIMIZE CC_DEFINES CC_INCLUDES LD_FLAGS LIBRARY_PATHS LIBRARIES STATIC_LIBRARIES JAVA JAVAC JAR JAVA_FLAGS JAVAC_FLAGS JAVA_DATA_MODEL SWT_DIR LAUNCH4J_DIR CERTOOL OPENSSL KEYTOOL TXT2MAN EPM_VERSION_3 EPM_VERSION_4 PERL INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA EPM MD5SUM LAUNCH4J CERTTOOL CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1883,17 +1883,17 @@ if test "${ac_cv_prog_epm_version+set}" = set; then
 else
 
       if   test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v4\"`"; then
-        ac_cv_prog_epm_version=4.x
+        ac_cv_prog_epm_version="4.x"
         EPM_VERSION_4=1
         EPM_VERSION_3=
       elif test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v3\"`"; then
-        ac_cv_prog_epm_version=3.x
+        ac_cv_prog_epm_version="3.x"
         EPM_VERSION_4=
         EPM_VERSION_3=1
       else
         { echo "$as_me:$LINENO: WARNING: Cannot detect version of EPM - assume version 4 or newer" >&5
 echo "$as_me: WARNING: Cannot detect version of EPM - assume version 4 or newer" >&2;}
-        ac_cv_prog_epm_version=4.x
+        ac_cv_prog_epm_version="4.x"
         EPM_VERSION_4=1
         EPM_VERSION_3=
       fi
@@ -2155,6 +2155,42 @@ fi
 
   test -n "$LAUNCH4J" && break
 done
+
+
+
+  echo "$as_me:$LINENO: checking $JAVA data model" >&5
+echo $ECHO_N "checking $JAVA data model... $ECHO_C" >&6
+if test "${ac_cv_prog_java_data_model+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+      cat << \EOF > Test.java
+class Test
+{
+  public static void main(String[] args)
+  {
+    System.out.println(System.getProperty("sun.arch.data.model"));
+  }
+}
+EOF
+      if { ac_try='$JAVAC $JAVAC_FLAGS Test.java'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } && test -s Test.class; then
+        ac_cv_prog_java_data_model=`$JAVA $JAVA_FLAGS Test`
+      else
+        ac_cv_prog_java_data_model=32
+      fi
+      JAVA_DATA_MODEL=$ac_cv_prog_java_data_model
+
+      rm -f Test.java Test.class
+
+
+fi
+echo "$as_me:$LINENO: result: $ac_cv_prog_java_data_model" >&5
+echo "${ECHO_T}$ac_cv_prog_java_data_model" >&6
 
 
   JAVA_FLAGS=""
@@ -8664,6 +8700,105 @@ _ACEOF
 fi
 
 
+echo "$as_me:$LINENO: checking for backtrace" >&5
+echo $ECHO_N "checking for backtrace... $ECHO_C" >&6
+if test "${ac_cv_func_backtrace+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* Define backtrace to an innocuous variant, in case <limits.h> declares backtrace.
+   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
+#define backtrace innocuous_backtrace
+
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char backtrace (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+
+#undef backtrace
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char backtrace ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_backtrace) || defined (__stub___backtrace)
+choke me
+#else
+char (*f) () = backtrace;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+int
+main ()
+{
+return f != backtrace;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_func_backtrace=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_func_backtrace=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_func_backtrace" >&5
+echo "${ECHO_T}$ac_cv_func_backtrace" >&6
+if test $ac_cv_func_backtrace = yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_BACKTRACE 1
+_ACEOF
+
+fi
+
+
 
 VERSION_MAJOR=`cat version|grep MAJOR|sed 's/.*=//g'`
 VERSION_MINOR=`cat version|grep MINOR|sed 's/.*=//g'`
@@ -9414,6 +9549,7 @@ s,@JAVAC@,$JAVAC,;t t
 s,@JAR@,$JAR,;t t
 s,@JAVA_FLAGS@,$JAVA_FLAGS,;t t
 s,@JAVAC_FLAGS@,$JAVAC_FLAGS,;t t
+s,@JAVA_DATA_MODEL@,$JAVA_DATA_MODEL,;t t
 s,@SWT_DIR@,$SWT_DIR,;t t
 s,@LAUNCH4J_DIR@,$LAUNCH4J_DIR,;t t
 s,@CERTOOL@,$CERTOOL,;t t
