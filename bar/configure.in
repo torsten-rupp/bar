@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.32 $
+dnl $Revision: 1.33 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -128,21 +128,23 @@ EOF
 
 AC_DEFUN([AC_PROG_EPM_VERSION],
 [
-  AC_CACHE_CHECK(
-    [$EPM version],
+  AC_MSG_CHECKING([$EPM version])
+  AC_CACHE_VAL(
     ac_cv_prog_epm_version,
     [
       if   test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v4\"`"; then
+        AC_MSG_RESULT([4.x])
         ac_cv_prog_epm_version="4.x"
         EPM_VERSION_4=1
         EPM_VERSION_3=
       elif test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v3\"`"; then
+        AC_MSG_RESULT([3.x])
         ac_cv_prog_epm_version="3.x"
         EPM_VERSION_4=
         EPM_VERSION_3=1
       else
-        AC_MSG_WARN([Cannot detect version of EPM - assume version 4 or newer])
-        ac_cv_prog_epm_version="4.x"
+        AC_MSG_RESULT([unknown - assume version 4 or newer])
+        ac_cv_prog_epm_version="unknown"
         EPM_VERSION_4=1
         EPM_VERSION_3=
       fi
@@ -372,7 +374,9 @@ if test -z "$INSTALL"; then
   AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
 fi
 AC_PATH_PROGS(EPM,epm)
-AC_PROG_EPM_VERSION
+if test -n "$EPM"; then
+  AC_PROG_EPM_VERSION
+fi
 
 AC_PATH_PROGS(MD5SUM,md5sum)
 
@@ -690,8 +694,10 @@ if test $ENABLE_GCRYPT = "yes"; then
         fi
       ],
       [
-        AC_MSG_WARN([no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support.]); ENABLE_GCRYPT=no,[#include <gcrypt.h>]
-      ]
+        AC_MSG_WARN([no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support.]);
+        ENABLE_GCRYPT=no
+      ],
+      [#include <gcrypt.h>]
     )
   fi
 fi
@@ -868,7 +874,7 @@ for z in $LIBRARY_PATHS ""; do
 done
 for z in $LIBRARIES $STATIC_LIBRARIES ""; do
   if test -n "$z"; then
-    LDFLAGS="$LDFLAGS -l$z"
+    LIBS="$LIBS -l$z"
   fi
 done
 AC_MSG_WARN([$LDFLAGS])
@@ -881,7 +887,7 @@ AC_CHECK_FUNC(gethostbyname_r,AC_DEFINE(HAVE_GETBYHOSTNAME_R,1,[getbyhostname_r(
 AC_CHECK_FUNC(fseeko,,AC_ERROR([function fseeko() is not available]))
 AC_CHECK_FUNC(ftello,,AC_ERROR([function ftello() is not available]))
 
-AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available in zlib.h]))
+AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available]))
 
 AC_CHECK_FUNC(libssh2_channel_send_keepalive,AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,1,[SSH2 has libssh2_channel_send_keepalive()]))
 AC_CHECK_FUNC(libssh2_sftp_seek2,            AC_DEFINE(HAVE_SSH2_SFTP_SEEK2,            1,[SSH2 has libssh2_sftp_seek2() function.]))
@@ -963,6 +969,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  GUI support      : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory    : $SWT_DIR"
                     echo ""
+                    echo "  Packages support : `if test -n "$EPM"; then echo yes; else echo no; fi`"
+                    echo ""
                     echo "  Install directory: $INSTALL_DIR"
                     echo "  Binary directory : $INSTALL_BIN_DIR"
                     echo "  Config directory : $CONFIG_DIR"
@@ -988,6 +996,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    INSTALL_BIN_DIR="$INSTALL_BIN_DIR"
                    CONFIG_DIR="$CONFIG_DIR"
                    TLS_DIR="$TLS_DIR"
+                   EPM="$EPM"
                   )
 
 AC_OUTPUT

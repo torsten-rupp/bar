@@ -1875,34 +1875,39 @@ fi
   test -n "$EPM" && break
 done
 
+if test -n "$EPM"; then
 
   echo "$as_me:$LINENO: checking $EPM version" >&5
 echo $ECHO_N "checking $EPM version... $ECHO_C" >&6
-if test "${ac_cv_prog_epm_version+set}" = set; then
+  if test "${ac_cv_prog_epm_version+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
 
       if   test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v4\"`"; then
+        echo "$as_me:$LINENO: result: 4.x" >&5
+echo "${ECHO_T}4.x" >&6
         ac_cv_prog_epm_version="4.x"
         EPM_VERSION_4=1
         EPM_VERSION_3=
       elif test -n "`$EPM --version 2>/dev/null | grep \"ESP Package Manager v3\"`"; then
+        echo "$as_me:$LINENO: result: 3.x" >&5
+echo "${ECHO_T}3.x" >&6
         ac_cv_prog_epm_version="3.x"
         EPM_VERSION_4=
         EPM_VERSION_3=1
       else
-        { echo "$as_me:$LINENO: WARNING: Cannot detect version of EPM - assume version 4 or newer" >&5
-echo "$as_me: WARNING: Cannot detect version of EPM - assume version 4 or newer" >&2;}
-        ac_cv_prog_epm_version="4.x"
+        echo "$as_me:$LINENO: result: unknown - assume version 4 or newer" >&5
+echo "${ECHO_T}unknown - assume version 4 or newer" >&6
+        ac_cv_prog_epm_version="unknown"
         EPM_VERSION_4=1
         EPM_VERSION_3=
       fi
 
 
 fi
-echo "$as_me:$LINENO: result: $ac_cv_prog_epm_version" >&5
-echo "${ECHO_T}$ac_cv_prog_epm_version" >&6
 
+
+fi
 
 for ac_prog in md5sum
 do
@@ -6145,9 +6150,9 @@ echo "$as_me:$LINENO: result: $ac_cv_type_gcry_cipher_hd_t" >&5
 echo "${ECHO_T}$ac_cv_type_gcry_cipher_hd_t" >&6
 if test $ac_cv_type_gcry_cipher_hd_t = yes; then
 
-        LIBRARIES="$LIBRARIES dl"
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
+                LIBRARIES="$LIBRARIES dl"
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+          echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
 echo $ECHO_N "checking for library containing gpg_strerror... $ECHO_C" >&6
 if test "${ac_cv_search_gpg_strerror+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -6277,8 +6282,8 @@ _ACEOF
 
 fi
 
-    else
-      echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
+        else
+          echo "$as_me:$LINENO: checking for library containing gpg_strerror" >&5
 echo $ECHO_N "checking for library containing gpg_strerror... $ECHO_C" >&6
 if test "${ac_cv_search_gpg_strerror+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -6408,9 +6413,9 @@ _ACEOF
 
 fi
 
-    fi
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      echo "$as_me:$LINENO: checking for library containing gcry_check_version" >&5
+        fi
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+          echo "$as_me:$LINENO: checking for library containing gcry_check_version" >&5
 echo $ECHO_N "checking for library containing gcry_check_version... $ECHO_C" >&6
 if test "${ac_cv_search_gcry_check_version+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -6540,8 +6545,8 @@ _ACEOF
 
 fi
 
-    else
-      echo "$as_me:$LINENO: checking for library containing gcry_check_version" >&5
+        else
+          echo "$as_me:$LINENO: checking for library containing gcry_check_version" >&5
 echo $ECHO_N "checking for library containing gcry_check_version... $ECHO_C" >&6
 if test "${ac_cv_search_gcry_check_version+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -6671,12 +6676,14 @@ _ACEOF
 
 fi
 
-    fi
-
+        fi
 
 else
-  { echo "$as_me:$LINENO: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support." >&5
-echo "$as_me: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support." >&2;}; ENABLE_GCRYPT=no
+
+        { echo "$as_me:$LINENO: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support." >&5
+echo "$as_me: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4 needed. Disabled gcrypt support." >&2;};
+        ENABLE_GCRYPT=no
+
 fi
 
   fi
@@ -7975,7 +7982,7 @@ for z in $LIBRARY_PATHS ""; do
 done
 for z in $LIBRARIES $STATIC_LIBRARIES ""; do
   if test -n "$z"; then
-    LDFLAGS="$LDFLAGS -l$z"
+    LIBS="$LIBS -l$z"
   fi
 done
 { echo "$as_me:$LINENO: WARNING: $LDFLAGS" >&5
@@ -8500,8 +8507,8 @@ echo "${ECHO_T}$ac_cv_func_zlibVersion" >&6
 if test $ac_cv_func_zlibVersion = yes; then
   :
 else
-  { { echo "$as_me:$LINENO: error: function zlibVersion() is not available in zlib.h" >&5
-echo "$as_me: error: function zlibVersion() is not available in zlib.h" >&2;}
+  { { echo "$as_me:$LINENO: error: function zlibVersion() is not available" >&5
+echo "$as_me: error: function zlibVersion() is not available" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
@@ -9405,6 +9412,7 @@ ENABLE_DEBUG=$ENABLE_DEBUG
                    INSTALL_BIN_DIR="$INSTALL_BIN_DIR"
                    CONFIG_DIR="$CONFIG_DIR"
                    TLS_DIR="$TLS_DIR"
+                   EPM="$EPM"
 
 
 _ACEOF
@@ -10166,6 +10174,8 @@ echo "$as_me: executing $ac_dest commands" >&6;}
                     echo "  TLS/SSL server   : `if test "$HAVE_GNU_TLS"; then echo yes; else echo no; fi`";
                     echo "  GUI support      : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory    : $SWT_DIR"
+                    echo ""
+                    echo "  Packages support : `if test -n "$EPM"; then echo yes; else echo no; fi`"
                     echo ""
                     echo "  Install directory: $INSTALL_DIR"
                     echo "  Binary directory : $INSTALL_BIN_DIR"
