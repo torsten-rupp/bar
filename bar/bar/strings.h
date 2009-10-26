@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -86,6 +86,7 @@ typedef struct
       { \
         if (((ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data) != (string)->checkSum) \
         { \
+          String_debugPrintCurrentStackTrace(); \
           HALT_INTERNAL_ERROR("Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!",\
                               (string)->checkSum,\
                               string,\
@@ -113,6 +114,14 @@ typedef struct
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
+
+#ifdef __cplusplus
+  extern "C" {
+#endif
+void String_debugPrintCurrentStackTrace(void);
+#ifdef __cplusplus
+  }
+#endif
 
 /***************************** Functions *******************************/
 
@@ -694,7 +703,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 /***********************************************************************\
 * Name   : String_scan
 * Purpose: scan string
-* Input  : string - string
+* Input  : string,s - string
 *          format - format (like scanf)
 *          ...    - optional variables
 * Output : -
@@ -703,11 +712,12 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 \***********************************************************************/
 
 bool String_scan(const String string, ulong index, const char *format, ...);
+bool String_scanCString(const char *s, const char *format, ...);
 
 /***********************************************************************\
 * Name   : String_parse
 * Purpose: parse string
-* Input  : string - string
+* Input  : string,s - string
 *          format - format (like scanf)
 *          ...    - optional variables
 * Output : nextIndex - index of next character in string not parsed (can
@@ -716,7 +726,7 @@ bool String_scan(const String string, ulong index, const char *format, ...);
 * Notes  : extended scan-function:
 *            - match also specified text
 *            - %<n>s will return max. <n-1> characters and always add
-*              all \0 at the end of the string
+*              a \0 at the end of the string
 *            - %s and %S are parsed as strings which could be enclosed
 *              in "..." or '...'
 *            - % s and % S parse rest of string (including spaces)
@@ -724,6 +734,7 @@ bool String_scan(const String string, ulong index, const char *format, ...);
 \***********************************************************************/
 
 bool String_parse(const String string, ulong index, const char *format, ulong *nextIndex, ...);
+bool String_parseCString(const char *s, const char *format, ulong *nextIndex, ...);
 
 /***********************************************************************\
 * Name   : String_match, String_matchCString
@@ -782,15 +793,15 @@ char* String_toCString(const String string);
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name   : String_debug
-* Purpose: string debug function: output not deallocated strings
+* Name   : String_debugInit
+* Purpose: init string debug functions
 * Input  : -
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : called automatically
 \***********************************************************************/
 
-void String_debug(void);
+void String_debugInit(void);
 
 /***********************************************************************\
 * Name   : String_debugDone
@@ -802,6 +813,28 @@ void String_debug(void);
 \***********************************************************************/
 
 void String_debugDone(void);
+
+/***********************************************************************\
+* Name   : String_debug
+* Purpose: string debug function: output not deallocated strings
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void String_debug(void);
+
+/***********************************************************************\
+* Name   : String_debugPrintCurrentStackTrace
+* Purpose: print C stack trace
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void String_debugPrintCurrentStackTrace(void);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

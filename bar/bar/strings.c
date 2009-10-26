@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -11,12 +11,17 @@
 #define __STRINGS_IMPLEMENATION__
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 #include <sys/types.h>
 #include <regex.h>
+#ifdef HAVE_BACKTRACE
+  #include <execinfo.h>
+#endif
 #include <assert.h>
 
 #include "global.h"
@@ -91,8 +96,16 @@ typedef struct
 
     const char      *fileName;
     ulong           lineNb;
-    const char      *prevFileName;
-    ulong           prevLineNb;
+    #ifdef HAVE_BACKTRACE
+      void *stackTrace[16];
+      int  stackTraceSize;
+    #endif /* HAVE_BACKTRACE */
+    const char      *deleteFileName;
+    ulong           deleteLineNb;
+    #ifdef HAVE_BACKTRACE
+      void *deleteStackTrace[16];
+      int  deleteStackTraceSize;
+    #endif /* HAVE_BACKTRACE */
     struct __String *string;
   } DebugStringNode;
 
@@ -123,17 +136,37 @@ typedef struct
   extern "C" {
 #endif
 
-#ifndef NDEBUG
-LOCAL void debugStringInit(void)
+#if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
+/***********************************************************************\
+* Name   : String_printFunctionNames
+* Purpose: print function names of stack trace
+* Input  : title          - title text
+*          stackTrace     - stack trace
+*          stackTraceSize - size of stack trace
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void String_debugPrintStackTrace(const char *title, int indent, void *stackTrace[], int stackTraceSize)
 {
-  pthread_mutex_init(&debugStringLock,NULL);
-  List_init(&debugAllocStringList);
-  List_init(&debugFreeStringList);
-  #ifdef MAX_STRINGS_CHECK
-    debugMaxStringNextWarningCount = WARN_MAX_STRINGS;
-  #endif /* MAX_STRINGS_CHECK */
+  const char **functionNames;
+  int        z,i;
+
+  for (i = 0; i < indent; i++) fprintf(stderr," ");
+  fprintf(stderr,"C stack trace: %s\n",title);
+  functionNames = (const char **)backtrace_symbols(stackTrace,stackTraceSize);
+  if (functionNames != NULL)
+  {
+    for (z = 1; z < stackTraceSize; z++)
+    {
+      for (i = 0; i < indent; i++) fprintf(stderr," ");
+      fprintf(stderr,"  %2d %p: %s\n",z,stackTrace[z],functionNames[z]);
+    }
+    free(functionNames);
+  }
 }
-#endif /* not NDEBUG */
+#endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
 
 /***********************************************************************\
 * Name   : allocString
@@ -890,12 +923,13 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
 *            n
 \***********************************************************************/
 
-LOCAL bool parseString(const struct __String *string,
-                       ulong                 index,
-                       const char            *format,
-                       const va_list         arguments,
-                       const char            *stringQuotes,
-                       ulong                 *nextIndex
+LOCAL bool parseString(const char    *string,
+                       ulong         length,
+                       ulong         index,
+                       const char    *format,
+                       const va_list arguments,
+                       const char    *stringQuotes,
+                       ulong         *nextIndex
                       )
 {
   FormatToken formatToken;
@@ -917,8 +951,6 @@ LOCAL bool parseString(const struct __String *string,
   const char  *stringQuote;
   bool        foundFlag;
 
-  CHECK_VALID(string);
-
   while ((*format) != '\0')
   {
     /* skip white spaces in format */
@@ -928,7 +960,7 @@ LOCAL bool parseString(const struct __String *string,
     }
 
     /* skip white-spaces in string */
-    while ((index < string->length) && isspace(string->data[index]))
+    while ((index < length) && isspace(string[index]))
     {
       index++;
     }
@@ -948,18 +980,18 @@ LOCAL bool parseString(const struct __String *string,
           case 'u':
             /* get data */
             z = 0;
-            if ((index < string->length) && ((string->data[index] == '+') || (string->data[index] == '-')))
+            if ((index < length) && ((string[index] == '+') || (string[index] == '-')))
             {
-              buffer[z] = string->data[index];
+              buffer[z] = string[index];
               z++;
               index++;
             }
-            while (   (index < string->length)
+            while (   (index < length)
                    && (z < sizeof(buffer)-1)
-                   && isdigit(string->data[index])
+                   && isdigit(string[index])
                   )
             {
-              buffer[z] = string->data[index];
+              buffer[z] = string[index];
               z++;
               index++;
             }
@@ -996,10 +1028,10 @@ LOCAL bool parseString(const struct __String *string,
             break;
           case 'c':
             /* convert */
-            if (index < string->length)
+            if (index < length)
             {
               value.c = va_arg(arguments,char*);
-              if (value.c != NULL) (*value.c) = string->data[index];
+              if (value.c != NULL) (*value.c) = string[index];
               index++;
             }
             else
@@ -1010,13 +1042,13 @@ LOCAL bool parseString(const struct __String *string,
           case 'o':
             /* get data */
             z = 0;
-            while (   (index < string->length)
+            while (   (index < length)
                    && (z < sizeof(buffer)-1)
-                   && (string->data[index] >= '0')
-                   && (string->data[index] <= '7')
+                   && (string[index] >= '0')
+                   && (string[index] <= '7')
                   )
             {
-              buffer[z] = string->data[index];
+              buffer[z] = string[index];
               z++;
               index++;
             }
@@ -1054,17 +1086,17 @@ LOCAL bool parseString(const struct __String *string,
           case 'x':
           case 'X':
             /* get data */
-            if (((index+1) < string->length) && (string->data[index+0] == '0') && (string->data[index+0] == 'x'))
+            if (((index+1) < length) && (string[index+0] == '0') && (string[index+0] == 'x'))
             {
               index+=2;
             }
             z = 0;
-            while (   (index < string->length)
+            while (   (index < length)
                    && (z < sizeof(buffer)-1)
-                   && isdigit(string->data[index])
+                   && isdigit(string[index])
                   )
             {
-              buffer[z] = string->data[index];
+              buffer[z] = string[index];
               z++;
               index++;
             }
@@ -1109,32 +1141,32 @@ LOCAL bool parseString(const struct __String *string,
           case 'A':
             /* get data */
             z = 0;
-            if ((index < string->length) && ((string->data[index] == '+') || (string->data[index] == '-')  || (string->data[index] == '.')))
+            if ((index < length) && ((string[index] == '+') || (string[index] == '-')  || (string[index] == '.')))
             {
-              buffer[z] = string->data[index];
+              buffer[z] = string[index];
               z++;
               index++;
             }
-            while (   (index < string->length)
+            while (   (index < length)
                    && (z < sizeof(buffer)-1)
-                   && isdigit(string->data[index])
+                   && isdigit(string[index])
                   )
             {
-              buffer[z] = string->data[index];
+              buffer[z] = string[index];
               z++;
               index++;
             }
-            if ((index < string->length) && (string->data[index] == '.'))
+            if ((index < length) && (string[index] == '.'))
             {
               buffer[z] = '.';
               z++;
               index++;
-              while (   (index < string->length)
+              while (   (index < length)
                      && (z < sizeof(buffer)-1)
-                     && isdigit(string->data[index])
+                     && isdigit(string[index])
                     )
               {
-                buffer[z] = string->data[index];
+                buffer[z] = string[index];
                 z++;
                 index++;
               }
@@ -1174,22 +1206,22 @@ LOCAL bool parseString(const struct __String *string,
             value.s = va_arg(arguments,char*);
             assert(formatToken.width > 0);
 
-            if (index < string->length)
+            if (index < length)
             {
               z = 0;
-              while (   (index < string->length)
-                     && (formatToken.blankFlag || !isspace(string->data[index]))
-                     && (string->data[index] != (*format))
+              while (   (index < length)
+                     && (formatToken.blankFlag || !isspace(string[index]))
+                     && (string[index] != (*format))
                     )
               {
-                if (string->data[index] == '\\')
+                if (string[index] == '\\')
                 {
                   index++;
-                  if (index < string->length)
+                  if (index < length)
                   {
                     if ((formatToken.width == 0) || (z < formatToken.width-1))
                     {
-                      if (value.s != NULL) value.s[z] = string->data[index];
+                      if (value.s != NULL) value.s[z] = string[index];
                       z++;
                     }
                     index++;
@@ -1199,8 +1231,8 @@ LOCAL bool parseString(const struct __String *string,
                 {
                   /* check for string quote */
                   stringQuote = NULL;
-                  if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-                  if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
+                  if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
+                  if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
 
                   if (stringQuote != NULL)
                   {
@@ -1210,16 +1242,16 @@ LOCAL bool parseString(const struct __String *string,
                       index++;
 
                       /* get string */
-                      while ((index < string->length) && (string->data[index] != (*stringQuote)))
+                      while ((index < length) && (string[index] != (*stringQuote)))
                       {
-                        if (string->data[index] == '\\')
+                        if (string[index] == '\\')
                         {
                           index++;
-                          if (index < string->length)
+                          if (index < length)
                           {
                             if ((formatToken.width == 0) || (z < formatToken.width-1))
                             {
-                              if (value.s != NULL) value.s[z] = string->data[index];
+                              if (value.s != NULL) value.s[z] = string[index];
                               z++;
                             }
                             index++;
@@ -1229,7 +1261,7 @@ LOCAL bool parseString(const struct __String *string,
                         {
                           if (z < (formatToken.width-1))
                           {
-                            if (value.s != NULL) value.s[z] = string->data[index];
+                            if (value.s != NULL) value.s[z] = string[index];
                             z++;
                           }
                           index++;
@@ -1237,16 +1269,16 @@ LOCAL bool parseString(const struct __String *string,
                       }
 
                       /* skip quote-char */
-                      if (index < string->length)
+                      if (index < length)
                       {
                         index++;
                       }
 
                       stringQuote = NULL;
-                      if (index < string->length)
+                      if (index < length)
                       {
-                        if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-                        if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
+                        if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
+                        if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
                       }
                     }
                     while (stringQuote != NULL);
@@ -1255,7 +1287,7 @@ LOCAL bool parseString(const struct __String *string,
                   {
                     if (z < (formatToken.width-1))
                     {
-                      if (value.s != NULL) value.s[z] = string->data[index];
+                      if (value.s != NULL) value.s[z] = string[index];
                       z++;
                     }
                     index++;
@@ -1277,24 +1309,24 @@ LOCAL bool parseString(const struct __String *string,
             value.string = va_arg(arguments,String);
             CHECK_VALID(value.string);
 
-            if (index < string->length)
+            if (index < length)
             {
               String_clear(value.string);           
               z = 0;
-              while (   (index < string->length)
-                     && (formatToken.blankFlag || !isspace(string->data[index]))
+              while (   (index < length)
+                     && (formatToken.blankFlag || !isspace(string[index]))
     // NUL in string here a problem?
-                     && (string->data[index] != (*format))
+                     && (string[index] != (*format))
                     )
               {
-                if (string->data[index] == '\\')
+                if (string[index] == '\\')
                 {
                   index++;
-                  if (index < string->length)
+                  if (index < length)
                   {
                     if ((formatToken.width == 0) || (z < formatToken.width-1))
                     {
-                      String_appendChar(value.string,string->data[index]);
+                      String_appendChar(value.string,string[index]);
                       z++;
                     }
                     index++;
@@ -1304,8 +1336,8 @@ LOCAL bool parseString(const struct __String *string,
                 {
                   /* check for string quote */
                   stringQuote = NULL;
-                  if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-                  if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
+                  if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
+                  if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
 
                   if (stringQuote != NULL)
                   {
@@ -1315,16 +1347,16 @@ LOCAL bool parseString(const struct __String *string,
                       index++;
 
                       /* get string */
-                      while ((index < string->length) && (string->data[index] != (*stringQuote)))
+                      while ((index < length) && (string[index] != (*stringQuote)))
                       {
-                        if (string->data[index] == '\\')
+                        if (string[index] == '\\')
                         {
                           index++;
-                          if (index < string->length)
+                          if (index < length)
                           {
                             if ((formatToken.width == 0) || (z < formatToken.width-1))
                             {
-                              String_appendChar(value.string,string->data[index]);
+                              String_appendChar(value.string,string[index]);
                               z++;
                             }
                             index++;
@@ -1334,7 +1366,7 @@ LOCAL bool parseString(const struct __String *string,
                         {
                           if ((formatToken.width == 0) || (z < formatToken.width-1))
                           {
-                            String_appendChar(value.string,string->data[index]);
+                            String_appendChar(value.string,string[index]);
                             z++;
                           }
                           index++;
@@ -1342,17 +1374,17 @@ LOCAL bool parseString(const struct __String *string,
                       }
 
                       /* skip quote-char */
-                      if (index < string->length)
+                      if (index < length)
                       {
                         index++;
                       }
 
                       /* check for string quote */
                       stringQuote = NULL;
-                      if (index < string->length)
+                      if (index < length)
                       {
-                        if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string->data[index])) stringQuote = &formatToken.quoteChar;
-                        if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string->data[index]);
+                        if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
+                        if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
                       }
                     }
                     while (stringQuote != NULL);
@@ -1361,7 +1393,7 @@ LOCAL bool parseString(const struct __String *string,
                   {
                     if ((formatToken.width == 0) || (z < formatToken.width-1))
                     {
-                      String_appendChar(value.string,string->data[index]);
+                      String_appendChar(value.string,string[index]);
                       z++;
                     }
                     index++;
@@ -1419,25 +1451,23 @@ LOCAL bool parseString(const struct __String *string,
           case 'y':
             /* get data */
             z = 0;
-            while (   (index < string->length)
-                   && !isspace(string->data[index])
+            while (   (index < length)
+                   && !isspace(string[index])
                   )
             {
               if (z < sizeof(buffer)-1)
               {
-                buffer[z] = string->data[index];
+                buffer[z] = string[index];
                 z++;
               }
               index++;
             }
             buffer[z] = '\0';
-//fprintf(stderr,"%s,%d: buffer=%s\n",__FILE__,__LINE__,buffer);
 
             /* convert */
             if (z > 0)
             {
               value.b = va_arg(arguments,bool*);
-//fprintf(stderr,"%s,%d: %p %d %d\n",__FILE__,__LINE__,value.b,sizeof(*value.b),*value.b);
               foundFlag = FALSE;
               z = 0;
               while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS)))
@@ -1459,7 +1489,6 @@ LOCAL bool parseString(const struct __String *string,
                 }
                 z++;
               }
-//if ((*value.b != 0) && (*value.b != 1)) HALT(1,"x");
 
               if (!foundFlag)
               {
@@ -1474,16 +1503,16 @@ LOCAL bool parseString(const struct __String *string,
           case '*':
             /* skip value */
             z = 0;
-            while (   (index < string->length)
-                   && !isspace(string->data[index])
-                   && (string->data[index] != (*format))
+            while (   (index < length)
+                   && !isspace(string[index])
+                   && (string[index] != (*format))
                   )
             {
               index++;
             }
             break;
           case '%':
-            if ((index >= string->length) || (string->data[index] != '%'))
+            if ((index >= length) || (string[index] != '%'))
             {
               return FALSE;
             }
@@ -1496,7 +1525,7 @@ LOCAL bool parseString(const struct __String *string,
       }
       else
       {
-        if ((index >= string->length) || (string->data[index] != (*format)))
+        if ((index >= length) || (string[index] != (*format)))
         {
           return FALSE;
         }
@@ -1507,11 +1536,11 @@ LOCAL bool parseString(const struct __String *string,
   }
   if (nextIndex != NULL)
   {
-    (*nextIndex) = (index >= string->length)?STRING_END:index;
+    (*nextIndex) = (index >= length)?STRING_END:index;
   }
   else
   {
-    if (index < string->length)
+    if (index < length)
     {
       return FALSE;
     }
@@ -1661,8 +1690,10 @@ String __String_new(const char *fileName, ulong lineNb)
   }
 
   #ifndef NDEBUG
-    pthread_once(&debugStringInitFlag,debugStringInit);
+    /* init debug */
+    pthread_once(&debugStringInitFlag,String_debugInit);
 
+    /* lock */
     pthread_mutex_lock(&debugStringLock);
 
     /* find string in free-list; reuse or allocate new debug node */
@@ -1685,11 +1716,17 @@ String __String_new(const char *fileName, ulong lineNb)
     }
 
     /* init string node */
-    debugStringNode->fileName     = fileName;
-    debugStringNode->lineNb       = lineNb;
-    debugStringNode->prevFileName = NULL;
-    debugStringNode->prevLineNb   = 0;
-    debugStringNode->string       = string;
+    debugStringNode->fileName       = fileName;
+    debugStringNode->lineNb         = lineNb;
+    #ifdef HAVE_BACKTRACE
+      debugStringNode->stackTraceSize = backtrace(debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
+    #endif /* HAVE_BACKTRACE */
+    debugStringNode->deleteFileName = NULL;
+    debugStringNode->deleteLineNb   = 0;
+    #ifdef HAVE_BACKTRACE
+      debugStringNode->deleteStackTraceSize = 0;
+    #endif /* HAVE_BACKTRACE */
+    debugStringNode->string         = string;
 
     /* add string to allocated-list */
     List_append(&debugAllocStringList,debugStringNode);
@@ -1703,6 +1740,7 @@ String __String_new(const char *fileName, ulong lineNb)
       }
     #endif /* MAX_STRINGS_CHECK */
 
+    /* unlock */
     pthread_mutex_unlock(&debugStringLock);
 
     #ifdef MAX_STRINGS_CHECK
@@ -1869,11 +1907,11 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
     DebugStringNode *debugStringNode;;
   #endif /* not NDEBUG */
 
-  CHECK_VALID(string);
-
   #ifndef NDEBUG
-    pthread_once(&debugStringInitFlag,debugStringInit);
+    /* init debug */
+    pthread_once(&debugStringInitFlag,String_debugInit);
 
+    /* lock */
     pthread_mutex_lock(&debugStringLock);
 
     /* find string in free-list to check for duplicate free */
@@ -1888,24 +1926,33 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
               string,
               fileName,
               lineNb,
-              debugStringNode->prevFileName,
-              debugStringNode->prevLineNb,
+              debugStringNode->deleteFileName,
+              debugStringNode->deleteLineNb,
               debugStringNode->fileName,
               debugStringNode->lineNb
              );
+      #ifdef HAVE_BACKTRACE
+        String_debugPrintStackTrace("allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+        String_debugPrintStackTrace("deleted at",2,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize);
+      #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR("");
     }
 
+    /* unlock */
     pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
+
+  CHECK_VALID(string);
 
   if (string != NULL)
   {
     assert(string->data != NULL);
 
     #ifndef NDEBUG
-      pthread_once(&debugStringInitFlag,debugStringInit);
+      /* init debug */
+      pthread_once(&debugStringInitFlag,String_debugInit);
 
+      /* lock */
       pthread_mutex_lock(&debugStringLock);
 
       /* add string to free-list, shorten list */
@@ -1917,8 +1964,11 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
       if (debugStringNode != NULL)
       {
         List_remove(&debugAllocStringList,debugStringNode);
-        debugStringNode->prevFileName = fileName;
-        debugStringNode->prevLineNb   = lineNb;
+        debugStringNode->deleteFileName = fileName;
+        debugStringNode->deleteLineNb   = lineNb;
+        #ifdef HAVE_BACKTRACE
+          debugStringNode->deleteStackTraceSize = backtrace(debugStringNode->deleteStackTrace,SIZE_OF_ARRAY(debugStringNode->deleteStackTrace));
+        #endif /* HAVE_BACKTRACE */
         List_append(&debugFreeStringList,debugStringNode);
 
         while (debugFreeStringList.count > DEBUG_MAX_FREE_LIST)
@@ -1934,9 +1984,13 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
                 fileName,
                 lineNb
                );
+        #ifdef HAVE_BACKTRACE
+          String_debugPrintCurrentStackTrace();
+        #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR("");
       }
 
+      /* unlock */
       pthread_mutex_unlock(&debugStringLock);
     #endif /* not NDEBUG */
 
@@ -3552,6 +3606,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
 bool String_scan(const String string, ulong index, const char *format, ...)
 {
   va_list arguments;
+  ulong   nextIndex;
   bool    result;
 
   assert(string != NULL);
@@ -3561,7 +3616,25 @@ bool String_scan(const String string, ulong index, const char *format, ...)
   CHECK_VALID(string);
 
   va_start(arguments,format);
-  result = parseString(string,index,format,arguments,NULL,NULL);
+  result = parseString(string->data,string->length,index,format,arguments,NULL,&nextIndex);
+  UNUSED_VARIABLE(nextIndex);
+  va_end(arguments);
+
+  return result;
+}
+
+bool String_scanCString(const char *s, const char *format, ...)
+{
+  va_list arguments;
+  ulong   nextIndex;
+  bool    result;
+
+  assert(s != NULL);
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  result = parseString(s,strlen(s),0,format,arguments,NULL,&nextIndex);
+  UNUSED_VARIABLE(nextIndex);
   va_end(arguments);
 
   return result;
@@ -3579,7 +3652,22 @@ bool String_parse(const String string, ulong index, const char *format, ulong *n
   CHECK_VALID(string);
 
   va_start(arguments,nextIndex);
-  result = parseString(string,index,format,arguments,STRING_QUOTES,nextIndex);
+  result = parseString(string->data,string->length,index,format,arguments,STRING_QUOTES,nextIndex);
+  va_end(arguments);
+
+  return result;
+}
+
+bool String_parseCString(const char *s, const char *format, ulong *nextIndex, ...)
+{
+  va_list arguments;
+  bool    result;
+
+  assert(s != NULL);
+  assert(format != NULL);
+
+  va_start(arguments,nextIndex);
+  result = parseString(s,strlen(s),0,format,arguments,STRING_QUOTES,nextIndex);
   va_end(arguments);
 
   return result;
@@ -3854,39 +3942,69 @@ char* String_toCString(const String string)
 }
 
 #ifndef NDEBUG
-void String_debugPrintAllocated(void)
+void String_debugInit(void)
 {
-  DebugStringNode *debugStringNode;
-
-  for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
-  {
-    fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %ld\n",
-            debugStringNode->string,
-            debugStringNode->string->data,
-            debugStringNode->fileName,
-            debugStringNode->lineNb
-           );
-  }
-}
-
-void String_debug(void)
-{
-  pthread_once(&debugStringInitFlag,debugStringInit);
-
-  pthread_mutex_lock(&debugStringLock);
-  String_debugPrintAllocated();
-  pthread_mutex_unlock(&debugStringLock);
+  pthread_mutex_init(&debugStringLock,NULL);
+  List_init(&debugAllocStringList);
+  List_init(&debugFreeStringList);
+  #ifdef MAX_STRINGS_CHECK
+    debugMaxStringNextWarningCount = WARN_MAX_STRINGS;
+  #endif /* MAX_STRINGS_CHECK */
 }
 
 void String_debugDone(void)
 {
-  pthread_once(&debugStringInitFlag,debugStringInit);
+  /* init debug */
+  pthread_once(&debugStringInitFlag,String_debugInit);
 
   pthread_mutex_lock(&debugStringLock);
   debugMaxStringNextWarningCount = 0LL;
   List_done(&debugFreeStringList,NULL,NULL);
   List_done(&debugFreeStringList,NULL,NULL);
   pthread_mutex_unlock(&debugStringLock);
+}
+
+LOCAL void String_debugPrintAllocated(void)
+{
+  DebugStringNode *debugStringNode;
+
+  for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
+  {
+    fprintf(stderr,"DEBUG WARNING: string %p '%s' not freed at %s, line %ld\n",
+            debugStringNode->string,
+            debugStringNode->string->data,
+            debugStringNode->fileName,
+            debugStringNode->lineNb
+           );
+    #ifdef HAVE_BACKTRACE
+      String_debugPrintStackTrace("not freed string at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+    #endif /* HAVE_BACKTRACE */
+  }
+}
+
+void String_debug(void)
+{
+  /* init debug */
+  pthread_once(&debugStringInitFlag,String_debugInit);
+
+  pthread_mutex_lock(&debugStringLock);
+  String_debugPrintAllocated();
+  pthread_mutex_unlock(&debugStringLock);
+}
+
+void String_debugPrintCurrentStackTrace(void)
+{
+  #ifdef HAVE_BACKTRACE
+    const int MAX_STACK_TRACE_SIZE = 256;
+
+    void *stackTrace[MAX_STACK_TRACE_SIZE];
+    int  stackTraceSize;
+  #endif /* HAVE_BACKTRACE */
+
+  #ifdef HAVE_BACKTRACE
+    stackTraceSize = backtrace(stackTrace,MAX_STACK_TRACE_SIZE);
+    String_debugPrintStackTrace("",0,stackTrace,stackTraceSize);
+  #endif /* HAVE_BACKTRACE */
 }
 
 #endif /* not NDEBUG */
