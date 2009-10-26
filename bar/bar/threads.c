@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/threads.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: thread functions
 * Systems: all
@@ -68,8 +68,7 @@ LOCAL void threadStart(ThreadStartInfo *startInfo)
   userData      = startInfo->userData;
   sem_post(&startInfo->lock);
 
-  nice(niceLevel);
-//fprintf(stderr,"%s,%d: %s: %d %d\n",__FILE__,__LINE__,startInfo->name,pthread_self(),getpid());
+  (void)nice(niceLevel);
 
   assert(entryFunction != NULL);
   entryFunction(userData);
