@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -32,6 +32,7 @@
 #include "passwords.h"
 #include "network.h"
 #include "files.h"
+#include "devices.h"
 #include "patterns.h"
 #include "patternlists.h"
 #include "archive.h"
@@ -160,12 +161,12 @@ typedef struct DirectoryInfoNode
 {
   LIST_NODE_HEADER(struct DirectoryInfoNode);
 
-  String          pathName;
-  uint64          fileCount;
-  uint64          totalFileSize;
-  StringList      pathNameList;
-  bool            directoryOpenFlag;
-  DirectoryHandle directoryHandle;
+  String              pathName;
+  uint64              fileCount;
+  uint64              totalFileSize;
+  StringList          pathNameList;
+  bool                directoryOpenFlag;
+  DirectoryListHandle directoryListHandle;
 } DirectoryInfoNode;
 
 /* directory info list */
@@ -371,7 +372,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_STRING   ("incremental-list-file",  JobNode,jobOptions.incrementalListFileName     ),
 
   CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",        JobNode,jobOptions.directoryStripCount,        0,INT_MAX,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("directory",              JobNode,jobOptions.directory                   ),
+  CONFIG_STRUCT_VALUE_STRING   ("destination",            JobNode,jobOptions.destination                 ),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("owern",                  JobNode,jobOptions.cryptPassword,              configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
 
   CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",           JobNode,jobOptions.patternType,                CONFIG_VALUE_PATTERN_TYPES),
 
@@ -1128,11 +1130,11 @@ LOCAL bool readJobFile(JobNode *jobNode)
 
 LOCAL Errors rereadJobFiles(const char *jobsDirectory)
 {
-  Errors          error;
-  DirectoryHandle directoryHandle;
-  String          fileName;
-  String          baseName;
-  JobNode         *jobNode,*deleteJobNode;
+  Errors              error;
+  DirectoryListHandle directoryListHandle;
+  String              fileName;
+  String              baseName;
+  JobNode             *jobNode,*deleteJobNode;
 
   assert(jobsDirectory != NULL);
 
@@ -1141,17 +1143,17 @@ LOCAL Errors rereadJobFiles(const char *jobsDirectory)
 
   /* add new/update jobs */
   File_setFileNameCString(fileName,jobsDirectory);
-  error = File_openDirectory(&directoryHandle,fileName);
+  error = File_openDirectoryList(&directoryListHandle,fileName);
   if (error != ERROR_NONE)
   {
     File_deleteFileName(fileName);
     return error;
   }
   baseName = File_newFileName();
-  while (!File_endOfDirectory(&directoryHandle))
+  while (!File_endOfDirectoryList(&directoryListHandle))
   {
     /* read directory entry */
-    File_readDirectory(&directoryHandle,fileName);
+    File_readDirectoryList(&directoryListHandle,fileName);
 
     /* get base name */
     File_getFileBaseName(baseName,fileName);
@@ -1170,7 +1172,7 @@ LOCAL Errors rereadJobFiles(const char *jobsDirectory)
       }
       if (jobNode == NULL)
       {
-        jobNode = newJob(JOB_TYPE_BACKUP,fileName);
+        jobNode = newJob(JOB_TYPE_CREATE,fileName);
         List_append(&jobList,jobNode);
       }
 
@@ -1187,7 +1189,7 @@ LOCAL Errors rereadJobFiles(const char *jobsDirectory)
     }
   }
   File_deleteFileName(baseName);
-  File_closeDirectory(&directoryHandle);
+  File_closeDirectoryList(&directoryListHandle);
 
   /* remove not existing jobs */
   Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -1732,10 +1734,11 @@ LOCAL void jobThreadEntry(void)
     logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------");
     switch (jobNode->type)
     {
-      case JOB_TYPE_BACKUP:
+      case JOB_TYPE_CREATE:
         /* create archive */
-        logMessage(LOG_TYPE_ALWAYS,"start create '%s'",String_cString(archiveName));
-        jobNode->runningInfo.error = Command_create(String_cString(archiveName),
+        logMessage(LOG_TYPE_ALWAYS,"start create archive '%s'",String_cString(archiveName));
+        jobNode->runningInfo.error = Command_create(CREATE_MODE_FILES,
+                                                    String_cString(archiveName),
                                                     &includePatternList,
                                                     &excludePatternList,
                                                     &jobOptions,
@@ -1749,7 +1752,7 @@ LOCAL void jobThreadEntry(void)
                                                     &pauseFlag,
                                                     &jobNode->requestedAbortFlag
                                                    );
-        logMessage(LOG_TYPE_ALWAYS,"done create '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
+        logMessage(LOG_TYPE_ALWAYS,"done create archive '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
         break;
       case JOB_TYPE_RESTORE:
         logMessage(LOG_TYPE_ALWAYS,"start restore '%s'",String_cString(archiveName));
@@ -2137,7 +2140,7 @@ LOCAL void freeDirectoryInfoNode(DirectoryInfoNode *directoryInfoNode)
 
   if (directoryInfoNode->directoryOpenFlag)
   {
-    File_closeDirectory(&directoryInfoNode->directoryHandle);
+    File_closeDirectoryList(&directoryInfoNode->directoryListHandle);
   }
   StringList_done(&directoryInfoNode->pathNameList);
   String_delete(directoryInfoNode->pathName);
@@ -2217,7 +2220,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
       StringList_getLast(&directoryInfoNode->pathNameList,pathName);
 
       /* open diretory for reading */
-      error = File_openDirectory(&directoryInfoNode->directoryHandle,pathName);
+      error = File_openDirectoryList(&directoryInfoNode->directoryListHandle,pathName);
       if (error != ERROR_NONE)
       {
         continue;
@@ -2226,13 +2229,13 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
     }
 
     /* read directory content */
-    while (   !File_endOfDirectory(&directoryInfoNode->directoryHandle)
+    while (   !File_endOfDirectoryList(&directoryInfoNode->directoryListHandle)
            && ((timeoutFlag == NULL) || !(*timeoutFlag))
            && !quitFlag
           )
     {
       /* read next directory entry */
-      error = File_readDirectory(&directoryInfoNode->directoryHandle,fileName);
+      error = File_readDirectoryList(&directoryInfoNode->directoryListHandle,fileName);
       if (error != ERROR_NONE)
       {
         continue;
@@ -2269,7 +2272,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
     {
       /* close diretory */
       directoryInfoNode->directoryOpenFlag = FALSE;
-      File_closeDirectory(&directoryInfoNode->directoryHandle);
+      File_closeDirectoryList(&directoryInfoNode->directoryListHandle);
     }
 
     /* check for timeout */
@@ -2472,9 +2475,9 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
 
 LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  Errors       error;
-  DeviceHandle deviceHandle;
-  String       deviceName;
+  Errors           error;
+  DeviceListHandle deviceListHandle;
+  String           deviceName;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -2482,23 +2485,23 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  /* open device */
-  error = File_openDevices(&deviceHandle);
+  /* open device list */
+  error = Device_openDeviceList(&deviceListHandle);
   if (error != ERROR_NONE)
   {
     sendResult(clientInfo,id,TRUE,error,"cannot open device list (error: %s)",Errors_getText(error));
     return;
   }
 
-  /* read device entries */
+  /* read device list entries */
   deviceName = String_new();
-  while (!File_endOfDevices(&deviceHandle))
+  while (!Device_endOfDeviceList(&deviceListHandle))
   {
-    error = File_readDevice(&deviceHandle,deviceName);
+    error = Device_readDeviceList(&deviceListHandle,deviceName);
     if (error != ERROR_NONE)
     {
       sendResult(clientInfo,id,TRUE,error,"cannot read device list (error: %s)",Errors_getText(error));
-      File_closeDevices(&deviceHandle);
+      Device_closeDeviceList(&deviceListHandle);
       String_delete(deviceName);
       return;
     }
@@ -2508,17 +2511,17 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
   String_delete(deviceName);
 
   /* close device */
-  File_closeDevices(&deviceHandle);
+  Device_closeDeviceList(&deviceListHandle);
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  Errors                 error;
-  StorageDirectoryHandle storageDirectoryHandle;
-  String                 fileName;
-  FileInfo               fileInfo;
+  Errors                     error;
+  StorageDirectoryListHandle storageDirectoryListHandle;
+  String                     fileName;
+  FileInfo                   fileInfo;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -2531,10 +2534,10 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
   }
 
   /* open directory */
-  error = Storage_openDirectory(&storageDirectoryHandle,
-                                arguments[0],
-                                &clientInfo->jobOptions
-                               );
+  error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                    arguments[0],
+                                    &clientInfo->jobOptions
+                                   );
   if (error != ERROR_NONE)
   {
     sendResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
@@ -2543,9 +2546,9 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
 
   /* read directory entries */
   fileName = String_new();
-  while (!Storage_endOfDirectory(&storageDirectoryHandle))
+  while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
   {
-    error = Storage_readDirectory(&storageDirectoryHandle,fileName,&fileInfo);
+    error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
     if (error == ERROR_NONE)
     {
       switch (fileInfo.type)
@@ -2573,11 +2576,45 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
                     );
           break;
         case FILE_TYPE_SPECIAL:
-          sendResult(clientInfo,id,FALSE,0,
-                     "SPECIAL %llu %'S",
-                     fileInfo.timeModified,
-                     fileName
-                    );
+          switch (fileInfo.specialType)
+          {
+            case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
+              sendResult(clientInfo,id,FALSE,0,
+                         "DEVICE CHARACTER %llu %'S",
+                         fileInfo.timeModified,
+                         fileName
+                        );
+              break;
+            case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
+              sendResult(clientInfo,id,FALSE,0,
+                         "DEVICE BLOCK %lld %llu %'S",
+                         fileInfo.size,
+                         fileInfo.timeModified,
+                         fileName
+                        );
+              break;
+            case FILE_SPECIAL_TYPE_FIFO:
+              sendResult(clientInfo,id,FALSE,0,
+                         "FIFO %llu %'S",
+                         fileInfo.timeModified,
+                         fileName
+                        );
+              break;
+            case FILE_SPECIAL_TYPE_SOCKET:
+              sendResult(clientInfo,id,FALSE,0,
+                         "SOCKET %llu %'S",
+                         fileInfo.timeModified,
+                         fileName
+                        );
+              break;
+            default:
+              sendResult(clientInfo,id,FALSE,0,
+                         "SPECIAL %llu %'S",
+                         fileInfo.timeModified,
+                         fileName
+                        );
+              break;
+          }
           break;
         default:
           break;
@@ -2594,7 +2631,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
   String_delete(fileName);
 
   /* close directory */
-  Storage_closeDirectory(&storageDirectoryHandle);
+  Storage_closeDirectoryList(&storageDirectoryListHandle);
 
   sendResult(clientInfo,id,TRUE,0,"");
 }
@@ -2985,7 +3022,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   File_close(&fileHandle);
 
   /* create new job */
-  jobNode = newJob(JOB_TYPE_BACKUP,fileName);
+  jobNode = newJob(JOB_TYPE_CREATE,fileName);
   if (jobNode == NULL)
   {
     File_delete(fileName,FALSE);
@@ -4175,11 +4212,11 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 
 LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  String          archiveName;
-  Errors          error;
-  ArchiveInfo     archiveInfo;
-  ArchiveFileInfo archiveFileInfo;
-  FileTypes       fileType;
+  String            archiveName;
+  Errors            error;
+  ArchiveInfo       archiveInfo;
+  ArchiveFileInfo   archiveFileInfo;
+  ArchiveEntryTypes archiveEntryType;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -4212,16 +4249,16 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 //Misc_udelay(1000*100);
 
     /* get next file type */
-    error = Archive_getNextFileType(&archiveInfo,
-                                    &archiveFileInfo,
-                                    &fileType
-                                   );
+    error = Archive_getNextArchiveEntryType(&archiveInfo,
+                                            &archiveFileInfo,
+                                            &archiveEntryType
+                                           );
     if (error == ERROR_NONE)
     {
       /* read entry */
-      switch (fileType)
+      switch (archiveEntryType)
       {
-        case FILE_TYPE_FILE:
+        case ARCHIVE_ENTRY_TYPE_FILE:
           {
             ArchiveFileInfo    archiveFileInfo;
             CompressAlgorithms compressAlgorithm;
@@ -4271,7 +4308,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             String_delete(fileName);
           }
           break;
-        case FILE_TYPE_DIRECTORY:
+        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
             CryptAlgorithms cryptAlgorithm;
             CryptTypes      cryptType;
@@ -4311,7 +4348,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             String_delete(directoryName);
           }
           break;
-        case FILE_TYPE_LINK:
+        case ARCHIVE_ENTRY_TYPE_LINK:
           {
             CryptAlgorithms cryptAlgorithm;
             CryptTypes      cryptType;
@@ -4357,7 +4394,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             String_delete(linkName);
           }
           break;
-        case FILE_TYPE_SPECIAL:
+        case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
             CryptAlgorithms cryptAlgorithm;
             CryptTypes      cryptType;
@@ -4438,11 +4475,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   StringList_append(&archiveNameList,arguments[0]);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory");
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
     return;
   }
   initJobOptions(&jobOptions);
-  jobOptions.directory = String_duplicate(arguments[1]);
+  jobOptions.destination = String_duplicate(arguments[1]);
   PatternList_init(&includePatternList);
   PatternList_init(&excludePatternList);
   for (z = 2; z < argumentCount; z++)

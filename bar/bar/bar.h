@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -64,16 +64,16 @@ typedef enum
 /* log types */
 typedef enum
 {
-  LOG_TYPE_ALWAYS             = 0,
-  LOG_TYPE_ERROR              = (1 <<  0),
-  LOG_TYPE_WARNING            = (1 <<  1),
-  LOG_TYPE_FILE_OK            = (1 <<  2),
-  LOG_TYPE_FILE_TYPE_UNKNOWN  = (1 <<  3),
-  LOG_TYPE_FILE_ACCESS_DENIED = (1 <<  4),
-  LOG_TYPE_FILE_MISSING       = (1 <<  5),
-  LOG_TYPE_FILE_INCOMPLETE    = (1 <<  6),
-  LOG_TYPE_FILE_EXCLUDED      = (1 <<  7),
-  LOG_TYPE_STORAGE            = (1 <<  8),
+  LOG_TYPE_ALWAYS              = 0,
+  LOG_TYPE_ERROR               = (1 <<  0),
+  LOG_TYPE_WARNING             = (1 <<  1),
+  LOG_TYPE_ENTRY_OK            = (1 <<  2),
+  LOG_TYPE_ENTRY_TYPE_UNKNOWN  = (1 <<  3),
+  LOG_TYPE_ENTRY_ACCESS_DENIED = (1 <<  4),
+  LOG_TYPE_ENTRY_MISSING       = (1 <<  5),
+  LOG_TYPE_ENTRY_INCOMPLETE    = (1 <<  6),
+  LOG_TYPE_ENTRY_EXCLUDED      = (1 <<  7),
+  LOG_TYPE_STORAGE             = (1 <<  8),
 } LogTypes;
 
 #define LOG_TYPE_NONE 0x00000000
@@ -290,6 +290,12 @@ typedef struct
 /* job options */
 typedef struct
 {
+  uint32              userId;                          // user id
+  uint32              groupId;                         // group id 
+} Owner;
+
+typedef struct
+{
   ArchiveTypes        archiveType;                     // archive type (normal, full, incremental)
 
   uint64              archivePartSize;                 // archive part size [bytes]
@@ -297,7 +303,8 @@ typedef struct
   String              incrementalListFileName;         // name of incremental list file
 
   uint                directoryStripCount;             // number of directories to strip in restore
-  String              directory;                       // restore destination directory
+  String              destination     ;                // destination for restore
+  Owner               owner;                           // restore owner
 
   PatternTypes        patternType;
 
@@ -315,7 +322,7 @@ typedef struct
   String              deviceName;
   Device              device;
 
-  bool                skipUnreadableFlag;
+  bool                skipUnreadableFlag;              // TRUE for skipping unreadable files
   bool                overwriteArchiveFilesFlag;
   bool                overwriteFilesFlag;
   bool                errorCorrectionCodesFlag;
@@ -546,6 +553,61 @@ Errors inputCryptPassword(void         *userData,
                           bool         validateFlag,
                           bool         weakCheckFlag
                          );
+
+/***********************************************************************\
+* Name   : configValueParseOwner
+* Purpose: config value option call back for parsing owner
+*          patterns
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseOwner(void *userData, void *variable, const char *name, const char *value);
+
+/***********************************************************************\
+* Name   : configValueFormatInitOwner
+* Purpose: init format of config owner statements
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitOwner(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneOwner
+* Purpose: done format of config owner statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneOwner(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatOwner
+* Purpose: format next config owner statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatOwner(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseIncludeExclude

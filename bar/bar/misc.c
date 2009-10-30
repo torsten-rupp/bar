@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -75,19 +75,25 @@ LOCAL bool readProcessIO(int fd, String line)
     /* read data until EOL found */
     while (n > 0)
     {
-      read(fd,&ch,1);
-      switch (ch)
+      if (read(fd,&ch,1) == 1)
       {
-        case '\n':
-        case '\r':
-        case '\b':
-          if (String_length(line) > 0) return TRUE;
-          break;
-        default:
-          String_appendChar(line,ch);
-          break;
+        switch (ch)
+        {
+          case '\n':
+          case '\r':
+          case '\b':
+            if (String_length(line) > 0) return TRUE;
+            break;
+          default:
+            String_appendChar(line,ch);
+            break;
+        }
+        n--;
       }
-      n--;
+      else
+      {
+        n = 0;
+      }
     }
   }
   while (n > 0);
@@ -681,7 +687,7 @@ void Misc_waitEnter(void)
   tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings);
 
   /* read line */
-  fgets(s,2,stdin);
+  (void)fgets(s,2,stdin);
 
   /* restore console settings */
   tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);

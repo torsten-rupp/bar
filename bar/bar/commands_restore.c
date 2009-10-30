@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -31,7 +31,7 @@
 #include "patternlists.h"
 #include "files.h"
 #include "archive.h"
-#include "filefragmentlists.h"
+#include "fragmentlists.h"
 #include "misc.h"
 
 #include "commands_restore.h"
@@ -76,7 +76,7 @@ typedef struct
 *          add destination directory
 * Input  : destinationFileName - destination file name variable
 *          fileName            - original file name
-*          directory           - destination directory
+*          destination         - destination directory or NULL
 *          directoryStripCount - number of directories to strip from
 *                                original file name
 * Output : -
@@ -86,7 +86,7 @@ typedef struct
 
 LOCAL String getDestinationFileName(String       destinationFileName,
                                     String       fileName,
-                                    const String directory,
+                                    const String destination,
                                     uint         directoryStripCount
                                    )
 {
@@ -97,15 +97,20 @@ LOCAL String getDestinationFileName(String       destinationFileName,
   assert(destinationFileName != NULL);
   assert(fileName != NULL);
 
-  if (directory != NULL)
+  /* get destination base directory */
+  if (destination != NULL)
   {
-    File_setFileName(destinationFileName,directory);
+    File_setFileName(destinationFileName,destination);
   }
   else
   {
-    String_clear(destinationFileName);
+    File_clearFileName(destinationFileName);
   }
+
+  /* split file name */
   File_splitFileName(fileName,&pathName,&baseName);
+
+  /* strip directory, create destination directory */
   File_initSplitFileName(&fileNameTokenizer,pathName);
   z = 0;
   while ((z< directoryStripCount) && File_getNextSplitFileName(&fileNameTokenizer,&name))
@@ -117,11 +122,47 @@ LOCAL String getDestinationFileName(String       destinationFileName,
     File_appendFileName(destinationFileName,name);
   }     
   File_doneSplitFileName(&fileNameTokenizer);
+
+  /* create destination file name */
   File_appendFileName(destinationFileName,baseName);
+
+  /* free resources  */
   String_delete(pathName);
   String_delete(baseName);
 
   return destinationFileName;
+}
+
+/***********************************************************************\
+* Name   : getDestinationFileName
+* Purpose: get destination file name by stripping directory levels and
+*          add destination directory
+* Input  : destinationDeviceName - destination device name variable
+*          imageName             - original file name
+*          destination           - destination device or NULL
+* Output : -
+* Return : file name
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getDestinationDeviceName(String       destinationDeviceName,
+                                      String       imageName,
+                                      const String destination
+                                     )
+{
+  assert(destinationDeviceName != NULL);
+  assert(imageName != NULL);
+
+  if (destination != NULL)
+  {
+    File_setFileName(destinationDeviceName,destination);
+  }
+  else
+  {
+    File_setFileName(destinationDeviceName,imageName);
+  }
+
+  return destinationDeviceName;
 }
 
 /***********************************************************************\
@@ -159,13 +200,13 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 {
   RestoreInfo       restoreInfo;
   byte              *buffer;
-  FileFragmentList  fileFragmentList;
+  FragmentList      fragmentList;
   String            archiveFileName;
   Errors            error;
   ArchiveInfo       archiveInfo;
   ArchiveFileInfo   archiveFileInfo;
-  FileTypes         fileType;
-  FileFragmentNode  *fileFragmentNode;
+  ArchiveEntryTypes archiveEntryType;
+  FragmentNode      *fragmentNode;
 
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
@@ -200,7 +241,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  FileFragmentList_init(&fileFragmentList);
+  FragmentList_init(&fragmentList);
   archiveFileName = String_new();
 
   while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
@@ -248,11 +289,11 @@ Errors Command_restore(StringList                      *archiveFileNameList,
         Misc_udelay(500*1000);
       }
 
-      /* get next file type */
-      error = Archive_getNextFileType(&archiveInfo,
-                                      &archiveFileInfo,
-                                      &fileType
-                                     );
+      /* get next archive entry type */
+      error = Archive_getNextArchiveEntryType(&archiveInfo,
+                                              &archiveFileInfo,
+                                              &archiveEntryType
+                                             );
       if (error != ERROR_NONE)
       {
         printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
@@ -263,20 +304,20 @@ Errors Command_restore(StringList                      *archiveFileNameList,
         break;
       }
 
-      switch (fileType)
+      switch (archiveEntryType)
       {
-        case FILE_TYPE_FILE:
+        case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            String           fileName;
-            FileInfo         fileInfo;
-            uint64           fragmentOffset,fragmentSize;
-            FileFragmentNode *fileFragmentNode;
-            String           destinationFileName;
-            String           directoryName;
+            String       fileName;
+            FileInfo     fileInfo;
+            uint64       fragmentOffset,fragmentSize;
+            String       destinationFileName;
+            FragmentNode *fragmentNode;
+            String       directoryName;
 //            FileInfo         localFileInfo;
-            FileHandle       fileHandle;
-            uint64           length;
-            ulong            n;
+            FileHandle   fileHandle;
+            uint64       length;
+            ulong        n;
 
             /* read file */
             fileName = String_new();
@@ -298,7 +339,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                         );
               String_delete(fileName);
               if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
-              break;
+              continue;
             }
 
             if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -313,18 +354,18 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            fileName,
-                                                           jobOptions->directory,
+                                                           jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
 
 
               /* check if file fragment exists */
-              fileFragmentNode = FileFragmentList_findFile(&fileFragmentList,fileName);
-              if (fileFragmentNode != NULL)
+              fragmentNode = FragmentList_find(&fragmentList,fileName);
+              if (fragmentNode != NULL)
               {
-                if (!jobOptions->overwriteFilesFlag && FileFragmentList_checkExists(fileFragmentNode,fragmentOffset,fragmentSize))
+                if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,fragmentOffset,fragmentSize))
                 {
-                  printInfo(1,"  Restore file '%s'...skipped (file part %ll..%ll exists)\n",
+                  printInfo(1,"  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
                             String_cString(destinationFileName),
                             fragmentOffset,
                             (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset
@@ -345,7 +386,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   String_delete(fileName);
                   continue;
                 }
-                fileFragmentNode = FileFragmentList_addFile(&fileFragmentList,fileName,fileInfo.size);
+                fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size);
               }
 
               printInfo(2,"  Restore file '%s'...",String_cString(destinationFileName));
@@ -354,9 +395,10 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               directoryName = File_getFilePathName(String_new(),destinationFileName);
               if (!File_exists(directoryName))
               {
+                /* create directory */
                 error = File_makeDirectory(directoryName,
-                                           fileInfo.userId,
-                                           fileInfo.groupId,
+                                           FILE_DEFAULT_USER_ID,
+                                           FILE_DEFAULT_GROUP_ID,
                                            fileInfo.permission
                                           );
                 if (error != ERROR_NONE)
@@ -373,16 +415,46 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
                   continue;
                 }
+
+                /* set owner ship */
+                error = File_setOwner(directoryName,
+                                      (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
+                                      (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
+                                     );
+                if (error != ERROR_NONE)
+                {
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    printInfo(2,"FAIL!\n");
+                    printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+                               String_cString(directoryName),
+                               Errors_getText(error)
+                              );
+                    String_delete(directoryName);
+                    String_delete(destinationFileName);
+                    Archive_closeEntry(&archiveFileInfo);
+                    String_delete(fileName);
+                    if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+                    continue;
+                  }
+                  else
+                  {
+                    printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                 String_cString(directoryName),
+                                 Errors_getText(error)
+                                );
+                  }
+                }
               }
               String_delete(directoryName);
 
               /* write file data */
-//if (fileFragmentNode == NULL) File_delete(destinationFileName,TRUE);
+//if (fragmentNode == NULL) File_delete(destinationFileName,TRUE);
               error = File_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
-                printError("Cannot open file '%s' (error: %s)\n",
+                printError("Cannot create/write to file '%s' (error: %s)\n",
                            String_cString(destinationFileName),
                            Errors_getText(error)
                           );
@@ -427,7 +499,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
                 n = MIN(fragmentSize-length,BUFFER_SIZE);
 
-                error = Archive_readFileData(&archiveFileInfo,buffer,n);
+                error = Archive_readData(&archiveFileInfo,buffer,n);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -480,33 +552,42 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               }
 #endif /* 0 */
 
-              /* set file time, permissions, file owner/group */
+              /* set file time, file owner/group */
+              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
               {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot set file info of '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot set file info of '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Errors_getText(error)
+                            );
+                  String_delete(destinationFileName);
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(fileName);
                   restoreInfo.error = error;
+                  continue;
                 }
-                continue;
+                else
+                {
+                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                               String_cString(destinationFileName),
+                               Errors_getText(error)
+                              );
+                }
               }
 
               /* add fragment to file fragment list */
-              FileFragmentList_add(fileFragmentNode,fragmentOffset,fragmentSize);
-//FileFragmentList_print(fileFragmentNode,String_cString(fileName));
+              FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+//FragmentList_print(fragmentNode,String_cString(fileName));
 
               /* discard fragment list if file is complete */
-              if (FileFragmentList_checkComplete(fileFragmentNode))
+              if (FragmentList_checkEntryComplete(fragmentNode))
               {
-                FileFragmentList_removeFile(&fileFragmentList,fileFragmentNode);
+                FragmentList_remove(&fragmentList,fragmentNode);
               }
 
               /* free resources */
@@ -525,7 +606,206 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             String_delete(fileName);
           }
           break;
-        case FILE_TYPE_DIRECTORY:
+        case ARCHIVE_ENTRY_TYPE_IMAGE:
+          {
+            String       imageName;
+            DeviceInfo   deviceInfo;
+            uint64       blockOffset,blockCount;
+            String       destinationDeviceName;
+            FragmentNode *fragmentNode;
+            DeviceHandle deviceHandle;
+            uint64       length;
+            ulong        n;
+
+            /* read image */
+            imageName = String_new();
+            error = Archive_readImageEntry(&archiveInfo,
+                                           &archiveFileInfo,
+                                           NULL,
+                                           NULL,
+                                           NULL,
+                                           imageName,
+                                           &deviceInfo,
+                                           &blockOffset,
+                                           &blockCount
+                                          );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read 'image' content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         Errors_getText(error)
+                        );
+              String_delete(imageName);
+              if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+              break;
+            }
+
+            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,imageName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              String_set(restoreInfo.statusInfo.fileName,imageName);
+              restoreInfo.statusInfo.fileDoneBytes = 0LL;
+              restoreInfo.statusInfo.fileTotalBytes = blockCount;
+              updateStatusInfo(&restoreInfo);
+
+              /* get destination filename */
+              destinationDeviceName = getDestinationDeviceName(String_new(),
+                                                               imageName,
+                                                               jobOptions->destination
+                                                              );
+
+
+              /* check if image fragment exists */
+              fragmentNode = FragmentList_find(&fragmentList,imageName);
+              if (fragmentNode != NULL)
+              {
+                if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
+                {
+                  printInfo(1,"  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
+                            String_cString(destinationDeviceName),
+                            blockOffset*(uint64)deviceInfo.blockSize,
+                            ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
+                           );
+                  String_delete(destinationDeviceName);
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(imageName);
+                  continue;
+                }
+              }
+              else
+              {
+                fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size);
+              }
+
+              printInfo(2,"  Restore image '%s'...",String_cString(destinationDeviceName));
+
+              /* write image data */
+              error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPENMODE_WRITE);
+              if (error != ERROR_NONE)
+              {
+                printInfo(2,"FAIL!\n");
+                printError("Cannot write to device '%s' (error: %s)\n",
+                           String_cString(destinationDeviceName),
+                           Errors_getText(error)
+                          );
+                String_delete(destinationDeviceName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(imageName);
+                if (jobOptions->stopOnErrorFlag)
+                {
+                  restoreInfo.error = error;
+                }
+                continue;
+              }
+              error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
+              if (error != ERROR_NONE)
+              {
+                printInfo(2,"FAIL!\n");
+                printError("Cannot write to device '%s' (error: %s)\n",
+                           String_cString(destinationDeviceName),
+                           Errors_getText(error)
+                          );
+                Device_close(&deviceHandle);
+                String_delete(destinationDeviceName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(imageName);
+                if (jobOptions->stopOnErrorFlag)
+                {
+                  restoreInfo.error = error;
+                }
+                continue;
+              }
+
+              length = 0;
+              while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
+                     && (length < blockCount)
+                    )
+              {
+                /* pause */
+                while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
+                {
+                  Misc_udelay(500*1000);
+                }
+
+                assert(deviceInfo.blockSize > 0);
+                n = MIN(blockCount-length,BUFFER_SIZE/deviceInfo.blockSize);
+
+                error = Archive_readData(&archiveFileInfo,buffer,n*deviceInfo.blockSize);
+                if (error != ERROR_NONE)
+                {
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                             String_cString(archiveFileName),
+                             Errors_getText(error)
+                            );
+                  if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+                  break;
+                }
+                error = Device_write(&deviceHandle,buffer,n*deviceInfo.blockSize);
+                if (error != ERROR_NONE)
+                {
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot write to device '%s' (error: %s)\n",
+                             String_cString(destinationDeviceName),
+                             Errors_getText(error)
+                            );
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    restoreInfo.error = error;
+                  }
+                  break;
+                }
+                restoreInfo.statusInfo.fileDoneBytes += n*deviceInfo.blockSize;
+                updateStatusInfo(&restoreInfo);
+
+                length += n;
+              }
+              Device_close(&deviceHandle);
+              if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
+              {
+                printInfo(2,"ABORTED\n");
+                String_delete(destinationDeviceName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(imageName);
+                continue;
+              }
+#if 0
+              if (restoreInfo.error != ERROR_NONE)
+              {
+                String_delete(destinationDeviceName);
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(imageName);
+                continue;
+              }
+#endif /* 0 */
+
+              /* add fragment to file fragment list */
+              FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+
+              /* discard fragment list if file is complete */
+              if (FragmentList_checkEntryComplete(fragmentNode))
+              {
+                FragmentList_remove(&fragmentList,fragmentNode);
+              }
+
+              /* free resources */
+              String_delete(destinationDeviceName);
+
+              printInfo(2,"ok\n");
+            }
+            else
+            {
+              /* skip */
+              printInfo(3,"  Restore '%s'...skipped\n",String_cString(imageName));
+            }
+
+            /* close archive file, free resources */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(imageName);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
             String   directoryName;
             FileInfo fileInfo;
@@ -564,13 +844,12 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            directoryName,
-                                                           jobOptions->directory,
+                                                           jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
 
 
-              /* create directory */
-//File_delete(destinationFileName,TRUE);
+              /* check if directory already exists */
               if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
               {
                 printInfo(1,
@@ -585,9 +864,10 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
               printInfo(2,"  Restore directory '%s'...",String_cString(destinationFileName));
 
+              /* create directory */
               error = File_makeDirectory(destinationFileName,
-                                         fileInfo.userId,
-                                         fileInfo.groupId,
+                                         FILE_DEFAULT_USER_ID,
+                                         FILE_DEFAULT_GROUP_ID,
                                          fileInfo.permission
                                         );
               if (error != ERROR_NONE)
@@ -607,23 +887,35 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 continue;
               }
 
-              /* set file time, permissions, file owner/group */
+              /* set file time, file owner/group */
+              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
               {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot set directory info of '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(directoryName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = error;
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot set directory info of '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Errors_getText(error)
+                            );
+                  String_delete(destinationFileName);
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(directoryName);
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    restoreInfo.error = error;
+                  }
+                  continue;
                 }
-                continue;
+                else
+                {
+                  printWarning("Cannot set directory info of '%s' (error: %s)\n",
+                               String_cString(destinationFileName),
+                               Errors_getText(error)
+                              );
+                }
               }
 
               /* free resources */
@@ -642,7 +934,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             String_delete(directoryName);
           }
           break;
-        case FILE_TYPE_LINK:
+        case ARCHIVE_ENTRY_TYPE_LINK:
           {
             String   linkName;
             String   fileName;
@@ -685,7 +977,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            linkName,
-                                                           jobOptions->directory,
+                                                           jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
 
@@ -730,24 +1022,36 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 continue;
               }
 
-              /* set file time, permissions, file owner/group */
+              /* set file time, file owner/group */
+              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
               {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot set file info of '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(fileName);
-                String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = error;
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot set file info of '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Errors_getText(error)
+                            );
+                  String_delete(destinationFileName);
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(fileName);
+                  String_delete(linkName);
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    restoreInfo.error = error;
+                  }
+                  continue;
                 }
-                continue;
+                else
+                {
+                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                               String_cString(destinationFileName),
+                               Errors_getText(error)
+                              );
+                }
               }
 
               /* free resources */
@@ -767,7 +1071,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             String_delete(linkName);
           }
           break;
-        case FILE_TYPE_SPECIAL:
+        case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
             String   fileName;
             FileInfo fileInfo;
@@ -806,7 +1110,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
                                                            fileName,
-                                                           jobOptions->directory,
+                                                           jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
 
@@ -852,23 +1156,35 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 continue;
               }
 
-              /* set file time, permissions, file owner/group */
+              /* set file time, file owner/group */
+              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
               {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot set file info of '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = error;
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot set file info of '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Errors_getText(error)
+                            );
+                  String_delete(destinationFileName);
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(fileName);
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    restoreInfo.error = error;
+                  }
+                  continue;
                 }
-                continue;
+                else
+                {
+                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                               String_cString(destinationFileName),
+                               Errors_getText(error)
+                              );
+                }
               }
 
               /* free resources */
@@ -902,11 +1218,11 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   /* check fragment lists */
   if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
   {
-    for (fileFragmentNode = fileFragmentList.head; fileFragmentNode != NULL; fileFragmentNode = fileFragmentNode->next)
+    for (fragmentNode = fragmentList.head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
     {
-      if (!FileFragmentList_checkComplete(fileFragmentNode))
+      if (!FragmentList_checkEntryComplete(fragmentNode))
       {
-        printInfo(0,"Warning: incomplete file '%s'\n",String_cString(fileFragmentNode->fileName));
+        printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
         if (restoreInfo.error == ERROR_NONE) restoreInfo.error = ERROR_FILE_INCOMPLETE;
       }
     }
@@ -914,7 +1230,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
   /* free resources */
   String_delete(archiveFileName);
-  FileFragmentList_done(&fileFragmentList);
+  FragmentList_done(&fragmentList);
   free(buffer);
   String_delete(restoreInfo.statusInfo.fileName);
   String_delete(restoreInfo.statusInfo.storageName);

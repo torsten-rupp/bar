@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -239,7 +239,7 @@ typedef struct
   {
     struct
     {
-      DirectoryHandle directoryHandle;
+      DirectoryListHandle directoryListHandle;
     } fileSystem;
     #ifdef HAVE_FTP
       struct
@@ -269,10 +269,10 @@ typedef struct
     #endif /* HAVE_SSH2 */
     struct
     {
-      DirectoryHandle directoryHandle;
+      DirectoryListHandle directoryListHandle;
     } dvd;
   };
-} StorageDirectoryHandle;
+} StorageDirectoryListHandle;
 
 /***************************** Variables *******************************/
 
@@ -672,59 +672,61 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : Storage_openDirectory
-* Purpose: open storage directory for reading directory entries
-* Input  : storageDirectoryHandle - storage directory handle variable
-*          storageName            - storage name
-*          jobOptions             - job options
-* Output : storageDirectoryHandle - initialized storage directory handle
+* Name   : Storage_openDirectoryList
+* Purpose: open storage directory list for reading directory entries
+* Input  : storageDirectoryListHandle - storage directory list handle
+*                                       variable
+*          storageName                - storage name
+*          jobOptions                 - job options
+* Output : storageDirectoryListHandle - initialized storage directory
+*                                       list handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
-                             const String           storageName,
-                             const JobOptions       *jobOptions
-                            );
+Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
+                                 const String               storageName,
+                                 const JobOptions           *jobOptions
+                                );
 
 /***********************************************************************\
-* Name   : Storage_closeDirectory
-* Purpose: close storage directory
-* Input  : storageDirectoryHandle - storage directory handle
+* Name   : Storage_closeDirectoryList
+* Purpose: close storage directory list
+* Input  : storageDirectoryListHandle - storage directory list handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Storage_closeDirectory(StorageDirectoryHandle *storageDirectoryHandle);
+void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle);
 
 /***********************************************************************\
-* Name   : Storage_endOfDirectory
-* Purpose: check if end of directory reached
-* Input  : storageDirectoryHandle - storage directory handle
+* Name   : Storage_endOfDirectoryList
+* Purpose: check if end of storage directory list reached
+* Input  : storageDirectoryListHandle - storage directory list handle
 * Output : -
 * Return : TRUE if not more diretory entries to read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_endOfDirectory(StorageDirectoryHandle *storageDirectoryHandle);
+bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle);
 
 /***********************************************************************\
-* Name   : Storage_readDirectory
-* Purpose: read next directory entry in storage
-* Input  : storageDirectoryHandle - storage directory handle
-*          fileName               - file name variable
-*          fileInfo               - file info (can be NULL)
+* Name   : Storage_readDirectoryList
+* Purpose: read next storage directory list entry in storage
+* Input  : storageDirectoryListHandle - storage directory list handle
+*          fileName                   - file name variable
+*          fileInfo                   - file info (can be NULL)
 * Output : fileName - next file name
 *          fileInfo - next file info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
-                             String                 fileName,
-                             FileInfo               *fileInfo
-                            );
+Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
+                                 String                     fileName,
+                                 FileInfo                   *fileInfo
+                                );
 
 #ifdef __cplusplus
   }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -56,7 +56,7 @@ typedef enum
   FILE_SPECIAL_TYPE_CHARACTER_DEVICE,
   FILE_SPECIAL_TYPE_BLOCK_DEVICE,
   FILE_SPECIAL_TYPE_FIFO,
-  FILE_SPECIAL_TYPE_SOCKET,
+  FILE_SPECIAL_TYPE_SOCKET
 } FileSpecialTypes;
 
 #define FILE_DEFAULT_USER_ID    0xFFFFFFFF
@@ -80,15 +80,7 @@ typedef struct
   String        name;
   DIR           *dir;
   struct dirent *entry;
-} DirectoryHandle;
-
-/* device list read handle */
-typedef struct
-{
-  FILE *file;
-  char buffer[128];
-  bool bufferFilledFlag;
-} DeviceHandle;
+} DirectoryListHandle;
 
 /* file cast: change if file is modified in some way */
 typedef byte FileCast[FILE_CAST_SIZE];
@@ -97,7 +89,7 @@ typedef byte FileCast[FILE_CAST_SIZE];
 typedef struct
 {
   FileTypes        type;
-  uint64           size;
+  int64            size;
   uint64           timeLastAccess;
   uint64           timeModified;
   uint64           timeLastChanged;
@@ -165,12 +157,23 @@ String File_duplicateFileName(const String fromFileName);
 void File_deleteFileName(String fileName);
 
 /***********************************************************************\
+* Name   : File_clearFileName
+* Purpose: clear file name variable
+* Input  : fileName - file name variable
+* Output : -
+* Return : file name variable
+* Notes  : -
+\***********************************************************************/
+
+String File_clearFileName(String fileName);
+
+/***********************************************************************\
 * Name   : File_setFileName
-* Purpose: set name to file name
-* Input  : fileName - file name
+* Purpose: set file name
+* Input  : fileName - file name variable
 *          name     - name to set
 * Output : -
-* Return : file name
+* Return : file name variable
 * Notes  : -
 \***********************************************************************/
 
@@ -181,10 +184,10 @@ String File_setFileNameChar(String fileName, char ch);
 /***********************************************************************\
 * Name   : File_fileNameAppend
 * Purpose: append name to file name
-* Input  : fileName - file name
+* Input  : fileName - file name variable
 *          name     - name to append
 * Output : -
-* Return : file name
+* Return : file name variable
 * Notes  : -
 \***********************************************************************/
 
@@ -199,7 +202,7 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 * Input  : fileName - file name
 *          path     - path variable
 * Output : -
-* Return : path
+* Return : path variable
 * Notes  : -
 \***********************************************************************/
 
@@ -211,7 +214,7 @@ String File_getFilePathName(String path, const String fileName);
 * Input  : fileName - file name
 *          baseName - basename variable
 * Output : -
-* Return : basename
+* Return : basename variable
 * Notes  : -
 \***********************************************************************/
 
@@ -473,108 +476,81 @@ Errors File_truncate(FileHandle *fileHandle,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : File_openDirectory
+* Name   : File_openDirectoryList
 * Purpose: open directory for reading
-* Input  : directoryHandle - directory handle
-*          pathName        - path name
+* Input  : directoryListHandle - directory list handle
+*          pathName            - path name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors File_openDirectory(DirectoryHandle *directoryHandle,
-                          const String    pathName
-                         );
-Errors File_openDirectoryCString(DirectoryHandle *directoryHandle,
-                                 const char      *pathName
-                                );
+Errors File_openDirectoryList(DirectoryListHandle *directoryListHandle,
+                              const String        pathName
+                             );
+Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
+                                     const char          *pathName
+                                    );
 
 /***********************************************************************\
-* Name   : File_closeDirectory
-* Purpose: close directory
-* Input  : directoryHandle - directory handle
+* Name   : File_closeDirectoryList
+* Purpose: close directory .ist
+* Input  : directoryListHandle - directory list handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void File_closeDirectory(DirectoryHandle *directoryHandle);
+void File_closeDirectoryList(DirectoryListHandle *directoryListHandle);
 
 /***********************************************************************\
-* Name   : File_endOfDirectory
-* Purpose: check if end of directory reached
+* Name   : File_endOfDirectoryList
+* Purpose: check if end of directory list reached
 * Input  : directoryHandle - directory handle
 * Output : -
 * Return : TRUE if not more diretory entries to read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool File_endOfDirectory(DirectoryHandle *directoryHandle);
+bool File_endOfDirectoryList(DirectoryListHandle *directoryListHandle);
 
 /***********************************************************************\
-* Name   : File_readDirectory
-* Purpose: read next directory entry
-* Input  : directoryHandle - directory handle
-*          fileName        - file name variable
+* Name   : File_readDirectoryList
+* Purpose: read next directory list entry
+* Input  : directoryHandleList - directory list handle
+*          fileName            - file name variable
 * Output : fileName - next file name
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors File_readDirectory(DirectoryHandle *directoryHandle,
-                          String          fileName
-                         );
+Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
+                              String              fileName
+                             );
 
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : File_openDevices
-* Purpose: open devices for reading
-* Input  : deviceHandle - device handle
+* Name   : File_userNameToUserId
+* Purpose: convert user name to user id
+* Input  : name - user name
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : user id or FILE_DEFAULT_USER_ID if user not found
 * Notes  : -
 \***********************************************************************/
 
-Errors File_openDevices(DeviceHandle *deviceHandle);
+uint32 File_userNameToUserId(const char *name);
 
 /***********************************************************************\
-* Name   : File_closeDevices
-* Purpose: close devices
-* Input  : deviceHandle - device handle
+* Name   : File_groupNameToGroupId
+* Purpose: convert group name to group id
+* Input  : name - group name
 * Output : -
-* Return : -
+* Return : user id or FILE_DEFAULT_GROUP_ID if group not found
 * Notes  : -
 \***********************************************************************/
 
-void File_closeDevices(DeviceHandle *deviceHandle);
-
-/***********************************************************************\
-* Name   : File_endOfDevices
-* Purpose: check if end of devices reached
-* Input  : deviceHandle - device handle
-* Output : -
-* Return : TRUE if not more diretory entries to read, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool File_endOfDevices(DeviceHandle *deviceHandle);
-
-/***********************************************************************\
-* Name   : File_readDevice
-* Purpose: read next device entry
-* Input  : deviceHandle - device handle
-*          deviceName   - device name variable
-* Output : deviceName - next device name
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors File_readDevice(DeviceHandle *deviceHandle,
-                       String       deviceName
-                      );
-
-/*---------------------------------------------------------------------*/
+uint32 File_groupNameToGroupId(const char *name);
 
 /***********************************************************************\
 * Name   : File_getType
@@ -693,7 +669,7 @@ bool File_isWriteableCString(const char *fileName);
 * Name   : File_getInfo
 * Purpose: get file info
 * Input  : fileName - file name
-* Output : fileInfo - file info
+* Output : fileInfo - file info variable to file
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -714,7 +690,37 @@ Errors File_getFileInfo(const String fileName,
 uint64 File_getFileTimeModified(const String fileName);
 
 /***********************************************************************\
-* Name   : File_setInfo
+* Name   : File_setPermission
+* Purpose: set file permission
+* Input  : fileName   - file name
+*          permission - file permission
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_setPermission(const String fileName,
+                          uint32       permission
+                         );
+
+/***********************************************************************\
+* Name   : File_setOwner
+* Purpose: set file owner
+* Input  : fileName - file name
+*          userId   - user id or FILE_DEFAULT_USER_ID
+*          groupId  - group id or FILE_DEFAULT_GROUP_ID
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_setOwner(const String fileName,
+                     uint32       userId,
+                     uint32       groupId
+                    );
+
+/***********************************************************************\
+* Name   : File_setFileInfo
 * Purpose: set file info
 * Input  : fileName - file name
 *          fileInfo - file info

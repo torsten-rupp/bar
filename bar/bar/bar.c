@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -92,7 +92,8 @@ typedef enum
 {
   COMMAND_NONE,
 
-  COMMAND_CREATE,
+  COMMAND_CREATE_FILES,
+  COMMAND_CREATE_IMAGES,
   COMMAND_LIST,
   COMMAND_TEST,
   COMMAND_COMPARE,
@@ -115,14 +116,14 @@ LOCAL uint          keyBits;
 
 LOCAL JobOptions    jobOptions;
 LOCAL const char    *archiveFileName;
-LOCAL PatternList   includePatternList;
-LOCAL PatternList   excludePatternList;
 LOCAL FTPServer     defaultFTPServer;
 LOCAL SSHServer     defaultSSHServer;
 LOCAL FTPServerList ftpServerList;
 LOCAL SSHServerList sshServerList;
 LOCAL Device        defaultDevice;
 LOCAL DeviceList    deviceList;
+LOCAL PatternList   includePatternList;
+LOCAL PatternList   excludePatternList;
 LOCAL FTPServer     *currentFTPServer = &defaultFTPServer;
 LOCAL SSHServer     *currentSSHServer = &defaultSSHServer;
 LOCAL Device        *currentDevice = &defaultDevice;
@@ -167,6 +168,7 @@ LOCAL bool          outputNewLineFlag;
   extern "C" {
 #endif
 
+LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseIncludeExclude(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
@@ -249,25 +251,26 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
 
 LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
 {
-  {"none",      LOG_TYPE_NONE,              "no logging"               },
-  {"errors",    LOG_TYPE_ERROR,             "log errors"               },
-  {"warnings",  LOG_TYPE_WARNING,           "log warnings"             },
+  {"none",      LOG_TYPE_NONE,               "no logging"               },
+  {"errors",    LOG_TYPE_ERROR,              "log errors"               },
+  {"warnings",  LOG_TYPE_WARNING,            "log warnings"             },
 
-  {"ok",        LOG_TYPE_FILE_OK,           "log stored/restored files"},
-  {"unknown",   LOG_TYPE_FILE_TYPE_UNKNOWN, "log unknown files"        },
-  {"skipped",   LOG_TYPE_FILE_ACCESS_DENIED,"log skipped files"        },
-  {"missing",   LOG_TYPE_FILE_MISSING,      "log missing files"        },
-  {"incomplete",LOG_TYPE_FILE_INCOMPLETE,   "log incomplete files"     },
-  {"excluded",  LOG_TYPE_FILE_EXCLUDED,     "log excluded files"       },
+  {"ok",        LOG_TYPE_ENTRY_OK,           "log stored/restored files"},
+  {"unknown",   LOG_TYPE_ENTRY_TYPE_UNKNOWN, "log unknown files"        },
+  {"skipped",   LOG_TYPE_ENTRY_ACCESS_DENIED,"log skipped files"        },
+  {"missing",   LOG_TYPE_ENTRY_MISSING,      "log missing files"        },
+  {"incomplete",LOG_TYPE_ENTRY_INCOMPLETE,   "log incomplete files"     },
+  {"excluded",  LOG_TYPE_ENTRY_EXCLUDED,     "log excluded files"       },
 
-  {"storage",   LOG_TYPE_STORAGE,           "log storage"              },
+  {"storage",   LOG_TYPE_STORAGE,            "log storage"              },
 
-  {"all",       LOG_TYPE_ALL,               "log everything"           },
+  {"all",       LOG_TYPE_ALL,                "log everything"           },
 };
 
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM         ("create",                       'c',0,0,command,                                   COMMAND_LIST,COMMAND_CREATE,                                       "create new archive"                                                       ),
+  CMD_OPTION_ENUM         ("create",                       'c',0,0,command,                                   COMMAND_LIST,COMMAND_CREATE_FILES,                                 "create new files archive"                                                 ),
+  CMD_OPTION_ENUM         ("image",                        'm',0,0,command,                                   COMMAND_LIST,COMMAND_CREATE_IMAGES,                                "create new images archive"                                                ),
   CMD_OPTION_ENUM         ("list",                         'l',0,0,command,                                   COMMAND_LIST,COMMAND_LIST,                                         "list contents of archive"                                                 ),
   CMD_OPTION_ENUM         ("test",                         't',0,0,command,                                   COMMAND_LIST,COMMAND_TEST,                                         "test contents of archive"                                                 ),
   CMD_OPTION_ENUM         ("compare",                      'd',0,0,command,                                   COMMAND_LIST,COMMAND_COMPARE,                                      "compare contents of archive with files"                                   ),
@@ -289,7 +292,9 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("incremental-list-file",        'I',1,0,&jobOptions.incrementalListFileName,       NULL,cmdOptionParseString,NULL,                                    "incremental list file name (default: <archive name>.bid)","file name"     ),
 
   CMD_OPTION_INTEGER      ("directory-strip",              'p',1,0,jobOptions.directoryStripCount,            0,0,INT_MAX,NULL,                                                  "number of directories to strip on extract"                                ),
-  CMD_OPTION_SPECIAL      ("directory",                    0,  0,0,&jobOptions.directory   ,                  NULL,cmdOptionParseString,NULL,                                    "directory to restore files","path"                                        ),
+  CMD_OPTION_SPECIAL      ("destination",                  0,  0,0,&jobOptions.destination,                   NULL,cmdOptionParseString,NULL,                                    "destination to restore files/image","path"                                ),
+  CMD_OPTION_SPECIAL      ("owner",                        0,  0,0,&jobOptions.owner,                         NULL,cmdOptionParseOwner,NULL,                                     "owner of restored files","user:group"                                     ),
+
   CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,globalOptions.niceLevel,                   0,0,19,NULL,                                                       "general nice level of processes/threads"                                  ),
 
   CMD_OPTION_INTEGER      ("max-band-width",               0,  1,0,globalOptions.maxBandWidth,                0,0,INT_MAX,COMMAND_LINE_BITS_UNITS,                               "max. network band width to use"                                           ),
@@ -478,20 +483,20 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] =
 
 LOCAL const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
 {
-  {"none",      LOG_TYPE_NONE              },
-  {"errors",    LOG_TYPE_ERROR             },
-  {"warnings",  LOG_TYPE_WARNING           },
+  {"none",      LOG_TYPE_NONE               },
+  {"errors",    LOG_TYPE_ERROR              },
+  {"warnings",  LOG_TYPE_WARNING            },
 
-  {"ok",        LOG_TYPE_FILE_OK           },
-  {"unknown",   LOG_TYPE_FILE_TYPE_UNKNOWN },
-  {"skipped",   LOG_TYPE_FILE_ACCESS_DENIED},
-  {"missing",   LOG_TYPE_FILE_MISSING      },
-  {"incomplete",LOG_TYPE_FILE_INCOMPLETE   },
-  {"excluded",  LOG_TYPE_FILE_EXCLUDED     },
+  {"ok",        LOG_TYPE_ENTRY_OK           },
+  {"unknown",   LOG_TYPE_ENTRY_TYPE_UNKNOWN },
+  {"skipped",   LOG_TYPE_ENTRY_ACCESS_DENIED},
+  {"missing",   LOG_TYPE_ENTRY_MISSING      },
+  {"incomplete",LOG_TYPE_ENTRY_INCOMPLETE   },
+  {"excluded",  LOG_TYPE_ENTRY_EXCLUDED     },
 
-  {"storage",   LOG_TYPE_STORAGE           },
+  {"storage",   LOG_TYPE_STORAGE            },
 
-  {"all",       LOG_TYPE_ALL               },
+  {"all",       LOG_TYPE_ALL                },
 };
 
 LOCAL const ConfigValue CONFIG_VALUES[] =
@@ -503,7 +508,9 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER64("max-tmp-size",                 &globalOptions.maxTmpSize,-1,                           0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
 
   CONFIG_VALUE_INTEGER  ("directory-strip",              &jobOptions.directoryStripCount,-1,                     0,INT_MAX,NULL),
-  CONFIG_VALUE_STRING   ("directory",                    &jobOptions.directory,-1                                ),
+  CONFIG_VALUE_STRING   ("destination",                  &jobOptions.destination,-1                              ),
+  CONFIG_VALUE_SPECIAL  ("owner",                        &jobOptions.owner,-1,                                   configValueParseOwner,NULL,NULL,NULL,&jobOptions.owner),
+
   CONFIG_VALUE_INTEGER  ("nice-level",                   &globalOptions.niceLevel,-1,                            0,19,NULL),
 
   CONFIG_VALUE_INTEGER  ("max-band-width",               &globalOptions.maxBandWidth,-1,                         0,INT_MAX,CONFIG_VALUE_BITS_UNITS),
@@ -867,6 +874,60 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 }
 
 /***********************************************************************\
+* Name   : cmdOptionParseOwner
+* Purpose: command line option call back for parsing owner
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+{
+  const char userName[256],groupName[256];
+  uint32     userId,groupId;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
+
+  /* parse */
+  if      (String_scanCString(value,"%256s:%256s",userName,groupName))
+  {
+    userId  = File_userNameToUserId(userName);
+    groupId = File_groupNameToGroupId(groupName);
+  }
+  else if (String_scanCString(value,"%256s:",userName))
+  {
+    userId  = File_userNameToUserId(userName);
+    groupId = FILE_DEFAULT_GROUP_ID;
+  }
+  else if (String_scanCString(value,":%256s",groupName))
+  {
+    userId  = FILE_DEFAULT_USER_ID;
+    groupId = File_groupNameToGroupId(groupName);
+  }
+  else if (String_scanCString(value,"%256s",userName))
+  {
+    userId  = File_userNameToUserId(userName);
+    groupId = FILE_DEFAULT_GROUP_ID;
+  }
+  else
+  {
+    return FALSE;
+  }
+
+  /* store owner values */
+  ((Owner*)variable)->userId  = userId;
+  ((Owner*)variable)->groupId = groupId;
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : cmdOptionParseConfigFile
 * Purpose: command line option call back for parsing config file
 * Input  : -
@@ -1212,18 +1273,19 @@ LOCAL bool initAll(void)
   }
 
   /* initialise variables */
-  StringList_init(&configFileNameList);
-  tmpDirectory = String_new();
-  tmpLogFileName = String_new();
-  outputLine = String_new();
-  outputNewLineFlag = TRUE;
   initGlobalOptions();
+  initJobOptions(&jobOptions);
   List_init(&ftpServerList);
   List_init(&sshServerList);
   List_init(&deviceList);
   serverPassword = Password_new();
   PatternList_init(&includePatternList);
   PatternList_init(&excludePatternList);
+  StringList_init(&configFileNameList);
+  tmpDirectory = String_new();
+  tmpLogFileName = String_new();
+  outputLine = String_new();
+  outputNewLineFlag = TRUE;
 
   return TRUE;
 }
@@ -1492,6 +1554,8 @@ void initJobOptions(JobOptions *jobOptions)
   assert(jobOptions != NULL);
 
   memset(jobOptions,0,sizeof(JobOptions));
+  jobOptions->owner.userId  = FILE_DEFAULT_USER_ID;
+  jobOptions->owner.groupId = FILE_DEFAULT_GROUP_ID;
 }
 
 void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions)
@@ -1501,7 +1565,7 @@ void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions)
 
   memcpy(toJobOptions,fromJobOptions,sizeof(JobOptions));
   toJobOptions->incrementalListFileName      = String_duplicate(fromJobOptions->incrementalListFileName);
-  toJobOptions->directory                    = String_duplicate(fromJobOptions->directory);
+  toJobOptions->destination                  = String_duplicate(fromJobOptions->destination);
   toJobOptions->cryptPassword                = Password_duplicate(fromJobOptions->cryptPassword);
   toJobOptions->cryptPublicKeyFileName       = String_duplicate(fromJobOptions->cryptPublicKeyFileName);
   toJobOptions->cryptPrivateKeyFileName      = String_duplicate(fromJobOptions->cryptPrivateKeyFileName);
@@ -1527,7 +1591,7 @@ void freeJobOptions(JobOptions *jobOptions)
   String_delete(jobOptions->cryptPrivateKeyFileName);
   String_delete(jobOptions->cryptPublicKeyFileName);
   Password_delete(jobOptions->cryptPassword);
-  String_delete(jobOptions->directory);
+  String_delete(jobOptions->destination);
   String_delete(jobOptions->incrementalListFileName);
   memset(jobOptions,0,sizeof(JobOptions));
 }
@@ -1679,6 +1743,77 @@ Errors inputCryptPassword(void         *userData,
   }
 
   return error;
+}
+
+bool configValueParseOwner(void *userData, void *variable, const char *name, const char *value)
+{
+  const char userName[256],groupName[256];
+  uint32     userId,groupId;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  /* parse */
+  if      (String_scanCString(value,"%256s:%256s",userName,groupName))
+  {
+    userId  = File_userNameToUserId(userName);
+    groupId = File_groupNameToGroupId(groupName);
+  }
+  else if (String_scanCString(value,"%256s:",userName))
+  {
+    userId  = File_userNameToUserId(userName);
+    groupId = FILE_DEFAULT_GROUP_ID;
+  }
+  else if (String_scanCString(value,":%256s",groupName))
+  {
+    userId  = FILE_DEFAULT_USER_ID;
+    groupId = File_groupNameToGroupId(groupName);
+  }
+  else if (String_scanCString(value,"%256s",userName))
+  {
+    userId  = File_userNameToUserId(userName);
+    groupId = FILE_DEFAULT_GROUP_ID;
+  }
+  else
+  {
+    return FALSE;
+  }
+
+  /* store owner values */
+  ((Owner*)variable)->userId  = userId;
+  ((Owner*)variable)->groupId = groupId;
+
+  return TRUE;
+}
+
+void configValueFormatInitOwner(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (*(String**)variable);
+}
+
+void configValueFormatDoneOwner(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(formatUserData);  
+}
+
+bool configValueFormatOwner(void **formatUserData, void *userData, String line)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+//???
+  String_format(line,"%d:%d",0,0);
+
+  return TRUE;
 }
 
 bool configValueParseIncludeExclude(void *userData, void *variable, const char *name, const char *value)
@@ -2571,9 +2706,11 @@ int main(int argc, const char *argv[])
 
     switch (command)
     {
-      case COMMAND_CREATE:
+      case COMMAND_CREATE_FILES:
+      case COMMAND_CREATE_IMAGES:
         {
-          int z;
+          int         z;
+          CreateModes createMode;
 
           /* get archive file name */
           if (argc <= 1)
@@ -2591,7 +2728,14 @@ int main(int argc, const char *argv[])
           }
 
           /* create archive */
-          error = Command_create(archiveFileName,
+          switch (command)
+          {
+            case COMMAND_CREATE_FILES:  createMode = CREATE_MODE_FILES;  break;
+            case COMMAND_CREATE_IMAGES: createMode = CREATE_MODE_IMAGES; break;
+            default:                    createMode = CREATE_MODE_FILES;  break;
+          }
+          error = Command_create(createMode,
+                                 archiveFileName,
                                  &includePatternList,
                                  &excludePatternList,
                                  &jobOptions,
@@ -2831,3 +2975,4 @@ int main(int argc, const char *argv[])
 #endif
 
 /* end of file */
+

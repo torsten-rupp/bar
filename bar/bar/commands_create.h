@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -29,6 +29,13 @@
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
+/* create types */
+typedef enum
+{
+  CREATE_MODE_FILES,
+  CREATE_MODE_IMAGES,
+} CreateModes;
+
 /* status info data */
 typedef struct
 {
@@ -72,7 +79,8 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 /***********************************************************************\
 * Name   : Command_create
 * Purpose: create archive
-* Input  : archiveFileName                  - archive file name
+* Input  : createMode                       - create mode
+*          archiveFileName                  - archive file name
 *          includeList                      - include list
 *          excludeList                      - exclude list
 *          jobOptions                       - job options
@@ -98,7 +106,8 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_create(const char                      *archiveFileName,
+Errors Command_create(CreateModes                     createMode,
+                      const char                      *archiveFileName,
                       PatternList                     *includePatternList,
                       PatternList                     *excludePatternList,
                       JobOptions                      *jobOptions,

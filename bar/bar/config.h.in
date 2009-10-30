@@ -16,6 +16,9 @@
 /* configuration directory */
 #undef CONFIG_DIR
 
+/* backtrace() available */
+#undef HAVE_BACKTRACE
+
 /* bzip2 installed */
 #undef HAVE_BZ2
 

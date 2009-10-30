@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -29,10 +29,10 @@
 
 /***************************** Datatypes *******************************/
 
-/* backup/restore job */
+/* create/restore job */
 typedef enum
 {
-  JOB_TYPE_BACKUP,
+  JOB_TYPE_CREATE,
   JOB_TYPE_RESTORE,
 } JobTypes;
 

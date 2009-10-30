@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/chunks.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems: all
@@ -71,8 +71,10 @@ typedef struct
   uint64(*getSize)(void *userData);
 } ChunkIO;
 
+/* chunk id: 4 characters */
 typedef uint32 ChunkId;
 
+/* chunk header (Note: only id+size is stored in file!) */
 typedef struct
 {
   uint32 id;                        // chunk id
@@ -80,6 +82,7 @@ typedef struct
   uint64 offset;                    // start of chunk in file (offset of header)
 } ChunkHeader;
 
+/* chunk information */
 typedef struct ChunkInfo
 {
   struct ChunkInfo *parentChunkInfo;
@@ -137,17 +140,6 @@ Errors Chunk_initAll(void);
 \***********************************************************************/
 
 void Chunk_doneAll(void);
-
-void Chunk_initIO(ChunkIO *chunkIO,
-                  bool(*eof)(void *userData),
-                  Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead),
-                  Errors(*write)(void *userData, const void *buffer, ulong length),
-                  Errors(*tell)(void *userData, uint64 *offset),
-                  Errors(*seek)(void *userData, uint64 offset),
-                  uint64(*getSize)(void *userData)
-                 );
-
-void Chunk_doneIO(ChunkIO *chunkIO);
 
 /***********************************************************************\
 * Name   : Chunk_idToString

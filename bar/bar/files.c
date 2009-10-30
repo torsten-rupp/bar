@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -18,12 +18,15 @@
 #include <dirent.h>
 #include <utime.h>
 #include <sys/statvfs.h>
+#include <pwd.h>
+#include <grp.h>
 #include <errno.h>
 #include <assert.h>
 
 #include "global.h"
 #include "strings.h"
 #include "stringlists.h"
+#include "devices.h"
 
 #include "files.h"
 
@@ -58,6 +61,13 @@ String File_duplicateFileName(const String fromFileName)
 void File_deleteFileName(String fileName)
 {
   String_delete(fileName);
+}
+
+String File_clearFileName(String fileName)
+{
+  assert(fileName != NULL);
+
+  return String_clear(fileName);
 }
 
 String File_setFileName(String fileName, const String name)
@@ -361,7 +371,7 @@ Errors File_open(FileHandle    *fileHandle,
         return error;
       }
       n = ftello(fileHandle->file);
-      if (n == (off_t)-1)
+      if (n == (off_t)(-1))
       {
         error = ERRORX(IO_ERROR,errno,String_cString(fileName));
         fclose(fileHandle->file);
@@ -443,7 +453,7 @@ Errors File_open(FileHandle    *fileHandle,
 
       /* get file size */
       n = ftello(fileHandle->file);
-      if (n == (off_t)-1)
+      if (n == (off_t)(-1))
       {
         error = ERRORX(IO_ERROR,errno,String_cString(fileName));
         fclose(fileHandle->file);
@@ -523,7 +533,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
 
       /* get file size */
       n = ftello(fileHandle->file);
-      if (n == (off_t)-1)
+      if (n == (off_t)(-1))
       {
         error = ERROR(IO_ERROR,errno);
         fclose(fileHandle->file);
@@ -749,7 +759,7 @@ Errors File_tell(FileHandle *fileHandle, uint64 *offset)
   assert(offset != NULL);
 
   n = ftello(fileHandle->file);
-  if (n == (off_t)-1)
+  if (n == (off_t)(-1))
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileHandle->name));
   }
@@ -796,193 +806,132 @@ Errors File_truncate(FileHandle *fileHandle,
 
 /*---------------------------------------------------------------------*/
 
-Errors File_openDirectory(DirectoryHandle *directoryHandle,
-                          const String    pathName
-                         )
+Errors File_openDirectoryList(DirectoryListHandle *directoryListHandle,
+                              const String        pathName
+                             )
 {
-  assert(directoryHandle != NULL);
+  assert(directoryListHandle != NULL);
   assert(pathName != NULL);
 
-  directoryHandle->dir = opendir(String_cString(pathName));
-  if (directoryHandle->dir == NULL)
+  directoryListHandle->dir = opendir(String_cString(pathName));
+  if (directoryListHandle->dir == NULL)
   {
     return ERRORX(OPEN_DIRECTORY,errno,String_cString(pathName));
   }
 
-  directoryHandle->name  = String_duplicate(pathName);
-  directoryHandle->entry = NULL;
+  directoryListHandle->name  = String_duplicate(pathName);
+  directoryListHandle->entry = NULL;
 
   return ERROR_NONE;
 }
 
-Errors File_openDirectoryCString(DirectoryHandle *directoryHandle,
-                                 const char      *pathName
-                                )
+Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
+                                     const char      *pathName
+                                    )
 {
-  assert(directoryHandle != NULL);
+  assert(directoryListHandle != NULL);
   assert(pathName != NULL);
 
-  directoryHandle->dir = opendir(pathName);
-  if (directoryHandle->dir == NULL)
+  directoryListHandle->dir = opendir(pathName);
+  if (directoryListHandle->dir == NULL)
   {
     return ERRORX(OPEN_DIRECTORY,errno,pathName);
   }
 
-  directoryHandle->name  = String_newCString(pathName);
-  directoryHandle->entry = NULL;
+  directoryListHandle->name  = String_newCString(pathName);
+  directoryListHandle->entry = NULL;
 
   return ERROR_NONE;
 }
 
-void File_closeDirectory(DirectoryHandle *directoryHandle)
+void File_closeDirectoryList(DirectoryListHandle *directoryListHandle)
 {
-  assert(directoryHandle != NULL);
-  assert(directoryHandle->name != NULL);
-  assert(directoryHandle->dir != NULL);
+  assert(directoryListHandle != NULL);
+  assert(directoryListHandle->name != NULL);
+  assert(directoryListHandle->dir != NULL);
 
-  closedir(directoryHandle->dir);
-  File_deleteFileName(directoryHandle->name);
+  closedir(directoryListHandle->dir);
+  File_deleteFileName(directoryListHandle->name);
 }
 
-bool File_endOfDirectory(DirectoryHandle *directoryHandle)
+bool File_endOfDirectoryList(DirectoryListHandle *directoryListHandle)
 {
-  assert(directoryHandle != NULL);
-  assert(directoryHandle->name != NULL);
-  assert(directoryHandle->dir != NULL);
+  assert(directoryListHandle != NULL);
+  assert(directoryListHandle->name != NULL);
+  assert(directoryListHandle->dir != NULL);
 
   /* read entry iff not read */
-  if (directoryHandle->entry == NULL)
+  if (directoryListHandle->entry == NULL)
   {
-    directoryHandle->entry = readdir(directoryHandle->dir);
+    directoryListHandle->entry = readdir(directoryListHandle->dir);
   }
 
   /* skip "." and ".." entries */
-  while (   (directoryHandle->entry != NULL)
-         && (   (strcmp(directoryHandle->entry->d_name,"." ) == 0)
-             || (strcmp(directoryHandle->entry->d_name,"..") == 0)
+  while (   (directoryListHandle->entry != NULL)
+         && (   (strcmp(directoryListHandle->entry->d_name,"." ) == 0)
+             || (strcmp(directoryListHandle->entry->d_name,"..") == 0)
             )
         )
   {
-    directoryHandle->entry = readdir(directoryHandle->dir);
+    directoryListHandle->entry = readdir(directoryListHandle->dir);
   }
 
-  return directoryHandle->entry == NULL;
+  return directoryListHandle->entry == NULL;
 }
 
-Errors File_readDirectory(DirectoryHandle *directoryHandle,
-                          String          fileName
-                         )
+Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
+                              String              fileName
+                             )
 {
-  assert(directoryHandle != NULL);
-  assert(directoryHandle->name != NULL);
-  assert(directoryHandle->dir != NULL);
+  assert(directoryListHandle != NULL);
+  assert(directoryListHandle->name != NULL);
+  assert(directoryListHandle->dir != NULL);
   assert(fileName != NULL);
 
   /* read entry iff not read */
-  if (directoryHandle->entry == NULL)
+  if (directoryListHandle->entry == NULL)
   {
-    directoryHandle->entry = readdir(directoryHandle->dir);
+    directoryListHandle->entry = readdir(directoryListHandle->dir);
   }
 
   /* skip "." and ".." entries */
-  while (   (directoryHandle->entry != NULL)
-         && (   (strcmp(directoryHandle->entry->d_name,"." ) == 0)
-             || (strcmp(directoryHandle->entry->d_name,"..") == 0)
+  while (   (directoryListHandle->entry != NULL)
+         && (   (strcmp(directoryListHandle->entry->d_name,"." ) == 0)
+             || (strcmp(directoryListHandle->entry->d_name,"..") == 0)
             )
         )
   {
-    directoryHandle->entry = readdir(directoryHandle->dir);
+    directoryListHandle->entry = readdir(directoryListHandle->dir);
   }
-  if (directoryHandle->entry == NULL)
+  if (directoryListHandle->entry == NULL)
   {
-    return ERRORX(IO_ERROR,errno,String_cString(directoryHandle->name));
+    return ERRORX(IO_ERROR,errno,String_cString(directoryListHandle->name));
   }
 
-  String_set(fileName,directoryHandle->name);
-  File_appendFileNameCString(fileName,directoryHandle->entry->d_name);
+  String_set(fileName,directoryListHandle->name);
+  File_appendFileNameCString(fileName,directoryListHandle->entry->d_name);
 
-  directoryHandle->entry = NULL;
+  directoryListHandle->entry = NULL;
 
   return ERROR_NONE;
 }
 
-Errors File_openDevices(DeviceHandle *deviceHandle)
+/*---------------------------------------------------------------------*/
+
+uint32 File_userNameToUserId(const char *name)
 {
-  assert(deviceHandle != NULL);
+  struct passwd *passwordEntry;
 
-  deviceHandle->file = fopen("/etc/mtab","r");
-  if (deviceHandle->file == NULL)
-  {
-    return ERROR(OPEN_FILE,errno);
-  }
-
-  deviceHandle->bufferFilledFlag = FALSE;
-
-  return ERROR_NONE;
+  passwordEntry = getpwnam(name);
+  return (passwordEntry != NULL)?passwordEntry->pw_uid:FILE_DEFAULT_USER_ID;
 }
 
-void File_closeDevices(DeviceHandle *deviceHandle)
+uint32 File_groupNameToGroupId(const char *name)
 {
-  assert(deviceHandle != NULL);
-  assert(deviceHandle->file != NULL);
+  struct group *groupEntry;
 
-  fclose(deviceHandle->file);
-}
-
-bool File_endOfDevices(DeviceHandle *deviceHandle)
-{
-  assert(deviceHandle != NULL);
-  assert(deviceHandle->file != NULL);
-
-  if (!deviceHandle->bufferFilledFlag)
-  {
-    if (fgets(deviceHandle->buffer,sizeof(deviceHandle->buffer),deviceHandle->file) == NULL)
-    {
-      return TRUE;
-    }
-    deviceHandle->bufferFilledFlag = TRUE;
-  }
-
-  return (feof(deviceHandle->file) != 0);
-}
-
-Errors File_readDevice(DeviceHandle *deviceHandle,
-                       String       deviceName
-                      )
-{
-  char *s0,*s1;
-
-  assert(deviceHandle != NULL);
-  assert(deviceHandle->file != NULL);
-  assert(deviceName != NULL);
-
-  if (!deviceHandle->bufferFilledFlag)
-  {
-    /* read line */
-    if (fgets(deviceHandle->buffer,sizeof(deviceHandle->buffer),deviceHandle->file) == NULL)
-    {
-      return ERROR(IO_ERROR,errno);
-    }
-    deviceHandle->bufferFilledFlag = TRUE;
-  }
-
-  /* parse */
-  s0 = strchr(&deviceHandle->buffer[0],' ');
-  if (s0 == NULL)
-  {
-    return ERROR_PARSE_DEVICE_LIST;
-  }
-  s1 = strchr(s0+1,' ');
-  if (s1 == NULL)
-  {
-    return ERROR_PARSE_DEVICE_LIST;
-  }
-  assert(s1 > s0);
-  String_setBuffer(deviceName,s0+1,s1-s0-1);
-
-  deviceHandle->bufferFilledFlag = FALSE;
-
-  return ERROR_NONE;
+  groupEntry = getgrnam(name);
+  return (groupEntry != NULL)?groupEntry->gr_gid:FILE_DEFAULT_GROUP_ID;
 }
 
 FileTypes File_getType(const String fileName)
@@ -1331,6 +1280,7 @@ Errors File_getFileInfo(const String fileName,
                        )
 {
   struct stat64 fileStat;
+  DeviceInfo    deviceInfo;
   struct
   {
     time_t d0;
@@ -1345,34 +1295,56 @@ Errors File_getFileInfo(const String fileName,
     return ERRORX(IO_ERROR,errno,String_cString(fileName));
   }
 
-  if      (S_ISREG(fileStat.st_mode)) fileInfo->type = FILE_TYPE_FILE;
-  else if (S_ISDIR(fileStat.st_mode)) fileInfo->type = FILE_TYPE_DIRECTORY;
-  else if (S_ISLNK(fileStat.st_mode)) fileInfo->type = FILE_TYPE_LINK;
+  if      (S_ISREG(fileStat.st_mode))
+  {
+    fileInfo->type = FILE_TYPE_FILE;
+    fileInfo->size = fileStat.st_size;
+  }
+  else if (S_ISDIR(fileStat.st_mode))
+  {
+    fileInfo->type = FILE_TYPE_DIRECTORY;
+    fileInfo->size = 0LL;
+  }
+  else if (S_ISLNK(fileStat.st_mode))
+  {
+    fileInfo->type = FILE_TYPE_LINK;
+    fileInfo->size = 0LL;
+  }
   else if (S_ISCHR(fileStat.st_mode))
   {
     fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = 0LL;
     fileInfo->specialType = FILE_SPECIAL_TYPE_CHARACTER_DEVICE;
   }
   else if (S_ISBLK(fileStat.st_mode))
   {
     fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = -1LL;
     fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
+
+    /* try to detect block device size */
+    if (Device_getDeviceInfo(fileName,&deviceInfo) == ERROR_NONE)
+    {
+      fileInfo->size = deviceInfo.size;
+    }
   }
   else if (S_ISFIFO(fileStat.st_mode))
   {
     fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = 0LL;
     fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
   }
   else if (S_ISSOCK(fileStat.st_mode))
   {
     fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = 0LL;
     fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
   }
   else
   {
     fileInfo->type        = FILE_TYPE_UNKNOWN;
+    fileInfo->size        = 0LL;
   }
-  fileInfo->size            = fileStat.st_size;
   fileInfo->timeLastAccess  = fileStat.st_atime;
   fileInfo->timeModified    = fileStat.st_mtime;
   fileInfo->timeLastChanged = fileStat.st_ctime;
@@ -1402,6 +1374,39 @@ uint64 File_getFileTimeModified(const String fileName)
   return (uint64)fileStat.st_mtime;
 }
 
+Errors File_setPermission(const String fileName,
+                          uint32       permission
+                         )
+{
+  assert(fileName != NULL);
+
+  if (chmod(String_cString(fileName),permission) != 0)
+  {
+    return ERRORX(IO_ERROR,errno,String_cString(fileName));
+  }
+
+  return ERROR_NONE;
+}
+
+Errors File_setOwner(const String fileName,
+                     uint32       userId,
+                     uint32       groupId
+                    )
+{
+  assert(fileName != NULL);
+
+  if (chown(String_cString(fileName),
+            (userId  != FILE_DEFAULT_USER_ID ) ? userId  : -1,
+            (groupId != FILE_DEFAULT_GROUP_ID) ? groupId : -1
+           ) != 0
+     )
+  {
+    return ERRORX(IO_ERROR,errno,String_cString(fileName));
+  }
+
+  return ERROR_NONE;
+}
+
 Errors File_setFileInfo(const String fileName,
                         FileInfo     *fileInfo
                        )
@@ -1424,6 +1429,7 @@ Errors File_setFileInfo(const String fileName,
       }
       if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
       {
+fprintf(stderr,"%s,%d:  %d %d\n",__FILE__,__LINE__,fileInfo->userId,fileInfo->groupId);
         return ERRORX(IO_ERROR,errno,String_cString(fileName));
       }
       if (chmod(String_cString(fileName),fileInfo->permission) != 0)
@@ -1453,6 +1459,7 @@ Errors File_makeDirectory(const String pathName,
                           uint32       permission
                          )
 {
+  mode_t          currentCreationMask;
   StringTokenizer pathNameTokenizer;
   String          directoryName;
   uid_t           uid;
@@ -1462,6 +1469,11 @@ Errors File_makeDirectory(const String pathName,
 
   assert(pathName != NULL);
 
+  /* get current umask */
+  currentCreationMask = umask(0);
+  umask(currentCreationMask);
+
+  /* create directory including parent directories */
   directoryName = File_newFileName();
   File_initSplitFileName(&pathNameTokenizer,pathName);
   if (File_getNextSplitFileName(&pathNameTokenizer,&name))
@@ -1477,7 +1489,7 @@ Errors File_makeDirectory(const String pathName,
   }
   if (!File_exists(directoryName))
   {
-    if (mkdir(String_cString(directoryName),0700) != 0)
+    if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
     {
       error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
       File_doneSplitFileName(&pathNameTokenizer);
@@ -1500,7 +1512,7 @@ Errors File_makeDirectory(const String pathName,
     }
     if (permission != FILE_DEFAULT_PERMISSION)
     {
-      if (chmod(String_cString(directoryName),permission) != 0)
+      if (chmod(String_cString(directoryName),(permission|S_IXUSR|S_IXGRP|S_IXOTH) & ~currentCreationMask) != 0)
       {
         error = ERROR(IO_ERROR,errno);
         File_doneSplitFileName(&pathNameTokenizer);
@@ -1517,7 +1529,7 @@ Errors File_makeDirectory(const String pathName,
 
       if (!File_exists(directoryName))
       {
-        if (mkdir(String_cString(directoryName),0700) != 0)
+        if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
         {
           error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
           File_doneSplitFileName(&pathNameTokenizer);
@@ -1532,14 +1544,20 @@ Errors File_makeDirectory(const String pathName,
           gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : -1;
           if (chown(String_cString(directoryName),uid,gid) != 0)
           {
-            return ERRORX(IO_ERROR,errno,String_cString(directoryName));
+            error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
+            File_doneSplitFileName(&pathNameTokenizer);
+            File_deleteFileName(directoryName);
+            return error;
           }
         }
         if (permission != FILE_DEFAULT_PERMISSION)
         {
-          if (chmod(String_cString(directoryName),permission) != 0)
+          if (chmod(String_cString(directoryName),(permission|S_IXUSR|S_IXGRP|S_IXOTH) & ~currentCreationMask) != 0)
           {
-            return ERRORX(IO_ERROR,errno,String_cString(directoryName));
+            error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
+            File_doneSplitFileName(&pathNameTokenizer);
+            File_deleteFileName(directoryName);
+            return error;
           }
         }
       }

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/chunks.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems: all
@@ -488,9 +488,9 @@ const char *Chunk_idToString(ChunkId chunkId)
 }
 
 ulong Chunk_getSize(const int  *definition,
-                     ulong      alignment,
-                     const void *data
-                    )
+                    ulong      alignment,
+                    const void *data
+                   )
 {
   int   z;
   ulong definitionSize;

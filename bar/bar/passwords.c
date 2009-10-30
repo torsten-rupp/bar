@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/passwords.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -537,6 +537,7 @@ bool Password_input(Password   *password,
 
     if (isatty(STDIN_FILENO) == 1)
     {
+      /* read data from interactive input */
       if (title != NULL)
       {
         fprintf(stderr,"%s: ",title);fflush(stderr);
@@ -545,7 +546,6 @@ bool Password_input(Password   *password,
       /* save current console settings */
       if (tcgetattr(STDIN_FILENO,&oldTermioSettings) != 0)
       {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,errno,strerror(errno));
         return FALSE;
       }
 
@@ -554,7 +554,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,errno,strerror(errno));
       termioSettings.c_lflag &= ~ECHO;
       if (tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings) != 0)
       {
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
         return FALSE;
       }
 
@@ -562,17 +561,23 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       eolFlag = FALSE;
       do
       {
-        read(STDIN_FILENO,&ch,1);
-        switch (ch)
+        if (read(STDIN_FILENO,&ch,1) == 1)
         {
-          case '\r':
-            break;
-          case '\n':
-            eolFlag = TRUE;
-            break;
-          default:
-            Password_appendChar(password,ch);
-            break;
+          switch (ch)
+          {
+            case '\r':
+              break;
+            case '\n':
+              eolFlag = TRUE;
+              break;
+            default:
+              Password_appendChar(password,ch);
+              break;
+          }
+        }
+        else
+        {
+          eolFlag = TRUE;
         }
       }
       while (!eolFlag);
@@ -582,7 +587,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
       if (title != NULL)
       {
-        printf("\n");
+        fprintf(stderr,"\n");
       }
     }
     else
@@ -594,17 +599,23 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
         ioctl(STDIN_FILENO,FIONREAD,(char*)&n);
         if (n > 0)
         {
-          read(STDIN_FILENO,&ch,1);
-          switch (ch)
+          if (read(STDIN_FILENO,&ch,1) == 1)
           {
-            case '\r':
-              break;
-            case '\n':
-              eolFlag = TRUE;
-              break;
-            default:
-              Password_appendChar(password,ch);
-              break;
+            switch (ch)
+            {
+              case '\r':
+                break;
+              case '\n':
+                eolFlag = TRUE;
+                break;
+              default:
+                Password_appendChar(password,ch);
+                break;
+            }
+          }
+          else
+          {
+            eolFlag = TRUE;
           }
         }
       }

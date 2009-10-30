@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -35,6 +35,7 @@
 #include "patterns.h"
 #include "patternlists.h"
 #include "files.h"
+#include "devices.h"
 #include "archive.h"
 #include "crypt.h"
 #include "storage.h"
@@ -78,6 +79,7 @@ typedef struct
 /* create status info  */
 typedef struct
 {
+  CreateModes                 createMode;
   String                      storageName;
   PatternList                 *includePatternList;
   PatternList                 *excludePatternList;
@@ -121,7 +123,7 @@ typedef struct
   FileTypes fileType;
 } FileMsg;
 
-/* storage messaeg, send from main -> storage thread */
+/* storage message, send from main -> storage thread */
 typedef struct
 {
   String fileName;
@@ -991,21 +993,21 @@ LOCAL String formatIncrementalFileName(String       fileName,
 
 LOCAL void collectorSumThread(CreateInfo *createInfo)
 {
-  StringList      nameList;
-  String          name;
-  PatternNode     *includePatternNode;
-  StringTokenizer fileNameTokenizer;
-  String          basePath;
-  String          string;
-  Errors          error;
-  String          fileName;
-  FileInfo        fileInfo;
-  DirectoryHandle directoryHandle;
-//ulong xx;
+  StringList          nameList;
+  String              name;
+  PatternNode         *includePatternNode;
+  StringTokenizer     fileNameTokenizer;
+  String              basePath;
+  String              string;
+  Errors              error;
+  String              fileName;
+  FileInfo            fileInfo;
+  DirectoryListHandle directoryListHandle;
 
   assert(createInfo != NULL);
   assert(createInfo->includePatternList != NULL);
   assert(createInfo->excludePatternList != NULL);
+  assert(createInfo->jobOptions != NULL);
 
   StringList_init(&nameList);
   name = String_new();
@@ -1076,27 +1078,41 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
         switch (fileInfo.type)
         {
           case FILE_TYPE_FILE:
-            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            switch (createInfo->createMode)
             {
-              createInfo->statusInfo.totalFiles++;
-              createInfo->statusInfo.totalBytes += fileInfo.size;
-              updateStatusInfo(createInfo);
+              case CREATE_MODE_FILES:
+                if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+                {
+                  createInfo->statusInfo.totalFiles++;
+                  createInfo->statusInfo.totalBytes += fileInfo.size;
+                  updateStatusInfo(createInfo);
+                }
+                break;
+              case CREATE_MODE_IMAGES:
+                break;
             }
             break;
           case FILE_TYPE_DIRECTORY:
-            if (   checkIsIncluded(includePatternNode,name)
-                && !checkIsExcluded(createInfo->excludePatternList,name)
-               )
+            switch (createInfo->createMode)
             {
-              if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
-              {
-                createInfo->statusInfo.totalFiles++;
-                updateStatusInfo(createInfo);
-              }
+              case CREATE_MODE_FILES:
+                if (   checkIsIncluded(includePatternNode,name)
+                    && !checkIsExcluded(createInfo->excludePatternList,name)
+                   )
+                {
+                  if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+                  {
+                    createInfo->statusInfo.totalFiles++;
+                    updateStatusInfo(createInfo);
+                  }
+                }
+                break;
+              case CREATE_MODE_IMAGES:
+                break;
             }
 
             /* open directory contents */
-            error = File_openDirectory(&directoryHandle,name);
+            error = File_openDirectoryList(&directoryListHandle,name);
             if (error == ERROR_NONE)
             {
               /* read directory contents */
@@ -1104,7 +1120,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
               while (   !createInfo->collectorSumThreadExitFlag
                      && (createInfo->failError == ERROR_NONE)
                      && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-                     && !File_endOfDirectory(&directoryHandle)
+                     && !File_endOfDirectoryList(&directoryListHandle)
                     )
               {
                 /* pause */
@@ -1114,7 +1130,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                 }
 
                 /* read next directory entry */
-                error = File_readDirectory(&directoryHandle,fileName);
+                error = File_readDirectoryList(&directoryListHandle,fileName);
                 if (error != ERROR_NONE)
                 {
                   continue;
@@ -1134,11 +1150,18 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                   switch (fileInfo.type)
                   {
                     case FILE_TYPE_FILE:
-                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      switch (createInfo->createMode)
                       {
-                        createInfo->statusInfo.totalFiles++;
-                        createInfo->statusInfo.totalBytes += fileInfo.size;
-                        updateStatusInfo(createInfo);
+                        case CREATE_MODE_FILES:
+                          if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                          {
+                            createInfo->statusInfo.totalFiles++;
+                            createInfo->statusInfo.totalBytes += fileInfo.size;
+                            updateStatusInfo(createInfo);
+                          }
+                          break;
+                        case CREATE_MODE_IMAGES:
+                          break;
                       }
                       break;
                     case FILE_TYPE_DIRECTORY:
@@ -1146,17 +1169,44 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                       StringList_append(&nameList,fileName);
                       break;
                     case FILE_TYPE_LINK:
-                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      switch (createInfo->createMode)
                       {
-                        createInfo->statusInfo.totalFiles++;
-                        updateStatusInfo(createInfo);
+                        case CREATE_MODE_FILES:
+                          if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                          {
+                            createInfo->statusInfo.totalFiles++;
+                            updateStatusInfo(createInfo);
+                          }
+                          break;
+                        case CREATE_MODE_IMAGES:
+                          break;
                       }
                       break;
                     case FILE_TYPE_SPECIAL:
-                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      switch (createInfo->createMode)
                       {
-                        createInfo->statusInfo.totalFiles++;
-                        updateStatusInfo(createInfo);
+                        case CREATE_MODE_FILES:
+                          if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                          {
+                            createInfo->statusInfo.totalFiles++;
+                            if (   (createInfo->createMode == CREATE_MODE_IMAGES)
+                                && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                && (fileInfo.size >= 0L)
+                               )
+                            {
+                              createInfo->statusInfo.totalBytes += fileInfo.size;
+                            }
+                            updateStatusInfo(createInfo);
+                          }
+                          break;
+                        case CREATE_MODE_IMAGES:
+                          if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                          {
+                            createInfo->statusInfo.totalFiles++;
+                            if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
+                            updateStatusInfo(createInfo);
+                          }
+                          break;
                       }
                       break;
                     default:
@@ -1167,21 +1217,41 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
               String_delete(fileName);
 
               /* close directory */
-              File_closeDirectory(&directoryHandle);
+              File_closeDirectoryList(&directoryListHandle);
             }
             break;
           case FILE_TYPE_LINK:
-            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            switch (createInfo->createMode)
             {
-              createInfo->statusInfo.totalFiles++;
-              updateStatusInfo(createInfo);
+              case CREATE_MODE_FILES:
+                if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+                {
+                  createInfo->statusInfo.totalFiles++;
+                  updateStatusInfo(createInfo);
+                }
+                break;
+              case CREATE_MODE_IMAGES:
+                break;
             }
             break;
           case FILE_TYPE_SPECIAL:
-            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            switch (createInfo->createMode)
             {
-              createInfo->statusInfo.totalFiles++;
-              updateStatusInfo(createInfo);
+              case CREATE_MODE_FILES:
+                if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+                {
+                  createInfo->statusInfo.totalFiles++;
+                  updateStatusInfo(createInfo);
+                }
+                break;
+              case CREATE_MODE_IMAGES:
+                if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                {
+                  createInfo->statusInfo.totalFiles++;
+                  if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
+                  updateStatusInfo(createInfo);
+                }
+                break;
             }
             break;
           default:
@@ -1216,20 +1286,21 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
 
 LOCAL void collectorThread(CreateInfo *createInfo)
 {
-  StringList      nameList;
-  String          name;
-  PatternNode     *includePatternNode;
-  StringTokenizer fileNameTokenizer;
-  String          basePath;
-  String          string;
-  Errors          error;
-  String          fileName;
-  FileInfo        fileInfo;
-  DirectoryHandle directoryHandle;
+  StringList          nameList;
+  String              name;
+  PatternNode         *includePatternNode;
+  StringTokenizer     fileNameTokenizer;
+  String              basePath;
+  String              string;
+  Errors              error;
+  String              fileName;
+  FileInfo            fileInfo;
+  DirectoryListHandle directoryListHandle;
 
   assert(createInfo != NULL);
   assert(createInfo->includePatternList != NULL);
   assert(createInfo->excludePatternList != NULL);
+  assert(createInfo->jobOptions != NULL);
 
   StringList_init(&nameList);
   name     = String_new();
@@ -1288,7 +1359,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
       if (error != ERROR_NONE)
       {
         printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
-        logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
+        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(name));
         createInfo->statusInfo.errorFiles++;
         updateStatusInfo(createInfo);
         continue;
@@ -1303,32 +1374,46 @@ LOCAL void collectorThread(CreateInfo *createInfo)
         switch (fileInfo.type)
         {
           case FILE_TYPE_FILE:
-            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            switch (createInfo->createMode)
             {
-              /* add to file list */
-              appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_FILE);
+              case CREATE_MODE_FILES:
+                if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+                {
+                  /* add to file list */
+                  appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_FILE);
+                }
+                break;
+              case CREATE_MODE_IMAGES:
+                break;
             }
             break;
           case FILE_TYPE_DIRECTORY:
-            if (   checkIsIncluded(includePatternNode,name)
-                && !checkIsExcluded(createInfo->excludePatternList,name)
-               )
+            switch (createInfo->createMode)
             {
-              if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
-              {
-                /* add to file list */
-                appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_DIRECTORY);
-              }
+              case CREATE_MODE_FILES:
+                if (   checkIsIncluded(includePatternNode,name)
+                    && !checkIsExcluded(createInfo->excludePatternList,name)
+                   )
+                {
+                  if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+                  {
+                    /* add to file list */
+                    appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_DIRECTORY);
+                  }
+                }
+                break;
+              case CREATE_MODE_IMAGES:
+                break;
             }
 
             /* open directory contents */
-            error = File_openDirectory(&directoryHandle,name);
+            error = File_openDirectoryList(&directoryListHandle,name);
             if (error == ERROR_NONE)
             {
               /* read directory contents */
               while (   (createInfo->failError == ERROR_NONE)
                      && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-                     && !File_endOfDirectory(&directoryHandle)
+                     && !File_endOfDirectoryList(&directoryListHandle)
                     )
               {
                 /* pause */
@@ -1338,11 +1423,11 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                 }
 
                 /* read next directory entry */
-                error = File_readDirectory(&directoryHandle,fileName);
+                error = File_readDirectoryList(&directoryListHandle,fileName);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
-                  logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
+                  logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(name));
                   createInfo->statusInfo.errorFiles++;
                   createInfo->statusInfo.errorBytes += fileInfo.size;
                   updateStatusInfo(createInfo);
@@ -1358,7 +1443,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   if (error != ERROR_NONE)
                   {
                     printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Errors_getText(error));
-                    logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
+                    logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
                     createInfo->statusInfo.errorFiles++;
                     updateStatusInfo(createInfo);
                     continue;
@@ -1368,10 +1453,17 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   switch (fileInfo.type)
                   {
                     case FILE_TYPE_FILE:
-                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      switch (createInfo->createMode)
                       {
-                        /* add to file list */
-                        appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_FILE);
+                        case CREATE_MODE_FILES:
+                          if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                          {
+                            /* add to file list */
+                            appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_FILE);
+                          }
+                          break;
+                        case CREATE_MODE_IMAGES:
+                          break;
                       }
                       break;
                     case FILE_TYPE_DIRECTORY:
@@ -1379,22 +1471,41 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                       StringList_append(&nameList,fileName);
                       break;
                     case FILE_TYPE_LINK:
-                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      switch (createInfo->createMode)
                       {
-                        /* add to file list */
-                        appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_LINK);
+                        case CREATE_MODE_FILES:
+                          if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                          {
+                            /* add to file list */
+                            appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_LINK);
+                          }
+                          break;
+                        case CREATE_MODE_IMAGES:
+                          break;
                       }
                       break;
                     case FILE_TYPE_SPECIAL:
-                      if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                      switch (createInfo->createMode)
                       {
-                        /* add to file list */
-                        appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_SPECIAL);
+                        case CREATE_MODE_FILES:
+                          if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
+                          {
+                            /* add to file list */
+                            appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_SPECIAL);
+                          }
+                          break;
+                        case CREATE_MODE_IMAGES:
+                          if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                          {
+                            /* add to file list */
+                            appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_SPECIAL);
+                          }
+                          break;
                       }
                       break;
                     default:
                       printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
-                      logMessage(LOG_TYPE_FILE_TYPE_UNKNOWN,"unknown type '%s'",String_cString(fileName));
+                      logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"unknown type '%s'",String_cString(fileName));
                       createInfo->statusInfo.errorFiles++;
                       createInfo->statusInfo.errorBytes += fileInfo.size;
                       updateStatusInfo(createInfo);
@@ -1410,33 +1521,52 @@ LOCAL void collectorThread(CreateInfo *createInfo)
               }
 
               /* close directory */
-              File_closeDirectory(&directoryHandle);
+              File_closeDirectoryList(&directoryListHandle);
             }
             else
             {
               printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
-              logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(name));
+              logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(name));
               createInfo->statusInfo.errorFiles++;
               updateStatusInfo(createInfo);
             }
             break;
           case FILE_TYPE_LINK:
-            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            switch (createInfo->createMode)
             {
-              /* add to file list */
-              appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_LINK);
+              case CREATE_MODE_FILES:
+                if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+                {
+                  /* add to file list */
+                  appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_LINK);
+                }
+                break;
+              case CREATE_MODE_IMAGES:
+                break;
             }
             break;
           case FILE_TYPE_SPECIAL:
-            if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+            switch (createInfo->createMode)
             {
-              /* add to file list */
-              appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_SPECIAL);
+              case CREATE_MODE_FILES:
+                if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
+                {
+                  /* add to file list */
+                  appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_SPECIAL);
+                }
+                break;
+              case CREATE_MODE_IMAGES:
+                if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                {
+                  /* add to file list */
+                  appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_SPECIAL);
+                }
+                break;
             }
             break;
           default:
             printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
-            logMessage(LOG_TYPE_FILE_TYPE_UNKNOWN,"unknown type '%s'",String_cString(name));
+            logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"unknown type '%s'",String_cString(name));
             createInfo->statusInfo.errorFiles++;
             createInfo->statusInfo.errorBytes += fileInfo.size;
             updateStatusInfo(createInfo);
@@ -1445,7 +1575,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
       }
       else
       {
-        logMessage(LOG_TYPE_FILE_EXCLUDED,"excluded '%s'",String_cString(name));
+        logMessage(LOG_TYPE_ENTRY_EXCLUDED,"excluded '%s'",String_cString(name));
         createInfo->statusInfo.skippedFiles++;
         createInfo->statusInfo.skippedBytes += fileInfo.size;
         updateStatusInfo(createInfo);
@@ -1599,17 +1729,17 @@ LOCAL void storageThread(CreateInfo *createInfo)
 {
   #define MAX_RETRIES 3
 
-  byte                   *buffer;
-  String                 storageName;
-  StorageMsg             storageMsg;
-  Errors                 error;
-  FileHandle             fileHandle;
-  uint                   retryCount;
-  ulong                  n;
-  String                 pattern;
-  String                 storagePath;
-  String                 fileName;
-  StorageDirectoryHandle storageDirectoryHandle;
+  byte                       *buffer;
+  String                     storageName;
+  StorageMsg                 storageMsg;
+  Errors                     error;
+  FileHandle                 fileHandle;
+  uint                       retryCount;
+  ulong                      n;
+  String                     pattern;
+  String                     storagePath;
+  String                     fileName;
+  StorageDirectoryListHandle storageDirectoryListHandle;
 
   assert(createInfo != NULL);
 
@@ -1883,15 +2013,15 @@ LOCAL void storageThread(CreateInfo *createInfo)
 //fprintf(stderr,"%s,%d: pa=%s\n",__FILE__,__LINE__,String_cString(pattern));
 
         storagePath = File_getFilePathName(String_new(),createInfo->storageName);
-        error = Storage_openDirectory(&storageDirectoryHandle,
-                                      storagePath,
-                                      createInfo->jobOptions
-                                     );
+        error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                          storagePath,
+                                          createInfo->jobOptions
+                                         );
         if (error == ERROR_NONE)
         {
           fileName = String_new();
-          while (   !Storage_endOfDirectory(&storageDirectoryHandle)
-                 && (Storage_readDirectory(&storageDirectoryHandle,fileName,NULL) == ERROR_NONE)
+          while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
+                 && (Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL) == ERROR_NONE)
                 )
           {
             /* find in storage list */
@@ -1906,7 +2036,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
           }
           String_delete(fileName);
 
-          Storage_closeDirectory(&storageDirectoryHandle);
+          Storage_closeDirectoryList(&storageDirectoryListHandle);
         }
         String_delete(storagePath);
         String_delete(pattern);
@@ -1923,7 +2053,8 @@ LOCAL void storageThread(CreateInfo *createInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_create(const char                      *storageName,
+Errors Command_create(CreateModes                     createMode,
+                      const char                      *storageName,
                       PatternList                     *includePatternList,
                       PatternList                     *excludePatternList,
                       JobOptions                      *jobOptions,
@@ -1953,6 +2084,7 @@ Errors Command_create(const char                      *storageName,
   assert(excludePatternList != NULL);
 
   /* initialise variables */
+  createInfo.createMode                   = createMode;
   createInfo.storageName                  = String_newCString(storageName);
   createInfo.includePatternList           = includePatternList;
   createInfo.excludePatternList           = excludePatternList;
@@ -2165,452 +2297,535 @@ Errors Command_create(const char                      *storageName,
           && (StringList_find(&createInfo.storageFileList,fileName) == NULL)
          )
       {
-        switch (fileType)
+        FileInfo fileInfo;
+
+        /* get file info */
+        error = File_getFileInfo(fileName,&fileInfo);
+        if (error != ERROR_NONE)
         {
-          case FILE_TYPE_FILE:
-            {
-              FileInfo   fileInfo;
-              FileHandle fileHandle;
-              ulong      n;
-              double     ratio;
+          if (jobOptions->skipUnreadableFlag)
+          {
+            printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+            logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
+            createInfo.statusInfo.errorFiles++;
+          }
+          else
+          {
+            printInfo(1,"FAIL\n");
+            printError("Cannot get info for '%s' (error: %s)\n",
+                       String_cString(fileName),
+                       Errors_getText(error)
+                      );
+            createInfo.failError = error;
+          }
+          updateStatusInfo(&createInfo);
+          continue;
+        }
 
-              /* get file info */
-              error = File_getFileInfo(fileName,&fileInfo);
-              if (error != ERROR_NONE)
+        if (!jobOptions->noStorageFlag)
+        {
+          switch (fileType)
+          {
+            case FILE_TYPE_FILE:
+              switch (createMode)
               {
-                if (jobOptions->skipUnreadableFlag)
-                {
-                  printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-                  logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
-                  createInfo.statusInfo.errorFiles++;
-                }
-                else
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot get info for file '%s' (error: %s)\n",
-                             String_cString(fileName),
-                             Errors_getText(error)
-                            );
-                  createInfo.failError = error;
-                }
-                updateStatusInfo(&createInfo);
-                continue;
-              }
-
-              if (!jobOptions->noStorageFlag)
-              {
-                /* open file */
-                error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
-                if (error != ERROR_NONE)
-                {
-                  if (jobOptions->skipUnreadableFlag)
+                case CREATE_MODE_FILES:
                   {
-                    printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-                    logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
-                    createInfo.statusInfo.errorFiles++;
-                    createInfo.statusInfo.errorBytes += fileInfo.size;
-                  }
-                  else
-                  {
-                    printInfo(1,"FAIL\n");
-                    printError("Cannot open file '%s' (error: %s)\n",
-                               String_cString(fileName),
-                               Errors_getText(error)
-                              );
-                    createInfo.failError = error;
-                  }
-                  updateStatusInfo(&createInfo);
-                  continue;
-                }
+                    FileHandle fileHandle;
+                    ulong      n;
+                    double     ratio;
 
-                /* create new archive file entry */
-                error = Archive_newFileEntry(&archiveInfo,
-                                             &archiveFileInfo,
-                                             fileName,
-                                             &fileInfo
-                                            );
-                if (error != ERROR_NONE)
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot create new archive file entry '%s' (error: %s)\n",
-                             String_cString(fileName),
-                             Errors_getText(error)
-                            );
-                  createInfo.failError = error;
-                  updateStatusInfo(&createInfo);
-                  break;
-                }
-                String_set(createInfo.statusInfo.fileName,fileName);
-                createInfo.statusInfo.fileDoneBytes = 0LL;
-                createInfo.statusInfo.fileTotalBytes = fileInfo.size;
-                updateStatusInfo(&createInfo);
+                    /* open file */
+                    error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+                    if (error != ERROR_NONE)
+                    {
+                      if (jobOptions->skipUnreadableFlag)
+                      {
+                        printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+                        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open file failed '%s'",String_cString(fileName));
+                        createInfo.statusInfo.errorFiles++;
+                        createInfo.statusInfo.errorBytes += fileInfo.size;
+                      }
+                      else
+                      {
+                        printInfo(1,"FAIL\n");
+                        printError("Cannot open file '%s' (error: %s)\n",
+                                   String_cString(fileName),
+                                   Errors_getText(error)
+                                  );
+                        createInfo.failError = error;
+                      }
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
 
-                /* write file content to archive */
-                error = ERROR_NONE;
-                do
-                {
-                  /* pause */
-                  while ((createInfo.pauseFlag != NULL) && (*createInfo.pauseFlag))
-                  {
-                    Misc_udelay(500*1000);
-                  }
+                    /* create new archive file entry */
+                    error = Archive_newFileEntry(&archiveInfo,
+                                                 &archiveFileInfo,
+                                                 fileName,
+                                                 &fileInfo
+                                                );
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot create new archive file entry '%s' (error: %s)\n",
+                                 String_cString(fileName),
+                                 Errors_getText(error)
+                                );
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
+                    String_set(createInfo.statusInfo.fileName,fileName);
+                    createInfo.statusInfo.fileDoneBytes = 0LL;
+                    createInfo.statusInfo.fileTotalBytes = fileInfo.size;
+                    updateStatusInfo(&createInfo);
 
-                  File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
-                  if (n > 0)
-                  {
-                    error = Archive_writeFileData(&archiveFileInfo,buffer,n);
-                    createInfo.statusInfo.doneBytes += n;
-                    createInfo.statusInfo.fileDoneBytes += n;
-                    createInfo.statusInfo.archiveBytes = createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo);
-                    createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
-    //printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
+                    /* write file content to archive */
+                    error = ERROR_NONE;
+                    do
+                    {
+                      /* pause */
+                      while ((createInfo.pauseFlag != NULL) && (*createInfo.pauseFlag))
+                      {
+                        Misc_udelay(500*1000);
+                      }
+
+                      File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+                      if (n > 0)
+                      {
+                        error = Archive_writeData(&archiveFileInfo,buffer,n);
+                        createInfo.statusInfo.doneBytes += n;
+                        createInfo.statusInfo.fileDoneBytes += n;
+                        createInfo.statusInfo.archiveBytes = createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo);
+                        createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
+        //printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
+                        updateStatusInfo(&createInfo);
+                      }
+                    }
+                    while (   ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
+                           && (n > 0)
+                           && (createInfo.failError == ERROR_NONE)
+                           && (error == ERROR_NONE)
+                          );
+                    if ((createInfo.requestedAbortFlag != NULL) && (*createInfo.requestedAbortFlag))
+                    {
+                      printInfo(1,"ABORTED\n");
+                      File_close(&fileHandle);
+                      Archive_closeEntry(&archiveFileInfo);
+                      continue;
+                    }
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot store archive file (error: %s)!\n",
+                                 Errors_getText(error)
+                                );
+                      File_close(&fileHandle);
+                      Archive_closeEntry(&archiveFileInfo);
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
+
+                    /* close archive entry */
+                    error = Archive_closeEntry(&archiveFileInfo);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot close archive file entry (error: %s)!\n",
+                                 Errors_getText(error)
+                                );
+                      File_close(&fileHandle);
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
+
+                    /* get compression ratio */
+                    if ((archiveFileInfo.file.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveFileInfo.file.chunkFileData.fragmentSize > 0))
+                    {
+                      ratio = 100.0-archiveFileInfo.file.chunkInfoFileData.size*100.0/archiveFileInfo.file.chunkFileData.fragmentSize;
+                    }
+                    else
+                    {
+                      ratio = 0;
+                    }
+
+                    /* close file */
+                    File_close(&fileHandle);
+
+                    printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
+                    logMessage(LOG_TYPE_ENTRY_OK,"added '%s'",String_cString(fileName));
+                    createInfo.statusInfo.doneFiles++;
                     updateStatusInfo(&createInfo);
                   }
-                }
-                while (   ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
-                       && (n > 0)
-                       && (createInfo.failError == ERROR_NONE)
-                       && (error == ERROR_NONE)
-                      );
-                if ((createInfo.requestedAbortFlag != NULL) && (*createInfo.requestedAbortFlag))
-                {
-                  printInfo(1,"ABORTED\n");
-                  File_close(&fileHandle);
-                  Archive_closeEntry(&archiveFileInfo);
                   break;
-                }
-                if (error != ERROR_NONE)
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot store archive file (error: %s)!\n",
-                             Errors_getText(error)
-                            );
-                  File_close(&fileHandle);
-                  Archive_closeEntry(&archiveFileInfo);
-                  createInfo.failError = error;
-                  updateStatusInfo(&createInfo);
+                case CREATE_MODE_IMAGES:
                   break;
-                }
+              }
+              break;
+            case FILE_TYPE_DIRECTORY:
+              switch (createMode)
+              {
+                case CREATE_MODE_FILES:
+                  {
+                    /* new directory */
+                    error = Archive_newDirectoryEntry(&archiveInfo,
+                                                      &archiveFileInfo,
+                                                      fileName,
+                                                      &fileInfo
+                                                     );
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot create new archive directory entry '%s' (error: %s)\n",
+                                 String_cString(fileName),
+                                 Errors_getText(error)
+                                );
+                      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
 
-                /* close file */
-                File_close(&fileHandle);
+                    /* close archive entry */
+                    error = Archive_closeEntry(&archiveFileInfo);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot close archive directory entry (error: %s)!\n",
+                                 Errors_getText(error)
+                                );
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
 
-                /* close archive entry */
-                error = Archive_closeEntry(&archiveFileInfo);
-                if (error != ERROR_NONE)
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot close archive file entry (error: %s)!\n",
-                             Errors_getText(error)
-                            );
-                  createInfo.failError = error;
-                  updateStatusInfo(&createInfo);
+                    printInfo(1,"ok\n");
+                    logMessage(LOG_TYPE_ENTRY_OK,"added '%s'",String_cString(fileName));
+                    createInfo.statusInfo.doneFiles++;
+                    updateStatusInfo(&createInfo);
+                  }
                   break;
-                }
-
-                if ((archiveFileInfo.file.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveFileInfo.file.chunkFileData.fragmentSize > 0))
-                {
-                  ratio = 100.0-archiveFileInfo.file.chunkInfoFileData.size*100.0/archiveFileInfo.file.chunkFileData.fragmentSize;
-                }
-                else
-                {
-                  ratio = 0;
-                }
-
-                printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
-                logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
-                createInfo.statusInfo.doneFiles++;
-                updateStatusInfo(&createInfo);
+                case CREATE_MODE_IMAGES:
+                  break;
               }
-              else
+              break;
+            case FILE_TYPE_LINK:
+              switch (createMode)
               {
-                printInfo(1,"ok (not stored)\n");
-              }
+                case CREATE_MODE_FILES:
+                  {
+                    String name;
 
-              /* add to incremental list */
-              if (storeIncrementalFileInfoFlag)
-              {
-                addIncrementalList(&createInfo.filesDictionary,fileName,&fileInfo);
-              }
-            }
-            break;
-          case FILE_TYPE_DIRECTORY:
-            {
-              FileInfo fileInfo;
+                    /* read link */
+                    name = String_new();
+                    error = File_readLink(fileName,name);
+                    if (error != ERROR_NONE)
+                    {
+                      if (jobOptions->skipUnreadableFlag)
+                      {
+                        printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+                        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
+                        createInfo.statusInfo.errorFiles++;
+                        createInfo.statusInfo.errorBytes += fileInfo.size;
+                      }
+                      else
+                      {
+                        printInfo(1,"FAIL\n");
+                        printError("Cannot read link '%s' (error: %s)\n",
+                                   String_cString(fileName),
+                                   Errors_getText(error)
+                                  );
+                        String_delete(name);
+                        createInfo.failError = error;
+                      }
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
 
-              /* get directory info */
-              error = File_getFileInfo(fileName,&fileInfo);
-              if (error != ERROR_NONE)
-              {
-                if (jobOptions->skipUnreadableFlag)
-                {
-                  printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-                  logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
-                  createInfo.statusInfo.errorFiles++;
-                }
-                else
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot get info for directory '%s' (error: %s)\n",
-                             String_cString(fileName),
-                             Errors_getText(error)
-                            );
-                  createInfo.failError = error;
-                }
-                updateStatusInfo(&createInfo);
-                continue;
-              }
+                    /* new link */
+                    error = Archive_newLinkEntry(&archiveInfo,
+                                                 &archiveFileInfo,
+                                                 fileName,
+                                                 name,
+                                                 &fileInfo
+                                                );
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot create new archive link entry '%s' (error: %s)\n",
+                                 String_cString(fileName),
+                                 Errors_getText(error)
+                                );
+                      String_delete(name);
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
 
-              if (!jobOptions->noStorageFlag)
+                    /* close archive entry */
+                    error = Archive_closeEntry(&archiveFileInfo);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot close archive link entry (error: %s)!\n",
+                                 Errors_getText(error)
+                                );
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
+
+                    printInfo(1,"ok\n");
+                    logMessage(LOG_TYPE_ENTRY_OK,"added '%s'",String_cString(fileName));
+                    createInfo.statusInfo.doneFiles++;
+                    updateStatusInfo(&createInfo);
+
+                    /* free resources */
+                    String_delete(name);
+                  }
+                  break;
+                case CREATE_MODE_IMAGES:
+                  break;
+              }
+              break;
+            case FILE_TYPE_SPECIAL:
+              switch (createMode)
               {
-                /* new directory */
-                error = Archive_newDirectoryEntry(&archiveInfo,
+                case CREATE_MODE_FILES:
+                  {
+                    /* new special */
+                    error = Archive_newSpecialEntry(&archiveInfo,
+                                                    &archiveFileInfo,
+                                                    fileName,
+                                                    &fileInfo
+                                                   );
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot create new archive special entry '%s' (error: %s)\n",
+                                 String_cString(fileName),
+                                 Errors_getText(error)
+                                );
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
+
+                    /* close archive entry */
+                    error = Archive_closeEntry(&archiveFileInfo);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot close archive special entry (error: %s)!\n",
+                                 Errors_getText(error)
+                                );
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
+
+                    printInfo(1,"ok\n");
+                    logMessage(LOG_TYPE_ENTRY_OK,"added '%s'",String_cString(fileName));
+                    createInfo.statusInfo.doneFiles++;
+                    updateStatusInfo(&createInfo);
+
+                    /* free resources */
+                  }
+                  break;
+                case CREATE_MODE_IMAGES:
+                  {
+                    DeviceInfo   deviceInfo;
+                    DeviceHandle deviceHandle;
+                    ulong        n;
+                    double       ratio;
+
+                    /* get device info */
+                    error = Device_getDeviceInfo(fileName,&deviceInfo);
+                    if (error != ERROR_NONE)
+                    {
+                      if (jobOptions->skipUnreadableFlag)
+                      {
+                        printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+                        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
+                        createInfo.statusInfo.errorFiles++;
+                      }
+                      else
+                      {
+                        printInfo(1,"FAIL\n");
+                        printError("Cannot open device '%s' (error: %s)\n",
+                                   String_cString(fileName),
+                                   Errors_getText(error)
+                                  );
+                        createInfo.failError = error;
+                      }
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
+
+                    /* check block size */
+                    if (deviceInfo.blockSize > BUFFER_SIZE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Device '%s' block size %llu to big (max: %llu)\n",
+                                 String_cString(fileName),
+                                 deviceInfo.blockSize,
+                                 BUFFER_SIZE
+                                );
+                      createInfo.failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
+                      continue;
+                    }
+
+                    /* open device */
+                    error = Device_open(&deviceHandle,fileName,DEVICE_OPENMODE_READ);
+                    if (error != ERROR_NONE)
+                    {
+                      if (jobOptions->skipUnreadableFlag)
+                      {
+                        printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+                        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open device failed '%s'",String_cString(fileName));
+                        createInfo.statusInfo.errorFiles++;
+                        createInfo.statusInfo.errorBytes += fileInfo.size;
+                      }
+                      else
+                      {
+                        printInfo(1,"FAIL\n");
+                        printError("Cannot open file '%s' (error: %s)\n",
+                                   String_cString(fileName),
+                                   Errors_getText(error)
+                                  );
+                        createInfo.failError = error;
+                      }
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
+
+                    /* new image */
+                    error = Archive_newImageEntry(&archiveInfo,
                                                   &archiveFileInfo,
                                                   fileName,
-                                                  &fileInfo
+                                                  &deviceInfo
                                                  );
-                if (error != ERROR_NONE)
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot create new archive directory entry '%s' (error: %s)\n",
-                             String_cString(fileName),
-                             Errors_getText(error)
-                            );
-                  logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
-                  createInfo.failError = error;
-                  updateStatusInfo(&createInfo);
-                  break;
-                }
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot create new archive image entry '%s' (error: %s)\n",
+                                 String_cString(fileName),
+                                 Errors_getText(error)
+                                );
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
 
-                /* close archive entry */
-                error = Archive_closeEntry(&archiveFileInfo);
-                if (error != ERROR_NONE)
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot close archive directory entry (error: %s)!\n",
-                             Errors_getText(error)
-                            );
-                  createInfo.failError = error;
-                  updateStatusInfo(&createInfo);
-                  break;
-                }
+                    /* write device content to archive */
+                    error = ERROR_NONE;
+                    do
+                    {
+                      /* pause */
+                      while ((createInfo.pauseFlag != NULL) && (*createInfo.pauseFlag))
+                      {
+                        Misc_udelay(500*1000);
+                      }
 
-                printInfo(1,"ok\n");
-                logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
-                createInfo.statusInfo.doneFiles++;
-                updateStatusInfo(&createInfo);
-              }
-              else
-              {
-                printInfo(1,"ok (not stored)\n");
-              }
+                      Device_read(&deviceHandle,buffer,BUFFER_SIZE,&n);
+                      if (n > 0)
+                      {
+                        error = Archive_writeData(&archiveFileInfo,buffer,n);
+                        createInfo.statusInfo.doneBytes += n;
+                        createInfo.statusInfo.fileDoneBytes += n;
+                        createInfo.statusInfo.archiveBytes = createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo);
+                        createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
+        //printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
+                        updateStatusInfo(&createInfo);
+                      }
+                    }
+                    while (   ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
+                           && (n > 0)
+                           && (createInfo.failError == ERROR_NONE)
+                           && (error == ERROR_NONE)
+                          );
+                    if ((createInfo.requestedAbortFlag != NULL) && (*createInfo.requestedAbortFlag))
+                    {
+                      printInfo(1,"ABORTED\n");
+                      Device_close(&deviceHandle);
+                      Archive_closeEntry(&archiveFileInfo);
+                      continue;
+                    }
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot store archive file (error: %s)!\n",
+                                 Errors_getText(error)
+                                );
+                      Device_close(&deviceHandle);
+                      Archive_closeEntry(&archiveFileInfo);
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
 
-              /* add to incremental list */
-              if (storeIncrementalFileInfoFlag)
-              {
-                addIncrementalList(&createInfo.filesDictionary,fileName,&fileInfo);
-              }
-            }
-            break;
-          case FILE_TYPE_LINK:
-            {
-              FileInfo fileInfo;
-              String   name;
+                    /* close archive entry */
+                    error = Archive_closeEntry(&archiveFileInfo);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL\n");
+                      printError("Cannot close archive image entry (error: %s)!\n",
+                                 Errors_getText(error)
+                                );
+                      Device_close(&deviceHandle);
+                      createInfo.failError = error;
+                      updateStatusInfo(&createInfo);
+                      continue;
+                    }
 
-              /* get file info */
-              error = File_getFileInfo(fileName,&fileInfo);
-              if (error != ERROR_NONE)
-              {
-                if (jobOptions->skipUnreadableFlag)
-                {
-                  printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-                  logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
-                  createInfo.statusInfo.errorFiles++;
-                }
-                else
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot get info for link '%s' (error: %s)\n",
-                             String_cString(fileName),
-                             Errors_getText(error)
-                            );
-                  createInfo.failError = error;
-                }
-                updateStatusInfo(&createInfo);
-                continue;
-              }
+                    /* get compression ratio */
+                    if ((archiveFileInfo.image.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveFileInfo.image.chunkImageData.blockCount > 0))
+                    {
+                      ratio = 100.0-archiveFileInfo.image.chunkInfoImageData.size*100.0/(archiveFileInfo.image.chunkImageData.blockCount*(uint64)deviceInfo.blockSize);
+                    }
+                    else
+                    {
+                      ratio = 0;
+                    }
 
-              if (!jobOptions->noStorageFlag)
-              {
-                /* read link */
-                name = String_new();
-                error = File_readLink(fileName,name);
-                if (error != ERROR_NONE)
-                {
-                  if (jobOptions->skipUnreadableFlag)
-                  {
-                    printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-                    logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
-                    createInfo.statusInfo.errorFiles++;
-                    createInfo.statusInfo.errorBytes += fileInfo.size;
+                    /* close device */
+                    Device_close(&deviceHandle);
+
+                    printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",deviceInfo.size,ratio);
+                    logMessage(LOG_TYPE_ENTRY_OK,"added '%s'",String_cString(fileName));
+                    createInfo.statusInfo.doneFiles++;
+                    updateStatusInfo(&createInfo);
+
+                    /* free resources */
                   }
-                  else
-                  {
-                    printInfo(1,"FAIL\n");
-                    printError("Cannot read link '%s' (error: %s)\n",
-                               String_cString(fileName),
-                               Errors_getText(error)
-                              );
-                    String_delete(name);
-                    createInfo.failError = error;
-                  }
-                  updateStatusInfo(&createInfo);
-                  continue;
-                }
-
-                /* new link */
-                error = Archive_newLinkEntry(&archiveInfo,
-                                             &archiveFileInfo,
-                                             fileName,
-                                             name,
-                                             &fileInfo
-                                            );
-                if (error != ERROR_NONE)
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot create new archive link entry '%s' (error: %s)\n",
-                             String_cString(fileName),
-                             Errors_getText(error)
-                            );
-                  String_delete(name);
-                  createInfo.failError = error;
-                  updateStatusInfo(&createInfo);
                   break;
-                }
-
-                /* close archive entry */
-                error = Archive_closeEntry(&archiveFileInfo);
-                if (error != ERROR_NONE)
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot close archive link entry (error: %s)!\n",
-                             Errors_getText(error)
-                            );
-                  createInfo.failError = error;
-                  updateStatusInfo(&createInfo);
-                  break;
-                }
-
-                printInfo(1,"ok\n");
-                logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
-                createInfo.statusInfo.doneFiles++;
-                updateStatusInfo(&createInfo);
-
-                /* free resources */
-                String_delete(name);
               }
-              else
-              {
-                printInfo(1,"ok (not stored)\n");
-              }
+              break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
+          }
+        }
+        else
+        {
+          printInfo(1,"ok (not stored)\n");
+        }
 
-              /* add to incremental list */
-              if (storeIncrementalFileInfoFlag)
-              {
-                addIncrementalList(&createInfo.filesDictionary,fileName,&fileInfo);
-              }
-            }
-            break;
-          case FILE_TYPE_SPECIAL:
-            {
-              FileInfo fileInfo;
-
-              /* get file info */
-              error = File_getFileInfo(fileName,&fileInfo);
-              if (error != ERROR_NONE)
-              {
-                if (jobOptions->skipUnreadableFlag)
-                {
-                  printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-                  logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
-                  createInfo.statusInfo.errorFiles++;
-                }
-                else
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot get info for link '%s' (error: %s)\n",
-                             String_cString(fileName),
-                             Errors_getText(error)
-                            );
-                  createInfo.failError = error;
-                }
-                updateStatusInfo(&createInfo);
-                continue;
-              }
-
-              if (!jobOptions->noStorageFlag)
-              {
-                /* new special */
-                error = Archive_newSpecialEntry(&archiveInfo,
-                                                &archiveFileInfo,
-                                                fileName,
-                                                &fileInfo
-                                               );
-                if (error != ERROR_NONE)
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot create new archive special entry '%s' (error: %s)\n",
-                             String_cString(fileName),
-                             Errors_getText(error)
-                            );
-                  createInfo.failError = error;
-                  updateStatusInfo(&createInfo);
-                  break;
-                }
-
-                /* close archive entry */
-                error = Archive_closeEntry(&archiveFileInfo);
-                if (error != ERROR_NONE)
-                {
-                  printInfo(1,"FAIL\n");
-                  printError("Cannot close archive special entry (error: %s)!\n",
-                             Errors_getText(error)
-                            );
-                  createInfo.failError = error;
-                  updateStatusInfo(&createInfo);
-                  break;
-                }
-
-                printInfo(1,"ok\n");
-                logMessage(LOG_TYPE_FILE_OK,"added '%s'",String_cString(fileName));
-                createInfo.statusInfo.doneFiles++;
-                updateStatusInfo(&createInfo);
-
-                /* free resources */
-              }
-              else
-              {
-                printInfo(1,"ok (not stored)\n");
-              }
-
-              /* add to incremental list */
-              if (storeIncrementalFileInfoFlag)
-              {
-                addIncrementalList(&createInfo.filesDictionary,fileName,&fileInfo);
-              }
-            }
-            break;
-          default:
-            #ifndef NDEBUG
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            #endif /* NDEBUG */
-            break; /* not reached */
+        /* add to incremental list */
+        if (storeIncrementalFileInfoFlag)
+        {
+          addIncrementalList(&createInfo.filesDictionary,fileName,&fileInfo);
         }
       }
       else
       {
         printInfo(1,"skipped (reason: own created file)\n");
-        logMessage(LOG_TYPE_FILE_ACCESS_DENIED,"skipped '%s'",String_cString(fileName));
+        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"skipped '%s'",String_cString(fileName));
         createInfo.statusInfo.skippedFiles++;
         updateStatusInfo(&createInfo);
       }

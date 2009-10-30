@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -3365,16 +3365,16 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 /*---------------------------------------------------------------------*/
 
-Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
-                             const String           storageName,
-                             const JobOptions       *jobOptions
-                            )
+Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
+                                 const String               storageName,
+                                 const JobOptions           *jobOptions
+                                )
 {
   String    storageSpecifier;
   String    pathName;
   Errors    error;
 
-  assert(storageDirectoryHandle != NULL);
+  assert(storageDirectoryListHandle != NULL);
   assert(storageName != NULL);
   assert(jobOptions != NULL);
 
@@ -3386,7 +3386,7 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
       UNUSED_VARIABLE(jobOptions);
 
       /* init variables */
-      storageDirectoryHandle->type = STORAGE_TYPE_FILESYSTEM;
+      storageDirectoryListHandle->type = STORAGE_TYPE_FILESYSTEM;
 
       /* open directory */
       if (File_isDirectory(storageSpecifier))
@@ -3397,9 +3397,9 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
       {
         pathName = File_getFilePathName(String_new(),storageSpecifier);
       }
-      error = File_openDirectory(&storageDirectoryHandle->fileSystem.directoryHandle,
-                                 pathName
-                                );
+      error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
+                                     pathName
+                                    );
       String_delete(pathName);
       break;
     case STORAGE_TYPE_FTP:
@@ -3414,16 +3414,16 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
           netbuf     *control;
 
           /* init variables */
-          storageDirectoryHandle->type                 = STORAGE_TYPE_FTP;
-          storageDirectoryHandle->ftp.fileListFileName = String_new();
-          storageDirectoryHandle->ftp.line             = String_new();
+          storageDirectoryListHandle->type                 = STORAGE_TYPE_FTP;
+          storageDirectoryListHandle->ftp.fileListFileName = String_new();
+          storageDirectoryListHandle->ftp.line             = String_new();
 
           /* create temporary list file */           
-          error = File_getTmpFileName(storageDirectoryHandle->ftp.fileListFileName,NULL,tmpDirectory);
+          error = File_getTmpFileName(storageDirectoryListHandle->ftp.fileListFileName,NULL,tmpDirectory);
           if (error != ERROR_NONE)
           {
-            String_delete(storageDirectoryHandle->ftp.line);
-            String_delete(storageDirectoryHandle->ftp.fileListFileName);
+            String_delete(storageDirectoryListHandle->ftp.line);
+            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
             return error;
           }
 
@@ -3438,9 +3438,9 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
-            File_delete(storageDirectoryHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryHandle->ftp.line);
-            String_delete(storageDirectoryHandle->ftp.fileListFileName);
+            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
+            String_delete(storageDirectoryListHandle->ftp.line);
+            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
             error = ERROR_FTP_SESSION_FAIL;
             break;
           }
@@ -3505,9 +3505,9 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
-            File_delete(storageDirectoryHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryHandle->ftp.line);
-            String_delete(storageDirectoryHandle->ftp.fileListFileName);
+            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
+            String_delete(storageDirectoryListHandle->ftp.line);
+            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
             error = ERROR_HOST_NOT_FOUND;
             break;
           }
@@ -3519,9 +3519,9 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
-            File_delete(storageDirectoryHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryHandle->ftp.line);
-            String_delete(storageDirectoryHandle->ftp.fileListFileName);
+            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
+            String_delete(storageDirectoryListHandle->ftp.line);
+            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
             error = ERROR_HOST_NOT_FOUND;
             break;
           }
@@ -3531,9 +3531,9 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
-            File_delete(storageDirectoryHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryHandle->ftp.line);
-            String_delete(storageDirectoryHandle->ftp.fileListFileName);
+            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
+            String_delete(storageDirectoryListHandle->ftp.line);
+            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
             return ERROR_FTP_SESSION_FAIL;
           }
 
@@ -3551,24 +3551,24 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
-            File_delete(storageDirectoryHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryHandle->ftp.line);
-            String_delete(storageDirectoryHandle->ftp.fileListFileName);
+            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
+            String_delete(storageDirectoryListHandle->ftp.line);
+            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
             error = ERROR_FTP_AUTHENTIFICATION;
             break;
           }
           Password_undeploy(password);
 
           /* read directory */
-          if (FtpDir(String_cString(storageDirectoryHandle->ftp.fileListFileName),String_cString(fileName),control) != 1)
+          if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(fileName),control) != 1)
           {
             String_delete(fileName);
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
-            File_delete(storageDirectoryHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryHandle->ftp.line);
-            String_delete(storageDirectoryHandle->ftp.fileListFileName);
+            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
+            String_delete(storageDirectoryListHandle->ftp.line);
+            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
             error = ERROR_OPEN_DIRECTORY;
             break;
           }
@@ -3577,16 +3577,16 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
           FtpQuit(control);
 
           /* open list file */
-          error = File_open(&storageDirectoryHandle->ftp.fileHandle,storageDirectoryHandle->ftp.fileListFileName,FILE_OPENMODE_READ);
+          error = File_open(&storageDirectoryListHandle->ftp.fileHandle,storageDirectoryListHandle->ftp.fileListFileName,FILE_OPENMODE_READ);
           if (error != ERROR_NONE)
           {
             String_delete(fileName);
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
-            File_delete(storageDirectoryHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryHandle->ftp.line);
-            String_delete(storageDirectoryHandle->ftp.fileListFileName);
+            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
+            String_delete(storageDirectoryListHandle->ftp.line);
+            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
             break;
           }
 
@@ -3604,7 +3604,7 @@ Errors Storage_openDirectory(StorageDirectoryHandle *storageDirectoryHandle,
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+error = ERROR_FUNCTION_NOT_SUPPORTED;
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(jobOptions);
 
@@ -3624,16 +3624,16 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           SSHServer sshServer;
 
           /* init variables */
-          storageDirectoryHandle->type               = STORAGE_TYPE_SFTP;
-          storageDirectoryHandle->sftp.pathName      = String_new();
-          storageDirectoryHandle->sftp.buffer        = (char*)malloc(MAX_FILENAME_LENGTH);
-          if (storageDirectoryHandle->sftp.buffer == NULL)
+          storageDirectoryListHandle->type               = STORAGE_TYPE_SFTP;
+          storageDirectoryListHandle->sftp.pathName      = String_new();
+          storageDirectoryListHandle->sftp.buffer        = (char*)malloc(MAX_FILENAME_LENGTH);
+          if (storageDirectoryListHandle->sftp.buffer == NULL)
           {
             error = ERROR_INSUFFICIENT_MEMORY;
             break;
           }
-          storageDirectoryHandle->sftp.bufferLength  = 0;
-          storageDirectoryHandle->sftp.entryReadFlag = FALSE;
+          storageDirectoryListHandle->sftp.bufferLength  = 0;
+          storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
 
           /* parse storage string */
           loginName    = String_new();
@@ -3644,21 +3644,23 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
-            free(storageDirectoryHandle->sftp.buffer);
-            String_delete(storageDirectoryHandle->sftp.pathName);
+            free(storageDirectoryListHandle->sftp.buffer);
+            String_delete(storageDirectoryListHandle->sftp.pathName);
             error = ERROR_SSH_SESSION_FAIL;
             break;
           }
-          String_set(storageDirectoryHandle->sftp.pathName,hostFileName);
+          String_set(storageDirectoryListHandle->sftp.pathName,hostFileName);
 
-          /* open network connection */
+          /* get SSH server data */
           getSSHServer(hostName,jobOptions,&sshServer);
           if (String_empty(loginName)) String_set(loginName,sshServer.loginName);
-          error = Network_connect(&storageDirectoryHandle->sftp.socketHandle,
+
+          /* open network connection */
+          error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
                                   SOCKET_TYPE_SSH,
                                   hostName,
                                   (hostPort != 0)?hostPort:sshServer.port,
-                                  !String_empty(loginName)?loginName:sshServer.loginName,
+                                  loginName,
                                   (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
                                   sshServer.publicKeyFileName,
                                   sshServer.privateKeyFileName,
@@ -3669,39 +3671,39 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
-            free(storageDirectoryHandle->sftp.buffer);
-            String_delete(storageDirectoryHandle->sftp.pathName);
+            free(storageDirectoryListHandle->sftp.buffer);
+            String_delete(storageDirectoryListHandle->sftp.pathName);
             break;
           }
 
           /* init FTP session */
-          storageDirectoryHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryHandle->sftp.socketHandle));
-          if (storageDirectoryHandle->sftp.sftp == NULL)
+          storageDirectoryListHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
+          if (storageDirectoryListHandle->sftp.sftp == NULL)
           {
-            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryHandle->sftp.socketHandle)));
-            Network_disconnect(&storageDirectoryHandle->sftp.socketHandle);
+            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
+            Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
-            free(storageDirectoryHandle->sftp.buffer);
-            String_delete(storageDirectoryHandle->sftp.pathName);
+            free(storageDirectoryListHandle->sftp.buffer);
+            String_delete(storageDirectoryListHandle->sftp.pathName);
             break;
           }
 
           /* open directory for reading */
-          storageDirectoryHandle->sftp.sftpHandle = libssh2_sftp_opendir(storageDirectoryHandle->sftp.sftp,
-                                                                         String_cString(hostFileName)
-                                                                        );
-          if (storageDirectoryHandle->sftp.sftpHandle == NULL)
+          storageDirectoryListHandle->sftp.sftpHandle = libssh2_sftp_opendir(storageDirectoryListHandle->sftp.sftp,
+                                                                             String_cString(hostFileName)
+                                                                            );
+          if (storageDirectoryListHandle->sftp.sftpHandle == NULL)
           {
-            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryHandle->sftp.socketHandle)));
-            libssh2_sftp_shutdown(storageDirectoryHandle->sftp.sftp);
-            Network_disconnect(&storageDirectoryHandle->sftp.socketHandle);
+            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
+            libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp);
+            Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
             String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
-            free(storageDirectoryHandle->sftp.buffer);
-            String_delete(storageDirectoryHandle->sftp.pathName);
+            free(storageDirectoryListHandle->sftp.buffer);
+            String_delete(storageDirectoryListHandle->sftp.pathName);
             break;
           }
 
@@ -3720,12 +3722,12 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       UNUSED_VARIABLE(jobOptions);
 
       /* init variables */
-      storageDirectoryHandle->type = STORAGE_TYPE_DEVICE;
+      storageDirectoryListHandle->type = STORAGE_TYPE_DEVICE;
 
       /* open directory */
-      error = File_openDirectory(&storageDirectoryHandle->dvd.directoryHandle,
-                                 storageName
-                                );
+      error = File_openDirectoryList(&storageDirectoryListHandle->dvd.directoryListHandle,
+                                     storageName
+                                    );
       break;
     case STORAGE_TYPE_DEVICE:
       UNUSED_VARIABLE(jobOptions);
@@ -3743,20 +3745,20 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return error;
 }
 
-void Storage_closeDirectory(StorageDirectoryHandle *storageDirectoryHandle)
+void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
-  assert(storageDirectoryHandle != NULL);
+  assert(storageDirectoryListHandle != NULL);
 
-  switch (storageDirectoryHandle->type)
+  switch (storageDirectoryListHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
-      File_closeDirectory(&storageDirectoryHandle->fileSystem.directoryHandle);
+      File_closeDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
       break;
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
-        File_close(&storageDirectoryHandle->ftp.fileHandle);
-        String_delete(storageDirectoryHandle->ftp.line);
-        String_delete(storageDirectoryHandle->ftp.fileListFileName);
+        File_close(&storageDirectoryListHandle->ftp.fileHandle);
+        String_delete(storageDirectoryListHandle->ftp.line);
+        String_delete(storageDirectoryListHandle->ftp.fileListFileName);
       #else /* not HAVE_FTP */
       #endif /* HAVE_FTP */
       break;
@@ -3771,16 +3773,16 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
-        libssh2_sftp_closedir(storageDirectoryHandle->sftp.sftpHandle);
-        libssh2_sftp_shutdown(storageDirectoryHandle->sftp.sftp);
-        Network_disconnect(&storageDirectoryHandle->sftp.socketHandle);
-        free(storageDirectoryHandle->sftp.buffer);
-        String_delete(storageDirectoryHandle->sftp.pathName);
+        libssh2_sftp_closedir(storageDirectoryListHandle->sftp.sftpHandle);
+        libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp);
+        Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
+        free(storageDirectoryListHandle->sftp.buffer);
+        String_delete(storageDirectoryListHandle->sftp.pathName);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
-      File_closeDirectory(&storageDirectoryHandle->dvd.directoryHandle);
+      File_closeDirectoryList(&storageDirectoryListHandle->dvd.directoryListHandle);
       break;
     case STORAGE_TYPE_DEVICE:
       break;
@@ -3792,21 +3794,21 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   }
 }
 
-bool Storage_endOfDirectory(StorageDirectoryHandle *storageDirectoryHandle)
+bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
   bool endOfDirectoryFlag;
 
-  assert(storageDirectoryHandle != NULL);
+  assert(storageDirectoryListHandle != NULL);
 
   endOfDirectoryFlag = TRUE;
-  switch (storageDirectoryHandle->type)
+  switch (storageDirectoryListHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
-      endOfDirectoryFlag = File_endOfDirectory(&storageDirectoryHandle->fileSystem.directoryHandle);
+      endOfDirectoryFlag = File_endOfDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
       break;
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
-        endOfDirectoryFlag = File_eof(&storageDirectoryHandle->ftp.fileHandle);
+        endOfDirectoryFlag = File_eof(&storageDirectoryListHandle->ftp.fileHandle);
       #else /* not HAVE_FTP */
       #endif /* HAVE_FTP */
       break;
@@ -3825,22 +3827,22 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         int n;
 
         /* read entry iff not already read */
-        while (!storageDirectoryHandle->sftp.entryReadFlag)
+        while (!storageDirectoryListHandle->sftp.entryReadFlag)
         {
-          n = libssh2_sftp_readdir(storageDirectoryHandle->sftp.sftpHandle,
-                                   storageDirectoryHandle->sftp.buffer,
+          n = libssh2_sftp_readdir(storageDirectoryListHandle->sftp.sftpHandle,
+                                   storageDirectoryListHandle->sftp.buffer,
                                    MAX_FILENAME_LENGTH,
-                                   &storageDirectoryHandle->sftp.attributes
+                                   &storageDirectoryListHandle->sftp.attributes
                                   );
           if (n > 0)
           {
-            if (   !S_ISDIR(storageDirectoryHandle->sftp.attributes.flags)
-                && ((n != 1) || (strncmp(storageDirectoryHandle->sftp.buffer,".", 1) != 0))
-                && ((n != 2) || (strncmp(storageDirectoryHandle->sftp.buffer,"..",2) != 0))
+            if (   !S_ISDIR(storageDirectoryListHandle->sftp.attributes.flags)
+                && ((n != 1) || (strncmp(storageDirectoryListHandle->sftp.buffer,".", 1) != 0))
+                && ((n != 2) || (strncmp(storageDirectoryListHandle->sftp.buffer,"..",2) != 0))
                )
             {
-              storageDirectoryHandle->sftp.bufferLength = n;
-              storageDirectoryHandle->sftp.entryReadFlag = TRUE;
+              storageDirectoryListHandle->sftp.bufferLength = n;
+              storageDirectoryListHandle->sftp.entryReadFlag = TRUE;
             }
           }
           else
@@ -3849,13 +3851,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           }
         }
 
-        endOfDirectoryFlag = !storageDirectoryHandle->sftp.entryReadFlag;
+        endOfDirectoryFlag = !storageDirectoryListHandle->sftp.entryReadFlag;
       }
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
-      endOfDirectoryFlag = File_endOfDirectory(&storageDirectoryHandle->dvd.directoryHandle);
+      endOfDirectoryFlag = File_endOfDirectoryList(&storageDirectoryListHandle->dvd.directoryListHandle);
       break;
     case STORAGE_TYPE_DEVICE:
       endOfDirectoryFlag = TRUE;
@@ -3870,20 +3872,20 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return endOfDirectoryFlag;
 }
 
-Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
-                             String                 fileName,
-                             FileInfo               *fileInfo
-                            )
+Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
+                                 String                     fileName,
+                                 FileInfo                   *fileInfo
+                                )
 {
   Errors error;
 
-  assert(storageDirectoryHandle != NULL);
+  assert(storageDirectoryListHandle != NULL);
 
   error = ERROR_UNKNOWN;
-  switch (storageDirectoryHandle->type)
+  switch (storageDirectoryListHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
-      error = File_readDirectory(&storageDirectoryHandle->fileSystem.directoryHandle,fileName);
+      error = File_readDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,fileName);
       if (error == ERROR_NONE)
       {
         if (fileInfo != NULL)
@@ -3903,18 +3905,18 @@ Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
           uint   n;
 
           readFlag = FALSE;
-          while (!readFlag && !File_eof(&storageDirectoryHandle->ftp.fileHandle))
+          while (!readFlag && !File_eof(&storageDirectoryListHandle->ftp.fileHandle))
           {
             /* read line */
-            error = File_readLine(&storageDirectoryHandle->ftp.fileHandle,storageDirectoryHandle->ftp.line);
+            error = File_readLine(&storageDirectoryListHandle->ftp.fileHandle,storageDirectoryListHandle->ftp.line);
             if (error != ERROR_NONE)
             {
               return error;
             }
-//fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(storageDirectoryHandle->ftp.line));
+//fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(storageDirectoryListHandle->ftp.line));
 
             /* parse */
-            if      (String_parse(storageDirectoryHandle->ftp.line,
+            if      (String_parse(storageDirectoryListHandle->ftp.line,
                                   STRING_BEGIN,
                                   "%32s %* %* %* %llu %d-%d-%d %d:%d %S",
                                   NULL,
@@ -3959,7 +3961,7 @@ Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
 
               readFlag = TRUE;
             }
-            else if (String_parse(storageDirectoryHandle->ftp.line,
+            else if (String_parse(storageDirectoryListHandle->ftp.line,
                                   STRING_BEGIN,
                                   "%32s %* %* %* %llu %* %* %*:%* %S",
                                   NULL,
@@ -4000,7 +4002,7 @@ Errors Storage_readDirectory(StorageDirectoryHandle *storageDirectoryHandle,
 
               readFlag = TRUE;
             }
-            else if (String_parse(storageDirectoryHandle->ftp.line,
+            else if (String_parse(storageDirectoryListHandle->ftp.line,
                                   STRING_BEGIN,
                                   "%32s %* %* %* %llu %* %* %* %S",
                                   NULL,
@@ -4060,23 +4062,23 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       {
         int n;
 
-        if (!storageDirectoryHandle->sftp.entryReadFlag)
+        if (!storageDirectoryListHandle->sftp.entryReadFlag)
         {
           do
           {
-            n = libssh2_sftp_readdir(storageDirectoryHandle->sftp.sftpHandle,
-                                     storageDirectoryHandle->sftp.buffer,
+            n = libssh2_sftp_readdir(storageDirectoryListHandle->sftp.sftpHandle,
+                                     storageDirectoryListHandle->sftp.buffer,
                                      MAX_FILENAME_LENGTH,
-                                     &storageDirectoryHandle->sftp.attributes
+                                     &storageDirectoryListHandle->sftp.attributes
                                     );
             if      (n > 0)
             {
-              if (   !S_ISDIR(storageDirectoryHandle->sftp.attributes.flags)
-                  && ((n != 1) || (strncmp(storageDirectoryHandle->sftp.buffer,".", 1) != 0))
-                  && ((n != 2) || (strncmp(storageDirectoryHandle->sftp.buffer,"..",2) != 0))
+              if (   !S_ISDIR(storageDirectoryListHandle->sftp.attributes.flags)
+                  && ((n != 1) || (strncmp(storageDirectoryListHandle->sftp.buffer,".", 1) != 0))
+                  && ((n != 2) || (strncmp(storageDirectoryListHandle->sftp.buffer,"..",2) != 0))
                  )
               {
-                storageDirectoryHandle->sftp.entryReadFlag = TRUE;
+                storageDirectoryListHandle->sftp.entryReadFlag = TRUE;
                 error = ERROR_NONE;
               }
             }
@@ -4085,64 +4087,64 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               error = ERROR(IO_ERROR,errno);
             }
           }
-          while (!storageDirectoryHandle->sftp.entryReadFlag && (error == ERROR_NONE));
+          while (!storageDirectoryListHandle->sftp.entryReadFlag && (error == ERROR_NONE));
         }
         else
         {
           error = ERROR_NONE;
         }
 
-        if (storageDirectoryHandle->sftp.entryReadFlag)
+        if (storageDirectoryListHandle->sftp.entryReadFlag)
         {
-          String_set(fileName,storageDirectoryHandle->sftp.pathName);
-          File_appendFileNameBuffer(fileName,storageDirectoryHandle->sftp.buffer,storageDirectoryHandle->sftp.bufferLength);
+          String_set(fileName,storageDirectoryListHandle->sftp.pathName);
+          File_appendFileNameBuffer(fileName,storageDirectoryListHandle->sftp.buffer,storageDirectoryListHandle->sftp.bufferLength);
 
           if (fileInfo != NULL)
           {
-            if      (S_ISREG(storageDirectoryHandle->sftp.attributes.permissions))  fileInfo->type = FILE_TYPE_FILE;
-            else if (S_ISDIR(storageDirectoryHandle->sftp.attributes.permissions))  fileInfo->type = FILE_TYPE_DIRECTORY;
-            else if (S_ISLNK(storageDirectoryHandle->sftp.attributes.permissions))  fileInfo->type = FILE_TYPE_LINK;
-            else if (S_ISCHR(storageDirectoryHandle->sftp.attributes.permissions))
+            if      (S_ISREG(storageDirectoryListHandle->sftp.attributes.permissions))  fileInfo->type = FILE_TYPE_FILE;
+            else if (S_ISDIR(storageDirectoryListHandle->sftp.attributes.permissions))  fileInfo->type = FILE_TYPE_DIRECTORY;
+            else if (S_ISLNK(storageDirectoryListHandle->sftp.attributes.permissions))  fileInfo->type = FILE_TYPE_LINK;
+            else if (S_ISCHR(storageDirectoryListHandle->sftp.attributes.permissions))
             {
               fileInfo->type        = FILE_TYPE_SPECIAL;
               fileInfo->specialType = FILE_SPECIAL_TYPE_CHARACTER_DEVICE;
             }
-            else if (S_ISBLK(storageDirectoryHandle->sftp.attributes.permissions))
+            else if (S_ISBLK(storageDirectoryListHandle->sftp.attributes.permissions))
             {
               fileInfo->type        = FILE_TYPE_SPECIAL;
               fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
             }
-            else if (S_ISFIFO(storageDirectoryHandle->sftp.attributes.permissions))
+            else if (S_ISFIFO(storageDirectoryListHandle->sftp.attributes.permissions))
             {
               fileInfo->type        = FILE_TYPE_SPECIAL;
               fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
             }
-            else if (S_ISSOCK(storageDirectoryHandle->sftp.attributes.permissions))
+            else if (S_ISSOCK(storageDirectoryListHandle->sftp.attributes.permissions))
             {
               fileInfo->type        = FILE_TYPE_SPECIAL;
               fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
             }
             else                                fileInfo->type = FILE_TYPE_UNKNOWN;
-            fileInfo->size            = storageDirectoryHandle->sftp.attributes.filesize;
-            fileInfo->timeLastAccess  = storageDirectoryHandle->sftp.attributes.atime;
-            fileInfo->timeModified    = storageDirectoryHandle->sftp.attributes.mtime;
+            fileInfo->size            = storageDirectoryListHandle->sftp.attributes.filesize;
+            fileInfo->timeLastAccess  = storageDirectoryListHandle->sftp.attributes.atime;
+            fileInfo->timeModified    = storageDirectoryListHandle->sftp.attributes.mtime;
             fileInfo->timeLastChanged = 0LL;
-            fileInfo->userId          = storageDirectoryHandle->sftp.attributes.uid;
-            fileInfo->groupId         = storageDirectoryHandle->sftp.attributes.gid;
-            fileInfo->permission      = storageDirectoryHandle->sftp.attributes.permissions;
+            fileInfo->userId          = storageDirectoryListHandle->sftp.attributes.uid;
+            fileInfo->groupId         = storageDirectoryListHandle->sftp.attributes.gid;
+            fileInfo->permission      = storageDirectoryListHandle->sftp.attributes.permissions;
             fileInfo->major           = 0;
             fileInfo->minor           = 0;
             memset(fileInfo->cast,0,sizeof(FileCast));
           }
 
-          storageDirectoryHandle->sftp.entryReadFlag = FALSE;
+          storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
         }
       }
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_DVD:
-      error = File_readDirectory(&storageDirectoryHandle->dvd.directoryHandle,fileName);
+      error = File_readDirectoryList(&storageDirectoryListHandle->dvd.directoryListHandle,fileName);
       break;
     case STORAGE_TYPE_DEVICE:
       error = ERROR_FUNCTION_NOT_SUPPORTED;

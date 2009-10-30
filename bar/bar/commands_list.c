@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -46,26 +46,15 @@
 
 /***************************** Constants *******************************/
 
-#define DEFAULT_FORMAT_TITLE_NORMAL_LONG "%type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_FORMAT_TITLE_NORMAL_LONG "%type:-5s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
 #define DEFAULT_FORMAT_TITLE_GROUP_LONG  "%archiveName:-20s %type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_FORMAT_TITLE_NORMAL      "%type:4s %size:-10s %date:-25s %name:s"
+#define DEFAULT_FORMAT_TITLE_NORMAL      "%type:-5s %size:-10s %date:-25s %name:s"
 #define DEFAULT_FORMAT_TITLE_GROUP       "%archiveName:-20s %type:4s %size:-10s %date:-25s %name:s"
 
-#define DEFAULT_FORMAT_NORMAL_LONG       "%type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_FORMAT_NORMAL_LONG       "%type:-5s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
 #define DEFAULT_FORMAT_GROUP_LONG        "%archiveName:-20s %type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_FORMAT_NORMAL            "%type:4s %size:-10s %date:-25s %name:s"
+#define DEFAULT_FORMAT_NORMAL            "%type:-5s %size:-10s %date:-25s %name:s"
 #define DEFAULT_FORMAT_GROUP             "%archiveName:-20s %type:4s %size:-10s %date:-25s %name:s"
-
-/* archive entry types */
-typedef enum
-{
-  ARCHIVE_ENTRY_TYPE_NONE,
-
-  ARCHIVE_ENTRY_TYPE_FILE,
-  ARCHIVE_ENTRY_TYPE_DIRECTORY,
-  ARCHIVE_ENTRY_TYPE_LINK,
-  ARCHIVE_ENTRY_TYPE_SPECIAL,
-} ArchiveEntryTypes;
 
 /***************************** Datatypes *******************************/
 
@@ -81,15 +70,27 @@ typedef struct ArchiveEntryNode
     struct
     {
       String             fileName;
-      uint64             fileSize;
+      uint64             size;
       uint64             timeModified;
-      uint64             archiveFileSize;
+      uint64             archiveSize;
       CompressAlgorithms compressAlgorithm;
       CryptAlgorithms    cryptAlgorithm;
       CryptTypes         cryptType;
       uint64             fragmentOffset;
       uint64             fragmentSize;
     } file;
+    struct
+    {
+      String             imageName;
+      uint64             size;
+      uint64             archiveSize;
+      CompressAlgorithms compressAlgorithm;
+      CryptAlgorithms    cryptAlgorithm;
+      CryptTypes         cryptType;
+      uint               blockSize;
+      uint64             blockOffset;
+      uint64             blockCount;
+    } image;
     struct
     {
       String          directoryName;
@@ -227,7 +228,7 @@ LOCAL void printFooter(ulong fileCount)
   if (!globalOptions.noHeaderFooterFlag)
   {
     printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
-    printInfo(0,"%lu file(s)\n",fileCount);
+    printInfo(0,"%lu %s\n",fileCount,(fileCount == 1)?"entry":"entries");
     printInfo(0,"\n");
   }
 }
@@ -239,7 +240,7 @@ LOCAL void printFooter(ulong fileCount)
 *                              should not be printed
 *          fileName          - file name
 *          fileSize          - file size [bytes]
-*          archiveFileSize   - archive size [bytes]
+*          archiveSize       - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
 *          cryptAlgorithm    - used crypt algorithm
 *          cryptType         - crypt type; see CRYPT_TYPES
@@ -252,9 +253,9 @@ LOCAL void printFooter(ulong fileCount)
 
 LOCAL void printFileInfo(const String       archiveFileName,
                          const String       fileName,
-                         uint64             fileSize,
+                         uint64             size,
                          uint64             timeModified,
-                         uint64             archiveFileSize,
+                         uint64             archiveSize,
                          CompressAlgorithms compressAlgorithm,
                          CryptAlgorithms    cryptAlgorithm,
                          CryptTypes         cryptType,
@@ -272,7 +273,7 @@ LOCAL void printFileInfo(const String       archiveFileName,
 
   if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (fragmentSize > 0))
   {
-    ratio = 100.0-archiveFileSize*100.0/fragmentSize;
+    ratio = 100.0-archiveSize*100.0/fragmentSize;
   }
   else
   {
@@ -286,8 +287,8 @@ LOCAL void printFileInfo(const String       archiveFileName,
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-    printf("FILE %10llu %-25s %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
-           fileSize,
+    printf("FILE  %10llu %-25s %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
+           size,
            String_cString(dateTime),
            fragmentOffset,
            (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset,
@@ -300,10 +301,85 @@ LOCAL void printFileInfo(const String       archiveFileName,
   }
   else
   {
-    printf("FILE %10llu %-25s %s\n",
-           fileSize,
+    printf("FILE  %10llu %-25s %s\n",
+           size,
            String_cString(dateTime),
            String_cString(fileName)
+          );
+  }
+
+  String_delete(dateTime);
+}
+
+/***********************************************************************\
+* Name   : printFileInfo
+* Purpose: print file information
+* Input  : archiveFileName   - archive name or NULL if archive name
+*                              should not be printed
+*          iamgeName         - image name
+*          size              - image size [bytes]
+*          archiveSize       - archive size [bytes]
+*          compressAlgorithm - used compress algorithm
+*          cryptAlgorithm    - used crypt algorithm
+*          cryptType         - crypt type; see CRYPT_TYPES
+*          blockSize         - block size :bytes]
+*          blockOffset       - block offset (0..n-1)
+*          blockCount        - number of blocks
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printImageInfo(const String       archiveFileName,
+                          const String       imageName,
+                          uint64             size,
+                          uint64             archiveSize,
+                          CompressAlgorithms compressAlgorithm,
+                          CryptAlgorithms    cryptAlgorithm,
+                          CryptTypes         cryptType,
+                          uint               blockSize,
+                          uint64             blockOffset,
+                          uint64             blockCount
+                         )
+{
+  String dateTime;
+  double ratio;
+  String cryptString;
+
+  assert(imageName != NULL);
+
+  if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (blockCount > 0))
+  {
+    ratio = 100.0-archiveSize*100.0/(blockCount*(uint64)blockSize);
+  }
+  else
+  {
+    ratio = 0;
+  }
+
+  if (archiveFileName != NULL)
+  {
+    printf("%-20s ",String_cString(archiveFileName));
+  }
+  if (globalOptions.longFormatFlag)
+  {
+    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+    printf("IMAGE %10llu                           %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
+           size,
+           blockOffset,
+           ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)blockSize,
+           Compress_getAlgorithmName(compressAlgorithm),
+           ratio,
+           String_cString(cryptString),
+           String_cString(imageName)
+          );
+    String_delete(cryptString);
+  }
+  else
+  {
+    printf("IMAGE %10llu                           %s\n",
+           size,
+           String_cString(imageName)
           );
   }
 
@@ -340,7 +416,7 @@ LOCAL void printDirectoryInfo(const String    archiveFileName,
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-    printf("DIR                                                                                 %-10s %s\n",
+    printf("DIR                                                                                  %-10s %s\n",
            String_cString(cryptString),
            String_cString(directoryName)
           );
@@ -348,7 +424,7 @@ LOCAL void printDirectoryInfo(const String    archiveFileName,
   }
   else
   {
-    printf("DIR                                       %s\n",
+    printf("DIR                                        %s\n",
            String_cString(directoryName)
           );
   }
@@ -387,7 +463,7 @@ LOCAL void printLinkInfo(const String    archiveFileName,
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-    printf("LINK                                                                                %-10s %s -> %s\n",
+    printf("LINK                                                                                 %-10s %s -> %s\n",
            String_cString(cryptString),
            String_cString(linkName),
            String_cString(destinationName)
@@ -396,7 +472,7 @@ LOCAL void printLinkInfo(const String    archiveFileName,
   }
   else
   {
-    printf("LINK                                      %s -> %s\n",
+    printf("LINK                                       %s -> %s\n",
            String_cString(linkName),
            String_cString(destinationName)
           );
@@ -442,7 +518,7 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
       if (globalOptions.longFormatFlag)
       {
         cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-        printf("CHAR                                                                                %-10s %s, %lu %lu\n",
+        printf("CHAR                                                                                 %-10s %s, %lu %lu\n",
                String_cString(cryptString),
                String_cString(fileName),
                major,
@@ -452,7 +528,7 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
       }
       else
       {
-        printf("CHAR                                      %s\n",
+        printf("CHAR                                       %s\n",
                String_cString(fileName)
               );
       }
@@ -480,7 +556,7 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
       if (globalOptions.longFormatFlag)
       {
         cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-        printf("FIFO                                                                                %-10s %s\n",
+        printf("FIFO                                                                                 %-10s %s\n",
                String_cString(cryptString),
                String_cString(fileName)
               );
@@ -488,7 +564,7 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
       }
       else
       {
-        printf("FIFO                                      %s\n",
+        printf("FIFO                                       %s\n",
                String_cString(fileName)
               );
       }
@@ -523,7 +599,7 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
 * Purpose: add file info to archive entry list
 * Input  : fileName          - file name
 *          fileSize          - file size [bytes]
-*          archiveFileSize   - archive size [bytes]
+*          archiveSize       - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
 *          cryptAlgorithm    - used crypt algorithm
 *          cryptType         - crypt type; see CRYPT_TYPES
@@ -536,9 +612,9 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
 
 LOCAL void addListFileInfo(const String       archiveFileName,
                            const String       fileName,
-                           uint64             fileSize,
+                           uint64             size,
                            uint64             timeModified,
-                           uint64             archiveFileSize,
+                           uint64             archiveSize,
                            CompressAlgorithms compressAlgorithm,
                            CryptAlgorithms    cryptAlgorithm,
                            CryptTypes         cryptType,
@@ -559,14 +635,69 @@ LOCAL void addListFileInfo(const String       archiveFileName,
   archiveEntryNode->archiveFileName        = String_duplicate(archiveFileName);
   archiveEntryNode->type                   = ARCHIVE_ENTRY_TYPE_FILE;
   archiveEntryNode->file.fileName          = String_duplicate(fileName);
-  archiveEntryNode->file.fileSize          = fileSize;
+  archiveEntryNode->file.size              = size;
   archiveEntryNode->file.timeModified      = timeModified;
-  archiveEntryNode->file.archiveFileSize   = archiveFileSize;
+  archiveEntryNode->file.archiveSize       = archiveSize;
   archiveEntryNode->file.compressAlgorithm = compressAlgorithm;
   archiveEntryNode->file.cryptAlgorithm    = cryptAlgorithm;
   archiveEntryNode->file.cryptType         = cryptType;
   archiveEntryNode->file.fragmentOffset    = fragmentOffset;
   archiveEntryNode->file.fragmentSize      = fragmentSize;
+
+  /* append to list */
+  List_append(&archiveEntryList,archiveEntryNode);
+}
+
+/***********************************************************************\
+* Name   : addListFileInfo
+* Purpose: add file info to archive entry list
+* Input  : imageName         - image name
+*          size              - iamge size [bytes]
+*          archiveSize       - archive size [bytes]
+*          compressAlgorithm - used compress algorithm
+*          cryptAlgorithm    - used crypt algorithm
+*          cryptType         - crypt type; see CRYPT_TYPES
+*          blockSize         - block size
+*          blockOffset       - block offset (0..n-1)
+*          blockCount        - block count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void addListImageInfo(const String       archiveFileName,
+                            const String       imageName,
+                            uint64             size,
+                            uint64             archiveSize,
+                            CompressAlgorithms compressAlgorithm,
+                            CryptAlgorithms    cryptAlgorithm,
+                            CryptTypes         cryptType,
+                            uint               blockSize,
+                            uint64             blockOffset,
+                            uint64             blockCount
+                           )
+{
+  ArchiveEntryNode *archiveEntryNode;
+
+  /* allocate node */
+  archiveEntryNode = LIST_NEW_NODE(ArchiveEntryNode);
+  if (archiveEntryNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  /* init node */
+  archiveEntryNode->archiveFileName         = String_duplicate(archiveFileName);
+  archiveEntryNode->type                    = ARCHIVE_ENTRY_TYPE_IMAGE;
+  archiveEntryNode->image.imageName         = String_duplicate(imageName);
+  archiveEntryNode->image.size              = size;
+  archiveEntryNode->image.archiveSize       = archiveSize;
+  archiveEntryNode->image.compressAlgorithm = compressAlgorithm;
+  archiveEntryNode->image.cryptAlgorithm    = cryptAlgorithm;
+  archiveEntryNode->image.cryptType         = cryptType;
+  archiveEntryNode->image.blockSize         = blockSize;
+  archiveEntryNode->image.blockOffset       = blockOffset;
+  archiveEntryNode->image.blockCount        = blockCount;
 
   /* append to list */
   List_append(&archiveEntryList,archiveEntryNode);
@@ -858,9 +989,9 @@ LOCAL void printList(void)
         {
           printFileInfo(archiveEntryNode->archiveFileName,
                         archiveEntryNode->file.fileName,
-                        archiveEntryNode->file.fileSize,
+                        archiveEntryNode->file.size,
                         archiveEntryNode->file.timeModified,
-                        archiveEntryNode->file.archiveFileSize,
+                        archiveEntryNode->file.archiveSize,
                         archiveEntryNode->file.compressAlgorithm,
                         archiveEntryNode->file.cryptAlgorithm,
                         archiveEntryNode->file.cryptType,
@@ -869,6 +1000,27 @@ LOCAL void printList(void)
                        );
           prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_FILE;
           prevArchiveName      = archiveEntryNode->file.fileName;
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_IMAGE:
+        if (   globalOptions.allFlag
+            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_IMAGE)
+            || !String_equals(prevArchiveName,archiveEntryNode->image.imageName)
+           )
+        {
+          printImageInfo(archiveEntryNode->archiveFileName,
+                         archiveEntryNode->image.imageName,
+                         archiveEntryNode->image.size,
+                         archiveEntryNode->image.archiveSize,
+                         archiveEntryNode->image.compressAlgorithm,
+                         archiveEntryNode->image.cryptAlgorithm,
+                         archiveEntryNode->image.cryptType,
+                         archiveEntryNode->image.blockSize,
+                         archiveEntryNode->image.blockOffset,
+                         archiveEntryNode->image.blockCount
+                        );
+          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_IMAGE;
+          prevArchiveName      = archiveEntryNode->image.imageName;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
@@ -979,10 +1131,10 @@ remoteBarFlag=FALSE;
       case STORAGE_TYPE_FTP:
       case STORAGE_TYPE_SFTP:
         {
-          Errors          error;
-          ArchiveInfo     archiveInfo;
-          ArchiveFileInfo archiveFileInfo;
-          FileTypes       fileType;
+          Errors            error;
+          ArchiveInfo       archiveInfo;
+          ArchiveFileInfo   archiveFileInfo;
+          ArchiveEntryTypes archiveEntryType;
 
           /* open archive */
           error = Archive_open(&archiveInfo,
@@ -1006,11 +1158,11 @@ remoteBarFlag=FALSE;
                  && (failError == ERROR_NONE)
                 )
           {
-            /* get next file type */
-            error = Archive_getNextFileType(&archiveInfo,
-                                            &archiveFileInfo,
-                                            &fileType
-                                           );
+            /* get next archive entry type */
+            error = Archive_getNextArchiveEntryType(&archiveInfo,
+                                                    &archiveFileInfo,
+                                                    &archiveEntryType
+                                                   );
             if (error != ERROR_NONE)
             {
               printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
@@ -1021,9 +1173,9 @@ remoteBarFlag=FALSE;
               break;
             }
 
-            switch (fileType)
+            switch (archiveEntryType)
             {
-              case FILE_TYPE_FILE:
+              case ARCHIVE_ENTRY_TYPE_FILE:
                 {
                   ArchiveFileInfo    archiveFileInfo;
                   CompressAlgorithms compressAlgorithm;
@@ -1104,7 +1256,88 @@ remoteBarFlag=FALSE;
                   String_delete(fileName);
                 }
                 break;
-              case FILE_TYPE_DIRECTORY:
+              case ARCHIVE_ENTRY_TYPE_IMAGE:
+                {
+                  ArchiveFileInfo    archiveFileInfo;
+                  CompressAlgorithms compressAlgorithm;
+                  CryptAlgorithms    cryptAlgorithm;
+                  CryptTypes         cryptType;
+                  String             imageName;
+                  DeviceInfo         deviceInfo;
+                  uint64             blockOffset,blockCount;
+
+                  /* open archive file */
+                  imageName = String_new();
+                  error = Archive_readImageEntry(&archiveInfo,
+                                                 &archiveFileInfo,
+                                                 &compressAlgorithm,
+                                                 &cryptAlgorithm,
+                                                 &cryptType,
+                                                 imageName,
+                                                 &deviceInfo,
+                                                 &blockOffset,
+                                                 &blockCount
+                                                );
+                  if (error != ERROR_NONE)
+                  {
+                    printError("Cannot not read 'image' content of archive '%s' (error: %s)!\n",
+                               String_cString(archiveFileName),
+                               Errors_getText(error)
+                              );
+                    String_delete(imageName);
+                    if (failError == ERROR_NONE) failError = error;
+                    break;
+                  }
+
+                  if (   (List_empty(includePatternList) || PatternList_match(includePatternList,imageName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
+                     )
+                  {
+                    if (globalOptions.groupFlag)
+                    {
+                      /* add image info to list */
+                      addListImageInfo(archiveFileName,
+                                       imageName,
+                                       deviceInfo.size,
+                                       archiveFileInfo.image.chunkInfoImageData.size,
+                                       compressAlgorithm,
+                                       cryptAlgorithm,
+                                       cryptType,
+                                       deviceInfo.blockSize,
+                                       blockOffset,
+                                       blockCount
+                                      );
+                    }
+                    else
+                    {
+                      if (!printedInfoFlag)
+                      {
+                        printHeader(archiveFileName);
+                        printedInfoFlag = TRUE;
+                      }
+
+                      /* output file info */
+                      printImageInfo(NULL,
+                                     imageName,
+                                     deviceInfo.size,
+                                     archiveFileInfo.image.chunkInfoImageData.size,
+                                     compressAlgorithm,
+                                     cryptAlgorithm,
+                                     cryptType,
+                                     deviceInfo.blockSize,
+                                     blockOffset,
+                                     blockCount
+                                    );
+                    }
+                    fileCount++;
+                  }
+
+                  /* close archive file, free resources */
+                  Archive_closeEntry(&archiveFileInfo);
+                  String_delete(imageName);
+                }
+                break;
+              case ARCHIVE_ENTRY_TYPE_DIRECTORY:
                 {
                   String          directoryName;
                   CryptAlgorithms cryptAlgorithm;
@@ -1167,7 +1400,7 @@ remoteBarFlag=FALSE;
                   String_delete(directoryName);
                 }
                 break;
-              case FILE_TYPE_LINK:
+              case ARCHIVE_ENTRY_TYPE_LINK:
                 {
                   CryptAlgorithms cryptAlgorithm;
                   CryptTypes      cryptType;
@@ -1237,7 +1470,7 @@ remoteBarFlag=FALSE;
                   String_delete(linkName);
                 }
                 break;
-              case FILE_TYPE_SPECIAL:
+              case ARCHIVE_ENTRY_TYPE_SPECIAL:
                 {
                   CryptAlgorithms cryptAlgorithm;
                   CryptTypes      cryptType;

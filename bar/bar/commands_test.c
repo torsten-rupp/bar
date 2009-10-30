@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_test.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -31,7 +31,7 @@
 #include "patternlists.h"
 #include "files.h"
 #include "archive.h"
-#include "filefragmentlists.h"
+#include "fragmentlists.h"
 
 #include "commands_test.h"
 
@@ -65,15 +65,15 @@ Errors Command_test(StringList                      *archiveFileNameList,
                     void                            *archiveGetCryptPasswordUserData
                    )
 {
-  byte             *archiveBuffer,*fileBuffer;
-  FileFragmentList fileFragmentList;
-  String           archiveFileName;
-  Errors           failError;
-  Errors           error;
-  ArchiveInfo      archiveInfo;
-  ArchiveFileInfo  archiveFileInfo;
-  FileTypes        fileType;
-  FileFragmentNode *fileFragmentNode;
+  byte              *archiveBuffer,*fileBuffer;
+  FragmentList      fragmentList;
+  String            archiveFileName;
+  Errors            failError;
+  Errors            error;
+  ArchiveInfo       archiveInfo;
+  ArchiveFileInfo   archiveFileInfo;
+  ArchiveEntryTypes archiveEntryType;
+  FragmentNode      *fragmentNode;
 
   assert(archiveFileNameList != NULL);
   assert(includePatternList != NULL);
@@ -92,7 +92,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
     free(archiveBuffer);
     HALT_INSUFFICIENT_MEMORY();
   }
-  FileFragmentList_init(&fileFragmentList);
+  FragmentList_init(&fragmentList);
   archiveFileName = String_new();
 
   failError = ERROR_NONE;
@@ -121,11 +121,11 @@ Errors Command_test(StringList                      *archiveFileNameList,
     /* read files */
     while (!Archive_eof(&archiveInfo) && (failError == ERROR_NONE))
     {
-      /* get next file type */
-      error = Archive_getNextFileType(&archiveInfo,
-                                      &archiveFileInfo,
-                                      &fileType
-                                     );
+      /* get next archive entry type */
+      error = Archive_getNextArchiveEntryType(&archiveInfo,
+                                              &archiveFileInfo,
+                                              &archiveEntryType
+                                             );
       if (error != ERROR_NONE)
       {
         printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
@@ -136,16 +136,16 @@ Errors Command_test(StringList                      *archiveFileNameList,
         break;
       }
 
-      switch (fileType)
+      switch (archiveEntryType)
       {
-        case FILE_TYPE_FILE:
+        case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            String           fileName;
-            FileInfo         fileInfo;
-            uint64           fragmentOffset,fragmentSize;
-            FileFragmentNode *fileFragmentNode;
-            uint64           length;
-            ulong            n;
+            String       fileName;
+            FileInfo     fileInfo;
+            uint64       fragmentOffset,fragmentSize;
+            FragmentNode *fragmentNode;
+            uint64       length;
+            ulong        n;
 
             /* read file */
             fileName = String_new();
@@ -177,21 +177,21 @@ Errors Command_test(StringList                      *archiveFileNameList,
               printInfo(2,"  Test file '%s'...",String_cString(fileName));
 
               /* get file fragment list */
-              fileFragmentNode = FileFragmentList_findFile(&fileFragmentList,fileName);
-              if (fileFragmentNode == NULL)
+              fragmentNode = FragmentList_find(&fragmentList,fileName);
+              if (fragmentNode == NULL)
               {
-                fileFragmentNode = FileFragmentList_addFile(&fileFragmentList,fileName,fileInfo.size);
+                fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size);
               }
-//FileFragmentList_print(fileFragmentNode,String_cString(fileName));
+//FragmentList_print(fragmentNode,String_cString(fileName));
 
-              /* test file content */
+              /* test read file content */
               length = 0;
               while (length < fragmentSize)
               {
                 n = MIN(fragmentSize-length,BUFFER_SIZE);
 
                 /* read archive file */
-                error = Archive_readFileData(&archiveFileInfo,archiveBuffer,n);
+                error = Archive_readData(&archiveFileInfo,archiveBuffer,n);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -203,7 +203,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
                   break;
                 }
 
-                length += n;
+                length += (uint64)n;
               }
               if (failError != ERROR_NONE)
               {
@@ -215,12 +215,12 @@ Errors Command_test(StringList                      *archiveFileNameList,
               printInfo(2,"ok\n");
 
               /* add fragment to file fragment list */
-              FileFragmentList_add(fileFragmentNode,fragmentOffset,fragmentSize);
+              FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 
               /* discard fragment list if file is complete */
-              if (FileFragmentList_checkComplete(fileFragmentNode))
+              if (FragmentList_checkEntryComplete(fragmentNode))
               {
-                FileFragmentList_removeFile(&fileFragmentList,fileFragmentNode);
+                FragmentList_remove(&fragmentList,fragmentNode);
               }
 
               /* free resources */
@@ -236,7 +236,106 @@ Errors Command_test(StringList                      *archiveFileNameList,
             String_delete(fileName);
           }
           break;
-        case FILE_TYPE_DIRECTORY:
+        case ARCHIVE_ENTRY_TYPE_IMAGE:
+          {
+            String       imageName;
+            DeviceInfo   deviceInfo;
+            uint64       blockOffset,blockCount;
+            FragmentNode *fragmentNode;
+            uint64       length;
+            ulong        n;
+
+            /* read image */
+            imageName = String_new();
+            error = Archive_readImageEntry(&archiveInfo,
+                                           &archiveFileInfo,
+                                           NULL,
+                                           NULL,
+                                           NULL,
+                                           imageName,
+                                           &deviceInfo,
+                                           &blockOffset,
+                                           &blockCount
+                                          );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot not read 'image' content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         Errors_getText(error)
+                        );
+              String_delete(imageName);
+              if (failError == ERROR_NONE) failError = error;
+              break;
+            }
+
+            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,imageName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              printInfo(2,"  Test image '%s'...",String_cString(imageName));
+
+              /* get file fragment list */
+              fragmentNode = FragmentList_find(&fragmentList,imageName);
+              if (fragmentNode == NULL)
+              {
+                fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size);
+              }
+//FragmentList_print(fragmentNode,String_cString(imageName));
+
+              /* test read image content */
+              length = 0;
+              while (length < blockCount)
+              {
+                assert(deviceInfo.blockSize > 0);
+                n = MIN(blockCount-length,BUFFER_SIZE/deviceInfo.blockSize);
+
+                /* read archive file */
+                error = Archive_readData(&archiveFileInfo,archiveBuffer,n*deviceInfo.blockSize);
+                if (error != ERROR_NONE)
+                {
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                             String_cString(archiveFileName),
+                             Errors_getText(error)
+                            );
+                  if (failError == ERROR_NONE) failError = error;
+                  break;
+                }
+
+                length += (uint64)n;
+              }
+              if (failError != ERROR_NONE)
+              {
+                Archive_closeEntry(&archiveFileInfo);
+                String_delete(imageName);
+                continue;
+              }
+
+              printInfo(2,"ok\n");
+
+              /* add fragment to file fragment list */
+              FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+
+              /* discard fragment list if file is complete */
+              if (FragmentList_checkEntryComplete(fragmentNode))
+              {
+                FragmentList_remove(&fragmentList,fragmentNode);
+              }
+
+              /* free resources */
+            }
+            else
+            {
+              /* skip */
+              printInfo(3,"  Test '%s'...skipped\n",String_cString(imageName));
+            }
+
+            /* close archive file, free resources */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(imageName);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
             String   directoryName;
             FileInfo fileInfo;
@@ -282,7 +381,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
             String_delete(directoryName);
           }
           break;
-        case FILE_TYPE_LINK:
+        case ARCHIVE_ENTRY_TYPE_LINK:
           {
             String   linkName;
             String   fileName;
@@ -333,7 +432,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
             String_delete(linkName);
           }
           break;
-        case FILE_TYPE_SPECIAL:
+        case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
             String   fileName;
             FileInfo fileInfo;
@@ -392,18 +491,18 @@ Errors Command_test(StringList                      *archiveFileNameList,
   }
 
   /* check fragment lists */
-  for (fileFragmentNode = fileFragmentList.head; fileFragmentNode != NULL; fileFragmentNode = fileFragmentNode->next)
+  for (fragmentNode = fragmentList.head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
   {
-    if (!FileFragmentList_checkComplete(fileFragmentNode))
+    if (!FragmentList_checkEntryComplete(fragmentNode))
     {
-      printInfo(0,"Warning: incomplete file '%s'\n",String_cString(fileFragmentNode->fileName));
+      printInfo(0,"Warning: incomplete file '%s'\n",String_cString(fragmentNode->name));
       if (failError == ERROR_NONE) failError = ERROR_FILE_INCOMPLETE;
     }
   }
 
   /* free resources */
   String_delete(archiveFileName);
-  FileFragmentList_done(&fileFragmentList);
+  FragmentList_done(&fragmentList);
   free(fileBuffer);
   free(archiveBuffer);
 
