@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -159,18 +159,26 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 
 String File_getFilePathName(String pathName, const String fileName)
 {
-  long lastPathSeparatorIndex;
+  assert(fileName != NULL);
+  assert(pathName != NULL);
+
+  return File_getFilePathNameCString(pathName,String_cString(fileName));
+}
+
+String File_getFilePathNameCString(String pathName, const char *fileName)
+{
+  const char *lastPathSeparator;
 
   assert(fileName != NULL);
   assert(pathName != NULL);
 
   /* find last path separator */
-  lastPathSeparatorIndex = String_findLastChar(fileName,STRING_END,FILES_PATHNAME_SEPARATOR_CHAR);
+  lastPathSeparator = strrchr(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
 
   /* get path */
-  if (lastPathSeparatorIndex >= 0)
+  if (lastPathSeparator != NULL)
   {
-    String_sub(pathName,fileName,0,lastPathSeparatorIndex);
+    String_setBuffer(pathName,fileName,lastPathSeparator-fileName);
   }
   else
   {
@@ -182,18 +190,26 @@ String File_getFilePathName(String pathName, const String fileName)
 
 String File_getFileBaseName(String baseName, const String fileName)
 {
-  long lastPathSeparatorIndex;
+  assert(fileName != NULL);
+  assert(baseName != NULL);
+
+  return File_getFileBaseNameCString(baseName,String_cString(fileName));
+}
+
+String File_getFileBaseNameCString(String baseName, const char *fileName)
+{
+  const char *lastPathSeparator;
 
   assert(fileName != NULL);
   assert(baseName != NULL);
 
   /* find last path separator */
-  lastPathSeparatorIndex = String_findLastChar(fileName,STRING_END,FILES_PATHNAME_SEPARATOR_CHAR);
+  lastPathSeparator = strrchr(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
 
   /* get path */
-  if (lastPathSeparatorIndex >= 0)
+  if (lastPathSeparator != NULL)
   {
-    String_sub(baseName,fileName,lastPathSeparatorIndex+1,STRING_END);
+    String_setCString(baseName,lastPathSeparator+1);
   }
   else
   {
@@ -334,6 +350,17 @@ Errors File_open(FileHandle    *fileHandle,
                  FileOpenModes fileOpenMode
                 )
 {
+  return File_openCString(fileHandle,
+                          String_cString(fileName),
+                          fileOpenMode
+                         );
+}
+
+Errors File_openCString(FileHandle    *fileHandle,
+                        const char    *fileName,
+                        FileOpenModes fileOpenMode
+                       )
+{
   off_t  n;
   Errors error;
   String pathName;
@@ -345,52 +372,52 @@ Errors File_open(FileHandle    *fileHandle,
   {
     case FILE_OPENMODE_CREATE:
       /* create file */
-      fileHandle->file = fopen(String_cString(fileName),"wb");
+      fileHandle->file = fopen(fileName,"wb");
       if (fileHandle->file == NULL)
       {
-        return ERRORX(CREATE_FILE,errno,String_cString(fileName));
+        return ERRORX(CREATE_FILE,errno,fileName);
       }
 
-      fileHandle->name  = String_duplicate(fileName);;
+      fileHandle->name  = String_newCString(fileName);;
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
       break;
     case FILE_OPENMODE_READ:
       /* open file for reading */
-      fileHandle->file = fopen(String_cString(fileName),"rb");
+      fileHandle->file = fopen(fileName,"rb");
       if (fileHandle->file == NULL)
       {
-        return ERRORX(OPEN_FILE,errno,String_cString(fileName));
+        return ERRORX(OPEN_FILE,errno,fileName);
       }
 
       /* get file size */
       if (fseeko(fileHandle->file,(off_t)0,SEEK_END) == -1)
       {
-        error = ERRORX(IO_ERROR,errno,String_cString(fileName));
+        error = ERRORX(IO_ERROR,errno,fileName);
         fclose(fileHandle->file);
         return error;
       }
       n = ftello(fileHandle->file);
       if (n == (off_t)(-1))
       {
-        error = ERRORX(IO_ERROR,errno,String_cString(fileName));
+        error = ERRORX(IO_ERROR,errno,fileName);
         fclose(fileHandle->file);
         return error;
       }
       if (fseeko(fileHandle->file,(off_t)0,SEEK_SET) == -1)
       {
-        error = ERRORX(IO_ERROR,errno,String_cString(fileName));
+        error = ERRORX(IO_ERROR,errno,fileName);
         fclose(fileHandle->file);
         return error;
       }
 
-      fileHandle->name  = String_duplicate(fileName);;
+      fileHandle->name  = String_newCString(fileName);;
       fileHandle->index = 0LL;
       fileHandle->size  = (uint64)n;
       break;
     case FILE_OPENMODE_WRITE:
       /* create directory if needed */
-      pathName = File_getFilePathName(File_newFileName(),fileName);
+      pathName = File_getFilePathNameCString(File_newFileName(),fileName);
       if (!File_exists(pathName))
       {
         error = File_makeDirectory(pathName,
@@ -406,30 +433,30 @@ Errors File_open(FileHandle    *fileHandle,
       File_deleteFileName(pathName);
 
       /* open existing file for writing */
-      fileHandle->file = fopen(String_cString(fileName),"r+b");
+      fileHandle->file = fopen(fileName,"r+b");
       if (fileHandle->file == NULL)
       {
         if (errno == ENOENT)
         {
-          fileHandle->file = fopen(String_cString(fileName),"wb");
+          fileHandle->file = fopen(fileName,"wb");
           if (fileHandle->file == NULL)
           {
-            return ERRORX(OPEN_FILE,errno,String_cString(fileName));
+            return ERRORX(OPEN_FILE,errno,fileName);
           }
         }
         else
         {
-          return ERRORX(OPEN_FILE,errno,String_cString(fileName));
+          return ERRORX(OPEN_FILE,errno,fileName);
         }
       }
 
-      fileHandle->name  = String_duplicate(fileName);;
+      fileHandle->name  = String_newCString(fileName);;
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
       break;
     case FILE_OPENMODE_APPEND:
       /* create directory if needed */
-      pathName = File_getFilePathName(File_newFileName(),fileName);
+      pathName = File_getFilePathNameCString(File_newFileName(),fileName);
       if (!File_exists(pathName))
       {
         error = File_makeDirectory(pathName,
@@ -445,22 +472,22 @@ Errors File_open(FileHandle    *fileHandle,
       File_deleteFileName(pathName);
 
       /* open existing file for writing */
-      fileHandle->file = fopen(String_cString(fileName),"ab");
+      fileHandle->file = fopen(fileName,"ab");
       if (fileHandle->file == NULL)
       {
-        return ERRORX(OPEN_FILE,errno,String_cString(fileName));
+        return ERRORX(OPEN_FILE,errno,fileName);
       }
 
       /* get file size */
       n = ftello(fileHandle->file);
       if (n == (off_t)(-1))
       {
-        error = ERRORX(IO_ERROR,errno,String_cString(fileName));
+        error = ERRORX(IO_ERROR,errno,fileName);
         fclose(fileHandle->file);
         return error;
       }
 
-      fileHandle->name  = String_duplicate(fileName);;
+      fileHandle->name  = String_newCString(fileName);;
       fileHandle->index = (uint64)n;
       fileHandle->size  = (uint64)n;
       break;
@@ -776,7 +803,7 @@ Errors File_seek(FileHandle *fileHandle,
                  uint64     offset
                 )
 {
-  assert(fileHandle != NULL);
+   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
 
   if (fseeko(fileHandle->file,(off_t)offset,SEEK_SET) == -1)
@@ -955,6 +982,71 @@ FileTypes File_getType(const String fileName)
   {
     return FILE_TYPE_UNKNOWN;
   }
+}
+
+Errors File_getData(const String fileName,
+                    void         **data,
+                    ulong        *size
+                   )
+{
+  assert(fileName != NULL);
+  assert(data != NULL);
+  assert(size != NULL);
+
+  return File_getDataCString(String_cString(fileName),
+                             data,
+                             size
+                            );
+}
+
+Errors File_getDataCString(const char *fileName,
+                           void       **data,
+                           ulong      *size
+                          )
+{
+  Errors     error;
+  FileHandle fileHandle;
+  ulong      bytesRead;
+
+  assert(fileName != NULL);
+  assert(data != NULL);
+  assert(size != NULL);
+
+  /* open file */
+  error = File_openCString(&fileHandle,fileName,FILE_OPENMODE_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  /* get file size */
+  (*size) = (ulong)File_getSize(&fileHandle);
+
+  /* allocate memory for data */
+  (*data) = malloc(*size);
+  if ((*data) == NULL)
+  {
+    File_close(&fileHandle);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  /* read data */
+  error = File_read(&fileHandle,*data,*size,&bytesRead);
+  if (error != ERROR_NONE)
+  {
+    File_close(&fileHandle);
+    return error;
+  }
+  if (bytesRead != (*size))
+  {
+    File_close(&fileHandle);
+    return ERROR(IO_ERROR,errno);
+  }
+
+  /* close file */
+  File_close(&fileHandle);
+
+  return ERROR_NONE;
 }
 
 Errors File_delete(const String fileName, bool recursiveFlag)

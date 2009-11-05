@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -197,7 +197,7 @@ String File_appendFileNameChar(String fileName, char ch);
 String File_appendFileNameBuffer(String fileName, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
-* Name   : File_getFilePathName
+* Name   : File_getFilePathName, File_getFilePathNameCString
 * Purpose: get path of filename
 * Input  : fileName - file name
 *          path     - path variable
@@ -207,9 +207,10 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 \***********************************************************************/
 
 String File_getFilePathName(String path, const String fileName);
+String File_getFilePathNameCString(String path, const char *fileName);
 
 /***********************************************************************\
-* Name   : File_getFileBaseName
+* Name   : File_getFileBaseName, File_getFileBaseNameCString
 * Purpose: get basename of file
 * Input  : fileName - file name
 *          baseName - basename variable
@@ -219,6 +220,7 @@ String File_getFilePathName(String path, const String fileName);
 \***********************************************************************/
 
 String File_getFileBaseName(String baseName, const String fileName);
+String File_getFileBaseNameCString(String baseName, const char *fileName);
 
 /***********************************************************************\
 * Name   : File_splitFileName
@@ -290,7 +292,7 @@ Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : File_open
+* Name   : File_open, File_openCString
 * Purpose: open file
 * Input  : fileHandle   - file handle
 *          fileName     - file name
@@ -304,6 +306,10 @@ Errors File_open(FileHandle    *fileHandle,
                  const String  fileName,
                  FileOpenModes fileOpenMode
                 );
+Errors File_openCString(FileHandle    *fileHandle,
+                        const char    *fileName,
+                        FileOpenModes fileOpenMode
+                       );
 
 /***********************************************************************\
 * Name   : File_openDescriptor
@@ -562,6 +568,25 @@ uint32 File_groupNameToGroupId(const char *name);
 \***********************************************************************/
 
 FileTypes File_getType(const String fileName);
+
+/***********************************************************************\
+* Name   : File_getData
+* Purpose: get file data
+* Input  : fileName - file name
+* Output : data - data
+*          size - size of data
+* Return : ERROR_NONE or error code
+* Notes  : data must be freed with free() after usage!
+\***********************************************************************/
+
+Errors File_getData(const String fileName,
+                    void         **data,
+                    ulong        *size
+                   );
+Errors File_getDataCString(const char *fileName,
+                           void       **data,
+                           ulong      *size
+                          );
 
 /***********************************************************************\
 * Name   : File_delete
