@@ -2162,6 +2162,7 @@ fi
 done
 
 
+  if test -n "$JAVAC" -a -n "$JAVA"; then
 
   echo "$as_me:$LINENO: checking $JAVA data model" >&5
 echo $ECHO_N "checking $JAVA data model... $ECHO_C" >&6
@@ -2197,6 +2198,7 @@ fi
 echo "$as_me:$LINENO: result: $ac_cv_prog_java_data_model" >&5
 echo "${ECHO_T}$ac_cv_prog_java_data_model" >&6
 
+  fi
 
   JAVA_FLAGS=""
   if test "$ENABLE_DEBUG" = "yes"; then
@@ -3773,6 +3775,38 @@ fi
 rm -f conftest*
 fi
 
+
+  echo "$as_me:$LINENO: checking for needed large files defines" >&5
+echo $ECHO_N "checking for needed large files defines... $ECHO_C" >&6
+if test "${ac_largefile_defines+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+      cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+int main(void) { printf("%p",fseeko64); return 0; }
+EOF
+      ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+      if test $rc -eq 0; then
+        ac_largefile_defines=""
+      else
+        ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_largefile_defines="_LARGEFILE64_SOURCE"
+        else
+          ac_largefile_defines=""
+        fi
+      fi
+      rm -f conftest.c conftest.o
+      CC_DEFINES="$CC_DEFINES $ac_largefile_defines"
+
+
+fi
+echo "$as_me:$LINENO: result: $ac_largefile_defines" >&5
+echo "${ECHO_T}$ac_largefile_defines" >&6
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -7047,7 +7081,7 @@ echo "${ECHO_T}done" >&6
       HAVE_SSH2=1
       CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2 crypto"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2"
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SSH2 1
@@ -7179,7 +7213,7 @@ echo "$as_me:$LINENO: result: $ac_cv_search_libssh2_session_init_ex" >&5
 echo "${ECHO_T}$ac_cv_search_libssh2_session_init_ex" >&6
 if test "$ac_cv_search_libssh2_session_init_ex" != no; then
   test "$ac_cv_search_libssh2_session_init_ex" = "none required" || LIBS="$ac_cv_search_libssh2_session_init_ex $LIBS"
-  HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2 crypto";
+  HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SSH2 1
 _ACEOF
@@ -7310,7 +7344,7 @@ echo "$as_me:$LINENO: result: $ac_cv_search_libssh2_session_init_ex" >&5
 echo "${ECHO_T}$ac_cv_search_libssh2_session_init_ex" >&6
 if test "$ac_cv_search_libssh2_session_init_ex" != no; then
   test "$ac_cv_search_libssh2_session_init_ex" = "none required" || LIBS="$ac_cv_search_libssh2_session_init_ex $LIBS"
-  HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2 crypto";
+  HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SSH2 1
 _ACEOF
@@ -7318,6 +7352,262 @@ _ACEOF
 fi
 
     fi
+  fi
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    echo "$as_me:$LINENO: checking for library containing MD5_Init" >&5
+echo $ECHO_N "checking for library containing MD5_Init... $ECHO_C" >&6
+if test "${ac_cv_search_MD5_Init+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+ac_cv_search_MD5_Init=no
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char MD5_Init ();
+int
+main ()
+{
+MD5_Init ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_MD5_Init="none required"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+if test "$ac_cv_search_MD5_Init" = no; then
+  for ac_lib in crypto; do
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char MD5_Init ();
+int
+main ()
+{
+MD5_Init ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_MD5_Init="-l$ac_lib"
+break
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+  done
+fi
+LIBS=$ac_func_search_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_search_MD5_Init" >&5
+echo "${ECHO_T}$ac_cv_search_MD5_Init" >&6
+if test "$ac_cv_search_MD5_Init" != no; then
+  test "$ac_cv_search_MD5_Init" = "none required" || LIBS="$ac_cv_search_MD5_Init $LIBS"
+  LIBRARIES="$LIBRARIES crypto"
+fi
+
+  else
+    echo "$as_me:$LINENO: checking for library containing MD5_Init" >&5
+echo $ECHO_N "checking for library containing MD5_Init... $ECHO_C" >&6
+if test "${ac_cv_search_MD5_Init+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+ac_cv_search_MD5_Init=no
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char MD5_Init ();
+int
+main ()
+{
+MD5_Init ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_MD5_Init="none required"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+if test "$ac_cv_search_MD5_Init" = no; then
+  for ac_lib in crypto; do
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char MD5_Init ();
+int
+main ()
+{
+MD5_Init ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_search_MD5_Init="-l$ac_lib"
+break
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+  done
+fi
+LIBS=$ac_func_search_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_search_MD5_Init" >&5
+echo "${ECHO_T}$ac_cv_search_MD5_Init" >&6
+if test "$ac_cv_search_MD5_Init" != no; then
+  test "$ac_cv_search_MD5_Init" = "none required" || LIBS="$ac_cv_search_MD5_Init $LIBS"
+  STATIC_LIBRARIES="$STATIC_LIBRARIES crypto"
+fi
+
   fi
 fi
 
@@ -8217,9 +8507,9 @@ _ACEOF
 fi
 
 
-echo "$as_me:$LINENO: checking for fseeko" >&5
-echo $ECHO_N "checking for fseeko... $ECHO_C" >&6
-if test "${ac_cv_func_fseeko+set}" = set; then
+echo "$as_me:$LINENO: checking for fseeko64" >&5
+echo $ECHO_N "checking for fseeko64... $ECHO_C" >&6
+if test "${ac_cv_func_fseeko64+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   cat >conftest.$ac_ext <<_ACEOF
@@ -8228,12 +8518,12 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
-/* Define fseeko to an innocuous variant, in case <limits.h> declares fseeko.
+/* Define fseeko64 to an innocuous variant, in case <limits.h> declares fseeko64.
    For example, HP-UX 11i <limits.h> declares gettimeofday.  */
-#define fseeko innocuous_fseeko
+#define fseeko64 innocuous_fseeko64
 
 /* System header to define __stub macros and hopefully few prototypes,
-    which can conflict with char fseeko (); below.
+    which can conflict with char fseeko64 (); below.
     Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
     <limits.h> exists even on freestanding compilers.  */
 
@@ -8243,7 +8533,7 @@ cat >>conftest.$ac_ext <<_ACEOF
 # include <assert.h>
 #endif
 
-#undef fseeko
+#undef fseeko64
 
 /* Override any gcc2 internal prototype to avoid an error.  */
 #ifdef __cplusplus
@@ -8252,14 +8542,14 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char fseeko ();
+char fseeko64 ();
 /* The GNU C library defines this for functions which it implements
     to always fail with ENOSYS.  Some functions are actually named
     something starting with __ and the normal name is an alias.  */
-#if defined (__stub_fseeko) || defined (__stub___fseeko)
+#if defined (__stub_fseeko64) || defined (__stub___fseeko64)
 choke me
 #else
-char (*f) () = fseeko;
+char (*f) () = fseeko64;
 #endif
 #ifdef __cplusplus
 }
@@ -8268,7 +8558,7 @@ char (*f) () = fseeko;
 int
 main ()
 {
-return f != fseeko;
+return f != fseeko64;
   ;
   return 0;
 }
@@ -8295,29 +8585,29 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_func_fseeko=yes
+  ac_cv_func_fseeko64=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-ac_cv_func_fseeko=no
+ac_cv_func_fseeko64=no
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
 fi
-echo "$as_me:$LINENO: result: $ac_cv_func_fseeko" >&5
-echo "${ECHO_T}$ac_cv_func_fseeko" >&6
-if test $ac_cv_func_fseeko = yes; then
+echo "$as_me:$LINENO: result: $ac_cv_func_fseeko64" >&5
+echo "${ECHO_T}$ac_cv_func_fseeko64" >&6
+if test $ac_cv_func_fseeko64 = yes; then
   :
 else
-  { { echo "$as_me:$LINENO: error: function fseeko() is not available" >&5
-echo "$as_me: error: function fseeko() is not available" >&2;}
+  { { echo "$as_me:$LINENO: error: function fseeko64() is not available" >&5
+echo "$as_me: error: function fseeko64() is not available" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
-echo "$as_me:$LINENO: checking for ftello" >&5
-echo $ECHO_N "checking for ftello... $ECHO_C" >&6
-if test "${ac_cv_func_ftello+set}" = set; then
+echo "$as_me:$LINENO: checking for ftello64" >&5
+echo $ECHO_N "checking for ftello64... $ECHO_C" >&6
+if test "${ac_cv_func_ftello64+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   cat >conftest.$ac_ext <<_ACEOF
@@ -8326,12 +8616,12 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
-/* Define ftello to an innocuous variant, in case <limits.h> declares ftello.
+/* Define ftello64 to an innocuous variant, in case <limits.h> declares ftello64.
    For example, HP-UX 11i <limits.h> declares gettimeofday.  */
-#define ftello innocuous_ftello
+#define ftello64 innocuous_ftello64
 
 /* System header to define __stub macros and hopefully few prototypes,
-    which can conflict with char ftello (); below.
+    which can conflict with char ftello64 (); below.
     Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
     <limits.h> exists even on freestanding compilers.  */
 
@@ -8341,7 +8631,7 @@ cat >>conftest.$ac_ext <<_ACEOF
 # include <assert.h>
 #endif
 
-#undef ftello
+#undef ftello64
 
 /* Override any gcc2 internal prototype to avoid an error.  */
 #ifdef __cplusplus
@@ -8350,14 +8640,14 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char ftello ();
+char ftello64 ();
 /* The GNU C library defines this for functions which it implements
     to always fail with ENOSYS.  Some functions are actually named
     something starting with __ and the normal name is an alias.  */
-#if defined (__stub_ftello) || defined (__stub___ftello)
+#if defined (__stub_ftello64) || defined (__stub___ftello64)
 choke me
 #else
-char (*f) () = ftello;
+char (*f) () = ftello64;
 #endif
 #ifdef __cplusplus
 }
@@ -8366,7 +8656,7 @@ char (*f) () = ftello;
 int
 main ()
 {
-return f != ftello;
+return f != ftello64;
   ;
   return 0;
 }
@@ -8393,23 +8683,23 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_func_ftello=yes
+  ac_cv_func_ftello64=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-ac_cv_func_ftello=no
+ac_cv_func_ftello64=no
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
 fi
-echo "$as_me:$LINENO: result: $ac_cv_func_ftello" >&5
-echo "${ECHO_T}$ac_cv_func_ftello" >&6
-if test $ac_cv_func_ftello = yes; then
+echo "$as_me:$LINENO: result: $ac_cv_func_ftello64" >&5
+echo "${ECHO_T}$ac_cv_func_ftello64" >&6
+if test $ac_cv_func_ftello64 = yes; then
   :
 else
-  { { echo "$as_me:$LINENO: error: function ftello() is not available" >&5
-echo "$as_me: error: function ftello() is not available" >&2;}
+  { { echo "$as_me:$LINENO: error: function ftello64() is not available" >&5
+echo "$as_me: error: function ftello64() is not available" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
