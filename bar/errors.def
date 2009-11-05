@@ -1,7 +1,7 @@
 //***********************************************************************
 //
 // $Source: /home/torsten/cvs/bar/errors.def,v $
-// $Revision: 1.21 $
+// $Revision: 1.22 $
 // $Author: torsten $
 // Contents: Backup ARchiver errors definition
 // Systems: all
@@ -37,6 +37,8 @@ ERROR NO_TLS_CERTIFICATE             "no TLS (SSL) certificate file 'bar-server-
 ERROR NO_TLS_KEY                     "no or unreadable TLS (SSL) key file 'bar-server-key.pem'"
 ERROR INVALID_TLS_CA                 "invalid TLS (SSL) certificate authority"
 ERROR INVALID_TLS_CERTIFICATE        "invalid TLS (SSL) certificate"
+ERROR TLS_CERTIFICATE_EXPIRED        "TLS (SSL) certificate expired"
+ERROR TLS_CERTIFICATE_NOT_ACTIVE     "TLS (SSL) certificate is still not active"
 ERROR TLS_HANDSHAKE                  "TLS (SSL) handshake failure"
 ERROR INVALID_SSH_SPECIFIER          "invalid SSH specifier"
 ERROR NO_SSH_PASSWORD                "no SSH password given"
@@ -98,6 +100,13 @@ ERROR WRONG_PRIVATE_KEY              "wrong private key"
 ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
+  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+
 ERROR IO_ERROR
   strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
   if (ERROR_TEXT != NULL)
@@ -110,17 +119,32 @@ ERROR READ_FILE                      "read file fail"
 ERROR WRITE_FILE                     "write file fail"
 ERROR DELETE_FILE                    "delete file fail"
 
-ERROR PARSE_DEVICE_LIST              "error parsing device list"
 ERROR FILE_EXITS                     "file already exists"
 ERROR FILE_NOT_FOUND                 "file not found"
+
+// device i/o
+ERROR OPEN_DEVICE
+  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+
+ERROR INVALID_DEVICE_BLOCK_SIZE      "invalid device block size"
+ERROR READ_DEVICE                    "read device fail"
+ERROR WRITE_DEVICE                   "write device fail"
+ERROR PARSE_DEVICE_LIST              "error parsing device list"
 
 // archive
 ERROR END_OF_ARCHIVE                 "end of archive"
 ERROR NO_FILE_ENTRY                  "no file entry"
-ERROR NO_FILE_DATA                   "no data entry"
+ERROR NO_FILE_DATA                   "no file data entry"
 ERROR NO_DIRECTORY_ENTRY             "no directory entry"
 ERROR NO_LINK_ENTRY                  "no link entry"
 ERROR NO_SPECIAL_ENTRY               "no special entry"
+ERROR NO_IMAGE_ENTRY                 "no image entry"
+ERROR NO_IMAGE_DATA                  "no image data entry"
 ERROR END_OF_DATA                    "end of data"
 ERROR CRC_ERROR                      "CRC error"
 ERROR FILE_INCOMPLETE                "file is incomplete"

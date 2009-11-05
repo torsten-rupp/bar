@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -27,6 +27,7 @@
 #endif /* HAVE_SSH2 */
 #ifdef HAVE_GNU_TLS
   #include <gnutls/gnutls.h>
+  #include <gnutls/x509.h>
 #endif /* HAVE_GNU_TLS */
 #include <errno.h>
 #include <assert.h>
@@ -776,6 +777,12 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
       break;
     case SERVER_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
+      {
+        void              *certData;
+        ulong             certDataSize;
+        gnutls_datum_t    datum; 
+        gnutls_x509_crt_t cert;
+
         // check if all key files exists and can be read
         if ((caFileName == NULL) || !File_isFileCString(caFileName) || !File_isReadableCString(caFileName))
         {
@@ -793,15 +800,51 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           return ERROR_NO_TLS_KEY;
         }
 
-        // init certificate and key
-        if (gnutls_certificate_allocate_credentials(&serverSocketHandle->gnuTLSCredentials) != 0)
+        // check if certificate is valid
+        error = File_getDataCString(certFileName,&certData,&certDataSize);
+        if (error != ERROR_NONE)
         {
           close(serverSocketHandle->handle);
-          return ERROR_INIT_TLS;
+          return error;
         }
-
+        if (gnutls_x509_crt_init(&cert) != GNUTLS_E_SUCCESS)
+        {
+          free(certData);
+          close(serverSocketHandle->handle);
+          return ERROR_INVALID_TLS_CERTIFICATE;
+        }
+        datum.data = certData;
+        datum.size = certDataSize;
+        if (gnutls_x509_crt_import(cert,&datum,GNUTLS_X509_FMT_PEM) != GNUTLS_E_SUCCESS)
+        {
+          free(certData);
+          close(serverSocketHandle->handle);
+          return ERROR_INVALID_TLS_CERTIFICATE;
+        }
+        if (time(NULL) > gnutls_x509_crt_get_expiration_time(cert))
+        {
+          free(certData);
+          close(serverSocketHandle->handle);
+          return ERROR_TLS_CERTIFICATE_EXPIRED;
+        }
+        if (time(NULL) < gnutls_x509_crt_get_activation_time(cert))
+        {
+          free(certData);
+          close(serverSocketHandle->handle);
+          return ERROR_TLS_CERTIFICATE_NOT_ACTIVE;
+        }
 #if 0
 NYI: how to do certificate verification?
+gnutls_x509_crt_t ca;
+gnutls_x509_crt_init(&ca);
+data=Xread_file("/etc/ssl/certs/bar-ca.pem",&size);
+d.data=data,d.size=size;
+fprintf(stderr,"%s,%d: import=%d\n",__FILE__,__LINE__,gnutls_x509_crt_import(ca,&d,GNUTLS_X509_FMT_PEM));
+
+        if (gnutls_x509_crt_verify(cert,&ca,1,0,&verify));
+
+or
+
         result = gnutls_certificate_set_x509_trust_file(serverSocketHandle->gnuTLSCredentials,
                                                         caFileName,
                                                         GNUTLS_X509_FMT_PEM
@@ -813,6 +856,15 @@ NYI: how to do certificate verification?
           return ERROR_INVALID_TLS_CA;
         }
 #endif /* 0 */
+        gnutls_x509_crt_deinit(cert);
+        free(certData);
+
+        // init certificate and key
+        if (gnutls_certificate_allocate_credentials(&serverSocketHandle->gnuTLSCredentials) != GNUTLS_E_SUCCESS)
+        {
+          close(serverSocketHandle->handle);
+          return ERROR_INIT_TLS;
+        }
 
         result = gnutls_certificate_set_x509_key_file(serverSocketHandle->gnuTLSCredentials,
                                                       certFileName,
@@ -838,6 +890,7 @@ NYI: how to do certificate verification?
         gnutls_certificate_set_dh_params(serverSocketHandle->gnuTLSCredentials,
                                          serverSocketHandle->gnuTLSDHParams
                                         );
+      }
       #else /* not HAVE_GNU_TLS */
         UNUSED_VARIABLE(caFileName);
         UNUSED_VARIABLE(certFileName);
@@ -970,8 +1023,9 @@ NYI: how to do certificate verification?
         {
           gnutls_deinit(socketHandle->gnuTLS.session);
           close(socketHandle->handle);
-gnutls_perror(result);
-          return ERRORX(TLS_HANDSHAKE,result,gnutls_strerror(result));
+fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,gnutls_strerror(result));
+fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,gnutls_strerror_name(result));
+          return ERRORX(TLS_HANDSHAKE,result,gnutls_strerror_name(result));
         }
 
 #if 0
@@ -981,7 +1035,6 @@ NYI: how to enable client authentication?
         {
           gnutls_deinit(socketHandle->gnuTLS.session);
           close(socketHandle->handle);
-gnutls_perror(result);
           return ERRORX(TLS_HANDSHAKE,result,gnutls_strerror(result));
         }
 #endif /* 0 */
