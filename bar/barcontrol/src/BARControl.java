@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -1016,7 +1016,12 @@ public class BARControl
         // connect to server
         try
         {
-          BARServer.connect(loginData.serverName,loginData.port,loginData.tlsPort,loginData.password,serverKeyFileName);
+          BARServer.connect(loginData.serverName,
+                            loginData.port,
+                            loginData.tlsPort,
+                            loginData.password,
+                            serverKeyFileName
+                           );
           connectOkFlag = true;
         }
         catch (ConnectionError error)
