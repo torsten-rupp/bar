@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -246,11 +246,11 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 /***********************************************************************\
 * Name   : String_sub, String_subCString, String_subBuffer
 * Purpose: get sub-string from string
-* Input  : string/buffer - string/buffer to set
-*          fromString    - string to get sub-string from
-*          index         - start index (0..n-1)
-*          length        - length of sub-string (0..n) or STRING_END
-*                          (String_sub only!)
+* Input  : string/s/buffer - string/buffer to set
+*          fromString      - string to get sub-string from
+*          index           - start index (0..n-1)
+*          length          - length of sub-string (0..n) or STRING_END
+*                            (String_sub only!)
 * Output : -
 * Return : new sub-string/buffer
 * Notes  : -
