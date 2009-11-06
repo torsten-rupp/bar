@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -17,6 +17,13 @@ import java.util.HashSet;
 import java.util.LinkedList;
 
 import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.dnd.Clipboard;
+import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.FocusListener;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionEvent;
@@ -454,6 +461,24 @@ class WidgetListener
   }
 }
 
+/** widget column table data
+ */
+class WidgetTableColumnData
+{
+  public int     width;
+  public boolean resizable;
+
+  /** create column data
+   * @param width column width
+   * @param resizable true iff column is resiable
+   */
+  WidgetTableColumnData(int width, boolean resizable)
+  {
+    this.width     = width;
+    this.resizable = resizable;
+  }
+}
+
 class Widgets
 {
   //-----------------------------------------------------------------------
@@ -842,19 +867,30 @@ class Widgets
     return newImage(composite,image,SWT.LEFT);
   }
 
+  /** create new view
+   * @param composite composite widget
+   * @param text view text
+   * @param style view style
+   * @return new view
+   */
+  static Label newView(Composite composite, String text, int style)
+  {
+    Label label;
+
+    label = new Label(composite,SWT.LEFT|SWT.BORDER|style);
+    label.setText(text);
+
+    return label;
+  }
 
   /** create new view
    * @param composite composite widget
+   * @param text view text
    * @return new view
    */
   static Label newView(Composite composite, String text)
   {
-    Label label;
-
-    label = new Label(composite,SWT.LEFT|SWT.BORDER);
-    label.setText(text);
-
-    return label;
+    return newView(composite,text,SWT.NONE);
   }
 
   /** create new view
@@ -1054,6 +1090,7 @@ class Widgets
     {
       text.setText((String)getField(data,field));
     }
+
     text.addSelectionListener(new SelectionListener()
     {
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -1070,6 +1107,17 @@ class Widgets
       public void modifyText(ModifyEvent modifyEvent)
       {
         Text widget = (Text)modifyEvent.widget;
+        setField(data,field,widget.getText());
+      }
+    });
+    text.addFocusListener(new FocusListener()
+    {
+      public void focusGained(FocusEvent focusEvent)
+      {
+      }
+      public void focusLost(FocusEvent focusEvent)
+      {
+        Text widget = (Text)focusEvent.widget;
         setField(data,field,widget.getText());
       }
     });
@@ -1154,6 +1202,7 @@ class Widgets
     {
       combo.setText((String)getField(data,field));
     }
+
     combo.addSelectionListener(new SelectionListener()
     {
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -1210,6 +1259,7 @@ class Widgets
     {
       combo.setText((String)getField(data,field));
     }
+
     combo.addSelectionListener(new SelectionListener()
     {
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -1310,12 +1360,36 @@ class Widgets
   {
     TableColumn tableColumn = new TableColumn(table,style);
     tableColumn.setText(title);
-    tableColumn.setData(columnNb);
+    tableColumn.setData(new WidgetTableColumnData(width,resizable));
     tableColumn.setWidth(width);
     tableColumn.setResizable(resizable);
     if (width <= 0) tableColumn.pack();
 
     return tableColumn;
+  }
+
+  /** hide table column
+   * @param tableColumn table column to hide
+   */
+  static void hideTableColumn(TableColumn tableColumn)
+  {
+    tableColumn.setWidth(0);
+    tableColumn.setResizable(false);
+  }
+
+  /** show table column
+   * @param tableColumn table column to show
+   * @param width table column width
+   */
+  static void showTableColumn(TableColumn tableColumn)
+  {
+    WidgetTableColumnData widgetTableColumnData = (WidgetTableColumnData)tableColumn.getData();
+
+    if (widgetTableColumnData != null)
+    {
+      tableColumn.setWidth(widgetTableColumnData.width);
+      tableColumn.setResizable(widgetTableColumnData.resizable);
+    }
   }
 
   /** default table sort selection listener
@@ -2241,10 +2315,13 @@ private static void printTree(Tree tree)
   /** add new menu item
    * @param menu menu
    * @param text menu item text
+   * @param data data structure to store radio value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for radio button
    * @param accelerator accelerator key or 0
    * @return new menu item
    */
-  static MenuItem addMenuCheckbox(Menu menu, String text, int accelerator)
+  static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value, int accelerator)
   {
     if (accelerator != 0)
     {
@@ -2258,8 +2335,50 @@ private static void printTree(Tree tree)
     }
     MenuItem menuItem = new MenuItem(menu,SWT.CHECK);
     menuItem.setText(text);
+    if (data != null)
+    {
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          setField(data,field,value);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      menuItem.setSelection((getField(data,field) == value));
+    }
     if (accelerator != 0) menuItem.setAccelerator(accelerator);
 
+    return menuItem;
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param data data structure to store radio value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for radio button
+   * @param accelerator accelerator key or 0
+   * @return new menu item
+   */
+  static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value)
+  {
+    return addMenuCheckbox(menu,text,data,field,value,0);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param selected true iff checkbox menu entry is selected
+   * @return new menu item
+   */
+  static MenuItem addMenuCheckbox(Menu menu, String text, boolean selected)
+  {
+    MenuItem menuItem = addMenuCheckbox(menu,text,null,null,null);
+    menuItem.setSelection(selected);
     return menuItem;
   }
 
@@ -2270,16 +2389,19 @@ private static void printTree(Tree tree)
    */
   static MenuItem addMenuCheckbox(Menu menu, String text)
   {
-    return addMenuCheckbox(menu,text,0);
+    return addMenuCheckbox(menu,text,null,null,null);
   }
 
   /** add new menu item
    * @param menu menu
    * @param text menu item text
+   * @param data data structure to store radio value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for radio button
    * @param accelerator accelerator key or 0
    * @return new menu item
    */
-  static MenuItem addMenuRadio(Menu menu, String text, int accelerator)
+  static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value, int accelerator)
   {
     if (accelerator != 0)
     {
@@ -2293,8 +2415,49 @@ private static void printTree(Tree tree)
     }
     MenuItem menuItem = new MenuItem(menu,SWT.RADIO);
     menuItem.setText(text);
+    if (data != null)
+    {
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          setField(data,field,value);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      menuItem.setSelection((getField(data,field) == value));
+    }
     if (accelerator != 0) menuItem.setAccelerator(accelerator);
 
+    return menuItem;
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param data data structure to store radio value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for radio button
+   * @return new menu item
+   */
+  static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value)
+  {
+    return addMenuRadio(menu,text,data,field,value,0);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param selected true iff radio menu entry is selected
+   * @return new menu item
+   */
+  static MenuItem addMenuRadio(Menu menu, String text, boolean selected)
+  {
+    MenuItem menuItem = addMenuRadio(menu,text,null,null,null);
+    menuItem.setSelection(selected);
     return menuItem;
   }
 
@@ -2305,7 +2468,7 @@ private static void printTree(Tree tree)
    */
   static MenuItem addMenuRadio(Menu menu, String text)
   {
-    return addMenuRadio(menu,text,0);
+    return addMenuRadio(menu,text,null,null,null);
   }
 
   /** add new menu separator
@@ -2453,6 +2616,110 @@ private static void printTree(Tree tree)
   static void notify(Control control)
   {
     notify(control,SWT.Selection,control,null);
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** set clipboard with text
+   * @param clipboard clipboard
+   * @param text text
+   */
+  public static void setClipboard(Clipboard clipboard, String text)
+  {
+    clipboard.setContents(new Object[]{text},new Transfer[]{TextTransfer.getInstance()});
+  }
+
+  /** set clipboard with text from label
+   * @param clipboard clipboard
+   * @param label label
+   */
+  public static void setClipboard(Clipboard clipboard, Label label)
+  {
+    setClipboard(clipboard,label.getText());
+  }
+
+  /** set clipboard with text from label
+   * @param clipboard clipboard
+   * @param label label
+   */
+  public static void setClipboard(Clipboard clipboard, Text text)
+  {
+    setClipboard(clipboard,text.getSelectionText());
+  }
+
+  /** set clipboard with text from table item
+   * @param clipboard clipboard
+   * @param tableItem table item
+   */
+  public static void setClipboard(Clipboard clipboard, TableItem tableItem)
+  {
+    Table table       = tableItem.getParent();
+    int   columnCount = table.getColumnCount();
+
+    StringBuffer buffer = new StringBuffer();
+    for (int i = 0; i < columnCount ; i++)
+    {
+      if (i > 0) buffer.append('\t');
+      buffer.append(tableItem.getText(i));
+    }
+
+    setClipboard(clipboard,buffer.toString());
+  }
+
+  /** set clipboard with text from table item
+   * @param clipboard clipboard
+   * @param tableItem table item
+   */
+  public static void setClipboard(Clipboard clipboard, TableItem[] tableItems)
+  {
+    if (tableItems.length > 0)
+    {
+      Table table       = tableItems[0].getParent();
+      int   columnCount = Math.max(table.getColumnCount(),1);
+      //if (columnCount==0) columnCount=1;
+
+      StringBuffer buffer = new StringBuffer();
+      for (int z = 0; z < tableItems.length ; z++)
+      {
+        if (z > 0) buffer.append('\n');
+        for (int i = 0; i < columnCount ; i++)
+        {
+          if (i > 0) buffer.append('\t');
+          buffer.append(tableItems[z].getText(i));
+        }
+      }
+
+      setClipboard(clipboard,buffer.toString());
+    }
+  }
+
+  /** add copy listener (copy content to clipboard on ctrl-c)
+   * @param control control
+   * @param clipboard clipboard to copy to
+   */
+  public static void addCopyListener(final Control control, final Clipboard clipboard)
+  {
+    control.addKeyListener(new KeyListener()
+    {
+      public void keyPressed(KeyEvent keyEvent)
+      {
+        if (((keyEvent.stateMask & SWT.CTRL) != 0) && (keyEvent.keyCode == 'c'))
+        {
+//Dprintf.dprintf("control=%s",control);
+          if      (control instanceof Text)
+          {
+            setClipboard(clipboard,(Text)control);
+          }
+          else if (control instanceof Table)
+          {
+            setClipboard(clipboard,((Table)control).getSelection());
+          }
+        }
+      }
+      public void keyReleased(KeyEvent keyEvent)
+      {
+      }
+    });
   }
 }
 
