@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -9,6 +9,7 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+// base
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 
+// graphics
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
@@ -78,7 +80,8 @@ class TabStatus
     long   lastExecutedDateTime;
     long   estimatedRestTime;
 
-    private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    // date/time format
+    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /** create job data
      */
@@ -327,6 +330,10 @@ class TabStatus
     }
   }
 
+  /** create status tab
+   * @param parentTabFolder parent tab folder
+   * @param accelerator keyboard shortcut to select tab
+   */
   TabStatus(TabFolder parentTabFolder, int accelerator)
   {
     TableColumn tableColumn;
@@ -799,14 +806,29 @@ class TabStatus
     TabStatusUpdateThread tabStatusUpdateThread = new TabStatusUpdateThread(this);
     tabStatusUpdateThread.setDaemon(true);
     tabStatusUpdateThread.start();
+
+    // get initial job list
+    updateJobList();
   }
 
-  //-----------------------------------------------------------------------
-
+  /** set jobs tab
+   * @param tabJobs jobs tab
+   */
   void setTabJobs(TabJobs tabJobs)
   {
     this.tabJobs = tabJobs;
   }
+
+  void selectJob(String name)
+  {
+    synchronized(jobList)
+    {
+      selectedJobData = jobList.get(name);
+      widgetSelectedJob.setText("Selected '"+((selectedJobData != null)?selectedJobData.name:"")+"'");
+    }
+  }
+
+  //-----------------------------------------------------------------------
 
   /** getProgress
    * @param n,m process current/max. value

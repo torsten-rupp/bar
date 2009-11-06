@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -9,6 +9,7 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+// base
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import java.util.LinkedList;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+// graphics
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
@@ -357,6 +359,9 @@ class TabRestore
   private final Image IMAGE_MARK_ALL;
   private final Image IMAGE_UNMARK_ALL;
 
+  // date/time format
+  private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
   // cursors
   private final Cursor waitCursor;
 
@@ -379,12 +384,14 @@ class TabRestore
   // variables
   private ArchiveNameParts     archiveNameParts;
 
-  private SimpleDateFormat     simpleDateFormat   = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
   private Pattern              filePattern        = null;
   private boolean              newestFileOnlyFlag = true;
   private LinkedList<FileData> fileList           = new LinkedList<FileData>();
 
+  /** create restore tab
+   * @param parentTabFolder parent tab folder
+   * @param accelerator keyboard shortcut to select tab
+   */
   TabRestore(TabFolder parentTabFolder, int accelerator)
   {
     Composite   tab;

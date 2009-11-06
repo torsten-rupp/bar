@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -9,6 +9,7 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+// base
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -25,6 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 
+// graphics
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
 import org.eclipse.swt.dnd.DND;
@@ -471,6 +473,7 @@ public class BARControl
   private int        serverTLSPort     = DEFAULT_SERVER_TLS_PORT;
   private boolean    loginDialogFlag   = false;
   private String     serverKeyFileName = null;
+  private String     selectedJobName   = null;
 
   private boolean    debug = false;
 
@@ -497,6 +500,7 @@ public class BARControl
     System.out.println("         --tls-port=<n>         - TLS server port");
     System.out.println("         --login-dialog         - force to open login dialog");
     System.out.println("         --key-file=<file name> - key file name");
+    System.out.println("         --select-job=<name>    - select job");
     System.out.println("         -h|--help              - print this help");
   }
 
@@ -608,6 +612,20 @@ public class BARControl
         serverKeyFileName = args[z+1];
         z += 2;
       }
+      else if (args[z].startsWith("--select-job="))
+      {
+        selectedJobName = args[z].substring(args[z].indexOf('=')+1);
+        z += 1;
+      }
+      else if (args[z].equals("--select-job"))
+      {
+        if ((z+1) >= args.length)
+        {
+          throw new Error("Expected value for option --select-job!");
+        }
+        selectedJobName = args[z+1];
+        z += 2;
+      }
       else if (args[z].equals("--debug"))
       {
         debug = true;
@@ -637,7 +655,7 @@ public class BARControl
     // check arguments
     if (serverKeyFileName != null)
     {
-      // check if JKS file readable
+      // check if JKS file is readable
       try
       {
         KeyStore keyStore = java.security.KeyStore.getInstance("JKS");
@@ -781,7 +799,7 @@ public class BARControl
 
   /** create tabs
    */
-  private void createTabs()
+  private void createTabs(String selectedJobName)
   {
     // create tab
     tabFolder = Widgets.newTabFolder(shell);
@@ -791,6 +809,13 @@ public class BARControl
     tabRestore = new TabRestore(tabFolder,SWT.F3);
     tabStatus.setTabJobs(tabJobs);
     tabJobs.setTabStatus(tabStatus);
+
+    // pre-select job
+    if (selectedJobName != null)
+    {
+      tabStatus.selectJob(selectedJobName);
+      tabJobs.selectJob(selectedJobName);
+    }
 
     // add tab listener
     display.addFilter(SWT.KeyDown,new Listener()
@@ -1035,7 +1060,7 @@ public class BARControl
 
       // open main window
       createWindow();
-      createTabs();
+      createTabs(selectedJobName);
       createMenu();
 
       // run

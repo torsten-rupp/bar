@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -9,6 +9,7 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+// base
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -28,6 +29,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
+// graphics
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
 import org.eclipse.swt.dnd.DND;
@@ -107,8 +109,9 @@ class TabJobs
     FILE,
     DIRECTORY,
     LINK,
-    SPECIAL,
     DEVICE,
+    SPECIAL,
+    FIFO,
     SOCKET
   };
 
@@ -124,29 +127,29 @@ class TabJobs
 
     FileTreeData(String name, FileTypes type, long size, long datetime, String title)
     {
-      this.name               = name;
-      this.type               = type;
-      this.size               = size;
-      this.datetime           = datetime;
-      this.title              = title;
+      this.name     = name;
+      this.type     = type;
+      this.size     = size;
+      this.datetime = datetime;
+      this.title    = title;
     }
 
     FileTreeData(String name, FileTypes type, long datetime, String title)
     {
-      this.name               = name;
-      this.type               = type;
-      this.size               = 0;
-      this.datetime           = datetime;
-      this.title              = title;
+      this.name     = name;
+      this.type     = type;
+      this.size     = 0;
+      this.datetime = datetime;
+      this.title    = title;
     }
 
     FileTreeData(String name, FileTypes type, String title)
     {
-      this.name               = name;
-      this.type               = type;
-      this.size               = 0;
-      this.datetime           = 0;
-      this.title              = title;
+      this.name     = name;
+      this.type     = type;
+      this.size     = 0;
+      this.datetime = 0;
+      this.title    = title;
     }
 
     public String toString()
@@ -243,6 +246,83 @@ class TabJobs
     public String toString()
     {
       return "FileComparator {"+sortMode+"}";
+    }
+  }
+
+  /** device tree data
+   */
+  class DeviceTreeData
+  {
+    String name;
+    long   size;
+    String title;
+
+    DeviceTreeData(String name, long size, String title)
+    {
+      this.name  = name;
+      this.size  = size;
+      this.title = title;
+    }
+
+    DeviceTreeData(String name, String title)
+    {
+      this.name  = name;
+      this.size  = 0;
+      this.title = title;
+    }
+
+    public String toString()
+    {
+      return "File {"+name+", "+size+" bytes, title="+title+"}";
+    }
+  };
+
+  /** device data comparator
+   */
+  class DeviceTreeDataComparator implements Comparator<DeviceTreeData>
+  {
+    // Note: enum in inner classes are not possible in Java, thus use the old way...
+    private final static int SORTMODE_NAME = 0;
+    private final static int SORTMODE_SIZE = 1;
+
+    private int sortMode;
+
+    /** create device data comparator
+     * @param tree device tree
+     */
+    DeviceTreeDataComparator(Tree tree)
+    {
+      TreeColumn sortColumn = tree.getSortColumn();
+
+      if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
+      else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
+      else                                      sortMode = SORTMODE_NAME;
+    }
+
+    /** compare device tree data without take care about type
+     * @param deviceTreeData1, deviceTreeData2 device tree data to compare
+     * @return -1 iff deviceTreeData1 < deviceTreeData2,
+                0 iff deviceTreeData1 = deviceTreeData2,
+                1 iff deviceTreeData1 > deviceTreeData2
+     */
+    public int compare(DeviceTreeData deviceTreeData1, DeviceTreeData deviceTreeData2)
+    {
+      switch (sortMode)
+      {
+        case SORTMODE_NAME:
+          return deviceTreeData1.title.compareTo(deviceTreeData2.title);
+        case SORTMODE_SIZE:
+          if      (deviceTreeData1.size < deviceTreeData2.size) return -1;
+          else if (deviceTreeData1.size > deviceTreeData2.size) return  1;
+          else                                                  return  0;
+        default:
+          return 0;
+      }
+    }
+
+    public String toString()
+    {
+      return "DeviceComparator {"+sortMode+"}";
     }
   }
 
@@ -934,6 +1014,9 @@ l=x.depth;
   private final Image  IMAGE_LINK_INCLUDED;
   private final Image  IMAGE_LINK_EXCLUDED;
 
+  // date/time format
+  private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
   // cursors
   private final Cursor waitCursor;
 
@@ -946,6 +1029,7 @@ l=x.depth;
   private TabFolder    widgetTabFolder;
   private Combo        widgetJobList;
   private Tree         widgetFileTree;
+  private Tree         widgetDeviceTree;
   private List         widgetIncludedPatterns;
   private List         widgetExcludedPatterns;
   private Combo        widgetArchivePartSize;
@@ -995,11 +1079,16 @@ l=x.depth;
   private     HashSet<String>          includedPatterns  = new HashSet<String>();
   private     HashSet<String>          excludedPatterns  = new HashSet<String>();
   private     LinkedList<ScheduleData> scheduleList      = new LinkedList<ScheduleData>();
-  private     SimpleDateFormat         simpleDateFormat  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+
+  /** create jobs tab
+   * @param parentTabFolder parent tab folder
+   * @param accelerator keyboard shortcut to select tab
+   */
   TabJobs(TabFolder parentTabFolder, int accelerator)
   {
-final    Display     display;
+//final 
+   Display     display;
     Composite   tab;
     Group       group;
     Composite   composite,subComposite;
@@ -1167,13 +1256,13 @@ final    Display     display;
           {
           }
         };
-        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Name",    SWT.LEFT, 500,true);
+        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Name",    SWT.LEFT, 390,true);
         treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
-        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Type",    SWT.LEFT,  50,false);
+        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Type",    SWT.LEFT, 160,true);
         treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
-        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Size",    SWT.RIGHT,100,false);
+        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Size",    SWT.RIGHT,100,true);
         treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
-        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Modified",SWT.LEFT, 100,false);
+        treeColumn = Widgets.addTreeColumn(widgetFileTree,"Modified",SWT.LEFT, 100,true);
         treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
 
         // buttons
@@ -1198,8 +1287,9 @@ final    Display     display;
                   case FILE:      treeItem.setImage(IMAGE_FILE);      break;
                   case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY); break;
                   case LINK:      treeItem.setImage(IMAGE_LINK);      break;
-                  case SPECIAL:   treeItem.setImage(IMAGE_FILE);      break;
                   case DEVICE:    treeItem.setImage(IMAGE_FILE);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE);      break;
+                  case FIFO:      treeItem.setImage(IMAGE_FILE);      break;
                   case SOCKET:    treeItem.setImage(IMAGE_FILE);      break;
                 }
               }
@@ -1226,8 +1316,9 @@ final    Display     display;
                   case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
                   case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_INCLUDED); break;
                   case LINK:      treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
-                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
                   case DEVICE:    treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case FIFO:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
                   case SOCKET:    treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
                 }
               }
@@ -1254,8 +1345,9 @@ final    Display     display;
                   case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                   case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
                   case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                   case DEVICE:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case FIFO:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                   case SOCKET:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                 }
               }
@@ -1290,6 +1382,117 @@ final    Display     display;
             {
               Button  widget = (Button)selectionEvent.widget;
               directoryInfoFlag = widget.getSelection();
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+        }
+      }
+
+      tab = Widgets.addTab(widgetTabFolder,"Images");
+      tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+      Widgets.layout(tab,0,0,TableLayoutData.NSWE);
+      {
+        // image tree
+        widgetDeviceTree = Widgets.newTree(tab,SWT.NONE);
+        Widgets.layout(widgetDeviceTree,0,0,TableLayoutData.NSWE);
+        SelectionListener filesTreeColumnSelectionListener = new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            TreeColumn               treeColumn = (TreeColumn)selectionEvent.widget;
+            DeviceTreeDataComparator deviceTreeDataComparator = new DeviceTreeDataComparator(widgetDeviceTree);
+            synchronized(widgetDeviceTree)
+            {
+              Widgets.sortTreeColumn(widgetDeviceTree,treeColumn,deviceTreeDataComparator);
+            }
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        };
+        treeColumn = Widgets.addTreeColumn(widgetDeviceTree,"Name",    SWT.LEFT, 390,true);
+        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
+        treeColumn = Widgets.addTreeColumn(widgetDeviceTree,"Size",    SWT.RIGHT,100,true);
+        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
+
+        // buttons
+        composite = Widgets.newComposite(tab,SWT.NONE,4);
+        composite.setLayout(new TableLayout(1.0,new double[]{1.0,1.0,1.0,0.0,0.0,0.0}));
+        Widgets.layout(composite,1,0,TableLayoutData.WE);
+        {
+          button = Widgets.newButton(composite,"None");
+          Widgets.layout(button,0,0,TableLayoutData.WE);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              for (TreeItem treeItem : widgetDeviceTree.getSelection())
+              {
+                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
+                patternDelete(PatternTypes.INCLUDE,deviceTreeData.name);
+                patternDelete(PatternTypes.EXCLUDE,deviceTreeData.name);
+                treeItem.setImage(IMAGE_FILE);
+              }
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+
+          button = Widgets.newButton(composite,"Include");
+          Widgets.layout(button,0,1,TableLayoutData.WE);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              for (TreeItem treeItem : widgetDeviceTree.getSelection())
+              {
+                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
+                patternNew(PatternTypes.INCLUDE,deviceTreeData.name);
+                patternDelete(PatternTypes.EXCLUDE,deviceTreeData.name);
+                treeItem.setImage(IMAGE_FILE_INCLUDED);
+              }
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+
+          button = Widgets.newButton(composite,"Exclude");
+          Widgets.layout(button,0,2,TableLayoutData.WE);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              for (TreeItem treeItem : widgetDeviceTree.getSelection())
+              {
+                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
+                patternDelete(PatternTypes.INCLUDE,deviceTreeData.name);
+                patternNew(PatternTypes.EXCLUDE,deviceTreeData.name);
+                treeItem.setImage(IMAGE_FILE_EXCLUDED);
+              }
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+
+          control = Widgets.newSpacer(composite);
+          Widgets.layout(control,0,3,TableLayoutData.NONE,0,0,30,0);
+
+          button = Widgets.newButton(composite,IMAGE_DIRECTORY_INCLUDED);
+          Widgets.layout(button,0,4,TableLayoutData.E,0,0,2,0);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              openIncludedDirectories();
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -4072,6 +4275,106 @@ throw new Error("NYI");
           subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
           subTreeItem.setImage(image);
         }
+        else if (StringParser.parse(line,"DEVICE CHARACTER %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               date/time
+               name
+          */
+          long   datetime = (Long  )data[0];
+          String name     = (String)data[1];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.DEVICE,0,datetime,name);
+
+          // add entry
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"DEVICE CHARACTER");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+        }
+        else if (StringParser.parse(line,"DEVICE BLOCK %ld %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               size
+               date/time
+               name
+          */
+          long   size     = (Long  )data[0];
+          long   datetime = (Long  )data[1];
+          String name     = (String)data[2];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.DEVICE,0,datetime,name);
+
+          // add entry
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"DEVICE BLOCK");
+          if (size >= 0) subTreeItem.setText(2,Units.formatByteSize(size));
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+        }
+        else if (StringParser.parse(line,"DEVICE %s %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               type
+               date/time
+               name
+          */
+          String type     = (String)data[0];
+          long   datetime = (Long  )data[1];
+          String name     = (String)data[2];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.DEVICE,0,datetime,name);
+
+          // add entry
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,String.format("DEVICE %s",type));
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+        }
+        else if (StringParser.parse(line,"FIFO %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               date/time
+               name
+          */
+          long   datetime = (Long  )data[0];
+          String name     = (String)data[1];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.FIFO,0,datetime,name);
+
+          // add entry
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"FIFO");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+        }
+        else if (StringParser.parse(line,"SOCKET %ld %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               date/time
+               name
+          */
+          long   datetime = (Long  )data[0];
+          String name     = (String)data[1];
+
+          // create file tree data
+          fileTreeData = new FileTreeData(name,FileTypes.SOCKET,0,datetime,name);
+
+          // add entry
+          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+          subTreeItem.setText(0,fileTreeData.title);
+          subTreeItem.setText(1,"SOCKET");
+          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+        }
         else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
         {
           /* get data
@@ -4091,47 +4394,77 @@ throw new Error("NYI");
           subTreeItem.setText(1,"SPECIAL");
           subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
         }
-        else if (StringParser.parse(line,"DEVICE %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               name
-          */
-          String name = (String)data[0];
-
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.DEVICE,name);
-
-          // add entry
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"DEVICE");
-        }
-        else if (StringParser.parse(line,"SOCKET %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               name
-          */
-          String name = (String)data[0];
-
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.SOCKET,name);
-
-          // add entry
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"SOCKET");
-        }
       }
     }
     else
     {
-//Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTreeData.name,fileListResult,errorCode);
+Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTreeData.name,fileListResult,errorCode);
        Dialogs.error(shell,"Cannot get file list (error: "+fileListResult.get(0)+")");
     }
 
     shell.setCursor(null);
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** add block devices
+   */
+  private void addBlockDevices()
+  {
+    TreeItem treeItem = Widgets.addTreeItem(widgetDeviceTree,new FileTreeData("/",FileTypes.DIRECTORY,"/"),true);
+    treeItem.setText("/");
+    treeItem.setImage(IMAGE_DIRECTORY);
+    widgetDeviceTree.addListener(SWT.Expand,new Listener()
+    {
+      public void handleEvent(final Event event)
+      {
+        final TreeItem treeItem = (TreeItem)event.item;
+        updateFileTree(treeItem);
+      }
+    });
+    widgetDeviceTree.addListener(SWT.Collapse,new Listener()
+    {
+      public void handleEvent(final Event event)
+      {
+        final TreeItem treeItem = (TreeItem)event.item;
+        treeItem.removeAll();
+        new TreeItem(treeItem,SWT.NONE);
+      }
+    });
+    widgetDeviceTree.addMouseListener(new MouseListener()
+    {
+      public void mouseDoubleClick(final MouseEvent mouseEvent)
+      {
+        TreeItem treeItem = widgetDeviceTree.getItem(new Point(mouseEvent.x,mouseEvent.y));
+        if (treeItem != null)
+        {
+          FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+          if (fileTreeData.type == FileTypes.DIRECTORY)
+          {
+            Event treeEvent = new Event();
+            treeEvent.item = treeItem;
+            if (treeItem.getExpanded())
+            {
+              widgetDeviceTree.notifyListeners(SWT.Collapse,treeEvent);
+              treeItem.setExpanded(false);
+            }
+            else
+            {
+              widgetDeviceTree.notifyListeners(SWT.Expand,treeEvent);
+              treeItem.setExpanded(true);
+            }
+          }
+        }
+      }
+
+      public void mouseDown(final MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseUp(final MouseEvent mouseEvent)
+      {
+      }
+    });
   }
 
   //-----------------------------------------------------------------------
