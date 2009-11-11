@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -9,6 +9,7 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+// base
 import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
@@ -16,6 +17,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
 
+// graphics
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.Transfer;
@@ -668,7 +670,6 @@ class Widgets
     }
     catch (Exception exception)
     {
-//System.err.println("Widgets.java"+", "+147+": "+exception);
       // ignored
     }
 
@@ -1871,6 +1872,16 @@ class Widgets
     return tree;
   }
 
+  /** new tree widget
+   * @param composite composite widget
+   * @return new tree widget
+   */
+  static Tree newTree(Composite composite)
+  {
+    return newTree(composite,SWT.NONE);
+  }
+
+
   /** add column to tree widget
    * @param tree tree widget
    * @param title column title
@@ -1976,7 +1987,7 @@ private static void printTree(Tree tree)
    * @param treeItem tree item to re-create
    * @param index index (0..n)
    */
-  private static TreeItem recreateTreeItem(Tree tree, TreeItem parentTreeItem, TreeItem treeItem, int index)
+  private static TreeItem recreateSubTreeItem(Tree tree, TreeItem parentTreeItem, TreeItem treeItem, int index)
   {
     TreeItem newTreeItem = null;
 
@@ -1993,14 +2004,15 @@ private static void printTree(Tree tree)
       Image image = treeItem.getImage();
 
       // recreate item
-      newTreeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
+      if (parentTreeItem != null) newTreeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
+      else                        newTreeItem = new TreeItem(tree,SWT.NONE,index);
       newTreeItem.setData(data);
       newTreeItem.setText(texts);
       newTreeItem.setChecked(checked);
       newTreeItem.setImage(image);
       for (TreeItem subTreeItem : treeItem.getItems())
       {
-        recreateTreeItem(tree,newTreeItem,subTreeItem);
+        recreateSubTreeItem(tree,newTreeItem,subTreeItem);
       }
 
       // discard old item
@@ -2015,9 +2027,49 @@ private static void printTree(Tree tree)
    * @param parentTreeItem parent tree item
    * @param treeItem tree item to re-create
    */
-  private static TreeItem recreateTreeItem(Tree tree, TreeItem parentTreeItem, TreeItem treeItem)
+  private static TreeItem recreateSubTreeItem(Tree tree, TreeItem parentTreeItem, TreeItem treeItem)
   {
-    return recreateTreeItem(tree,parentTreeItem,treeItem,parentTreeItem.getItemCount());
+    return recreateSubTreeItem(tree,parentTreeItem,treeItem,parentTreeItem.getItemCount());
+  }
+
+  /** re-created tree item (required when sorting by column)
+   * @param tree tree
+   * @param parentTreeItem parent tree item
+   * @param treeItem tree item to re-create
+   * @param index index (0..n)
+   */
+  private static TreeItem recreateTreeItem(Tree tree, TreeItem treeItem, int index)
+  {
+    TreeItem newTreeItem = null;
+
+    if (!tree.isDisposed())
+    {
+      // save data
+      Object   data = treeItem.getData();
+      String[] texts = new String[tree.getColumnCount()];
+      for (int z = 0; z < tree.getColumnCount(); z++)
+      {
+        texts[z] = treeItem.getText(z);
+      }
+      boolean checked = treeItem.getChecked();
+      Image image = treeItem.getImage();
+
+      // recreate item
+      newTreeItem = new TreeItem(tree,SWT.NONE,index);
+      newTreeItem.setData(data);
+      newTreeItem.setText(texts);
+      newTreeItem.setChecked(checked);
+      newTreeItem.setImage(image);
+      for (TreeItem subTreeItem : treeItem.getItems())
+      {
+        recreateSubTreeItem(tree,newTreeItem,subTreeItem);
+      }
+
+      // discard old item
+      treeItem.dispose();
+    }
+
+    return newTreeItem;
   }
 
   /** sort tree column
@@ -2026,7 +2078,7 @@ private static void printTree(Tree tree)
    * @param sortDirection sort directory (SWT.UP, SWT.DOWN)
    * @param comparator comperator to compare two tree items
    */
-  private static void sortSubTreeColumn(Tree tree, TreeItem treeItem, int sortDirection, Comparator comparator)
+  private static void sortSubTreeColumnX(Tree tree, TreeItem treeItem, int sortDirection, Comparator comparator)
   {
     if (!tree.isDisposed())
     {
@@ -2035,13 +2087,14 @@ private static void printTree(Tree tree)
 //System.err.println(indent(rr)+"A "+treeItem+" "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
       for (TreeItem subTreeItem : treeItem.getItems())
       {
-        sortSubTreeColumn(tree,subTreeItem,sortDirection,comparator);
+        sortSubTreeColumnX(tree,subTreeItem,sortDirection,comparator);
       }
 //System.err.println(indent(rr)+"B "+treeItem+" ("+treeItem.hashCode()+") "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
 
       // sort sub-tree
 //boolean xx = treeItem.getExpanded();
       TreeItem[] subTreeItems = treeItem.getItems();
+Dprintf.dprintf("%d",subTreeItems.length);
       for (int i = 0; i < subTreeItems.length; i++)
       {     
         boolean sortedFlag = false;
@@ -2054,7 +2107,83 @@ private static void printTree(Tree tree)
           }
           if (sortedFlag)
           {
-            recreateTreeItem(tree,treeItem,subTreeItems[i],j);
+            recreateSubTreeItem(tree,treeItem,subTreeItems[i],j);
+          }
+        }
+      }
+//treeItem.setExpanded(xx);
+
+//rr--;
+    }
+  }
+
+  private static void sortSubTreeColumn(Tree tree, TreeItem treeItem, TreeItem[] subTreeItems, int sortDirection, Comparator comparator)
+  {
+    if (!tree.isDisposed())
+    {
+//rr++;
+
+//System.err.println(indent(rr)+"A "+treeItem+" "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
+      for (TreeItem subTreeItem : subTreeItems)
+      {
+        sortSubTreeColumn(tree,subTreeItem,subTreeItem.getItems(),sortDirection,comparator);
+      }
+//System.err.println(indent(rr)+"B "+subTreeItem+" ("+subTreeItem.hashCode()+") "+subTreeItem.hashCode()+" "+subTreeItem.getItemCount()+" open="+subTreeItem.getExpanded());
+
+      // sort sub-tree
+//boolean xx = treeItem.getExpanded();
+Dprintf.dprintf("%d",subTreeItems.length);
+      for (int i = 0; i < subTreeItems.length; i++)
+      {     
+        boolean sortedFlag = false;
+        for (int j = 0; (j <= i) && !sortedFlag; j++)
+        {
+          switch (sortDirection)
+          {
+            case SWT.UP:   sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),treeItem.getItem(j).getData()) < 0); break;
+            case SWT.DOWN: sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),treeItem.getItem(j).getData()) > 0); break;
+          }
+          if (sortedFlag)
+          {
+            recreateSubTreeItem(tree,treeItem,subTreeItems[i],j);
+          }
+        }
+      }
+//treeItem.setExpanded(xx);
+
+//rr--;
+    }
+  }
+
+  private static void sortTreeColumn(Tree tree, TreeItem[] subTreeItems, int sortDirection, Comparator comparator)
+  {
+    if (!tree.isDisposed())
+    {
+//rr++;
+
+//System.err.println(indent(rr)+"A "+treeItem+" "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
+      // sort sub-trees
+      for (TreeItem subTreeItem : subTreeItems)
+      {
+        sortSubTreeColumn(tree,subTreeItem,subTreeItem.getItems(),sortDirection,comparator);
+      }
+//System.err.println(indent(rr)+"B "+subTreeItem+" ("+subTreeItem.hashCode()+") "+subTreeItem.hashCode()+" "+subTreeItem.getItemCount()+" open="+subTreeItem.getExpanded());
+
+      // sort tree
+//boolean xx = treeItem.getExpanded();
+      for (int i = 0; i < subTreeItems.length; i++)
+      {     
+        boolean sortedFlag = false;
+        for (int j = 0; (j <= i) && !sortedFlag; j++)
+        {
+          switch (sortDirection)
+          {
+            case SWT.UP:   sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),tree.getItem(j).getData()) < 0); break;
+            case SWT.DOWN: sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),tree.getItem(j).getData()) > 0); break;
+          }
+          if (sortedFlag)
+          {
+            recreateTreeItem(tree,subTreeItems[i],j);
           }
         }
       }
@@ -2121,23 +2250,19 @@ private static void printTree(Tree tree)
 
       // save expanded sub-trees.
       // Note: sub-tree cannot be expanded when either no children exist or the
-      // parent is not expanded. Because for sort the tree entries they are copied
+      // parent is not expanded. Because for sort the tree entries are copied
       // (recreated) the state of the expanded sub-trees are stored here and will
-      // late be restored when the complete new tree is created.
+      // later be restored when the complete new tree is created.
       HashSet expandedDirectories = new HashSet();
       for (TreeItem treeItem : tree.getItems())
       {
         getExpandedDiretories(expandedDirectories,treeItem);
       }
-  //System.err.println("BARControl.java"+", "+1627+": "+expandedDirectories.toString());
+//System.err.println("BARControl.java"+", "+1627+": "+expandedDirectories.toString());
 
       // sort column
-  //System.err.println("1 ---------------");
-  //printTree(tree);
-      for (TreeItem treeItem : tree.getItems())
-      {
-        sortSubTreeColumn(tree,treeItem,sortDirection,comparator);
-      }
+//printTree(tree);
+      sortTreeColumn(tree,tree.getItems(),sortDirection,comparator);
 
       // restore expanded sub-trees
       for (TreeItem treeItem : tree.getItems())
@@ -2148,8 +2273,8 @@ private static void printTree(Tree tree)
       // set column sort indicators
       tree.setSortColumn(treeColumn);
       tree.setSortDirection(sortDirection);
-  //System.err.println("2 ---------------");
-  //printTree(tree);
+//System.err.println("2 ---------------");
+//printTree(tree);
     }
   }
 
