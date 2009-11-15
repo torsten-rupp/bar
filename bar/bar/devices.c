@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/devices.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver device functions
 * Systems: all
@@ -332,11 +332,7 @@ Errors Device_getDeviceInfo(const String deviceName, DeviceInfo *deviceInfo)
 {
   struct stat64 fileStat;
   FILE          *file;
-  Errors        error;
   off_t         n;
-  const char    *mountPoint;
-  char          buffer[256];
-  char          s0[256],s1[256];
   int           handle;
   struct statfs fileSystemStat;
 
