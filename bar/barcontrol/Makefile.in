@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -10,42 +10,47 @@
 
 #---------------------------------- settings ---------------------------------
 
-PLATFORM        = @PLATFORM@
+PLATFORM         = @PLATFORM@
 
-ENABLE_DEBUG    = @ENABLE_DEBUG@
-ENABLE_GUI      = @ENABLE_GUI@
+ENABLE_DEBUG     = @ENABLE_DEBUG@
+ENABLE_GUI       = @ENABLE_GUI@
 
 #------------------------------------ paths ----------------------------------
 
-SWT_DIR         = @SWT_DIR@
-LAUNCH4J_DIR    = @LAUNCH4J_DIR@
+SWT_DIR          = @SWT_DIR@
+LAUNCH4J_DIR     = @LAUNCH4J_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
-JAVA            = @JAVA@
-JAVA_FLAGS      = @JAVA_FLAGS@
+JAVA             = @JAVA@
+JAVA_FLAGS       = @JAVA_FLAGS@
 
-JAVAC           = @JAVAC@
-JAVAC_FLAGS     = @JAVAC_FLAGS@
+JAVAC            = @JAVAC@
+JAVAC_FLAGS      = @JAVAC_FLAGS@
 # -Xlint
 
-JAR             = @JAR@
+JAR              = @JAR@
 
-SWT_JAR_LINUX   = jars/swt-3.4-linux.jar
-SWT_JAR_WINDOWS = jars/swt-3.4-windows.jar
+SWT_JAR_LINUX    = jars/linux/swt-3.4.jar
+SWT_JAR_LINUX_64 = jars/linux/swt-3.4_64.jar
+SWT_JAR_WINDOWS  = jars/windows/swt-3.4.jar
 
 ifneq ($(SWT_DIR),)
-SWT_JAR         = $(SWT_DIR)/swt.jar
+SWT_JAR          = $(SWT_DIR)/swt.jar
 else
 ifeq ($(PLATFORM),Linux)
-SWT_JAR         = $(SWT_JAR_LINUX)
+ifeq ($(JAVA_DATA_MODEL),64)
+SWT_JAR          = $(SWT_JAR_LINUX_64)
+else
+SWT_JAR          = $(SWT_JAR_LINUX)
+endif
 endif
 ifeq ($(PLATFORM),Windows)
-SWT_JAR         = $(SWT_JAR_WINDOWS)
+SWT_JAR          = $(SWT_JAR_WINDOWS)
 endif
 endif
 
-CLASSPATH       = classes:$(SWT_JAR)
+CLASSPATH        = classes:$(SWT_JAR)
 
 #---------------------------------- commands----------------------------------
 
@@ -93,6 +98,7 @@ SOURCES        = src/BARControl.java \
                  \
                  src/TableLayout.java \
                  src/TableLayoutData.java \
+                 src/Pane.java \
                  src/ProgressBar.java \
                  src/BusyDialog.java \
                  src/Widgets.java \
@@ -112,6 +118,7 @@ OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).cl
 INTERMEDIATE   = src/Errors.java \
                  barcontrol.jar \
                  barcontrol-linux.jar \
+                 barcontrol-linux_64.jar \
                  barcontrol-windows.jar
 
 TARGETS        = barcontrol \
@@ -141,7 +148,7 @@ src/Errors.java: ../errors.def ../errors.pl
 
 # jars
 .PHONY: jars
-jars: barcontrol.jar barcontrol-linux.jar barcontrol-windows.jar
+jars: barcontrol.jar barcontrol-linux.jar barcontrol-linux_64.jar barcontrol-windows.jar
 
 # create jars
 barcontrol.jar: jar.txt $(OBJECTS) images/*.gif
@@ -156,10 +163,23 @@ else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
 
-barcontrol-linux.jar: jar.txt $(OBJECTS) src/Errors.java images/*.gif jars/swt-3.4-linux.jar
+barcontrol-linux.jar: jar.txt $(OBJECTS) src/Errors.java images/*.gif $(SWT_JAR_LINUX)
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_LINUX) 1>/dev/null; $(RMRF) META-INF)
+	$(CP) classes/*.class tmp/jar
+	$(INSTALL) -d tmp/jar/images
+	$(CP) images/*.gif tmp/jar/images
+	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
+	$(RMRF) tmp/jar
+else
+	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
+endif
+
+barcontrol-linux_64.jar: jar.txt $(OBJECTS) src/Errors.java images/*.gif $(SWT_JAR_LINUX_64)
+ifneq ($(JAR),)
+	$(INSTALL) -d tmp/jar
+	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_LINUX_64) 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
 	$(CP) images/*.gif tmp/jar/images
@@ -183,7 +203,7 @@ else
 endif
 
 # create Unix start script
-barcontrol: barcontrol.in barcontrol-linux.jar
+barcontrol: barcontrol.in barcontrol-linux.jar barcontrol-linux_64.jar
 	$(CAT) barcontrol.in | \
         ( \
           while IFS="" read line; do \
