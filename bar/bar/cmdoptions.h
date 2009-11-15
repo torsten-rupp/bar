@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/bar/cmdoptions.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -151,18 +151,6 @@ typedef struct CommandLineOption
   const char                    *description;
 } CommandLineOption;
 
-typedef union
-{
-  int    n;
-  int64  l;
-  double d;
-  bool   b;
-  uint   enumeration;
-  uint   select;
-  char   *string;
-  void   *special;
-} OptionVariable;
-
 /* example
 
 CMD_OPTION_INTEGER        (<long name>,<short name>,<level>,<priority>,<variable>,<default value>,<min>,<max>,<units>,<help text>                )
@@ -214,10 +202,10 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_STRING       ("string",  0,  0,0,stringValue,"",                                           "string value"),
 
-  CMD_OPTION_ENUM         ("e1",      '1',0,0,enumValue,  0,ENUM1,                                      "enum 1"), 
-  CMD_OPTION_ENUM         ("e2",      '2',0,0,enumValue,  0,ENUM2,                                      "enum 2"), 
-  CMD_OPTION_ENUM         ("e3",      '3',0,0,enumValue,  0,ENUM3,                                      "enum 3"), 
-  CMD_OPTION_ENUM         ("e4",      '4',0,0,enumValue,  0,ENUM4,                                      "enum 4"), 
+  CMD_OPTION_ENUM         ("e1",      '1',0,0,enumValue,  ENUM1,ENUM1,                                      "enum 1"), 
+  CMD_OPTION_ENUM         ("e2",      '2',0,0,enumValue,  ENUM1,ENUM2,                                      "enum 2"), 
+  CMD_OPTION_ENUM         ("e3",      '3',0,0,enumValue,  ENUM1,ENUM3,                                      "enum 3"), 
+  CMD_OPTION_ENUM         ("e4",      '4',0,0,enumValue,  ENUM1,ENUM4,                                      "enum 4"), 
 
   CMD_OPTION_SPECIAL      ("special", 's',0,1,specialValue,parseSpecial,123,                            "special","abc"), 
   CMD_OPTION_INTEGER      ("extended",'i',1,0,extendValue,0,0,123,NULL                                  "extended integer"),

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -378,7 +378,7 @@ Errors File_openCString(FileHandle    *fileHandle,
         return ERRORX(CREATE_FILE,errno,fileName);
       }
 
-      fileHandle->name  = String_newCString(fileName);;
+      fileHandle->name  = String_newCString(fileName);
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
       break;
@@ -411,7 +411,7 @@ Errors File_openCString(FileHandle    *fileHandle,
         return error;
       }
 
-      fileHandle->name  = String_newCString(fileName);;
+      fileHandle->name  = String_newCString(fileName);
       fileHandle->index = 0LL;
       fileHandle->size  = (uint64)n;
       break;
@@ -450,7 +450,7 @@ Errors File_openCString(FileHandle    *fileHandle,
         }
       }
 
-      fileHandle->name  = String_newCString(fileName);;
+      fileHandle->name  = String_newCString(fileName);
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
       break;
@@ -487,7 +487,7 @@ Errors File_openCString(FileHandle    *fileHandle,
         return error;
       }
 
-      fileHandle->name  = String_newCString(fileName);;
+      fileHandle->name  = String_newCString(fileName);
       fileHandle->index = (uint64)n;
       fileHandle->size  = (uint64)n;
       break;
@@ -935,9 +935,11 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
     return ERRORX(IO_ERROR,errno,String_cString(directoryListHandle->name));
   }
 
+  /* get entry name */
   String_set(fileName,directoryListHandle->name);
   File_appendFileNameCString(fileName,directoryListHandle->entry->d_name);
 
+  /* mark entry read */
   directoryListHandle->entry = NULL;
 
   return ERROR_NONE;

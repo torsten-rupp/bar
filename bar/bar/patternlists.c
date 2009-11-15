@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patternlists.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -47,7 +47,7 @@
 /***********************************************************************\
 * Name   : copyPatternNode
 * Purpose: copy allocated pattern node
-* Input  : patterNode - pattern node
+* Input  : patternNode - pattern node
 * Output : -
 * Return : copied pattern node
 * Notes  : -
@@ -90,7 +90,7 @@ LOCAL PatternNode *copyPatternNode(PatternNode *patternNode,
 /***********************************************************************\
 * Name   : freePatternNode
 * Purpose: free allocated pattern node
-* Input  : patterNode - pattern node
+* Input  : patternNode - pattern node
 * Output : -
 * Return : -
 * Notes  : -

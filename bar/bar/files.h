@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -31,6 +31,7 @@
 
 #define FILE_CAST_SIZE (sizeof(time_t)+sizeof(time_t))
 
+/* file types */
 typedef enum
 {
   FILE_TYPE_NONE,
@@ -43,6 +44,7 @@ typedef enum
   FILE_TYPE_UNKNOWN
 } FileTypes;
 
+/* file open modes */
 typedef enum
 {
   FILE_OPENMODE_CREATE,
@@ -51,6 +53,7 @@ typedef enum
   FILE_OPENMODE_APPEND
 } FileOpenModes;
 
+/* special file types */
 typedef enum
 {
   FILE_SPECIAL_TYPE_CHARACTER_DEVICE,
