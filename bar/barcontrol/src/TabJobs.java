@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -94,12 +94,21 @@ import org.eclipse.swt.widgets.Widget;
  */
 class TabJobs
 {
+  /** entry types
+   */
+  enum EntryTypes
+  {
+    FILE,
+    IMAGE
+  };
+
   /** pattern types
    */
   enum PatternTypes
   {
-    INCLUDE,
-    EXCLUDE,
+    GLOB,
+    REGEX,
+    EXTENDED_REGEX
   };
 
   /** file types
@@ -255,25 +264,22 @@ class TabJobs
   {
     String name;
     long   size;
-    String title;
 
-    DeviceTreeData(String name, long size, String title)
+    DeviceTreeData(String name, long size)
     {
-      this.name  = name;
-      this.size  = size;
-      this.title = title;
+      this.name = name;
+      this.size = size;
     }
 
-    DeviceTreeData(String name, String title)
+    DeviceTreeData(String name)
     {
-      this.name  = name;
-      this.size  = 0;
-      this.title = title;
+      this.name = name;
+      this.size = 0;
     }
 
     public String toString()
     {
-      return "File {"+name+", "+size+" bytes, title="+title+"}";
+      return "File {"+name+", "+size+" bytes}";
     }
   };
 
@@ -310,7 +316,7 @@ class TabJobs
       switch (sortMode)
       {
         case SORTMODE_NAME:
-          return deviceTreeData1.title.compareTo(deviceTreeData2.title);
+          return deviceTreeData1.name.compareTo(deviceTreeData2.name);
         case SORTMODE_SIZE:
           if      (deviceTreeData1.size < deviceTreeData2.size) return -1;
           else if (deviceTreeData1.size > deviceTreeData2.size) return  1;
@@ -540,6 +546,47 @@ l=x.depth;
       {
         directoryInfoRequestList.clear();
       }
+    }
+  }
+
+  /** entry data
+   */
+  class EntryData
+  {
+    EntryTypes entryType;
+    String     pattern;
+
+    /** create entry data
+     * @param entryType entry type
+     * @param pattern pattern
+     */
+    EntryData(EntryTypes entryType, String pattern)
+    {
+      this.entryType = entryType;
+      this.pattern   = pattern;
+    }
+
+    /** get image for entry data
+     * @return image
+     */
+    Image getImage()
+    {
+      Image image = null;
+      switch (entryType)
+      {
+        case FILE:  image = IMAGE_FILE;   break;
+        case IMAGE: image = IMAGE_DEVICE; break;
+      }
+
+      return image;
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      return "Entry {"+entryType+", "+pattern+"}";
     }
   }
 
@@ -1013,6 +1060,8 @@ l=x.depth;
   private final Image  IMAGE_LINK;
   private final Image  IMAGE_LINK_INCLUDED;
   private final Image  IMAGE_LINK_EXCLUDED;
+  private final Image  IMAGE_DEVICE;
+  private final Image  IMAGE_DEVICE_INCLUDED;
 
   // date/time format
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -1030,8 +1079,8 @@ l=x.depth;
   private Combo        widgetJobList;
   private Tree         widgetFileTree;
   private Tree         widgetDeviceTree;
-  private List         widgetIncludedPatterns;
-  private List         widgetExcludedPatterns;
+  private Table        widgetIncludeTable;
+  private List         widgetExcludeList;
   private Combo        widgetArchivePartSize;
   private Text         widgetCryptPublicKeyFileName;
   private Button       widgetCryptPublicKeyFileNameSelect;
@@ -1071,14 +1120,15 @@ l=x.depth;
   private WidgetVariable  waitFirstVolume         = new WidgetVariable(false);
 
   // variables
-  private     DirectoryInfoThread      directoryInfoThread;
-  private     boolean                  directoryInfoFlag = false;
-  private     HashMap<String,Integer>  jobIds            = new HashMap<String,Integer>();
-  private     String                   selectedJobName   = null;
-  private     int                      selectedJobId     = 0;
-  private     HashSet<String>          includedPatterns  = new HashSet<String>();
-  private     HashSet<String>          excludedPatterns  = new HashSet<String>();
-  private     LinkedList<ScheduleData> scheduleList      = new LinkedList<ScheduleData>();
+  private     DirectoryInfoThread       directoryInfoThread;
+  private     boolean                   directoryInfoFlag = false;
+  private     HashMap<String,Integer>   jobIds            = new HashMap<String,Integer>();
+  private     String                    selectedJobName   = null;
+  private     int                       selectedJobId     = 0;
+//  private     HashMap<String,DeviceTreeData> deviceHashMap     = new HashMap<String,DeviceTreeData>();
+  private     HashMap<String,EntryData> includeHashMap    = new HashMap<String,EntryData>();
+  private     HashSet<String>           excludeHashSet    = new HashSet<String>();
+  private     LinkedList<ScheduleData>  scheduleList      = new LinkedList<ScheduleData>();
 
 
   /** create jobs tab
@@ -1122,6 +1172,8 @@ l=x.depth;
     IMAGE_LINK               = Widgets.loadImage(display,"link.gif");
     IMAGE_LINK_INCLUDED      = Widgets.loadImage(display,"linkIncluded.gif");
     IMAGE_LINK_EXCLUDED      = Widgets.loadImage(display,"linkExcluded.gif");
+    IMAGE_DEVICE             = Widgets.loadImage(display,"device.gif");
+    IMAGE_DEVICE_INCLUDED    = Widgets.loadImage(display,"deviceIncluded.gif");
 
     // get cursors
     waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
@@ -1241,7 +1293,7 @@ l=x.depth;
         // file tree
         widgetFileTree = Widgets.newTree(tab,SWT.NONE);
         Widgets.layout(widgetFileTree,0,0,TableLayoutData.NSWE);
-        SelectionListener filesTreeColumnSelectionListener = new SelectionListener()
+        SelectionListener fileTreeColumnSelectionListener = new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
@@ -1257,13 +1309,13 @@ l=x.depth;
           }
         };
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Name",    SWT.LEFT, 390,true);
-        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
+        treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Type",    SWT.LEFT, 160,true);
-        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
+        treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Size",    SWT.RIGHT,100,true);
-        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
+        treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Modified",SWT.LEFT, 100,true);
-        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
+        treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -1280,8 +1332,8 @@ l=x.depth;
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                patternDelete(PatternTypes.INCLUDE,fileTreeData.name);
-                patternDelete(PatternTypes.EXCLUDE,fileTreeData.name);
+                includeDelete(fileTreeData.name);
+                excludeDelete(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE);      break;
@@ -1309,8 +1361,8 @@ l=x.depth;
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                patternNew(PatternTypes.INCLUDE,fileTreeData.name);
-                patternDelete(PatternTypes.EXCLUDE,fileTreeData.name);
+                includeNew(EntryTypes.FILE,fileTreeData.name);
+                excludeDelete(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
@@ -1338,8 +1390,8 @@ l=x.depth;
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                patternDelete(PatternTypes.INCLUDE,fileTreeData.name);
-                patternNew(PatternTypes.EXCLUDE,fileTreeData.name);
+                includeDelete(fileTreeData.name);
+                excludeNew(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
@@ -1395,9 +1447,9 @@ l=x.depth;
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // image tree
-        widgetDeviceTree = Widgets.newTree(tab,SWT.NONE);
+        widgetDeviceTree = Widgets.newTree(tab);
         Widgets.layout(widgetDeviceTree,0,0,TableLayoutData.NSWE);
-        SelectionListener filesTreeColumnSelectionListener = new SelectionListener()
+        SelectionListener deviceTreeColumnSelectionListener = new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
@@ -1412,10 +1464,10 @@ l=x.depth;
           {
           }
         };
-        treeColumn = Widgets.addTreeColumn(widgetDeviceTree,"Name",    SWT.LEFT, 390,true);
-        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
-        treeColumn = Widgets.addTreeColumn(widgetDeviceTree,"Size",    SWT.RIGHT,100,true);
-        treeColumn.addSelectionListener(filesTreeColumnSelectionListener);
+        treeColumn = Widgets.addTreeColumn(widgetDeviceTree,"Name",SWT.LEFT, 500,true);
+        treeColumn.addSelectionListener(deviceTreeColumnSelectionListener);
+        treeColumn = Widgets.addTreeColumn(widgetDeviceTree,"Size",SWT.RIGHT,100,false);
+        treeColumn.addSelectionListener(deviceTreeColumnSelectionListener);
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -1432,9 +1484,9 @@ l=x.depth;
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                patternDelete(PatternTypes.INCLUDE,deviceTreeData.name);
-                patternDelete(PatternTypes.EXCLUDE,deviceTreeData.name);
-                treeItem.setImage(IMAGE_FILE);
+                excludeDelete(deviceTreeData.name);
+                includeDelete(deviceTreeData.name);
+                treeItem.setImage(IMAGE_DEVICE);
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1452,47 +1504,10 @@ l=x.depth;
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                patternNew(PatternTypes.INCLUDE,deviceTreeData.name);
-                patternDelete(PatternTypes.EXCLUDE,deviceTreeData.name);
-                treeItem.setImage(IMAGE_FILE_INCLUDED);
+                includeNew(EntryTypes.IMAGE,deviceTreeData.name);
+                excludeDelete(deviceTreeData.name);
+                treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-          });
-
-          button = Widgets.newButton(composite,"Exclude");
-          Widgets.layout(button,0,2,TableLayoutData.WE);
-          button.addSelectionListener(new SelectionListener()
-          {
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button widget = (Button)selectionEvent.widget;
-              for (TreeItem treeItem : widgetDeviceTree.getSelection())
-              {
-                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                patternDelete(PatternTypes.INCLUDE,deviceTreeData.name);
-                patternNew(PatternTypes.EXCLUDE,deviceTreeData.name);
-                treeItem.setImage(IMAGE_FILE_EXCLUDED);
-              }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-          });
-
-          control = Widgets.newSpacer(composite);
-          Widgets.layout(control,0,3,TableLayoutData.NONE,0,0,30,0);
-
-          button = Widgets.newButton(composite,IMAGE_DIRECTORY_INCLUDED);
-          Widgets.layout(button,0,4,TableLayoutData.E,0,0,2,0);
-          button.addSelectionListener(new SelectionListener()
-          {
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button widget = (Button)selectionEvent.widget;
-              openIncludedDirectories();
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1505,11 +1520,14 @@ l=x.depth;
       tab.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
-        // included list
+        // included table
         label = Widgets.newLabel(tab,"Included:");
         Widgets.layout(label,0,0,TableLayoutData.NS);
-        widgetIncludedPatterns = Widgets.newList(tab);
-        Widgets.layout(widgetIncludedPatterns,0,1,TableLayoutData.NSWE);
+        widgetIncludeTable = Widgets.newTable(tab);
+        widgetIncludeTable.setHeaderVisible(false);
+        Widgets.addTableColumn(widgetIncludeTable,0,SWT.LEFT,20);
+        Widgets.addTableColumn(widgetIncludeTable,1,SWT.LEFT,0);
+        Widgets.layout(widgetIncludeTable,0,1,TableLayoutData.NSWE);
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -1524,7 +1542,7 @@ l=x.depth;
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                patternNew(PatternTypes.INCLUDE);
+                includeNew();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1541,7 +1559,7 @@ l=x.depth;
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                patternDelete(PatternTypes.INCLUDE);
+                includeDelete();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1553,8 +1571,8 @@ l=x.depth;
         // excluded list
         label = Widgets.newLabel(tab,"Excluded:");
         Widgets.layout(label,2,0,TableLayoutData.NS);
-        widgetExcludedPatterns = Widgets.newList(tab);
-        Widgets.layout(widgetExcludedPatterns,2,1,TableLayoutData.NSWE);
+        widgetExcludeList = Widgets.newList(tab);
+        Widgets.layout(widgetExcludeList,2,1,TableLayoutData.NSWE);
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -1569,7 +1587,7 @@ l=x.depth;
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                patternNew(PatternTypes.EXCLUDE);
+                excludeNew();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1586,7 +1604,7 @@ l=x.depth;
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                patternDelete(PatternTypes.EXCLUDE);
+                excludeDelete();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3477,7 +3495,8 @@ throw new Error("NYI");
     Widgets.setEnabled(widgetTabFolder,false);
 
     // add root devices
-    addRootDevices();
+    addDirectoryRootDevices();
+    addDevices();
 
     // update data
     updateJobList();
@@ -3566,8 +3585,8 @@ throw new Error("NYI");
   private void clearJobData()
   {
 // NYI: rest?
-    widgetIncludedPatterns.removeAll();
-    widgetExcludedPatterns.removeAll();
+    widgetIncludeTable.removeAll();
+    widgetExcludeList.removeAll();
   }
 
   /** update job data
@@ -3609,8 +3628,10 @@ throw new Error("NYI");
       ecc.set(BARServer.getBooleanOption(selectedJobId,"ecc"));
       waitFirstVolume.set(BARServer.getBooleanOption(selectedJobId,"wait-first-volume"));
 
-      updatePatternList(PatternTypes.INCLUDE);
-      updatePatternList(PatternTypes.EXCLUDE);
+      updateIncludeList();
+      updateExcludeList();
+      updateFileTreeImages();
+      updateDeviceImages();
     }
   }
 
@@ -4011,9 +4032,9 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** add root devices
+  /** add directorty root devices
    */
-  private void addRootDevices()
+  private void addDirectoryRootDevices()
   {
     TreeItem treeItem = Widgets.addTreeItem(widgetFileTree,new FileTreeData("/",FileTypes.DIRECTORY,"/"),true);
     treeItem.setText("/");
@@ -4023,7 +4044,7 @@ throw new Error("NYI");
       public void handleEvent(final Event event)
       {
         final TreeItem treeItem = (TreeItem)event.item;
-        updateFileTree(treeItem);
+        addFileTree(treeItem);
       }
     });
     widgetFileTree.addListener(SWT.Collapse,new Listener()
@@ -4110,8 +4131,10 @@ throw new Error("NYI");
   private void openIncludedDirectories()
   {
     // open all included directories
-    for (String pattern : widgetIncludedPatterns.getItems())
+    for (TableItem tableItem : widgetIncludeTable.getItems())
     {
+      String pattern = (String)tableItem.getData();
+
       TreeItem[] treeItems = widgetFileTree.getItems();
 
       StringBuffer name = new StringBuffer();
@@ -4169,7 +4192,7 @@ throw new Error("NYI");
   /** update file list of tree item
    * @param treeItem tree item to update
    */
-  private void updateFileTree(TreeItem treeItem)
+  private void addFileTree(TreeItem treeItem)
   {
     FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
     TreeItem     subTreeItem;
@@ -4202,9 +4225,9 @@ throw new Error("NYI");
 
           // add entry
           Image image;
-          if      (includedPatterns.contains(name))
+          if      (includeHashMap.containsKey(name))
             image = IMAGE_FILE_INCLUDED;
-          else if (excludedPatterns.contains(name))
+          else if (excludeHashSet.contains(name))
             image = IMAGE_FILE_EXCLUDED;
           else
             image = IMAGE_FILE;
@@ -4231,9 +4254,9 @@ throw new Error("NYI");
 
           // add entry
           Image   image;
-          if      (includedPatterns.contains(name))
+          if      (includeHashMap.containsKey(name))
             image = IMAGE_DIRECTORY_INCLUDED;
-          else if (excludedPatterns.contains(name))
+          else if (excludeHashSet.contains(name))
             image = IMAGE_DIRECTORY_EXCLUDED;
           else
             image = IMAGE_DIRECTORY;
@@ -4262,9 +4285,9 @@ throw new Error("NYI");
 
           // add entry
           Image image;
-          if      (includedPatterns.contains(name))
+          if      (includeHashMap.containsKey(name))
             image = IMAGE_LINK_INCLUDED;
-          else if (excludedPatterns.contains(name))
+          else if (excludeHashSet.contains(name))
             image = IMAGE_LINK_EXCLUDED;
           else
             image = IMAGE_LINK;
@@ -4405,76 +4428,181 @@ Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTree
     shell.setCursor(null);
   }
 
-  //-----------------------------------------------------------------------
-
-  /** add block devices
+  /** update file tree item images
+   * @param treeItem tree item to update
    */
-  private void addBlockDevices()
+  private void updateFileTreeImages(TreeItem treeItem)
   {
-    TreeItem treeItem = Widgets.addTreeItem(widgetDeviceTree,new FileTreeData("/",FileTypes.DIRECTORY,"/"),true);
-    treeItem.setText("/");
-    treeItem.setImage(IMAGE_DIRECTORY);
-    widgetDeviceTree.addListener(SWT.Expand,new Listener()
+    if (treeItem.getExpanded())
     {
-      public void handleEvent(final Event event)
+      for (TreeItem subTreeItem : treeItem.getItems())
       {
-        final TreeItem treeItem = (TreeItem)event.item;
-        updateFileTree(treeItem);
+        updateFileTreeImages(subTreeItem);
       }
-    });
-    widgetDeviceTree.addListener(SWT.Collapse,new Listener()
+    }
+    else
     {
-      public void handleEvent(final Event event)
+      FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+
+      Image image = null;
+      if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
       {
-        final TreeItem treeItem = (TreeItem)event.item;
-        treeItem.removeAll();
-        new TreeItem(treeItem,SWT.NONE);
-      }
-    });
-    widgetDeviceTree.addMouseListener(new MouseListener()
-    {
-      public void mouseDoubleClick(final MouseEvent mouseEvent)
-      {
-        TreeItem treeItem = widgetDeviceTree.getItem(new Point(mouseEvent.x,mouseEvent.y));
-        if (treeItem != null)
+        switch (fileTreeData.type)
         {
-          FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-          if (fileTreeData.type == FileTypes.DIRECTORY)
-          {
-            Event treeEvent = new Event();
-            treeEvent.item = treeItem;
-            if (treeItem.getExpanded())
-            {
-              widgetDeviceTree.notifyListeners(SWT.Collapse,treeEvent);
-              treeItem.setExpanded(false);
-            }
-            else
-            {
-              widgetDeviceTree.notifyListeners(SWT.Expand,treeEvent);
-              treeItem.setExpanded(true);
-            }
-          }
+          case FILE:      image = IMAGE_FILE_INCLUDED;      break;
+          case DIRECTORY: image = IMAGE_DIRECTORY_INCLUDED; break;
+          case LINK:      image = IMAGE_LINK_INCLUDED;      break;
+          case DEVICE:    image = IMAGE_FILE_INCLUDED;      break;
+          case SPECIAL:   image = IMAGE_FILE_INCLUDED;      break;
+          case FIFO:      image = IMAGE_FILE_INCLUDED;      break;
+          case SOCKET:    image = IMAGE_FILE_INCLUDED;      break;
         }
       }
-
-      public void mouseDown(final MouseEvent mouseEvent)
+      else if (excludeHashSet.contains(fileTreeData.name))
       {
+        switch (fileTreeData.type)
+        {
+          case FILE:      image = IMAGE_FILE_EXCLUDED;      break;
+          case DIRECTORY: image = IMAGE_DIRECTORY_EXCLUDED; break;
+          case LINK:      image = IMAGE_LINK_EXCLUDED;      break;
+          case DEVICE:    image = IMAGE_FILE_EXCLUDED;      break;
+          case SPECIAL:   image = IMAGE_FILE_EXCLUDED;      break;
+          case FIFO:      image = IMAGE_FILE_EXCLUDED;      break;
+          case SOCKET:    image = IMAGE_FILE_EXCLUDED;      break;
+        }
       }
-
-      public void mouseUp(final MouseEvent mouseEvent)
+      else
       {
+        switch (fileTreeData.type)
+        {
+          case FILE:      image = IMAGE_FILE;      break;
+          case DIRECTORY: image = IMAGE_DIRECTORY; break;
+          case LINK:      image = IMAGE_LINK;      break;
+          case DEVICE:    image = IMAGE_FILE;      break;
+          case SPECIAL:   image = IMAGE_FILE;      break;
+          case FIFO:      image = IMAGE_FILE;      break;
+          case SOCKET:    image = IMAGE_FILE;      break;
+        }
       }
-    });
+      treeItem.setImage(image);
+    }
+  }
+
+  /** update all file tree item images
+   */
+  private void updateFileTreeImages()
+  {
+    for (TreeItem treeItem : widgetFileTree.getItems())
+    {
+      updateFileTreeImages(treeItem);
+    }
   }
 
   //-----------------------------------------------------------------------
+
+  /** add devices
+   */
+  private void addDevices()
+  {
+    ArrayList<String> deviceListResult = new ArrayList<String>();
+    int errorCode = BARServer.executeCommand("DEVICE_LIST",deviceListResult);
+    if (errorCode == Errors.NONE)
+    {
+      for (String line : deviceListResult)
+      {
+        Object data[] = new Object[3];
+        if      (StringParser.parse(line,"%ld %d %S",data,StringParser.QUOTE_CHARS))
+        {
+          /* get data
+             format:
+               size
+               mountedFlag
+               name
+          */
+          long    size        = (Long)data[0];
+          boolean mountedFlag = ((Integer)data[1] == 1);
+          String  name        = (String)data[2];
+
+          // create device data
+          DeviceTreeData deviceTreeData = new DeviceTreeData(name,size);
+
+          TreeItem treeItem = Widgets.addTreeItem(widgetDeviceTree,findDeviceIndex(widgetDeviceTree,deviceTreeData),deviceTreeData,false);
+          treeItem.setText(0,name);
+          treeItem.setText(1,Units.formatByteSize(size));
+          treeItem.setImage(IMAGE_DEVICE);
+        }
+      }
+    }
+  }
+
+  /** find index for insert of tree item in sorted list of tree items
+   * @param treeItem tree item
+   * @param fileTreeData data of tree item
+   * @return index in tree item
+   */
+  private int findDeviceIndex(Tree tree, DeviceTreeData deviceTreeData)
+  {
+    TreeItem                 treeItems[]              = tree.getItems();
+    DeviceTreeDataComparator deviceTreeDataComparator = new DeviceTreeDataComparator(widgetDeviceTree);
+
+    int index = 0;
+    while (   (index < treeItems.length)
+           && (deviceTreeDataComparator.compare(deviceTreeData,(DeviceTreeData)treeItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
+
+  /** update images in device tree
+   */
+  private void updateDeviceImages()
+  {
+    for (TreeItem treeItem : widgetDeviceTree.getItems())
+    {
+      DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
+
+      Image image;
+      if      (includeHashMap.containsKey(deviceTreeData.name) && !excludeHashSet.contains(deviceTreeData.name))
+        image = IMAGE_DEVICE_INCLUDED;
+      else if (excludeHashSet.contains(deviceTreeData.name))
+        image = IMAGE_DEVICE;
+      else
+        image = IMAGE_DEVICE;
+      treeItem.setImage(image);
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** find index for insert of entry in sorted table
+   * @param table table
+   * @param pattern pattern to insert
+   * @return index in table
+   */
+  private int findIncludeIndex(Table table, String pattern)
+  {
+    TableItem tableItems[] = table.getItems();
+
+    int index = 0;
+    while (   (index < tableItems.length)
+           && (pattern.compareTo(((EntryData)tableItems[index].getData()).pattern) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
 
   /** find index for insert of pattern in sorted pattern list
    * @param list list
    * @param pattern pattern to insert
    * @return index in list
    */
-  private int findPatternsIndex(List list, String pattern)
+  private int findExcludeIndex(List list, String pattern)
   {
     String patterns[] = list.getItems();
 
@@ -4489,35 +4617,66 @@ Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTree
     return index;
   }
 
-  /** update pattern list
-   * @param patternType pattern type
+  /** update include list
    */
-  private void updatePatternList(PatternTypes patternType)
+  private void updateIncludeList()
   {
     assert selectedJobId != 0;
 
     ArrayList<String> result = new ArrayList<String>();
-    switch (patternType)
-    {
-      case INCLUDE:
-        BARServer.executeCommand("INCLUDE_PATTERNS_LIST "+selectedJobId,result);
-        break;
-      case EXCLUDE:
-        BARServer.executeCommand("EXCLUDE_PATTERNS_LIST "+selectedJobId,result);
-        break;
-    }
+    BARServer.executeCommand("INCLUDE_LIST "+selectedJobId,result);
 
-    switch (patternType)
+    includeHashMap.clear();
+    widgetIncludeTable.removeAll();
+    for (String line : result)
     {
-      case INCLUDE:
-        includedPatterns.clear();
-        widgetIncludedPatterns.removeAll();
-        break;
-      case EXCLUDE:
-        excludedPatterns.clear();
-        widgetExcludedPatterns.removeAll();
-        break;
+      Object[] data = new Object[3];
+      if (StringParser.parse(line,"%{TabJobs.EntryTypes}s %{TabJobs.PatternTypes}s %S",data,StringParser.QUOTE_CHARS))
+      {
+        // get data
+        EntryTypes   entryType   = (EntryTypes)data[0];
+        PatternTypes patternType = (PatternTypes)data[1];
+        String       pattern     = (String)data[2];
+
+        if (!pattern.equals(""))
+        {
+          EntryData entryData = new EntryData(entryType,pattern);
+
+/*
+          // add entry
+          Image image;
+          if      (includeHashMap.containsKey(name))
+            image = IMAGE_DEVICE_INCLUDED;
+          else if (excludeHashSet.contains(name))
+            image = IMAGE_FILE_EXCLUDED;
+          else
+            image = IMAGE_DEVICE;
+Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
+*/
+
+          includeHashMap.put(pattern,entryData);
+          Widgets.insertTableEntry(widgetIncludeTable,
+                                   findIncludeIndex(widgetIncludeTable,pattern),
+                                   (Object)entryData,
+                                   entryData.getImage(),
+                                   entryData.pattern
+                                  );
+        }
+      }
     }
+  }
+
+  /** update exclude list
+   */
+  private void updateExcludeList()
+  {
+    assert selectedJobId != 0;
+
+    ArrayList<String> result = new ArrayList<String>();
+    BARServer.executeCommand("EXCLUDE_LIST "+selectedJobId,result);
+
+    excludeHashSet.clear();
+    widgetExcludeList.removeAll();
 
     for (String line : result)
     {
@@ -4530,26 +4689,138 @@ Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTree
 
         if (!pattern.equals(""))
         {
-          switch (patternType)
-          {
-            case INCLUDE:
-              includedPatterns.add(pattern);
-              widgetIncludedPatterns.add(pattern,findPatternsIndex(widgetIncludedPatterns,pattern));
-              break;
-            case EXCLUDE:
-              excludedPatterns.add(pattern);
-              widgetExcludedPatterns.add(pattern,findPatternsIndex(widgetExcludedPatterns,pattern));
-              break;
-          }
+           excludeHashSet.add(pattern);
+           widgetExcludeList.add(pattern,findExcludeIndex(widgetExcludeList,pattern));
         }
       }
     }
   }
 
-  /** add new include/exclude pattern
-   * @param patternType pattern type
+  /** edit include entry
+   * @param entryType entry type
+   * @param pattern pattern
+   * @param title dialog title
+   * @param buttonText add button text
    */
-  private boolean patternEdit(final PatternTypes patternType, final String pattern[], String title, String buttonText)
+  private boolean includeEdit(final EntryTypes[] entryType, final String[] pattern, String title, String buttonText)
+  {
+    Composite composite,subComposite;
+    Label     label;
+    Button    button;
+
+    assert selectedJobId != 0;
+
+    // create dialog
+    final Shell dialog = Dialogs.open(shell,title,300,70,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Text   widgetPattern;
+    final Button widgetAdd;
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    {
+      label = Widgets.newLabel(composite,"Pattern:");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      widgetPattern = Widgets.newText(composite);
+      Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
+
+      label = Widgets.newLabel(composite,"Type:");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,0.0));
+      Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+      {
+        button = Widgets.newRadio(subComposite,"file");
+        button.setSelection(true);
+        Widgets.layout(button,0,0,TableLayoutData.W);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Button widget = (Button)selectionEvent.widget;
+            entryType[0] = EntryTypes.FILE;
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        button = Widgets.newRadio(subComposite,"image");
+        button.setSelection(false);
+        Widgets.layout(button,0,1,TableLayoutData.W);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Button widget = (Button)selectionEvent.widget;
+            entryType[0] = EntryTypes.IMAGE;
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+      }
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    {
+      widgetAdd = Widgets.newButton(composite,buttonText);
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,"Cancel");
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,false);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    // add selection listeners
+    widgetPattern.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetAdd.forceFocus();
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+    });
+    widgetAdd.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget = (Button)selectionEvent.widget;
+        pattern[0] = widgetPattern.getText().trim();
+        Dialogs.close(dialog,true);
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+
+    return (Boolean)Dialogs.run(dialog,false) && !pattern[0].equals("");
+  }
+
+  /** edit exclude pattern
+   * @param pattern pattern
+   * @param title dialog title
+   * @param buttonText add button text
+   */
+  private boolean excludeEdit(final String[] pattern, String title, String buttonText)
   {
     Composite composite;
     Label     label;
@@ -4622,126 +4893,146 @@ throw new Error("NYI");
       }
     });
 
-    return (Boolean)Dialogs.run(dialog,false);
+    return (Boolean)Dialogs.run(dialog,false) && !pattern[0].equals("");
   }
 
-  /** add new include/exclude pattern
-   * @param patternType pattern type
+  /** add new include entry
+   * @param entryType entry type
    * @param pattern pattern to add to included/exclude list
    */
-  private void patternNew(PatternTypes patternType, String pattern)
+  private void includeNew(EntryTypes entryType, String pattern)
   {
     assert selectedJobId != 0;
 
-    switch (patternType)
-    {
-      case INCLUDE:
-        {
-          BARServer.executeCommand("INCLUDE_PATTERNS_ADD "+selectedJobId+" GLOB "+StringParser.escape(pattern));
+    EntryData entryData = new EntryData(entryType,pattern);
 
-          includedPatterns.add(pattern);
-          widgetIncludedPatterns.add(pattern,findPatternsIndex(widgetIncludedPatterns,pattern));
-        }
-        break;
-      case EXCLUDE:
-        {
-          BARServer.executeCommand("EXCLUDE_PATTERNS_ADD "+selectedJobId+" GLOB "+StringParser.escape(pattern));
+    BARServer.executeCommand("INCLUDE_ADD "+selectedJobId+" "+entryType.toString()+" GLOB "+StringParser.escape(entryData.pattern));
 
-          excludedPatterns.add(pattern);
-          widgetExcludedPatterns.add(pattern,findPatternsIndex(widgetExcludedPatterns,pattern));
-        }
-        break;
-    }
+    includeHashMap.put(pattern,entryData);
+    Widgets.insertTableEntry(widgetIncludeTable,
+                             findIncludeIndex(widgetIncludeTable,pattern),
+                             (Object)entryData,
+                             entryData.getImage(),
+                             entryData.pattern
+                            );
+
+    updateFileTreeImages();
+    updateDeviceImages();
   }
 
-  /** add new include/exclude pattern
-   * @param patternType pattern type
+  /** add new exclude pattern
    * @param pattern pattern to add to included/exclude list
    */
-  private void patternNew(PatternTypes patternType)
+  private void excludeNew(String pattern)
   {
     assert selectedJobId != 0;
 
-    String title = null;
-    switch (patternType)
+    BARServer.executeCommand("EXCLUDE_ADD "+selectedJobId+" GLOB "+StringParser.escape(pattern));
+
+    excludeHashSet.add(pattern);
+    widgetExcludeList.add(pattern,findExcludeIndex(widgetExcludeList,pattern));
+
+    updateFileTreeImages();
+    updateDeviceImages();
+  }
+
+  /** add new include entry
+   */
+  private void includeNew()
+  {
+    assert selectedJobId != 0;
+
+    EntryTypes[] entryType = new EntryTypes[]{EntryTypes.FILE};
+    String[]     pattern   = new String[1];
+    if (includeEdit(entryType,pattern,"New include pattern","Add"))
     {
-      case INCLUDE:
-        title = "New include pattern";
-        break;
-      case EXCLUDE:
-        title = "New exclude pattern";
-        break;
+      includeNew(entryType[0],pattern[0]);
     }
+  }
+
+  /** add new exclude pattern
+   */
+  private void excludeNew()
+  {
+    assert selectedJobId != 0;
+
     String[] pattern = new String[1];
-    if (patternEdit(patternType,pattern,title,"Add"))
+    if (excludeEdit(pattern,"New exclude pattern","Add"))
     {
-      patternNew(patternType,pattern[0]);
+      excludeNew(pattern[0]);
     }
   }
 
-  /** delete include/exclude pattern
-   * @param patternType pattern type
+  /** delete include entry
    * @param pattern pattern to remove from include/exclude list
    */
-  private void patternDelete(PatternTypes patternType, String pattern)
+  private void includeDelete(String pattern)
   {
     assert selectedJobId != 0;
 
-    switch (patternType)
+    includeHashMap.remove(pattern);
+
+    BARServer.executeCommand("INCLUDE_CLEAR "+selectedJobId);
+    widgetIncludeTable.removeAll();
+    for (EntryData entryData : includeHashMap.values())
     {
-      case INCLUDE:
-        {
-          includedPatterns.remove(pattern);
+      BARServer.executeCommand("INCLUDE_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringParser.escape(entryData.pattern));
+      Widgets.insertTableEntry(widgetIncludeTable,
+                               findIncludeIndex(widgetIncludeTable,entryData.pattern),
+                               (Object)entryData,
+                               entryData.getImage(),
+                               entryData.pattern
+                              );
+    }
 
-          BARServer.executeCommand("INCLUDE_PATTERNS_CLEAR "+selectedJobId);
-          widgetIncludedPatterns.removeAll();
-          for (String s : includedPatterns)
-          {
-            BARServer.executeCommand("INCLUDE_PATTERNS_ADD "+selectedJobId+" GLOB "+StringParser.escape(s));
-            widgetIncludedPatterns.add(s,findPatternsIndex(widgetIncludedPatterns,s));
-          }
-        }
-        break;
-      case EXCLUDE:
-        {
-          excludedPatterns.remove(pattern);
+    updateFileTreeImages();
+    updateDeviceImages();
+  }
 
-          BARServer.executeCommand("EXCLUDE_PATTERNS_CLEAR "+selectedJobId);
-          widgetExcludedPatterns.removeAll();
-          for (String s : excludedPatterns)
-          {
-            BARServer.executeCommand("EXCLUDE_PATTERNS_ADD "+selectedJobId+" GLOB "+StringParser.escape(s));
-            widgetExcludedPatterns.add(s,findPatternsIndex(widgetExcludedPatterns,s));
-          }
-        }
-        break;
+  /** delete exclude pattern
+   * @param pattern pattern to remove from include/exclude list
+   */
+  private void excludeDelete(String pattern)
+  {
+    assert selectedJobId != 0;
+
+    excludeHashSet.remove(pattern);
+
+    BARServer.executeCommand("EXCLUDE_CLEAR "+selectedJobId);
+    widgetExcludeList.removeAll();
+    for (String s : excludeHashSet)
+    {
+      BARServer.executeCommand("EXCLUDE_ADD "+selectedJobId+" GLOB "+StringParser.escape(s));
+      widgetExcludeList.add(s,findExcludeIndex(widgetExcludeList,s));
+    }
+
+    updateFileTreeImages();
+    updateDeviceImages();
+  }
+
+  /** delete selected include/exclude pattern
+   */
+  private void includeDelete()
+  {
+    assert selectedJobId != 0;
+
+    int index = widgetIncludeTable.getSelectionIndex();
+    if (index >= 0)
+    { 
+      includeDelete(((EntryData)widgetIncludeTable.getItem(index).getData()).pattern);
     }
   }
 
   /** delete selected include/exclude pattern
-   * @param patternType pattern type
    */
-  private void patternDelete(PatternTypes patternType)
+  private void excludeDelete()
   {
     assert selectedJobId != 0;
 
-    int index;
-    String pattern = null;
-    switch (patternType)
+    int index = widgetExcludeList.getSelectionIndex();
+    if (index >= 0)
     {
-      case INCLUDE:
-        index = widgetIncludedPatterns.getSelectionIndex();
-        if (index >= 0) pattern = widgetIncludedPatterns.getItem(index);
-        break;
-      case EXCLUDE:
-        index = widgetExcludedPatterns.getSelectionIndex();
-        if (index >= 0) pattern = widgetExcludedPatterns.getItem(index);
-        break;
-    }
-
-    if (pattern != null)
-    {
-      patternDelete(patternType,pattern);
+      excludeDelete(widgetExcludeList.getItem(index));
     }
   }
 

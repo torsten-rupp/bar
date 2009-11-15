@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -1008,6 +1008,7 @@ public class BARControl
       // connect to server
       LoginData loginData = new LoginData(serverName,serverPort,serverTLSPort);
       boolean connectOkFlag = false;
+loginData.password="heinz";
       if ((loginData.serverName != null) && !loginData.serverName.equals("") && (loginData.password != null) && !loginData.password.equals("") && !loginDialogFlag)
       {
         // connect to server with preset data
