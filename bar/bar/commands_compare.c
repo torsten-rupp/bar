@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_compare.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive compare function
 * Systems : all
@@ -28,6 +28,8 @@
 #include "stringlists.h"
 
 #include "errors.h"
+#include "patterns.h"
+#include "entrylists.h"
 #include "patternlists.h"
 #include "files.h"
 #include "archive.h"
@@ -88,7 +90,7 @@ LOCAL ulong compare(const void *p0, const void *p1, ulong length)
 /*---------------------------------------------------------------------*/
 
 Errors Command_compare(StringList                      *archiveFileNameList,
-                       PatternList                     *includePatternList,
+                       EntryList                       *includeEntryList,
                        PatternList                     *excludePatternList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
@@ -106,7 +108,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
   FragmentNode      *fragmentNode;
 
   assert(archiveFileNameList != NULL);
-  assert(includePatternList != NULL);
+  assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
@@ -208,7 +210,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -427,7 +429,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,imageName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -626,7 +628,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -723,7 +725,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -860,7 +862,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {

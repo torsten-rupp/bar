@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -33,6 +33,7 @@
 #include "errors.h"
 #include "misc.h"
 #include "patterns.h"
+#include "entrylists.h"
 #include "patternlists.h"
 #include "files.h"
 #include "archive.h"
@@ -342,7 +343,6 @@ LOCAL void printImageInfo(const String       archiveFileName,
                           uint64             blockCount
                          )
 {
-  String dateTime;
   double ratio;
   String cryptString;
 
@@ -382,8 +382,6 @@ LOCAL void printImageInfo(const String       archiveFileName,
            String_cString(imageName)
           );
   }
-
-  String_delete(dateTime);
 }
 
 /***********************************************************************\
@@ -547,7 +545,7 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
       }
       else
       {
-        printf("BLOCK                                     %s\n",
+        printf("BLOCK                                      %s\n",
                String_cString(fileName)
               );
       }
@@ -581,7 +579,7 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
       }
       else
       {
-        printf("SOCKET                                    %s\n",
+        printf("SOCKET                                     %s\n",
                String_cString(fileName)
               );
       }
@@ -1087,7 +1085,7 @@ LOCAL void printList(void)
 /*---------------------------------------------------------------------*/
 
 Errors Command_list(StringList                      *archiveFileNameList,
-                    PatternList                     *includePatternList,
+                    EntryList                       *includeEntryList,
                     PatternList                     *excludePatternList,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
@@ -1106,7 +1104,7 @@ bool         remoteBarFlag;
   SocketHandle socketHandle;
 
   assert(archiveFileNameList != NULL);
-  assert(includePatternList != NULL);
+  assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
@@ -1208,7 +1206,7 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                  if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                       && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
@@ -1289,7 +1287,7 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includePatternList) || PatternList_match(includePatternList,imageName,PATTERN_MATCH_MODE_EXACT))
+                  if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
                       && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
@@ -1364,7 +1362,7 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includePatternList) || PatternList_match(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                  if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                       && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
@@ -1431,7 +1429,7 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includePatternList) || PatternList_match(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                  if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                       && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
@@ -1497,7 +1495,7 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                  if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                       && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
@@ -1727,7 +1725,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                                    )
                       )
               {
-                if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+                if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                     && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
@@ -1783,7 +1781,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                                    )
                       )
               {
-                if (   (List_empty(includePatternList) || PatternList_match(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                     && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
@@ -1828,7 +1826,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                                    )
                       )
               {
-                if (   (List_empty(includePatternList) || PatternList_match(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                     && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
@@ -1877,7 +1875,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                                    )
                       )
               {
-                if (   (List_empty(includePatternList) || PatternList_match(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+                if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                     && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {

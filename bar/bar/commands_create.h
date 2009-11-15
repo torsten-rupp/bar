@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "bar.h"
+#include "entrylists.h"
 #include "patternlists.h"
 #include "compress.h"
 #include "crypt.h"
@@ -29,12 +30,6 @@
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
-/* create types */
-typedef enum
-{
-  CREATE_MODE_FILES,
-  CREATE_MODE_IMAGES,
-} CreateModes;
 
 /* status info data */
 typedef struct
@@ -79,10 +74,9 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 /***********************************************************************\
 * Name   : Command_create
 * Purpose: create archive
-* Input  : createMode                       - create mode
-*          archiveFileName                  - archive file name
-*          includeList                      - include list
-*          excludeList                      - exclude list
+* Input  : storageName                      - storage name
+*          includeEntryList                 - include entry list
+*          excludePatternList               - exclude pattern list
 *          jobOptions                       - job options
 *          archiveType                      - archive type; see
 *                                             ArchiveTypes (normal/full/
@@ -106,9 +100,8 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_create(CreateModes                     createMode,
-                      const char                      *archiveFileName,
-                      PatternList                     *includePatternList,
+Errors Command_create(const char                      *storageName,
+                      EntryList                       *includeEntryList,
                       PatternList                     *excludePatternList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,

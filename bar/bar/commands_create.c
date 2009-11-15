@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -33,6 +33,7 @@
 
 #include "errors.h"
 #include "patterns.h"
+#include "entrylists.h"
 #include "patternlists.h"
 #include "files.h"
 #include "devices.h"
@@ -79,9 +80,8 @@ typedef struct
 /* create status info  */
 typedef struct
 {
-  CreateModes                 createMode;
   String                      storageName;
-  PatternList                 *includePatternList;
+  EntryList                   *includeEntryList;
   PatternList                 *excludePatternList;
   const JobOptions            *jobOptions;
   ArchiveTypes                archiveType;                        // archive type to create
@@ -93,7 +93,7 @@ typedef struct
   String                      archiveFileName;                    // archive file name
   time_t                      startTime;                          // start time [ms] (unix time)
 
-  MsgQueue                    fileMsgQueue;                       // queue with files to store
+  MsgQueue                    entryMsgQueue;                      // queue with entries to store
 
   Thread                      collectorSumThread;                 // files collector sum thread id
   bool                        collectorSumThreadExitFlag;
@@ -116,12 +116,13 @@ typedef struct
   CreateStatusInfo            statusInfo;                         // status info
 } CreateInfo;
 
-/* file message, send from collector thread -> main */
+/* entry message, send from collector thread -> main */
 typedef struct
 {
-  String    fileName;
-  FileTypes fileType;
-} FileMsg;
+  EntryTypes entryType;
+  String     name;
+  FileTypes  fileType;
+} EntryMsg;
 
 /* storage message, send from main -> storage thread */
 typedef struct
@@ -527,21 +528,21 @@ LOCAL void updateStorageStatusInfo(CreateInfo              *createInfo,
 /***********************************************************************\
 * Name   : checkIsIncluded
 * Purpose: check if filename is included
-* Input  : includePatternNode - include pattern node
-*          fileName           - file name
+* Input  : includeEntryNode - include entry node
+*          fileName         - file name
 * Output : -
 * Return : TRUE if excluded, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool checkIsIncluded(PatternNode *includePatternNode,
-                           String      fileName
+LOCAL bool checkIsIncluded(EntryNode *includeEntryNode,
+                           String    fileName
                           )
 {
-  assert(includePatternNode != NULL);
+  assert(includeEntryNode != NULL);
   assert(fileName != NULL);
 
-  return Pattern_match(&includePatternNode->pattern,fileName,PATTERN_MATCH_MODE_BEGIN);
+  return Pattern_match(&includeEntryNode->pattern,fileName,PATTERN_MATCH_MODE_BEGIN);
 }
 
 /***********************************************************************\
@@ -565,79 +566,85 @@ LOCAL bool checkIsExcluded(PatternList *excludePatternList,
 }
 
 /***********************************************************************\
-* Name   : appendToFileList
-* Purpose: append a filename to filename list
-* Input  : fileMsgQueue - file message queue
-*          fileName     - file name (will be copied!)
-*          fileType     - file type
+* Name   : appendToEntryList
+* Purpose: append to entry list
+* Input  : entryMsgQueue - entry message queue
+*          entryType     - entry type
+*          name          - name (will be copied!)
+*          fileType      - file type
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendToFileList(MsgQueue  *fileMsgQueue,
-                            String    fileName,
-                            FileTypes fileType
-                           )
+LOCAL void appendToEntryList(MsgQueue   *entryMsgQueue,
+                             EntryTypes entryType,
+                             String     name,
+                             FileTypes  fileType
+                            )
 {
-  FileMsg fileMsg;
+  EntryMsg entryMsg;
 
-  assert(fileMsgQueue != NULL);
-  assert(fileName != NULL);
+  assert(entryMsgQueue != NULL);
+  assert(name != NULL);
 
   /* init */
-  fileMsg.fileName = String_duplicate(fileName);
-  fileMsg.fileType = fileType;
+  entryMsg.entryType = entryType;
+  entryMsg.name      = String_duplicate(name);
+  entryMsg.fileType  = fileType;
 
   /* put into message queue */
-  MsgQueue_put(fileMsgQueue,&fileMsg,sizeof(fileMsg));
+  MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg));
 }
 
 /***********************************************************************\
-* Name   : freeFileMsg
+* Name   : freeEntryMsg
 * Purpose: free file msg
-* Input  : fileMsg - file message
+* Input  : entryMsg - entry message
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeFileMsg(FileMsg *fileMsg, void *userData)
+LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 {
-  assert(fileMsg != NULL);
+  assert(entryMsg != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(fileMsg->fileName);
+  String_delete(entryMsg->name);
 }
 
 /***********************************************************************\
-* Name   : getNextFile
+* Name   : getNextEntry
 * Purpose: get next file from list of files to pack
-* Input  : fileMsgQueue - file message queue
-           fileName - file name variable
-* Output : fileName - file name
-*          fileType - file type
-* Return : TRUE if file available, FALSE otherwise
+* Input  : entryMsgQueue - entry message queue
+* Output : entryType - entry type
+*          fileName  - file name
+*          fileType  - file type
+* Return : TRUE if entry available, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool getNextFile(MsgQueue  *fileMsgQueue,
-                       String    fileName,
-                       FileTypes *fileType
-                      )
+LOCAL bool getNextEntry(MsgQueue   *entryMsgQueue,
+                        EntryTypes *entryType,
+                        String     name,
+                        FileTypes  *fileType
+                       )
 {
-  FileMsg fileMsg;
+  EntryMsg entryMsg;
 
-  assert(fileName != NULL);
+  assert(entryMsgQueue != NULL);
+  assert(name != NULL);
   assert(fileType != NULL);
 
-  if (MsgQueue_get(fileMsgQueue,&fileMsg,NULL,sizeof(fileMsg)))
+  if (MsgQueue_get(entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg)))
   {
-    String_set(fileName,fileMsg.fileName);
-    (*fileType) = fileMsg.fileType;
+    (*entryType) = entryMsg.entryType;
+    String_set(name,entryMsg.name);
+    (*fileType)  = entryMsg.fileType;
 
-    String_delete(fileMsg.fileName);
+    String_delete(entryMsg.name);
 
     return TRUE;
   }
@@ -995,7 +1002,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
 {
   StringList          nameList;
   String              name;
-  PatternNode         *includePatternNode;
+  EntryNode           *includeEntryNode;
   StringTokenizer     fileNameTokenizer;
   String              basePath;
   String              string;
@@ -1003,20 +1010,21 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
   String              fileName;
   FileInfo            fileInfo;
   DirectoryListHandle directoryListHandle;
+  DeviceInfo          deviceInfo;
 
   assert(createInfo != NULL);
-  assert(createInfo->includePatternList != NULL);
+  assert(createInfo->includeEntryList != NULL);
   assert(createInfo->excludePatternList != NULL);
   assert(createInfo->jobOptions != NULL);
 
   StringList_init(&nameList);
   name = String_new();
 
-  includePatternNode = createInfo->includePatternList->head;
+  includeEntryNode = createInfo->includeEntryList->head;
   while (   !createInfo->collectorSumThreadExitFlag
          && (createInfo->failError == ERROR_NONE)
          && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-         && (includePatternNode != NULL)
+         && (includeEntryNode != NULL)
         )
   {
     /* pause */
@@ -1027,7 +1035,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
 
     /* find base path */
     basePath = String_new();
-    File_initSplitFileName(&fileNameTokenizer,includePatternNode->string);
+    File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
     if (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
     {
       if (String_length(string) > 0)
@@ -1070,7 +1078,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
       }
 
       if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
-          || (   checkIsIncluded(includePatternNode,name)
+          || (   checkIsIncluded(includeEntryNode,name)
               && !checkIsExcluded(createInfo->excludePatternList,name)
              )
          )
@@ -1078,9 +1086,9 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
         switch (fileInfo.type)
         {
           case FILE_TYPE_FILE:
-            switch (createInfo->createMode)
+            switch (includeEntryNode->type)
             {
-              case CREATE_MODE_FILES:
+              case ENTRY_TYPE_FILE:
                 if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                 {
                   createInfo->statusInfo.totalFiles++;
@@ -1088,15 +1096,15 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                   updateStatusInfo(createInfo);
                 }
                 break;
-              case CREATE_MODE_IMAGES:
+              case ENTRY_TYPE_IMAGE:
                 break;
             }
             break;
           case FILE_TYPE_DIRECTORY:
-            switch (createInfo->createMode)
+            switch (includeEntryNode->type)
             {
-              case CREATE_MODE_FILES:
-                if (   checkIsIncluded(includePatternNode,name)
+              case ENTRY_TYPE_FILE:
+                if (   checkIsIncluded(includeEntryNode,name)
                     && !checkIsExcluded(createInfo->excludePatternList,name)
                    )
                 {
@@ -1107,7 +1115,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                   }
                 }
                 break;
-              case CREATE_MODE_IMAGES:
+              case ENTRY_TYPE_IMAGE:
                 break;
             }
 
@@ -1136,7 +1144,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                   continue;
                 }
 
-                if (   checkIsIncluded(includePatternNode,fileName)
+                if (   checkIsIncluded(includeEntryNode,fileName)
                     && !checkIsExcluded(createInfo->excludePatternList,fileName)
                    )
                 {
@@ -1150,9 +1158,9 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                   switch (fileInfo.type)
                   {
                     case FILE_TYPE_FILE:
-                      switch (createInfo->createMode)
+                      switch (includeEntryNode->type)
                       {
-                        case CREATE_MODE_FILES:
+                        case ENTRY_TYPE_FILE:
                           if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                           {
                             createInfo->statusInfo.totalFiles++;
@@ -1160,7 +1168,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                             updateStatusInfo(createInfo);
                           }
                           break;
-                        case CREATE_MODE_IMAGES:
+                        case ENTRY_TYPE_IMAGE:
                           break;
                       }
                       break;
@@ -1169,27 +1177,27 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                       StringList_append(&nameList,fileName);
                       break;
                     case FILE_TYPE_LINK:
-                      switch (createInfo->createMode)
+                      switch (includeEntryNode->type)
                       {
-                        case CREATE_MODE_FILES:
+                        case ENTRY_TYPE_FILE:
                           if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                           {
                             createInfo->statusInfo.totalFiles++;
                             updateStatusInfo(createInfo);
                           }
                           break;
-                        case CREATE_MODE_IMAGES:
+                        case ENTRY_TYPE_IMAGE:
                           break;
                       }
                       break;
                     case FILE_TYPE_SPECIAL:
-                      switch (createInfo->createMode)
+                      switch (includeEntryNode->type)
                       {
-                        case CREATE_MODE_FILES:
+                        case ENTRY_TYPE_FILE:
                           if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                           {
                             createInfo->statusInfo.totalFiles++;
-                            if (   (createInfo->createMode == CREATE_MODE_IMAGES)
+                            if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
                                 && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                 && (fileInfo.size >= 0L)
                                )
@@ -1199,7 +1207,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                             updateStatusInfo(createInfo);
                           }
                           break;
-                        case CREATE_MODE_IMAGES:
+                        case ENTRY_TYPE_IMAGE:
                           if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                           {
                             createInfo->statusInfo.totalFiles++;
@@ -1221,32 +1229,40 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
             }
             break;
           case FILE_TYPE_LINK:
-            switch (createInfo->createMode)
+            switch (includeEntryNode->type)
             {
-              case CREATE_MODE_FILES:
+              case ENTRY_TYPE_FILE:
                 if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                 {
                   createInfo->statusInfo.totalFiles++;
                   updateStatusInfo(createInfo);
                 }
                 break;
-              case CREATE_MODE_IMAGES:
+              case ENTRY_TYPE_IMAGE:
                 break;
             }
             break;
           case FILE_TYPE_SPECIAL:
-            switch (createInfo->createMode)
+            switch (includeEntryNode->type)
             {
-              case CREATE_MODE_FILES:
+              case ENTRY_TYPE_FILE:
                 if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                 {
                   createInfo->statusInfo.totalFiles++;
                   updateStatusInfo(createInfo);
                 }
                 break;
-              case CREATE_MODE_IMAGES:
+              case ENTRY_TYPE_IMAGE:
                 if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                 {
+                  /* get device info */
+                  error = Device_getDeviceInfo(name,&deviceInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    continue;
+                  }
+                  UNUSED_VARIABLE(deviceInfo);
+
                   createInfo->statusInfo.totalFiles++;
                   if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
                   updateStatusInfo(createInfo);
@@ -1263,8 +1279,8 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
     /* free resources */
     String_delete(basePath);
 
-    /* next include pattern */
-    includePatternNode = includePatternNode->next;
+    /* next include entry */
+    includeEntryNode = includeEntryNode->next;
   }
 
   /* free resoures */
@@ -1288,7 +1304,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
 {
   StringList          nameList;
   String              name;
-  PatternNode         *includePatternNode;
+  EntryNode           *includeEntryNode;
   StringTokenizer     fileNameTokenizer;
   String              basePath;
   String              string;
@@ -1296,9 +1312,10 @@ LOCAL void collectorThread(CreateInfo *createInfo)
   String              fileName;
   FileInfo            fileInfo;
   DirectoryListHandle directoryListHandle;
+  DeviceInfo          deviceInfo;
 
   assert(createInfo != NULL);
-  assert(createInfo->includePatternList != NULL);
+  assert(createInfo->includeEntryList != NULL);
   assert(createInfo->excludePatternList != NULL);
   assert(createInfo->jobOptions != NULL);
 
@@ -1306,10 +1323,10 @@ LOCAL void collectorThread(CreateInfo *createInfo)
   name     = String_new();
   fileName = String_new();
 
-  includePatternNode = createInfo->includePatternList->head;
+  includeEntryNode = createInfo->includeEntryList->head;
   while (   (createInfo->failError == ERROR_NONE)
          && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-         && (includePatternNode != NULL)
+         && (includeEntryNode != NULL)
         )
   {
     /* pause */
@@ -1320,7 +1337,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
 
     /* find base path */
     basePath = String_new();
-    File_initSplitFileName(&fileNameTokenizer,includePatternNode->string);
+    File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
     if (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
     {
       if (String_length(string) > 0)
@@ -1366,7 +1383,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
       }
 
       if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
-          || (   checkIsIncluded(includePatternNode,name)
+          || (   checkIsIncluded(includeEntryNode,name)
               && !checkIsExcluded(createInfo->excludePatternList,name)
              )
          )
@@ -1374,35 +1391,35 @@ LOCAL void collectorThread(CreateInfo *createInfo)
         switch (fileInfo.type)
         {
           case FILE_TYPE_FILE:
-            switch (createInfo->createMode)
+            switch (includeEntryNode->type)
             {
-              case CREATE_MODE_FILES:
+              case ENTRY_TYPE_FILE:
                 if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                 {
                   /* add to file list */
-                  appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_FILE);
+                  appendToEntryList(&createInfo->entryMsgQueue,ENTRY_TYPE_FILE,name,FILE_TYPE_FILE);
                 }
                 break;
-              case CREATE_MODE_IMAGES:
+              case ENTRY_TYPE_IMAGE:
                 break;
             }
             break;
           case FILE_TYPE_DIRECTORY:
-            switch (createInfo->createMode)
+            switch (includeEntryNode->type)
             {
-              case CREATE_MODE_FILES:
-                if (   checkIsIncluded(includePatternNode,name)
+              case ENTRY_TYPE_FILE:
+                if (   checkIsIncluded(includeEntryNode,name)
                     && !checkIsExcluded(createInfo->excludePatternList,name)
                    )
                 {
                   if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                   {
                     /* add to file list */
-                    appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_DIRECTORY);
+                    appendToEntryList(&createInfo->entryMsgQueue,ENTRY_TYPE_FILE,name,FILE_TYPE_DIRECTORY);
                   }
                 }
                 break;
-              case CREATE_MODE_IMAGES:
+              case ENTRY_TYPE_IMAGE:
                 break;
             }
 
@@ -1434,7 +1451,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   continue;
                 }
 
-                if (   checkIsIncluded(includePatternNode,fileName)
+                if (   checkIsIncluded(includeEntryNode,fileName)
                     && !checkIsExcluded(createInfo->excludePatternList,fileName)
                    )
                 {
@@ -1453,16 +1470,16 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   switch (fileInfo.type)
                   {
                     case FILE_TYPE_FILE:
-                      switch (createInfo->createMode)
+                      switch (includeEntryNode->type)
                       {
-                        case CREATE_MODE_FILES:
+                        case ENTRY_TYPE_FILE:
                           if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                           {
                             /* add to file list */
-                            appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_FILE);
+                            appendToEntryList(&createInfo->entryMsgQueue,ENTRY_TYPE_FILE,fileName,FILE_TYPE_FILE);
                           }
                           break;
-                        case CREATE_MODE_IMAGES:
+                        case ENTRY_TYPE_IMAGE:
                           break;
                       }
                       break;
@@ -1471,34 +1488,34 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                       StringList_append(&nameList,fileName);
                       break;
                     case FILE_TYPE_LINK:
-                      switch (createInfo->createMode)
+                      switch (includeEntryNode->type)
                       {
-                        case CREATE_MODE_FILES:
+                        case ENTRY_TYPE_FILE:
                           if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                           {
                             /* add to file list */
-                            appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_LINK);
+                            appendToEntryList(&createInfo->entryMsgQueue,ENTRY_TYPE_FILE,fileName,FILE_TYPE_LINK);
                           }
                           break;
-                        case CREATE_MODE_IMAGES:
+                        case ENTRY_TYPE_IMAGE:
                           break;
                       }
                       break;
                     case FILE_TYPE_SPECIAL:
-                      switch (createInfo->createMode)
+                      switch (includeEntryNode->type)
                       {
-                        case CREATE_MODE_FILES:
+                        case ENTRY_TYPE_FILE:
                           if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                           {
                             /* add to file list */
-                            appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_SPECIAL);
+                            appendToEntryList(&createInfo->entryMsgQueue,ENTRY_TYPE_FILE,fileName,FILE_TYPE_SPECIAL);
                           }
                           break;
-                        case CREATE_MODE_IMAGES:
+                        case ENTRY_TYPE_IMAGE:
                           if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                           {
                             /* add to file list */
-                            appendToFileList(&createInfo->fileMsgQueue,fileName,FILE_TYPE_SPECIAL);
+                            appendToEntryList(&createInfo->entryMsgQueue,ENTRY_TYPE_IMAGE,fileName,FILE_TYPE_SPECIAL);
                           }
                           break;
                       }
@@ -1532,34 +1549,46 @@ LOCAL void collectorThread(CreateInfo *createInfo)
             }
             break;
           case FILE_TYPE_LINK:
-            switch (createInfo->createMode)
+            switch (includeEntryNode->type)
             {
-              case CREATE_MODE_FILES:
+              case ENTRY_TYPE_FILE:
                 if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                 {
                   /* add to file list */
-                  appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_LINK);
+                  appendToEntryList(&createInfo->entryMsgQueue,ENTRY_TYPE_FILE,name,FILE_TYPE_LINK);
                 }
                 break;
-              case CREATE_MODE_IMAGES:
+              case ENTRY_TYPE_IMAGE:
                 break;
             }
             break;
           case FILE_TYPE_SPECIAL:
-            switch (createInfo->createMode)
+            switch (includeEntryNode->type)
             {
-              case CREATE_MODE_FILES:
+              case ENTRY_TYPE_FILE:
                 if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                 {
                   /* add to file list */
-                  appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_SPECIAL);
+                  appendToEntryList(&createInfo->entryMsgQueue,ENTRY_TYPE_FILE,name,FILE_TYPE_SPECIAL);
                 }
                 break;
-              case CREATE_MODE_IMAGES:
+              case ENTRY_TYPE_IMAGE:
                 if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                 {
+                  /* get device info */
+                  error = Device_getDeviceInfo(name,&deviceInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
+                    logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(name));
+                    createInfo->statusInfo.errorFiles++;
+                    updateStatusInfo(createInfo);
+                    continue;
+                  }
+                  UNUSED_VARIABLE(deviceInfo);
+
                   /* add to file list */
-                  appendToFileList(&createInfo->fileMsgQueue,name,FILE_TYPE_SPECIAL);
+                  appendToEntryList(&createInfo->entryMsgQueue,ENTRY_TYPE_IMAGE,name,FILE_TYPE_SPECIAL);
                 }
                 break;
             }
@@ -1585,10 +1614,10 @@ LOCAL void collectorThread(CreateInfo *createInfo)
     /* free resources */
     String_delete(basePath);
 
-    /* next include pattern */
-    includePatternNode = includePatternNode->next;
+    /* next include entry */
+    includeEntryNode = includeEntryNode->next;
   }
-  MsgQueue_setEndOfMsg(&createInfo->fileMsgQueue);
+  MsgQueue_setEndOfMsg(&createInfo->entryMsgQueue);
 
   /* free resoures */
   String_delete(fileName);
@@ -2053,9 +2082,8 @@ LOCAL void storageThread(CreateInfo *createInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_create(CreateModes                     createMode,
-                      const char                      *storageName,
-                      PatternList                     *includePatternList,
+Errors Command_create(const char                      *storageName,
+                      EntryList                       *includeEntryList,
                       PatternList                     *excludePatternList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,
@@ -2075,18 +2103,18 @@ Errors Command_create(CreateModes                     createMode,
   Errors          error;
   String          incrementalListFileName;
   bool            storeIncrementalFileInfoFlag;
+  EntryTypes      entryType;
   String          fileName;
   FileTypes       fileType;
   ArchiveFileInfo archiveFileInfo;
 
   assert(storageName != NULL);
-  assert(includePatternList != NULL);
+  assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
 
   /* initialise variables */
-  createInfo.createMode                   = createMode;
   createInfo.storageName                  = String_newCString(storageName);
-  createInfo.includePatternList           = includePatternList;
+  createInfo.includeEntryList             = includeEntryList;
   createInfo.excludePatternList           = excludePatternList;
   createInfo.jobOptions                   = jobOptions;
   createInfo.archiveType                  = ((archiveType == ARCHIVE_TYPE_FULL) || (archiveType == ARCHIVE_TYPE_INCREMENTAL))?archiveType:jobOptions->archiveType;
@@ -2136,7 +2164,7 @@ Errors Command_create(CreateModes                     createMode,
 
 #if 1
   /* init file name queue, storage queue and list lock */
-  if (!MsgQueue_init(&createInfo.fileMsgQueue,MAX_FILE_MSG_QUEUE_ENTRIES))
+  if (!MsgQueue_init(&createInfo.entryMsgQueue,MAX_FILE_MSG_QUEUE_ENTRIES))
   {
     HALT_FATAL_ERROR("Cannot initialise file message queue!");
   }
@@ -2164,7 +2192,7 @@ Errors Command_create(CreateModes                     createMode,
   {
     Semaphore_done(&createInfo.storageSemaphore);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
-    MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
+    MsgQueue_done(&createInfo.entryMsgQueue,NULL,NULL);
     free(buffer);
     String_delete(createInfo.statusInfo.storageName);
     String_delete(createInfo.statusInfo.fileName);
@@ -2213,7 +2241,7 @@ Errors Command_create(CreateModes                     createMode,
         String_delete(incrementalListFileName);
         Semaphore_done(&createInfo.storageSemaphore);
         MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
-        MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
+        MsgQueue_done(&createInfo.entryMsgQueue,NULL,NULL);
         free(buffer);
         Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
         String_delete(createInfo.statusInfo.storageName);
@@ -2252,7 +2280,7 @@ Errors Command_create(CreateModes                     createMode,
     }
     Semaphore_done(&createInfo.storageSemaphore);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
-    MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
+    MsgQueue_done(&createInfo.entryMsgQueue,NULL,NULL);
     free(buffer);
     String_delete(createInfo.statusInfo.storageName);
     String_delete(createInfo.statusInfo.fileName);
@@ -2280,7 +2308,7 @@ Errors Command_create(CreateModes                     createMode,
   /* store files */
   fileName = String_new();
   while (   ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
-         && getNextFile(&createInfo.fileMsgQueue,fileName,&fileType)
+         && getNextEntry(&createInfo.entryMsgQueue,&entryType,fileName,&fileType)
         )
   {
     if (createInfo.failError == ERROR_NONE)
@@ -2327,9 +2355,9 @@ Errors Command_create(CreateModes                     createMode,
           switch (fileType)
           {
             case FILE_TYPE_FILE:
-              switch (createMode)
+              switch (entryType)
               {
-                case CREATE_MODE_FILES:
+                case ENTRY_TYPE_FILE:
                   {
                     FileHandle fileHandle;
                     ulong      n;
@@ -2461,14 +2489,14 @@ Errors Command_create(CreateModes                     createMode,
                     updateStatusInfo(&createInfo);
                   }
                   break;
-                case CREATE_MODE_IMAGES:
+                case ENTRY_TYPE_IMAGE:
                   break;
               }
               break;
             case FILE_TYPE_DIRECTORY:
-              switch (createMode)
+              switch (entryType)
               {
-                case CREATE_MODE_FILES:
+                case ENTRY_TYPE_FILE:
                   {
                     /* new directory */
                     error = Archive_newDirectoryEntry(&archiveInfo,
@@ -2508,14 +2536,14 @@ Errors Command_create(CreateModes                     createMode,
                     updateStatusInfo(&createInfo);
                   }
                   break;
-                case CREATE_MODE_IMAGES:
+                case ENTRY_TYPE_IMAGE:
                   break;
               }
               break;
             case FILE_TYPE_LINK:
-              switch (createMode)
+              switch (entryType)
               {
-                case CREATE_MODE_FILES:
+                case ENTRY_TYPE_FILE:
                   {
                     String name;
 
@@ -2587,14 +2615,14 @@ Errors Command_create(CreateModes                     createMode,
                     String_delete(name);
                   }
                   break;
-                case CREATE_MODE_IMAGES:
+                case ENTRY_TYPE_IMAGE:
                   break;
               }
               break;
             case FILE_TYPE_SPECIAL:
-              switch (createMode)
+              switch (entryType)
               {
-                case CREATE_MODE_FILES:
+                case ENTRY_TYPE_FILE:
                   {
                     /* new special */
                     error = Archive_newSpecialEntry(&archiveInfo,
@@ -2635,7 +2663,7 @@ Errors Command_create(CreateModes                     createMode,
                     /* free resources */
                   }
                   break;
-                case CREATE_MODE_IMAGES:
+                case ENTRY_TYPE_IMAGE:
                   {
                     DeviceInfo   deviceInfo;
                     DeviceHandle deviceHandle;
@@ -2701,6 +2729,10 @@ Errors Command_create(CreateModes                     createMode,
                       updateStatusInfo(&createInfo);
                       continue;
                     }
+                    String_set(createInfo.statusInfo.fileName,fileName);
+                    createInfo.statusInfo.fileDoneBytes = 0LL;
+                    createInfo.statusInfo.fileTotalBytes = fileInfo.size;
+                    updateStatusInfo(&createInfo);
 
                     /* new image */
                     error = Archive_newImageEntry(&archiveInfo,
@@ -2847,7 +2879,7 @@ Errors Command_create(CreateModes                     createMode,
 
   /* signal end of data */
   createInfo.collectorSumThreadExitFlag = TRUE;
-  MsgQueue_setEndOfMsg(&createInfo.fileMsgQueue);
+  MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
   updateStatusInfo(&createInfo);
 
@@ -2879,7 +2911,7 @@ Errors Command_create(CreateModes                     createMode,
       String_delete(incrementalListFileName);
       Semaphore_done(&createInfo.storageSemaphore);
       MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
-      MsgQueue_done(&createInfo.fileMsgQueue,NULL,NULL);
+      MsgQueue_done(&createInfo.entryMsgQueue,NULL,NULL);
       free(buffer);
       Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
       String_delete(createInfo.statusInfo.storageName);
@@ -2914,7 +2946,7 @@ Errors Command_create(CreateModes                     createMode,
   Thread_done(&createInfo.storageThread);
   Semaphore_done(&createInfo.storageSemaphore);
   MsgQueue_done(&createInfo.storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
-  MsgQueue_done(&createInfo.fileMsgQueue,(MsgQueueMsgFreeFunction)freeFileMsg,NULL);
+  MsgQueue_done(&createInfo.entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
 #endif /* 0 */
   free(buffer);
   String_delete(createInfo.statusInfo.storageName);

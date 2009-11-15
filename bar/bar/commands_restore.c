@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -28,6 +28,7 @@
 #include "stringlists.h"
 
 #include "errors.h"
+#include "patterns.h"
 #include "patternlists.h"
 #include "files.h"
 #include "archive.h"
@@ -45,7 +46,7 @@
 /***************************** Datatypes *******************************/
 typedef struct
 {
-  PatternList               *includePatternList;
+  EntryList                 *includeEntryList;
   PatternList               *excludePatternList;
   const JobOptions          *jobOptions;
   bool                      *pauseFlag;              // pause flag (can be NULL)
@@ -187,7 +188,7 @@ LOCAL void updateStatusInfo(const RestoreInfo *restoreInfo)
 /*---------------------------------------------------------------------*/
 
 Errors Command_restore(StringList                      *archiveFileNameList,
-                       PatternList                     *includePatternList,
+                       EntryList                       *includeEntryList,
                        PatternList                     *excludePatternList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
@@ -209,12 +210,12 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   FragmentNode      *fragmentNode;
 
   assert(archiveFileNameList != NULL);
-  assert(includePatternList != NULL);
+  assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
   /* initialize variables */
-  restoreInfo.includePatternList           = includePatternList;
+  restoreInfo.includeEntryList             = includeEntryList;
   restoreInfo.excludePatternList           = excludePatternList;
   restoreInfo.jobOptions                   = jobOptions;
   restoreInfo.pauseFlag                    = pauseFlag;
@@ -342,7 +343,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               continue;
             }
 
-            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -640,7 +641,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,imageName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -832,7 +833,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -965,7 +966,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -1098,7 +1099,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               break;
             }
 
-            if (   (List_empty(includePatternList) || PatternList_match(includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {

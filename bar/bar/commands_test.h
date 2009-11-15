@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_test.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -21,6 +21,7 @@
 #include "stringlists.h"
 
 #include "bar.h"
+#include "entrylists.h"
 #include "patternlists.h"
 #include "crypt.h"
 
@@ -45,9 +46,9 @@
 /***********************************************************************\
 * Name   : Commands_test
 * Purpose: compare archive and file system content
-* Input  : fileNameList                     - list with archive files 
-*          includeList                      - include list            
-*          excludeList                      - exclude list            
+* Input  : archiveFileNameList              - list with archive files 
+*          includeEntryList                 - include entry list
+*          excludePatternList               - exclude pattern list
 *          jobOptions                       - job options             
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
@@ -57,9 +58,9 @@
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_test(StringList                      *fileNameList,
-                    PatternList                     *includeList,
-                    PatternList                     *excludeList,
+Errors Command_test(StringList                      *archiveFileNameList,
+                    EntryList                       *includeEntryList,
+                    PatternList                     *excludePatternList,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                     void                            *archiveGetCryptPasswordUserData

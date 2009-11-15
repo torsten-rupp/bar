@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -21,7 +21,8 @@
 #include "stringlists.h"
 
 #include "bar.h"
-#include "patterns.h"
+#include "entrylists.h"
+#include "patternlists.h"
 #include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
@@ -67,8 +68,8 @@ typedef void(*RestoreStatusInfoFunction)(Errors                  error,
 * Name   : Command_restore
 * Purpose: restore archive content
 * Input  : archiveFileNameList              - list with archive files 
-*          includePatternList               - include list            
-*          excludePatternList               - exclude list            
+*          includeEntryList                 - include entry list
+*          excludePatternList               - exclude pattern list
 *          jobOptions                       - job options             
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
@@ -86,7 +87,7 @@ typedef void(*RestoreStatusInfoFunction)(Errors                  error,
 \***********************************************************************/
 
 Errors Command_restore(StringList                      *archiveFileNameList,
-                       PatternList                     *includePatternList,
+                       EntryList                       *includeEntryList,
                        PatternList                     *excludePatternList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
