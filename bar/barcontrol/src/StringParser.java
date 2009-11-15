@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/StringParser.java,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -13,6 +13,9 @@ import java.lang.Integer;
 import java.lang.Long;
 import java.lang.NumberFormatException;
 import java.lang.String;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 
 /****************************** Classes ********************************/
 
@@ -65,6 +68,7 @@ class StringParser
     int          precision;
     LengthTypes  lengthType;
     char         quoteChar;
+    String       enumClassName;
     char         conversionChar;
   }
 
@@ -83,6 +87,7 @@ class StringParser
    *     #,0,-, ,+,*     - flags
    *     1-9             - width
    *     .               - precision
+   *     {<name>}s       - enumeration <name>
    *     <x>s, <x>S      - quoting character <x>
    *     h,l,j,z,t       - length modifier
    * @param format format string
@@ -103,6 +108,7 @@ class StringParser
     formatToken.precision        = 0;
     formatToken.lengthType       = LengthTypes.INTEGER;
     formatToken.quoteChar        = '\0';
+    formatToken.enumClassName    = null;
     formatToken.conversionChar   = '\0';
 
     /* format start character */
@@ -172,14 +178,20 @@ class StringParser
     }
 
     /* quoting character */
-    if ((formatIndex+1 < format.length()) && ((format.charAt(formatIndex+1) == 's') || (format.charAt(formatIndex+1) == 'S')))
+    if (   (formatIndex+1 < format.length())
+        && (format.charAt(formatIndex) != '{')
+        && ((format.charAt(formatIndex+1) == 's') || (format.charAt(formatIndex+1) == 'S'))
+       )
     {
       formatToken.quoteChar = format.charAt(formatIndex);
       formatIndex++;
     }
 
     /* length modifier */
-    if      ((formatIndex+1 < format.length()) && (format.charAt(formatIndex) == 'h') && (format.charAt(formatIndex+1) == 'h'))
+    if      (   (formatIndex+1 < format.length())
+             && (format.charAt(formatIndex) == 'h')
+             && (format.charAt(formatIndex+1) == 'h')
+            )
     {
       formatToken.token.append(format.charAt(formatIndex+0));
       formatToken.token.append(format.charAt(formatIndex+1));
@@ -187,14 +199,19 @@ class StringParser
       formatToken.lengthType = LengthTypes.INTEGER;
       formatIndex += 2;
     }
-    else if ((formatIndex < format.length()) && (format.charAt(formatIndex) == 'h'))
+    else if (   (formatIndex < format.length())
+             && (format.charAt(formatIndex) == 'h')
+            )
     {
       formatToken.token.append(format.charAt(formatIndex));
 
       formatToken.lengthType = LengthTypes.INTEGER;
       formatIndex++;
     }
-    else if ((formatIndex+1 < format.length()) && (format.charAt(formatIndex) == 'l') && (format.charAt(formatIndex+1) == 'l'))
+    else if (   (formatIndex+1 < format.length())
+             && (format.charAt(formatIndex) == 'l')
+             && (format.charAt(formatIndex+1) == 'l')
+            )
     {
       formatToken.token.append(format.charAt(formatIndex+0));
       formatToken.token.append(format.charAt(formatIndex+1));
@@ -202,34 +219,64 @@ class StringParser
       formatToken.lengthType = LengthTypes.LONG;
       formatIndex += 2;
     }
-    else if ((formatIndex < format.length()) && (format.charAt(formatIndex) == 'l'))
+    else if (   (formatIndex < format.length())
+             && (format.charAt(formatIndex) == 'l')
+            )
     {
       formatToken.token.append(format.charAt(formatIndex));
 
       formatToken.lengthType = LengthTypes.LONG;
       formatIndex++;
     }
-    else if ((formatIndex < format.length()) && (format.charAt(formatIndex) == 'j'))
+    else if (   (formatIndex < format.length())
+             && (format.charAt(formatIndex) == 'j')
+            )
     {
       formatToken.token.append(format.charAt(formatIndex));
 
       formatToken.lengthType = LengthTypes.INTEGER;
       formatIndex++;
     }
-    else if ((formatIndex < format.length()) && (format.charAt(formatIndex) == 'z'))
+    else if (   (formatIndex < format.length())
+             && (format.charAt(formatIndex) == 'z')
+            )
     {
       formatToken.token.append(format.charAt(formatIndex));
 
       formatToken.lengthType = LengthTypes.INTEGER;
       formatIndex++;
     }
-    else if ((formatIndex < format.length()) && (format.charAt(formatIndex) == 't'))
+    else if (   (formatIndex < format.length())
+             && (format.charAt(formatIndex) == 't')
+            )
     {
       formatToken.token.append(format.charAt(formatIndex));
 
       formatToken.lengthType = LengthTypes.INTEGER;
       formatIndex++;
     }
+
+    if (   (formatIndex < format.length())
+        && (format.charAt(formatIndex) == '{')
+       )
+    {
+      /* enum name */
+      formatToken.token.append(format.charAt(formatIndex));
+      formatIndex++;
+
+      StringBuffer buffer = new StringBuffer();
+      while ((formatIndex < format.length()) && (format.charAt(formatIndex) != '}'))
+      {
+        char ch = format.charAt(formatIndex);
+        formatToken.token.append(ch);
+        buffer.append((ch != '.') ? ch : '$');
+        formatIndex++;
+      }
+      formatIndex++;
+
+      formatToken.enumClassName = buffer.toString();
+    }
+
     if (formatIndex >= format.length())
     {
       return -1;
@@ -588,7 +635,38 @@ class StringParser
                   }
                 }
               }
-              arguments[argumentIndex] = buffer.toString();
+
+              if (formatToken.enumClassName != null)
+              {          
+                // enum class      
+                try
+                {
+                  // find enum class
+                  Class enumClass = Class.forName(formatToken.enumClassName);
+                  if (!enumClass.isEnum())
+                  {
+                    return -1;
+                  }
+
+                  // convert to enum
+                  arguments[argumentIndex] = Enum.valueOf(enumClass,buffer.toString());
+                }
+                catch (ClassNotFoundException exception)
+                {
+//Dprintf.dprintf(""+exception);
+                  throw new Error("Enumeration class '"+formatToken.enumClassName+"' not found",exception);
+                }               
+                catch (IllegalArgumentException exception)
+                {
+//Dprintf.dprintf(""+exception);
+                  return -1;
+                }
+              }
+              else
+              {
+                // store string
+                arguments[argumentIndex] = buffer.toString();
+              }
               argumentIndex++;
               break;
             case 'p':
@@ -751,6 +829,7 @@ class StringParser
    * @return index of first not parsed character
    */
   public static int parse(String string, int index, String format, Object arguments[])
+//    throws ClassNotFoundException
   {
     return parse(string,index,format,arguments,null);
   }
@@ -762,6 +841,7 @@ class StringParser
    * @return true iff string parse, false otherwise
    */
   public static boolean parse(String string, String format, Object arguments[], String stringQuotes)
+//    throws ClassNotFoundException
   {
     return parse(string,0,format,arguments,stringQuotes) >= string.length();
   }
@@ -773,6 +853,7 @@ class StringParser
    * @return true iff string parse, false otherwise
    */
   public static boolean parse(String string, String format, Object arguments[])
+//    throws ClassNotFoundException
   {
     return parse(string,format,arguments,null);
   }
