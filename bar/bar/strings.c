@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <regex.h>
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
@@ -36,9 +37,12 @@
 #define HALT_ON_INSUFFICIENT_MEMORY
 #define _FILL_MEMORY
 
-#define MAX_STRINGS_CHECK
-#define WARN_MAX_STRINGS       2000
-#define WARN_MAX_STRINGS_DELTA  500
+#ifndef NDEBUG
+  // max. string check: print warning and delay if to many strings allocated
+  #define MAX_STRINGS_CHECK
+  #define WARN_MAX_STRINGS       2000
+  #define WARN_MAX_STRINGS_DELTA  500
+#endif /* not NDEBUG */
 
 /***************************** Constants *******************************/
 #define STRING_START_LENGTH 64   // string start length
@@ -1737,6 +1741,7 @@ String __String_new(const char *fileName, ulong lineNb)
         fprintf(stderr,"DEBUG WARNING: %lu strings allocated!\n",debugStringCount);
         debugMaxStringNextWarningCount += WARN_MAX_STRINGS_DELTA;
 //String_debugPrintAllocated();
+        sleep(1);
       }
     #endif /* MAX_STRINGS_CHECK */
 
@@ -3970,14 +3975,14 @@ LOCAL void String_debugPrintAllocated(void)
 
   for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
   {
-    fprintf(stderr,"DEBUG WARNING: string %p '%s' not freed at %s, line %ld\n",
+    fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %ld\n",
             debugStringNode->string,
             debugStringNode->string->data,
             debugStringNode->fileName,
             debugStringNode->lineNb
            );
     #ifdef HAVE_BACKTRACE
-      String_debugPrintStackTrace("not freed string at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+      String_debugPrintStackTrace("allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
     #endif /* HAVE_BACKTRACE */
   }
 }
