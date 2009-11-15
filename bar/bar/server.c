@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -34,6 +34,7 @@
 #include "files.h"
 #include "devices.h"
 #include "patterns.h"
+#include "entrylists.h"
 #include "patternlists.h"
 #include "archive.h"
 #include "storage.h"
@@ -69,6 +70,13 @@ typedef enum
   SERVER_STATE_SUSPENDED,
 } ServerStates;
 
+/* job type */
+typedef enum
+{
+  JOB_TYPE_CREATE,
+  JOB_TYPE_RESTORE,
+} JobTypes;
+
 /* job states */
 typedef enum
 {
@@ -90,11 +98,11 @@ typedef struct JobNode
   uint64       timeModified;                   // file modified date/time (timestamp)
 
   /* job config */
-  JobTypes     type;                           // job type: backup, restore
+  JobTypes     jobType;                        // job type: backup, restore
   String       name;                           // name of job
   String       archiveName;                    // archive name
-  PatternList  includePatternList;             // included files
-  PatternList  excludePatternList;             // excluded files
+  EntryList    includeEntryList;               // included entries
+  PatternList  excludePatternList;             // excluded entries
   ScheduleList scheduleList;                   // schedule list
   JobOptions   jobOptions;                     // options for job
   bool         modifiedFlag;                   // TRUE iff job config modified
@@ -227,7 +235,7 @@ typedef struct
     } network;
   };
 
-  PatternList         includePatternList;
+  EntryList           includeEntryList;
   PatternList         excludePatternList;
   JobOptions          jobOptions;
   DirectoryInfoList   directoryInfoList;
@@ -402,13 +410,15 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files",JobNode,jobOptions.overwriteArchiveFilesFlag   ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",        JobNode,jobOptions.overwriteFilesFlag          ),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include",                JobNode,includePatternList,                    configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",           JobNode,includeEntryList,                      configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",          JobNode,includeEntryList,                      configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                    configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
 
   CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",               JobNode,scheduleList,                          configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
 };
 
 /***************************** Variables *******************************/
+
 LOCAL const Password   *serverPassword;
 LOCAL const char       *serverJobsDirectory;
 LOCAL const JobOptions *serverDefaultJobOptions;
@@ -553,15 +563,12 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
 * Purpose: create new job
 * Input  : jobType  - job type
 *          fileName - file name or NULL
-*          name     - name of job
 * Output : -
 * Return : job node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *newJob(JobTypes     jobType,
-                      const String fileName
-                     )
+LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
 {
   JobNode *jobNode;
 
@@ -573,13 +580,13 @@ LOCAL JobNode *newJob(JobTypes     jobType,
   }
 
   /* init job node */
+  jobNode->jobType                        = jobType;
   jobNode->fileName                       = String_duplicate(fileName);
   jobNode->timeModified                   = 0LL;
 
-  jobNode->type                           = jobType;
   jobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
   jobNode->archiveName                    = String_new();
-  PatternList_init(&jobNode->includePatternList);
+  EntryList_init(&jobNode->includeEntryList);
   PatternList_init(&jobNode->excludePatternList);
   List_init(&jobNode->scheduleList);
   initJobOptions(&jobNode->jobOptions);
@@ -675,13 +682,13 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   }
 
   /* init job node */
+  newJobNode->jobType                        = jobNode->jobType;
   newJobNode->fileName                       = String_duplicate(fileName);
   newJobNode->timeModified                   = 0LL;
 
-  newJobNode->type                           = jobNode->type;
   newJobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
-  PatternList_init(&newJobNode->includePatternList); PatternList_copy(&jobNode->includePatternList,&newJobNode->includePatternList);
+  EntryList_init(&newJobNode->includeEntryList); EntryList_copy(&jobNode->includeEntryList,&newJobNode->includeEntryList);
   PatternList_init(&newJobNode->excludePatternList); PatternList_copy(&jobNode->excludePatternList,&newJobNode->excludePatternList);
   List_init(&newJobNode->scheduleList); List_copy(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,NULL,(ListNodeCopyFunction)copyScheduleNode,NULL);
   initJobOptions(&newJobNode->jobOptions); copyJobOptions(&newJobNode->jobOptions,&newJobNode->jobOptions);
@@ -741,7 +748,7 @@ LOCAL void freeJobNode(JobNode *jobNode)
 
   List_done(&jobNode->scheduleList,NULL,NULL);
   PatternList_done(&jobNode->excludePatternList);
-  PatternList_done(&jobNode->includePatternList);
+  EntryList_done(&jobNode->includeEntryList);
   freeJobOptions(&jobNode->jobOptions);
   String_delete(jobNode->archiveName);
   String_delete(jobNode->name);
@@ -1038,7 +1045,7 @@ LOCAL bool readJobFile(JobNode *jobNode)
   }
 
   /* reset values */
-  PatternList_clear(&jobNode->includePatternList);
+  EntryList_clear(&jobNode->includeEntryList);
   PatternList_clear(&jobNode->excludePatternList);
   List_clear(&jobNode->scheduleList,NULL,NULL);
 
@@ -1431,7 +1438,6 @@ LOCAL Errors getCryptPassword(void         *userData,
   UNUSED_VARIABLE(validateFlag);
   UNUSED_VARIABLE(weakCheckFlag);
 
-fprintf(stderr,"%s,%d: xxxxxxxxxxxxxxxxxxxx %p\n",__FILE__,__LINE__,((JobNode*)userData)->cryptPassword);
   if (((JobNode*)userData)->cryptPassword != NULL)
   {
     Password_set(password,((JobNode*)userData)->cryptPassword);
@@ -1651,14 +1657,15 @@ LOCAL void jobThreadEntry(void)
 {
   JobNode      *jobNode;
   String       archiveName;
-  PatternList  includePatternList,excludePatternList;
+  EntryList    includeEntryList;
+  PatternList  excludePatternList;
   JobOptions   jobOptions;
   ArchiveTypes archiveType;
   StringList   archiveFileNameList;
 
   /* initialize variables */
   archiveName = String_new();
-  PatternList_init(&includePatternList);
+  EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
 
   while (!quitFlag)
@@ -1689,7 +1696,7 @@ LOCAL void jobThreadEntry(void)
 
     /* get copy of mandatory job data */
     String_set(archiveName,jobNode->archiveName);
-    PatternList_clear(&includePatternList); PatternList_copy(&jobNode->includePatternList,&includePatternList);
+    EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList);
     PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList);
     initJobOptions(&jobOptions); copyJobOptions(&jobNode->jobOptions,&jobOptions);
     archiveType = jobNode->archiveType,
@@ -1704,8 +1711,8 @@ LOCAL void jobThreadEntry(void)
 
   jobNode->runningInfo.estimatedRestTime=120;
 
-  jobNode->runningInfo.totalFiles+=60;
-  jobNode->runningInfo.totalBytes+=6000;
+  jobNode->runningInfo.totalFiles += 60;
+  jobNode->runningInfo.totalBytes += 6000;
 
   for (z=0;z<120;z++)
   {
@@ -1716,14 +1723,14 @@ LOCAL void jobThreadEntry(void)
     sleep(1);
 
     if (z==40) {
-      jobNode->runningInfo.totalFiles+=80;
-      jobNode->runningInfo.totalBytes+=8000;
+      jobNode->runningInfo.totalFiles += 80;
+      jobNode->runningInfo.totalBytes += 8000;
     }
 
     jobNode->runningInfo.doneFiles++;
-    jobNode->runningInfo.doneBytes+=100;
-  //  jobNode->runningInfo.totalFiles+=3;
-  //  jobNode->runningInfo.totalBytes+=181;
+    jobNode->runningInfo.doneBytes += 100;
+  //  jobNode->runningInfo.totalFiles += 3;
+  //  jobNode->runningInfo.totalBytes += 181;
     jobNode->runningInfo.estimatedRestTime=120-z;
     String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
     String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
@@ -1732,14 +1739,13 @@ LOCAL void jobThreadEntry(void)
 #else
     /* run job */
     logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------");
-    switch (jobNode->type)
+    switch (jobNode->jobType)
     {
       case JOB_TYPE_CREATE:
         /* create archive */
         logMessage(LOG_TYPE_ALWAYS,"start create archive '%s'",String_cString(archiveName));
-        jobNode->runningInfo.error = Command_create(CREATE_MODE_FILES,
-                                                    String_cString(archiveName),
-                                                    &includePatternList,
+        jobNode->runningInfo.error = Command_create(String_cString(archiveName),
+                                                    &includeEntryList,
                                                     &excludePatternList,
                                                     &jobOptions,
                                                     archiveType,
@@ -1755,11 +1761,11 @@ LOCAL void jobThreadEntry(void)
         logMessage(LOG_TYPE_ALWAYS,"done create archive '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
         break;
       case JOB_TYPE_RESTORE:
-        logMessage(LOG_TYPE_ALWAYS,"start restore '%s'",String_cString(archiveName));
+        logMessage(LOG_TYPE_ALWAYS,"start restore archive '%s'",String_cString(archiveName));
         StringList_init(&archiveFileNameList);
         StringList_append(&archiveFileNameList,archiveName);
         jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
-                                                     &includePatternList,
+                                                     &includeEntryList,
                                                      &excludePatternList,
                                                      &jobOptions,
                                                      getCryptPassword,
@@ -1770,7 +1776,7 @@ LOCAL void jobThreadEntry(void)
                                                      &jobNode->requestedAbortFlag
                                                     );
         StringList_done(&archiveFileNameList);
-        logMessage(LOG_TYPE_ALWAYS,"done restore '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
+        logMessage(LOG_TYPE_ALWAYS,"done restore archive '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
         break;
       #ifndef NDEBUG
         default:
@@ -1785,7 +1791,7 @@ LOCAL void jobThreadEntry(void)
     /* free resources */
     freeJobOptions(&jobOptions);
     PatternList_clear(&excludePatternList);
-    PatternList_clear(&includePatternList);
+    EntryList_clear(&includeEntryList);
 
     /* lock */
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -1802,7 +1808,7 @@ LOCAL void jobThreadEntry(void)
 
   /* free resources */
   PatternList_done(&excludePatternList);
-  PatternList_done(&includePatternList);
+  EntryList_done(&includeEntryList);
   String_delete(archiveName);
 }
 
@@ -1908,7 +1914,7 @@ LOCAL void schedulerThreadEntry(void)
     while ((z < 60) && !quitFlag)
     {
       Misc_udelay(10LL*1000LL*1000LL);
-      z+=10;
+      z += 10;
     }
   }
 }
@@ -1940,7 +1946,7 @@ LOCAL void pauseThreadEntry(void)
     while ((z < 60) && !quitFlag)
     {
       Misc_udelay(10LL*1000LL*1000LL);
-      z+=10;
+      z += 10;
     }
   }
 }
@@ -2478,6 +2484,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
   Errors           error;
   DeviceListHandle deviceListHandle;
   String           deviceName;
+  DeviceInfo       deviceInfo;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -2497,6 +2504,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
   deviceName = String_new();
   while (!Device_endOfDeviceList(&deviceListHandle))
   {
+    /* read device list entry */
     error = Device_readDeviceList(&deviceListHandle,deviceName);
     if (error != ERROR_NONE)
     {
@@ -2506,7 +2514,28 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
       return;
     }
 
-    sendResult(clientInfo,id,FALSE,0,"%'S",deviceName);
+    /* get device info */
+    error = Device_getDeviceInfo(deviceName,&deviceInfo);
+    if (error != ERROR_NONE)
+    {
+      sendResult(clientInfo,id,TRUE,error,"cannot read device info (error: %s)",Errors_getText(error));
+      Device_closeDeviceList(&deviceListHandle);
+      String_delete(deviceName);
+      return;
+    }
+
+    if (   (deviceInfo.type == DEVICE_TYPE_BLOCK)
+        && (deviceInfo.size > 0)
+       )
+    {
+      sendResult(clientInfo,
+                 id,FALSE,0,
+                 "%lld %d %'S",
+                 deviceInfo.size,
+                 deviceInfo.mountedFlag?1:0,
+                 deviceName
+                );
+    }
   }
   String_delete(deviceName);
 
@@ -3373,12 +3402,12 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const String 
   sendResult(clientInfo,id,TRUE,0,"");
 }
 
-LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  uint        jobId;
-  JobNode     *jobNode;
-  PatternNode *patternNode;
-  const char  *type;
+  uint       jobId;
+  JobNode    *jobNode;
+  EntryNode  *entryNode;
+  const char *entryType,*patternType;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -3404,15 +3433,26 @@ LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, co
   }
 
   /* send include list */
-  patternNode = jobNode->includePatternList.head;
-  while (patternNode != NULL)
+  entryNode = jobNode->includeEntryList.head;
+  while (entryNode != NULL)
   {
-    type = NULL;
-    switch (patternNode->pattern.type)
+    entryType   = NULL;
+    patternType = NULL;
+    switch (entryNode->type)
     {
-      case PATTERN_TYPE_GLOB          : type = "GLOB";           break;
-      case PATTERN_TYPE_REGEX         : type = "REGEX";          break;
-      case PATTERN_TYPE_EXTENDED_REGEX: type = "EXTENDED_REGEX"; break;
+      case ENTRY_TYPE_FILE : entryType = "FILE";  break;
+      case ENTRY_TYPE_IMAGE: entryType = "IMAGE"; break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+    switch (entryNode->pattern.type)
+    {
+      case PATTERN_TYPE_GLOB          : patternType = "GLOB";           break;
+      case PATTERN_TYPE_REGEX         : patternType = "REGEX";          break;
+      case PATTERN_TYPE_EXTENDED_REGEX: patternType = "EXTENDED_REGEX"; break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -3420,11 +3460,12 @@ LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, co
       #endif /* NDEBUG */
     }
     sendResult(clientInfo,id,FALSE,0,
-               "%s %'S",
-               type,
-               patternNode->string
+               "%s %s %'S",
+               entryType,
+               patternType,
+               entryNode->string
               );
-    patternNode = patternNode->next;
+    entryNode = entryNode->next;
   }
   sendResult(clientInfo,id,TRUE,0,"");
 
@@ -3432,7 +3473,7 @@ LOCAL void serverCommand_includePatternsList(ClientInfo *clientInfo, uint id, co
   Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_includePatternsClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_includeClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint    jobId;
   JobNode *jobNode;
@@ -3461,7 +3502,7 @@ LOCAL void serverCommand_includePatternsClear(ClientInfo *clientInfo, uint id, c
   }
 
   /* clear include list */
-  PatternList_clear(&jobNode->includePatternList);
+  EntryList_clear(&jobNode->includeEntryList);
   jobNode->modifiedFlag = TRUE;
   sendResult(clientInfo,id,TRUE,0,"");
 
@@ -3469,9 +3510,10 @@ LOCAL void serverCommand_includePatternsClear(ClientInfo *clientInfo, uint id, c
   Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_includePatternsAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint         jobId;
+  EntryTypes   entryType;
   PatternTypes patternType;
   String       pattern;
   JobNode      *jobNode;
@@ -3488,32 +3530,50 @@ LOCAL void serverCommand_includePatternsAdd(ClientInfo *clientInfo, uint id, con
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entry type");
+    return;
+  }
+  if      (String_equalsCString(arguments[1],"FILE"))
+  {
+    entryType = ENTRY_TYPE_FILE;
+  }
+  else if (String_equalsCString(arguments[1],"IMAGE"))
+  {
+    entryType = ENTRY_TYPE_IMAGE;
+  }
+  else
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown entry type '%S'",arguments[1]);
+    return;
+  }
+  if (argumentCount < 3)
+  {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern type");
     return;
   }
-  if      (String_equalsCString(arguments[1],"GLOB"))
+  if      (String_equalsCString(arguments[2],"GLOB"))
   {
     patternType = PATTERN_TYPE_GLOB;
   }
-  else if (String_equalsCString(arguments[1],"REGEX"))
+  else if (String_equalsCString(arguments[2],"REGEX"))
   {
     patternType = PATTERN_TYPE_REGEX;
   }
-  else if (String_equalsCString(arguments[1],"EXTENDED_REGEX"))
+  else if (String_equalsCString(arguments[2],"EXTENDED_REGEX"))
   {
     patternType = PATTERN_TYPE_EXTENDED_REGEX;
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown pattern type '%S'",arguments[1]);
+    sendResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown pattern type '%S'",arguments[2]);
     return;
   }
-  if (argumentCount < 3)
+  if (argumentCount < 4)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern");
     return;
   }
-  pattern = arguments[2];
+  pattern = arguments[3];
 
   /* lock */
   Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -3528,7 +3588,7 @@ LOCAL void serverCommand_includePatternsAdd(ClientInfo *clientInfo, uint id, con
   }
 
   /* add to include list */
-  PatternList_append(&jobNode->includePatternList,pattern,patternType);
+  EntryList_append(&jobNode->includeEntryList,entryType,pattern,patternType);
   jobNode->modifiedFlag = TRUE;
 
   /* unlock */
@@ -3537,7 +3597,7 @@ LOCAL void serverCommand_includePatternsAdd(ClientInfo *clientInfo, uint id, con
   sendResult(clientInfo,id,TRUE,0,"");
 }
 
-LOCAL void serverCommand_excludePatternsList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint        jobId;
   JobNode     *jobNode;
@@ -3596,7 +3656,7 @@ LOCAL void serverCommand_excludePatternsList(ClientInfo *clientInfo, uint id, co
   Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_excludePatternsClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_excludeClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint    jobId;
   JobNode *jobNode;
@@ -3633,7 +3693,7 @@ LOCAL void serverCommand_excludePatternsClear(ClientInfo *clientInfo, uint id, c
   Semaphore_unlock(&jobList.lock);
 }
 
-LOCAL void serverCommand_excludePatternsAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_excludeAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint         jobId;
   PatternTypes patternType;
@@ -4288,7 +4348,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             }
 
             /* match pattern */
-            if (   (List_empty(&clientInfo->includePatternList) || PatternList_match(&clientInfo->includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -4332,7 +4392,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             }
 
             /* match pattern */
-            if (   (List_empty(&clientInfo->includePatternList) || PatternList_match(&clientInfo->includePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -4376,7 +4436,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             }
 
             /* match pattern */
-            if (   (List_empty(&clientInfo->includePatternList) || PatternList_match(&clientInfo->includePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -4418,7 +4478,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             }
 
             /* match pattern */
-            if (   (List_empty(&clientInfo->includePatternList) || PatternList_match(&clientInfo->includePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -4456,7 +4516,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   StringList  archiveNameList;
-  PatternList includePatternList;
+  EntryList   includeEntryList;
   PatternList excludePatternList;
   JobOptions  jobOptions;
   uint        z;
@@ -4480,19 +4540,21 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   }
   initJobOptions(&jobOptions);
   jobOptions.destination = String_duplicate(arguments[1]);
-  PatternList_init(&includePatternList);
+  EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   for (z = 2; z < argumentCount; z++)
   {
-    PatternList_append(&includePatternList,
-                       arguments[z],
-                       PATTERN_TYPE_GLOB
-                      );
+    EntryList_append(&includeEntryList,
+//???
+ENTRY_TYPE_FILE,
+                     arguments[z],
+                     PATTERN_TYPE_GLOB
+                    );
   }
 
   /* restore */
   error = Command_restore(&archiveNameList,
-                          &includePatternList,
+                          &includeEntryList,
                           &excludePatternList,
                           &jobOptions,
                           NULL,
@@ -4507,7 +4569,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   /* free resources */
   freeJobOptions(&jobOptions);
   PatternList_done(&excludePatternList);
-  PatternList_done(&includePatternList);
+  EntryList_done(&includeEntryList);
   StringList_done(&archiveNameList);
 }
 
@@ -4555,12 +4617,12 @@ SERVER_COMMANDS[] =
   { "JOB_START",             "i",  serverCommand_jobStart,             AUTHORIZATION_STATE_OK      },
   { "JOB_ABORT",             "i",  serverCommand_jobAbort,             AUTHORIZATION_STATE_OK      },
   { "JOB_FLUSH",             "",   serverCommand_jobFlush,             AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_PATTERNS_LIST", "i",  serverCommand_includePatternsList,  AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_PATTERNS_CLEAR","i",  serverCommand_includePatternsClear, AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_PATTERNS_ADD",  "i S",serverCommand_includePatternsAdd,   AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_PATTERNS_LIST", "i",  serverCommand_excludePatternsList,  AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_PATTERNS_CLEAR","i",  serverCommand_excludePatternsClear, AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_PATTERNS_ADD",  "i S",serverCommand_excludePatternsAdd,   AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST",          "i",  serverCommand_includeList,          AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_CLEAR",         "i",  serverCommand_includeClear,         AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_ADD",           "i S",serverCommand_includeAdd,           AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST",          "i",  serverCommand_excludeList,          AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_CLEAR",         "i",  serverCommand_excludeClear,         AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_ADD",           "i S",serverCommand_excludeAdd,           AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_LIST",         "i",  serverCommand_scheduleList,         AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_CLEAR",        "i",  serverCommand_scheduleClear,        AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_ADD",          "i S",serverCommand_scheduleAdd,          AUTHORIZATION_STATE_OK      },
@@ -4826,7 +4888,7 @@ clientInfo->authorizationState   = AUTHORIZATION_STATE_OK;
   clientInfo->abortId            = 0;
   clientInfo->file.fileHandle    = fileHandle;
 
-  PatternList_init(&clientInfo->includePatternList);
+  EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   initJobOptions(&clientInfo->jobOptions);
 
@@ -4867,7 +4929,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   clientInfo->network.socketHandle = socketHandle;
   clientInfo->network.exitFlag     = FALSE;
 
-  PatternList_init(&clientInfo->includePatternList);
+  EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   initJobOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
@@ -4935,7 +4997,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 
   freeJobOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->excludePatternList);
-  PatternList_done(&clientInfo->includePatternList);
+  EntryList_done(&clientInfo->includeEntryList);
 }
 
 /***********************************************************************\

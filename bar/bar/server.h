@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -29,12 +29,14 @@
 
 /***************************** Datatypes *******************************/
 
+#if 0
 /* create/restore job */
 typedef enum
 {
   JOB_TYPE_CREATE,
   JOB_TYPE_RESTORE,
 } JobTypes;
+#endif
 
 /***************************** Variables *******************************/
 
@@ -110,6 +112,7 @@ Errors Server_batch(int inputDescriptor,
                     int outputDescriptor
                    );
 
+#if 0
 /***********************************************************************\
 * Name   : Server_addJob
 * Purpose: add new job to server for execution
@@ -131,6 +134,7 @@ Errors Server_addJob(JobTypes          jobType,
                      const PatternList *excludePatternList,
                      const JobOptions  *jobOptions
                     );
+#endif /* 0 */
 
 #ifdef __cplusplus
   }
