@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.34 $
+dnl $Revision: 1.35 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -40,6 +40,7 @@ AC_DEFUN([AC_C_LONG_LONG],
 dnl extend C compiler defines for large files
 AC_DEFUN([AC_CHECK_LARGEFILE_DEFINES],
 [
+  AC_SYS_LARGEFILE
   AC_CACHE_CHECK(
     [for needed large files defines],
     ac_largefile_defines,
@@ -57,9 +58,9 @@ EOF
       else
         ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
-          ac_largefile_defines="_LARGEFILE64_SOURCE"
+          ac_largefile_defines="_LARGEFILE64_SOURCE _FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
         else
-          ac_largefile_defines=""
+          ac_largefile_defines="_FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
         fi
       fi
       rm -f conftest.c conftest.o
@@ -460,7 +461,12 @@ for z in $LIBRARY_PATHS ""; do
 done
 
 AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
-AC_SYS_LARGEFILE
+dnl AC_SYS_LARGEFILE
+dnl echo ---
+dnl echo "ac_cv_sys_file_offset_bits=$ac_cv_sys_file_offset_bits"
+dnl echo "ac_cv_sys_large_files~$ac_cv_sys_large_files"
+dnl echo "ac_cv_sys_largefile_CC=$ac_cv_sys_largefile_CC"
+dnl echo -----------
 AC_CHECK_LARGEFILE_DEFINES
 AC_CHECK_SIZEOF(void *)
 

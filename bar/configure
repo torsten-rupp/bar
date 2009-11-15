@@ -3411,7 +3411,8 @@ echo "$as_me: error: long long data type not available" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
-# Check whether --enable-largefile or --disable-largefile was given.
+
+  # Check whether --enable-largefile or --disable-largefile was given.
 if test "${enable_largefile+set}" = set; then
   enableval="$enable_largefile"
 
@@ -3775,7 +3776,6 @@ fi
 rm -f conftest*
 fi
 
-
   echo "$as_me:$LINENO: checking for needed large files defines" >&5
 echo $ECHO_N "checking for needed large files defines... $ECHO_C" >&6
 if test "${ac_largefile_defines+set}" = set; then
@@ -3795,9 +3795,9 @@ EOF
       else
         ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
-          ac_largefile_defines="_LARGEFILE64_SOURCE"
+          ac_largefile_defines="_LARGEFILE64_SOURCE _FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
         else
-          ac_largefile_defines=""
+          ac_largefile_defines="_FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
         fi
       fi
       rm -f conftest.c conftest.o
