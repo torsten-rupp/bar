@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/bar/configvalues.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: config file entry parser
 * Systems: all
@@ -68,7 +68,7 @@ typedef union
 {
   void   *pointer;
   void   **reference;
-  int    *n;
+  int    *i;
   int64  *l;
   double *d;
   bool   *b;
@@ -87,6 +87,24 @@ typedef struct
   ConfigValueTypes type;                          // type of config value
   ConfigVariable   variable;                      // variable or NULL
   int              offset;                        // offset in struct or -1
+  struct
+  {
+    int    i;
+    int64  l;
+    double d;
+    bool   b;
+    union
+    {
+      uint  enumeration;
+      uint  select;
+      ulong set;
+    };
+    union
+    {
+      const char *string;
+      const void *p;
+    };
+  } defaultValue;
   struct
   {
     int                     min,max;              // valid range
@@ -243,6 +261,7 @@ typedef struct
     CONFIG_VALUE_TYPE_INTEGER,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -263,6 +282,7 @@ typedef struct
     CONFIG_VALUE_TYPE_INTEGER64,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
     {0.0,0.0,NULL,0},\
@@ -283,6 +303,7 @@ typedef struct
     CONFIG_VALUE_TYPE_DOUBLE,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
@@ -303,6 +324,7 @@ typedef struct
     CONFIG_VALUE_TYPE_BOOLEAN,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -323,6 +345,7 @@ typedef struct
     CONFIG_VALUE_TYPE_BOOLEAN,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -337,12 +360,13 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
   CONFIG_VALUE_BOOLEAN_YESNO(name,NULL,offsetof(type,member))
 
-#define CONFIG_VALUE_ENUM(name,variablePointer,offset,value) \
+#define CONFIG_VALUE_ENUM(name,variablePointer,offset,defaultValue,value) \
   { \
     name,\
     CONFIG_VALUE_TYPE_ENUM,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{defaultValue},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -354,8 +378,8 @@ typedef struct
     {},\
     {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_ENUM(name,type,member,value) \
-  CONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value)
+#define CONFIG_STRUCT_VALUE_ENUM(name,type,member,defaultValue,value) \
+  CONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),defaultValue,value)
 
 #define CONFIG_VALUE_SELECT(name,variablePointer,offset,selects) \
   { \
@@ -363,6 +387,7 @@ typedef struct
     CONFIG_VALUE_TYPE_SELECT,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -383,6 +408,7 @@ typedef struct
     CONFIG_VALUE_TYPE_SET,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -403,6 +429,7 @@ typedef struct
     CONFIG_VALUE_TYPE_CSTRING,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -423,6 +450,7 @@ typedef struct
     CONFIG_VALUE_TYPE_STRING,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -443,6 +471,7 @@ typedef struct
     CONFIG_VALUE_TYPE_SPECIAL,\
     {variablePointer},\
     offset,\
+    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0},\

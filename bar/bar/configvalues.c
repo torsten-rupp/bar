@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/bar/configvalues.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -44,7 +44,7 @@ extern "C" {
 *          value             - option value or NULL
 *          errorOutputHandle - error output handle or NULL
 *          errorPrefix       - error prefix or NULL
-* Output : -
+* Output : variable - variable to store value
 * Return : TRUE if option processed without error, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -69,7 +69,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         uint  i,j,z;
         char  number[128],unit[32];
         ulong factor;
-        int   n;
+        int   data;
 
         /* split number, unit */
         i = strlen(value);
@@ -132,9 +132,9 @@ LOCAL bool processValue(const ConfigValue *configValue,
         }
 
         /* calculate value */
-        n = strtoll(value,NULL,0)*factor;
-        if (   (n < configValue->integerValue.min)
-            || (n > configValue->integerValue.max)
+        data = strtoll(value,NULL,0)*factor;
+        if (   (data < configValue->integerValue.min)
+            || (data > configValue->integerValue.max)
            )
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
@@ -153,23 +153,23 @@ LOCAL bool processValue(const ConfigValue *configValue,
         {
           if (variable != NULL)
           {
-            configVariable.n = (int*)((byte*)variable+configValue->offset);
-            (*configVariable.n) = n;
+            configVariable.i = (int*)((byte*)variable+configValue->offset);
+            (*configVariable.i) = data;
           }
           else
           {
             assert(configValue->variable.reference != NULL);
             if ((*configValue->variable.reference) != NULL)
             {
-              configVariable.n = (int*)((byte*)(*configValue->variable.reference)+configValue->offset);
-              (*configVariable.n) = n;
+              configVariable.i = (int*)((byte*)(*configValue->variable.reference)+configValue->offset);
+              (*configVariable.i) = data;
             }
           }
         }
         else
         {
-          assert(configValue->variable.n != NULL);
-          (*configValue->variable.n) = n;
+          assert(configValue->variable.i != NULL);
+          (*configValue->variable.i) = data;
         }
       }
       break;
@@ -178,7 +178,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         uint  i,j,z;
         char  number[128],unit[32];
         ulong factor;
-        int64 l;
+        int64 data;
 
         /* split number, unit */
         i = strlen(value);
@@ -241,9 +241,9 @@ LOCAL bool processValue(const ConfigValue *configValue,
         }
 
         /* calculate value */
-        l = strtoll(value,NULL,0)*factor;
-        if (   (l < configValue->integer64Value.min)
-            || (l > configValue->integer64Value.max)
+        data = strtoll(value,NULL,0)*factor;
+        if (   (data < configValue->integer64Value.min)
+            || (data > configValue->integer64Value.max)
            )
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
@@ -263,7 +263,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           if (variable != NULL)
           {
             configVariable.l = (int64*)((byte*)variable+configValue->offset);
-            (*configVariable.l) = l;
+            (*configVariable.l) = data;
           }
           else
           {
@@ -271,23 +271,23 @@ LOCAL bool processValue(const ConfigValue *configValue,
             if ((*configValue->variable.reference) != NULL)
             {
               configVariable.l = (int64*)((byte*)(*configValue->variable.reference)+configValue->offset);
-              (*configVariable.l) = l;
+              (*configVariable.l) = data;
             }
           }
         }
         else
         {
           assert(configValue->variable.l != NULL);
-          (*configValue->variable.l) = l;
+          (*configValue->variable.l) = data;
         }
       }
       break;
     case CONFIG_VALUE_TYPE_DOUBLE:
       {
-        uint  i,j,z;
-        char  number[128],unit[32];
-        ulong factor;
-        double d;
+        uint   i,j,z;
+        char   number[128],unit[32];
+        ulong  factor;
+        double data;
 
         /* split number, unit */
         i = strlen(value);
@@ -350,9 +350,9 @@ LOCAL bool processValue(const ConfigValue *configValue,
         }
 
         /* calculate value */
-        d = strtod(value,0);
-        if (   (d < configValue->doubleValue.min)
-            || (d > configValue->doubleValue.max)
+        data = strtod(value,0);
+        if (   (data < configValue->doubleValue.min)
+            || (data > configValue->doubleValue.max)
            )
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
@@ -372,7 +372,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           if (variable != NULL)
           {
             configVariable.d = (double*)((byte*)variable+configValue->offset);
-            (*configVariable.d) = d;
+            (*configVariable.d) = data;
           }
           else
           {
@@ -380,20 +380,20 @@ LOCAL bool processValue(const ConfigValue *configValue,
             if ((*configValue->variable.reference) != NULL)
             {
               configVariable.d = (double*)((byte*)(*configValue->variable.reference)+configValue->offset);
-              (*configVariable.d) = d;
+              (*configVariable.d) = data;
             }
           }
         }
         else
         {
           assert(configValue->variable.d != NULL);
-          (*configValue->variable.d) = d;
+          (*configValue->variable.d) = data;
         }
       }
       break;
     case CONFIG_VALUE_TYPE_BOOLEAN:
       {
-        bool b;
+        bool data;
 
         /* calculate value */
         if      (   (value == NULL)
@@ -403,7 +403,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
                  || (strcmp(value,"yes") == 0)
                 )
         {
-          b = TRUE;
+          data = TRUE;
         }
         else if (   (strcmp(value,"0") == 0)
                  || (strcmp(value,"false") == 0)
@@ -411,7 +411,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
                  || (strcmp(value,"no") == 0)
                 )
         {
-          b = FALSE;
+          data = FALSE;
         }
         else
         {
@@ -430,7 +430,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           if (variable != NULL)
           {
             configVariable.b = (bool*)((byte*)variable+configValue->offset);
-            (*configVariable.b) = b;
+            (*configVariable.b) = data;
           }
           else
           {
@@ -438,14 +438,14 @@ LOCAL bool processValue(const ConfigValue *configValue,
             if ((*configValue->variable.reference) != NULL)
             {
               configVariable.b = (bool*)((byte*)(*configValue->variable.reference)+configValue->offset);
-              (*configVariable.b) = b;
+              (*configVariable.b) = data;
             }
           }
         }
         else
         {
           assert(configValue->variable.b != NULL);
-          (*configValue->variable.b) = b;
+          (*configValue->variable.b) = data;
         }
       }
       break;
@@ -525,8 +525,8 @@ LOCAL bool processValue(const ConfigValue *configValue,
       break;
     case CONFIG_VALUE_TYPE_SET:
       {
-        uint  i,j,z;
-        char  setName[128];
+        uint i,j,z;
+        char setName[128];
 
         /* find and store set values */
         assert(configValue->variable.set != NULL);
@@ -729,33 +729,43 @@ bool ConfigValue_init(const ConfigValue configValues[],
     switch (configValues[i].type)
     {
       case CONFIG_VALUE_TYPE_INTEGER:
-        assert(configValues[i].variable.n != NULL);
+        assert(configValues[i].variable.i != NULL);
+        (*configValues[i].variable.i) = configValues[i].defaultValue.i;
         break;
       case CONFIG_VALUE_TYPE_INTEGER64:
         assert(configValues[i].variable.l != NULL);
+        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
         break;
       case CONFIG_VALUE_TYPE_DOUBLE:
         assert(configValues[i].variable.d != NULL);
+        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
         break;
       case CONFIG_VALUE_TYPE_BOOLEAN:
         assert(configValues[i].variable.b != NULL);
+        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
         break;
       case CONFIG_VALUE_TYPE_ENUM:
         assert(configValues[i].variable.enumeration != NULL);
+        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
         break;
       case CONFIG_VALUE_TYPE_SELECT:
         assert(configValues[i].variable.select != NULL);
+        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
         break;
       case CONFIG_VALUE_TYPE_SET:
         assert(configValues[i].variable.set != NULL);
+        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
         break;
       case CONFIG_VALUE_TYPE_CSTRING:
         assert(configValues[i].variable.cString != NULL);
+        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
         break;
       case CONFIG_VALUE_TYPE_STRING:
         assert(configValues[i].variable.string != NULL);
+        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
         break;
       case CONFIG_VALUE_TYPE_SPECIAL:
+        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
         break;
       #ifndef NDEBUG
         default:
@@ -1016,26 +1026,26 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         {
           if (configValueFormat->variable != NULL)
           {
-            configVariable.n = (int*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
+            configVariable.i = (int*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
           else
           {
             assert(configValueFormat->configValue->variable.reference != NULL);
-            configVariable.n = (int*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
+            configVariable.i = (int*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
         }
         else
         {
-          assert(configValueFormat->configValue->variable.n != NULL);
-          configVariable.n = configValueFormat->configValue->variable.n;
+          assert(configValueFormat->configValue->variable.i != NULL);
+          configVariable.i = configValueFormat->configValue->variable.i;
         }
 
         /* find usable unit */
-        if ((configValueFormat->configValue->integerValue.units != NULL) && ((*configVariable.n) != 0))
+        if ((configValueFormat->configValue->integerValue.units != NULL) && ((*configVariable.i) != 0))
         {
           z = 0;
           while (   (z < configValueFormat->configValue->integerValue.unitCount)
-                 && (((*configVariable.n) % configValueFormat->configValue->integerValue.units[z].factor) != 0)
+                 && (((*configVariable.i) % configValueFormat->configValue->integerValue.units[z].factor) != 0)
                 )
           {
             z++;
@@ -1059,11 +1069,11 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 
         if (factor > 0)
         {
-          String_format(line,"%ld%s",(*configVariable.n)/factor,unit);
+          String_format(line,"%ld%s",(*configVariable.i)/factor,unit);
         }
         else
         {
-          String_format(line,"%ld",*configVariable.n);
+          String_format(line,"%ld",*configVariable.i);
         }
 
         configValueFormat->endOfDataFlag = TRUE;
@@ -1093,7 +1103,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         {
           z = 0;
           while (   (z < configValueFormat->configValue->integer64Value.unitCount)
-                 && (((*configVariable.n) % configValueFormat->configValue->integer64Value.units[z].factor) != 0)
+                 && (((*configVariable.l) % configValueFormat->configValue->integer64Value.units[z].factor) != 0)
                 )
           {
             z++;
@@ -1319,7 +1329,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
         else
         {
-          assert(configValueFormat->configValue->variable.n != NULL);
+          assert(configValueFormat->configValue->variable.cString != NULL);
           configVariable.cString = configValueFormat->configValue->variable.cString;
         }
 
@@ -1351,7 +1361,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
         else
         {
-          assert(configValueFormat->configValue->variable.n != NULL);
+          assert(configValueFormat->configValue->variable.string != NULL);
           configVariable.string = configValueFormat->configValue->variable.string;
         }
 
