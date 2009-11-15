@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -1369,6 +1369,19 @@ class Widgets
     return tableColumn;
   }
 
+  /** add column to table widget
+   * @param table table widget
+   * @param columnNb column number
+   * @param style style
+   * @param width width of column
+   * @param resizable TRUE iff resizable column
+   * @return new table column
+   */
+  static TableColumn addTableColumn(Table table, int columnNb, int style, int width)
+  {
+    return addTableColumn(table,columnNb,"",style,width,false);
+  }
+
   /** hide table column
    * @param tableColumn table column to hide
    */
@@ -1603,11 +1616,11 @@ class Widgets
 
   /** add table entry
    * @param table table
-   * @param index insert before this index in table [0..n]
+   * @param index insert before this index in table [0..n-1] or -1
    * @param table entry data
    * @param values values list
    */
-  static void addTableEntry(final Table table, final int index, final Object data, final String... values)
+  static void insertTableEntry(final Table table, final int index, final Object data, final Object... values)
   {
     if (!table.isDisposed())
     {
@@ -1617,11 +1630,21 @@ class Widgets
         {
           if (!table.isDisposed())
           {
-            TableItem tableItem = new TableItem(table,SWT.NONE,index);
+            TableItem tableItem = (index >= 0) ? new TableItem(table,SWT.NONE,index) : new TableItem(table,SWT.NONE);
             tableItem.setData(data);
             for (int i = 0; i < values.length; i++)
             {
-              tableItem.setText(i,values[i]);
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  tableItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Image)
+                {
+                  tableItem.setImage(i,(Image)values[i]);
+                }
+              }
             }
           }
         }
@@ -1635,7 +1658,7 @@ class Widgets
    * @param table entry data
    * @param values values list
    */
-  static void addTableEntry(final Table table, final Comparator comparator, final Object data, final String... values)
+  static void insertTableEntry(final Table table, final Comparator comparator, final Object data, final Object... values)
   {
     if (!table.isDisposed())
     {
@@ -1652,7 +1675,17 @@ class Widgets
             tableItem.setData(data);
             for (int i = 0; i < values.length; i++)
             {
-              tableItem.setText(i,values[i]);
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  tableItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Image)
+                {
+                  tableItem.setImage(i,(Image)values[i]);
+                }
+              }
             }
           }
         }
@@ -1665,9 +1698,9 @@ class Widgets
    * @param table entry data
    * @param values values list
    */
-  static void addTableEntry(Table table, Object data, String... values)
+  static void addTableEntry(Table table, Object data, Object... values)
   {
-    addTableEntry(table,0,data,values);
+    insertTableEntry(table,-1,data,values);
   }
 
   /** update table entry
@@ -1675,7 +1708,7 @@ class Widgets
    * @param table entry data
    * @param values values list
    */
-  static void updateTableEntry(final Table table, final Object data, final String... values)
+  static void updateTableEntry(final Table table, final Object data, final Object... values)
   {
     if (!table.isDisposed())
     {
@@ -1691,7 +1724,17 @@ class Widgets
               {
                 for (int i = 0; i < values.length; i++)
                 {
-                  if (values[i] != null) tableItem.setText(i,values[i]);
+                  if (values[i] != null)
+                  {
+                    if      (values[i] instanceof String)
+                    {
+                      tableItem.setText(i,(String)values[i]);
+                    }
+                    else if (values[i] instanceof Image)
+                    {
+                      tableItem.setImage(i,(Image)values[i]);
+                    }
+                  }
                 }
                 break;
               }
