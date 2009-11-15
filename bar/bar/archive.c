@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -1333,6 +1333,7 @@ LOCAL Errors writeImageDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes bl
     }
 
     /* update part size */
+    assert(archiveFileInfo->image.blockSize > 0);
     archiveFileInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveFileInfo->image.compressInfoData)/archiveFileInfo->image.blockSize;
     error = Chunk_update(&archiveFileInfo->image.chunkInfoImageData,
                          &archiveFileInfo->image.chunkImageData
@@ -2099,6 +2100,7 @@ Errors Archive_newImageEntry(ArchiveInfo     *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveFileInfo != NULL);
   assert(deviceInfo != NULL);
+  assert(deviceInfo->blockSize > 0);
 
   /* init crypt password */
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
@@ -4364,6 +4366,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           if (archiveFileInfo->image.headerWrittenFlag)
           {
             /* update part size */
+            assert(archiveFileInfo->image.blockSize > 0);
             archiveFileInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveFileInfo->image.compressInfoData)/archiveFileInfo->image.blockSize;
             error = Chunk_update(&archiveFileInfo->image.chunkInfoImageData,
                                  &archiveFileInfo->image.chunkImageData
