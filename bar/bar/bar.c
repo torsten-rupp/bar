@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -30,6 +30,7 @@
 #include "errors.h"
 #include "files.h"
 #include "patternlists.h"
+#include "entrylists.h"
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
@@ -122,7 +123,7 @@ LOCAL FTPServerList ftpServerList;
 LOCAL SSHServerList sshServerList;
 LOCAL Device        defaultDevice;
 LOCAL DeviceList    deviceList;
-LOCAL PatternList   includePatternList;
+LOCAL EntryList     includeEntryList;
 LOCAL PatternList   excludePatternList;
 LOCAL FTPServer     *currentFTPServer = &defaultFTPServer;
 LOCAL SSHServer     *currentSSHServer = &defaultSSHServer;
@@ -171,6 +172,7 @@ LOCAL bool          outputNewLineFlag;
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
+LOCAL bool cmdOptionParseEntry(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseIncludeExclude(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 
@@ -301,7 +303,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SELECT       ("pattern-type",                 0,  1,0,jobOptions.patternType,                    PATTERN_TYPE_GLOB,COMMAND_LINE_OPTIONS_PATTERN_TYPES,              "select pattern type"                                                      ),
 
-  CMD_OPTION_SPECIAL      ("include",                      '#',0,1,&includePatternList,                       NULL,cmdOptionParseIncludeExclude,NULL,                            "include pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("include",                      '#',0,1,&includeEntryList,                         NULL,cmdOptionParseEntry,NULL,                                     "include pattern","pattern"                                                ),
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,1,&excludePatternList,                       NULL,cmdOptionParseIncludeExclude,NULL,                            "exclude pattern","pattern"                                                ),
 
   CMD_OPTION_SELECT       ("compress-algorithm",           'z',0,0,jobOptions.compressAlgorithm,              COMPRESS_ALGORITHM_NONE,COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,  "select compress algorithm to use"                                         ),
@@ -517,7 +519,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                             CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_VALUE_SPECIAL  ("include",                      &includePatternList,-1,                                 configValueParseIncludeExclude,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL  ("include-file",                 &includeEntryList,-1,                                   configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL  ("include-image",                &includeEntryList,-1,                                   configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL  ("exclude",                      &excludePatternList,-1,                                 configValueParseIncludeExclude,NULL,NULL,NULL,&jobOptions.patternType),
 
   CONFIG_VALUE_SELECT   ("compress-algorithm",           &jobOptions.compressAlgorithm,-1,                       CONFIG_VALUE_COMPRESS_ALGORITHMS),
@@ -960,6 +963,53 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
 * Notes  : -
 \***********************************************************************/
 
+LOCAL bool cmdOptionParseEntry(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+{
+  EntryTypes   entryType;
+  PatternTypes patternType;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
+
+  /* get entry type */
+  switch (command)
+  {
+    case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
+    case COMMAND_CREATE_IMAGES: entryType = ENTRY_TYPE_IMAGE; break;
+    default:
+      HALT_INTERNAL_ERROR("no valid command set");
+      break;
+  }
+
+  /* detect pattern type, get pattern */
+  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+
+  /* append to list */
+  if (EntryList_appendCString((EntryList*)variable,entryType,value,patternType) != ERROR_NONE)
+  {
+    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseIncludeExclude
+* Purpose: command line option call back for parsing include/exclude
+*          patterns
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool cmdOptionParseIncludeExclude(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
 {
   PatternTypes patternType;
@@ -1279,7 +1329,7 @@ LOCAL bool initAll(void)
   List_init(&sshServerList);
   List_init(&deviceList);
   serverPassword = Password_new();
-  PatternList_init(&includePatternList);
+  EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   StringList_init(&configFileNameList);
   tmpDirectory = String_new();
@@ -1321,7 +1371,7 @@ LOCAL void doneAll(void)
   if (defaultFTPServer.password != NULL) Password_delete(defaultFTPServer.password);
   if (defaultFTPServer.loginName != NULL) String_delete(defaultFTPServer.loginName);
   PatternList_done(&excludePatternList);
-  PatternList_done(&includePatternList);
+  EntryList_done(&includeEntryList);
   Password_delete(serverPassword);
   freeJobOptions(&jobOptions);
   List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
@@ -1810,10 +1860,157 @@ bool configValueFormatOwner(void **formatUserData, void *userData, String line)
 
   UNUSED_VARIABLE(userData);
 
+  if ((*formatUserData) != NULL)
+  {
 //???
-  String_format(line,"%d:%d",0,0);
+    String_format(line,"%d:%d",0,0);
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *variable, const char *name, const char *value)
+{
+  PatternTypes patternType;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+//  UNUSED_VARIABLE(userData);
+//??? userData = default patterType?
+  UNUSED_VARIABLE(name);
+
+  /* detect pattern type, get pattern */
+  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+
+  /* append to list */
+  if (EntryList_appendCString((EntryList*)variable,entryType,value,patternType) != ERROR_NONE)
+  {
+    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
+    return FALSE;
+  }
 
   return TRUE;
+}
+
+bool configValueParseFileEntry(void *userData, void *variable, const char *name, const char *value)
+{
+  return configValueParseEntry(ENTRY_TYPE_FILE,userData,variable,name,value);
+}
+
+bool configValueParseImageEntry(void *userData, void *variable, const char *name, const char *value)
+{
+  return configValueParseEntry(ENTRY_TYPE_IMAGE,userData,variable,name,value);
+}
+
+void configValueFormatInitEntry(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = ((EntryList*)variable)->head;
+}
+
+void configValueFormatDoneEntry(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(formatUserData);  
+}
+
+bool configValueFormatFileEntry(void **formatUserData, void *userData, String line)
+{
+  EntryNode *entryNode;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  entryNode = (EntryNode*)(*formatUserData);
+  while ((entryNode != NULL) && (entryNode->type != ENTRY_TYPE_FILE))
+  {
+    entryNode = entryNode->next;
+  }
+  if (entryNode != NULL)
+  {
+    switch (entryNode->pattern.type)
+    {
+      case PATTERN_TYPE_GLOB:
+        String_format(line,"%'S",entryNode->string);
+        break;
+      case PATTERN_TYPE_REGEX:
+        String_format(line,"r:%'S",entryNode->string);
+        break;
+      case PATTERN_TYPE_EXTENDED_REGEX:
+        String_format(line,"x:%'S",entryNode->string);
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
+    (*formatUserData) = entryNode->next;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool configValueFormatImageEntry(void **formatUserData, void *userData, String line)
+{
+  EntryNode *entryNode;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  entryNode = (EntryNode*)(*formatUserData);
+  while ((entryNode != NULL) && (entryNode->type != ENTRY_TYPE_IMAGE))
+  {
+    entryNode = entryNode->next;
+  }
+  if (entryNode != NULL)
+  {
+    switch (entryNode->pattern.type)
+    {
+      case PATTERN_TYPE_GLOB:
+        String_format(line,"%'S",entryNode->string);
+        break;
+      case PATTERN_TYPE_REGEX:
+        String_format(line,"r:%'S",entryNode->string);
+        break;
+      case PATTERN_TYPE_EXTENDED_REGEX:
+        String_format(line,"x:%'S",entryNode->string);
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
+    (*formatUserData) = entryNode->next;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 bool configValueParseIncludeExclude(void *userData, void *variable, const char *name, const char *value)
@@ -2709,8 +2906,8 @@ int main(int argc, const char *argv[])
       case COMMAND_CREATE_FILES:
       case COMMAND_CREATE_IMAGES:
         {
-          int         z;
-          CreateModes createMode;
+          EntryTypes entryType;
+          int        z;
 
           /* get archive file name */
           if (argc <= 1)
@@ -2722,21 +2919,20 @@ int main(int argc, const char *argv[])
           archiveFileName = argv[1];
 
           /* get include patterns */
+          switch (command)
+          {
+            case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
+            case COMMAND_CREATE_IMAGES: entryType = ENTRY_TYPE_IMAGE; break;
+            default:                    entryType = ENTRY_TYPE_FILE;  break;
+          }
           for (z = 2; z < argc; z++)
           {
-            error = PatternList_appendCString(&includePatternList,argv[z],jobOptions.patternType);
+            error = EntryList_appendCString(&includeEntryList,entryType,argv[z],jobOptions.patternType);
           }
 
           /* create archive */
-          switch (command)
-          {
-            case COMMAND_CREATE_FILES:  createMode = CREATE_MODE_FILES;  break;
-            case COMMAND_CREATE_IMAGES: createMode = CREATE_MODE_IMAGES; break;
-            default:                    createMode = CREATE_MODE_FILES;  break;
-          }
-          error = Command_create(createMode,
-                                 archiveFileName,
-                                 &includePatternList,
+          error = Command_create(archiveFileName,
+                                 &includeEntryList,
                                  &excludePatternList,
                                  &jobOptions,
                                  ARCHIVE_TYPE_NORMAL,
@@ -2770,7 +2966,7 @@ int main(int argc, const char *argv[])
           {
             case COMMAND_LIST:
               error = Command_list(&fileNameList,
-                                   &includePatternList,
+                                   &includeEntryList,
                                    &excludePatternList,
                                    &jobOptions,
                                    inputCryptPassword,
@@ -2779,7 +2975,7 @@ int main(int argc, const char *argv[])
               break;
             case COMMAND_TEST:
               error = Command_test(&fileNameList,
-                                   &includePatternList,
+                                   &includeEntryList,
                                    &excludePatternList,
                                    &jobOptions,
                                    inputCryptPassword,
@@ -2788,7 +2984,7 @@ int main(int argc, const char *argv[])
               break;
             case COMMAND_COMPARE:
               error = Command_compare(&fileNameList,
-                                      &includePatternList,
+                                      &includeEntryList,
                                       &excludePatternList,
                                       &jobOptions,
                                       inputCryptPassword,
@@ -2797,7 +2993,7 @@ int main(int argc, const char *argv[])
               break;
             case COMMAND_RESTORE:
               error = Command_restore(&fileNameList,
-                                      &includePatternList,
+                                      &includeEntryList,
                                       &excludePatternList,
                                       &jobOptions,
                                       inputCryptPassword,

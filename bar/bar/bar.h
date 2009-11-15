@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -608,6 +608,62 @@ void configValueFormatDoneOwner(void **formatUserData, void *userData);
 \***********************************************************************/
 
 bool configValueFormatOwner(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseFileEntry, configValueParseImageEntry
+* Purpose: config value option call back for parsing include/exclude
+*          patterns
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseFileEntry(void *userData, void *variable, const char *name, const char *value);
+bool configValueParseImageEntry(void *userData, void *variable, const char *name, const char *value);
+
+/***********************************************************************\
+* Name   : configValueFormatInitEntry
+* Purpose: init format of config include statements
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitEntry(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneEntry
+* Purpose: done format of config include statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneEntry(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatFileEntry, configValueFormatImageEntry
+* Purpose: format next config include statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatFileEntry(void **formatUserData, void *userData, String line);
+bool configValueFormatImageEntry(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseIncludeExclude
