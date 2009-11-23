@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/bar/archive_format.def,v $
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems: all
@@ -46,10 +46,8 @@ CHUNK IMAGE_ENTRY "IENT" ImageEntry
   uint16 fileSystemType
   uint64 size
   uint32 blockSize
-  uint16 blockMapSize
   string name
   crc32  crc
-#  data   blockMap
 
 CHUNK IMAGE_DATA "IDAT" ImageData
   uint64 blockOffset
