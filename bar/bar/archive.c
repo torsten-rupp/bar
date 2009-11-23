@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -2118,34 +2118,33 @@ Errors Archive_newImageEntry(ArchiveInfo     *archiveInfo,
   }
 
   /* init archive file info */
-  archiveFileInfo->archiveInfo                          = archiveInfo;
-  archiveFileInfo->mode                                 = ARCHIVE_MODE_WRITE;
+  archiveFileInfo->archiveInfo                        = archiveInfo;
+  archiveFileInfo->mode                               = ARCHIVE_MODE_WRITE;
 
-  archiveFileInfo->cryptAlgorithm                       = archiveInfo->jobOptions->cryptAlgorithm;
-  archiveFileInfo->blockLength                          = archiveInfo->blockLength;
+  archiveFileInfo->cryptAlgorithm                     = archiveInfo->jobOptions->cryptAlgorithm;
+  archiveFileInfo->blockLength                        = archiveInfo->blockLength;
 
-  archiveFileInfo->archiveEntryType                     = ARCHIVE_ENTRY_TYPE_IMAGE;
+  archiveFileInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_IMAGE;
 
-  archiveFileInfo->image.blockSize                      = deviceInfo->blockSize;
-  archiveFileInfo->image.compressAlgorithm              = (deviceInfo->size > globalOptions.compressMinFileSize)?archiveInfo->jobOptions->compressAlgorithm:COMPRESS_ALGORITHM_NONE;
+  archiveFileInfo->image.blockSize                    = deviceInfo->blockSize;
+  archiveFileInfo->image.compressAlgorithm            = (deviceInfo->size > globalOptions.compressMinFileSize)?archiveInfo->jobOptions->compressAlgorithm:COMPRESS_ALGORITHM_NONE;
 
-  archiveFileInfo->image.chunkImage.compressAlgorithm   = archiveFileInfo->image.compressAlgorithm;
-  archiveFileInfo->image.chunkImage.cryptAlgorithm      = archiveInfo->jobOptions->cryptAlgorithm;
+  archiveFileInfo->image.chunkImage.compressAlgorithm = archiveFileInfo->image.compressAlgorithm;
+  archiveFileInfo->image.chunkImage.cryptAlgorithm    = archiveInfo->jobOptions->cryptAlgorithm;
 
-  archiveFileInfo->image.chunkImageEntry.size           = deviceInfo->size;
-  archiveFileInfo->image.chunkImageEntry.blockSize      = deviceInfo->blockSize;
-  archiveFileInfo->image.chunkImageEntry.blockMapSize   = 0;
-  archiveFileInfo->image.chunkImageEntry.name           = String_duplicate(deviceName);
+  archiveFileInfo->image.chunkImageEntry.size         = deviceInfo->size;
+  archiveFileInfo->image.chunkImageEntry.blockSize    = deviceInfo->blockSize;
+  archiveFileInfo->image.chunkImageEntry.name         = String_duplicate(deviceName);
 
-  archiveFileInfo->image.chunkImageData.blockOffset     = 0;
-  archiveFileInfo->image.chunkImageData.blockCount      = 0;
+  archiveFileInfo->image.chunkImageData.blockOffset   = 0;
+  archiveFileInfo->image.chunkImageData.blockCount    = 0;
 
-  archiveFileInfo->image.createdFlag                    = FALSE;
-  archiveFileInfo->image.headerLength                   = 0;
-  archiveFileInfo->image.headerWrittenFlag              = FALSE;
+  archiveFileInfo->image.createdFlag                  = FALSE;
+  archiveFileInfo->image.headerLength                 = 0;
+  archiveFileInfo->image.headerWrittenFlag            = FALSE;
 
-  archiveFileInfo->image.buffer                         = NULL;
-  archiveFileInfo->image.bufferLength                   = 0;
+  archiveFileInfo->image.buffer                       = NULL;
+  archiveFileInfo->image.bufferLength                 = 0;
 
   /* init file-chunk */
   error = Chunk_init(&archiveFileInfo->image.chunkInfoImage,
