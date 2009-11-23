@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -385,9 +385,11 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      0,  0,0,jobOptions.overwriteArchiveFilesFlag,      FALSE,                                                             "overwrite existing archive files"                                         ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,0,jobOptions.overwriteFilesFlag,             FALSE,                                                             "overwrite existing files"                                                 ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,0,jobOptions.waitFirstVolumeFlag,            FALSE,                                                             "wait for first volume"                                                    ),
+  CMD_OPTION_BOOLEAN      ("no-spare-images",              0,  1,0,jobOptions.noSpareImagesFlag,              FALSE,                                                             "do not store spare images"                                                ),
   CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,0,jobOptions.noStorageFlag,                  FALSE,                                                             "do not store archives (skip storage)"                                     ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-dvd",                0,  1,0,jobOptions.noBAROnDVDFlag,                 FALSE,                                                             "do not store a copy of BAR on DVDs"                                       ),
   CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,0,jobOptions.stopOnErrorFlag,                FALSE,                                                             "immediately stop on error"                                                ),
+  
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,         FALSE,                                                             "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                   FALSE,                                                             "suppress any output"                                                      ),
   CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                1,0,3,NULL,                                                        "verbosity level"                                                          ),
