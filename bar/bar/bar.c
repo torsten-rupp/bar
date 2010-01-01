@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -295,7 +295,7 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_INTEGER      ("directory-strip",              'p',1,0,jobOptions.directoryStripCount,            0,0,INT_MAX,NULL,                                                  "number of directories to strip on extract"                                ),
   CMD_OPTION_SPECIAL      ("destination",                  0,  0,0,&jobOptions.destination,                   NULL,cmdOptionParseString,NULL,                                    "destination to restore files/image","path"                                ),
-  CMD_OPTION_SPECIAL      ("owner",                        0,  0,0,&jobOptions.owner,                         NULL,cmdOptionParseOwner,NULL,                                     "owner of restored files","user:group"                                     ),
+  CMD_OPTION_SPECIAL      ("owner",                        0,  0,0,&jobOptions.owner,                         NULL,cmdOptionParseOwner,NULL,                                     "owner and group of restored files","user:group"                           ),
 
   CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,globalOptions.niceLevel,                   0,0,19,NULL,                                                       "general nice level of processes/threads"                                  ),
 
@@ -385,7 +385,6 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      0,  0,0,jobOptions.overwriteArchiveFilesFlag,      FALSE,                                                             "overwrite existing archive files"                                         ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,0,jobOptions.overwriteFilesFlag,             FALSE,                                                             "overwrite existing files"                                                 ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,0,jobOptions.waitFirstVolumeFlag,            FALSE,                                                             "wait for first volume"                                                    ),
-  CMD_OPTION_BOOLEAN      ("no-spare-images",              0,  1,0,jobOptions.noSpareImagesFlag,              FALSE,                                                             "do not store spare images"                                                ),
   CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,0,jobOptions.noStorageFlag,                  FALSE,                                                             "do not store archives (skip storage)"                                     ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-dvd",                0,  1,0,jobOptions.noBAROnDVDFlag,                 FALSE,                                                             "do not store a copy of BAR on DVDs"                                       ),
   CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,0,jobOptions.stopOnErrorFlag,                FALSE,                                                             "immediately stop on error"                                                ),
@@ -977,6 +976,7 @@ LOCAL bool cmdOptionParseEntry(void *userData, void *variable, const char *name,
   UNUSED_VARIABLE(userData);
 
   /* get entry type */
+  entryType = ENTRY_TYPE_FILE;
   switch (command)
   {
     case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
@@ -1451,7 +1451,8 @@ void printInfo(uint verboseLevel, const char *format, ...)
 
 void vlogMessage(ulong logType, const char *prefix, const char *text, va_list arguments)
 {
-  String dateTime;
+  String  dateTime;
+  va_list tmpArguments;
 
   assert(text != NULL);
 
@@ -1466,7 +1467,9 @@ void vlogMessage(ulong logType, const char *prefix, const char *text, va_list ar
         /* append to temporary log file */
         fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
         if (prefix != NULL) fprintf(tmpLogFile,prefix);
-        vfprintf(tmpLogFile,text,arguments);
+        va_copy(tmpArguments,arguments);
+        vfprintf(tmpLogFile,text,tmpArguments);
+        va_end(tmpArguments);
         fprintf(tmpLogFile,"\n");
       }
 
@@ -1475,7 +1478,9 @@ void vlogMessage(ulong logType, const char *prefix, const char *text, va_list ar
         /* append to log file */
         fprintf(logFile,"%s> ",String_cString(dateTime));
         if (prefix != NULL) fprintf(logFile,prefix);
-        vfprintf(logFile,text,arguments);
+        va_copy(tmpArguments,arguments);
+        vfprintf(logFile,text,tmpArguments);
+        va_end(tmpArguments);
         fprintf(logFile,"\n");
       }
 
@@ -1884,7 +1889,7 @@ LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *var
   assert(variable != NULL);
   assert(value != NULL);
 
-//  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(userData);
 //??? userData = default patterType?
   UNUSED_VARIABLE(name);
 
