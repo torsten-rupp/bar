@@ -29,7 +29,9 @@ network connection (either plain or SSL encrypted) with the graphical
 front end barcontrol(3).
 
 OPTIONS
-         -c|--create                               create new archive
+
+         -c|--create                               create new files archive
+         -m|--image                                create new images archive
          -l|--list                                 list contents of archive
          -t|--test                                 test contents of archive
          -d|--compare                              compare contents of archive with files
@@ -44,7 +46,8 @@ OPTIONS
          -i|--incremental                          create incremental archive
          -I|--incremental-list-file=<file name>    incremental list file name (default: <archive name>.bid)
          -p|--directory-strip=<n>                  number of directories to strip on extract
-         --directory=<path>                        directory to restore files
+         --destination=<path>                      destination to restore files/image
+         --owner=<user:group>                      owner and group of restored files
          --nice-level=<n>                          general nice level of processes/threads
          --max-band-width=<n>[K]                   max. network band width to use
          --pattern-type=<name>                     select pattern type
@@ -54,17 +57,17 @@ OPTIONS
          -#|--include=<pattern>                    include pattern
          -!|--exclude=<pattern>                    exclude pattern
          -z|--compress-algorithm=<name>            select compress algorithm to use
-                                                     * none: no compression (default)
-                                                     * zip0: ZIP compression level 0
-                                                     * zip1: ZIP compression level 1
-                                                     * zip2: ZIP compression level 2
-                                                     * zip3: ZIP compression level 3
-                                                     * zip4: ZIP compression level 4
-                                                     * zip5: ZIP compression level 5
-                                                     * zip6: ZIP compression level 6
-                                                     * zip7: ZIP compression level 7
-                                                     * zip8: ZIP compression level 8
-                                                     * zip9: ZIP compression level 9
+                                                     * none : no compression (default)
+                                                     * zip0 : ZIP compression level 0
+                                                     * zip1 : ZIP compression level 1
+                                                     * zip2 : ZIP compression level 2
+                                                     * zip3 : ZIP compression level 3
+                                                     * zip4 : ZIP compression level 4
+                                                     * zip5 : ZIP compression level 5
+                                                     * zip6 : ZIP compression level 6
+                                                     * zip7 : ZIP compression level 7
+                                                     * zip8 : ZIP compression level 8
+                                                     * zip9 : ZIP compression level 9
                                                      * bzip1: BZIP2 compression level 1
                                                      * bzip2: BZIP2 compression level 2
                                                      * bzip3: BZIP2 compression level 3
@@ -74,6 +77,15 @@ OPTIONS
                                                      * bzip7: BZIP2 compression level 7
                                                      * bzip8: BZIP2 compression level 8
                                                      * bzip9: BZIP2 compression level 9
+                                                     * lzma1: LZMA compression level 1
+                                                     * lzma2: LZMA compression level 2
+                                                     * lzma3: LZMA compression level 3
+                                                     * lzma4: LZMA compression level 4
+                                                     * lzma5: LZMA compression level 5
+                                                     * lzma6: LZMA compression level 6
+                                                     * lzma7: LZMA compression level 7
+                                                     * lzma8: LZMA compression level 8
+                                                     * lzma9: LZMA compression level 9
          --compress-min-size=<n>[G|M|K]            minimal size of file for compression (default: 32)
          -y|--crypt-algorithm=<name>               select crypt algorithm to use
                                                      * none: no crypting (default)
@@ -91,7 +103,7 @@ OPTIONS
          --crypt-private-key=<file name>           private key for decryption
          --ftp-login-name=<name>                   ftp login name
          --ftp-password=<password>                 ftp password (use with care!)
-         --ssh-port=<n>                            ssh port (default: 22) (default: 22)
+         --ssh-port=<n>                            ssh port (default: 22)
          --ssh-login-name=<name>                   ssh login name
          --ssh-password=<password>                 ssh password (use with care!)
          --ssh-public-key=<file name>              ssh public key file name
@@ -136,17 +148,17 @@ OPTIONS
          --device-write-command=<command>          write device command
          --ecc                                     add error-correction codes with 'dvdisaster' tool
          --log=<name>[,<name>...]                  log types
-                                                     none      : no logging (default)
-                                                     errors    : log errors
-                                                     warnings  : log warnings
-                                                     ok        : log stored/restored files
-                                                     unknown   : log unknown files
-                                                     skipped   : log skipped files
-                                                     missing   : log missing files
-                                                     incomplete: log incomplete files
-                                                     excluded  : log excluded files
-                                                     storage   : log storage
-                                                     all       : log everything
+                                                     * none: no logging (default)
+                                                     * errors: log errors
+                                                     * warnings: log warnings
+                                                     * ok: log stored/restored files
+                                                     * unknown: log unknown files
+                                                     * skipped: log skipped files
+                                                     * missing: log missing files
+                                                     * incomplete: log incomplete files
+                                                     * excluded: log excluded files
+                                                     * storage: log storage
+                                                     * all: log everything
          --log-file=<file name>                    log file name
          --log-post-command=<command>              log file post-process command
          --pid-file=<file name>                    process id file name
@@ -215,6 +227,15 @@ FILES
 $HOME/.bar/bar.cfg
 
   user specific configuration
+
+/etc/ssl/certs/bar-ca.pem, /etc/ssl/certs/bar-server-cert.pemq
+
+  BAR TLS/SSL certificates and public keys
+
+/etc/ssl/private/bar-server-key.pem
+
+  BAR TLS/SSL server private key
+ 
 
 BUGS
 Please report bugs to torsten.rupp@gmx.net
