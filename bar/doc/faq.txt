@@ -21,22 +21,21 @@ A: Yes. BAR create his own incremental list files (.bid files).
    which files changed.
 
 Q: Can I just create the incremental list file?
-A: Yes. Use option --no-storage and --create-incremental-list.
-   The incremental list file is created, but no archive files
-   are neither created nor stored.
+A: Yes. Use option --no-storage. The incremental list file is
+   created, but no archive files are neither created nor
+   stored.
 
 Q: I cannot establish a TLS/SSL connection with barcontrol.
 A: For the TLS/SSL connection in barcontrol a TLS/SSL key
    is required. Create that key once with "make keys" and
-   copy the keys with "make install_keys" in the appropiapted
+   copy the keys with "make install_keys" in the appropiated
    directories of your system.
 
 Q: I tried to list a *.bid-file, but it does not show anything.
 A: The .bid-files are not archive files, but files with lists
    of files names needed for the incremental backup. Do not
    modified, delete or copy those files. The content is not
-   encrypted. There is no need to e. g. storage them on an
-   external server.
+   encrypted. BAR does not store them on an external server.
 
 Q: When I specify "-# /foo/" the list of included files is
    different to "-# /foo". Why?
@@ -45,5 +44,11 @@ A: The options values for -# and -! are patterns, not file or
    wie "/foo/" including the trailing "/". If the directory
    "/foo" contain sub-directories only those sub-directories
    are included. If you specify "-# /foo" the directory "foo"
-   including all sub-directories and all files starting wie
-   "foo" in the directoty "/" are included.
+   including all sub-directories and all files in "/" starting
+   with "foo" are included.
+
+Q: I get the error "configure: error: function zlibVersion() is
+   not available".
+A: The zlib library is mandatory. Please install the zlib
+   package (binary and development files) with your
+   distribution package tools.

@@ -46,7 +46,7 @@ Restore contents of an archive:
 3) --- Extended usage of BAR -------------------------------
 
 Note: The example commands are formated with "\" to avoid
-      to long lines.
+      long lines.
 
 Get extended help:
 
@@ -69,8 +69,8 @@ Create an archive with compression, encryption, splitted in 128MBytes parts:
     home.bar \
     /home
 
-Create an archive with compression, encryption, splitted in 128MBytes parts, store
-it on server via ssh (scp):
+Create an archive with compression, encryption, splitted in 128MBytes parts,
+store it on server via ssh (scp):
 
   bar \
     -c \
@@ -79,8 +79,8 @@ it on server via ssh (scp):
     scp://myname@myserver.org/home.bar \
     /home
 
-Create an archive with compression, encryption, splitted in 128MBytes parts, store
-it on DVD:
+Create an archive with compression, encryption, splitted in 128MBytes parts,
+store it on DVD:
 
   bar \
     -c \
@@ -89,8 +89,8 @@ it on DVD:
     dvd:/home.bar \
     /home
 
-Create an archive with compression, encryption, splitted in 128MBytes parts, store
-it on DVD and add error-correction codes to DVD image:
+Create an archive with compression, encryption, splitted in 128MBytes parts,
+store it on DVD and add error-correction codes to DVD image:
 
   bar \
     -c \
@@ -100,9 +100,10 @@ it on DVD and add error-correction codes to DVD image:
     dvd:/home.bar \
     /home
 
-Create an archive with compression, encryption, splitted in 128MBytes parts, store
-it on DVD, add error-correction codes to DVD image, send me an email each time a
-new DVD have to be inserted, and wait via Xdialog for user interaction:
+Create an archive with compression, encryption, splitted in 128MBytes parts,
+store it on DVD, add error-correction codes to DVD image, send an email
+each time a new DVD have to be inserted, and wait via Xdialog for user
+interaction:
 
   bar \
     -c \
