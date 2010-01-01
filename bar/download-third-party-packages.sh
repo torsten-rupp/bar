@@ -98,11 +98,11 @@ if test $cleanFlag -eq 0; then
   (
    cd $tmpDirectory
    if test ! -f libssh2-1.1.tar.gz; then
-     $WGET 'http://prdownloads.sourceforge.net/libssh2/libssh2-1.1.tar.gz?download'
+     $WGET 'http://www.libssh2.org/download/libssh2-1.2.2.tar.gz'
    fi
-   $TAR xzf libssh2-1.1.tar.gz
+   $TAR xzf libssh2-1.2.2.tar.gz
   )
-  $LN -f -s $tmpDirectory/libssh2-1.1 libssh2
+  $LN -f -s $tmpDirectory/libssh2-1.2.2 libssh2
 
   # gnutls
   (
@@ -120,8 +120,8 @@ else
   $RMF bzip2
 
   # lzma
-  $RMF `find $tmpDirectory -type f -name "xz-*.tar.gz"`
-  $RMRF `find $tmpDirectory -type d -name "xz-*"`
+  $RMF `find $tmpDirectory -type f -name "xz-*.tar.gz" 2>/dev/null`
+  $RMRF `find $tmpDirectory -type d -name "xz-*" 2>/dev/null`
   $RMF xz
 
   # gcrypt
