@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.35 $
+dnl $Revision: 1.36 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -43,7 +43,7 @@ AC_DEFUN([AC_CHECK_LARGEFILE_DEFINES],
   AC_SYS_LARGEFILE
   AC_CACHE_CHECK(
     [for needed large files defines],
-    ac_largefile_defines,
+    ac_cv_largefile_defines,
     [
       cat << \EOF > conftest.c
 #include <stdlib.h>
@@ -54,17 +54,17 @@ int main(void) { printf("%p",fseeko64); return 0; }
 EOF
       ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
       if test $rc -eq 0; then
-        ac_largefile_defines=""
+        ac_cv_largefile_defines=""
       else
         ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
-          ac_largefile_defines="_LARGEFILE64_SOURCE _FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
+          ac_cv_largefile_defines="_LARGEFILE64_SOURCE _FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
         else
-          ac_largefile_defines="_FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
+          ac_cv_largefile_defines="_FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
         fi
       fi
       rm -f conftest.c conftest.o
-      CC_DEFINES="$CC_DEFINES $ac_largefile_defines"
+      CC_DEFINES="$CC_DEFINES $ac_cv_largefile_defines"
     ]
   )dnl
   AC_PROVIDE([$0])dnl
@@ -75,7 +75,7 @@ AC_DEFUN([AC_CHECK_PTHREAD_DEFINES],
 [
   AC_CACHE_CHECK(
     [for needed pthread defines],
-    ac_extended_pthread_defines,
+    ac_cv_extended_pthread_defines,
     [
       cat << \EOF > conftest.c
 #include <stdlib.h>
@@ -85,17 +85,17 @@ int main(void) { printf("%p",pthread_mutexattr_settype); return 0; }
 EOF
       ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
       if test $rc -eq 0; then
-        ac_extended_pthread_defines=""
+        ac_cv_extended_pthread_defines=""
       else
         ${CC} ${CFLAGS} -Wall -Werror -D_GNU_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
-          ac_extended_pthread_defines="_GNU_SOURCE"
+          ac_cv_extended_pthread_defines="_GNU_SOURCE"
         else
-          ac_extended_pthread_defines=""
+          ac_cv_extended_pthread_defines=""
         fi
       fi
       rm -f conftest.c conftest.o
-      CC_DEFINES="$CC_DEFINES $ac_extended_pthread_defines"
+      CC_DEFINES="$CC_DEFINES $ac_cv_extended_pthread_defines"
     ]
   )dnl
   AC_PROVIDE([$0])dnl
@@ -232,6 +232,7 @@ AC_SUBST(CERTOOL)                           dnl GNU TLS certtool
 AC_SUBST(OPENSSL)                           dnl OpenSSL key tool
 AC_SUBST(KEYTOOL)                           dnl Java keytool
 
+AC_SUBST(UNOCONV)                           dnl OO conversion tool
 AC_SUBST(TXT2MAN)                           dnl text-to-man page tool
 
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
@@ -437,6 +438,7 @@ AC_PATH_PROGS(CERTTOOL,certtool)
 AC_PATH_PROGS(OPENSSL,openssl)
 AC_PATH_PROGS(KEYTOOL,keytool)
 
+AC_PATH_PROGS(UNOCONV,unoconv)
 AC_PATH_PROGS(TXT2MAN,txt2man)
 
 dnl -------------- headers/functions/definitions/libraries -------------

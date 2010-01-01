@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.58 $
+# $Revision: 1.59 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -29,6 +29,7 @@ CERTTOOL = @CERTTOOL@
 OPENSSL  = @OPENSSL@
 KEYTOOL  = @KEYTOOL@
 
+UNOCONV  = @UNOCONV@
 TXT2MAN  = @TXT2MAN@
 
 #---------------------------------- commands----------------------------------
@@ -162,8 +163,25 @@ $(KEY_FILES): bar/bar-keygen
 # ----------------------------------------------------------------------------
 
 # create documentation
-.PHONY: doc
-doc: doc/bar.7
+.PHONY: doc man clean_doc clean_man
+doc: \
+  doc/bar.7 \
+  doc/bar.pdf
+
+man: \
+  doc/bar.7
+
+clean_doc:
+	$(RMF) doc/bar.7
+	$(RMF) doc/bar.pdf
+
+clean_man:
+	$(RMF) doc/bar.7
+
+doc/bar.pdf: doc/bar.odt
+ifneq ($(UNOCONV),)
+	$(UNOCONV) -f pdf doc/bar.odt
+endif
 
 doc/bar.7: doc/bar.txt
 ifneq ($(TXT2MAN),)
