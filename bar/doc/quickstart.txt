@@ -96,7 +96,7 @@ store it on DVD and add error-correction codes to DVD image:
     -c \
     --compress-algorithm=bzip9 --crypt-algorithm=AES256 \
     --archive-part-size=128M \
-    --error-correction-codes \
+    --ecc \
     dvd:/home.bar \
     /home
 
@@ -109,7 +109,7 @@ interaction:
     -c \
     --compress-algorithm=bzip9 --crypt-algorithm=AES256 \
     --archive-part-size=128M \
-    --error-correction-codes \
+    --ecc \
     --wait-first-volume \
     --request-volume-command="sh -c \"mail -s 'Insert DVD #%number' root </dev/null; Xdialog --yesno 'Please insert DVD #%number' 5 50\"" \
     dvd:/home.bar \
