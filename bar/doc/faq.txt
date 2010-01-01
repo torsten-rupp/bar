@@ -28,7 +28,7 @@ A: Yes. Use option --no-storage. The incremental list file is
 Q: I cannot establish a TLS/SSL connection with barcontrol.
 A: For the TLS/SSL connection in barcontrol a TLS/SSL key
    is required. Create that key once with "make keys" and
-   copy the keys with "make install_keys" in the appropiated
+   copy the keys with "make install_keys" in the appropriated
    directories of your system.
 
 Q: I tried to list a *.bid-file, but it does not show anything.
@@ -41,7 +41,7 @@ Q: When I specify "-# /foo/" the list of included files is
    different to "-# /foo". Why?
 A: The options values for -# and -! are patterns, not file or
    directory names. "-# /foo/" match to everying which starts
-   wie "/foo/" including the trailing "/". If the directory
+   with "/foo/" including the trailing "/". If the directory
    "/foo" contain sub-directories only those sub-directories
    are included. If you specify "-# /foo" the directory "foo"
    including all sub-directories and all files in "/" starting
