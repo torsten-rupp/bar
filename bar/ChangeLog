@@ -1,4 +1,4 @@
-2009-10-?? 0.13
+2010-01-?? 0.13
   * implemente device image functions: create images from devices
   * renamed option --directory to --destination, use it for
     destination of images, too
@@ -8,11 +8,17 @@
     message
   * fix halt on some not implemented functions when
     restoring files
-  * add stack backtrace output in string-debug functions
+  * added stack backtrace output in string-debug functions
   * fix lost string when directory cannot be created
   * added option --owner
   * barcontrol: added support for 64bit systems
   * fixed some C compiler warnings
+  * fixed creating directory when writing incremental file list
+  * improved error messages
+
+2010-01-01 0.12d
+  * fixed wrong usage of vprintf in log function (caused SigSegV
+    on 64bit systems)
 
 2009-10-20 0.12c
   * fixes in configure: fix large file support for some system
@@ -163,7 +169,7 @@
     chunk is skipped when reading an archive
 
 2008-12-09 0.09g
-  * add option --pid-file
+  * added option --pid-file
 
 2008-12-07 0.09f
   * small fix in "make install"
