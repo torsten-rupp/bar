@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/StringParser.java,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -829,7 +829,6 @@ class StringParser
    * @return index of first not parsed character
    */
   public static int parse(String string, int index, String format, Object arguments[])
-//    throws ClassNotFoundException
   {
     return parse(string,index,format,arguments,null);
   }
@@ -841,7 +840,6 @@ class StringParser
    * @return true iff string parse, false otherwise
    */
   public static boolean parse(String string, String format, Object arguments[], String stringQuotes)
-//    throws ClassNotFoundException
   {
     return parse(string,0,format,arguments,stringQuotes) >= string.length();
   }
@@ -853,7 +851,6 @@ class StringParser
    * @return true iff string parse, false otherwise
    */
   public static boolean parse(String string, String format, Object arguments[])
-//    throws ClassNotFoundException
   {
     return parse(string,format,arguments,null);
   }

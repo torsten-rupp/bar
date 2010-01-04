@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -2118,48 +2118,10 @@ private static void printTree(Tree tree)
   /** sort tree column
    * @param tree tree
    * @param treeItem tree item
+   * @param subTreeItems sub-tree items to sort
    * @param sortDirection sort directory (SWT.UP, SWT.DOWN)
    * @param comparator comperator to compare two tree items
    */
-  private static void sortSubTreeColumnX(Tree tree, TreeItem treeItem, int sortDirection, Comparator comparator)
-  {
-    if (!tree.isDisposed())
-    {
-//rr++;
-
-//System.err.println(indent(rr)+"A "+treeItem+" "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
-      for (TreeItem subTreeItem : treeItem.getItems())
-      {
-        sortSubTreeColumnX(tree,subTreeItem,sortDirection,comparator);
-      }
-//System.err.println(indent(rr)+"B "+treeItem+" ("+treeItem.hashCode()+") "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
-
-      // sort sub-tree
-//boolean xx = treeItem.getExpanded();
-      TreeItem[] subTreeItems = treeItem.getItems();
-Dprintf.dprintf("%d",subTreeItems.length);
-      for (int i = 0; i < subTreeItems.length; i++)
-      {     
-        boolean sortedFlag = false;
-        for (int j = 0; (j <= i) && !sortedFlag; j++)
-        {
-          switch (sortDirection)
-          {
-            case SWT.UP:   sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),treeItem.getItem(j).getData()) < 0); break;
-            case SWT.DOWN: sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),treeItem.getItem(j).getData()) > 0); break;
-          }
-          if (sortedFlag)
-          {
-            recreateSubTreeItem(tree,treeItem,subTreeItems[i],j);
-          }
-        }
-      }
-//treeItem.setExpanded(xx);
-
-//rr--;
-    }
-  }
-
   private static void sortSubTreeColumn(Tree tree, TreeItem treeItem, TreeItem[] subTreeItems, int sortDirection, Comparator comparator)
   {
     if (!tree.isDisposed())
@@ -2198,6 +2160,12 @@ Dprintf.dprintf("%d",subTreeItems.length);
     }
   }
 
+  /** sort tree column
+   * @param tree tree
+   * @param subTreeItems sub-tree items to sort
+   * @param sortDirection sort directory (SWT.UP, SWT.DOWN)
+   * @param comparator comperator to compare two tree items
+   */
   private static void sortTreeColumn(Tree tree, TreeItem[] subTreeItems, int sortDirection, Comparator comparator)
   {
     if (!tree.isDisposed())
