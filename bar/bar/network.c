@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -1023,9 +1023,7 @@ NYI: how to do certificate verification?
         {
           gnutls_deinit(socketHandle->gnuTLS.session);
           close(socketHandle->handle);
-fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,gnutls_strerror(result));
-fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,gnutls_strerror_name(result));
-          return ERRORX(TLS_HANDSHAKE,result,gnutls_strerror_name(result));
+          return ERRORX(TLS_HANDSHAKE,result,gnutls_strerror(result));
         }
 
 #if 0
