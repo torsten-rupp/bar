@@ -1,25 +1,29 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/bar/archive_format.def,v $
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems: all
 #
 #***********************************************************************
 
+# archive info header
 CHUNK BAR "BAR0" Bar
   crc32  crc
 
+# asymmetric encryption key
 CHUNK KEY "KEY0" Key
   data   data
   crc32  crc
 
+# file info header
 CHUNK FILE "FIL0" File
   uint16 compressAlgorithm;
   uint16 cryptAlgorithm;
   crc32  crc
 
+# file entry
 CHUNK FILE_ENTRY "FENT" FileEntry
   uint64 size
   uint64 timeLastAccess
@@ -31,17 +35,20 @@ CHUNK FILE_ENTRY "FENT" FileEntry
   string name
   crc32  crc
 
+# file data
 CHUNK FILE_DATA "FDAT" FileData
   uint64 fragmentOffset
   uint64 fragmentSize
   crc32  crc
   data   data
 
+# image info header
 CHUNK IMAGE "IMG0" Image
   uint16 compressAlgorithm;
   uint16 cryptAlgorithm;
   crc32  crc
 
+# image entry
 CHUNK IMAGE_ENTRY "IENT" ImageEntry
   uint16 fileSystemType
   uint64 size
@@ -49,16 +56,19 @@ CHUNK IMAGE_ENTRY "IENT" ImageEntry
   string name
   crc32  crc
 
+# image data
 CHUNK IMAGE_DATA "IDAT" ImageData
   uint64 blockOffset
   uint64 blockCount
   crc32  crc
   data   data
 
+# directory info header
 CHUNK DIRECTORY "DIR0" Directory
   uint16 cryptAlgorithm;
   crc32  crc
 
+# directory entry
 CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   uint64 timeLastAccess
   uint64 timeModified
@@ -69,10 +79,12 @@ CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   string name
   crc32  crc
 
+# link info header
 CHUNK LINK "LNK0" Link
   uint16 cryptAlgorithm;
   crc32  crc
 
+# link entry
 CHUNK LINK_ENTRY "LENT" LinkEntry
   uint64 timeLastAccess
   uint64 timeModified
@@ -84,10 +96,12 @@ CHUNK LINK_ENTRY "LENT" LinkEntry
   string destinationName
   crc32  crc
 
+# special info header
 CHUNK SPECIAL "SPE0" Special
   uint16 cryptAlgorithm;
   crc32  crc
 
+# special entry
 CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
   uint16 specialType
   uint64 timeLastAccess
