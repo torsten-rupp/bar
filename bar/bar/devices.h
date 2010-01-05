@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/devices.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver device functions
 * Systems: all
@@ -27,6 +27,7 @@
 
 /***************************** Constants *******************************/
 
+/* device open modes */
 typedef enum
 {
   DEVICE_OPENMODE_READ,
@@ -47,8 +48,9 @@ typedef struct
 /* device list read handle */
 typedef struct
 {
-  DIR           *dir;
-  struct dirent *entry;
+  FILE *file;
+  char line[256];
+  bool readFlag;
 } DeviceListHandle;
 
 /* device types */
@@ -68,9 +70,9 @@ typedef struct
   DeviceTypes type;
   int64       size;             // total size [bytes]
   ulong       blockSize;        // size of a block [bytes]
-  int64       freeBlocks;       // number of free blocks
-  int64       totalBlocks;      // total number of blocks
-  bool        mountedFlag;      // TRUE iff device is currently mounted
+//  int64       freeBlocks;       // number of free blocks
+//  int64       totalBlocks;      // total number of blocks
+//  bool        mountedFlag;      // TRUE iff device is currently mounted
 } DeviceInfo;
 
 /***************************** Variables *******************************/
