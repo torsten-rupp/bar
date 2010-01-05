@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all
@@ -136,7 +136,7 @@ sub writeHPostfix()
   ".$PREFIX."UNKNOWN = ".($errorNumber+1)."
 } Errors;
 
-const int _Errors_textToIndex(const char *text);
+int _Errors_textToIndex(const char *text);
 unsigned int Errors_getCode(Errors error);
 const char *Errors_getText(Errors error);
 
@@ -187,7 +187,7 @@ static ErrorText errorTexts[$ERROR_TEXTINDEX_MAX_COUNT];
 static int       errorTextCount = 0;
 static int       errorTextId    = 0;
 
-const int _Errors_textToIndex(const char *text)
+int _Errors_textToIndex(const char *text)
 {
   int index;
   int minId;
