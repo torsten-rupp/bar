@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -1581,7 +1581,7 @@ Errors File_makeDirectory(const String pathName,
       File_setFileNameChar(directoryName,FILES_PATHNAME_SEPARATOR_CHAR);
     }
   }
-  if (!File_exists(directoryName))
+  if      (!File_exists(directoryName))
   {
     if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
     {
@@ -1615,13 +1615,20 @@ Errors File_makeDirectory(const String pathName,
       }
     }
   }
+  else if (!File_isDirectory(directoryName))
+  {
+    error = ERRORX(NOT_A_DIRECTORY,0,String_cString(directoryName));
+    File_doneSplitFileName(&pathNameTokenizer);
+    File_deleteFileName(directoryName);
+    return error;
+  }
   while (File_getNextSplitFileName(&pathNameTokenizer,&name))
   {
     if (String_length(name) > 0)
     {     
       File_appendFileName(directoryName,name);
 
-      if (!File_exists(directoryName))
+      if      (!File_exists(directoryName))
       {
         if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
         {
@@ -1654,6 +1661,13 @@ Errors File_makeDirectory(const String pathName,
             return error;
           }
         }
+      }
+      else if (!File_isDirectory(directoryName))
+      {
+        error = ERRORX(NOT_A_DIRECTORY,0,String_cString(directoryName));
+        File_doneSplitFileName(&pathNameTokenizer);
+        File_deleteFileName(directoryName);
+        return error;
       }
     }
   }

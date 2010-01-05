@@ -1,7 +1,7 @@
 //***********************************************************************
 //
 // $Source: /home/torsten/cvs/bar/errors.def,v $
-// $Revision: 1.22 $
+// $Revision: 1.23 $
 // $Author: torsten $
 // Contents: Backup ARchiver errors definition
 // Systems: all
@@ -121,6 +121,13 @@ ERROR DELETE_FILE                    "delete file fail"
 
 ERROR FILE_EXITS                     "file already exists"
 ERROR FILE_NOT_FOUND                 "file not found"
+ERROR NOT_A_DIRECTORY
+  strncpy(errorText,"not a directory",sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
 
 // device i/o
 ERROR OPEN_DEVICE
