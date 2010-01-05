@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -99,6 +99,7 @@ BAR_SOURCES          = bar.c \
                        commands_restore.c \
                        files.c \
                        devices.c \
+                       filesystems.c \
                        archive.c \
                        archive_format.c \
                        chunks.c \
