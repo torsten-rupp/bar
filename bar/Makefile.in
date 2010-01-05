@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.59 $
+# $Revision: 1.60 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -100,15 +100,12 @@ all: \
 
 clean: \
   clean_keys \
+  clean_doc \
   clean_rpm \
   clean_deb
 	-$(MAKE) -C bar clean
 ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol clean
-endif
-	$(RMF) $(TARGETS)
-ifneq ($(TXT2MAN),)
-	$(RMF) $(MAN)
 endif
 	$(RMRF) $(DISTRIBUTION_NAME)
 	$(RMF) $(DISTRIBUTION_NAME).tgz
