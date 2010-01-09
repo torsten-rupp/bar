@@ -1,5 +1,7 @@
 2010-01-?? 0.13
-  * implemente device image functions: create images from devices
+  * implemented device image functions: create images from devices
+  * implemented support for images with ext2/ext3, fat12/fat16/fat32
+    file systems
   * renamed option --directory to --destination, use it for
     destination of images, too
     IMPORTANT: please edit your files in /etc/bar/jobs and
