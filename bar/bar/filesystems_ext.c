@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/filesystems_ext.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
-* Contents: Backup ARchiver EXT2 file system plug in
+* Contents: Backup ARchiver EXT2/3 file system plug in
 * Systems: all
 *
 \***********************************************************************/
@@ -61,7 +61,10 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
   }
 
   /* check if this a super block */
-  if ((__u16)(le16_to_cpu(superBlock.s_magic)) != EXT2_SUPER_MAGIC) return FALSE;
+  if ((__u16)(le16_to_cpu(superBlock.s_magic)) != EXT2_SUPER_MAGIC)
+  {
+    return FALSE;
+  }
 
   /* get block size */
   switch (le32_to_cpu(superBlock.s_log_block_size))
