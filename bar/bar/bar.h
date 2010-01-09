@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -327,6 +327,7 @@ typedef struct
   bool                overwriteFilesFlag;
   bool                errorCorrectionCodesFlag;
   bool                waitFirstVolumeFlag;
+  bool                rawImagesFlag;                   // TRUE for storing raw images
   bool                noStorageFlag;
   bool                noBAROnDVDFlag;                  // TRUE for not storing BAR on DVDs
   bool                stopOnErrorFlag;

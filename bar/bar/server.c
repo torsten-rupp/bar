@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -407,6 +407,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                    JobNode,jobOptions.errorCorrectionCodesFlag    ),
 
   CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",        JobNode,jobOptions.skipUnreadableFlag          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("raw-images",             JobNode,jobOptions.rawImagesFlag               ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files",JobNode,jobOptions.overwriteArchiveFilesFlag   ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",        JobNode,jobOptions.overwriteFilesFlag          ),
 
@@ -2532,7 +2533,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
                  id,FALSE,0,
                  "%lld %d %'S",
                  deviceInfo.size,
-                 deviceInfo.mountedFlag?1:0,
+0,//                 deviceInfo.mountedFlag?1:0,
                  deviceName
                 );
     }

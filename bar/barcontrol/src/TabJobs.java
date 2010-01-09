@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -1091,6 +1091,7 @@ l=x.depth;
 
   // BAR variables
   private WidgetVariable  skipUnreadable          = new WidgetVariable(false);
+  private WidgetVariable  rawImages               = new WidgetVariable(false);
   private WidgetVariable  overwriteFiles          = new WidgetVariable(false);
 
   private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental"});
@@ -1629,6 +1630,23 @@ l=x.depth;
               boolean checkedFlag = widget.getSelection();
               skipUnreadable.set(checkedFlag);
               BARServer.setOption(selectedJobId,"skip-unreadable",checkedFlag);
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+          Widgets.addModifyListener(new WidgetListener(button,skipUnreadable));
+
+          button = Widgets.newCheckbox(composite,"raw images");
+          Widgets.layout(button,1,0,TableLayoutData.NW);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button  widget      = (Button)selectionEvent.widget;
+              boolean checkedFlag = widget.getSelection();
+              rawImages.set(checkedFlag);
+              BARServer.setOption(selectedJobId,"raw-images",checkedFlag);
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -4504,11 +4522,11 @@ Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTree
    */
   private void addDevices()
   {
-    ArrayList<String> deviceListResult = new ArrayList<String>();
-    int errorCode = BARServer.executeCommand("DEVICE_LIST",deviceListResult);
+    ArrayList<String> result = new ArrayList<String>();
+    int errorCode = BARServer.executeCommand("DEVICE_LIST",result);
     if (errorCode == Errors.NONE)
     {
-      for (String line : deviceListResult)
+      for (String line : result)
       {
         Object data[] = new Object[3];
         if      (StringParser.parse(line,"%ld %d %S",data,StringParser.QUOTE_CHARS))
@@ -4532,6 +4550,10 @@ Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTree
           treeItem.setImage(IMAGE_DEVICE);
         }
       }
+    }
+    else
+    {
+      Dialogs.error(shell,"Cannot get device list:\n\n"+result.get(0));
     }
   }
 
