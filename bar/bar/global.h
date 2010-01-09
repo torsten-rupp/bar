@@ -143,7 +143,7 @@ typedef void               void32;
 
 #define ALIGN(n,alignment) (((alignment)>0)?(((n)+(alignment)-1) & ~((alignment)-1)):(n))
 
-/* set macros */
+/* scalar set macros */
 #define SET_CLEAR(set) \
   do { \
     (set) = 0; \
@@ -159,6 +159,18 @@ typedef void               void32;
     (set) &= ~(SET_VALUE(element)); \
   } while (0)
 #define IN_SET(set,element) (((set) & SET_VALUE(element)) == SET_VALUE(element))
+
+/* bitset macros */
+#define BITSET_SET(set,bit) \
+  do { \
+    ((byte*)(set))[bit/8] |= (1 << (bit%8)); \
+  } while (0)
+#define BITSET_CLEAR(set,bit) \
+  do { \
+    ((byte*)(set))[bit/8] &= ~(1 << (bit%8)); \
+  } while (0)
+#define BITSET_IS_SET(set,bit) \
+  ((((byte*)(set))[bit/8] & (1 << (bit%8))) != 0)
 
 /* mathematicl macros */
 #ifndef __cplusplus
@@ -203,25 +215,64 @@ typedef void               void32;
   #define RadToDegree(n) RAD_TO_DEGREE(n)
   #define DegreeToRad(n) DEGREE_TO_RAD(n)
 #endif
-#define NORM_RAD(n)       ((n)<0?((n)+2*PI):(n)>(2*PI)?((n)-2*PI):(n)) /* used in constant declarations */
-#define NORM_DEGREE(n)    ((n)<0?((n)+360):(n)>360?((n)-360):(n))      /* used in constant declarations */
-#define NORM_RAD90(n)     ((n)>3*PI/2?\
-                            ((n)-2*PI):\
-                            ((n)>PI/2?\
-                             ((n)-PI):\
-                             ((n)<-3*PI/2?\
-                              ((n)+2*PI):\
-                              ((n)<-PI/2?\
-                               ((n)+PI):\
-                               (n)\
-                              )\
-                             )\
+
+/* used in constant declarations */
+#define NORM_RAD360(n)    (fmod(n,2*PI))
+#define NORM_RAD180(n)    (((n)>PI)\
+                           ?((n)-2*PI)\
+                           :(((n)<-PI)\
+                             ?((n)+2*PI)\
+                             :(n)\
                             )\
-                          )                                            /* used in constant declarations */
-#define NORM_RAD180(n)    ((n)>PI?((n)-2*PI):(n)<-PI?((n)+2*PI):(n))   /* used in constant declarations */
-#define NORM_DEGREE180(n) ((n)>180?((n)-360):(n)<-180?((n)+360):(n))   /* used in constant declarations */
-#define NORM_RAD360(n)    (fmod(n,2*PI))                               /* used in constant declarations */
-#define NORM_DEGREE360(n) (fmod(n,360))                                /* used in constant declarations */
+                          )
+#define NORM_RAD90(n)     (((n)>3*PI/2)\
+                           ?((n)-2*PI)\
+                           :(((n)>PI/2)\
+                             ?((n)-PI)\
+                             :(((n)<-3*PI/2)\
+                               ?((n)+2*PI)\
+                               :(((n)<-PI/2)\
+                                 ?((n)+PI)\
+                                 :(n)\
+                                )\
+                              )\
+                            )\
+                          )
+#define NORM_RAD(n)       (((n)<0)\
+                           ?((n)+2*PI)\
+                           :(((n)>(2*PI))\
+                             ?((n)-2*PI)\
+                             :(n)\
+                            )\
+                          )
+#define NORM_DEGREE360(n) (fmod(n,360))
+#define NORM_DEGREE180(n) (((n)>180)\
+                           ?((n)-360)\
+                           :(((n)<-180)\
+                             ?((n)+360):\
+                             (n)\
+                            )\
+                          )
+#define NORM_DEGREE90(n)  (((n)>270)\
+                            ?((n)-180)\
+                            :(((n)>180)\
+                              ?((n)-90)\
+                              :(((n)<-270)\
+                                ?((n)+180)\
+                                :(((n)<-180)\
+                                  ?((n)+90)\
+                                  :(n)\
+                                 )\
+                               )\
+                             )\
+                          )
+#define NORM_DEGREE(n)    (((n)<0)\
+                           ?((n)+360)\
+                           :(((n)>360)\
+                             ?((n)-360):\
+                             (n)\
+                            )\
+                          )
 /* used in code */
 #ifndef __cplusplus
   #define SwapWORD(n) ( ((n & 0xFF00) >> 8) | \

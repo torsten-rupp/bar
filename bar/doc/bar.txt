@@ -238,4 +238,6 @@ $HOME/.bar/bar.cfg
  
 
 BUGS
-Please report bugs to torsten.rupp@gmx.net
+Please report bugs to torsten.rupp@gmx.net. If possible compile BAR with
+debugging enabled (configure option --enable-debug) and include a C stack
+trace in the bug report.
