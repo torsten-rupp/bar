@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -37,6 +37,7 @@
 #include "patternlists.h"
 #include "files.h"
 #include "devices.h"
+#include "filesystems.h"
 #include "archive.h"
 #include "crypt.h"
 #include "storage.h"
@@ -264,6 +265,7 @@ LOCAL Errors writeIncrementalList(const String     fileName,
   assert(fileName != NULL);
   assert(filesDictionary != NULL);
 
+  String                    directoryName;
   String                    directory;
   String                    tmpFileName;
   Errors                    error;
@@ -277,10 +279,31 @@ LOCAL Errors writeIncrementalList(const String     fileName,
   ulong                     length;
   uint16                    n;
   const IncrementalListInfo *incrementalListInfo;
-  String                    directoryName;
 
   assert(fileName != NULL);
   assert(filesDictionary != NULL);
+
+  /* create directory if not existing */
+  directoryName = File_getFilePathName(String_new(),fileName);
+  if (!String_empty(directoryName))
+  {
+    if      (!File_exists(directoryName))
+    {
+      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+      if (error != ERROR_NONE)
+      {
+        String_delete(directoryName);
+        return error;
+      }
+    }
+    else if (!File_isDirectory(directoryName))
+    {
+      error = ERRORX(NOT_A_DIRECTORY,0,String_cString(directoryName));
+      String_delete(directoryName);
+      return error;
+    }
+  }
+  String_delete(directoryName);
 
   /* get temporary name */
   directory = File_getFilePathName(File_newFileName(),fileName);
@@ -352,7 +375,7 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
     n = (uint16)keyLength;
     error = File_write(&fileHandle,&n,sizeof(n));
     if (error != ERROR_NONE) break;
-    error = File_write(&fileHandle,keyData,keyLength);
+    error = File_write(&fileHandle,keyData,n);
     if (error != ERROR_NONE) break;
   }
   Dictionary_doneIterator(&dictionaryIterator);
@@ -366,22 +389,6 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
     File_deleteFileName(directory);
     return error;
   }
-
-  /* create directory if not existing */
-  directoryName = File_getFilePathName(String_new(),fileName);
-  if (!String_empty(directoryName) && !File_exists(directoryName))
-  {
-    error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
-    if (error != ERROR_NONE)
-    {
-      String_delete(directoryName);
-      File_delete(tmpFileName,FALSE);
-      File_deleteFileName(tmpFileName);
-      File_deleteFileName(directory);
-      return error;
-    }
-  }
-  String_delete(directoryName);
 
   /* rename files */
   error = File_rename(tmpFileName,fileName);
@@ -2155,12 +2162,11 @@ Errors Command_create(const char                      *storageName,
   storeIncrementalFileInfoFlag = FALSE;
 
   /* allocate resources */
-  buffer = malloc(BUFFER_SIZE);
+  buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-//  fileName = String_new();
 
 #if 1
   /* init file name queue, storage queue and list lock */
@@ -2190,6 +2196,10 @@ Errors Command_create(const char                      *storageName,
                       );
   if (error != ERROR_NONE)
   {
+    printError("Cannot initialize storage '%s' (error: %s)\n",
+               storageName,
+               Errors_getText(error)
+              );
     Semaphore_done(&createInfo.storageSemaphore);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
     MsgQueue_done(&createInfo.entryMsgQueue,NULL,NULL);
@@ -2427,7 +2437,7 @@ Errors Command_create(const char                      *storageName,
                         createInfo.statusInfo.fileDoneBytes += n;
                         createInfo.statusInfo.archiveBytes = createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo);
                         createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
-        //printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
+//printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
                         updateStatusInfo(&createInfo);
                       }
                     }
@@ -2665,10 +2675,15 @@ Errors Command_create(const char                      *storageName,
                   break;
                 case ENTRY_TYPE_IMAGE:
                   {
-                    DeviceInfo   deviceInfo;
-                    DeviceHandle deviceHandle;
-                    ulong        n;
-                    double       ratio;
+                    DeviceInfo       deviceInfo;
+                    DeviceHandle     deviceHandle;
+                    bool             fileSystemFlag;
+                    FileSystemHandle fileSystemHandle;
+                    uint64           block;
+                    uint64           blockCount;
+                    uint             bufferBlockCount;
+                    uint             maxBufferBlockCount;
+                    double           ratio;
 
                     /* get device info */
                     error = Device_getDeviceInfo(fileName,&deviceInfo);
@@ -2693,18 +2708,19 @@ Errors Command_create(const char                      *storageName,
                       continue;
                     }
 
-                    /* check block size */
+                    /* check device block size, get max. blocks in buffer */
                     if (deviceInfo.blockSize > BUFFER_SIZE)
                     {
                       printInfo(1,"FAIL\n");
-                      printError("Device '%s' block size %llu to big (max: %llu)\n",
-                                 String_cString(fileName),
+                      printError("Device block size %llu on '%s' is to big (max: %llu)\n",
                                  deviceInfo.blockSize,
+                                 String_cString(fileName),
                                  BUFFER_SIZE
                                 );
                       createInfo.failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
                       continue;
                     }
+                    maxBufferBlockCount = BUFFER_SIZE/deviceInfo.blockSize;
 
                     /* open device */
                     error = Device_open(&deviceHandle,fileName,DEVICE_OPENMODE_READ);
@@ -2734,6 +2750,16 @@ Errors Command_create(const char                      *storageName,
                     createInfo.statusInfo.fileTotalBytes = fileInfo.size;
                     updateStatusInfo(&createInfo);
 
+                    /* check if device contain a known file system */
+                    if (!jobOptions->rawImagesFlag)
+                    {
+                      fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
+                    }
+                    else
+                    {
+                      fileSystemFlag = FALSE;
+                    }
+
                     /* new image */
                     error = Archive_newImageEntry(&archiveInfo,
                                                   &archiveFileInfo,
@@ -2754,7 +2780,12 @@ Errors Command_create(const char                      *storageName,
 
                     /* write device content to archive */
                     error = ERROR_NONE;
-                    do
+                    block = 0LL;
+                    while (   ((block*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+                           && ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
+                           && (createInfo.failError == ERROR_NONE)
+                           && (error == ERROR_NONE)
+                          )
                     {
                       /* pause */
                       while ((createInfo.pauseFlag != NULL) && (*createInfo.pauseFlag))
@@ -2762,23 +2793,42 @@ Errors Command_create(const char                      *storageName,
                         Misc_udelay(500*1000);
                       }
 
-                      Device_read(&deviceHandle,buffer,BUFFER_SIZE,&n);
-                      if (n > 0)
+                      /* read blocks info buffer */
+                      bufferBlockCount = 0;
+                      while (   ((block*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+                             && (bufferBlockCount < maxBufferBlockCount)
+                            )
                       {
-                        error = Archive_writeData(&archiveFileInfo,buffer,n);
-                        createInfo.statusInfo.doneBytes += n;
-                        createInfo.statusInfo.fileDoneBytes += n;
+                        if (!fileSystemFlag || FileSystem_blockIsUsed(&fileSystemHandle,block*(uint64)deviceInfo.blockSize))
+                        {
+                          /* read block */
+//fprintf(stderr,"%s,%d: store blcok %ld\n",__FILE__,__LINE__,block);
+                          error = Device_seek(&deviceHandle,block*(uint64)deviceInfo.blockSize);
+                          if (error != ERROR_NONE) break;
+                          error = Device_read(&deviceHandle,buffer+bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize,NULL);
+                          if (error != ERROR_NONE) break;
+                        }
+                        else
+                        {
+                          /* not used -> store as "0"-block */
+                          memset(buffer+bufferBlockCount*deviceInfo.blockSize,0,deviceInfo.blockSize);
+                        }
+                        block++;
+                        bufferBlockCount++;
+                      }
+
+                      /* write block content to archive  */
+                      if (bufferBlockCount > 0)
+                      {
+                        error = Archive_writeData(&archiveFileInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
+                        createInfo.statusInfo.doneBytes += bufferBlockCount*deviceInfo.blockSize;
+                        createInfo.statusInfo.fileDoneBytes += bufferBlockCount*deviceInfo.blockSize;
                         createInfo.statusInfo.archiveBytes = createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo);
                         createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
-        //printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
+//printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
                         updateStatusInfo(&createInfo);
                       }
                     }
-                    while (   ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
-                           && (n > 0)
-                           && (createInfo.failError == ERROR_NONE)
-                           && (error == ERROR_NONE)
-                          );
                     if ((createInfo.requestedAbortFlag != NULL) && (*createInfo.requestedAbortFlag))
                     {
                       printInfo(1,"ABORTED\n");
@@ -2821,6 +2871,12 @@ Errors Command_create(const char                      *storageName,
                     else
                     {
                       ratio = 0;
+                    }
+
+                    /* done file system */
+                    if (fileSystemFlag)
+                    {
+                      FileSystem_done(&fileSystemHandle);
                     }
 
                     /* close device */
@@ -2930,9 +2986,9 @@ Errors Command_create(const char                      *storageName,
   /* output statics */
   if (createInfo.failError == ERROR_NONE)
   {
-    printInfo(0,"%lu file(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneFiles,createInfo.statusInfo.doneBytes);
-    printInfo(2,"%lu file(s) skipped\n",createInfo.statusInfo.skippedFiles);
-    printInfo(2,"%lu file(s) with errors\n",createInfo.statusInfo.errorFiles);
+    printInfo(0,"%lu file/image(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneFiles,createInfo.statusInfo.doneBytes);
+    printInfo(2,"%lu file/image(s) skipped\n",createInfo.statusInfo.skippedFiles);
+    printInfo(2,"%lu file/image(s) with errors\n",createInfo.statusInfo.errorFiles);
   }
 
   /* free resources */
