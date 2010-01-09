@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_compare.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive compare function
 * Systems : all
@@ -402,8 +402,8 @@ Errors Command_compare(StringList                      *archiveFileNameList,
             FragmentNode *fragmentNode;
             DeviceHandle deviceHandle;
             bool         equalFlag;
-            uint64       length;
-            ulong        n;
+            uint64       block;
+            ulong        bufferBlockCount;
             ulong        diffIndex;
 
             /* read image */
@@ -511,16 +511,16 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                 }
                 continue;
               }
-              length    = 0;
+              block     = 0LL;
               equalFlag = TRUE;
               diffIndex = 0;
-              while ((length < blockCount) && equalFlag)
+              while ((block < blockCount) && equalFlag)
               {
                 assert(deviceInfo.blockSize > 0);
-                n = MIN(blockCount-length,BUFFER_SIZE/deviceInfo.blockSize);
+                bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 
                 /* read archive, file */
-                error = Archive_readData(&archiveFileInfo,archiveBuffer,n*deviceInfo.blockSize);
+                error = Archive_readData(&archiveFileInfo,archiveBuffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -531,7 +531,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                   if (failError == ERROR_NONE) failError = error;
                   break;
                 }
-                error = Device_read(&deviceHandle,buffer,n*deviceInfo.blockSize,NULL);
+                error = Device_read(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize,NULL);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -547,14 +547,14 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                 }
 
                 /* compare */
-                diffIndex = compare(archiveBuffer,buffer,n*deviceInfo.blockSize);
-                equalFlag = (diffIndex >= n);
+                diffIndex = compare(archiveBuffer,buffer,bufferBlockCount*deviceInfo.blockSize);
+                equalFlag = (diffIndex >= bufferBlockCount*deviceInfo.blockSize);
                 if (!equalFlag)
                 {
                   printInfo(2,"FAIL!\n");
                   printError("'%s' differ at offset %llu\n",
                              String_cString(imageName),
-                             blockOffset*(uint64)deviceInfo.blockSize+length*(uint64)deviceInfo.blockSize+(uint64)diffIndex
+                             blockOffset*(uint64)deviceInfo.blockSize+block*(uint64)deviceInfo.blockSize+(uint64)diffIndex
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -563,7 +563,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                   break;
                 }
 
-                length += n;
+                block += (uint64)bufferBlockCount;
               }
               Device_close(&deviceHandle);
               if (failError != ERROR_NONE)
