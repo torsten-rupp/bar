@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.20 $
+# $Revision: 1.21 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -40,6 +40,7 @@ LD_STATIC_PREFIX    = -Wl,-static
 CAT        = cat
 CHMOD      = chmod
 CP         = cp
+DD         = dd
 DIFF       = diff
 ECHO       = echo
 ECHO_NO_LF = echo -n
@@ -52,6 +53,12 @@ RMF        = rm -f
 RMRF       = rm -rf
 SED        = sed
 TAR        = tar
+
+# for tests only (create test devices)
+LOSETUP    = sudo /sbin/losetup
+MKFS       = /sbin/mkfs
+MOUNT      = sudo /bin/mount
+UMOUNT     = sudo /bin/umount
 
 #------------------------ specific variables/settings ------------------------
 
@@ -240,14 +247,14 @@ runserver_ssl barserver_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
 # do test
 .PHONY: test test1 test2 test3 test4 test_all
 test:
-	@$(MAKE) QUIET=1 --no-print-directory -s test1 test2 test3 test4 test5 test_all
+	@$(MAKE) QUIET=1 --no-print-directory -s test1 test2 test3 test4 test5 test6 test_all
 
-test1: bar
+test1 test_basic: bar
 	@$(ECHO_NO_LF) "Test 1: basic..."
 	@$(MAKE) \
           BAR_FILE="test" \
           OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
-          standard_test
+          test_file
 	@$(ECHO) "ok"
 
 test2 test_compress: bar
@@ -256,7 +263,8 @@ test2 test_compress: bar
           $(MAKE) \
             BAR_FILE="test" \
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
-            standard_test; \
+            test_file \
+            ; \
         done
 	@$(ECHO) "ok"
 
@@ -266,7 +274,8 @@ test3 test_crypt: bar
           $(MAKE) \
             BAR_FILE="test-###" \
             OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
-            standard_test; \
+            test_file \
+            ; \
         done
 	@$(ECHO) "ok"
 
@@ -277,7 +286,8 @@ test4 test_asymmetric_crypt: bar
           $(MAKE) \
             BAR_FILE="test-###" \
             OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private" \
-            standard_test; \
+            test_file \
+            ; \
         done
 	@$(ECHO) "ok"
 
@@ -286,7 +296,20 @@ test5 test_split: bar
 	$(MAKE) \
           BAR_FILE="test-###" \
           OPTIONS="--archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none" \
-          standard_test
+          test_file
+	@$(ECHO) "ok"
+
+test6 test_image: bar
+	@$(ECHO_NO_LF) "Test 6: image..."
+	for compress in none zip9; do \
+          $(MAKE) \
+            BAR_FILE="test" \
+            OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
+            test_image_raw \
+            test_image_ext \
+            test_image_fat \
+            ; \
+        done
 	@$(ECHO) "ok"
 
 test_all: bar
@@ -297,7 +320,11 @@ test_all: bar
             $(MAKE) \
               BAR_FILE=test-### \
               OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private --archive-part-size=100000" \
-              standard_test; \
+              test_file \
+              test_image_raw \
+              test_image_ext \
+              test_image_fat \
+              ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
               exit 1; \
@@ -306,9 +333,11 @@ test_all: bar
         done
 	@$(ECHO) "ok"
 
-.PHONY: standard_test
-standard_test: bar
-	$(RMRF) test/*.bar test/*.bid test/new test/restore
+TEST_FILES = test/*.bar test/*.bid test/new test/restore test/*.image
+
+.PHONY: test_file test_file_base
+test_file test_file_base: bar
+	$(RMRF) $(TEST_FILES)
 	SSH_ASKPASS= ./bar -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
@@ -316,21 +345,17 @@ standard_test: bar
 	SSH_ASKPASS= ./bar -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.txt -x circular-link.dat -x fifo test/data test/restore/test/data
 	#
-	$(RMRF) test/*.bar test/*.bid test/new test/restore
+	$(RMRF) $(TEST_FILES)
 	SSH_ASKPASS= ./bar -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	$(MKDIR) test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
 	SSH_ASKPASS= ./bar -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
-	#
-	SSH_ASKPASS= ./bar -m test/$(BAR_FILE)-image.bar /dev/ram0 $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= ./bar -t test/$(BAR_FILE)-image.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= ./bar -d test/$(BAR_FILE)-image.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 
-.PHONY: standard_test_destroy
-standard_test_destroy: bar destroyer
-	$(RMRF) test/*.bar test/*.bid test/restore
+.PHONY: test_file_destroy test_file_base_destroy
+test_file_destroy test_file_base_destroy: bar destroyer
+	$(RMRF) $(TEST_FILES)
 	SSH_ASKPASS= ./bar -c test/$(BAR_FILE).bar test/data/zero1024.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	./destroyer test/test.bar m:0 > test/test.bar_destroyed
 	SSH_ASKPASS= ./bar -l test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
@@ -339,6 +364,141 @@ standard_test_destroy: bar destroyer
 	SSH_ASKPASS= ./bar -x test/test.bar_destroyed $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
 
+# helper function to create a test device
+# call FunctionTestDeviceCreate,<loop device> <file> <size>
+FunctionTestDeviceCreate = \
+  ( \
+    $(LOSETUP) -d $1 2>/dev/null; \
+    $(DD) if=/dev/zero of=$2 bs=$3 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+  )
+
+# helper function to delete a test device
+# call FunctionTestDeviceDelete,<loop device> <file>
+FunctionTestDeviceDelete = \
+  ( \
+    $(LOSETUP) -d $1; \
+    $(RMF) $2; \
+  )
+
+# helper function to zero out test device
+# call FunctionTestDeviceZero,<loop device>,<size>
+FunctionTestDeviceZero = \
+    $(DD) if=/dev/zero of=$1 bs=$2 count=1 2>/dev/null; \
+
+# helper function to fill test device with random data
+# call FunctionTestDeviceRandom,<loop device>,<size>
+FunctionTestDeviceRandom = \
+    $(DD) if=/dev/urandom of=$1 bs=$2 count=1 2>/dev/null; \
+
+# helper function to initialize file system on a test device
+# call FunctionTestDeviceInitFilesystem,<loop device>,<mkfs options>,<mount point>
+FunctionTestDeviceInitFilesystem = \
+  ( \
+    $(MKFS) $2 $1 $(if $(QUIET),1>/dev/null); \
+    $(if $3,($(MKDIR) test/dev 2>/dev/null; $(MOUNT) $1 test/dev; $(CP) -r test/data test/dev $(if $(QUIET),1>/dev/null); $(UMOUNT) test/dev; $(RMDIR) test/dev;);) \
+  )
+
+.PHONY: test_image_raw
+test_image_raw:
+	# raw
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,32M); $(call FunctionTestDeviceRandom,/dev/loop0,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,32M)
+	$(MAKE) test_image_base \
+           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1 \
+           OPTIONS+="--raw-images"
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
+
+.PHONY: test_image_ext test_image_ext2 test_image_ext3 test_image_ext4
+test_image_ext: \
+  test_image_ext2 \
+  test_image_ext3 \
+  test_image_ext4 
+
+test_image_ext2 test_image_ext3:
+	# ext2/ext3
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,32M)
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2,1)
+	$(MAKE) test_image_base \
+           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 1024,1)
+	$(MAKE) test_image_base \
+           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 2048,1)
+	$(MAKE) test_image_base \
+           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 4096,1)
+	$(MAKE) test_image_base \
+           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
+
+test_image_ext4:
+	# ext4
+	#
+
+.PHONY: test_image_fat test_image_fat12 test_image_fat16 test_image_fat32
+test_image_fat: \
+  test_image_fat12 \
+  test_image_fat16 \
+  test_image_fat32
+
+test_image_fat12:
+	# FAT12
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,1440K)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,1440K)
+	$(call FunctionTestDeviceZero,/dev/loop0,1440K)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t msdos -F 12,1)
+	$(MAKE) test_image_base \
+          DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
+
+test_image_fat16:
+	# FAT16
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,20M)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,20M)
+	$(call FunctionTestDeviceZero,/dev/loop0,20M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t msdos -F 16,1)
+	$(MAKE) test_image_base \
+          DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	$(call FunctionDeleteTestDevice,/dev/loop1,test/dev1)
+	$(call FunctionDeleteTestDevice,/dev/loop0,test/dev0)
+
+test_image_fat32:
+	# FAT32
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,40M)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,40M)
+	$(call FunctionTestDeviceZero,/dev/loop0,40M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t msdos -F 32,1)
+	$(MAKE) test_image_base \
+          DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
+
+.PHONY: test_image_base
+test_image_base: bar
+	$(RMRF) $(TEST_FILES)
+	SSH_ASKPASS= ./bar -m test/$(BAR_FILE).bar $(DEVICE0) $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= ./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= ./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= ./bar -x test/test*.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
+	$(DD) if=$(DEVICE0) of=test/dev0.image 1>/dev/null 2>/dev/null
+	$(DD) if=$(DEVICE1) of=test/dev1.image 1>/dev/null 2>/dev/null
+	$(DIFF) test/dev0.image test/dev1.image
+
+# valgrind checks
 .PHONY: memcheck memcheck1
 memcheck: bar
 	$(MAKE) VALGRIND_OPTIONS="--leak-check=summary" $(if $(CHECK),memcheck$(CHECK),memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6 memcheck7)
