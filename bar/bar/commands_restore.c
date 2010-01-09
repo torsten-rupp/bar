@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -615,8 +615,8 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             String       destinationDeviceName;
             FragmentNode *fragmentNode;
             DeviceHandle deviceHandle;
-            uint64       length;
-            ulong        n;
+            uint64       block;
+            ulong        bufferBlockCount;
 
             /* read image */
             imageName = String_new();
@@ -718,9 +718,9 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 continue;
               }
 
-              length = 0;
+              block = 0;
               while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
-                     && (length < blockCount)
+                     && (block < blockCount)
                     )
               {
                 /* pause */
@@ -730,9 +730,9 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 }
 
                 assert(deviceInfo.blockSize > 0);
-                n = MIN(blockCount-length,BUFFER_SIZE/deviceInfo.blockSize);
+                bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 
-                error = Archive_readData(&archiveFileInfo,buffer,n*deviceInfo.blockSize);
+                error = Archive_readData(&archiveFileInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -743,7 +743,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
                   break;
                 }
-                error = Device_write(&deviceHandle,buffer,n*deviceInfo.blockSize);
+                error = Device_write(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -757,10 +757,10 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   }
                   break;
                 }
-                restoreInfo.statusInfo.fileDoneBytes += n*deviceInfo.blockSize;
+                restoreInfo.statusInfo.fileDoneBytes += bufferBlockCount*deviceInfo.blockSize;
                 updateStatusInfo(&restoreInfo);
 
-                length += n;
+                block += (uint64)bufferBlockCount;
               }
               Device_close(&deviceHandle);
               if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
