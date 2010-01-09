@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_test.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -244,8 +244,8 @@ Errors Command_test(StringList                      *archiveFileNameList,
             DeviceInfo   deviceInfo;
             uint64       blockOffset,blockCount;
             FragmentNode *fragmentNode;
-            uint64       length;
-            ulong        n;
+            uint64       block;
+            ulong        bufferBlockCount;
 
             /* read image */
             imageName = String_new();
@@ -285,14 +285,14 @@ Errors Command_test(StringList                      *archiveFileNameList,
 //FragmentList_print(fragmentNode,String_cString(imageName));
 
               /* test read image content */
-              length = 0;
-              while (length < blockCount)
+              block = 0LL;
+              while (block < blockCount)
               {
                 assert(deviceInfo.blockSize > 0);
-                n = MIN(blockCount-length,BUFFER_SIZE/deviceInfo.blockSize);
+                bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 
                 /* read archive file */
-                error = Archive_readData(&archiveFileInfo,archiveBuffer,n*deviceInfo.blockSize);
+                error = Archive_readData(&archiveFileInfo,archiveBuffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -304,7 +304,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
                   break;
                 }
 
-                length += (uint64)n;
+                block += (uint64)bufferBlockCount;
               }
               if (failError != ERROR_NONE)
               {
