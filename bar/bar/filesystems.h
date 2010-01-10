@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/filesystems.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver file system functions
 * Systems: all
@@ -31,14 +31,9 @@ typedef enum
 {
   FILE_SYSTEM_TYPE_NONE,
 
-  FILE_SYSTEM_TYPE_EXT2,
-  FILE_SYSTEM_TYPE_EXT3,
-  FILE_SYSTEM_TYPE_EXT4,
-
-  FILE_SYSTEM_TYPE_FAT12,
-  FILE_SYSTEM_TYPE_FAT16,
-  FILE_SYSTEM_TYPE_FAT32,
-  FILE_SYSTEM_TYPE_VFAT,
+  FILE_SYSTEM_TYPE_EXT,
+  FILE_SYSTEM_TYPE_FAT,
+  FILE_SYSTEM_TYPE_REISERFS,
 
   FILE_SYSTEM_TYPE_UNKNOWN,
 } FileSystemTypes;
@@ -48,7 +43,7 @@ typedef enum
 /* file system functions */
 typedef bool(*FileSystemInitFunction)(DeviceHandle *deviceHandle, void *handle);
 typedef void(*FileSystemDoneFunction)(DeviceHandle *deviceHandle, void *handle);
-typedef bool(*FileSystemBlockIsUsedFunction)(DeviceHandle *deviceHandle, void *handle, uint64 blockOffset);
+typedef bool(*FileSystemBlockIsUsedFunction)(DeviceHandle *deviceHandle, void *handle, uint64 offset);
 
 /* file system handle */
 typedef struct
@@ -101,14 +96,14 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle);
 * Name   : FileSystem_blockIsUsed
 * Purpose: check if block is used by file system
 * Input  : fileSystemHandle - file system handle
-*          blockOffset      - block offset (0..n-1)
+*          offset           - offset (byte position) (0..n-1)
 * Output : -
 * Return : TRUE if block is used, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle,
-                            uint64           blockOffset
+                            uint64           offset
                            );
 
 #ifdef __cplusplus

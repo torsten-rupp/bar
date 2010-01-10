@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/filesystems.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver file system functions
 * Systems: all
@@ -22,8 +22,10 @@
 
 #include "filesystems.h"
 
-#include "filesystems_ext2.c"
-#include "filesystems_ext3.c"
+#include <utils.h>
+#include "filesystems_ext.c"
+#include "filesystems_fat.c"
+#include "filesystems_reiserfs.c"
 
 /****************** Conditional compilation switches *******************/
 
@@ -54,8 +56,9 @@ typedef struct
 /* support file systems */
 LOCAL FileSystem FILE_SYSTEMS[] =
 {
-  DEFINE_FILE_SYSTEM(EXT2),
-  DEFINE_FILE_SYSTEM(EXT3),
+  DEFINE_FILE_SYSTEM(EXT),
+  DEFINE_FILE_SYSTEM(FAT),
+  DEFINE_FILE_SYSTEM(REISERFS),
 };
 
 /****************************** Macros *********************************/
@@ -126,13 +129,13 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle)
   return ERROR_NONE;
 }
 
-bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle, uint64 blockOffset)
+bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle, uint64 offset)
 {
   assert(fileSystemHandle != NULL);
 
   if (fileSystemHandle->blockIsUsedFunction != NULL)
   {
-    return fileSystemHandle->blockIsUsedFunction(fileSystemHandle->deviceHandle,fileSystemHandle->handle,blockOffset);
+    return fileSystemHandle->blockIsUsedFunction(fileSystemHandle->deviceHandle,fileSystemHandle->handle,offset);
   }
   else
   {
