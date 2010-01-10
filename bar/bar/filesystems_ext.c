@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/filesystems_ext.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver EXT2/3 file system plug in
 * Systems: all
@@ -9,11 +9,13 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <linux/ext2_fs.h>
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define EXT_FIRST_SUPER_BLOCK_OFFSET 1024
+#define EXT_SUPER_MAGIC              0xEF53
+#define EXT_MAX_BLOCK_SIZE           4096
 
 /***************************** Datatypes *******************************/
 typedef struct
@@ -25,8 +27,81 @@ typedef struct
   uint32 *bitmapBlocks;                 
   uint32 bitmapBlocksCount;
   int    bitmapIndex;                       // index of currently read bitmap
-  uchar  bitmapData[EXT2_MAX_BLOCK_SIZE];   // bitmap block data
+  uchar  bitmapData[EXT_MAX_BLOCK_SIZE];    // bitmap block data
 } EXTHandle;
+
+/* ext2/ext3 super block */
+typedef struct
+{
+  uint32 inodeCount;
+  uint32 blocksCount;
+  uint32 reserverBlocksCount;
+  uint32 freeBlocksCount;
+  uint32 freeInodesCount;
+  uint32 firstDataBlock;
+  uint32 logBlockSize;
+  int32  logFragmentSize;
+  uint32 blocksPerGroup;
+  uint32 fragmentsPerGroup;
+  uint32 inodesPerGroup;
+  uint32 mountedTimestamp;
+  uint32 writeTimestamp;
+  uint16 mountedCount;
+  int16  maxMountedCount;
+  uint16 magic;
+  uint16 state;
+  uint16 errors;
+  uint16 minorRevisionLevel;
+  uint32 lastCheckTimestamp;
+  uint32 checkInterval;
+  uint32 creatorOS;
+  uint32 revisionLevel;
+  uint16 defaultUIDReservedBlocks;
+  uint16 defaultGIDReservedBlocks;
+
+  /* only when revision level EXT2_DYNAMIC_REV is set */
+  uint32 firstInode;
+  uint16 inodeSize;
+  uint16 blockGroupNumber;
+  uint32 featureCompatibility;
+  uint32 featureInCompatibility;
+  uint32 featureReadOnlyCompatibility;
+  uint8  uuid[16];
+  char   volumeName[16];
+  char   lastMounted[64];
+  uint32 algorithmUsageBitmap;
+
+  /* only when EXT2_COMPAT_PREALLOC is set */
+  uint8  preallocBlocks;
+  uint8  preallocDirectoryBlocks;
+  uint16 padding0;
+
+  /* only when EXT3_FEATURE_COMPAT_HAS_JOURNAL is set */
+  uint8  journalUUID[16];
+  uint32 journalInodeNumber;
+  uint32 journalDevice;
+  uint32 lastOrphan;
+  uint32 hashSeed[4];
+  uint8  defaultHashVersion;
+  uint8  padding1;
+  uint16 padding2;
+  uint32 defaultMountOptions;
+  uint32 firstMetaBlockGroup;
+  uint32 reserved[190];
+} EXTSuperBlock ATTRIBUTE_PACKED;
+
+/* ext2/ext3 group descriptor */
+typedef struct
+{
+  uint32 blockBitmap;
+  uint32 inodeBitmap;
+  uint32 inodeTable;
+  uint16 freeBlocksCount;
+  uint16 freeInodesCount;
+  uint16 usedDirectoriesCount;
+  uint16 padding0;
+  uint32 reserver0[3];
+} EXTGroupDescriptor ATTRIBUTE_PACKED;
 
 /***************************** Variables *******************************/
 
@@ -43,45 +118,46 @@ typedef struct
 
 LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
 {
-  struct ext2_super_block superBlock;
-  struct ext2_group_desc  groupDescriptor;
-  uint32                  z;
+  EXTSuperBlock      extSuperBlock;
+  EXTGroupDescriptor extGroupDescriptor;
+  uint32             z;
 
   assert(deviceHandle != NULL);
   assert(extHandle != NULL);
+  assert(sizeof(extSuperBlock) == 1024);
+  assert(sizeof(extGroupDescriptor) == 32);
 
   /* read first super-block */
-  if (Device_seek(deviceHandle,1024) != ERROR_NONE)
+  if (Device_seek(deviceHandle,EXT_FIRST_SUPER_BLOCK_OFFSET) != ERROR_NONE)
   {
     return FALSE;
   }
-  if (Device_read(deviceHandle,&superBlock,1024,NULL) != ERROR_NONE)
+  if (Device_read(deviceHandle,&extSuperBlock,sizeof(extSuperBlock),NULL) != ERROR_NONE)
   {
     return FALSE;
   }
 
   /* check if this a super block */
-  if ((__u16)(le16_to_cpu(superBlock.s_magic)) != EXT2_SUPER_MAGIC)
+  if ((uint16)(le16_to_cpu(extSuperBlock.magic)) != EXT_SUPER_MAGIC)
   {
     return FALSE;
   }
 
   /* get block size */
-  switch (le32_to_cpu(superBlock.s_log_block_size))
+  switch (le32_to_cpu(extSuperBlock.logBlockSize))
   {
     case 0: extHandle->blockSize = 1024; break;
     case 1: extHandle->blockSize = 2048; break;
     case 2: extHandle->blockSize = 4096; break;
-    case 3: extHandle->blockSize = 8192; break;
     default:
       return FALSE;
       break;
   }
 
   /* get file system block info */
-  extHandle->totalBlocks    = le32_to_cpu(superBlock.s_blocks_count);
-  extHandle->firstDataBlock = le32_to_cpu(superBlock.s_first_data_block);
-  extHandle->blocksPerGroup = le32_to_cpu(superBlock.s_blocks_per_group);
+  extHandle->totalBlocks    = le32_to_cpu(extSuperBlock.blocksCount);
+  extHandle->firstDataBlock = le32_to_cpu(extSuperBlock.firstDataBlock);
+  extHandle->blocksPerGroup = le32_to_cpu(extSuperBlock.blocksPerGroup);
   extHandle->bitmapIndex    = -1;
 
   /* validate data */
@@ -105,15 +181,14 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
     free(extHandle->bitmapBlocks);
     return FALSE;
   }
-  assert(sizeof(struct ext2_group_desc) == 32);
   for (z = 0; z < extHandle->bitmapBlocksCount; z++)
   {
-    if (Device_read(deviceHandle,&groupDescriptor,sizeof(struct ext2_group_desc),NULL) != ERROR_NONE)
+    if (Device_read(deviceHandle,&extGroupDescriptor,sizeof(extGroupDescriptor),NULL) != ERROR_NONE)
     {
       free(extHandle->bitmapBlocks);
       return FALSE;
     }
-    extHandle->bitmapBlocks[z] = le32_to_cpu(groupDescriptor.bg_block_bitmap);
+    extHandle->bitmapBlocks[z] = le32_to_cpu(extGroupDescriptor.blockBitmap);
   }
 
 #if 0
