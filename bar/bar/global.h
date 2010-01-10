@@ -137,6 +137,12 @@ typedef void               void32;
   #define LOCAL_INLINE static
 #endif
 
+#ifdef __GNUG__
+  #define ATTRIBUTE_PACKED __attribute__ ((__packed__))
+#else
+  #define ATTRIBUTE_PACKED
+#endif
+
 #define UNUSED_VARIABLE(s) (void)s
 
 #define SIZE_OF_ARRAY(a) (sizeof(a)/sizeof(a[0]))
