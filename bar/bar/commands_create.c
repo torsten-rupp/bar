@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -2680,7 +2680,6 @@ Errors Command_create(const char                      *storageName,
                     bool             fileSystemFlag;
                     FileSystemHandle fileSystemHandle;
                     uint64           block;
-                    uint64           blockCount;
                     uint             bufferBlockCount;
                     uint             maxBufferBlockCount;
                     double           ratio;
