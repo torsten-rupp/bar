@@ -8,10 +8,13 @@ backups in the background.
 
 --- Features
 
-* create, list, test, compare and extract archives
+* create, list, test, compare and extract archives of files
+  and disk images
 * fast file format: can find and extract single files
   without decompressing/decryption of the whole archive
-* full and incremental backup archives
+* full and incremental backup files archives
+* support for several file systems on disk images (ext2/ext3,
+  fat, reiserfs)
 * can split archive files into pieces
 * compress of data with zlib, bzip2 or lzma algorithms
 * encryption with gcrypt algrithms (AES,TWOFISH etc.)
@@ -21,7 +24,7 @@ backups in the background.
 * can store archives on DVD (with external tools)
 * support pre- and post-processing of DVD images (e. g.
   for including functions of dvdisaster)
-* daemon-mode with control over plain and TSL network
+* daemon-mode with control over plain and TLS network
   connection
 * nice graphical frontend (written in Java+SWT)
 
@@ -108,13 +111,13 @@ ftplib:
   ln -s ftplib-3.1 ftplib
 
 ssh2:
-  http://prdownloads.sourceforge.net/libssh2/libssh2-1.1.tar.gz?download
+  http://www.libssh2.org/download/libssh2-1.2.2.tar.gz
 
-  ln -s sshftplib-3.1 ftplib
+  ln -s libssh2-1.2.2 libssh2
 
-You can execute the supplied script to download (wget required) all
-additional packages, extract them to a temporary directory and set the
-required links for bar: 
+You can execute the supplied script 'download-third-party-packages.sh'
+to download (wget required) all additional packages, extract them to a
+temporary directory and set the required links for bar: 
 
   download-third-party-packages.sh
 
@@ -205,10 +208,10 @@ ftplib:
   ldconfig
 
 ssh2:
-  http://prdownloads.sourceforge.net/libssh2/libssh2-1.1.tar.gz?download
+  http://www.libssh2.org/download/libssh2-1.2.2.tar.gz
 
-  tar xzf libssh2-1.1.tar.gz
-  cd libssh2-1.1
+  tar xzf libssh2-1.2.2.tar.gz
+  cd libssh2-1.2.2
   ./configure
   patch -p1 < <BAR source directory>/misc/libssh2-1.1-keepalive.patch
   make
@@ -316,9 +319,17 @@ TclTk). To run the graphical user interface a Java
 runtime environment V1.5 (JDK5) or newer is required.
 To start the graphical user interface type in
 
+On Linux:
+
+  barcontrol.sh
+ 
+resp.
+
   java -jar barcontrol-linux.jar
 
-resp. (if jar is packed with launch4j into an .exe)
+On Windows:
+
+If jar is packed with launch4j into an .exe:
 
   barcontrol.exe
 
@@ -377,7 +388,7 @@ Note: call configure with
 
 BAR and all files are under the GPL version 2.
 
-BARControl is using SWT. SWT is under the "Eclipse Public License"
+barcontrol is using SWT. SWT is under the "Eclipse Public License"
 which can be found here:
 
   http://www.eclipse.org/org/documents/epl-v10.php
