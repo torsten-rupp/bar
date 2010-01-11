@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/filesystems_ext.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver EXT2/3 file system plug in
 * Systems: all
@@ -138,13 +138,13 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
   }
 
   /* check if this a super block */
-  if ((uint16)(le16_to_cpu(extSuperBlock.magic)) != EXT_SUPER_MAGIC)
+  if ((uint16)(LE16_TO_HOST(extSuperBlock.magic)) != EXT_SUPER_MAGIC)
   {
     return FALSE;
   }
 
   /* get block size */
-  switch (le32_to_cpu(extSuperBlock.logBlockSize))
+  switch (LE32_TO_HOST(extSuperBlock.logBlockSize))
   {
     case 0: extHandle->blockSize = 1024; break;
     case 1: extHandle->blockSize = 2048; break;
@@ -155,9 +155,9 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
   }
 
   /* get file system block info */
-  extHandle->totalBlocks    = le32_to_cpu(extSuperBlock.blocksCount);
-  extHandle->firstDataBlock = le32_to_cpu(extSuperBlock.firstDataBlock);
-  extHandle->blocksPerGroup = le32_to_cpu(extSuperBlock.blocksPerGroup);
+  extHandle->totalBlocks    = LE32_TO_HOST(extSuperBlock.blocksCount);
+  extHandle->firstDataBlock = LE32_TO_HOST(extSuperBlock.firstDataBlock);
+  extHandle->blocksPerGroup = LE32_TO_HOST(extSuperBlock.blocksPerGroup);
   extHandle->bitmapIndex    = -1;
 
   /* validate data */
@@ -188,7 +188,7 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
       free(extHandle->bitmapBlocks);
       return FALSE;
     }
-    extHandle->bitmapBlocks[z] = le32_to_cpu(extGroupDescriptor.blockBitmap);
+    extHandle->bitmapBlocks[z] = LE32_TO_HOST(extGroupDescriptor.blockBitmap);
   }
 
 #if 0

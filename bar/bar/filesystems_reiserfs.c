@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/filesystems_reiserfs.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver ReiserFS file system plug in
 * Systems: all
@@ -95,8 +95,8 @@ LOCAL bool REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHan
   }
 
   /* get file system block info */
-  reiserFSHandle->totalBlocks    = le32_to_cpu(reiserSuperBlock.blockCount);
-  reiserFSHandle->blockSize      = le32_to_cpu(reiserSuperBlock.blockSize);
+  reiserFSHandle->totalBlocks    = LE32_TO_HOST(reiserSuperBlock.blockCount);
+  reiserFSHandle->blockSize      = LE32_TO_HOST(reiserSuperBlock.blockSize);
   reiserFSHandle->bitmapIndex    = -1;
 
   /* validate data */
@@ -117,8 +117,7 @@ LOCAL void REISERFS_done(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHan
   assert(reiserFSHandle != NULL);
 
   UNUSED_VARIABLE(deviceHandle);
-
-//  free(reiserFSHandle->bitmapBlocks);
+  UNUSED_VARIABLE(reiserFSHandle);
 }
 
 LOCAL bool REISERFS_blockIsUsed(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHandle, uint64 offset)

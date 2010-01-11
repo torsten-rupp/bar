@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/filesystems_fat.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver FAT file systems plug in
 * Systems: all
@@ -53,19 +53,19 @@ typedef struct
 
 /* read int8/int16/int32 from arbitary memory position */
 #define FAT_READ_INT8(data,offset)  (*((uint8*)(data)+offset))
-#define FAT_READ_INT16(data,offset) (le16_to_cpu(  (((uint16)(*((uint8*)(data)+(offset)+0)))<< 0) \
-                                                 | (((uint16)(*((uint8*)(data)+(offset)+1)))<< 8) \
-                                                ) & 0xFFFF \
+#define FAT_READ_INT16(data,offset) (LE16_TO_HOST(  (((uint16)(*((uint8*)(data)+(offset)+0)))<< 0) \
+                                                  | (((uint16)(*((uint8*)(data)+(offset)+1)))<< 8) \
+                                                 ) & 0xFFFF \
                                     )
-#define FAT_READ_INT24(data,offset) le32_to_cpu(  (((uint32)(*((uint8*)(data)+(offset)+0)))<< 0) \
-                                                | (((uint32)(*((uint8*)(data)+(offset)+1)))<< 8) \
-                                                | (((uint32)(*((uint8*)(data)+(offset)+2)))<<16) \
-                                               )
-#define FAT_READ_INT32(data,offset) le32_to_cpu(  (((uint32)(*((uint8*)(data)+(offset)+0)))<< 0) \
-                                                | (((uint32)(*((uint8*)(data)+(offset)+1)))<< 8) \
-                                                | (((uint32)(*((uint8*)(data)+(offset)+2)))<<16) \
-                                                | (((uint32)(*((uint8*)(data)+(offset)+3)))<<24) \
-                                               )
+#define FAT_READ_INT24(data,offset) LE32_TO_HOST(  (((uint32)(*((uint8*)(data)+(offset)+0)))<< 0) \
+                                                 | (((uint32)(*((uint8*)(data)+(offset)+1)))<< 8) \
+                                                 | (((uint32)(*((uint8*)(data)+(offset)+2)))<<16) \
+                                                )
+#define FAT_READ_INT32(data,offset) LE32_TO_HOST(  (((uint32)(*((uint8*)(data)+(offset)+0)))<< 0) \
+                                                 | (((uint32)(*((uint8*)(data)+(offset)+1)))<< 8) \
+                                                 | (((uint32)(*((uint8*)(data)+(offset)+2)))<<16) \
+                                                 | (((uint32)(*((uint8*)(data)+(offset)+3)))<<24) \
+                                                )
 
 /***************************** Forwards ********************************/
 
@@ -138,13 +138,13 @@ x=FAT_READ_INT24(buffer,((index*12)/8) & ~0x1);
     case FAT16:
       for (index = 0; index < clustersCount; index++)
       {
-        if (le16_to_cpu(*((uint16*)buffer+index)) != 0x0000) BITSET_SET(fatHandle->clusterBitmap,index);
+        if (LE16_TO_HOST(*((uint16*)buffer+index)) != 0x0000) BITSET_SET(fatHandle->clusterBitmap,index);
       }
       break;
     case FAT32:
       for (index = 0; index < clustersCount; index++)
       {
-        if (le32_to_cpu(*((uint32*)buffer+index)) != 0x00000000) BITSET_SET(fatHandle->clusterBitmap,index);
+        if (LE32_TO_HOST(*((uint32*)buffer+index)) != 0x00000000) BITSET_SET(fatHandle->clusterBitmap,index);
       }
       break;
     #ifndef NDEBUG
