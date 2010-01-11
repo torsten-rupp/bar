@@ -316,7 +316,7 @@ settings of BAR to create an DVD:
 barcontrol is a graphical user interface for BAR. It is
 written in Java with SWT (Note: the former version used
 TclTk). To run the graphical user interface a Java
-runtime environment V1.5 (JDK5) or newer is required.
+runtime environment V1.6 (JRE6) or newer is required.
 To start the graphical user interface type in
 
 On Linux:
@@ -359,7 +359,7 @@ Note: If you want to use a ssh tunnel to connect to the bar
 
 Install Java, SWT, launch4j:
 
-* Download Java JRE V1.5 (JRE5) from http://www.sun.com
+* Download Java JRE V1.6 (JRE6) from http://www.sun.com
 * Install Java
 
 In case you do not want to use the included SWT 3.4
