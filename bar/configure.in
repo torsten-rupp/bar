@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.36 $
+dnl $Revision: 1.37 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -235,6 +235,13 @@ AC_SUBST(KEYTOOL)                           dnl Java keytool
 AC_SUBST(UNOCONV)                           dnl OO conversion tool
 AC_SUBST(TXT2MAN)                           dnl text-to-man page tool
 
+AC_SUBST(MKFS_EXT2)                         dnl mksfs.ext2 command
+AC_SUBST(MKFS_EXT3)                         dnl mksfs.ext3 command
+AC_SUBST(MKFS_EXT4)                         dnl mksfs.ext4 command
+AC_SUBST(MKFS_MSDOS)                        dnl mksfs.msdos command
+AC_SUBST(MKFS_REISERFS)                     dnl mksfs.reiserfs command
+AC_SUBST(MKFS_REISER4)                      dnl mksfs.reiser4 command
+
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
 AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise empty
 
@@ -440,6 +447,13 @@ AC_PATH_PROGS(KEYTOOL,keytool)
 
 AC_PATH_PROGS(UNOCONV,unoconv)
 AC_PATH_PROGS(TXT2MAN,txt2man)
+
+AC_PATH_PROGS(MKFS_EXT2,    mkfs.ext2,    ,/sbin)
+AC_PATH_PROGS(MKFS_EXT3,    mkfs.ext3,    ,/sbin)
+AC_PATH_PROGS(MKFS_EXT4,    mkfs.ext4,    ,/sbin)
+AC_PATH_PROGS(MKFS_MSDOS,   mkfs.msdos,   ,/sbin)
+AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
+AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
 
 dnl -------------- headers/functions/definitions/libraries -------------
 
