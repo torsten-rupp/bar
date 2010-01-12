@@ -17,6 +17,8 @@
   * fixed some C compiler warnings
   * fixed creating directory when writing incremental file list
   * improved error messages
+  * fixed memory leak
+  * improved valgrind suppression rules
 
 2010-01-01 0.12d
   * fixed wrong usage of vprintf in log function (caused SigSegV

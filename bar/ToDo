@@ -27,3 +27,4 @@ ToDo
 - partition image support
 - store partitions which are mounted ("on-the-fly-freeze")
 - md5 file check sum?
+- support sparse file when restoring
