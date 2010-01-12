@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.21 $
+# $Revision: 1.22 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -147,7 +147,11 @@ DESTROYER_SOURCES    = destroyer.c \
 
 DESTROYER_OBJECTS    = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
 
-OTHER_SOURCES        = archive_format.pl \
+OTHER_SOURCES        = filesystems_ext.c \
+                       filesystems_fat.c \
+                       filesystems_reiserfs.c \
+                       \
+                       archive_format.pl \
                        archive_format.def \
                        valgrind.supp \
                        bar.cfg \
@@ -164,9 +168,11 @@ TARGETS              = bar \
 
 #------------------------------ dependencies ---------------------------------
 
+# default target
 .PHONY: all clean distclean depend
 all: $(TARGETS)
 
+# clean
 clean:
 	$(RMF) $(BAR_OBJECTS)
 	$(RMF) $(DESTROYER_OBJECTS)
@@ -177,14 +183,48 @@ distclean: clean
 	$(RMF) Makefile Makefile.depend
 	$(RMF) config.h
 
-depend: Makefile.depend
+# help
+.PHONY: help
+help:
+	@$(ECHO) "Help targets:"
+	@$(ECHO) ""
+	@$(ECHO) "  all "
+	@$(ECHO) "  clean "
+	@$(ECHO) "  distclean"
+	@$(ECHO) ""
+	@$(ECHO) "  runserver"
+	@$(ECHO) "  runserver_ssl"
+	@$(ECHO) ""
+	@$(ECHO) "  test"
+	@$(ECHO) "  test1, test_basic"
+	@$(ECHO) "  test2, test_compress"
+	@$(ECHO) "  test3, test_crypt"
+	@$(ECHO) "  test4, test_asymmetric_crypt"
+	@$(ECHO) "  test5, test_split"
+	@$(ECHO) "  test6, test_image"
+	@$(ECHO) "  test_all"
+	@$(ECHO) ""
+	@$(ECHO) "  test_image_raw"
+	@$(ECHO) "  test_image_ext"
+	@$(ECHO) "  test_image_fat"
+	@$(ECHO) "  test_image_reiserfs"
+	@$(ECHO) ""
+	@$(ECHO) "  memcheck"
+	@$(ECHO) "  memcheck_extended"
+	@$(ECHO) ""
+	@$(ECHO) "  dist"
 
 # create dependencies
+.PHONY: depend
+depend: Makefile.depend
+
 Makefile.depend: $(BAR_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
 	$(ECHO) > Makefile.depend
 	for z in $(BAR_SOURCES) $(DESTROYER_SOURCES); do \
           $(CC) -MM >> Makefile.depend $$z; \
         done;
+
+# ----------------------------------------------------------------------------
 
 # create BAR
 bar@EXEEXT@: $(BAR_OBJECTS)
@@ -227,6 +267,8 @@ archive_format.c: archive_format.def
 destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
 	$(LD) $(LD_FLAGS) -o $@ $^ -lc -lpthread
 
+# ----------------------------------------------------------------------------
+
 # run server
 .PHONY: barserver barserver_ssl
 runserver barserver: bar
@@ -243,6 +285,8 @@ runserver_ssl barserver_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
           --server-ca-file=../bar-ca.pem \
           --server-cert-file=../bar-server-cert.pem \
           --server-key-file=../bar-server-key.pem
+
+# ----------------------------------------------------------------------------
 
 # do test
 .PHONY: test test1 test2 test3 test4 test_all
@@ -356,7 +400,7 @@ test_file test_file_base: bar
 .PHONY: test_file_destroy test_file_base_destroy
 test_file_destroy test_file_base_destroy: bar destroyer
 	$(RMRF) $(TEST_FILES)
-	SSH_ASKPASS= ./bar -c test/$(BAR_FILE).bar test/data/zero1024.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= ./bar -c test/$(if $(BAR_FILE),$(BAR_FILE),test).bar test/data/zero1024.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	./destroyer test/test.bar m:0 > test/test.bar_destroyed
 	SSH_ASKPASS= ./bar -l test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -t test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
@@ -395,8 +439,8 @@ FunctionTestDeviceRandom = \
 # call FunctionTestDeviceInitFilesystem,<loop device>,<mkfs options>,<mount point>
 FunctionTestDeviceInitFilesystem = \
   ( \
-    $(MKFS) $2 $1 $(if $(QUIET),1>/dev/null); \
-    $(if $3,($(MKDIR) test/dev 2>/dev/null; $(MOUNT) $1 test/dev; $(CP) -r test/data test/dev $(if $(QUIET),1>/dev/null); $(UMOUNT) test/dev; $(RMDIR) test/dev;);) \
+    $(MKFS) $2 $1 $(if $(QUIET),1>/dev/null 2>/dev/null); \
+    $(if $3,($(MKDIR) test/dev 2>/dev/null; $(MOUNT) $1 test/dev; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; $(CP) -r test/data test/dev $(if $(QUIET),1>/dev/null); $(UMOUNT) test/dev; $(RMDIR) test/dev;);) \
   )
 
 .PHONY: test_image_raw
@@ -406,7 +450,7 @@ test_image_raw:
 	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,32M)
 	$(MAKE) test_image_base \
            DEVICE0=/dev/loop0 DEVICE1=/dev/loop1 \
-           OPTIONS+="--raw-images"
+           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)"
 	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 
@@ -416,7 +460,8 @@ test_image_ext: \
   test_image_ext3 \
   test_image_ext4 
 
-test_image_ext2 test_image_ext3:
+test_image_ext2:
+ifneq (@MKFS_EXT2@,)
 	# ext2/ext3
 	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,32M)
 	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,32M)
@@ -443,10 +488,43 @@ test_image_ext2 test_image_ext3:
 	#
 	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
+endif
+
+test_image_ext3:
+ifneq (@MKFS_EXT3@,)
+	# ext2/ext3
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,32M)
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2,1)
+	$(MAKE) test_image_base \
+           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 1024,1)
+	$(MAKE) test_image_base \
+           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 2048,1)
+	$(MAKE) test_image_base \
+           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 4096,1)
+	$(MAKE) test_image_base \
+           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
+endif
 
 test_image_ext4:
+ifneq (@MKFS_EXT4@,)
 	# ext4
 	#
+endif
 
 .PHONY: test_image_fat test_image_fat12 test_image_fat16 test_image_fat32
 test_image_fat: \
@@ -455,6 +533,7 @@ test_image_fat: \
   test_image_fat32
 
 test_image_fat12:
+ifneq (@MKFS_MSDOS@,)
 	# FAT12
 	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,1440K)
 	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,1440K)
@@ -464,8 +543,10 @@ test_image_fat12:
           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
 	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
+endif
 
 test_image_fat16:
+ifneq (@MKFS_MSDOS@,)
 	# FAT16
 	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,20M)
 	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,20M)
@@ -475,8 +556,10 @@ test_image_fat16:
           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
 	$(call FunctionDeleteTestDevice,/dev/loop1,test/dev1)
 	$(call FunctionDeleteTestDevice,/dev/loop0,test/dev0)
+endif
 
 test_image_fat32:
+ifneq (@MKFS_MSDOS@,)
 	# FAT32
 	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,40M)
 	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,40M)
@@ -486,17 +569,70 @@ test_image_fat32:
           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
 	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
+endif
+
+.PHONY: test_image_reiserfs test_image_reiserfs1 test_image_reiserfs2 test_image_reiserfs3 test_image_reiser4
+test_image_reiserfs: \
+  test_image_reiserfs1 \
+  test_image_reiserfs2 \
+  test_image_reiserfs3 \
+  test_image_reiser4
+
+test_image_reiserfs1:
+ifneq (@MKFS_REISERFS@,)
+endif
+
+test_image_reiserfs2:
+ifneq (@MKFS_REISERFS@,)
+endif
+
+test_image_reiserfs3:
+ifneq (@MKFS_REISERFS@,)
+	# ReiserFS version 3 (Note: Linux only support block size 4096)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,64M)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,64M)
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,64M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t reiserfs -b 4096 -q --format 3.5,1)
+	$(MAKE) test_image_base \
+          DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,64M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t reiserfs -b 4096 -q --format 3.6,1)
+	$(MAKE) test_image_base \
+          DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionDeleteTestDevice,/dev/loop1,test/dev1)
+	$(call FunctionDeleteTestDevice,/dev/loop0,test/dev0)
+endif
+
+test_image_reiser4:
+ifneq (@MKFS_REISER4@,)
+	# Reiser4 (Note: Linux only support block size 4096)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,64M)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,64M)
+	#
+	$(call FunctionTestDeviceZero,/dev/loop0,64M)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t reiser4 -b 4096 -q,1)
+	$(MAKE) test_image_base \
+          DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	#
+	$(call FunctionDeleteTestDevice,/dev/loop1,test/dev1)
+	$(call FunctionDeleteTestDevice,/dev/loop0,test/dev0)
+endif
 
 .PHONY: test_image_base
 test_image_base: bar
 	$(RMRF) $(TEST_FILES)
-	SSH_ASKPASS= ./bar -m test/$(BAR_FILE).bar $(DEVICE0) $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= ./bar -m test/$(if $(BAR_FILE),$(BAR_FILE),test).bar $(DEVICE0) $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -x test/test*.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 	$(DD) if=$(DEVICE0) of=test/dev0.image 1>/dev/null 2>/dev/null
 	$(DD) if=$(DEVICE1) of=test/dev1.image 1>/dev/null 2>/dev/null
 	$(DIFF) test/dev0.image test/dev1.image
+
+# ----------------------------------------------------------------------------
 
 # valgrind checks
 .PHONY: memcheck memcheck1
