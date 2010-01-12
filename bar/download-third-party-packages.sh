@@ -108,11 +108,11 @@ if test $cleanFlag -eq 0; then
   (
    cd $tmpDirectory
    if test ! -f gnutls-2.8.1.tar.bz2; then
-     $WGET 'ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.8.1.tar.bz2'
+     $WGET 'ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.8.5.tar.bz2'
    fi
-   $TAR xjf gnutls-2.8.1.tar.bz2
+   $TAR xjf gnutls-2.8.5.tar.bz2
   )
-  $LN -f -s $tmpDirectory/gnutls-2.8.1 gnutls
+  $LN -f -s $tmpDirectory/gnutls-2.8.5 gnutls
 else
   # bzip2
   $RMF $tmpDirectory/bzip2-1.0.5.tar.gz
