@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.22 $
+# $Revision: 1.23 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -16,6 +16,9 @@ CONFIG_DIR      = @CONFIG_DIR@
 TLS_DIR         = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
+
+# shell in Makefile must be bash
+SHELL               = bash
 
 CC                  = @CC@
 CC_FLAGS            = @CC_FLAGS@ -g
