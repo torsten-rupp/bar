@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -35,6 +35,14 @@ import javax.net.ssl.SSLSocketFactory;
  */
 class ConnectionError extends Error
 {
+  // --------------------------- constants --------------------------------
+
+  // --------------------------- variables --------------------------------
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
+
   /** create new communication error
    * @param message message
    */
@@ -48,6 +56,14 @@ class ConnectionError extends Error
  */
 class CommunicationError extends Error
 {
+  // --------------------------- constants --------------------------------
+
+  // --------------------------- variables --------------------------------
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
+
   /** create new communication error
    * @param message message
    */
@@ -61,6 +77,14 @@ class CommunicationError extends Error
  */
 class Indicator
 {
+  // --------------------------- constants --------------------------------
+
+  // --------------------------- variables --------------------------------
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
+
   /** called when busy
    */
   public boolean busy(long n)
@@ -73,6 +97,14 @@ class Indicator
  */
 abstract class ProcessResult
 {
+  // --------------------------- constants --------------------------------
+
+  // --------------------------- variables --------------------------------
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
+
   abstract public void process(String result);
 }
 
@@ -80,12 +112,19 @@ abstract class ProcessResult
  */
 class Command
 {
+  // --------------------------- constants --------------------------------
+
+  // --------------------------- variables --------------------------------
   ProcessResult      processResult;
-  long               id;
-  int                errorCode;
-  String             errorText;
-  boolean            completedFlag;
-  LinkedList<String> result;
+  long               id;                // unique command id
+  int                errorCode;         // error code
+  String             errorText;         // error text
+  boolean            completedFlag;     // true iff command completed
+  LinkedList<String> result;            // result
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
 
   /** create new command
    * @param id command id
@@ -413,11 +452,13 @@ Dprintf.dprintf("not found %d: %s\n",commandId,line);
         }
         catch (NumberFormatException exception)
         {
+          // ignored
 //          throw new CommunicationError("malformed command result '"+line+"'");
         }
       }
       catch (IOException exception)
       {
+        // ignored
 //        throw new CommunicationError("Command fail (error: "+exception.getMessage()+")");
         break;
       }
@@ -473,15 +514,23 @@ Dprintf.dprintf("not found %d: %s\n",commandId,line);
  */
 class BARServer
 {
-  public static boolean debug = false;
+  // --------------------------- constants --------------------------------
+  public final static  String JAVA_SSL_KEY_FILE_NAME = "bar.jks";  // default name Java TLS/SSL key
 
-  private static String             JAVA_SSL_KEY_FILE_NAME = "bar.jks";
+  private final static int    SOCKET_READ_TIMEOUT    = 20*1000;    // timeout reading socket [ms]
+
+  // --------------------------- variables --------------------------------
+  public static boolean debug = false;
 
   private static long               commandId;
   private static Socket             socket;
   private static BufferedWriter     output;
   private static BufferedReader     input;
   private static ReadThread         readThread;
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
 
   /** connect to BAR server
    * @param hostname host name
@@ -537,6 +586,7 @@ class BARServer
 
             sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
             sslSocket        = (SSLSocket)sslSocketFactory.createSocket(hostname,tlsPort);
+            sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
             sslSocket.startHandshake();
 
 //java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
@@ -580,6 +630,7 @@ class BARServer
       try
       {
         socket = new Socket(hostname,port);
+        socket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
         input  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -630,7 +681,7 @@ class BARServer
     }
     catch (IOException exception)
     {
-      throw new Error("Network error (error: "+exception.getMessage()+")");
+      throw new Error("Network error on "+socket.getInetAddress()+":"+socket.getPort()+" (error: "+exception.getMessage()+")");
     }
 //System.err.print("BARControl.java"+", "+682+": sessionId=");for (byte b : sessionId) { System.err.print(String.format("%02x",b & 0xFF)); }; System.err.println();
 
@@ -666,7 +717,7 @@ class BARServer
     }
     catch (IOException exception)
     {
-      throw new CommunicationError("Network error (error: "+exception.getMessage()+")");
+      throw new CommunicationError("Network error on "+socket.getInetAddress()+":"+socket.getPort()+" (error: "+exception.getMessage()+")");
     }
 
     // get version
@@ -694,7 +745,7 @@ class BARServer
     }
     catch (IOException exception)
     {
-      throw new CommunicationError("Network error (error: "+exception.getMessage()+")");
+      throw new CommunicationError("Network error on "+socket.getInetAddress()+":"+socket.getPort()+" (error: "+exception.getMessage()+")");
     }
 
     // start read thread
@@ -761,7 +812,7 @@ class BARServer
       catch (IOException exception)
       {
         readThread.commandRemove(command);
-        throw new CommunicationError("i/o error (error: "+exception.getMessage()+")");
+        throw new CommunicationError("i/o error on "+socket.getInetAddress()+":"+socket.getPort()+" (error: "+exception.getMessage()+")");
       }
     }
 
@@ -828,7 +879,6 @@ class BARServer
       catch (IOException exception)
       {
         readThread.commandRemove(command);
-//        throw new CommunicationError("i/o error (error: "+exception.getMessage()+")");
         return -1;
       }
       if (indicator != null)
