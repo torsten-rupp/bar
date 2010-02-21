@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -305,6 +305,9 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 
       /* add to password list */
       Archive_appendDecryptPassword(password);
+
+      /* free resources */
+      Password_delete(password);
 
       /* next password is: none */
       passwordHandle->inputFlag = TRUE;
@@ -1735,6 +1738,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
                       );
   if (error != ERROR_NONE)
   {
+    String_delete(archiveInfo->fileName);
     String_delete(fileName);
     return error;
   }
@@ -1745,8 +1749,9 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
                       );
   if (error != ERROR_NONE)
   {
-    String_delete(fileName);
     Storage_done(&archiveInfo->storageFile.storageFileHandle);
+    String_delete(archiveInfo->fileName);
+    String_delete(fileName);
     return error;
   }
 
@@ -4180,8 +4185,8 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
             String_set(deviceName,archiveFileInfo->image.chunkImageEntry.name);
             deviceInfo->size        = archiveFileInfo->image.chunkImageEntry.size;
             deviceInfo->blockSize   = archiveFileInfo->image.chunkImageEntry.blockSize;
-            deviceInfo->freeBlocks  = 0LL;
-            deviceInfo->totalBlocks = 0LL;
+//            deviceInfo->freeBlocks  = 0LL;
+//            deviceInfo->totalBlocks = 0LL;
 
             foundImageEntryFlag = TRUE;
             break;
@@ -4265,11 +4270,12 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
 
 Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
 {
-  Errors error;
+  Errors error,tmpError;
 
   assert(archiveFileInfo != NULL);
   assert(archiveFileInfo->archiveInfo != NULL);
 
+  error = ERROR_NONE;
   switch (archiveFileInfo->mode)
   {
     case ARCHIVE_MODE_WRITE:
@@ -4282,18 +4288,15 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
               || (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
              )
           {
-            while (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
+            while (   (error == ERROR_NONE)
+                   && (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
+                  )
             {
               error = writeFileDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
-              if (error != ERROR_NONE)
-              {
-                return error;
-              }
             }
-            error = writeFileDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH);
-            if (error != ERROR_NONE)
+            if (error == ERROR_NONE)
             {
-              return error;
+              error = writeFileDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH);
             }
           }
 
@@ -4302,30 +4305,21 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           {
             /* update part size */
             archiveFileInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveFileInfo->file.compressInfoData);
-            error = Chunk_update(&archiveFileInfo->file.chunkInfoFileData,
-                                 &archiveFileInfo->file.chunkFileData
-                                );
-            if (error != ERROR_NONE)
+            if (error == ERROR_NONE)
             {
-              return error;
+              tmpError = Chunk_update(&archiveFileInfo->file.chunkInfoFileData,
+                                      &archiveFileInfo->file.chunkFileData
+                                     );
+              if (tmpError != ERROR_NONE) error = tmpError;
             }
 
             /* close chunks */
-            error = Chunk_close(&archiveFileInfo->file.chunkInfoFileData);
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
-            error = Chunk_close(&archiveFileInfo->file.chunkInfoFileEntry);
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
-            error = Chunk_close(&archiveFileInfo->file.chunkInfoFile);
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
+            tmpError = Chunk_close(&archiveFileInfo->file.chunkInfoFileData);
+            if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+            tmpError = Chunk_close(&archiveFileInfo->file.chunkInfoFileEntry);
+            if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+            tmpError = Chunk_close(&archiveFileInfo->file.chunkInfoFile);
+            if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
           }
 
           /* free resources */
@@ -4346,18 +4340,15 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
               || (Compress_getAvailableBlocks(&archiveFileInfo->image.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
              )
           {
-            while (Compress_getAvailableBlocks(&archiveFileInfo->image.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
+            while (   (error == ERROR_NONE)
+                   && (Compress_getAvailableBlocks(&archiveFileInfo->image.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
+                  )
             {
               error = writeImageDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
-              if (error != ERROR_NONE)
-              {
-                return error;
-              }
             }
-            error = writeImageDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH);
-            if (error != ERROR_NONE)
+            if (error == ERROR_NONE)
             {
-              return error;
+              error = writeImageDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH);
             }
           }
 
@@ -4367,30 +4358,21 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
             /* update part size */
             assert(archiveFileInfo->image.blockSize > 0);
             archiveFileInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveFileInfo->image.compressInfoData)/archiveFileInfo->image.blockSize;
-            error = Chunk_update(&archiveFileInfo->image.chunkInfoImageData,
-                                 &archiveFileInfo->image.chunkImageData
-                                );
-            if (error != ERROR_NONE)
+            if (error == ERROR_NONE)
             {
-              return error;
+              tmpError = Chunk_update(&archiveFileInfo->image.chunkInfoImageData,
+                                      &archiveFileInfo->image.chunkImageData
+                                     );
+              if (tmpError != ERROR_NONE) error = tmpError;
             }
 
             /* close chunks */
-            error = Chunk_close(&archiveFileInfo->image.chunkInfoImageData);
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
-            error = Chunk_close(&archiveFileInfo->image.chunkInfoImageEntry);
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
-            error = Chunk_close(&archiveFileInfo->image.chunkInfoImage);
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
+            tmpError = Chunk_close(&archiveFileInfo->image.chunkInfoImageData);
+            if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+            tmpError = Chunk_close(&archiveFileInfo->image.chunkInfoImageEntry);
+            if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+            tmpError = Chunk_close(&archiveFileInfo->image.chunkInfoImage);
+            if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
           }
 
           /* free resources */
@@ -4406,16 +4388,10 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           /* close chunks */
-          error = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectory);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
+          tmpError = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+          tmpError = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectory);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
           /* free resources */
           Chunk_done(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
@@ -4425,16 +4401,10 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           /* close chunks */
-          error = Chunk_close(&archiveFileInfo->link.chunkInfoLinkEntry);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunk_close(&archiveFileInfo->link.chunkInfoLink);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
+          tmpError = Chunk_close(&archiveFileInfo->link.chunkInfoLinkEntry);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+          tmpError = Chunk_close(&archiveFileInfo->link.chunkInfoLink);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
           /* free resources */
           Chunk_done(&archiveFileInfo->link.chunkInfoLinkEntry);
@@ -4445,16 +4415,10 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           /* close chunks */
-          error = Chunk_close(&archiveFileInfo->special.chunkInfoSpecialEntry);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunk_close(&archiveFileInfo->special.chunkInfoSpecial);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
+          tmpError = Chunk_close(&archiveFileInfo->special.chunkInfoSpecialEntry);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+          tmpError = Chunk_close(&archiveFileInfo->special.chunkInfoSpecial);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
           /* free resources */
           Chunk_done(&archiveFileInfo->special.chunkInfoSpecialEntry);
@@ -4474,21 +4438,12 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           /* close chunks */
-          error = Chunk_close(&archiveFileInfo->file.chunkInfoFileData);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunk_close(&archiveFileInfo->file.chunkInfoFileEntry);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunk_close(&archiveFileInfo->file.chunkInfoFile);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
+          tmpError = Chunk_close(&archiveFileInfo->file.chunkInfoFileData);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+          tmpError = Chunk_close(&archiveFileInfo->file.chunkInfoFileEntry);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+          tmpError = Chunk_close(&archiveFileInfo->file.chunkInfoFile);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
           /* free resources */
           Chunk_done(&archiveFileInfo->file.chunkInfoFileData);
@@ -4503,21 +4458,12 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           /* close chunks */
-          error = Chunk_close(&archiveFileInfo->image.chunkInfoImageData);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunk_close(&archiveFileInfo->image.chunkInfoImageEntry);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunk_close(&archiveFileInfo->image.chunkInfoImage);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
+          tmpError = Chunk_close(&archiveFileInfo->image.chunkInfoImageData);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+          tmpError = Chunk_close(&archiveFileInfo->image.chunkInfoImageEntry);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+          tmpError = Chunk_close(&archiveFileInfo->image.chunkInfoImage);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
           /* free resources */
           Chunk_done(&archiveFileInfo->image.chunkInfoImageData);
@@ -4532,16 +4478,10 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           /* close chunks */
-          error = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectory);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
+          tmpError = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+          tmpError = Chunk_close(&archiveFileInfo->directory.chunkInfoDirectory);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
           /* free resources */
           Chunk_done(&archiveFileInfo->directory.chunkInfoDirectoryEntry);
@@ -4551,16 +4491,10 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           /* close chunks */
-          error = Chunk_close(&archiveFileInfo->link.chunkInfoLinkEntry);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunk_close(&archiveFileInfo->link.chunkInfoLink);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
+          tmpError = Chunk_close(&archiveFileInfo->link.chunkInfoLinkEntry);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+          tmpError = Chunk_close(&archiveFileInfo->link.chunkInfoLink);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
           /* free resources */
           Chunk_done(&archiveFileInfo->link.chunkInfoLinkEntry);
@@ -4571,16 +4505,10 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           /* close chunks */
-          error = Chunk_close(&archiveFileInfo->special.chunkInfoSpecialEntry);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          error = Chunk_close(&archiveFileInfo->special.chunkInfoSpecial);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
+          tmpError = Chunk_close(&archiveFileInfo->special.chunkInfoSpecialEntry);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+          tmpError = Chunk_close(&archiveFileInfo->special.chunkInfoSpecial);
+          if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
           /* free resources */
           Chunk_done(&archiveFileInfo->special.chunkInfoSpecialEntry);
@@ -4597,7 +4525,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
       break;
   }
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Archive_writeData(ArchiveFileInfo *archiveFileInfo,
