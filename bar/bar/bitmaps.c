@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bitmaps.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Bitmap functions
 * Systems: all
@@ -62,8 +62,6 @@ void Bitmap_done(Bitmap *bitmap)
 Bitmap* Bitmap_new(uint64 size)
 {
   Bitmap *bitmap;
-
-  assert(bitmap != NULL);
 
   bitmap = (Bitmap*)malloc(sizeof(Bitmap));
   if (bitmap != NULL)
