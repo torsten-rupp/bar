@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -373,49 +373,49 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] =
 
 LOCAL const ConfigValue CONFIG_VALUES[] =
 {
-  CONFIG_STRUCT_VALUE_STRING   ("archive-name",           JobNode,archiveName                            ),
-  CONFIG_STRUCT_VALUE_SELECT   ("archive-type",           JobNode,jobOptions.archiveType,                CONFIG_VALUE_ARCHIVE_TYPES),
-  CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",      JobNode,jobOptions.archivePartSize,            0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_STRING   ("archive-name",           JobNode,archiveName                             ),
+  CONFIG_STRUCT_VALUE_SELECT   ("archive-type",           JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",      JobNode,jobOptions.archivePartSize,             0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_STRUCT_VALUE_STRING   ("incremental-list-file",  JobNode,jobOptions.incrementalListFileName     ),
+  CONFIG_STRUCT_VALUE_STRING   ("incremental-list-file",  JobNode,jobOptions.incrementalListFileName      ),
 
-  CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",        JobNode,jobOptions.directoryStripCount,        0,INT_MAX,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("destination",            JobNode,jobOptions.destination                 ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("owern",                  JobNode,jobOptions.cryptPassword,              configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",        JobNode,jobOptions.directoryStripCount,         0,INT_MAX,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("destination",            JobNode,jobOptions.destination                  ),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("owern",                  JobNode,jobOptions.cryptPassword,               configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
 
-  CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",           JobNode,jobOptions.patternType,                CONFIG_VALUE_PATTERN_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",           JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_STRUCT_VALUE_SELECT   ("compress-algorithm",     JobNode,jobOptions.compressAlgorithm,          CONFIG_VALUE_COMPRESS_ALGORITHMS),
+  CONFIG_STRUCT_VALUE_SELECT   ("compress-algorithm",     JobNode,jobOptions.compressAlgorithm,           CONFIG_VALUE_COMPRESS_ALGORITHMS),
 
-  CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",        JobNode,jobOptions.cryptAlgorithm,             CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_STRUCT_VALUE_SELECT   ("crypt-type",             JobNode,jobOptions.cryptType,                  CONFIG_VALUE_CRYPT_TYPES),
-  CONFIG_STRUCT_VALUE_SELECT   ("crypt-password-mode",    JobNode,jobOptions.cryptPasswordMode,          CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",         JobNode,jobOptions.cryptPassword,              configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("crypt-public-key",       JobNode,jobOptions.cryptPublicKeyFileName      ),
+  CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",        JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_STRUCT_VALUE_SELECT   ("crypt-type",             JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT   ("crypt-password-mode",    JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",         JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("crypt-public-key",       JobNode,jobOptions.cryptPublicKeyFileName       ),
 
-  CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",         JobNode,jobOptions.ftpServer.loginName         ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",           JobNode,jobOptions.ftpServer.password,         configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",         JobNode,jobOptions.ftpServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",           JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",               JobNode,jobOptions.sshServer.port,             0,65535,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",         JobNode,jobOptions.sshServer.loginName         ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",           JobNode,jobOptions.sshServer.password ,        configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("ssh-public-key",         JobNode,jobOptions.sshServer.publicKeyFileName ),
-  CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",        JobNode,jobOptions.sshServer.privateKeyFileName),
+  CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",               JobNode,jobOptions.sshServer.port,              0,65535,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",         JobNode,jobOptions.sshServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",           JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("ssh-public-key",         JobNode,jobOptions.sshServer.publicKeyFileName  ),
+  CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",        JobNode,jobOptions.sshServer.privateKeyFileName ),
 
-  CONFIG_STRUCT_VALUE_INTEGER64("volume-size",            JobNode,jobOptions.device.volumeSize,          0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",      JobNode,jobOptions.waitFirstVolumeFlag         ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                    JobNode,jobOptions.errorCorrectionCodesFlag    ),
+  CONFIG_STRUCT_VALUE_INTEGER64("volume-size",            JobNode,jobOptions.device.volumeSize,           0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",      JobNode,jobOptions.waitFirstVolumeFlag          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                    JobNode,jobOptions.errorCorrectionCodesFlag     ),
 
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",        JobNode,jobOptions.skipUnreadableFlag          ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("raw-images",             JobNode,jobOptions.rawImagesFlag               ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files",JobNode,jobOptions.overwriteArchiveFilesFlag   ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",        JobNode,jobOptions.overwriteFilesFlag          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",        JobNode,jobOptions.skipUnreadableFlag           ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("raw-images",             JobNode,jobOptions.rawImagesFlag                ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files",JobNode,jobOptions.overwriteArchiveFilesFlag    ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",        JobNode,jobOptions.overwriteFilesFlag           ),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",           JobNode,includeEntryList,                      configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",          JobNode,includeEntryList,                      configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                    configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",           JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",          JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                     configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",               JobNode,scheduleList,                          configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",               JobNode,scheduleList,                           configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
 };
 
 /***************************** Variables *******************************/
@@ -1049,7 +1049,46 @@ LOCAL bool readJobFile(JobNode *jobNode)
   EntryList_clear(&jobNode->includeEntryList);
   PatternList_clear(&jobNode->excludePatternList);
   List_clear(&jobNode->scheduleList,NULL,NULL);
+  jobNode->archiveName                             = NULL;
+  jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
+  jobNode->jobOptions.archivePartSize              = 0LL;
+  jobNode->jobOptions.incrementalListFileName      = NULL;
+  jobNode->jobOptions.directoryStripCount          = 0;
+  jobNode->jobOptions.destination                  = NULL;
+  jobNode->jobOptions.patternType                  = PATTERN_TYPE_GLOB;
+  jobNode->jobOptions.compressAlgorithm            = COMPRESS_ALGORITHM_NONE;
+  jobNode->jobOptions.cryptAlgorithm               = CRYPT_ALGORITHM_NONE;
+  jobNode->jobOptions.cryptType                    = CRYPT_TYPE_NONE;
+  jobNode->jobOptions.cryptPasswordMode            = PASSWORD_MODE_DEFAULT;
+  jobNode->jobOptions.cryptPublicKeyFileName       = NULL;
+  jobNode->jobOptions.ftpServer.loginName          = NULL;
+  jobNode->jobOptions.ftpServer.password           = NULL;
+  jobNode->jobOptions.sshServer.port               = 0;
+  jobNode->jobOptions.sshServer.loginName          = NULL;
+  jobNode->jobOptions.sshServer.publicKeyFileName  = NULL;
+  jobNode->jobOptions.sshServer.privateKeyFileName = NULL;
+  jobNode->jobOptions.device.volumeSize            = 0LL;
+  jobNode->jobOptions.waitFirstVolumeFlag          = FALSE;
+  jobNode->jobOptions.errorCorrectionCodesFlag     = FALSE;
+  jobNode->jobOptions.skipUnreadableFlag           = FALSE;
+  jobNode->jobOptions.rawImagesFlag                = FALSE;
+  jobNode->jobOptions.overwriteArchiveFilesFlag    = FALSE;
+  jobNode->jobOptions.overwriteFilesFlag           = FALSE;
+/*
 
+  CONFIG_STRUCT_VALUE_SPECIAL  ("owern",                  JobNode,jobOptions.cryptPassword,               configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",         JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",           JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",           JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",           JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",          JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                     configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
+
+  CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",               JobNode,scheduleList,                           configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
+*/
   /* parse file */
   failFlag = FALSE;
   lineNb   = 0;

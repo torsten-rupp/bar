@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -720,6 +720,21 @@ void configValueFormatDoneIncludeExclude(void **formatUserData, void *userData);
 \***********************************************************************/
 
 bool configValueFormatIncludeExclude(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseString
+* Purpose: config value option call back for parsing string
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseString(void *userData, void *variable, const char *name, const char *value);
 
 /***********************************************************************\
 * Name   : configValueParsePassword
