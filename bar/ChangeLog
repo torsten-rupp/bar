@@ -19,6 +19,10 @@
   * improved error messages
   * fixed memory leak
   * improved valgrind suppression rules
+  * fixed compilation warnings
+  * improved and clean-up command line/config value parsing
+  * set socket timeout in barcontrol (20s)
+  * improved error messages in barcontrol
 
 2010-01-01 0.12d
   * fixed wrong usage of vprintf in log function (caused SigSegV
