@@ -8596,6 +8596,192 @@ _ACEOF
 fi
 
 
+{ $as_echo "$as_me:$LINENO: checking for gethostbyname" >&5
+$as_echo_n "checking for gethostbyname... " >&6; }
+if test "${ac_cv_func_gethostbyname+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* Define gethostbyname to an innocuous variant, in case <limits.h> declares gethostbyname.
+   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
+#define gethostbyname innocuous_gethostbyname
+
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char gethostbyname (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+
+#undef gethostbyname
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char gethostbyname ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined __stub_gethostbyname || defined __stub___gethostbyname
+choke me
+#endif
+
+int
+main ()
+{
+return gethostbyname ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_func_gethostbyname=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_func_gethostbyname=no
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_func_gethostbyname" >&5
+$as_echo "$ac_cv_func_gethostbyname" >&6; }
+if test "x$ac_cv_func_gethostbyname" = x""yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_GETHOSTBYNAME 1
+_ACEOF
+
+fi
+
+{ $as_echo "$as_me:$LINENO: checking for gethostbyaddr" >&5
+$as_echo_n "checking for gethostbyaddr... " >&6; }
+if test "${ac_cv_func_gethostbyaddr+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* Define gethostbyaddr to an innocuous variant, in case <limits.h> declares gethostbyaddr.
+   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
+#define gethostbyaddr innocuous_gethostbyaddr
+
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char gethostbyaddr (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+
+#undef gethostbyaddr
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char gethostbyaddr ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined __stub_gethostbyaddr || defined __stub___gethostbyaddr
+choke me
+#endif
+
+int
+main ()
+{
+return gethostbyaddr ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_func_gethostbyaddr=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_func_gethostbyaddr=no
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_func_gethostbyaddr" >&5
+$as_echo "$ac_cv_func_gethostbyaddr" >&6; }
+if test "x$ac_cv_func_gethostbyaddr" = x""yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_GETHOSTBYADDR 1
+_ACEOF
+
+fi
+
 { $as_echo "$as_me:$LINENO: checking for gethostbyname_r" >&5
 $as_echo_n "checking for gethostbyname_r... " >&6; }
 if test "${ac_cv_func_gethostbyname_r+set}" = set; then
@@ -8684,7 +8870,100 @@ $as_echo "$ac_cv_func_gethostbyname_r" >&6; }
 if test "x$ac_cv_func_gethostbyname_r" = x""yes; then
 
 cat >>confdefs.h <<\_ACEOF
-#define HAVE_GETBYHOSTNAME_R 1
+#define HAVE_GETHOSTBYNAME_R 1
+_ACEOF
+
+fi
+
+{ $as_echo "$as_me:$LINENO: checking for gethostbyaddr_r" >&5
+$as_echo_n "checking for gethostbyaddr_r... " >&6; }
+if test "${ac_cv_func_gethostbyaddr_r+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* Define gethostbyaddr_r to an innocuous variant, in case <limits.h> declares gethostbyaddr_r.
+   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
+#define gethostbyaddr_r innocuous_gethostbyaddr_r
+
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char gethostbyaddr_r (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+
+#undef gethostbyaddr_r
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char gethostbyaddr_r ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined __stub_gethostbyaddr_r || defined __stub___gethostbyaddr_r
+choke me
+#endif
+
+int
+main ()
+{
+return gethostbyaddr_r ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_func_gethostbyaddr_r=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_func_gethostbyaddr_r=no
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_func_gethostbyaddr_r" >&5
+$as_echo "$ac_cv_func_gethostbyaddr_r" >&6; }
+if test "x$ac_cv_func_gethostbyaddr_r" = x""yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_GETHOSTBYADDR_R 1
 _ACEOF
 
 fi

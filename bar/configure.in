@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.37 $
+dnl $Revision: 1.38 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -917,7 +917,10 @@ AC_MSG_WARN([$LDFLAGS])
 AC_CHECK_PTHREAD_DEFINES
 AC_CHECK_FUNC(pthread_attr_setname,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
 
-AC_CHECK_FUNC(gethostbyname_r,AC_DEFINE(HAVE_GETBYHOSTNAME_R,1,[getbyhostname_r() available]))
+AC_CHECK_FUNC(gethostbyname,  AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]))
+AC_CHECK_FUNC(gethostbyaddr,  AC_DEFINE(HAVE_GETHOSTBYADDR,  1,[gethostbyname() available]))
+AC_CHECK_FUNC(gethostbyname_r,AC_DEFINE(HAVE_GETHOSTBYNAME_R,1,[gethostbyname_r() available]))
+AC_CHECK_FUNC(gethostbyaddr_r,AC_DEFINE(HAVE_GETHOSTBYADDR_R,1,[gethostbyname_r() available]))
 
 AC_CHECK_FUNC(fseeko64,,AC_ERROR([function fseeko64() is not available]))
 AC_CHECK_FUNC(ftello64,,AC_ERROR([function ftello64() is not available]))
