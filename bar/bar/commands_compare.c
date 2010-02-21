@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_compare.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive compare function
 * Systems : all
@@ -457,7 +457,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
               }
 
               /* open device */
-              error = Device_open(&deviceHandle,imageName,FILE_OPENMODE_READ);
+              error = Device_open(&deviceHandle,imageName,DEVICE_OPENMODE_READ);
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
