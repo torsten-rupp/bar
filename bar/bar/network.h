@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -169,15 +169,15 @@ void Network_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-bool Network_exists(const String hostName);
-bool Network_existsCString(const char *hostName);
+bool Network_hostExists(const String hostName);
+bool Network_hostExistsCString(const char *hostName);
 
 /***********************************************************************\
 * Name   : Network_connect
 * Purpose: connect to host
 * Input  : socketType            - socket type; see SOCKET_TYPE_*
 *          hostName              - host name
-*          hostPort              - host port
+*          hostPort              - host port (host byte order)
 *          flags                 - socket falgs
 *          loginName             - login user name
 *          password              - SSH password
@@ -325,7 +325,7 @@ Errors Network_writeLine(SocketHandle *socketHandle,
 /***********************************************************************\
 * Name   : Network_initServer
 * Purpose: initialize a server socket
-* Input  : serverPort  - server port
+* Input  : serverPort  - server port (host byte order)
 *          ServerTypes - server type; see SERVER_TYPE_*
 *          caFileName   - file with TLS CA or NULL
 *          certFileName - file with TLS cerificate or NULL
@@ -385,15 +385,15 @@ Errors Network_accept(SocketHandle             *socketHandle,
 * Purpose: get local socket info
 * Input  : socketHandle - socket handle
 *          name         - name variable
-* Output : name - local name
-*          port - local port
+* Output : name - local name (name or IP address as n.n.n.n)
+*          port - local port (host byte order)
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void Network_getLocalInfo(SocketHandle *socketHandle,
-                          String name,
-                          uint   *port
+                          String       name,
+                          uint         *port
                          );
 
 /***********************************************************************\
@@ -401,15 +401,15 @@ void Network_getLocalInfo(SocketHandle *socketHandle,
 * Purpose: get remove socket info
 * Input  : socketHandle - socket handle
 *          name         - name variable
-* Output : name - remote name
-*          port - remote port
+* Output : name - remote name (name or IP address as n.n.n.n)
+*          port - remote port (host byte order)
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void Network_getRemoteInfo(SocketHandle *socketHandle,
-                           String name,
-                           uint   *port
+                           String       name,
+                           uint         *port
                           );
 
 /*---------------------------------------------------------------------*/

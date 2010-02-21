@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -111,21 +111,23 @@ void Network_doneAll(void)
   #endif /* HAVE_SSH2 */
 }
 
-bool Network_exists(const String hostName)
+bool Network_hostExists(const String hostName)
 {
-  return Network_existsCString(String_cString(hostName));
+  return Network_hostExistsCString(String_cString(hostName));
 }
 
-bool Network_existsCString(const char *hostName)
+bool Network_hostExistsCString(const char *hostName)
 {
-  #ifdef HAVE_GETBYHOSTNAME_R
+  #if   defined(HAVE_GETHOSTBYNAME_R)
     char           buffer[512];
     struct hostent bufferAddressEntry;
     struct hostent *hostAddressEntry;
     int            getHostByNameError;
-  #endif /* HAVE_GETBYHOSTNAME_R */
+  #elif defined(HAVE_GETHOSTBYNAME)
+    const struct hostent *hostAddressEntry;
+  #endif /* HAVE_GETHOSTBYNAME* */
 
-  #ifdef HAVE_GETBYHOSTNAME_R
+  #if   defined(HAVE_GETHOSTBYNAME_R)
     return    (gethostbyname_r(hostName,
                                &bufferAddressEntry,
                                buffer,
@@ -134,9 +136,11 @@ bool Network_existsCString(const char *hostName)
                                &getHostByNameError
                               ) == 0)
            && (hostAddressEntry != NULL);
-  #else /* not HAVE_GETBYHOSTNAME_R */
+  #elif defined(HAVE_GETHOSTBYNAME)
     return gethostbyname(hostName) != NULL;
-  #endif /* HAVE_GETBYHOSTNAME_R */
+  #else /* not HAVE_GETHOSTBYNAME* */
+    return FALSE;
+  #endif /* HAVE_GETHOSTBYNAME_R */
 }
 
 Errors Network_connect(SocketHandle *socketHandle,
@@ -150,11 +154,12 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         flags
                       )
 {
-  #ifdef HAVE_GETBYHOSTNAME_R
+  #if   defined(HAVE_GETHOSTBYNAME_R)
     char           buffer[512];
     struct hostent bufferAddressEntry;
     int            getHostByNameError;
-  #endif /* HAVE_GETBYHOSTNAME_R */
+  #elif defined(HAVE_GETHOSTBYNAME)
+  #endif /* HAVE_GETHOSTBYNAME* */
   struct hostent     *hostAddressEntry;
   in_addr_t          ipAddress;
   struct sockaddr_in socketAddress;
@@ -169,7 +174,7 @@ Errors Network_connect(SocketHandle *socketHandle,
   {
     case SOCKET_TYPE_PLAIN:
       /* get host IP address */
-      #ifdef HAVE_GETBYHOSTNAME_R
+      #if   defined(HAVE_GETHOSTBYNAME_R)
         if (   (gethostbyname_r(String_cString(hostName),
                                 &bufferAddressEntry,
                                 buffer,
@@ -182,9 +187,11 @@ Errors Network_connect(SocketHandle *socketHandle,
         {
           hostAddressEntry = NULL;
         }
-      #else /* not HAVE_GETBYHOSTNAME_R */
+      #elif defined(HAVE_GETHOSTBYNAME)
         hostAddressEntry = gethostbyname(String_cString(hostName));
-      #endif /* HAVE_GETBYHOSTNAME_R */
+      #else /* not HAVE_GETHOSTBYNAME_R */
+        hostAddressEntry = NULL;
+      #endif /* HAVE_GETHOSTBYNAME_R */
       if (hostAddressEntry != NULL)
       {
         assert(hostAddressEntry->h_length > 0);
@@ -236,7 +243,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         /* initialise variables */
 
         /* get host IP address */
-        #ifdef HAVE_GETBYHOSTNAME_R
+        #if   defined(HAVE_GETHOSTBYNAME_R)
           if (  (gethostbyname_r(String_cString(hostName),
                                  &bufferAddressEntry,
                                  buffer,
@@ -249,9 +256,11 @@ Errors Network_connect(SocketHandle *socketHandle,
           {
             hostAddressEntry = NULL;
           }
-        #else /* not HAVE_GETBYHOSTNAME_R */
+        #elif defined(HAVE_GETHOSTBYNAME)
           hostAddressEntry = gethostbyname(String_cString(hostName));
-        #endif /* HAVE_GETBYHOSTNAME_R */
+        #else /* not HAVE_GETHOSTBYNAME_R */
+          hostAddressEntry = NULL;
+        #endif /* HAVE_GETHOSTBYNAME_R */
         if (hostAddressEntry != NULL)
         {
           assert(hostAddressEntry->h_length > 0);
@@ -1062,8 +1071,9 @@ void Network_getLocalInfo(SocketHandle *socketHandle,
                           uint         *port
                          )
 {
-  struct sockaddr_in socketAddress;
-  socklen_t          socketAddressLength;
+  struct sockaddr_in   socketAddress;
+  socklen_t            socketAddressLength;
+  const struct hostent *hostEntry;
 
   assert(socketHandle != NULL);
   assert(name != NULL);
@@ -1076,7 +1086,22 @@ void Network_getLocalInfo(SocketHandle *socketHandle,
                  ) == 0
      )
   {
-    String_setCString(name,inet_ntoa(socketAddress.sin_addr));
+    #ifdef HAVE_GETHOSTBYADDR
+      hostEntry = gethostbyaddr(&socketAddress.sin_addr,
+                                sizeof(socketAddress.sin_addr),
+                                AF_INET
+                               );
+      if (hostEntry != NULL)
+      {
+        String_setCString(name,hostEntry->h_name);
+      }
+      else
+      {
+        String_setCString(name,inet_ntoa(socketAddress.sin_addr));
+      }
+    #else /* not HAVE_GETHOSTBYADDR */
+      String_setCString(name,inet_ntoa(socketAddress.sin_addr));
+    #endif /* HAVE_GETHOSTBYADDR */
     (*port) = ntohs(socketAddress.sin_port);
   }
   else
@@ -1091,8 +1116,9 @@ void Network_getRemoteInfo(SocketHandle *socketHandle,
                            uint         *port
                           )
 {
-  struct sockaddr_in socketAddress;
-  socklen_t          socketAddressLength;
+  struct sockaddr_in   socketAddress;
+  socklen_t            socketAddressLength;
+  const struct hostent *hostEntry;
 
   assert(socketHandle != NULL);
   assert(name != NULL);
@@ -1105,7 +1131,22 @@ void Network_getRemoteInfo(SocketHandle *socketHandle,
                  ) == 0
      )
   {
-    String_setCString(name,inet_ntoa(socketAddress.sin_addr));
+    #ifdef HAVE_GETHOSTBYADDR_R
+      hostEntry = gethostbyaddr(&socketAddress.sin_addr,
+                                sizeof(socketAddress.sin_addr),
+                                AF_INET
+                               );
+      if (hostEntry != NULL)
+      {
+        String_setCString(name,hostEntry->h_name);
+      }
+      else
+      {
+        String_setCString(name,inet_ntoa(socketAddress.sin_addr));
+      }
+    #else /* not HAVE_GETHOSTBYADDR_R */
+      String_setCString(name,inet_ntoa(socketAddress.sin_addr));
+    #endif /* HAVE_GETHOSTBYADDR_R */
     (*port) = ntohs(socketAddress.sin_port);
   }
   else
