@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -514,6 +514,13 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
 * Notes  : -
 \***********************************************************************/
 
+/* we have here some snprintf()-calls with a string variable as format
+   string. This cause a warning. The string variable is OK, thus disable
+   this warning in this function.
+*/
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wformat-security"
+
 LOCAL void formatString(struct __String *string,
                         const char      *format,
                         const va_list   arguments
@@ -908,6 +915,8 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
     }
   }
 }
+
+#pragma GCC pop_options
 
 /***********************************************************************\
 * Name   : parseString
@@ -3975,14 +3984,14 @@ LOCAL void String_debugPrintAllocated(void)
 
   for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
   {
-    fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %ld\n",
+    fprintf(stderr,"DEBUG WARNING: string %p '%s' still allocated at %s, line %ld\n",
             debugStringNode->string,
             debugStringNode->string->data,
             debugStringNode->fileName,
             debugStringNode->lineNb
            );
     #ifdef HAVE_BACKTRACE
-      String_debugPrintStackTrace("allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+      String_debugPrintStackTrace("still allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
     #endif /* HAVE_BACKTRACE */
   }
 }
