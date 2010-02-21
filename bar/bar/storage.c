@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -176,7 +176,7 @@ LOCAL Errors checkFTPLogin(const String loginName,
   const char *plainPassword;
 
   /* check host name (Note: FTP library crash if host name is not valid!) */
-  if (!Network_exists(hostName))
+  if (!Network_hostExists(hostName))
   {
     return ERROR_HOST_NOT_FOUND;
   }
@@ -2140,7 +2140,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
         /* initialise variables */
 
         /* connect */
-        if (!Network_exists(storageFileHandle->ftp.hostName))
+        if (!Network_hostExists(storageFileHandle->ftp.hostName))
         {
           return ERROR_HOST_NOT_FOUND;
         }
@@ -2377,7 +2377,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
         /* initialise variables */
 
         /* connect */
-        if (!Network_exists(storageFileHandle->ftp.hostName))
+        if (!Network_hostExists(storageFileHandle->ftp.hostName))
         {
           return ERROR_HOST_NOT_FOUND;
         }
@@ -3513,7 +3513,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           /* connect */
-          if (!Network_exists(hostName))
+          if (!Network_hostExists(hostName))
           {
             String_delete(fileName);
             String_delete(hostName);

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/filesystems_reiserfs.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver ReiserFS file system plug in
 * Systems: all
@@ -14,10 +14,10 @@
 
 /***************************** Constants *******************************/
 #define REISERFS_SUPER_BLOCK_OFFSET (64*1024)
-#define REISERFS_MAGIC_STRING_V1 "ReIsErFs"
-#define REISERFS_MAGIC_STRING_V2 "ReIsEr2Fs"
-#define REISERFS_MAGIC_STRING_V3 "ReIsEr3Fs"
-#define REISERFS_MAGIC_STRING_V4 "ReIsEr4"
+#define REISERFS_SUPER_MAGIC_STRING_V1 "ReIsErFs"
+#define REISERFS_SUPER_MAGIC_STRING_V2 "ReIsEr2Fs"
+#define REISERFS_SUPER_MAGIC_STRING_V3 "ReIsEr3Fs"
+#define REISERFS_SUPER_MAGIC_STRING_V4 "ReIsEr4"
 
 #define REISERFS_MAX_BLOCK_SIZE 8192
 
@@ -85,10 +85,10 @@ LOCAL bool REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHan
   }
 
   /* check if this a ReiserFS super block */
-  if (   (strncmp(reiserSuperBlock.magicString,REISERFS_MAGIC_STRING_V1,strlen(REISERFS_MAGIC_STRING_V1)) != 0)
-      && (strncmp(reiserSuperBlock.magicString,REISERFS_MAGIC_STRING_V3,strlen(REISERFS_MAGIC_STRING_V2)) != 0)
-      && (strncmp(reiserSuperBlock.magicString,REISERFS_MAGIC_STRING_V3,strlen(REISERFS_MAGIC_STRING_V3)) != 0)
-      && (strncmp(reiserSuperBlock.magicString,REISERFS_MAGIC_STRING_V4,strlen(REISERFS_MAGIC_STRING_V4)) != 0)
+  if (   (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V1,strlen(REISERFS_SUPER_MAGIC_STRING_V1)) != 0)
+      && (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3,strlen(REISERFS_SUPER_MAGIC_STRING_V2)) != 0)
+      && (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3,strlen(REISERFS_SUPER_MAGIC_STRING_V3)) != 0)
+      && (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V4,strlen(REISERFS_SUPER_MAGIC_STRING_V4)) != 0)
      )
   {
     return FALSE;
