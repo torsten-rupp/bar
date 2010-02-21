@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/filesystems.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver file system functions
 * Systems: all
@@ -133,6 +133,7 @@ Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
   /* initialize variables */
   fileSystemHandle->deviceHandle        = deviceHandle;
   fileSystemHandle->type                = FILE_SYSTEM_TYPE_UNKNOWN;
+  fileSystemHandle->handle              = NULL;
   fileSystemHandle->doneFunction        = NULL;
   fileSystemHandle->blockIsUsedFunction = NULL;
 
@@ -171,7 +172,10 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle)
   {
     fileSystemHandle->doneFunction(fileSystemHandle->deviceHandle,fileSystemHandle->handle);
   }
-  free(fileSystemHandle->handle);
+  if (fileSystemHandle->handle != NULL)
+  {
+    free(fileSystemHandle->handle);
+  }
 
   return ERROR_NONE;
 }
