@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/crypt.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -1310,7 +1310,7 @@ Errors Crypt_createKeys(CryptKey *publicCryptKey,
       String_delete(description);
       Crypt_doneKey(privateCryptKey);
       Crypt_doneKey(publicCryptKey);
-      return ERROR_CREATE_KEY_FAIL;
+      return ERRORX(CREATE_KEY_FAIL,gcryptError,gpg_strerror(gcryptError));
     }
 
     /* generate keys */
@@ -1321,7 +1321,7 @@ Errors Crypt_createKeys(CryptKey *publicCryptKey,
       String_delete(description);
       Crypt_doneKey(privateCryptKey);
       Crypt_doneKey(publicCryptKey);
-      return ERROR_CREATE_KEY_FAIL;
+      return ERRORX(CREATE_KEY_FAIL,gcryptError,gpg_strerror(gcryptError));
     }
     gcry_sexp_release(sexpKeyParameters);
     String_delete(description);
