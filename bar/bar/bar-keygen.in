@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # $Author: torsten $
 # Contents: generate BAR server keys (PEM files)
 # Systems: Unix
@@ -328,7 +328,7 @@ else
   OPENSSL_OK=0
 fi
 if test $CERTTOOL_OK -ne 1 -a $OPENSSL_OK -ne 1; then
-  printError "'$CERTOOL' or '$OPENSSL' not found or not executable - cannot create keys!"
+  printError "'$CERTOOL' nor '$OPENSSL' found or not executable - cannot create keys!"
   exit $EXITCODE_NO_KEYTOOLS
 fi
 $KEYTOOL -help 1>/dev/null 2>/dev/null
@@ -349,6 +349,8 @@ if test -z "$tmpDir"; then
   printError "Cannot create temporary directory"
   exit $EXITCODE_CREATE_TEMPORARY_DIRECTORY
 fi
+stdout=$tmpDir/stdout; $ECHO_NO_LF > $stdout
+stderr=$tmpDir/stderr; $ECHO_NO_LF > $stderr
 
 # create template files
 if   test $CERTTOOL_OK -eq 1; then
@@ -417,19 +419,20 @@ if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-privkey \
     --outfile "$privateDir/bar-key.pem" \
-    1>/dev/null 2>/dev/null
+    1>$stdout 2>$stderr
   rc=$?
 elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     genrsa \
     -out $privateDir/bar-key.pem \
     1024 \
-    1>/dev/null 2>/dev/null
+    1>$stdout 2>$stderr
   rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
   printError "Cannot create BAR key '$privateDir/bar-key.pem' (exitcode: $rc)"
+  catStderr $stderr
   exit $EXITCODE_CREATE_KEY_FAIL
 fi
 println "OK"
@@ -442,7 +445,7 @@ if   test $CERTTOOL_OK -eq 1; then
     --template $tmpDir/ca.tmpl \
     --load-privkey $privateDir/bar-key.pem \
     --outfile "$certsDir/bar-ca.pem" \
-    1>/dev/null 2>/dev/null
+    1>$stdout 2>$stderr
   rc=$?
 elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
@@ -453,12 +456,13 @@ elif test $OPENSSL_OK -eq 1; then
     -x509 \
     -nodes \
     -out "$certsDir/bar-ca.pem" \
-    1>/dev/null 2>/dev/null
+    1>$stdout 2>$stderr
   rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
   printError "Cannot create BAR authority certficate '$certsDir/bar-ca.pem' (exitcode: $rc)"
+  catStderr $stderr
   exit $EXITCODE_CREATE_KEY_FAIL
 fi
 println "OK"
@@ -469,19 +473,20 @@ if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-privkey \
     --outfile "$privateDir/bar-server-key.pem" \
-    1>/dev/null 2>/dev/null
+    1>$stdout 2>$stderr
   rc=$?
 elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     genrsa \
     -out "$privateDir/bar-server-key.pem" \
     1024 \
-    1>/dev/null 2>/dev/null
+    1>$stdout 2>$stderr
   rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
   printError "Cannot create BAR server key '$privateDir/bar-server-key.pem (exitcode: $rc)"
+  catStderr $stderr
   exit $EXITCODE_CREATE_KEY_FAIL
 fi
 println "OK"
@@ -496,7 +501,7 @@ if   test $CERTTOOL_OK -eq 1; then
     --load-ca-certificate "$certsDir/bar-ca.pem" \
     --load-ca-privkey "$privateDir/bar-key.pem" \
     --outfile "$certsDir/bar-server-cert.pem" \
-    1>/dev/null 2>/dev/null
+    1>$stdout 2>$stderr
   rc=$?
 elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
@@ -507,12 +512,13 @@ elif test $OPENSSL_OK -eq 1; then
     -x509 \
     -nodes \
     -out "$certsDir/bar-server-cert.pem" \
-    1>/dev/null 2>/dev/null
+    1>$stdout 2>$stderr
   rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
   printError "Cannot create BAR server certificate '$certsDir/bar-server-cert.pem' (exitcode: $rc)"
+  catStderr $stderr
   exit $EXITCODE_CREATE_KEY_FAIL
 fi
 println "OK"
@@ -529,12 +535,13 @@ if test $KEYTOOL_OK -eq 1; then
     -noprompt \
     -file "$certsDir/bar-server-cert.pem" \
     -keystore "$privateDir/bar.jks" \
-    1>/dev/null 2>/dev/null
+    1>$stdout 2>$stderr
   rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
   printError "Cannot create BAR Java key '$privateDir/bar.jks' (exitcode: $rc)"
+  catStderr $stderr
   exit $EXITCODE_CREATE_KEY_FAIL
 fi
 println "OK"
