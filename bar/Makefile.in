@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.60 $
+# $Revision: 1.61 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -152,7 +152,8 @@ keys: $(KEY_FILES)
 clean_keys:
 	$(RMF) $(KEY_FILES)
 
-$(KEY_FILES): bar/bar-keygen
+$(KEY_FILES):
+	$(MAKE) -C bar bar-keygen
 	bar/bar-keygen \
           --private-directory=. \
           --certs-directory=.
