@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -12,6 +12,7 @@
 // base
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -496,10 +497,14 @@ public class BARControl
   {
     System.out.println("barcontrol usage: <options> --");
     System.out.println("");
-    System.out.println("Options: -p|--port=<n>          - server port");
-    System.out.println("         --tls-port=<n>         - TLS server port");
+    System.out.println("Options: -p|--port=<n>          - server port (default: "+DEFAULT_SERVER_PORT+")");
+    System.out.println("         --tls-port=<n>         - TLS server port (default: "+DEFAULT_SERVER_TLS_PORT+")");
     System.out.println("         --login-dialog         - force to open login dialog");
-    System.out.println("         --key-file=<file name> - key file name");
+    System.out.println("         --key-file=<file name> - key file name (default: ");
+    System.out.println("                                    ."+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
+    System.out.println("                                    "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
+    System.out.println("                                    "+Config.CONFIG_DIR+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME);
+    System.out.println("                                  )");
     System.out.println("         --select-job=<name>    - select job");
     System.out.println("         -h|--help              - print this help");
   }
