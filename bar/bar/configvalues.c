@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/bar/configvalues.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -633,7 +633,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           {
             configVariable.string = (String*)((byte*)variable+configValue->offset);
             if ((*configVariable.string) == NULL) (*configVariable.string) = String_new();
-            assert(*configVariable.string != NULL);
+            assert((*configVariable.string) != NULL);
             String_setCString(*configVariable.string,value);
           }
           else
@@ -643,7 +643,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
             {
               configVariable.string = (String*)((byte*)(*configValue->variable.reference)+configValue->offset);
               if ((*configVariable.string) == NULL) (*configVariable.string) = String_new();
-              assert(*configVariable.string != NULL);
+              assert((*configVariable.string) != NULL);
               String_setCString(*configVariable.string,value);
             }
           }
@@ -652,7 +652,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         {
           assert(configValue->variable.string != NULL);
           if ((*configValue->variable.string) == NULL) (*configValue->variable.string) = String_new();
-          assert(*configValue->variable.string != NULL);
+          assert((*configValue->variable.string) != NULL);
           String_setCString(*configValue->variable.string,value);
         }
       }
@@ -720,60 +720,10 @@ bool ConfigValue_init(const ConfigValue configValues[],
                       uint              configValueCount
                      )
 {
-  uint i;
-
   assert(configValues != NULL);
 
-  for (i = 0; i < configValueCount; i++)
-  {
-    switch (configValues[i].type)
-    {
-      case CONFIG_VALUE_TYPE_INTEGER:
-        assert(configValues[i].variable.i != NULL);
-        (*configValues[i].variable.i) = configValues[i].defaultValue.i;
-        break;
-      case CONFIG_VALUE_TYPE_INTEGER64:
-        assert(configValues[i].variable.l != NULL);
-        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
-        break;
-      case CONFIG_VALUE_TYPE_DOUBLE:
-        assert(configValues[i].variable.d != NULL);
-        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
-        break;
-      case CONFIG_VALUE_TYPE_BOOLEAN:
-        assert(configValues[i].variable.b != NULL);
-        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
-        break;
-      case CONFIG_VALUE_TYPE_ENUM:
-        assert(configValues[i].variable.enumeration != NULL);
-        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
-        break;
-      case CONFIG_VALUE_TYPE_SELECT:
-        assert(configValues[i].variable.select != NULL);
-        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
-        break;
-      case CONFIG_VALUE_TYPE_SET:
-        assert(configValues[i].variable.set != NULL);
-        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
-        break;
-      case CONFIG_VALUE_TYPE_CSTRING:
-        assert(configValues[i].variable.cString != NULL);
-        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
-        break;
-      case CONFIG_VALUE_TYPE_STRING:
-        assert(configValues[i].variable.string != NULL);
-        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
-        break;
-      case CONFIG_VALUE_TYPE_SPECIAL:
-        (*configValues[i].variable.enumeration) = configValues[i].defaultValue.enumeration;
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-  }
+  UNUSED_VARIABLE(configValues);
+  UNUSED_VARIABLE(configValueCount);
 
   return TRUE;
 }
@@ -782,51 +732,10 @@ void ConfigValue_done(const ConfigValue configValues[],
                       uint              configValueCount
                      )
 {
-  uint i;
-
   assert(configValues != NULL);
 
-  for (i = 0; i < configValueCount; i++)
-  {
-    switch (configValues[i].type)
-    {
-      case CONFIG_VALUE_TYPE_INTEGER:
-        break;
-      case CONFIG_VALUE_TYPE_INTEGER64:
-        break;
-      case CONFIG_VALUE_TYPE_DOUBLE:
-        break;
-      case CONFIG_VALUE_TYPE_BOOLEAN:
-        break;
-      case CONFIG_VALUE_TYPE_ENUM:
-        break;
-      case CONFIG_VALUE_TYPE_SELECT:
-        break;
-      case CONFIG_VALUE_TYPE_SET:
-        break;
-      case CONFIG_VALUE_TYPE_CSTRING:
-        assert(configValues[i].variable.cString != NULL);
-        if ((*configValues[i].variable.cString) != NULL)
-        {
-          free(*configValues[i].variable.cString);
-        }
-        break;
-      case CONFIG_VALUE_TYPE_STRING:
-        assert(configValues[i].variable.string != NULL);
-        if ((*configValues[i].variable.string) != NULL)
-        {
-          String_delete(*configValues[i].variable.string);
-        }
-        break;
-      case CONFIG_VALUE_TYPE_SPECIAL:
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-  }
+  UNUSED_VARIABLE(configValues);
+  UNUSED_VARIABLE(configValueCount);
 }
 
 bool ConfigValue_parse(const char        *name,

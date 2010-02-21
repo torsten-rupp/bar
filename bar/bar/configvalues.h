@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/bar/configvalues.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: config file entry parser
 * Systems: all
@@ -87,24 +87,6 @@ typedef struct
   ConfigValueTypes type;                          // type of config value
   ConfigVariable   variable;                      // variable or NULL
   int              offset;                        // offset in struct or -1
-  struct
-  {
-    int    i;
-    int64  l;
-    double d;
-    bool   b;
-    union
-    {
-      uint  enumeration;
-      uint  select;
-      ulong set;
-    };
-    union
-    {
-      const char *string;
-      const void *p;
-    };
-  } defaultValue;
   struct
   {
     int                     min,max;              // valid range
@@ -235,6 +217,7 @@ const ConfigValue CONFIG_VALUES[] =
 
 */
 
+/* config format value modes */
 typedef enum
 {
   CONFIG_VALUE_FORMAT_MODE_VALUE,                 // format value only
@@ -255,13 +238,28 @@ typedef struct
 /***************************** Variables ******************************/
 
 /******************************* Macros *******************************/
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_INTEGER, CONFIG_STRUCT_VALUE_INTEGER
+* Purpose: define an int-value, support units for number
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+*          min,max         - min./max. value
+*          units           - units definition array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define CONFIG_VALUE_INTEGER(name,variablePointer,offset,min,max,units) \
   { \
     name,\
     CONFIG_VALUE_TYPE_INTEGER,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -276,13 +274,27 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_INTEGER(name,type,member,min,max,units) \
   CONFIG_VALUE_INTEGER(name,NULL,offsetof(type,member),min,max,units)
 
+/***********************************************************************\
+* Name   : CONFIG_VALUE_INTEGER64, CONFIG_STRUCT_VALUE_INTEGER64
+* Purpose: define an int64-value, support units for number
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+*          min,max         - min./max. value
+*          units           - units definition array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define CONFIG_VALUE_INTEGER64(name,variablePointer,offset,min,max,units) \
   { \
     name,\
     CONFIG_VALUE_TYPE_INTEGER64,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
     {0.0,0.0,NULL,0},\
@@ -297,13 +309,27 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_INTEGER64(name,type,member,min,max,units) \
   CONFIG_VALUE_INTEGER64(name,NULL,offsetof(type,member),min,max,units)
 
+/***********************************************************************\
+* Name   : CONFIG_VALUE_DOUBLE, CONFIG_STRUCT_VALUE_DOUBLE
+* Purpose: define an double-value, support units for number
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+*          min,max         - min./max. value
+*          units           - units definition array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define CONFIG_VALUE_DOUBLE(name,variablePointer,offset,min,max,units) \
   { \
     name,\
     CONFIG_VALUE_TYPE_DOUBLE,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
@@ -318,13 +344,25 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_DOUBLE(name,type,member,min,max,units) \
   CONFIG_VALUE_DOUBLE(name,NULL,offsetof(type,member),min,max,units)
 
+/***********************************************************************\
+* Name   : CONFIG_VALUE_BOOLEAN, CONFIG_STRUCT_VALUE_BOOLEAN
+* Purpose: define an bool-value
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define CONFIG_VALUE_BOOLEAN(name,variablePointer,offset) \
   { \
     name,\
     CONFIG_VALUE_TYPE_BOOLEAN,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -339,13 +377,25 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_BOOLEAN(name,type,member) \
   CONFIG_VALUE_BOOLEAN(name,NULL,offsetof(type,member))
 
+/***********************************************************************\
+* Name   : CONFIG_VALUE_BOOLEAN_YESNO, CONFIG_STRUCT_VALUE_BOOLEAN_YESNO
+* Purpose: define an bool-value with yes/no
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define CONFIG_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
   { \
     name,\
     CONFIG_VALUE_TYPE_BOOLEAN,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -360,13 +410,26 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
   CONFIG_VALUE_BOOLEAN_YESNO(name,NULL,offsetof(type,member))
 
-#define CONFIG_VALUE_ENUM(name,variablePointer,offset,defaultValue,value) \
+/***********************************************************************\
+* Name   : CONFIG_VALUE_ENUM, CONFIG_STRUCT_VALUE_ENUM
+* Purpose: define an enum-value
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+*          value           - enum value
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CONFIG_VALUE_ENUM(name,variablePointer,offset,value) \
   { \
     name,\
     CONFIG_VALUE_TYPE_ENUM,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{defaultValue},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -378,8 +441,22 @@ typedef struct
     {},\
     {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_ENUM(name,type,member,defaultValue,value) \
-  CONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),defaultValue,value)
+#define CONFIG_STRUCT_VALUE_ENUM(name,type,member,value) \
+  CONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value)
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_SELECT, CONFIG_STRUCT_VALUE_SELECT
+* Purpose: define an enum-value as selection
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+*          selects         - selects definition array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 #define CONFIG_VALUE_SELECT(name,variablePointer,offset,selects) \
   { \
@@ -387,7 +464,6 @@ typedef struct
     CONFIG_VALUE_TYPE_SELECT,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -402,13 +478,26 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_SELECT(name,type,member,selects) \
   CONFIG_VALUE_SELECT(name,NULL,offsetof(type,member),selects)
 
+/***********************************************************************\
+* Name   : CONFIG_VALUE_SET, CONFIG_STRUCT_VALUE_SET
+* Purpose: define an set-value (multiple values)
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+*          set             - set definition array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define CONFIG_VALUE_SET(name,variablePointer,offset,set) \
   { \
     name,\
     CONFIG_VALUE_TYPE_SET,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -423,13 +512,25 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_SET(name,type,member,set) \
   CONFIG_VALUE_SET(name,NULL,offsetof(type,member),set)
 
+/***********************************************************************\
+* Name   : CONFIG_VALUE_CSTRING, CONFIG_STRUCT_VALUE_CSTRING
+* Purpose: define an C-string-value
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define CONFIG_VALUE_CSTRING(name,variablePointer,offset) \
   { \
     name,\
     CONFIG_VALUE_TYPE_CSTRING,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -444,13 +545,25 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_CSTRING(name,type,member) \
   CONFIG_VALUE_CSTRING(name,NULL,offsetof(type,member))
 
+/***********************************************************************\
+* Name   : CONFIG_VALUE_STRING, CONFIG_STRUCT_VALUE_STRING
+* Purpose: define an string-value
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define CONFIG_VALUE_STRING(name,variablePointer,offset) \
   { \
     name,\
     CONFIG_VALUE_TYPE_STRING,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0,NULL,0},\
@@ -465,13 +578,31 @@ typedef struct
 #define CONFIG_STRUCT_VALUE_STRING(name,type,member) \
   CONFIG_VALUE_STRING(name,NULL,offsetof(type,member))
 
+/***********************************************************************\
+* Name   : CONFIG_VALUE_SPECIAL, CONFIG_STRUCT_VALUE_SPECIAL
+* Purpose: define an specal-value
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+*          parse           - parse function
+*          parse           - parse function
+*          formatInit      - format init function
+*          formatDone      - format done function
+*          format          - format function
+*          userData        - user data for parse/format functions
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define CONFIG_VALUE_SPECIAL(name,variablePointer,offset,parse,formatInit,formatDone,format,userData) \
   { \
     name,\
     CONFIG_VALUE_TYPE_SPECIAL,\
     {variablePointer},\
     offset,\
-    {0,0LL,0.0,FALSE,{0},{NULL}},\
     {0,0,NULL,0},\
     {0,0,NULL,0},\
     {0.0,0.0},\
