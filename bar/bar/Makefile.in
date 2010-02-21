@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.23 $
+# $Revision: 1.24 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -58,10 +58,11 @@ SED        = sed
 TAR        = tar
 
 # for tests only (create test devices)
-LOSETUP    = sudo /sbin/losetup
+LOSETUP    = /sbin/losetup
 MKFS       = /sbin/mkfs
-MOUNT      = sudo /bin/mount
-UMOUNT     = sudo /bin/umount
+MOUNT      = /bin/mount
+UMOUNT     = /bin/umount
+SUDO       = sudo
 
 #------------------------ specific variables/settings ------------------------
 
@@ -355,6 +356,7 @@ test6 test_image: bar
             test_image_raw \
             test_image_ext \
             test_image_fat \
+            test_image_reiser \
             ; \
         done
 	@$(ECHO) "ok"
@@ -412,45 +414,65 @@ test_file_destroy test_file_base_destroy: bar destroyer
 	$(DIFF) -r -x unreadable.txt test/data test/restore/test/data
 
 # helper function to create a test device
-# call FunctionTestDeviceCreate,<loop device> <file> <size>
+# call FunctionTestDeviceCreate,<loop device> <file>
 FunctionTestDeviceCreate = \
   ( \
-    $(LOSETUP) -d $1 2>/dev/null; \
-    $(DD) if=/dev/zero of=$2 bs=$3 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(SUDO) $(LOSETUP) -d $1 2>/dev/null; \
+    $(SUDO) $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(SUDO) $(CHMOD) o+rw $1; \
   )
 
 # helper function to delete a test device
 # call FunctionTestDeviceDelete,<loop device> <file>
 FunctionTestDeviceDelete = \
   ( \
-    $(LOSETUP) -d $1; \
+    $(SUDO) $(CHMOD) o-rw $1; \
+    $(SUDO) $(LOSETUP) -d $1; \
     $(RMF) $2; \
   )
 
 # helper function to zero out test device
 # call FunctionTestDeviceZero,<loop device>,<size>
 FunctionTestDeviceZero = \
+  ( \
     $(DD) if=/dev/zero of=$1 bs=$2 count=1 2>/dev/null; \
+  )
 
 # helper function to fill test device with random data
 # call FunctionTestDeviceRandom,<loop device>,<size>
 FunctionTestDeviceRandom = \
+  ( \
     $(DD) if=/dev/urandom of=$1 bs=$2 count=1 2>/dev/null; \
+  )
 
 # helper function to initialize file system on a test device
 # call FunctionTestDeviceInitFilesystem,<loop device>,<mkfs options>,<mount point>
 FunctionTestDeviceInitFilesystem = \
   ( \
     $(MKFS) $2 $1 $(if $(QUIET),1>/dev/null 2>/dev/null); \
-    $(if $3,($(MKDIR) test/dev 2>/dev/null; $(MOUNT) $1 test/dev; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; $(CP) -r test/data test/dev $(if $(QUIET),1>/dev/null); $(UMOUNT) test/dev; $(RMDIR) test/dev;);) \
+    $(SUDO) $(CHMOD) o+rw $1; \
+    $(if $3,($(MKDIR) test/dev 2>/dev/null; \
+             $(SUDO) $(MOUNT) $1 test/dev; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+             $(CP) -r test/data test/dev $(if $(QUIET),1>/dev/null); \
+             $(SUDO) $(UMOUNT) test/dev; $(RMDIR) test/dev; \
+             $(SUDO) $(CHMOD) o+rw $1; \
+            ) \
+     ) \
+  )
+
+# helper function to dump content of device to file
+# call FunctionTestDeviceDump,<loop device>,<file>
+FunctionTestDeviceDump = \
+  ( \
+    $(SUDO) $(CHMOD) o+rw $1; \
+    $(DD) if=$1 of=$2 2>/dev/null; \
   )
 
 .PHONY: test_image_raw
 test_image_raw:
 	# raw
-	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,32M); $(call FunctionTestDeviceRandom,/dev/loop0,32M)
-	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,32M)
+	$(call FunctionTestDeviceRandom,test/dev0,32M); $(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceZero,test/dev1,32M);   $(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(MAKE) test_image_base \
            DEVICE0=/dev/loop0 DEVICE1=/dev/loop1 \
            OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)"
@@ -465,26 +487,41 @@ test_image_ext: \
 
 test_image_ext2:
 ifneq (@MKFS_EXT2@,)
-	# ext2/ext3
-	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,32M)
-	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,32M)
-	#
-	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	# ext2
+	$(call FunctionTestDeviceZero,test/dev0,32M)
+	$(call FunctionTestDeviceZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2,1)
 	$(MAKE) test_image_base \
            DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 	#
-	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceZero,test/dev0,32M)
+	$(call FunctionTestDeviceZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 1024,1)
 	$(MAKE) test_image_base \
            DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 	#
-	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceZero,test/dev0,32M)
+	$(call FunctionTestDeviceZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 2048,1)
 	$(MAKE) test_image_base \
            DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 	#
-	$(call FunctionTestDeviceZero,/dev/loop0,32M)
+	$(call FunctionTestDeviceZero,test/dev0,32M)
+	$(call FunctionTestDeviceZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 4096,1)
 	$(MAKE) test_image_base \
            DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
@@ -495,30 +532,44 @@ endif
 
 test_image_ext3:
 ifneq (@MKFS_EXT3@,)
-	# ext2/ext3
-	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,32M)
-	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,32M)
-	#
-	$(call FunctionTestDeviceZero,/dev/loop0,32M)
-	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2,1)
+	# ext3
+	$(call FunctionTestDeviceZero,test/dev0,32M)
+	$(call FunctionTestDeviceZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext3,1)
 	$(MAKE) test_image_base \
            DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 	#
-	$(call FunctionTestDeviceZero,/dev/loop0,32M)
-	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 1024,1)
+	$(call FunctionTestDeviceZero,test/dev0,32M)
+	$(call FunctionTestDeviceZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext3 -b 1024,1)
 	$(MAKE) test_image_base \
            DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 	#
-	$(call FunctionTestDeviceZero,/dev/loop0,32M)
-	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 2048,1)
+	$(call FunctionTestDeviceZero,test/dev0,32M)
+	$(call FunctionTestDeviceZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext3 -b 2048,1)
 	$(MAKE) test_image_base \
            DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 	#
-	$(call FunctionTestDeviceZero,/dev/loop0,32M)
-	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext2 -b 4096,1)
+	$(call FunctionTestDeviceZero,test/dev0,32M)
+	$(call FunctionTestDeviceZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t ext3 -b 4096,1)
 	$(MAKE) test_image_base \
            DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
-	#
 	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 endif
@@ -538,9 +589,10 @@ test_image_fat: \
 test_image_fat12:
 ifneq (@MKFS_MSDOS@,)
 	# FAT12
-	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,1440K)
-	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,1440K)
-	$(call FunctionTestDeviceZero,/dev/loop0,1440K)
+	$(call FunctionTestDeviceZero,test/dev0,1440K)
+	$(call FunctionTestDeviceZero,test/dev1,1440K)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t msdos -F 12,1)
 	$(MAKE) test_image_base \
           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
@@ -551,9 +603,10 @@ endif
 test_image_fat16:
 ifneq (@MKFS_MSDOS@,)
 	# FAT16
-	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,20M)
-	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,20M)
-	$(call FunctionTestDeviceZero,/dev/loop0,20M)
+	$(call FunctionTestDeviceZero,test/dev0,20M)
+	$(call FunctionTestDeviceZero,test/dev1,20M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t msdos -F 16,1)
 	$(MAKE) test_image_base \
           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
@@ -564,9 +617,10 @@ endif
 test_image_fat32:
 ifneq (@MKFS_MSDOS@,)
 	# FAT32
-	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,40M)
-	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,40M)
-	$(call FunctionTestDeviceZero,/dev/loop0,40M)
+	$(call FunctionTestDeviceZero,test/dev0,40M)
+	$(call FunctionTestDeviceZero,test/dev1,40M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t msdos -F 32,1)
 	$(MAKE) test_image_base \
           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
@@ -574,8 +628,8 @@ ifneq (@MKFS_MSDOS@,)
 	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 endif
 
-.PHONY: test_image_reiserfs test_image_reiserfs1 test_image_reiserfs2 test_image_reiserfs3 test_image_reiser4
-test_image_reiserfs: \
+.PHONY: test_image_reiser test_image_reiserfs1 test_image_reiserfs2 test_image_reiserfs3 test_image_reiser4
+test_image_reiser: \
   test_image_reiserfs1 \
   test_image_reiserfs2 \
   test_image_reiserfs3 \
@@ -592,36 +646,39 @@ endif
 test_image_reiserfs3:
 ifneq (@MKFS_REISERFS@,)
 	# ReiserFS version 3 (Note: Linux only support block size 4096)
-	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,64M)
-	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,64M)
-	#
-	$(call FunctionTestDeviceZero,/dev/loop0,64M)
+	$(call FunctionTestDeviceZero,test/dev0,64M)
+	$(call FunctionTestDeviceZero,test/dev1,64M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t reiserfs -b 4096 -q --format 3.5,1)
 	$(MAKE) test_image_base \
           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 	#
-	$(call FunctionTestDeviceZero,/dev/loop0,64M)
+	$(call FunctionTestDeviceZero,test/dev0,64M)
+	$(call FunctionTestDeviceZero,test/dev1,64M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t reiserfs -b 4096 -q --format 3.6,1)
 	$(MAKE) test_image_base \
           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
-	#
-	$(call FunctionDeleteTestDevice,/dev/loop1,test/dev1)
-	$(call FunctionDeleteTestDevice,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 endif
 
 test_image_reiser4:
 ifneq (@MKFS_REISER4@,)
 	# Reiser4 (Note: Linux only support block size 4096)
-	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0,64M)
-	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1,64M)
-	#
-	$(call FunctionTestDeviceZero,/dev/loop0,64M)
+	$(call FunctionTestDeviceZero,test/dev0,64M)
+	$(call FunctionTestDeviceZero,test/dev1,64M)
+	$(call FunctionTestDeviceCreate,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceCreate,/dev/loop1,test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,/dev/loop0,-t reiser4 -b 4096 -q,1)
 	$(MAKE) test_image_base \
           DEVICE0=/dev/loop0 DEVICE1=/dev/loop1
-	#
-	$(call FunctionDeleteTestDevice,/dev/loop1,test/dev1)
-	$(call FunctionDeleteTestDevice,/dev/loop0,test/dev0)
+	$(call FunctionTestDeviceDelete,/dev/loop1,test/dev1)
+	$(call FunctionTestDeviceDelete,/dev/loop0,test/dev0)
 endif
 
 .PHONY: test_image_base
@@ -631,8 +688,8 @@ test_image_base: bar
 	SSH_ASKPASS= ./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -x test/test*.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
-	$(DD) if=$(DEVICE0) of=test/dev0.image 1>/dev/null 2>/dev/null
-	$(DD) if=$(DEVICE1) of=test/dev1.image 1>/dev/null 2>/dev/null
+	$(call FunctionTestDeviceDump,$(DEVICE0),test/dev0.image)
+	$(call FunctionTestDeviceDump,$(DEVICE1),test/dev1.image)
 	$(DIFF) test/dev0.image test/dev1.image
 
 # ----------------------------------------------------------------------------
