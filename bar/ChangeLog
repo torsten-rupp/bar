@@ -23,6 +23,9 @@
   * improved and clean-up command line/config value parsing
   * set socket timeout in barcontrol (20s)
   * improved error messages in barcontrol
+  * updated SWT JAR to 3.6 (fix a bug with GTK version >= 2.18)
+  * added 64bit SWT JAR for Windows
+  * added SWT JAR for MacOSX (experimental)
 
 2010-01-01 0.12d
   * fixed wrong usage of vprintf in log function (caused SigSegV
