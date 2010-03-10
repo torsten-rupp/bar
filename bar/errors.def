@@ -1,7 +1,7 @@
 //***********************************************************************
 //
 // $Source: /home/torsten/cvs/bar/errors.def,v $
-// $Revision: 1.24 $
+// $Revision: 1.25 $
 // $Author: torsten $
 // Contents: Backup ARchiver errors definition
 // Systems: all
@@ -44,18 +44,21 @@ ERROR INVALID_SSH_SPECIFIER          "invalid SSH specifier"
 ERROR NO_SSH_PASSWORD                "no SSH password given"
 ERROR INVALID_SSH_PASSWORD           "invalid SSH password"
 ERROR SSH_SESSION_FAIL               "initialize SSH session fail"
-ERROR SSH_AUTHENTIFICATION           "SSH authentification fail"
-ERROR SSH                            ERROR_TEXT
+ERROR SSH_AUTHENTIFICATION
+  strncpy(errorText,"SSH authentification fail",sizeof(errorText));
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
 
-//  switch (ERRNO)
-//  {
-//    case LIBSSH2_ERROR_SCP_PROTOCOL: 
-//      strncpy(errorText,"ssh protocol error",sizeof(errorText));
-//      break;
-//    default:
-//      snprintf(errorText,sizeof(errorText),"unknown ssh error (code %d)",(int)ERRNO);
-//      break;
-//  }
+ERROR SSH
+  strncpy(errorText,"ssh protocol error",sizeof(errorText));
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
 
 // FTP
 ERROR INVALID_FTP_SPECIFIER          "invalid FTP specifier"
