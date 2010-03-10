@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -34,6 +34,9 @@
 #include "misc.h"
 
 #include "storage.h"
+
+
+#include <fcntl.h>
 
 /****************** Conditional compilation switches *******************/
 
@@ -251,6 +254,43 @@ LOCAL Errors checkSSHLogin(const String loginName,
   return ERROR_NONE;
 }
 #endif /* HAVE_SSH2 */
+
+#ifdef HAVE_SSH2
+/***********************************************************************\
+* Name   : waitSessionSocket
+* Purpose: delay a little until session socket can be read/write
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void waitSessionSocket(SocketHandle *socketHandle)
+{
+  LIBSSH2_SESSION *session;
+  struct timeval  tv;
+  fd_set          fdSet;
+
+  assert(socketHandle != NULL);
+
+  // get session
+  session = Network_getSSHSession(socketHandle);
+  assert(session != NULL);
+
+  // sleep for max. 5s
+  tv.tv_sec  = 5;
+  tv.tv_usec = 0;
+  FD_ZERO(&fdSet);
+  FD_SET(socketHandle->handle,&fdSet);
+  (void)select(socketHandle->handle+1,
+               ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_INBOUND ) != 0) ? &fdSet : NULL,
+               ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_OUTBOUND) != 0) ? &fdSet : NULL,
+               NULL,
+               &tv
+              );
+}
+#endif /* HAVE_SSH2 */
+
 
 /***********************************************************************\
 * Name   : limitBandWidth
@@ -3059,9 +3099,6 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
           writtenBytes = 0;
           while (writtenBytes < size)
           {
-            /* get start time */
-            startTimestamp = Misc_getTimestamp();
-
             /* send data */
             if (storageFileHandle->scp.bandWidth.max > 0)
             {
@@ -3071,6 +3108,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             {
               length = size-writtenBytes;
             }
+
+            /* get start time */
+            startTimestamp = Misc_getTimestamp();
+
             // workaround for libssh2-problem: it seems sending of blocks >=8k cause problems, e. g. corrupt ssh MAC
             length = MIN(length,4*1024);
             do
@@ -3081,15 +3122,22 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
                                        );
             }
             while (n == LIBSSH2_ERROR_EAGAIN);
-            if (n < 0)
+
+            /* get end time, transmission time */
+            endTimestamp = Misc_getTimestamp();
+
+            if      (n == 0)
+            {
+              // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
+              waitSessionSocket(&storageFileHandle->scp.socketHandle);
+            }
+            else if (n < 0)
             {
               return ERROR_NETWORK_SEND;
             }
             buffer = (byte*)buffer+n;
             writtenBytes += n;
 
-            /* get end time, transmission time */
-            endTimestamp = Misc_getTimestamp();
 
             /* limit used band width if requested (note: when the system time is
                changing endTimestamp may become smaller than startTimestamp;
@@ -3118,9 +3166,6 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
           writtenBytes = 0;
           while (writtenBytes < size)
           {
-            /* get start time */
-            startTimestamp = Misc_getTimestamp();
-
             /* send data */
             if (storageFileHandle->sftp.bandWidth.max > 0)
             {
@@ -3130,6 +3175,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             {
               length = size-writtenBytes;
             }
+
+            /* get start time */
+            startTimestamp = Misc_getTimestamp();
+
             do
             {
               n = libssh2_sftp_write(storageFileHandle->sftp.sftpHandle,
@@ -3138,15 +3187,21 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
                                     );
             }
             while (n == LIBSSH2_ERROR_EAGAIN);
-            if (n < 0)
+
+            /* get end time, transmission time */
+            endTimestamp = Misc_getTimestamp();
+
+            if      (n == 0)
+            {
+              // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
+              waitSessionSocket(&storageFileHandle->scp.socketHandle);
+            }
+            else if (n < 0)
             {
               return ERROR_NETWORK_SEND;
             }
             buffer = (byte*)buffer+n;
             size -= n;
-
-            /* get end time, transmission time */
-            endTimestamp = Misc_getTimestamp();
 
             /* limit used band width if requested (note: when the system time is
                changing endTimestamp may become smaller than startTimestamp;
