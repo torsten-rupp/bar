@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -163,7 +163,10 @@ Errors Network_connect(SocketHandle *socketHandle,
   struct hostent     *hostAddressEntry;
   in_addr_t          ipAddress;
   struct sockaddr_in socketAddress;
+  int                ssh2Error;
+  char               *ssh2ErrorText;
   Errors             error;
+  long               socketFlags;
 
   assert(socketHandle != NULL);
 
@@ -229,7 +232,8 @@ Errors Network_connect(SocketHandle *socketHandle,
       if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
       {
         /* enable non-blocking */
-        fcntl(socketHandle->handle,F_SETFL,O_NONBLOCK);
+        socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+        fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
       }
 
       break;
@@ -237,6 +241,7 @@ Errors Network_connect(SocketHandle *socketHandle,
       #ifdef HAVE_SSH2
       {
         const char *plainPassword;
+        long       socketFlags;
 
         assert(loginName != NULL);
 
@@ -327,14 +332,15 @@ Errors Network_connect(SocketHandle *socketHandle,
                                                 String_cString(!String_empty(sshPublicKeyFileName)?sshPublicKeyFileName:defaultSSHPublicKeyFileName),
                                                 String_cString(!String_empty(sshPrivateKeyFileName)?sshPrivateKeyFileName:defaultSSHPrivateKeyFileName),
                                                 plainPassword
-                                               ) != 0
-           )
+                                               ) != 0)
         {
+          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+          error = ERRORX(SSH_AUTHENTIFICATION,ssh2Error,ssh2ErrorText);
           Password_undeploy(password);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
           close(socketHandle->handle);
-          return ERROR_SSH_AUTHENTIFICATION;
+          return error;
         }
         Password_undeploy(password);
 #else
@@ -344,19 +350,21 @@ Errors Network_connect(SocketHandle *socketHandle,
                                                 ) != 0
            )
         {
+          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+          error = ERRORX(SSH_AUTHENTIFICATION,ssh2Error,ssh2ErrorText);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
           close(socketHandle->handle);
-          return ERROR_SSH_AUTHENTIFICATION;
+          return error;
         }
 #endif /* 0 */
 
         if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
         {
           /* enable non-blocking */
-          fcntl(socketHandle->handle,F_SETFL,O_NONBLOCK);
+          socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+          fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
         }
-
       }
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(loginName);
@@ -956,6 +964,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
   socklen_t          socketAddressLength;
   Errors             error;
   int                result;
+  long               socketFlags;
 
 //unsigned int status;
 
@@ -1060,7 +1069,8 @@ NYI: how to enable client authentication?
   if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {
     /* enable non-blocking */
-    fcntl(socketHandle->handle,F_SETFL,O_NONBLOCK);
+    socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+    fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
   }
 
   return ERROR_NONE;
@@ -1164,6 +1174,8 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
                        const char           *command
                       )
 {
+  long socketFlags;
+
   assert(networkExecuteHandle != NULL);
   assert(socketHandle != NULL);
   assert(socketHandle->type == SOCKET_TYPE_SSH);
@@ -1196,7 +1208,8 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
     }
 
     /* enable non-blocking */
-    fcntl(socketHandle->handle,F_SETFL,O_NONBLOCK);
+    socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+    fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
     libssh2_channel_set_blocking(networkExecuteHandle->channel,0);
 
     /* disable stderr if not requested */
