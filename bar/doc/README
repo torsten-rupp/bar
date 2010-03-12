@@ -13,8 +13,8 @@ backups in the background.
 * fast file format: can find and extract single files
   without decompressing/decryption of the whole archive
 * full and incremental backup files archives
-* support for several file systems on disk images (ext2/ext3,
-  fat, reiserfs)
+* support for several file systems on disk images (ext, fat,
+  reiserfs)
 * can split archive files into pieces
 * compress of data with zlib, bzip2 or lzma algorithms
 * encryption with gcrypt algrithms (AES,TWOFISH etc.)
@@ -46,7 +46,7 @@ backups in the background.
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
   eject (optional)
 * Java for graphical frontend (see below)
-* SWT 3.4 (optional)
+* SWT 3.6 (optional)
 * ANT and launch4j (optional)
 * EPM (optional)
 
@@ -224,22 +224,30 @@ ssh2:
 
 1c)
 
-On a Debian system you can use the following packages:
+On a Debian system you can use the following packages (or newer versions):
 
   gcc
-  zlib
-  zlib1g-dev
-  libbz2-dev
-  libssl-dev
-  libssh2-1-dev
-  libgcrypt11-dev
-  libgnutls-dev
-  gnutls-bin
   openjdk-6-jdk
   make
   epm
-
-  Note: the xz utils may not be available a Debian package current.
+  perl
+  zlib1g
+  zlib1g-dev
+  libbz2-1.0
+  libbz2-dev
+  liblzma
+  liblzma-dev
+  libssl0.9.8
+  libssl-dev
+  libssh2-1
+  libssh2-1-dev
+  libgcrypt11
+  libgcrypt11-dev
+  gnutls-bin
+  libgnutls26
+  libgnutls-dev
+  ftplib3
+  ftplib-dev
 
 2)
 
@@ -264,7 +272,7 @@ bzip9   259M   66.1%
 lzma9   214M   72.0%
 
 The compression of lzma9 is better than for zip9 or bzip9, but
-the compression time is also increased significantly.
+the compression time also increased significantly.
 
 --- Archive files and encryption
 
@@ -362,9 +370,10 @@ Install Java, SWT, launch4j:
 * Download Java JRE V1.6 (JRE6) from http://www.sun.com
 * Install Java
 
-In case you do not want to use the included SWT 3.4
+In case you do not want to use the included SWT 3.6
 in barcontrol-linux.jar or barcontrol-windows.jar and
-use instead barcontrol.jar SWT have to be installed:
+use instead barcontrol.jar (which does not include the
+SWT files) SWT have to be installed:
 
 * Download SWT from http://www.eclipse.org/swt
 * Install SWT to some directory
@@ -386,7 +395,10 @@ Note: call configure with
 
 --- License
 
-BAR and all files are under the GPL version 2.
+BAR and all files are under the GPL version 2. The full GPL
+version 2 license text can be found here:
+
+  http://www.gnu.org/licenses/gpl-2.0.html
 
 barcontrol is using SWT. SWT is under the "Eclipse Public License"
 which can be found here:
