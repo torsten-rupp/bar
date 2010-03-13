@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.38 $
+dnl $Revision: 1.39 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -407,6 +407,9 @@ CC_INCLUDES="$CC_INCLUDES"
 LD_FLAGS=""
 if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
+fi
+if test "$ENABLE_DEBUG" = "yes"; then
+  LD_FLAGS="$LD_FLAGS -rdynamic"
 fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
 

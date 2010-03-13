@@ -2583,6 +2583,9 @@ LD_FLAGS=""
 if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
+if test "$ENABLE_DEBUG" = "yes"; then
+  LD_FLAGS="$LD_FLAGS -rdynamic"
+fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
 
 if test "$ENABLE_GUI" = "yes"; then
