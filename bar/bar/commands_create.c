@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1938,7 +1938,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
           /* close storage file */
           Storage_close(&createInfo->storageFileHandle);
 #else
-  error = ERROR_NONE;
+error = ERROR_NONE;
 #endif /* 0 */
 
           if (error == ERROR_NONE)
@@ -2046,7 +2046,6 @@ LOCAL void storageThread(CreateInfo *createInfo)
                                         ARCHIVE_PART_NUMBER_NONE,
                                         FALSE
                                        );
-//fprintf(stderr,"%s,%d: pa=%s\n",__FILE__,__LINE__,String_cString(pattern));
 
         storagePath = File_getFilePathName(String_new(),createInfo->storageName);
         error = Storage_openDirectoryList(&storageDirectoryListHandle,
@@ -2065,7 +2064,6 @@ LOCAL void storageThread(CreateInfo *createInfo)
             {
               if (StringList_find(&createInfo->storageFileList,fileName) == NULL)
               {
-//fprintf(stderr,"%s,%d: deletete  %s    \n",__FILE__,__LINE__,String_cString(fileName));
                 Storage_delete(&createInfo->storageFileHandle,fileName);
               }
             }
@@ -2410,6 +2408,7 @@ Errors Command_create(const char                      *storageName,
                                  String_cString(fileName),
                                  Errors_getText(error)
                                 );
+                      File_close(&fileHandle);
                       createInfo.failError = error;
                       updateStatusInfo(&createInfo);
                       continue;
@@ -2432,12 +2431,11 @@ Errors Command_create(const char                      *storageName,
                       File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
                       if (n > 0)
                       {
-                        error = Archive_writeData(&archiveFileInfo,buffer,n);
+                        error = Archive_writeData(&archiveFileInfo,buffer,n,1);
                         createInfo.statusInfo.doneBytes += n;
                         createInfo.statusInfo.fileDoneBytes += n;
                         createInfo.statusInfo.archiveBytes = createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo);
                         createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
-//printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
                         updateStatusInfo(&createInfo);
                       }
                     }
@@ -2800,8 +2798,7 @@ Errors Command_create(const char                      *storageName,
                       {
                         if (!fileSystemFlag || FileSystem_blockIsUsed(&fileSystemHandle,block*(uint64)deviceInfo.blockSize))
                         {
-                          /* read block */
-//fprintf(stderr,"%s,%d: store blcok %ld\n",__FILE__,__LINE__,block);
+                          /* read single block */
                           error = Device_seek(&deviceHandle,block*(uint64)deviceInfo.blockSize);
                           if (error != ERROR_NONE) break;
                           error = Device_read(&deviceHandle,buffer+bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize,NULL);
@@ -2816,15 +2813,14 @@ Errors Command_create(const char                      *storageName,
                         bufferBlockCount++;
                       }
 
-                      /* write block content to archive  */
+                      /* write blocks content to archive  */
                       if (bufferBlockCount > 0)
                       {
-                        error = Archive_writeData(&archiveFileInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
+                        error = Archive_writeData(&archiveFileInfo,buffer,bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize);
                         createInfo.statusInfo.doneBytes += bufferBlockCount*deviceInfo.blockSize;
                         createInfo.statusInfo.fileDoneBytes += bufferBlockCount*deviceInfo.blockSize;
                         createInfo.statusInfo.archiveBytes = createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo);
                         createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
-//printf(stderr,"%s,%d: storage=%llu done=%llu\n",__FILE__,__LINE__,createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo),createInfo.statusInfo.doneBytes);
                         updateStatusInfo(&createInfo);
                       }
                     }
