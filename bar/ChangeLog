@@ -1,4 +1,4 @@
-2010-01-?? 0.13
+2010-03-?? 0.13
   * implemented device image functions: create images from devices
   * implemented support for images with ext2/ext3, fat12/fat16/fat32
     file systems
@@ -23,9 +23,15 @@
   * improved and clean-up command line/config value parsing
   * set socket timeout in barcontrol (20s)
   * improved error messages in barcontrol
-  * updated SWT JAR to 3.6 (fix a bug with GTK version >= 2.18)
+  * updated SWT JAR to 3.6 (this fix a bug with GTK versions
+    >= 2.18)
   * added 64bit SWT JAR for Windows
   * added SWT JAR for MacOSX (experimental)
+  * fixed C stacktrace output in debug mode: print function names
+  * added option -L = --long-format
+  * added option --human-format, -H: print sizes in human readable
+    format (size+unit)
+  * added first version of a manual!
 
 2010-01-01 0.12d
   * fixed wrong usage of vprintf in log function (caused SigSegV
