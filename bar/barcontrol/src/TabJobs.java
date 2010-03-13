@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -747,7 +747,7 @@ l=x.depth;
     {
       assert (hour   == ANY) || ((hour   >= 0) && (hour   <= 23));
 
-      return (hour != ANY)?Integer.toString(hour):"*";
+      return (hour != ANY)?String.format("%2d",hour):"*";
     }
 
     /** get minute value
@@ -757,7 +757,7 @@ l=x.depth;
     {
       assert (minute == ANY) || ((minute >= 0) && (minute <= 59));
 
-      return (minute != ANY)?Integer.toString(minute):"*";
+      return (minute != ANY)?String.format("%02d",minute):"*";
     }
 
     /** get time value
@@ -898,8 +898,8 @@ l=x.depth;
      */
     void setTime(String hour, String minute)
     {
-      this.hour   = !hour.equals  ("*")?Integer.parseInt(hour  ):ANY;
-      this.minute = !minute.equals("*")?Integer.parseInt(minute):ANY;
+      this.hour   = !hour.equals  ("*")?Integer.parseInt(hour,  10):ANY;
+      this.minute = !minute.equals("*")?Integer.parseInt(minute,10):ANY;
     }
 
     /** check if week day enabled
@@ -6138,7 +6138,7 @@ throw new Error("NYI");
         Widgets.layout(widgetHour,0,0,TableLayoutData.W);
 
         widgetMinute = Widgets.newOptionMenu(subComposite);
-        widgetMinute.setItems(new String[]{"*","0","5","10","15","20","30","35","40","45","50","55"});
+        widgetMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
         widgetMinute.setText(scheduleData.getMinute()); if (widgetMinute.getText().equals("")) widgetMinute.setText("*");
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
       }
