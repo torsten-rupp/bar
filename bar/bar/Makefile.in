@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.25 $
+# $Revision: 1.26 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -69,13 +69,11 @@ LOOP1      = /dev/loop1
 
 #------------------------ specific variables/settings ------------------------
 
+# major, minor version number
 VERSION_MAJOR := $(shell $(CAT) ../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR := $(shell $(CAT) ../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 
-CRYPT_NAMES    = none
-ifeq (@HAVE_GCRYPT@,1)
-CRYPT_NAMES    += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
-endif
+# supported compress algorithms
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
 ifeq (@HAVE_BZ2@,1)
 COMPRESS_NAMES += bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
@@ -84,10 +82,28 @@ ifeq (@HAVE_LZMA@,1)
 COMPRESS_NAMES += lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8 lzma9
 endif
 
-CRYPT=none
-COMPRESS=none
+# supported crypt algorithms
+CRYPT_NAMES    = none
+ifeq (@HAVE_GCRYPT@,1)
+CRYPT_NAMES    += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
+endif
 
+# password used for tests
 TEST_PASSWORD=Franz_Kafka:Die_Verwandlung
+
+# crypt/compress used for all-test (do not select all available compress and
+# crypt algorithms, because this would take a long time)
+TEST_ALL_COMPRESS_NAMES=zip9
+ifeq (@HAVE_BZ2@,1)
+TEST_ALL_COMPRESS_NAMES += bzip9
+endif
+ifeq (@HAVE_LZMA@,1)
+TEST_ALL_COMPRESS_NAMES += lzma9
+endif
+TEST_ALL_CRYPT_NAMES=none
+ifeq (@HAVE_GCRYPT@,1)
+TEST_ALL_CRYPT_NAMES += AES256
+endif
 
 #---------------------------------- rules ------------------------------------
 
@@ -306,7 +322,7 @@ test1 test_basic: bar
 	@$(MAKE) \
           BAR_FILE="test" \
           OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
-          test_file
+          test_files
 	@$(ECHO) "ok"
 
 test2 test_compress: bar
@@ -315,7 +331,7 @@ test2 test_compress: bar
           $(MAKE) \
             BAR_FILE="test" \
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
-            test_file \
+            test_files \
             ; \
         done
 	@$(ECHO) "ok"
@@ -326,7 +342,7 @@ test3 test_crypt: bar
           $(MAKE) \
             BAR_FILE="test-###" \
             OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
-            test_file \
+            test_files \
             ; \
         done
 	@$(ECHO) "ok"
@@ -338,7 +354,7 @@ test4 test_asymmetric_crypt: bar
           $(MAKE) \
             BAR_FILE="test-###" \
             OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private" \
-            test_file \
+            test_files \
             ; \
         done
 	@$(ECHO) "ok"
@@ -348,7 +364,7 @@ test5 test_split: bar
 	$(MAKE) \
           BAR_FILE="test-###" \
           OPTIONS="--archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none" \
-          test_file
+          test_files
 	@$(ECHO) "ok"
 
 test6 test_image: bar
@@ -357,10 +373,7 @@ test6 test_image: bar
           $(MAKE) \
             BAR_FILE="test" \
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
-            test_image_raw \
-            test_image_ext \
-            test_image_fat \
-            test_image_reiser \
+            test_files \
             ; \
         done
 	@$(ECHO) "ok"
@@ -368,19 +381,25 @@ test6 test_image: bar
 test_all: bar
 	@$(ECHO_NO_LF) "Test all..."
 	@$(RM) test/key.*; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
-	for compress in $(COMPRESS_NAMES); do \
-          for crypt in $(CRYPT_NAMES); do \
+	for compress in $(TEST_ALL_COMPRESS_NAMES); do \
+          for crypt in $(TEST_ALL_CRYPT_NAMES); do \
             $(MAKE) \
               BAR_FILE=test-### \
-              OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private --archive-part-size=100000" \
-              test_file \
-              test_image_raw \
-              test_image_ext \
-              test_image_fat \
+              OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private --archive-part-size=100K" \
+              test_files \
               ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
-              exit 1; \
+              exit $$rc; \
+            fi; \
+            $(MAKE) \
+              BAR_FILE=test-### \
+              OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private --archive-part-size=10M" \
+              test_images \
+              ; \
+            rc=$$?; \
+            if test $$rc -ne 0; then \
+              exit $$rc; \
             fi; \
           done; \
         done
@@ -388,8 +407,12 @@ test_all: bar
 
 TEST_FILES = test/*.bar test/*.bid test/new test/restore test/*.image
 
-.PHONY: test_file test_file_base
-test_file test_file_base: bar
+.PHONY: test_files
+test_files: \
+  test_file_base
+
+.PHONY: test_file_base
+test_file_base: bar
 	$(RMRF) $(TEST_FILES)
 	SSH_ASKPASS= ./bar -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
@@ -461,7 +484,7 @@ FunctionTestDeviceInitFilesystem = \
     $(SUDO) $(MKFS) $2 $1 $(if $(QUIET),1>/dev/null 2>/dev/null); \
     $(if $3,($(MKDIR) test/dev 2>/dev/null; \
              $(SUDO) $(MOUNT) $1 test/dev; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-             $(SUDO) $(CP) -r test/data test/dev $(if $(QUIET),1>/dev/null); \
+             $(SUDO) $(CP) -r test/data test/dev $(if $(QUIET),1>/dev/null 2>/dev/null); \
              $(SUDO) $(UMOUNT) test/dev; $(RMDIR) test/dev; \
             ) \
      ) \
@@ -473,6 +496,13 @@ FunctionTestDeviceDump = \
   ( \
     ($(SUDO) $(DD) if=$1 of=-) > $2 2>/dev/null; \
   )
+
+.PHONY: test_images
+test_images: \
+  test_image_raw \
+  test_image_ext \
+  test_image_fat \
+  test_image_reiser
 
 .PHONY: test_image_raw
 test_image_raw:
@@ -728,7 +758,7 @@ ifneq (@MKFS_REISER4@,)
 	$(call FunctionTestFileZero,test/dev1,64M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
-	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -q,1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,1)
 	$(MAKE) test_image_base \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
