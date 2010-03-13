@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -2137,7 +2137,6 @@ private static void printTree(Tree tree)
 
       // sort sub-tree
 //boolean xx = treeItem.getExpanded();
-Dprintf.dprintf("%d",subTreeItems.length);
       for (int i = 0; i < subTreeItems.length; i++)
       {     
         boolean sortedFlag = false;
