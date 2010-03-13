@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/StringParser.java,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -75,21 +75,23 @@ class StringParser
   /** get next format token
    * Note:
    *   Supported format specifieres
-   *     i,d,u           - decimal
-   *     o               - octal
-   *     x,X             - hexa-decimal
-   *     c               - character
-   *     e,E,f,F,g,G,a,A - float/double
-   *     s               - string
-   *     S               - string with quotes
-   *     y               - boolean
+   *     i,d,u             - decimal
+   *     o                 - octal
+   *     x,X               - hexa-decimal
+   *     c                 - character
+   *     e,E,f,F,g,G,a,A   - float/double
+   *     s                 - string
+   *     S                 - string with quotes
+   *     y                 - boolean
    *   Supported options:
-   *     #,0,-, ,+,*     - flags
-   *     1-9             - width
-   *     .               - precision
-   *     {<name>}s       - enumeration <name>
-   *     <x>s, <x>S      - quoting character <x>
-   *     h,l,j,z,t       - length modifier
+   *     #,0,-, ,+,*       - flags
+   *     1-9               - width
+   *     .                 - precision
+   *     {<name>}s         - enumeration <name>
+   *     <x>s, <x>S        - quoting character <x>
+   *     <space>s,<space>S - accept spaces, ignore quotes
+   *     *s,*S             - accept all to eol
+   *     h,l,j,z,t         - length modifier
    * @param format format string
    * @param formatIndex index in format string
    * @param formatToken format token
@@ -304,17 +306,21 @@ class StringParser
    * @param index index in string
    * @param formatToken format token
    * @param string quote characters
-   * @return string quote character
+   * @return string quote character if
+   *   not blank/greedy flag set and
+   *   string position match to format quote character or string quotes
    */
   private static char getQuoteChar(String string, int index, FormatToken formatToken, String stringQuotes)
   {
     char stringQuote = '\0';
-    if (index < string.length())
+    if (!formatToken.blankFlag && !formatToken.greedyFlag && (index < string.length()))
     {
+      // check if quote character specified and in string
       if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string.charAt(index)))
       {
         stringQuote = formatToken.quoteChar;
       }
+      // check if one of string quote characters is in string
       if ((stringQuote == '\0') && (stringQuotes != null) && (stringQuotes.indexOf(string.charAt(index)) >= 0))
       {
         stringQuote = stringQuotes.charAt(stringQuotes.indexOf(string.charAt(index)));
