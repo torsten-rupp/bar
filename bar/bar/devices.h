@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/devices.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver device functions
 * Systems: all
@@ -70,6 +70,7 @@ typedef struct
   DeviceTypes type;
   int64       size;             // total size [bytes]
   ulong       blockSize;        // size of a block [bytes]
+// NYI
 //  int64       freeBlocks;       // number of free blocks
 //  int64       totalBlocks;      // total number of blocks
 //  bool        mountedFlag;      // TRUE iff device is currently mounted

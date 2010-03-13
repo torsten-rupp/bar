@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_compare.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive compare function
 * Systems : all
@@ -435,7 +435,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
             {
               printInfo(2,"  Compare image '%s'...",String_cString(imageName));
 
-              /* check device exists */
+              /* check if device exists */
               if (!File_exists(imageName))
               {
                 printInfo(2,"FAIL!\n");
@@ -449,7 +449,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                 break;
               }
 
-              /* get file fragment list */
+              /* get image fragment list */
               fragmentNode = FragmentList_find(&fragmentList,imageName);
               if (fragmentNode == NULL)
               {
