@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -609,15 +609,19 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo);
 * Purpose: write data to archive
 * Input  : archiveFileInfo - archive file info block
 *          buffer          - data buffer
-*          length          - length of data buffer
+*          length          - length of data buffer (bytes)
+*          elementSize     - size of single (not splitted) element to
+*                            write to archive part (1..n)
 * Output : -
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : It is assured that a data parts of size elementSize are
+*          not splitted
 \***********************************************************************/
 
 Errors Archive_writeData(ArchiveFileInfo *archiveFileInfo,
                          const void      *buffer,
-                         ulong           length
+                         ulong           length,
+                         uint            elementSize
                         );
 
 /***********************************************************************\

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -424,6 +424,7 @@ LOCAL void ungetNextChunkHeader(ArchiveInfo *archiveInfo, ChunkHeader *chunkHead
 *          headerLength      - length of header data to write
 *          headerWrittenFlag - TRUE iff header already written
 *          minBytes          - additional space needed in archive file
+*                              part
 * Output : -
 * Return : TRUE if new file part should be created, FALSE otherwise
 * Notes  : -
@@ -457,7 +458,7 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
       }
       else if ((fileSize+minBytes) >= archiveInfo->jobOptions->archivePartSize)
       {
-        /* less than min. number of bytes left in part -> new part */
+        /* less than min. number of bytes left in part -> create new part */
         newPartFlag = TRUE;
       }
     }
@@ -722,7 +723,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
 }
 
 /***********************************************************************\
-* Name   : openArchiveFile
+* Name   : createArchiveFile
 * Purpose: create and open new archive file
 * Input  : archiveInfo - archive info block
 * Output : -
@@ -730,7 +731,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors openArchiveFile(ArchiveInfo *archiveInfo)
+LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
 {
   Errors error;
 
@@ -866,11 +867,11 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
     closeArchiveFile(archiveInfo,FALSE);
   }
 
-  /* open file if needed */
+  /* create new file if needed */
   if (!archiveInfo->file.openFlag)
   {
     /* create file */
-    error = openArchiveFile(archiveInfo);
+    error = createArchiveFile(archiveInfo);
     if (error != ERROR_NONE)
     {
       return error;
@@ -883,19 +884,19 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : writeFileDataBlock
 * Purpose: write file data block, encrypt and split file
-* Input  : archiveFileInfo - archive file info block
-*          blockModes      - block write mode; see BlockModes
+* Input  : archiveFileInfo  - archive file info block
+*          blockMode        - block write mode; see BlockModes
+*          allowNewPartFlag - TRUE iff new archive part can be created
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeFileDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockModes)
+LOCAL Errors writeFileDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMode, bool allowNewPartFlag)
 {
   ulong  length;
   bool   newPartFlag;
 //  ulong  n;
-//  ulong  freeBlocks;
   Errors error;
 
   assert(archiveFileInfo != NULL);
@@ -908,12 +909,13 @@ LOCAL Errors writeFileDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blo
                     &length
                    );
 
-  /* check if split necessary */
-  newPartFlag = checkNewPartNeeded(archiveFileInfo->archiveInfo,
-                                   archiveFileInfo->file.headerLength,
-                                   archiveFileInfo->file.headerWrittenFlag,
-                                   ((length > 0) || (blockModes == BLOCK_MODE_WRITE))?archiveFileInfo->archiveInfo->blockLength:0
-                                  );
+  /* check if split is allowed and necessary */
+  newPartFlag =    allowNewPartFlag
+                && checkNewPartNeeded(archiveFileInfo->archiveInfo,
+                                      archiveFileInfo->file.headerLength,
+                                      archiveFileInfo->file.headerWrittenFlag,
+                                      ((length > 0) || (blockMode == BLOCK_MODE_WRITE))?archiveFileInfo->archiveInfo->blockLength:0
+                                     );
 
   /* split */
   if (newPartFlag)
@@ -1058,16 +1060,13 @@ LOCAL Errors writeFileDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blo
 //      n = 0;
     }
 
-    /* calculate max. length of data which can be written into this part */
-//        freeBlocks = (archiveFileInfo->archiveInfo->partSize-(size+n))/archiveFileInfo->blockLength;
-
     if (!archiveFileInfo->file.createdFlag || (length > 0))
     {
       /* open file if needed */
       if (!archiveFileInfo->archiveInfo->file.openFlag)
       {
         /* create file */
-        error = openArchiveFile(archiveFileInfo->archiveInfo);
+        error = createArchiveFile(archiveFileInfo->archiveInfo);
         if (error != ERROR_NONE)
         {
           return error;
@@ -1208,14 +1207,15 @@ LOCAL Errors readFileDataBlock(ArchiveFileInfo *archiveFileInfo)
 /***********************************************************************\
 * Name   : writeImageDataBlock
 * Purpose: write image data block, encrypt and split file
-* Input  : archiveFileInfo - archive file info block
-*          blockModes      - block write mode; see BlockModes
+* Input  : archiveFileInfo  - archive file info block
+*          blockMode        - block write mode; see BlockModes
+*          allowNewPartFlag - TRUE iff new archive part can be created
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeImageDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockModes)
+LOCAL Errors writeImageDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes blockMode, bool allowNewPartFlag)
 {
   ulong  length;
   bool   newPartFlag;
@@ -1231,12 +1231,13 @@ LOCAL Errors writeImageDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes bl
                     &length
                    );
 
-  /* check if split necessary */
-  newPartFlag = checkNewPartNeeded(archiveFileInfo->archiveInfo,
-                                   archiveFileInfo->image.headerLength,
-                                   archiveFileInfo->image.headerWrittenFlag,
-                                   ((length > 0) || (blockModes == BLOCK_MODE_WRITE))?archiveFileInfo->archiveInfo->blockLength:0
-                                  );
+  /* check if split is allowed and necessary */
+  newPartFlag =    allowNewPartFlag
+                && checkNewPartNeeded(archiveFileInfo->archiveInfo,
+                                      archiveFileInfo->image.headerLength,
+                                      archiveFileInfo->image.headerWrittenFlag,
+                                      ((length > 0) || (blockMode == BLOCK_MODE_WRITE))?archiveFileInfo->archiveInfo->blockLength:0
+                                     );
 
   /* split */
   if (newPartFlag)
@@ -1378,7 +1379,7 @@ LOCAL Errors writeImageDataBlock(ArchiveFileInfo *archiveFileInfo, BlockModes bl
       if (!archiveFileInfo->archiveInfo->file.openFlag)
       {
         /* create file */
-        error = openArchiveFile(archiveFileInfo->archiveInfo);
+        error = createArchiveFile(archiveFileInfo->archiveInfo);
         if (error != ERROR_NONE)
         {
           return error;
@@ -4183,10 +4184,8 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
             }
 
             String_set(deviceName,archiveFileInfo->image.chunkImageEntry.name);
-            deviceInfo->size        = archiveFileInfo->image.chunkImageEntry.size;
-            deviceInfo->blockSize   = archiveFileInfo->image.chunkImageEntry.blockSize;
-//            deviceInfo->freeBlocks  = 0LL;
-//            deviceInfo->totalBlocks = 0LL;
+            deviceInfo->size      = archiveFileInfo->image.chunkImageEntry.size;
+            deviceInfo->blockSize = archiveFileInfo->image.chunkImageEntry.blockSize;
 
             foundImageEntryFlag = TRUE;
             break;
@@ -4282,7 +4281,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
       switch (archiveFileInfo->archiveEntryType)
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
-          /* flush last blocks */
+          /* flush data */
           Compress_flush(&archiveFileInfo->file.compressInfoData);
           if (   !archiveFileInfo->file.createdFlag
               || (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
@@ -4292,11 +4291,11 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
                    && (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
                   )
             {
-              error = writeFileDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
+              error = writeFileDataBlock(archiveFileInfo,BLOCK_MODE_WRITE,FALSE);
             }
             if (error == ERROR_NONE)
             {
-              error = writeFileDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH);
+              error = writeFileDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH,FALSE);
             }
           }
 
@@ -4334,7 +4333,7 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
           String_delete(archiveFileInfo->file.chunkFileEntry.name);
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
-          /* flush last blocks */
+          /* flush data */
           Compress_flush(&archiveFileInfo->image.compressInfoData);
           if (   !archiveFileInfo->image.createdFlag
               || (Compress_getAvailableBlocks(&archiveFileInfo->image.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
@@ -4344,19 +4343,20 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
                    && (Compress_getAvailableBlocks(&archiveFileInfo->image.compressInfoData,COMPRESS_BLOCK_TYPE_ANY) > 0)
                   )
             {
-              error = writeImageDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
+              error = writeImageDataBlock(archiveFileInfo,BLOCK_MODE_WRITE,FALSE);
             }
             if (error == ERROR_NONE)
             {
-              error = writeImageDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH);
+              error = writeImageDataBlock(archiveFileInfo,BLOCK_MODE_FLUSH,FALSE);
             }
           }
 
           /* update file and chunks if header is written */
           if (archiveFileInfo->image.headerWrittenFlag)
           {
-            /* update part size */
+            /* update part block count */
             assert(archiveFileInfo->image.blockSize > 0);
+            assert((Compress_getInputLength(&archiveFileInfo->image.compressInfoData) % archiveFileInfo->image.blockSize) == 0);
             archiveFileInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveFileInfo->image.compressInfoData)/archiveFileInfo->image.blockSize;
             if (error == ERROR_NONE)
             {
@@ -4530,75 +4530,115 @@ Errors Archive_closeEntry(ArchiveFileInfo *archiveFileInfo)
 
 Errors Archive_writeData(ArchiveFileInfo *archiveFileInfo,
                          const void      *buffer,
-                         ulong           length
+                         ulong           length,
+                         uint            elementSize
                         )
 {
   byte   *p;
+  ulong  writtenBytes;
   Errors error;
-  ulong  deflatedBytess;
+  ulong  blockLength;
+  ulong  writtenBlockBytes;
+  ulong  deflatedBytes;
+  bool   allowNewPartFlag;
 
   assert(archiveFileInfo != NULL);
   assert(archiveFileInfo->archiveInfo != NULL);
 
-  switch (archiveFileInfo->archiveEntryType)
+  p            = (byte*)buffer;
+  writtenBytes = 0L;
+  while (writtenBytes < length)
   {
-    case ARCHIVE_ENTRY_TYPE_FILE:
-      assert((archiveFileInfo->file.bufferLength%archiveFileInfo->blockLength) == 0);
+    /* get size of data block which must be written without splitting
+       (make sure written data is aligned at element size boundaries)
+    */
+    if ((elementSize > 1) && (length > elementSize))
+    {
+      blockLength = elementSize;
+    }
+    else
+    {
+      blockLength = length;
+    }
 
-      p = (byte*)buffer;
-      while (length > 0)
-      {
-        /* compress */
-        error = Compress_deflate(&archiveFileInfo->file.compressInfoData,p,length,&deflatedBytess);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-        p += deflatedBytess;
-        length -= deflatedBytess;
+    /* write data block */
+    writtenBlockBytes = 0L;
+    switch (archiveFileInfo->archiveEntryType)
+    {
+      case ARCHIVE_ENTRY_TYPE_FILE:
+        assert((archiveFileInfo->file.bufferLength%archiveFileInfo->blockLength) == 0);
 
-        /* check if block can be encrypted and written to file */
-        while (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_FULL) > 0)
+        while (writtenBlockBytes < blockLength)
         {
-          error = writeFileDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
+          /* compress */
+          error = Compress_deflate(&archiveFileInfo->file.compressInfoData,
+                                   p+writtenBlockBytes,
+                                   length-writtenBlockBytes,
+                                   &deflatedBytes
+                                  );
           if (error != ERROR_NONE)
           {
             return error;
           }
-        }
-        assert(Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_FULL) == 0);
-      }
-      break;
-    case ARCHIVE_ENTRY_TYPE_IMAGE:
-      assert((archiveFileInfo->image.bufferLength%archiveFileInfo->blockLength) == 0);
+          writtenBlockBytes += deflatedBytes;
 
-      p = (byte*)buffer;
-      while (length > 0)
-      {
-        /* compress */
-        error = Compress_deflate(&archiveFileInfo->image.compressInfoData,p,length,&deflatedBytess);
-        if (error != ERROR_NONE)
-        {
-          return error;
+          /* check if compressed data blocks are available and can be encrypted and written to file */
+          allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
+          while (Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,
+                                             COMPRESS_BLOCK_TYPE_FULL
+                                            ) > 0
+                )
+          {
+            error = writeFileDataBlock(archiveFileInfo,BLOCK_MODE_WRITE,allowNewPartFlag);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+          }
+          assert(Compress_getAvailableBlocks(&archiveFileInfo->file.compressInfoData,COMPRESS_BLOCK_TYPE_FULL) == 0);
         }
-        p += deflatedBytess;
-        length -= deflatedBytess;
+        break;
+      case ARCHIVE_ENTRY_TYPE_IMAGE:
+        assert((archiveFileInfo->image.bufferLength%archiveFileInfo->blockLength) == 0);
 
-        /* check if block can be encrypted and written to file */
-        while (Compress_getAvailableBlocks(&archiveFileInfo->image.compressInfoData,COMPRESS_BLOCK_TYPE_FULL) > 0)
+        while (writtenBlockBytes < blockLength)
         {
-          error = writeImageDataBlock(archiveFileInfo,BLOCK_MODE_WRITE);
+          /* compress */
+          error = Compress_deflate(&archiveFileInfo->image.compressInfoData,
+                                   p+writtenBlockBytes,
+                                   blockLength-writtenBlockBytes,
+                                   &deflatedBytes
+                                  );
           if (error != ERROR_NONE)
           {
             return error;
           }
+          writtenBlockBytes += deflatedBytes;
+
+          /* check if compressed data blocks are available and can be encrypted and written to file */
+          allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
+          while (Compress_getAvailableBlocks(&archiveFileInfo->image.compressInfoData,
+                                             COMPRESS_BLOCK_TYPE_FULL
+                                            ) > 0
+                )
+          {
+            error = writeImageDataBlock(archiveFileInfo,BLOCK_MODE_WRITE,allowNewPartFlag);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+          }
+          assert(Compress_getAvailableBlocks(&archiveFileInfo->image.compressInfoData,COMPRESS_BLOCK_TYPE_FULL) == 0);
         }
-        assert(Compress_getAvailableBlocks(&archiveFileInfo->image.compressInfoData,COMPRESS_BLOCK_TYPE_FULL) == 0);
-      }
-      break;
-    default:
-      HALT_INTERNAL_ERROR("write data not supported for entry type");
-      break;
+        break;
+      default:
+        HALT_INTERNAL_ERROR("write data not supported for entry type");
+        break;
+    }
+
+    /* next data */
+    p            += blockLength;
+    writtenBytes += blockLength;
   }
 
   archiveFileInfo->file.bufferLength = 0;
