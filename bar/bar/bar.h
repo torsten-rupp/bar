@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -259,6 +259,7 @@ typedef struct
   bool                   groupFlag;                    // TRUE iff entries in list should be grouped
   bool                   allFlag;                      // TRUE iff all entries should be listed/restored
   bool                   longFormatFlag;               // TRUE iff long format list
+  bool                   humanFormatFlag;              // TRUE iff human format list
   bool                   noHeaderFooterFlag;           // TRUE iff no header/footer should be printed in list
   bool                   deleteOldArchiveFilesFlag;    // TRUE iff old archive files should be deleted after creating new files
 

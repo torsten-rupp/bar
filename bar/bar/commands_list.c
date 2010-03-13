@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -156,6 +156,39 @@ LOCAL ArchiveEntryList archiveEntryList;
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : getHumanSizeString
+* Purpose: get human readable size string
+* Input  : buffer     - buffer to format string into
+*          bufferSize - size of buffer
+*          n          - size value
+* Output : -
+* Return : buffer with formated human string size
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
+{
+  if      (n > 1024L*1024L*1024L)
+  {
+    snprintf(buffer,bufferSize,"%.1fG",(double)n/(double)(1024L*1024L*1024L));
+  }
+  else if (n >       1024L*1024L)
+  {
+    snprintf(buffer,bufferSize,"%.1fM",(double)n/(double)(1024L*1024L));
+  }
+  else if (n >             1024L)
+  {
+    snprintf(buffer,bufferSize,"%.1fK",(double)n/(double)(1024L));
+  }
+  else
+  {
+    snprintf(buffer,bufferSize,"%llu",n);
+  }
+
+  return buffer;
+}
+
+/***********************************************************************\
 * Name   : printHeader
 * Purpose: print list header
 * Input  : archiveFileName - archive file name or NULL if archive should
@@ -266,6 +299,7 @@ LOCAL void printFileInfo(const String       archiveFileName,
 {
   String dateTime;
   double ratio;
+  char   buffer[16];
   String cryptString;
 
   assert(fileName != NULL);
@@ -285,11 +319,19 @@ LOCAL void printFileInfo(const String       archiveFileName,
   {
     printf("%-20s ",String_cString(archiveFileName));
   }
+  printf("FILE  ");
+  if (globalOptions.humanFormatFlag)
+  {
+    printf("%10s",getHumanSizeString(buffer,sizeof(buffer),size));
+  }
+  else
+  {
+    printf("%10llu",size);
+  }
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-    printf("FILE  %10llu %-25s %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
-           size,
+    printf(" %-25s %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
            String_cString(dateTime),
            fragmentOffset,
            (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset,
@@ -302,8 +344,7 @@ LOCAL void printFileInfo(const String       archiveFileName,
   }
   else
   {
-    printf("FILE  %10llu %-25s %s\n",
-           size,
+    printf(" %-25s %s\n",
            String_cString(dateTime),
            String_cString(fileName)
           );
@@ -313,8 +354,8 @@ LOCAL void printFileInfo(const String       archiveFileName,
 }
 
 /***********************************************************************\
-* Name   : printFileInfo
-* Purpose: print file information
+* Name   : printImageInfo
+* Purpose: print image information
 * Input  : archiveFileName   - archive name or NULL if archive name
 *                              should not be printed
 *          iamgeName         - image name
@@ -344,6 +385,7 @@ LOCAL void printImageInfo(const String       archiveFileName,
                          )
 {
   double ratio;
+  char   buffer[16];
   String cryptString;
 
   assert(imageName != NULL);
@@ -361,13 +403,21 @@ LOCAL void printImageInfo(const String       archiveFileName,
   {
     printf("%-20s ",String_cString(archiveFileName));
   }
+  printf("IMAGE ");
+  if (globalOptions.humanFormatFlag)
+  {
+    printf("%10s",getHumanSizeString(buffer,sizeof(buffer),size));
+  }
+  else
+  {
+    printf("%10llu",size);
+  }
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-    printf("IMAGE %10llu                           %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
-           size,
-           blockOffset,
-           ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)blockSize,
+    printf("                           %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
+           blockOffset*(uint64)blockSize,
+           (blockOffset+blockCount)*(uint64)blockSize-((blockCount > 0)?1:0),
            Compress_getAlgorithmName(compressAlgorithm),
            ratio,
            String_cString(cryptString),
@@ -377,8 +427,7 @@ LOCAL void printImageInfo(const String       archiveFileName,
   }
   else
   {
-    printf("IMAGE %10llu                           %s\n",
-           size,
+    printf("                           %s\n",
            String_cString(imageName)
           );
   }
@@ -647,8 +696,8 @@ LOCAL void addListFileInfo(const String       archiveFileName,
 }
 
 /***********************************************************************\
-* Name   : addListFileInfo
-* Purpose: add file info to archive entry list
+* Name   : addListImageInfo
+* Purpose: add image info to archive entry list
 * Input  : imageName         - image name
 *          size              - iamge size [bytes]
 *          archiveSize       - archive size [bytes]
