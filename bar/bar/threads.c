@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/threads.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: thread functions
 * Systems: all
@@ -68,7 +68,10 @@ LOCAL void threadStart(ThreadStartInfo *startInfo)
   userData      = startInfo->userData;
   sem_post(&startInfo->lock);
 
-  (void)nice(niceLevel);
+  if (nice(niceLevel) == -1)
+  {
+    // ignore error
+  }
 
   assert(entryFunction != NULL);
   entryFunction(userData);

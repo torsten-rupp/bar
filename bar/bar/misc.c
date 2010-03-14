@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -687,7 +687,10 @@ void Misc_waitEnter(void)
   tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings);
 
   /* read line */
-  (void)fgets(s,2,stdin);
+  if (fgets(s,2,stdin) == NULL)
+  {
+    // ignore error
+  }
 
   /* restore console settings */
   tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
