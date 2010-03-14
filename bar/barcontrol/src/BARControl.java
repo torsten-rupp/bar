@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -919,7 +919,6 @@ public class BARControl
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           tabStatus.jobPause(120*60);
-//          Widgets.notify(tabStatus.widgetButtonPause);
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -1013,7 +1012,6 @@ public class BARControl
       // connect to server
       LoginData loginData = new LoginData(serverName,serverPort,serverTLSPort);
       boolean connectOkFlag = false;
-loginData.password="heinz";
       if ((loginData.serverName != null) && !loginData.serverName.equals("") && (loginData.password != null) && !loginData.password.equals("") && !loginDialogFlag)
       {
         // connect to server with preset data
