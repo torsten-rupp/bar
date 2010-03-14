@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/devices.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver device functions
 * Systems: all
@@ -259,7 +259,10 @@ Errors Device_openDeviceList(DeviceListHandle *deviceListHandle)
   }
 
   /* skip first line (header line) */
-  fgets(deviceListHandle->line,sizeof(deviceListHandle->line),deviceListHandle->file);
+  if (fgets(deviceListHandle->line,sizeof(deviceListHandle->line),deviceListHandle->file) == NULL)
+  {
+    // ignore error
+  }
 
   /* no line read jet */
   deviceListHandle->readFlag = FALSE;
@@ -409,6 +412,7 @@ Errors Device_getDeviceInfo(const String deviceName, DeviceInfo *deviceInfo)
     {
       if (ioctl(handle,BLKSSZGET, &n) == 0) deviceInfo->blockSize = (ulong)n;
       if (ioctl(handle,BLKGETSIZE,&n) == 0) deviceInfo->size      = (int64)n*512;
+      close(handle);
     }
     else
     {
