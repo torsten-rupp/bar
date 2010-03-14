@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -1373,7 +1373,7 @@ LOCAL bool initAll(void)
   defaultFTPServer.password             = NULL;
   defaultSSHServer.loginName            = NULL;
   defaultSSHServer.password             = NULL;
-  defaultSSHServer.port                 = 23;
+  defaultSSHServer.port                 = 22;
   defaultSSHServer.publicKeyFileName    = NULL;
   defaultSSHServer.privateKeyFileName   = NULL;
   defaultDevice.requestVolumeCommand    = NULL;
