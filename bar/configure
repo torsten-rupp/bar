@@ -6008,6 +6008,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
 
   mkdir packages 2>/dev/null
   mkdir packages/include 2>/dev/null
+  mkdir packages/lib 2>/dev/null
   cwd=`pwd`
 
 
@@ -6248,6 +6249,7 @@ if test $ENABLE_BZIP2 = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
 
@@ -6480,6 +6482,7 @@ if test $ENABLE_LZMA = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
 
@@ -6720,6 +6723,7 @@ if test $ENABLE_GCRYPT = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
 
@@ -7289,6 +7293,7 @@ if test $ENABLE_FTP = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
 
@@ -7524,6 +7529,7 @@ if test $ENABLE_SSH = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
 
@@ -7945,6 +7951,7 @@ if test $ENABLE_TLS = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
 

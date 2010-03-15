@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.40 $
+dnl $Revision: 1.41 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -506,6 +506,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
 
   mkdir packages 2>/dev/null
   mkdir packages/include 2>/dev/null
+  mkdir packages/lib 2>/dev/null
   cwd=`pwd`
 
   AC_MSG_COMPILE([zlib])
@@ -558,6 +559,7 @@ if test $ENABLE_BZIP2 = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([bzip2])
@@ -603,6 +605,7 @@ if test $ENABLE_LZMA = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([xz utils])
@@ -655,6 +658,7 @@ if test $ENABLE_GCRYPT = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([libgpg-error])
@@ -751,6 +755,7 @@ if test $ENABLE_FTP = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([ftplib])
@@ -798,6 +803,7 @@ if test $ENABLE_SSH = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([libssh2])
@@ -859,6 +865,7 @@ if test $ENABLE_TLS = "yes"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([gnutls])
