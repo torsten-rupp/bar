@@ -132,15 +132,15 @@ if test $cleanFlag -eq 0; then
   $MKDIR $tmpDirectory 2>/dev/null
 
   if test $allFlag -eq 1 -o $zlibFlag -eq 1; then
-    # zlib 1.2.3
+    # zlib 1.2.4
     (
      cd $tmpDirectory
-     if test ! -f zlib-1.2.3.tar.gz; then
-       $WGET 'http://www.zlib.net/zlib-1.2.3.tar.gz'
+     if test ! -f zlib-1.2.4.tar.gz; then
+       $WGET 'http://www.zlib.net/zlib-1.2.4.tar.gz'
      fi
-     $TAR xzf zlib-1.2.3.tar.gz
+     $TAR xzf zlib-1.2.4.tar.gz
     )
-    $LN -f -s $tmpDirectory/zlib-1.2.3 zlib
+    $LN -f -s $tmpDirectory/zlib-1.2.4 zlib
   fi
 
   if test $allFlag -eq 1 -o $bzip2Flag -eq 1; then
