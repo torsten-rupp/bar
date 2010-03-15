@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.39 $
+dnl $Revision: 1.40 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -179,6 +179,8 @@ dnl ----------------------- substitute settings ------------------------
 
 AC_SUBST(VERSION_MAJOR)                     dnl version major number
 AC_SUBST(VERSION_MINOR)                     dnl version minor number
+
+AC_SUBST(COPYRIGHT_DATE)                    dnl copyright date
 
 AC_SUBST(PLATFORM)                          dnl platform
 
@@ -449,7 +451,13 @@ AC_PATH_PROGS(OPENSSL,openssl)
 AC_PATH_PROGS(KEYTOOL,keytool)
 
 AC_PATH_PROGS(UNOCONV,unoconv)
+if test -z "$UNOCONV"; then
+  AC_MSG_WARN([No 'unoconv' tool found. Cannot create PDF manual. Please check PATH or create PDF manual manually in OO.])
+fi
 AC_PATH_PROGS(TXT2MAN,txt2man)
+if test -z "$TXT2MAN"; then
+  AC_MSG_WARN([No 'txt2man' tool found. Cannot create man page. Please check PATH.])
+fi
 
 AC_PATH_PROGS(MKFS_EXT2,    mkfs.ext2,    ,/sbin)
 AC_PATH_PROGS(MKFS_EXT3,    mkfs.ext3,    ,/sbin)
@@ -497,6 +505,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
   dnl compile zlib library
 
   mkdir packages 2>/dev/null
+  mkdir packages/include 2>/dev/null
   cwd=`pwd`
 
   AC_MSG_COMPILE([zlib])
@@ -548,6 +557,7 @@ if test $ENABLE_BZIP2 = "yes"; then
     dnl compile bzip2 library
 
     mkdir packages 2>/dev/null
+    mkdir packages/include 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([bzip2])
@@ -592,6 +602,7 @@ if test $ENABLE_LZMA = "yes"; then
     dnl compile lzma library
 
     mkdir packages 2>/dev/null
+    mkdir packages/include 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([xz utils])
@@ -643,6 +654,7 @@ if test $ENABLE_GCRYPT = "yes"; then
     dnl compile libgcrypt library
 
     mkdir packages 2>/dev/null
+    mkdir packages/include 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([libgpg-error])
@@ -738,6 +750,7 @@ if test $ENABLE_FTP = "yes"; then
     dnl compile lzma library
 
     mkdir packages 2>/dev/null
+    mkdir packages/include 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([ftplib])
@@ -784,6 +797,7 @@ if test $ENABLE_SSH = "yes"; then
     dnl compile lzma library
 
     mkdir packages 2>/dev/null
+    mkdir packages/include 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([libssh2])
@@ -844,6 +858,7 @@ if test $ENABLE_TLS = "yes"; then
     dnl compile gnutls library
 
     mkdir packages 2>/dev/null
+    mkdir packages/include 2>/dev/null
     cwd=`pwd`
 
     AC_MSG_COMPILE([gnutls])
@@ -915,7 +930,6 @@ for z in $LIBRARIES $STATIC_LIBRARIES ""; do
     LIBS="$LIBS -l$z"
   fi
 done
-AC_MSG_WARN([$LDFLAGS])
 
 AC_CHECK_PTHREAD_DEFINES
 AC_CHECK_FUNC(pthread_attr_setname,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
@@ -939,6 +953,8 @@ dnl -------------------------------- misc ------------------------------
 
 VERSION_MAJOR=`cat version|grep MAJOR|sed 's/.*=//g'`
 VERSION_MINOR=`cat version|grep MINOR|sed 's/.*=//g'`
+
+COPYRIGHT_DATE="2007-2010"
 
 AC_DEFINE_UNQUOTED(CONFIG_DIR,"$CONFIG_DIR",[configuration directory])
 AC_DEFINE_UNQUOTED(TLS_DIR,   "$TLS_DIR",   [TLS directory])
