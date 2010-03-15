@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.61 $
+# $Revision: 1.62 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -77,6 +77,7 @@ TARGETS              = bar/bar \
                        $(if $(findstring $(ENABLE_GUI),yes),barcontrol/barcontrol) \
 
 MAN                  = doc/bar.7 \
+                       doc/bar.pdf \
 
 OTHER_SOURCES        = errors.pl \
                        errors.def \
@@ -179,11 +180,15 @@ clean_man:
 doc/bar.pdf: doc/bar.odt
 ifneq ($(UNOCONV),)
 	$(UNOCONV) -f pdf doc/bar.odt
+else
+	@$(ECHO) "ERROR: no 'unoconv' tool available! Cannot create PDF manual."
 endif
 
 doc/bar.7: doc/bar.txt
 ifneq ($(TXT2MAN),)
 	$(CAT) doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" > $@
+else
+	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."
 endif
 
 .PHONY: showman
@@ -373,6 +378,8 @@ $(DISTRIBUTION_NAME).tar.bz2: \
 	$(INSTALL) -m 664 \
                    doc/README \
                    doc/COPYING \
+                   doc/bar.odt \
+                   doc/bar.pdf \
                    doc/*.txt \
                    doc/bar.7 \
                    $(DISTRIBUTION_NAME)/doc
