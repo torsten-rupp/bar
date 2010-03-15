@@ -21,37 +21,101 @@ gnutlsFlag=0
 helpFlag=0
 cleanFlag=0
 while test $# != 0; do
-  if   test "$1" = "--help"; then
-    helpFlag=1
-  elif test "$1" = "--clean"; then
-    cleanFlag=1
-  elif test "$1" = "all"; then
-    allFlag=1
-  elif test "$1" = "zlib"; then
-    allFlag=0
-    zlibFlag=1
-  elif test "$1" = "bzip2"; then
-    allFlag=0
-    bzip2Flag=1
-  elif test "$1" = "lzma"; then
-    allFlag=0
-    lzmaFlag=1
-  elif test "$1" = "gcrypt"; then
-    allFlag=0
-    gcryptFlag=1
-  elif test "$1" = "ftplib"; then
-    allFlag=0
-    ftplibFlag=1
-  elif test "$1" = "libssh2"; then
-    allFlag=0
-    libssh2Flag=1
-  elif test "$1" = "gnutls"; then
-    allFlag=0
-    gnutlsFlag=1
-  else
-    $ECHO >&2 "ERROR: unknown option '$1'"
-    exit 1
-  fi
+  case $1 in
+    -h | --help)
+      helpFlag=1
+      ;;
+    --clean)
+      cleanFlag=1
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      $ECHO >&2 "ERROR: unknown option '$1'"
+      exit 1
+      ;;
+    *)
+      case $1 in
+        all)
+          allFlag=1
+         ;;
+        zlib)
+         allFlag=0
+         zlibFlag=1
+         ;;
+        bzip2)
+         allFlag=0
+         bzip2Flag=1
+         ;;
+        lzma)
+         allFlag=0
+         lzmaFlag=1
+         ;;
+        gcrypt)
+         allFlag=0
+         gcryptFlag=1
+         ;;
+        ftplib)
+         allFlag=0
+         ftplibFlag=1
+         ;;
+        libssh2)
+         allFlag=0
+         libssh2Flag=1
+         ;;
+        gnutls)
+         allFlag=0
+         gnutlsFlag=1
+         ;;
+       *)
+         $ECHO >&2 "ERROR: unknown package '$1'"
+         exit 1
+         ;;
+      esac
+      ;;
+  esac
+  shift
+done
+while test $# != 0; do
+   case $1 in
+     all)
+       allFlag=1
+      ;;
+     zlib)
+      allFlag=0
+      zlibFlag=1
+      ;;
+     bzip2)
+      allFlag=0
+      bzip2Flag=1
+      ;;
+     lzma)
+      allFlag=0
+      lzmaFlag=1
+      ;;
+     gcrypt)
+      allFlag=0
+      gcryptFlag=1
+      ;;
+     ftplib)
+      allFlag=0
+      ftplibFlag=1
+      ;;
+     libssh2)
+      allFlag=0
+      libssh2Flag=1
+      ;;
+     gnutls)
+      allFlag=0
+      gnutlsFlag=1
+      ;;
+    *)
+      $ECHO >&2 "ERROR: unknown package '$1'"
+      exit 1
+      ;;
+  esac
   shift
 done
 if test $helpFlag -eq 1; then
