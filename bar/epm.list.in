@@ -11,7 +11,7 @@ $configdir=@CONFIG_DIR@
 $tlsdir=@TLS_DIR@
 
 %product BAR
-%copyright 2007-2009 by Torsten Rupp, All Rights Reserved.
+%copyright @COPYRIGHT_DATE@ by Torsten Rupp, All Rights Reserved.
 %vendor Torsten Rupp
 %if epmVersion3
 %license GPL v2
@@ -22,26 +22,30 @@ $tlsdir=@TLS_DIR@
 %license doc/COPYING
 %readme doc/README
 %endif
+%ifdef     PACKAGE_CMD
+%description Backup archiver program for UNIX (command line tools).
+%elseifdef PACKAGE_GUI
+%description Backup archiver program for UNIX (GUI tools).
+%else
 %description Backup archiver program for UNIX.
+%endif
 %version @VERSION_MAJOR@.@VERSION_MINOR@
 
 # executables
 %system all
-%ifdef PACKAGE_CMD
+%ifdef     PACKAGE_CMD
 f 0555 root sys ${bindir}/bar bar/bar
 f 0555 root sys ${bindir}/bar-keygen bar/bar-keygen
-%endif
-%ifdef PACKAGE_GUI
+%elseifdef PACKAGE_GUI
 f 0555 root sys ${bindir}/barcontrol barcontrol/barcontrol
 f 0444 root sys ${bindir}/barcontrol-linux.jar barcontrol/barcontrol-linux.jar
 %endif
 
 # configuration
 %system all
-%ifdef PACKAGE_CMD
+%ifdef     PACKAGE_CMD
 f 0444 root sys ${configdir}/bar.cfg bar/bar.cfg
-%endif
-%ifdef PACKAGE_GUI
+%elseifdef PACKAGE_GUI
 f 0444 root sys ${configdir}/barcontrol.cfg barcontrol/barcontrol.cfg
 %endif
 d 0555 root sys ${configdir}/jobs
@@ -51,7 +55,7 @@ d 0555 root sys ${configdir}/jobs
 %ifdef PACKAGE_CMD
 f 0444 root sys ${docdir}/README doc/README
 f 0444 root sys ${docdir}/COPYING doc/COPYING
-f 0444 root sys ${docdir}/faq.txt doc/faq.txt
+f 0444 root sys ${docdir}/bar.pdf doc/bar.pdf
 f 0444 root sys ${docdir}/quickstart.txt doc/quickstart.txt
 %endif
 
