@@ -32,6 +32,7 @@
   * added option --human-format, -H: print sizes in human readable
     format (size+unit)
   * added first version of a manual!
+  * improved configure checks for doc tools
 
 2010-01-01 0.12d
   * fixed wrong usage of vprintf in log function (caused SigSegV
