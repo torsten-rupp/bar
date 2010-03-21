@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # $Author: torsten $
 # Contents: generate BAR server keys (PEM files)
 # Systems: Unix
@@ -62,6 +62,8 @@ privateDir=""
 certsDir=""
 
 # flags
+certtoolFlag=0
+opensslFlag=0
 quietFlag=0
 debugFlag=0
 
@@ -224,6 +226,8 @@ Usage: $PROGRAM_NAME [...] [--]...
 Options: -d|--tls-directory=<path>  - TLS directory (default: $DEFAULT_TLS_DIR)
          --private-directory=<path> - directory for private keys
          --certs-directory=<path>   - directory for certicates
+         --certtool                 - use certtool to generate keys
+         --openssl                  - use openssl to generate keys
          -h|--help                  - print this help
 EOT
 }
@@ -263,6 +267,22 @@ while test $# != 0; do
     --certs-directory | --certs-dir)
       certsDir=$2
       shift
+      shift
+      ;;
+    --certtool=*)
+      certtoolFlag=`$ECHO "$1" | sed 's/^[^=]*=\(.*\)$/\1/g'`
+      shift
+      ;;
+    --certtool)
+      certtoolFlag=1
+      shift
+      ;;
+    --openssl=*)
+      opensslFlag=`$ECHO "$1" | sed 's/^[^=]*=\(.*\)$/\1/g'`
+      shift
+      ;;
+    --openssl)
+      opensslFlag=1
       shift
       ;;
     --quiet=*)
@@ -330,6 +350,22 @@ fi
 if test $CERTTOOL_OK -ne 1 -a $OPENSSL_OK -ne 1; then
   printError "'$CERTOOL' nor '$OPENSSL' found or not executable - cannot create keys!"
   exit $EXITCODE_NO_KEYTOOLS
+fi
+if test $certtoolFlag -eq 1; then
+  if test $CERTTOOL_OK -eq 1; then
+    OPENSSL_OK=0
+  else
+    printError "'$CERTOOL' not found!"
+    exit $EXITCODE_NO_KEYTOOLS
+  fi
+fi
+if test $opensslFlag -eq 1; then
+  if test $OPENSSL_OK -eq 1; then
+    CERTTOOL_OK=0
+  else
+    printError "'$OPENSSL' not found!"
+    exit $EXITCODE_NO_KEYTOOLS
+  fi
 fi
 $KEYTOOL -help 1>/dev/null 2>/dev/null
 if test $? -ne 127; then
@@ -524,8 +560,8 @@ fi
 println "OK"
 
 # create Java key
-print "Create '$privateDir/bar.jks'..."
 if test $KEYTOOL_OK -eq 1; then
+  print "Create '$privateDir/bar.jks'..."
   $RMF $privateDir/bar.jks
   $KEYTOOL \
     -import \
@@ -537,14 +573,14 @@ if test $KEYTOOL_OK -eq 1; then
     -keystore "$privateDir/bar.jks" \
     1>$stdout 2>$stderr
   rc=$?
+  if test $rc -ne 0; then
+    println "FAIL"
+    printError "Cannot create BAR Java key '$privateDir/bar.jks' (exitcode: $rc)"
+    catStderr $stderr
+    exit $EXITCODE_CREATE_KEY_FAIL
+  fi
+  println "OK"
 fi
-if test $rc -ne 0; then
-  println "FAIL"
-  printError "Cannot create BAR Java key '$privateDir/bar.jks' (exitcode: $rc)"
-  catStderr $stderr
-  exit $EXITCODE_CREATE_KEY_FAIL
-fi
-println "OK"
 
 # free resources
 $RMRF $tmpDir 2>/dev/null
