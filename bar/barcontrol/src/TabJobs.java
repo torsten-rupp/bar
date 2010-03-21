@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -1972,7 +1972,7 @@ throw new Error("NYI");
         }
 
         // password
-        label = Widgets.newLabel(tab,"Password:");
+        label = Widgets.newLabel(tab,"Crypt password:");
         Widgets.layout(label,4,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab,SWT.NONE);
         composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,1.0,0.0,1.0}));
