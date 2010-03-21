@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -1161,7 +1161,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           /* check if SSH login is possible */
           error = ERROR_UNKNOWN;
-          if ((error != ERROR_NONE) && (sshServer.password != NULL))
+          if ((error == ERROR_UNKNOWN) && (sshServer.password != NULL))
           {
             error = checkSSHLogin(storageFileHandle->scp.loginName,
                                   sshServer.password,
@@ -1175,7 +1175,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
               Password_set(storageFileHandle->scp.password,sshServer.password);
             }
           }
-          if (error != ERROR_NONE)
+          if (error == ERROR_UNKNOWN)
           {
             /* initialize default password */
             if (initSSHPassword(jobOptions))
@@ -1191,6 +1191,10 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
               {
                 Password_set(storageFileHandle->scp.password,defaultSSHPassword);
               }
+            }
+            else
+            {
+              error = ERROR_NO_SSH_PASSWORD;
             }
           }
           if (error != ERROR_NONE)
