@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.62 $
+# $Revision: 1.63 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -157,7 +157,9 @@ $(KEY_FILES):
 	$(MAKE) -C bar bar-keygen
 	bar/bar-keygen \
           --private-directory=. \
-          --certs-directory=.
+          --certs-directory=. \
+          $(if $(findstring $(KEYTOOL),certtool),--certtool) \
+          $(if $(findstring $(KEYTOOL),openssl),--openssl) \
 
 # ----------------------------------------------------------------------------
 
@@ -417,7 +419,7 @@ ifneq ($(MD5SUM),)
 	$(MD5SUM) $@
 endif
 else
-	$(ECHO) "No EPM installed. Cannot create RPM package."
+	@$(ECHO) "No EPM installed. Cannot create RPM package."
 endif
 
 # create DEB
@@ -445,7 +447,7 @@ ifneq ($(MD5SUM),)
 	$(MD5SUM) $@
 endif
 else
-	$(ECHO) "No EPM installed. Cannot create DEB package."
+	@$(ECHO) "No EPM installed. Cannot create DEB package."
 endif
 bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).deb: epm.list
 ifneq ($(EPM),)
@@ -462,7 +464,7 @@ ifneq ($(MD5SUM),)
 	$(MD5SUM) $@
 endif
 else
-	$(ECHO) "No EPM installed. Cannot create DEB package."
+	@$(ECHO) "No EPM installed. Cannot create DEB package."
 endif
 
 # end of file
