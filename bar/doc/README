@@ -249,6 +249,43 @@ On a Debian system you can use the following packages (or newer versions):
   ftplib3
   ftplib-dev
 
+On SUSE system you may use the following packages (or newer versions):
+
+  gcc
+  make
+  perl
+  zlib
+  zlib-devel
+  zlib-devel-static
+  libbz2-1
+  libbz2-devel
+  liblzma0
+  xz-devel
+  libgcrypt11
+  libgcrypt-devel
+  gnutls
+  libgnutls26
+  libgnutls-devel
+  java_1_0_6-openjdk
+  java_1_0_6-openjdk-devel
+
+  Note: most libraries are only available as dynamic libraries. To
+  compile a static linked BAR, download the additional packages
+  instead of installing the packages above.
+
+On CentOS system you can use the following packages (or newer versions):
+
+  gcc
+  make-3.81-3
+  zlib-1.2.3-3
+  bzip2-devel-1.0.3-4
+  libgcrypt-devel-1.4.4-5
+  libgpg-error-devel-1.4.2
+  gnutls-defvel-1.4.1-3
+
+
+  Download: lzma, ftplib, libssh2
+
 2)
 
 Then compile and install BAR with:
