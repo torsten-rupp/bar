@@ -10,13 +10,11 @@ ToDo
 - novice/expert mode in barcontrol.tcl
 - barconfig for creating/edit bar.cfg
 - Windows port
-- create RPMs
 - re-read configuration when modified
 - configure band-width on run-time
 - ACL
 - send job from server to other server
 - send-only ssh-login (possible?)
-- flush in server protocol to store change data
 - clear internal performance arrays before next job is started
 - avoid negative bytes/s in performance monitor
 - multiple instances of backup threads
@@ -24,7 +22,7 @@ ToDo
 - fix progress bar update when writing a DVD
 - automatic build and link of additional packages when located in a sub-directory
 - multi-threaded compression?
-- partition image support
 - store partitions which are mounted ("on-the-fly-freeze")
 - md5 file check sum?
 - support sparse file when restoring
+- add epm to download-third-party-tools
