@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -23,7 +23,7 @@ LAUNCH4J_DIR       = @LAUNCH4J_DIR@
 #--------------------------------- tool chain --------------------------------
 
 JAVA               = @JAVA@
-JAVA_FLAGS         = @JAVA_FLAGS@
+JAVA_FLAGS         = @JAVA_FLAGS@ -Xmx128m
 
 JAVAC              = @JAVAC@
 JAVAC_FLAGS        = @JAVAC_FLAGS@ -source 1.5
