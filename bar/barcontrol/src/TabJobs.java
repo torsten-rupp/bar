@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -4151,12 +4151,12 @@ throw new Error("NYI");
     // open all included directories
     for (TableItem tableItem : widgetIncludeTable.getItems())
     {
-      String pattern = (String)tableItem.getData();
+      EntryData entryData = (EntryData)tableItem.getData();
 
       TreeItem[] treeItems = widgetFileTree.getItems();
 
       StringBuffer name = new StringBuffer();
-      for (String part : pattern.split(File.separator))
+      for (String part : entryData.pattern.split(File.separator))
       {
         // expand name
         if ((name.length() == 0) || (name.charAt(name.length()-1) != File.separatorChar)) name.append(File.separatorChar);
