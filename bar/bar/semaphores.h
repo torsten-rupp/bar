@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/semaphores.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -152,12 +152,12 @@ void Semaphore_waitModified(Semaphore *semaphore);
 bool Semaphore_checkPending(Semaphore *semaphore);
 
 /***********************************************************************\
-* Name   : Semaphore_setEndOfMail
-* Purpose: set end-of-mail flag for semaphore
+* Name   : Semaphore_setEnd
+* Purpose: set end flag for semaphore
 * Input  : semaphore - semaphore
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : trigger all waiting threads
 \***********************************************************************/
 
 void Semaphore_setEnd(Semaphore *semaphore);

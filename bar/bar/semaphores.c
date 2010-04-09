@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/semaphores.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -425,12 +425,16 @@ void Semaphore_setEnd(Semaphore *semaphore)
 {
   assert(semaphore != NULL);
 
-  /* lock */
+  // lock
   lock(semaphore,SEMAPHORE_LOCK_TYPE_READ);
 
+  // set end flag
   semaphore->endFlag = TRUE;
 
-  /* unlock */
+  // send modified signal
+  SIGNAL(DEBUG_READ_WRITE,"MODIFIED",&semaphore->modified);
+
+  // unlock
   unlock(semaphore);
 }
 
