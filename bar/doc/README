@@ -68,6 +68,7 @@ The following additional packages are optional:
 * http://www.nbpfaus.net/~pfau/ftplib/ftplib-3.1-src.tar.gz
 * http://nbpfaus.net/~pfau/ftplib/ftplib-3.1-1.patch
 * http://prdownloads.sourceforge.net/libssh2/libssh2-1.1.tar.gz?download
+* http://www.epmhome.org/index.php
 
 There are two ways to use the additional packages:
 
@@ -114,6 +115,14 @@ ssh2:
   http://www.libssh2.org/download/libssh2-1.2.2.tar.gz
 
   ln -s libssh2-1.2.2 libssh2
+
+epm:
+  http://ftp.easysw.com/pub/epm/4.1/epm-4.1-source.tar.bz2
+
+  ln -s epm-4.1 epm
+
+  Note: you may apply the patch misc/epm-4-1-rpm.patch in case you
+  see problems creating RPM packages with EPM on your system
 
 You can execute the supplied script 'download-third-party-packages.sh'
 to download (wget required) all additional packages, extract them to a
@@ -222,6 +231,16 @@ ssh2:
   Notes: - newer versions of libssh2 already include the seek-patch.
          - the keepalive patch is optional
 
+epm:
+  http://ftp.easysw.com/pub/epm/4.1/epm-4.1-source.tar.bz2
+
+  tar xjf epm-4.1-source.tar.bz2
+  cd epm-4.1
+  patch -p1 < <BAR source directory>/misc/epm-4.1-rpm.patch
+  ./configure
+  make
+  make install
+
 1c)
 
 On a Debian system you can use the following packages (or newer versions):
@@ -269,9 +288,11 @@ On SUSE system you may use the following packages (or newer versions):
   java_1_0_6-openjdk
   java_1_0_6-openjdk-devel
 
-  Note: most libraries are only available as dynamic libraries. To
+  Note 1: most libraries are only available as dynamic libraries. To
   compile a static linked BAR, download the additional packages
   instead of installing the packages above.
+
+  Note 2: download EPM and apply the patch to get a working EPM on SuSE.
 
 On CentOS system you can use the following packages (or newer versions):
 
@@ -283,8 +304,9 @@ On CentOS system you can use the following packages (or newer versions):
   libgpg-error-devel-1.4.2
   gnutls-defvel-1.4.1-3
 
+  Note 1: download lzma, ftplib, libssh2
 
-  Download: lzma, ftplib, libssh2
+  Note 2: download EPM and apply the patch to get a working EPM on SuSE.
 
 2)
 

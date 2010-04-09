@@ -650,13 +650,13 @@ CFLAGS
 CERTTOOL
 LAUNCH4J
 MD5SUM
-EPM
 INSTALL_DATA
 INSTALL_SCRIPT
 INSTALL_PROGRAM
 PERL
 EPM_VERSION_4
 EPM_VERSION_3
+EPM
 MKFS_REISER4
 MKFS_REISERFS
 MKFS_MSDOS
@@ -2447,7 +2447,46 @@ if test -z "$INSTALL"; then
 $as_echo "$as_me: error: Cannot find a 'install' in PATH. Please check your PATH environment variable." >&2;}
    { (exit 1); exit 1; }; }
 fi
-for ac_prog in epm
+if test -d epm -o -d "`readlink epm`"; then
+
+  cwd=`pwd`
+
+
+  $as_echo_n "Compile epm... " >&6
+
+  result=1
+  if test $result -eq 1; then
+    (cd epm; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
+    if test $? -ne 0; then
+      { $as_echo "$as_me:$LINENO: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+      result=0
+    fi
+  fi
+  if test $result -eq 1; then
+    (cd epm; make) 1>/dev/null 2>/dev/null
+    if test $? -ne 0; then
+      { $as_echo "$as_me:$LINENO: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+      result=0
+    fi
+  fi
+  if test $result -eq 1; then
+    (cd epm; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
+    if test $? -ne 0; then
+      { $as_echo "$as_me:$LINENO: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+      result=0
+    fi
+  fi
+  if test $result -eq 1; then
+    { $as_echo "$as_me:$LINENO: result: done" >&5
+$as_echo "done" >&6; }
+  fi
+
+  EPM=$cwd/packages/bin/epm
+else
+  for ac_prog in epm
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -2492,6 +2531,7 @@ fi
   test -n "$EPM" && break
 done
 
+fi
 if test -n "$EPM"; then
 
   { $as_echo "$as_me:$LINENO: checking $EPM version" >&5
@@ -6055,9 +6095,8 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
   fi
-
 else
-      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
     { $as_echo "$as_me:$LINENO: checking for library containing zlibVersion" >&5
 $as_echo_n "checking for library containing zlibVersion... " >&6; }
 if test "${ac_cv_search_zlibVersion+set}" = set; then

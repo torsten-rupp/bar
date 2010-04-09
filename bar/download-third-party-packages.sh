@@ -1,5 +1,17 @@
 #!/bin/sh
 
+# ----------------------------------------------------------------------------
+#
+# $Source: /home/torsten/cvs/bar/download-third-party-packages.sh,v $
+# $Revision: 1.12 $
+# $Author: torsten $
+# Contents: download third-party packages
+# Systems: Unix
+#
+# ----------------------------------------------------------------------------
+
+# --------------------------------- constants --------------------------------
+
 ECHO="echo"
 LN="ln"
 MKDIR="mkdir"
@@ -7,6 +19,12 @@ RMF="rm -f"
 RMRF="rm -rf"
 TAR="tar"
 WGET="wget"
+
+# --------------------------------- variables --------------------------------
+
+# ---------------------------------- functions -------------------------------
+
+# ------------------------------------ main ----------------------------------
 
 # parse arguments
 allFlag=1
@@ -17,6 +35,7 @@ gcryptFlag=0
 ftplibFlag=0
 libssh2Flag=0
 gnutlsFlag=0
+epmFlag=0
 
 helpFlag=0
 cleanFlag=0
@@ -40,76 +59,84 @@ while test $# != 0; do
       case $1 in
         all)
           allFlag=1
-         ;;
+          ;;
         zlib)
-         allFlag=0
-         zlibFlag=1
-         ;;
+          allFlag=0
+          zlibFlag=1
+          ;;
         bzip2)
-         allFlag=0
-         bzip2Flag=1
-         ;;
+          allFlag=0
+          bzip2Flag=1
+          ;;
         lzma)
-         allFlag=0
-         lzmaFlag=1
-         ;;
+          allFlag=0
+          lzmaFlag=1
+          ;;
         gcrypt)
-         allFlag=0
-         gcryptFlag=1
-         ;;
+          allFlag=0
+          gcryptFlag=1
+          ;;
         ftplib)
-         allFlag=0
-         ftplibFlag=1
-         ;;
+          allFlag=0
+          ftplibFlag=1
+          ;;
         libssh2)
-         allFlag=0
-         libssh2Flag=1
-         ;;
+          allFlag=0
+          libssh2Flag=1
+          ;;
         gnutls)
-         allFlag=0
-         gnutlsFlag=1
-         ;;
-       *)
-         $ECHO >&2 "ERROR: unknown package '$1'"
-         exit 1
-         ;;
+          allFlag=0
+          gnutlsFlag=1
+          ;;
+        epm)
+          allFlag=0
+          epmFlag=1
+          ;;
+        *)
+          $ECHO >&2 "ERROR: unknown package '$1'"
+          exit 1
+          ;;
       esac
       ;;
   esac
   shift
 done
 while test $# != 0; do
-   case $1 in
-     all)
-       allFlag=1
+  case $1 in
+    all)
+      allFlag=1
       ;;
-     zlib)
+    zlib)
       allFlag=0
       zlibFlag=1
       ;;
-     bzip2)
+    bzip2)
       allFlag=0
       bzip2Flag=1
       ;;
-     lzma)
+    lzma)
       allFlag=0
       lzmaFlag=1
       ;;
-     gcrypt)
+    gcrypt)
       allFlag=0
       gcryptFlag=1
       ;;
-     ftplib)
+    ftplib)
       allFlag=0
       ftplibFlag=1
       ;;
-     libssh2)
+    libssh2)
       allFlag=0
       libssh2Flag=1
       ;;
-     gnutls)
+    gnutls)
       allFlag=0
       gnutlsFlag=1
+      ;;
+    epm)
+      allFlag=0
+      epmFlag=1
       ;;
     *)
       $ECHO >&2 "ERROR: unknown package '$1'"
@@ -225,6 +252,19 @@ if test $cleanFlag -eq 0; then
     )
     $LN -f -s $tmpDirectory/gnutls-2.8.5 gnutls
   fi
+
+  if test $allFlag -eq 1 -o $epmFlag -eq 1; then
+    # epm 4.1
+    (
+     cd $tmpDirectory
+     if test ! -f epm-4.1-source.tar.bz2; then
+       $WGET 'http://ftp.easysw.com/pub/epm/4.1/epm-4.1-source.tar.bz2'
+     fi
+     $TAR xjf epm-4.1-source.tar.bz2
+     (cd epm-4.1; patch -p1 < ../../misc/epm-4.1-rpm.patch)
+    )
+    $LN -f -s $tmpDirectory/epm-4.1 epm
+  fi
 else
   # bzip2
   $RMF $tmpDirectory/bzip2-*.tar.gz
@@ -255,6 +295,11 @@ else
   $RMF $tmpDirectory/gnutls-*.tar.bz2
   $RMRF $tmpDirectory/gnutls-*
   $RMF gnutls
+
+  # epm
+  $RMF $tmpDirectory/epm-*.tar.bz2
+  $RMRF $tmpDirectory/epm-*
+  $RMF epm
 fi
 
 exit 0

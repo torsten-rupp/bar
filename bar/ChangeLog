@@ -1,3 +1,10 @@
+2010-04-10 0.13a
+  * fix typing error in "owner"
+  * fix wrong parsing of "owner" in server
+  * fix memory leak in server
+  * barcontrol: fix opening directories in file tree
+  * added epm to download third-party script
+
 2010-03-21 0.13
   * implemented device image functions: create images from devices
   * implemented support for images with ext2/ext3, fat12/fat16/fat32

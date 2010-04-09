@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.41 $
+dnl $Revision: 1.42 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -244,6 +244,7 @@ AC_SUBST(MKFS_MSDOS)                        dnl mksfs.msdos command
 AC_SUBST(MKFS_REISERFS)                     dnl mksfs.reiserfs command
 AC_SUBST(MKFS_REISER4)                      dnl mksfs.reiser4 command
 
+AC_SUBST(EPM)                               dnl EPM tool
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
 AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise empty
 
@@ -388,7 +389,42 @@ AC_PROG_INSTALL
 if test -z "$INSTALL"; then
   AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
 fi
-AC_PATH_PROGS(EPM,epm)
+if test -d epm -o -d "`readlink epm`"; then
+  dnl compile epm
+
+  cwd=`pwd`
+
+  AC_MSG_COMPILE([epm])
+  result=1
+  if test $result -eq 1; then
+    (cd epm; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
+    if test $? -ne 0; then 
+      AC_MSG_RESULT([fail (configure)])
+      result=0
+    fi
+  fi
+  if test $result -eq 1; then
+    (cd epm; make) 1>/dev/null 2>/dev/null
+    if test $? -ne 0; then 
+      AC_MSG_RESULT([fail (make)])
+      result=0
+    fi
+  fi
+  if test $result -eq 1; then
+    (cd epm; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
+    if test $? -ne 0; then 
+      AC_MSG_RESULT([fail (make)])
+      result=0
+    fi
+  fi
+  if test $result -eq 1; then
+    AC_MSG_RESULT([done])
+  fi
+
+  EPM=$cwd/packages/bin/epm
+else
+  AC_PATH_PROGS(EPM,epm)
+fi
 if test -n "$EPM"; then
   AC_PROG_EPM_VERSION
 fi
@@ -543,9 +579,8 @@ if test -d zlib -o -d "`readlink zlib`"; then
     STATIC_LIBRARIES="$STATIC_LIBRARIES z"
     AC_DEFINE(HAVE_Z,1,[zlib installed (local)])
   fi
-
 else
-    dnl search for installed zlib library
+  dnl search for installed zlib library
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     AC_SEARCH_LIBS(zlibVersion,z,[HAVE_Z=1;LIBRARIES="$LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
   else
