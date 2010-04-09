@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -739,7 +739,6 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       List_append(&ftpServerList,ftpServerNode);
 
       currentFTPServer = &ftpServerNode->ftpServer;
-//      currentSSHServer = NULL;
     }
     else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
     {
@@ -759,7 +758,6 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
 
       List_append(&sshServerList,sshServerNode);
 
-//      currentFTPServer = NULL;
       currentSSHServer = &sshServerNode->sshServer;
     }
     else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
@@ -795,11 +793,9 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       currentFTPServer = &defaultFTPServer;
       currentSSHServer = &defaultSSHServer;
       currentDevice    = &defaultDevice;
-fprintf(stderr,"%s,%d: current ssh server %s\n",__FILE__,__LINE__,String_cString(currentSSHServer->loginName));
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-//      String_unquote(String_trim(String_sub(value,line,nextIndex,STRING_END),STRING_WHITE_SPACES),STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
                              CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
@@ -1735,6 +1731,7 @@ void freeJobOptions(JobOptions *jobOptions)
 {
   assert(jobOptions != NULL);
 
+  String_delete(jobOptions->deviceName);
   String_delete(jobOptions->sshServer.privateKeyFileName);
   String_delete(jobOptions->sshServer.publicKeyFileName);
   Password_delete(jobOptions->sshServer.password);
@@ -2758,6 +2755,7 @@ int main(int argc, const char *argv[])
   {
     #ifndef NDEBUG
       Array_debug();
+      Array_debugDone();
       String_debug();
       String_debugDone();
     #endif /* not NDEBUG */
@@ -2776,6 +2774,7 @@ int main(int argc, const char *argv[])
     doneAll();
     #ifndef NDEBUG
       Array_debug();
+      Array_debugDone();
       String_debug();
       String_debugDone();
     #endif /* not NDEBUG */
@@ -2817,6 +2816,7 @@ int main(int argc, const char *argv[])
       doneAll();
       #ifndef NDEBUG
         Array_debug();
+        Array_debugDone();
         String_debug();
         String_debugDone();
       #endif /* not NDEBUG */
@@ -2836,6 +2836,7 @@ int main(int argc, const char *argv[])
     doneAll();
     #ifndef NDEBUG
       Array_debug();
+      Array_debugDone();
       String_debug();
       String_debugDone();
     #endif /* not NDEBUG */
@@ -2854,6 +2855,7 @@ int main(int argc, const char *argv[])
     doneAll();
     #ifndef NDEBUG
       Array_debug();
+      Array_debugDone();
       String_debug();
       String_debugDone();
     #endif /* not NDEBUG */
@@ -2868,6 +2870,7 @@ int main(int argc, const char *argv[])
     doneAll();
     #ifndef NDEBUG
       Array_debug();
+      Array_debugDone();
       String_debug();
       String_debugDone();
     #endif /* not NDEBUG */
@@ -2880,6 +2883,7 @@ int main(int argc, const char *argv[])
     doneAll();
     #ifndef NDEBUG
       Array_debug();
+      Array_debugDone();
       String_debug();
       String_debugDone();
     #endif /* not NDEBUG */
@@ -2894,6 +2898,7 @@ int main(int argc, const char *argv[])
     doneAll();
     #ifndef NDEBUG
       Array_debug();
+      Array_debugDone();
       String_debug();
       String_debugDone();
     #endif /* not NDEBUG */
@@ -2959,6 +2964,7 @@ int main(int argc, const char *argv[])
         doneAll();
         #ifndef NDEBUG
           Array_debug();
+          Array_debugDone();
           String_debug();
           String_debugDone();
         #endif /* not NDEBUG */
@@ -3280,6 +3286,7 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
 
   #ifndef NDEBUG
     Array_debug();
+    Array_debugDone();
     String_debug();
     String_debugDone();
   #endif /* not NDEBUG */
