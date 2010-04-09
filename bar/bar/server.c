@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -381,7 +381,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",        JobNode,jobOptions.directoryStripCount,         0,INT_MAX,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("destination",            JobNode,jobOptions.destination                  ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("owern",                  JobNode,jobOptions.cryptPassword,               configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("owner",                  JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
 
   CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",           JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
@@ -736,21 +736,22 @@ LOCAL void freeJobNode(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  String_delete(jobNode->runningInfo.message);
-  String_delete(jobNode->runningInfo.fileName);
-  String_delete(jobNode->runningInfo.storageName);
   Misc_performanceFilterDone(&jobNode->runningInfo.storageBytesPerSecond);
   Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecond);
   Misc_performanceFilterDone(&jobNode->runningInfo.filesPerSecond);
+
+  String_delete(jobNode->runningInfo.message);
+  String_delete(jobNode->runningInfo.storageName);
+  String_delete(jobNode->runningInfo.fileName);
 
   if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
   if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
   if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
 
+  freeJobOptions(&jobNode->jobOptions);
   List_done(&jobNode->scheduleList,NULL,NULL);
   PatternList_done(&jobNode->excludePatternList);
   EntryList_done(&jobNode->includeEntryList);
-  freeJobOptions(&jobNode->jobOptions);
   String_delete(jobNode->archiveName);
   String_delete(jobNode->name);
   String_delete(jobNode->fileName);
@@ -1046,10 +1047,10 @@ LOCAL bool readJobFile(JobNode *jobNode)
   }
 
   /* reset values */
+  String_clear(jobNode->archiveName);
   EntryList_clear(&jobNode->includeEntryList);
   PatternList_clear(&jobNode->excludePatternList);
   List_clear(&jobNode->scheduleList,NULL,NULL);
-  jobNode->archiveName                             = NULL;
   jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
   jobNode->jobOptions.archivePartSize              = 0LL;
   jobNode->jobOptions.incrementalListFileName      = NULL;
@@ -1060,13 +1061,14 @@ LOCAL bool readJobFile(JobNode *jobNode)
   jobNode->jobOptions.cryptAlgorithm               = CRYPT_ALGORITHM_NONE;
   jobNode->jobOptions.cryptType                    = CRYPT_TYPE_NONE;
   jobNode->jobOptions.cryptPasswordMode            = PASSWORD_MODE_DEFAULT;
-  jobNode->jobOptions.cryptPublicKeyFileName       = NULL;
-  jobNode->jobOptions.ftpServer.loginName          = NULL;
-  jobNode->jobOptions.ftpServer.password           = NULL;
+  String_clear(jobNode->jobOptions.cryptPublicKeyFileName);
+  String_clear(jobNode->jobOptions.ftpServer.loginName);
+  if (jobNode->jobOptions.ftpServer.password != NULL) Password_clear(jobNode->jobOptions.ftpServer.password);
   jobNode->jobOptions.sshServer.port               = 0;
-  jobNode->jobOptions.sshServer.loginName          = NULL;
-  jobNode->jobOptions.sshServer.publicKeyFileName  = NULL;
-  jobNode->jobOptions.sshServer.privateKeyFileName = NULL;
+  String_clear(jobNode->jobOptions.sshServer.loginName);
+  if (jobNode->jobOptions.sshServer.password != NULL) Password_clear(jobNode->jobOptions.sshServer.password);
+  String_clear(jobNode->jobOptions.sshServer.publicKeyFileName);
+  String_clear(jobNode->jobOptions.sshServer.privateKeyFileName);
   jobNode->jobOptions.device.volumeSize            = 0LL;
   jobNode->jobOptions.waitFirstVolumeFlag          = FALSE;
   jobNode->jobOptions.errorCorrectionCodesFlag     = FALSE;
@@ -1076,7 +1078,7 @@ LOCAL bool readJobFile(JobNode *jobNode)
   jobNode->jobOptions.overwriteFilesFlag           = FALSE;
 /*
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("owern",                  JobNode,jobOptions.cryptPassword,               configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("owner",                  JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",         JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
 
   CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",           JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
@@ -5232,6 +5234,7 @@ Errors Server_run(uint             port,
   serverJobsDirectory     = jobsDirectory;
   serverDefaultJobOptions = defaultJobOptions;
   List_init(&jobList);
+  Semaphore_init(&jobList.lock);
   List_init(&clientList);
   Semaphore_init(&serverStateLock);
   serverState             = SERVER_STATE_RUNNING;
@@ -5470,6 +5473,7 @@ Errors Server_run(uint             port,
   String_delete(clientName);
 
   /* wait for thread exit */
+  Semaphore_setEnd(&jobList.lock);
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);
@@ -5484,6 +5488,7 @@ Errors Server_run(uint             port,
   Thread_done(&jobThread);
   Semaphore_done(&serverStateLock);
   List_done(&clientList,(ListNodeFreeFunction)freeClientNode,NULL);
+  Semaphore_done(&jobList.lock);
   List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);
 
   return ERROR_NONE;
