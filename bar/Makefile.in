@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.65 $
+# $Revision: 1.66 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -108,7 +108,8 @@ clean: \
   clean_keys \
   clean_doc \
   clean_rpm \
-  clean_deb
+  clean_deb \
+  clean_debian_package
 	-$(MAKE) -C bar clean
 ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol clean
@@ -546,24 +547,24 @@ endif
 
 debian_package: \
   $(DISTRIBUTION_NAME).tar.bz2
-	$(INSTALL) -d debian_tmp
-	($(CD) debian_tmp; tar xjf ../$(DISTRIBUTION_NAME).tar.bz2)
-	($(CD) debian_tmp/$(DISTRIBUTION_NAME); $(LN) -s -f ../../debian)
-	($(CD) debian_tmp/$(DISTRIBUTION_NAME); dpkg-buildpackage -rfakeroot)
+	$(INSTALL) -d tmp/debian_package
+	($(CD) tmp/debian_package; tar xjf ../../$(DISTRIBUTION_NAME).tar.bz2)
+	($(CD) tmp/debian_package/$(DISTRIBUTION_NAME); $(LN) -s -f ../../../debian)
+	($(CD) tmp/debian_package/$(DISTRIBUTION_NAME); dpkg-buildpackage -rfakeroot)
         #
-	$(MV) debian_tmp/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.dsc .
-	$(MV) debian_tmp/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.changes .
-	$(MV) debian_tmp/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb .
-	$(MV) debian_tmp/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.tar.gz .
-	$(MV) debian_tmp/bar-gui_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb .
+	$(MV) tmp/debian_package/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.dsc .
+	$(MV) tmp/debian_package/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.changes .
+	$(MV) tmp/debian_package/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb .
+	$(MV) tmp/debian_package/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.tar.gz .
+	$(MV) tmp/debian_package/bar-gui_$(VERSION_MAJOR).$(VERSION_MINOR)-1_all.deb .
 
 clean_debian_package:
-	$(RMRF) debian_tmp
+	$(RMRF) tmp/debian_package
 	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.dsc
 	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.changes.dsc
 	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb
 	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.tar.gz
-	$(RMF) bar-gui_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb
+	$(RMF) bar-gui_$(VERSION_MAJOR).$(VERSION_MINOR)-1_all.deb
 
 # temporary debian install
 .PHONY: debian_install
@@ -604,12 +605,5 @@ ifeq ($(PLATFORM),Windows)
                    "$(prefix)/$(INSTALL_BIN_DIR)"
 endif
 endif
-
-# temporary debian install for documentation
-.PHONY: debian_install_doc
-debian_package_install_doc: \
-  $(MAN)
-	$(INSTALL) -d "$(prefix)/$(MAN_DIR)/7"
-	$(INSTALL) -m 644 doc/bar.7 "$(prefix)/$(MAN_DIR)/man7"
 
 # end of file
