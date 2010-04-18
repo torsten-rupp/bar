@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.64 $
+# $Revision: 1.65 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -17,8 +17,10 @@ PLATFORM        = @PLATFORM@
 
 #------------------------------------ paths ----------------------------------
 
+# Note: prefix is used for temporary installations
 INSTALL_DIR     = @INSTALL_DIR@
 INSTALL_BIN_DIR = @INSTALL_BIN_DIR@
+ETC_DIR         = /etc
 CONFIG_DIR      = @CONFIG_DIR@
 TLS_DIR         = @TLS_DIR@
 MAN_DIR         = @MAN_DIR@
@@ -35,6 +37,7 @@ TXT2MAN  = @TXT2MAN@
 #---------------------------------- commands----------------------------------
 
 CAT        = cat
+CD         = cd
 CHMOD      = chmod
 CP         = cp
 DIFF       = diff
@@ -43,6 +46,7 @@ ECHO_NO_LF = echo -n
 EPM        = @EPM@
 GREP       = grep
 INSTALL    = @INSTALL@
+LN         = ln
 MD5SUM     = @MD5SUM@
 MKDIR      = mkdir
 MV         = mv
@@ -94,6 +98,7 @@ SCRIPTS              = scripts/barserver-SuSE \
 #------------------------------ dependencies ---------------------------------
 
 .PHONY: all clean distclean
+
 all: \
   $(TARGETS) \
   $(MAN)\
@@ -109,7 +114,7 @@ ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol clean
 endif
 	$(RMRF) $(DISTRIBUTION_NAME)
-	$(RMF) $(DISTRIBUTION_NAME).tgz
+	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
 	$(RMRF) tmp
 
 distclean: clean
@@ -125,18 +130,23 @@ endif
 
 # ----------------------------------------------------------------------------
 
+# --- create main
+
 # create bar
 .PHONY: bar
+
 bar bar/bar:
 	$(MAKE) -C bar bar
 
 # create bar-keygen
 .PHONY: bar-keygen
+
 bar-keygen bar/bar-keygen:
 	$(MAKE) -C bar bar-keygen
 
 # create barcontrol
 .PHONY: barcontrol
+
 barcontrol barcontrol/barcontrol:
 ifeq ($(ENABLE_GUI),yes)
 	$(MAKE) -C barcontrol barcontrol
@@ -146,9 +156,12 @@ endif
 
 # ----------------------------------------------------------------------------
 
-# create SSL keys and certificates
+# --- create SSL keys and certificates
+
 .PHONY: keys clean_keys
-keys: $(KEY_FILES)
+
+keys: \
+  $(KEY_FILES)
 
 clean_keys:
 	$(RMF) $(KEY_FILES)
@@ -163,14 +176,13 @@ $(KEY_FILES):
 
 # ----------------------------------------------------------------------------
 
-# create documentation
-.PHONY: doc man clean_doc clean_man
+# --- create documentation
+
+.PHONY: doc clean_doc man clean_man showman
+
 doc: \
   doc/bar.7 \
   doc/bar.pdf
-
-man: \
-  doc/bar.7
 
 clean_doc:
 ifneq ($(TXT2MAN),)
@@ -180,17 +192,22 @@ ifneq ($(UNOCONV),)
 	$(RMF) doc/bar.pdf
 endif
 
+# create man-page
+
+man: \
+  doc/bar.7
+
 clean_man:
 	$(RMF) doc/bar.7
 
-doc/bar.7: doc/bar.txt
+doc/bar.7: \
+  doc/bar.txt
 ifneq ($(TXT2MAN),)
 	$(CAT) doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" > $@
 else
 	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."
 endif
 
-.PHONY: showman
 showman:
 ifneq ($(TXT2MAN),)
 	$(CAT) doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" -T
@@ -198,7 +215,10 @@ else
 	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."
 endif
 
-doc/bar.pdf: doc/bar.odt
+# create manual
+
+doc/bar.pdf: \
+  doc/bar.odt
 ifneq ($(UNOCONV),)
 	$(UNOCONV) -f pdf doc/bar.odt
 else
@@ -208,9 +228,17 @@ endif
 
 # ----------------------------------------------------------------------------
 
-# install/uninstall
-.PHONY: install install_keys uninstall
+# --- install/uninstall
+
+.PHONY: install install_base install_man install_keys uninstall
+
 install: \
+  install_base \
+  install_man \
+  install_keys
+
+# install base files
+install_base: \
   $(TARGETS) \
   $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
                                        $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar)) \
@@ -240,28 +268,25 @@ endif
         else \
           echo "$(DESTDIR)$(CONFIG_DIR)/bar.cfg NOT installed - file already exists!"; \
         fi
-ifeq ($(ENABLE_GUI),yes)
-	$(INSTALL) bar.jks "$(DESTDIR)$(CONFIG_DIR)"
-endif
 	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)/jobs"
-	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)"
-	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)/certs"
-	$(INSTALL) -m 644 bar-ca.pem "$(DESTDIR)$(TLS_DIR)/certs"
-	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(TLS_DIR)/certs"
-	$(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"
-	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(TLS_DIR)/private"
-	if test ! -f /etc/init.d/barserver; then \
-          if test -f /etc/SuSE-release; then \
-            $(INSTALL) -m 600 scripts/barserver-SuSE /etc/init.d/barserver; \
+	if test ! -f $(DESTDIR)$(ETC_DIR)/init.d/barserver; then \
+          $(INSTALL) -d "$(DESTDIR)$(ETC_DIR)/init.d"; \
+          if test -f $(ETC_DIR)/SuSE-release; then \
+            $(INSTALL) -m 600 scripts/barserver-SuSE "$(DESTDIR)$(ETC_DIR)/init.d/barserver"; \
           else \
-            $(INSTALL) -m 600 scripts/barserver-debian /etc/init.d/barserver; \
+            $(INSTALL) -m 600 scripts/barserver-debian "$(DESTDIR)$(ETC_DIR)/init.d/barserver"; \
           fi; \
         else \
-          echo "/etc/init.d/barserver NOT installed - file already exists!"; \
+          echo "$(ETC_DIR)/init.d/barserver NOT installed - file already exists!"; \
         fi
-	$(INSTALL) -d "$(MAN_DIR)/7"
-	$(INSTALL) -m 644 doc/bar.7 "$(MAN_DIR)/man7"
 
+# install man-page
+install_man: \
+  doc/bar.7
+	$(INSTALL) -d "$(DESTDIR)$(MAN_DIR)/7"
+	$(INSTALL) -m 644 doc/bar.7 "$(DESTDIR)$(MAN_DIR)/man7"
+
+# install keys
 install_keys: \
   $(KEY_FILES)
 	$(INSTALL) -d "$(DESTDIR)$(TLS_DIR)"
@@ -270,7 +295,11 @@ install_keys: \
 	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(TLS_DIR)/certs"
 	$(INSTALL) -d -m 700 "$(DESTDIR)$(TLS_DIR)/private"
 	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(TLS_DIR)/private"
+ifeq ($(ENABLE_GUI),yes)
+	$(INSTALL) bar.jks "$(DESTDIR)$(CONFIG_DIR)"
+endif
 
+# uninstall all
 uninstall:
 	@read -n 1 -p "Really uninstall? [y/N] " s; \
         if test "$s" = "y" -o "$s" = "Y"; then \
@@ -285,11 +314,13 @@ uninstall:
           $(RMF) "$(DESTDIR)$(TLS_DIR)/private/bar-server-key.pem"; \
           $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(CONFIG_DIR)/bar.jks"; \
           ) \
-          $(RMF) "/etc/init.d/barserver"; \
-          $(RMF) "$(MAN_DIR)/man7/bar.7"; \
+          $(RMF) "$(DESTDIR)$(ETC_DIR)/init.d/barserver"; \
+          $(RMF) "$(DESTDIR)$(MAN_DIR)/man7/bar.7"; \
         fi
 
 # ----------------------------------------------------------------------------
+
+# --- tests
 
 # run server
 .PHONY: barserver barserver_ssl
@@ -299,7 +330,7 @@ barserver:
 barserver_ssl:
 	@$(MAKE) -C bar barserver_ssl
 
-# do test
+# do tests
 .PHONY: test test1 test2 test3 test4 test5 testall
 test:
 	@$(MAKE) -C bar test
@@ -316,21 +347,54 @@ test5:
 test_all:
 	@$(MAKE) -C bar test_all
 
-.PHONY: memcheck memcheck1
+# memory checks
+.PHONY: memcheck memcheck1 memcheck_extended
 memcheck:
 	@$(MAKE) -C bar memcheck
 
-.PHONY: memcheck_extended
 memcheck_extended:
 	@$(MAKE) -C bar memcheck_extended
 
 # ----------------------------------------------------------------------------
 
-# create distribution
+# --- distribution
 .PHONY: dist $(DISTRIBUTION_NAME).tar.bz2
-dist: $(DISTRIBUTION_NAME).tar.bz2
 
+dist: \
+  $(DISTRIBUTION_NAME).tar.bz2
+
+# create distribution
 $(DISTRIBUTION_NAME).tar.bz2: \
+  $(TARGETS) \
+  \
+  configure \
+  configure.in \
+  Makefile.in \
+  epm.list.in \
+  version \
+  ToDo \
+  ChangeLog \
+  \
+  download-third-party-packages.sh \
+  $(OTHER_SOURCES) \
+  \
+  bin/config.guess \
+  bin/config.sub \
+  bin/install-sh \
+  bin/config.guess \
+  bin/config.sub bin/install-sh \
+  \
+  ssl/certtool/*.tmpl \
+  ssl/openssl/*.tmpl \
+  \
+  $(SCRIPTS) \
+  \
+  misc/*.patch \
+  \
+  doc/README \
+  doc/COPYING \
+  doc/bar.odt \
+  doc/*.txt \
   $(MAN)
 	$(INSTALL) -d $(DISTRIBUTION_NAME)
 	$(INSTALL) -m 775 \
@@ -400,15 +464,19 @@ endif
 
 # ----------------------------------------------------------------------------
 
+# packages
+
 # create RPM
 .PHONY: rpm clean_rpm
+
 rpm: \
   bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm
 
 clean_rpm:
 	$(RMF) bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm
 
-bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm: epm.list
+bar-$(VERSION_MAJOR).$(VERSION_MINOR).rpm: \
+  epm.list
 ifneq ($(EPM),)
 	$(INSTALL) -d tmp/package
 	$(EPM) \
@@ -428,7 +496,8 @@ else
 endif
 
 # create DEB
-.PHONY: deb
+.PHONY: deb clean_deb
+
 deb: \
   bar-$(VERSION_MAJOR).$(VERSION_MINOR).deb \
   bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).deb
@@ -471,5 +540,76 @@ endif
 else
 	@$(ECHO) "No EPM installed. Cannot create DEB package."
 endif
+
+# create x86 Debian FTP archive package
+.PHONY: debian_package clean_debian_package debian_package_install debian_package_install_gui
+
+debian_package: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	$(INSTALL) -d debian_tmp
+	($(CD) debian_tmp; tar xjf ../$(DISTRIBUTION_NAME).tar.bz2)
+	($(CD) debian_tmp/$(DISTRIBUTION_NAME); $(LN) -s -f ../../debian)
+	($(CD) debian_tmp/$(DISTRIBUTION_NAME); dpkg-buildpackage -rfakeroot)
+        #
+	$(MV) debian_tmp/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.dsc .
+	$(MV) debian_tmp/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.changes .
+	$(MV) debian_tmp/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb .
+	$(MV) debian_tmp/bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.tar.gz .
+	$(MV) debian_tmp/bar-gui_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb .
+
+clean_debian_package:
+	$(RMRF) debian_tmp
+	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.dsc
+	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.changes.dsc
+	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb
+	$(RMF) bar_$(VERSION_MAJOR).$(VERSION_MINOR)-1.tar.gz
+	$(RMF) bar-gui_$(VERSION_MAJOR).$(VERSION_MINOR)-1_i386.deb
+
+# temporary debian install
+.PHONY: debian_install
+debian_package_install: \
+  $(TARGETS) \
+  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
+                                       $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar)) \
+  ) \
+  $(SCRIPTS)
+	$(INSTALL) -d "$(prefix)/$(INSTALL_DIR)"
+	$(INSTALL) -d "$(prefix)/$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar/bar@EXEEXT@ "$(prefix)/$(INSTALL_BIN_DIR)"
+	$(INSTALL) -d "$(prefix)/$(CONFIG_DIR)"
+	$(INSTALL) -m 600 bar/bar.cfg "$(prefix)/$(CONFIG_DIR)"
+	$(INSTALL) -d "$(prefix)/$(CONFIG_DIR)/jobs"
+	$(INSTALL) -d "$(prefix)/$(ETC_DIR)/init.d"
+	$(INSTALL) -m 600 scripts/barserver-debian "$(prefix)/$(ETC_DIR)/init.d/barserver"
+
+# temporary debian install for GUI tools
+.PHONY: debian_install_gui
+debian_package_install_gui: \
+  $(TARGETS) \
+  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
+                                       $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar)) \
+  ) \
+  $(SCRIPTS)
+	$(INSTALL) -d "$(prefix)/$(INSTALL_BIN_DIR)"
+ifeq ($(ENABLE_GUI),yes)
+ifeq ($(PLATFORM),Linux)
+	$(INSTALL) barcontrol/barcontrol \
+                   barcontrol/barcontrol-linux.jar \
+                   "$(prefix)/$(INSTALL_BIN_DIR)"
+endif
+ifeq ($(PLATFORM),Windows)
+	$(INSTALL) $(if $(LAUNCH4J),barcontrol/barcontrol.exe,\
+                                    barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar \
+                    ) \
+                   "$(prefix)/$(INSTALL_BIN_DIR)"
+endif
+endif
+
+# temporary debian install for documentation
+.PHONY: debian_install_doc
+debian_package_install_doc: \
+  $(MAN)
+	$(INSTALL) -d "$(prefix)/$(MAN_DIR)/7"
+	$(INSTALL) -m 644 doc/bar.7 "$(prefix)/$(MAN_DIR)/man7"
 
 # end of file
