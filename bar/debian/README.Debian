@@ -1,0 +1,7 @@
+BAR for Debian
+--------------
+
+BAR for Debian is separated into two packages: the command line tools
+(bar) and the GUI front end (barcontrol).
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 10 Apr 2010 17:46:24 +0900
