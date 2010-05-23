@@ -1,3 +1,8 @@
+2010-05-23 0.13b
+  * fix on-the-fly compiling of libgcrypt: use provided libgpg-error
+    instead of system-libraries (which may not exists)
+  * fixed and improved download of zlib: download recent version
+
 2010-04-10 0.13a
   * fix typing error in "owner"
   * fix wrong parsing of "owner" in server
