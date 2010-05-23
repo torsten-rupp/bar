@@ -6803,7 +6803,7 @@ $as_echo "done" >&6; }
 
     result2=1
     if test $result2 -eq 1; then
-      (cd libgcrypt; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
+      (cd libgcrypt; ./configure --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:$LINENO: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
