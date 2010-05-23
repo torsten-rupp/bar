@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/download-third-party-packages.sh,v $
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # $Author: torsten $
 # Contents: download third-party packages
 # Systems: Unix
@@ -156,18 +156,21 @@ fi
 tmpDirectory="packages"
 cwd=`pwd`
 if test $cleanFlag -eq 0; then
+  # download
   $MKDIR $tmpDirectory 2>/dev/null
 
   if test $allFlag -eq 1 -o $zlibFlag -eq 1; then
-    # zlib 1.2.4
+    # zlib
     (
      cd $tmpDirectory
-     if test ! -f zlib-1.2.4.tar.gz; then
-       $WGET 'http://www.zlib.net/zlib-1.2.4.tar.gz'
+     fileName=`ls zlib-*.tar.gz 2>/dev/null`
+     if test ! -f "$fileName"; then
+       fileName=`wget --quiet -O - 'http://www.zlib.net'|grep -E -e 'http://zlib.net/zlib-.*\.tar\.gz'|head -1|sed 's|.*http://zlib.net/\(.*\.tar\.gz\)".*|\1|g'`     
+       $WGET "http://www.zlib.net/$fileName"
      fi
-     $TAR xzf zlib-1.2.4.tar.gz
+     $TAR xzf $fileName
     )
-    $LN -f -s $tmpDirectory/zlib-1.2.4 zlib
+    $LN -f -s `find $tmpDirectory -type d -name "zlib-*"` zlib
   fi
 
   if test $allFlag -eq 1 -o $bzip2Flag -eq 1; then
@@ -188,7 +191,7 @@ if test $cleanFlag -eq 0; then
      cd $tmpDirectory
      fileName=`ls xz-*.tar.gz 2>/dev/null`
      if test ! -f "$fileName"; then
-       fileName=`wget --quiet -O - 'http://tukaani.org/xz'|grep -E -e 'xz-.*\.tar\.gz'|sed 's|.*href="\(xz.*\.tar\.gz\)".*|\1|g'`     
+       fileName=`wget --quiet -O - 'http://tukaani.org/xz'|grep -E -e 'xz-.*\.tar\.gz'|head -1|sed 's|.*href="\(xz.*\.tar\.gz\)".*|\1|g'`     
        $WGET "http://tukaani.org/xz/$fileName"
      fi
      $TAR xzf $fileName
@@ -266,6 +269,13 @@ if test $cleanFlag -eq 0; then
     $LN -f -s $tmpDirectory/epm-4.1 epm
   fi
 else
+  # clean
+
+  # zlib
+  $RMF $tmpDirectory/zlib-*.tar.gz
+  $RMRF $tmpDirectory/zlib-*
+  $RMF zlib
+
   # bzip2
   $RMF $tmpDirectory/bzip2-*.tar.gz
   $RMRF $tmpDirectory/bzip2-*
