@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.26 $
+# $Revision: 1.27 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -416,6 +416,7 @@ test_file_base: bar
 	$(RMRF) $(TEST_FILES)
 	SSH_ASKPASS= ./bar -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= ./bar -l test/test*.bar -# '*rand*' -! '*512*' $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
@@ -435,6 +436,7 @@ test_file_destroy test_file_base_destroy: bar destroyer
 	SSH_ASKPASS= ./bar -c test/$(if $(BAR_FILE),$(BAR_FILE),test).bar test/data/zero1024.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	./destroyer test/test.bar m:0 > test/test.bar_destroyed
 	SSH_ASKPASS= ./bar -l test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= ./bar -l test/test.bar_destroyed -# '*rand*' -! '*512*' $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -t test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -d test/test.bar_destroyed $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -x test/test.bar_destroyed $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
