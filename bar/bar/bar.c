@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -110,7 +110,7 @@ typedef enum
 GlobalOptions       globalOptions;
 String              tmpDirectory;
 
-LOCAL Commands      command;
+LOCAL Commands      command = COMMAND_CREATE_FILES;
 
 LOCAL JobOptions    jobOptions;
 LOCAL FTPServerList ftpServerList;
@@ -976,8 +976,18 @@ LOCAL bool cmdOptionParseEntry(void *userData, void *variable, const char *name,
   entryType = ENTRY_TYPE_FILE;
   switch (command)
   {
-    case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
-    case COMMAND_CREATE_IMAGES: entryType = ENTRY_TYPE_IMAGE; break;
+    case COMMAND_CREATE_FILES:
+    case COMMAND_LIST:
+    case COMMAND_TEST:
+    case COMMAND_COMPARE:
+    case COMMAND_RESTORE:
+    case COMMAND_GENERATE_KEYS:
+    case COMMAND_NEW_KEY_PASSWORD:
+      entryType = ENTRY_TYPE_FILE;
+      break;
+    case COMMAND_CREATE_IMAGES:
+      entryType = ENTRY_TYPE_IMAGE;
+      break;
     default:
       HALT_INTERNAL_ERROR("no valid command set");
       break;
