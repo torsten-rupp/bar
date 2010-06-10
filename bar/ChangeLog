@@ -1,7 +1,14 @@
+2010-06-10 0.13c
+  * fix bar-keygen: wrong template file names
+  * fix some typing errors in manual
+
 2010-05-23 0.13b
+  * fix assert-error in options -#/-!
+  * improved test of file functions (added -#, -!)
   * fix on-the-fly compiling of libgcrypt: use provided libgpg-error
     instead of system-libraries (which may not exists)
   * fixed and improved download of zlib: download recent version
+  * small fixes in manual
 
 2010-04-10 0.13a
   * fix typing error in "owner"

@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # $Author: torsten $
 # Contents: generate BAR server keys (PEM files)
 # Systems: Unix
@@ -460,7 +460,7 @@ if   test $CERTTOOL_OK -eq 1; then
 elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     genrsa \
-    -out $privateDir/bar-key.pem \
+    -out "$privateDir/bar-key.pem" \
     1024 \
     1>$stdout 2>$stderr
   rc=$?
@@ -478,8 +478,8 @@ print "Create '$certsDir/bar-ca.pem'..."
 if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-self-signed \
-    --template $tmpDir/ca.tmpl \
-    --load-privkey $privateDir/bar-key.pem \
+    --template "$tmpDir/ca.tmpl" \
+    --load-privkey "$privateDir/bar-key.pem" \
     --outfile "$certsDir/bar-ca.pem" \
     1>$stdout 2>$stderr
   rc=$?
@@ -487,8 +487,8 @@ elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     req \
     -new \
-    -config ssl/openssl/ca.tmpl \
-    -key bar-key.pem \
+    -config "$tmpDir/ca.tmpl" \
+    -key "$privateDir/bar-key.pem" \
     -x509 \
     -nodes \
     -out "$certsDir/bar-ca.pem" \
@@ -542,7 +542,7 @@ if   test $CERTTOOL_OK -eq 1; then
 elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     req \
-    -config ssl/openssl/server.tmpl \
+    -config $tmpDir/server.tmpl \
     -new \
     -key "$privateDir/bar-server-key.pem" \
     -x509 \

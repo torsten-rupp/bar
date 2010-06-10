@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/download-third-party-packages.sh,v $
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # $Author: torsten $
 # Contents: download third-party packages
 # Systems: Unix
@@ -146,7 +146,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [--clean] [--help] [all] [zlib] [bzip2] [lzma] [gcrypt] [ftplib] [libssh2] [gnutls]"
+  $ECHO "download-third-party-packages.sh [--clean] [--help] [all] [zlib] [bzip2] [lzma] [gcrypt] [ftplib] [libssh2] [gnutls] [epm]"
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
