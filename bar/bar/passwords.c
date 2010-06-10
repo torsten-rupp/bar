@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/passwords.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: functions for secure storage of passwords
 * Systems: all
@@ -455,7 +455,7 @@ void Password_undeploy(Password *password)
 
 bool Password_input(Password   *password,
                     const char *title,
-                    uint           modes
+                    uint       modes
                    )
 {
   bool okFlag;
