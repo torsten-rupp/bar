@@ -4,7 +4,7 @@
   * fix bar-keygen: create bar.jsk in /etc/bar by default
   * improved bar-keygen: check if keys exists, add option --force
   * improved BAR server: additionall check /etc/ssl/private for
-    bar.jsk
+    bar.jks
   * fix some typing errors in manual
   * fix Makefile of barcontrol: SWT JAR version
 
