@@ -1,6 +1,12 @@
-2010-06-10 0.13c
-  * fix bar-keygen: wrong template file names
+2010-06-11 0.13c
+  * fix bar-keygen which caused broken Debian package: wrong template
+    file names
+  * fix bar-keygen: create bar.jsk in /etc/bar by default
+  * improved bar-keygen: check if keys exists, add option --force
+  * improved BAR server: additionall check /etc/ssl/private for
+    bar.jsk
   * fix some typing errors in manual
+  * fix Makefile of barcontrol: SWT JAR version
 
 2010-05-23 0.13b
   * fix assert-error in options -#/-!
