@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Config.java.in,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Java configuration file
 * Systems: all
@@ -20,6 +20,7 @@ public class Config
 
   public static final String INSTALL_DIR   = "@INSTALL_DIR@";
   public static final String CONFIG_DIR    = "@CONFIG_DIR@";
+  public static final String TLS_DIR       = "@TLS_DIR@";
 
   // --------------------------- variables --------------------------------
 
