@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.66 $
+# $Revision: 1.67 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -172,8 +172,10 @@ $(KEY_FILES):
 	bar/bar-keygen \
           --private-directory=. \
           --certs-directory=. \
+          --java-private-directory=. \
           $(if $(findstring $(KEYTOOL),certtool),--certtool) \
           $(if $(findstring $(KEYTOOL),openssl),--openssl) \
+          --force \
 
 # ----------------------------------------------------------------------------
 

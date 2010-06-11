@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.27 $
+# $Revision: 1.28 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -266,8 +266,8 @@ bar-keygen: bar-keygen.in
             elif test "$$line" = "@OPENSSL/SERVER.TEMPL@"; then \
               $(CAT) ../ssl/openssl/server.tmpl; \
             else \
-              line=`$(ECHO) "$$line"|$(SED) 's|\@DESTDIR\@|$(DESTDIR)|g'`; \
-              line=`$(ECHO) "$$line"|$(SED) 's|\@TLS_DIR\@|$(TLS_DIR)|g'`; \
+              line=`$(ECHO) "$$line"|$(SED) 's|\@TLS_DIR\@|$(DESTDIR)$(TLS_DIR)|g'`; \
+              line=`$(ECHO) "$$line"|$(SED) 's|\@CONFIG_DIR\@|$(DESTDIR)$(CONFIG_DIR)|g'`; \
               $(ECHO) "$$line"; \
             fi; \
           done; \

@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # $Author: torsten $
 # Contents: generate BAR server keys (PEM files)
 # Systems: Unix
@@ -36,6 +36,7 @@ RMRF="rm -rf"
 SED="sed"
 
 # directories
+DEFAULT_CONFIG_DIR="@CONFIG_DIR@"
 DEFAULT_TLS_DIR="@TLS_DIR@"
 
 # exit codes
@@ -60,10 +61,12 @@ EXITCODE_UNKNOWN=127
 tlsDir="$DEFAULT_TLS_DIR"
 privateDir=""
 certsDir=""
+javaPrivateDir="$DEFAULT_CONFIG_DIR"
 
 # flags
 certtoolFlag=0
 opensslFlag=0
+forceFlag=0
 quietFlag=0
 debugFlag=0
 
@@ -223,12 +226,14 @@ printUsage()
   $CAT << EOT
 Usage: $PROGRAM_NAME [...] [--]...
 
-Options: -d|--tls-directory=<path>  - TLS directory (default: $DEFAULT_TLS_DIR)
-         --private-directory=<path> - directory for private keys
-         --certs-directory=<path>   - directory for certicates
-         --certtool                 - use certtool to generate keys
-         --openssl                  - use openssl to generate keys
-         -h|--help                  - print this help
+Options: -d|--tls-directory=<path>       - TLS directory (default: $DEFAULT_TLS_DIR)
+         --private-directory=<path>      - directory for private keys (default: <TLS directory>/private)
+         --certs-directory=<path>        - directory for certicates (default: <TLS directory>/certs)
+         --java-private-directory=<path> - directory for certicates (default: $DEFAULT_CONFIG_DIR)
+         -f|--force                      - force overwriting existing keys
+         --certtool                      - use certtool to generate keys
+         --openssl                       - use openssl to generate keys
+         -h|--help                       - print this help
 EOT
 }
 
@@ -269,6 +274,15 @@ while test $# != 0; do
       shift
       shift
       ;;
+    --java-private-directory=* | --java-private-dir=*)
+      javaPrivateDir=`$ECHO "$1" | $SED 's/^[^=]*=\(.*\)$/\1/g'`
+      shift
+      ;;
+    --java-private-directory | --java-private-dir)
+      javaPrivateDir=$2
+      shift
+      shift
+      ;;
     --certtool=*)
       certtoolFlag=`$ECHO "$1" | sed 's/^[^=]*=\(.*\)$/\1/g'`
       shift
@@ -283,6 +297,14 @@ while test $# != 0; do
       ;;
     --openssl)
       opensslFlag=1
+      shift
+      ;;
+    -f=* | --force=*)
+      forceFlag=`$ECHO "$1" | sed 's/^[^=]*=\(.*\)$/\1/g'`
+      shift
+      ;;
+    -f | --force)
+      forceFlag=1
       shift
       ;;
     --quiet=*)
@@ -332,7 +354,14 @@ while test $# != 0; do
 done
 
 # check arguments
-## exit $EXITCODE_INVALID_ARGUMENT
+if test -z "$tlsDir"; then
+  printError "No TLS directory given!"
+  exit $EXITCODE_INVALID_ARGUMENT
+fi
+if test -z "$javaPrivateDir"; then
+  printError "No BAR Java private directory given!"
+  exit $EXITCODE_INVALID_ARGUMENT
+fi
 
 # check keytools
 $CERTTOOL --help 1>/dev/null 2>/dev/null
@@ -375,6 +404,45 @@ else
 fi
 if test $KEYTOOL_OK -ne 1; then
   printWarning "'$KEYTOOL' not found or not executable - cannot create Java key."
+fi
+
+# get directory names
+if test -z "$privateDir"; then
+  privateDir="$tlsDir/private"
+fi
+if test -z "$certsDir"; then
+  certsDir="$tlsDir/certs"
+fi
+
+# get key file names
+barKey="$privateDir/bar-key.pem"
+barCA="$certsDir/bar-ca.pem"
+barServerKey="$privateDir/bar-server-key.pem"
+barServerCert="$certsDir/bar-server-cert.pem"
+barJKS="$javaPrivateDir/bar.jks"
+
+# check if keys already exists
+if test $forceFlag -eq 0; then
+  if test -f "$barKey"; then
+    println "'$barKey' already exists! Use option --force to overwrite existing keys."
+    exit $EXITCODE_OK
+  fi
+  if test -f "$barCA"; then
+    println "'$barCA' already exists! Use option --force to overwrite existing keys."
+    exit $EXITCODE_OK
+  fi
+  if test -f "$barServerKey"; then
+    println "'$barServerKey' already exists! Use option --force to overwrite existing keys."
+    exit $EXITCODE_OK
+  fi
+  if test -f "$barServerCert"; then
+    println "'$barServerCert' already exists! Use option --force to overwrite existing keys."
+    exit $EXITCODE_OK
+  fi
+  if test -f "$barJKS"; then
+    println "'$barJKS' already exists! Use option --force to overwrite existing keys."
+    exit $EXITCODE_OK
+  fi
 fi
 
 # run main
@@ -426,61 +494,51 @@ if test -n "$tlsDir"; then
     fi
   fi
 fi
-if test -n "$privateDir"; then
-  if test ! -d "$privateDir"; then
-    $INSTALL -d "$privateDir"
-    if test $? -ne 0; then
-      exit $EXITCODE_CREATE_DIRECTORY_FAIL
-    fi
+if test ! -d "$privateDir"; then
+  $INSTALL -d "$privateDir"
+  if test $? -ne 0; then
+    exit $EXITCODE_CREATE_DIRECTORY_FAIL
   fi
 fi
-if test -n "$certsDir"; then
-  if test ! -d "$certsDir"; then
-    $INSTALL -d "$certsDir"
-    if test $? -ne 0; then
-      exit $EXITCODE_CREATE_DIRECTORY_FAIL
-    fi
+if test ! -d "$certsDir"; then
+  $INSTALL -d "$certsDir"
+  if test $? -ne 0; then
+    exit $EXITCODE_CREATE_DIRECTORY_FAIL
   fi
-fi
-if test -z "$privateDir"; then
-  privateDir="$tlsDir/private"
-fi
-if test -z "$certsDir"; then
-  certsDir="$tlsDir/certs"
 fi
 
 # create bar-key.pem
-print "Create '$privateDir/bar-key.pem'..."
+print "Create '$barKey'..."
 if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-privkey \
-    --outfile "$privateDir/bar-key.pem" \
+    --outfile "$barKey" \
     1>$stdout 2>$stderr
   rc=$?
 elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     genrsa \
-    -out "$privateDir/bar-key.pem" \
+    -out "$barKey" \
     1024 \
     1>$stdout 2>$stderr
   rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
-  printError "Cannot create BAR key '$privateDir/bar-key.pem' (exitcode: $rc)"
+  printError "Cannot create BAR key '$barKey' (exitcode: $rc)"
   catStderr $stderr
   exit $EXITCODE_CREATE_KEY_FAIL
 fi
 println "OK"
 
 # create bar-ca.pem
-print "Create '$certsDir/bar-ca.pem'..."
+print "Create '$barCA'..."
 if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-self-signed \
     --template "$tmpDir/ca.tmpl" \
-    --load-privkey "$privateDir/bar-key.pem" \
-    --outfile "$certsDir/bar-ca.pem" \
+    --load-privkey "$barKey" \
+    --outfile "$barCA" \
     1>$stdout 2>$stderr
   rc=$?
 elif test $OPENSSL_OK -eq 1; then
@@ -488,55 +546,55 @@ elif test $OPENSSL_OK -eq 1; then
     req \
     -new \
     -config "$tmpDir/ca.tmpl" \
-    -key "$privateDir/bar-key.pem" \
+    -key "$barKey" \
     -x509 \
     -nodes \
-    -out "$certsDir/bar-ca.pem" \
+    -out "$barCA" \
     1>$stdout 2>$stderr
   rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
-  printError "Cannot create BAR authority certficate '$certsDir/bar-ca.pem' (exitcode: $rc)"
+  printError "Cannot create BAR authority certficate '$barCA' (exitcode: $rc)"
   catStderr $stderr
   exit $EXITCODE_CREATE_KEY_FAIL
 fi
 println "OK"
 
 # create bar-server-key.pem
-print "Create '$privateDir/bar-server-key.pem'..."
+print "Create '$barServerKey'..."
 if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-privkey \
-    --outfile "$privateDir/bar-server-key.pem" \
+    --outfile "$barServerKey" \
     1>$stdout 2>$stderr
   rc=$?
 elif test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     genrsa \
-    -out "$privateDir/bar-server-key.pem" \
+    -out "$barServerKey" \
     1024 \
     1>$stdout 2>$stderr
   rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
-  printError "Cannot create BAR server key '$privateDir/bar-server-key.pem (exitcode: $rc)"
+  printError "Cannot create BAR server key '$barServerKey' (exitcode: $rc)"
   catStderr $stderr
   exit $EXITCODE_CREATE_KEY_FAIL
 fi
 println "OK"
 
 # create bar-server-cert.pem
-print "Create '$certsDir/bar-server-cert.pem'..."
+print "Create '$barServerCert'..."
 if   test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-certificate \
     --template $tmpDir/server.tmpl \
-    --load-privkey "$privateDir/bar-server-key.pem" \
-    --load-ca-certificate "$certsDir/bar-ca.pem" \
-    --load-ca-privkey "$privateDir/bar-key.pem" \
-    --outfile "$certsDir/bar-server-cert.pem" \
+    --load-privkey "$barServerKey" \
+    --load-ca-certificate "$barCA" \
+    --load-ca-privkey "$barKey" \
+    --outfile "$barServerCert" \
     1>$stdout 2>$stderr
   rc=$?
 elif test $OPENSSL_OK -eq 1; then
@@ -544,16 +602,16 @@ elif test $OPENSSL_OK -eq 1; then
     req \
     -config $tmpDir/server.tmpl \
     -new \
-    -key "$privateDir/bar-server-key.pem" \
+    -key "$barServerKey" \
     -x509 \
     -nodes \
-    -out "$certsDir/bar-server-cert.pem" \
+    -out "$barServerCert" \
     1>$stdout 2>$stderr
   rc=$?
 fi
 if test $rc -ne 0; then
   println "FAIL"
-  printError "Cannot create BAR server certificate '$certsDir/bar-server-cert.pem' (exitcode: $rc)"
+  printError "Cannot create BAR server certificate '$barServerCert' (exitcode: $rc)"
   catStderr $stderr
   exit $EXITCODE_CREATE_KEY_FAIL
 fi
@@ -561,21 +619,21 @@ println "OK"
 
 # create Java key
 if test $KEYTOOL_OK -eq 1; then
-  print "Create '$privateDir/bar.jks'..."
-  $RMF $privateDir/bar.jks
+  print "Create '$barJKS'..."
+  $RMF $barJKS
   $KEYTOOL \
     -import \
     -trustcacerts \
     -keypass not_needed \
     -storepass not_needed \
     -noprompt \
-    -file "$certsDir/bar-server-cert.pem" \
-    -keystore "$privateDir/bar.jks" \
+    -file "$barServerCert" \
+    -keystore "$barJKS" \
     1>$stdout 2>$stderr
   rc=$?
   if test $rc -ne 0; then
     println "FAIL"
-    printError "Cannot create BAR Java key '$privateDir/bar.jks' (exitcode: $rc)"
+    printError "Cannot create BAR Java key '$barJKS' (exitcode: $rc)"
     catStderr $stderr
     exit $EXITCODE_CREATE_KEY_FAIL
   fi
