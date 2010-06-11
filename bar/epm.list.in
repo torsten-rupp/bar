@@ -34,57 +34,58 @@ $tlsdir=@TLS_DIR@
 # executables
 %system all
 %ifdef     PACKAGE_CMD
-f 0555 root sys ${bindir}/bar bar/bar
-f 0555 root sys ${bindir}/bar-keygen bar/bar-keygen
+f 0755 root sys ${bindir}/bar bar/bar
+f 0755 root sys ${bindir}/bar-keygen bar/bar-keygen
 %elseifdef PACKAGE_GUI
-f 0555 root sys ${bindir}/barcontrol barcontrol/barcontrol
-f 0444 root sys ${bindir}/barcontrol-linux.jar barcontrol/barcontrol-linux.jar
+f 0755 root sys ${bindir}/barcontrol barcontrol/barcontrol
+f 0644 root sys ${bindir}/barcontrol-linux.jar barcontrol/barcontrol-linux.jar
 %endif
 
 # configuration
 %system all
 %ifdef     PACKAGE_CMD
-f 0444 root sys ${configdir}/bar.cfg bar/bar.cfg
+f 0600 root sys ${configdir}/bar.cfg bar/bar.cfg
 %elseifdef PACKAGE_GUI
-f 0444 root sys ${configdir}/barcontrol.cfg barcontrol/barcontrol.cfg
+f 0600 root sys ${configdir}/barcontrol.cfg barcontrol/barcontrol.cfg
 %endif
-d 0555 root sys ${configdir}/jobs
+d 0755 root sys ${configdir}/jobs
 
 # documentation
 %system all
 %ifdef PACKAGE_CMD
-f 0444 root sys ${docdir}/README doc/README
-f 0444 root sys ${docdir}/COPYING doc/COPYING
-f 0444 root sys ${docdir}/bar.7 doc/bar.7
-f 0444 root sys ${docdir}/bar.pdf doc/bar.pdf
-f 0444 root sys ${docdir}/quickstart.txt doc/quickstart.txt
+f 0644 root sys ${docdir}/README doc/README
+f 0644 root sys ${docdir}/COPYING doc/COPYING
+f 0644 root sys ${docdir}/bar.7 doc/bar.7
+f 0644 root sys ${docdir}/bar.pdf doc/bar.pdf
+f 0644 root sys ${docdir}/quickstart.txt doc/quickstart.txt
 %endif
 
 # man pages
 %system all
 %ifdef PACKAGE_CMD
-f 0444 root sys ${mandir}/man7/bar.7 doc/bar.7
+f 0644 root sys ${mandir}/man7/bar.7 doc/bar.7
 %endif
 
 # startup scripts
 %system linux
 %ifdef PACKAGE_CMD
 %format rpm
-f 0555 root sys /etc/init.d/barserver scripts/barserver-SuSE
+f 0755 root sys /etc/init.d/barserver scripts/barserver-SuSE
 %format deb
-f 0555 root sys /etc/init.d/barserver scripts/barserver-debian
+f 0755 root sys /etc/init.d/barserver scripts/barserver-debian
 %endif
 
 # create keys
 %ifdef PACKAGE_CMD
 %postinstall <<EOT
-  bar-keygen --tls-directory=$tlsdir
+  bar-keygen --tls-directory=$tlsdir --java-private-directory=$configdir --quiet
 EOT
 %endif
 
 # uninstall
 %ifdef PACKAGE_CMD
 %preremove <<EOT
+  rm -f $configdir/bar.jks
   rm -f $tlsdir/private/bar-key.pem
   rm -f $tlsdir/private/bar-server-key.pem
   rm -f $tlsdir/certs/bar-ca.pem
