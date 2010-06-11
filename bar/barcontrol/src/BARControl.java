@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -13,6 +13,7 @@
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -677,6 +678,10 @@ public class BARControl
       catch (java.security.KeyStoreException exception)
       {
         throw new Error(exception.getMessage());
+      }
+      catch (FileNotFoundException exception)
+      {
+        throw new Error("JKS file '"+serverKeyFileName+"' not found");
       }
       catch (IOException exception)
       {
