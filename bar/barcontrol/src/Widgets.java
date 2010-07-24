@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -48,7 +48,9 @@ import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Sash;
+import org.eclipse.swt.widgets.Scale;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Slider;
 import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.TabItem;
@@ -423,6 +425,26 @@ class WidgetListener
       }
       ((Spinner)control).setSelection(n);
     }
+    else if (control instanceof Slider)
+    {
+      int n = 0;
+      switch (variable.getType())
+      {
+        case LONG:   n = (int)variable.getLong(); break; 
+        case DOUBLE: n = (int)variable.getDouble(); break; 
+      }
+      ((Slider)control).setSelection(n);
+    }
+    else if (control instanceof Scale)
+    {
+      int n = 0;
+      switch (variable.getType())
+      {
+        case LONG:   n = (int)variable.getLong(); break; 
+        case DOUBLE: n = (int)variable.getDouble(); break; 
+      }
+      ((Scale)control).setSelection(n);
+    }
     else if (control instanceof ProgressBar)
     {
       double value = 0;
@@ -497,13 +519,28 @@ class Widgets
    * @param style SWT style flags
    * @param rowSpawn,columnSpan row/column spawn (0..n)
    * @param padX,padY padding X/Y
+   * @param width,height width/height
    * @param minWidth,minHeight min. width/height
    * @param maxWidth,maxHeight max. width/height
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int minWidth, int minHeight, int maxWidth, int maxHeight)
+  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight, int maxWidth, int maxHeight)
   {
-    TableLayoutData tableLayoutData = new TableLayoutData(row,column,style,rowSpawn,columnSpawn,padX,padY,minWidth,minHeight,maxWidth,maxHeight);
+    TableLayoutData tableLayoutData = new TableLayoutData(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,minWidth,minHeight,maxWidth,maxHeight);
     control.setLayoutData(tableLayoutData);
+  }
+
+  /** layout widget
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
+   * @param rowSpawn,columnSpan row/column spawn (0..n)
+   * @param padX,padY padding X/Y
+   * @param width,height width/height
+   * @param minWidth,minHeight min. width/height
+   */
+  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight)
+  {
+    layout(control,row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,minWidth,minHeight,SWT.DEFAULT,SWT.DEFAULT);
   }
 
   /** layout widget
@@ -991,7 +1028,7 @@ class Widgets
     Button button;
 
     button = new Button(composite,SWT.CHECK);
-    button.setText(text);
+    if (text != null) button.setText(text);
     button.addSelectionListener(new SelectionListener()
     {
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -1028,6 +1065,15 @@ class Widgets
   static Button newCheckbox(Composite composite, String text)
   {
     return newCheckbox(composite,text,null,null);
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @return new checkbox button
+   */
+  static Button newCheckbox(Composite composite)
+  {
+    return newCheckbox(composite,null);
   }
 
   /** create new radio button
@@ -1208,7 +1254,7 @@ class Widgets
     {
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget = (Button)selectionEvent.widget;
+        Combo widget = (Combo)selectionEvent.widget;
         setField(data,field,widget.getSelection());
       }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1705,7 +1751,7 @@ class Widgets
 
   /** update table entry
    * @param table table
-   * @param table entry data
+   * @param data entry data
    * @param values values list
    */
   static void updateTableEntry(final Table table, final Object data, final Object... values)
@@ -2312,14 +2358,27 @@ private static void printTree(Tree tree)
 
   /** create new pane widget
    * @param composite composite widget
-   * @param style 
+   * @param style style
+   * @param prevPane previous pane
    * @return new pane widget
    */
   static Pane newPane(Composite composite, int style, Pane prevPane)
   {    
-    Pane sash = new Pane(composite,style,prevPane);
+    Pane pane = new Pane(composite,style,prevPane);
 
-    return sash;
+    return pane;
+  }
+
+  /** create new pane widget
+   * @param composite composite widget
+   * @param style style
+   * @return new pane widget
+   */
+  static Pane newPane(Composite composite, int style)
+  {    
+    Pane pane = new Pane(composite,style,null);
+
+    return pane;
   }
 
   /** create new tab folder
@@ -2383,6 +2442,30 @@ private static void printTree(Tree tree)
     canvas.setLayout(new TableLayout(0.0,0.0,0));
 
     return canvas;
+  }
+
+  /** new slider widget
+   * @param composite composite widget
+   * @param style style
+   * @return new group widget
+   */
+  static Slider newSlider(Composite composite, int style)
+  {
+    Slider slider = new Slider(composite,style);
+
+    return slider;
+  }
+
+  /** new scale widget
+   * @param composite composite widget
+   * @param style style
+   * @return new group widget
+   */
+  static Scale newScale(Composite composite, int style)
+  {
+    Scale scale = new Scale(composite,style);
+
+    return scale;
   }
 
   /** create new menu bar
@@ -2764,6 +2847,22 @@ private static void printTree(Tree tree)
     clipboard.setContents(new Object[]{text},new Transfer[]{TextTransfer.getInstance()});
   }
 
+  /** set clipboard with text lines
+   * @param clipboard clipboard
+   * @param texts text lines
+   */
+  public static void setClipboard(Clipboard clipboard, String texts[])
+  {
+    StringBuffer buffer = new StringBuffer();
+    String lineSeparator = System.getProperty("line.separator");
+    for (String text : texts)
+    {
+      buffer.append(text);
+      buffer.append(lineSeparator);
+    }
+    setClipboard(clipboard,buffer.toString());
+  }
+
   /** set clipboard with text from label
    * @param clipboard clipboard
    * @param label label
@@ -2848,6 +2947,10 @@ private static void printTree(Tree tree)
           else if (control instanceof Table)
           {
             setClipboard(clipboard,((Table)control).getSelection());
+          }
+          else if (control instanceof List)
+          {
+            setClipboard(clipboard,((List)control).getSelection());
           }
         }
       }
