@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -860,7 +860,7 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
                                String       fileName
                               )
 {
-  ulong  nextIndex;
+  long   nextIndex;
   String s;
 
   assert(ftpSpecifier != NULL);
@@ -899,7 +899,7 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
                                String       fileName
                               )
 {
-  ulong nextIndex;
+  long nextIndex;
 
   assert(sshSpecifier != NULL);
 
@@ -3671,8 +3671,8 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
-      break;
+//      error = ERROR_FUNCTION_NOT_SUPPORTED;
+//      break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
