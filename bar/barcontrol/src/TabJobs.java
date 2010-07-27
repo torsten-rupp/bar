@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -433,7 +433,7 @@ class TabJobs
   //Dprintf.dprintf("get file size for %s\n",directoryInfoRequest);
           String[] result = new String[1];
           Object[] data   = new Object[3];
-          if (   (BARServer.executeCommand("DIRECTORY_INFO "+StringParser.escape(directoryInfoRequest.name)+" "+directoryInfoRequest.timeout,result) != Errors.NONE)
+          if (   (BARServer.executeCommand("DIRECTORY_INFO "+StringUtils.escape(directoryInfoRequest.name)+" "+directoryInfoRequest.timeout,result) != Errors.NONE)
               || !StringParser.parse(result[0],"%ld %ld %d",data,StringParser.QUOTE_CHARS)
              )
           {
@@ -1714,6 +1714,7 @@ l=x.depth;
 
           widgetArchivePartSize = Widgets.newCombo(composite);
           widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","256M","512M","1G","2G"});
+          widgetArchivePartSize.setData("showedErrorDialog",false);
           Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W);
           widgetArchivePartSize.addModifyListener(new ModifyListener()
           {
@@ -1730,6 +1731,7 @@ l=x.depth;
               {
               }
               widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
             }
           });
           widgetArchivePartSize.addSelectionListener(new SelectionListener()
@@ -1743,24 +1745,48 @@ l=x.depth;
                 long n = Units.parseByteSize(s);
                 archivePartSize.set(n);
                 BARServer.setOption(selectedJobId,"archive-part-size",n);
+                widget.setText(Units.formatByteSize(n));
+                widget.setBackground(COLOR_WHITE);
               }
               catch (NumberFormatException exception)
               {
-                Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
+                if (!(Boolean)widget.getData("showedErrorDialog"))
+                {
+                  widget.setData("showedErrorDialog",true);
+                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                  widget.forceFocus();
+                }
               }
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Combo widget = (Combo)selectionEvent.widget;
-              long  n      = Units.parseByteSize(widget.getText());
-              archivePartSize.set(n);
-              BARServer.setOption(selectedJobId,"archive-part-size",n);
+              Combo  widget = (Combo)selectionEvent.widget;
+              String s      = widget.getText();
+              try
+              {
+                long  n = Units.parseByteSize(s);
+                archivePartSize.set(n);
+                BARServer.setOption(selectedJobId,"archive-part-size",n);
+                widget.setText(Units.formatByteSize(n));
+                widget.setBackground(COLOR_WHITE);
+              }
+              catch (NumberFormatException exception)
+              {
+                if (!(Boolean)widget.getData("showedErrorDialog"))
+                {
+                  widget.setData("showedErrorDialog",true);
+                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                  widget.forceFocus();
+                }
+              }
             }
           });
           widgetArchivePartSize.addFocusListener(new FocusListener()
           {
             public void focusGained(FocusEvent focusEvent)
             {
+              Combo widget = (Combo)focusEvent.widget;
+              widget.setData("showedErrorDialog",false);
             }
             public void focusLost(FocusEvent focusEvent)
             {
@@ -1771,11 +1797,17 @@ l=x.depth;
                 long n = Units.parseByteSize(s);
                 archivePartSize.set(n);
                 BARServer.setOption(selectedJobId,"archive-part-size",n);
+                widget.setText(Units.formatByteSize(n));
+                widget.setBackground(COLOR_WHITE);
               }
               catch (NumberFormatException exception)
               {
-                Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
-                widget.forceFocus();
+                if (!(Boolean)widget.getData("showedErrorDialog"))
+                {
+                  widget.setData("showedErrorDialog",true);
+                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                  widget.forceFocus();
+                }
               }
             }
           });
@@ -1786,6 +1818,9 @@ l=x.depth;
               return Units.formatByteSize(variable.getLong());
             }
           });
+
+          label = Widgets.newLabel(composite,"bytes");
+          Widgets.layout(label,0,3,TableLayoutData.W);
         }
 
         // compress
@@ -2866,6 +2901,7 @@ throw new Error("NYI");
             Widgets.layout(label,0,4,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
+            text.setData("showedErrorDialog",false);
             Widgets.layout(text,0,5,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -2883,6 +2919,7 @@ throw new Error("NYI");
                 {
                 }
                 widget.setBackground(color);
+                widget.setData("showedErrorDialog",false);
               }
             });
             text.addSelectionListener(new SelectionListener()
@@ -2901,14 +2938,22 @@ throw new Error("NYI");
                   }
                   else
                   {
-                    Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
-                    widget.forceFocus();
+                    if (!(Boolean)widget.getData("showedErrorDialog"))
+                    {
+                      widget.setData("showedErrorDialog",true);
+                      Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
+                      widget.forceFocus();
+                    }
                   }
                 }
                 catch (NumberFormatException exception)
                 {
-                  Dialogs.error(shell,"'"+s+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
-                  widget.forceFocus();
+                  if (!(Boolean)widget.getData("showedErrorDialog"))
+                  {
+                    widget.setData("showedErrorDialog",true);
+                    Dialogs.error(shell,"'"+s+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                    widget.forceFocus();
+                  }
                 }
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -2920,6 +2965,8 @@ throw new Error("NYI");
             {
               public void focusGained(FocusEvent focusEvent)
               {
+                Text widget = (Text)focusEvent.widget;
+                widget.setData("showedErrorDialog",false);
               }
               public void focusLost(FocusEvent focusEvent)
               {
@@ -2935,14 +2982,22 @@ throw new Error("NYI");
                   }
                   else
                   {
-                    Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
-                    widget.forceFocus();
+                    if (!(Boolean)widget.getData("showedErrorDialog"))
+                    {
+                      widget.setData("showedErrorDialog",true);
+                      Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
+                      widget.forceFocus();
+                    }
                   }
                 }
                 catch (NumberFormatException exception)
                 {
-                  Dialogs.error(shell,"'"+s+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
-                  widget.forceFocus();
+                  if (!(Boolean)widget.getData("showedErrorDialog"))
+                  {
+                    widget.setData("showedErrorDialog",true);
+                    Dialogs.error(shell,"'"+s+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                    widget.forceFocus();
+                  }
                 }
               }
             });
@@ -2951,91 +3006,148 @@ throw new Error("NYI");
 
           label = Widgets.newLabel(composite,"SSH public key:");
           Widgets.layout(label,1,0,TableLayoutData.W);
-          text = Widgets.newText(composite);
-          Widgets.layout(text,1,1,TableLayoutData.WE);
-          text.addModifyListener(new ModifyListener()
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+          Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
-            public void modifyText(ModifyEvent modifyEvent)
+            text = Widgets.newText(subComposite);
+            Widgets.layout(text,0,0,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
             {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (sshPublicKeyFileName.getString().equals(s)) color = COLOR_WHITE;
-              widget.setBackground(color);
-            }
-          });
-          text.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text  widget = (Text)modifyEvent.widget;
+                Color color  = COLOR_MODIFIED;
+                String s = widget.getText();
+                if (sshPublicKeyFileName.getString().equals(s)) color = COLOR_WHITE;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
             {
-              Text   widget = (Text)selectionEvent.widget;
-              String string = widget.getText();
-              sshPublicKeyFileName.set(string);
-              BARServer.setOption(selectedJobId,"ssh-public-key",string);
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text   widget = (Text)selectionEvent.widget;
+                String string = widget.getText();
+                sshPublicKeyFileName.set(string);
+                BARServer.setOption(selectedJobId,"ssh-public-key",string);
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+  throw new Error("NYI");
+              }
+            });
+            text.addFocusListener(new FocusListener()
             {
-throw new Error("NYI");
-            }
-          });
-          text.addFocusListener(new FocusListener()
-          {
-            public void focusGained(FocusEvent focusEvent)
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text   widget = (Text)focusEvent.widget;
+                String string = widget.getText();
+                sshPublicKeyFileName.set(string);
+                BARServer.setOption(selectedJobId,"ssh-public-key",string);
+              }
+            });
+            Widgets.addModifyListener(new WidgetListener(text,sshPublicKeyFileName));
+
+            button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
             {
-            }
-            public void focusLost(FocusEvent focusEvent)
-            {
-              Text   widget = (Text)focusEvent.widget;
-              String string = widget.getText();
-              sshPublicKeyFileName.set(string);
-              BARServer.setOption(selectedJobId,"ssh-public-key",string);
-            }
-          });
-          Widgets.addModifyListener(new WidgetListener(text,sshPublicKeyFileName));
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget   = (Button)selectionEvent.widget;
+                String fileName = Dialogs.fileSave(shell,
+                                                   "Select incremental file",
+                                                   incrementalListFileName.getString(),
+                                                   new String[]{"Public key files","*.pub",
+                                                                "All files","*",
+                                                               }
+                                                  );
+                if (fileName != null)
+                {
+                  sshPublicKeyFileName.set(fileName);
+                }
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+          }
 
           label = Widgets.newLabel(composite,"SSH private key:");
           Widgets.layout(label,2,0,TableLayoutData.W);
-          text = Widgets.newText(composite);
-          Widgets.layout(text,2,1,TableLayoutData.WE);
-          text.addModifyListener(new ModifyListener()
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+          Widgets.layout(subComposite,2,1,TableLayoutData.WE);
           {
-            public void modifyText(ModifyEvent modifyEvent)
+            text = Widgets.newText(subComposite);
+            Widgets.layout(text,0,0,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
             {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (sshPrivateKeyFileName.getString().equals(s)) color = COLOR_WHITE;
-              widget.setBackground(color);
-            }
-          });
-          text.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text  widget = (Text)modifyEvent.widget;
+                Color color  = COLOR_MODIFIED;
+                String s = widget.getText();
+                if (sshPrivateKeyFileName.getString().equals(s)) color = COLOR_WHITE;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
             {
-              Text   widget = (Text)selectionEvent.widget;
-              String string = widget.getText();
-              sshPrivateKeyFileName.set(string);
-              BARServer.setOption(selectedJobId,"ssh-private-key",string);
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text   widget = (Text)selectionEvent.widget;
+                String string = widget.getText();
+                sshPrivateKeyFileName.set(string);
+                BARServer.setOption(selectedJobId,"ssh-private-key",string);
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+  throw new Error("NYI");
+              }
+            });
+            text.addFocusListener(new FocusListener()
             {
-throw new Error("NYI");
-            }
-          });
-          text.addFocusListener(new FocusListener()
-          {
-            public void focusGained(FocusEvent focusEvent)
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text   widget = (Text)focusEvent.widget;
+                String string = widget.getText();
+                sshPrivateKeyFileName.set(string);
+                BARServer.setOption(selectedJobId,"ssh-private-key",string);
+              }
+            });
+            Widgets.addModifyListener(new WidgetListener(text,sshPrivateKeyFileName));
+
+            button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
             {
-            }
-            public void focusLost(FocusEvent focusEvent)
-            {
-              Text   widget = (Text)focusEvent.widget;
-              String string = widget.getText();
-              sshPrivateKeyFileName.set(string);
-              BARServer.setOption(selectedJobId,"ssh-private-key",string);
-            }
-          });
-          Widgets.addModifyListener(new WidgetListener(text,sshPrivateKeyFileName));
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget   = (Button)selectionEvent.widget;
+                String fileName = Dialogs.fileSave(shell,
+                                                   "Select incremental file",
+                                                   incrementalListFileName.getString(),
+                                                   new String[]{"All files","*",
+                                                               }
+                                                  );
+                if (fileName != null)
+                {
+                  sshPrivateKeyFileName.set(fileName);
+                }
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+          }
 
 /*
           label = Widgets.newLabel(composite,"Max. band width:");
@@ -3113,46 +3225,73 @@ throw new Error("NYI");
         {
           label = Widgets.newLabel(composite,"Device:");
           Widgets.layout(label,0,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+          Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+          {
+            text = Widgets.newText(subComposite);
+            Widgets.layout(text,0,0,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text  widget = (Text)modifyEvent.widget;
+                Color color  = COLOR_MODIFIED;
+                String s = widget.getText();
+                if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text widget = (Text)selectionEvent.widget;
+                storageDeviceName.set(widget.getText());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+  throw new Error("NYI");
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageDeviceName.set(widget.getText());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              }
+            });
+            Widgets.addModifyListener(new WidgetListener(text,storageDeviceName));
 
-          text = Widgets.newText(composite);
-          Widgets.layout(text,0,1,TableLayoutData.WE);
-          text.addModifyListener(new ModifyListener()
-          {
-            public void modifyText(ModifyEvent modifyEvent)
+            button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
             {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
-              widget.setBackground(color);
-            }
-          });
-          text.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-              Text widget = (Text)selectionEvent.widget;
-              storageDeviceName.set(widget.getText());
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-throw new Error("NYI");
-            }
-          });
-          text.addFocusListener(new FocusListener()
-          {
-            public void focusGained(FocusEvent focusEvent)
-            {
-            }
-            public void focusLost(FocusEvent focusEvent)
-            {
-              Text widget = (Text)focusEvent.widget;
-              storageDeviceName.set(widget.getText());
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-          });
-          Widgets.addModifyListener(new WidgetListener(text,storageDeviceName));
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget   = (Button)selectionEvent.widget;
+                String fileName = Dialogs.fileSave(shell,
+                                                   "Select incremental file",
+                                                   incrementalListFileName.getString(),
+                                                   new String[]{"All files","*",
+                                                               }
+                                                  );
+                if (fileName != null)
+                {
+                  storageDeviceName.set(fileName);
+                }
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+          }
 
           label = Widgets.newLabel(composite,"Size:");
           Widgets.layout(label,1,0,TableLayoutData.W);
@@ -3161,6 +3300,7 @@ throw new Error("NYI");
           {
             combo = Widgets.newCombo(subComposite);
             combo.setItems(new String[]{"2G","3G","3.6G","4G"});
+            combo.setData("showedErrorDialog",false);
             Widgets.layout(combo,0,0,TableLayoutData.W);
             combo.addModifyListener(new ModifyListener()
             {
@@ -3177,6 +3317,7 @@ throw new Error("NYI");
                 {
                 }
                 widget.setBackground(color);
+                widget.setData("showedErrorDialog",false);
               }
             });
             combo.addSelectionListener(new SelectionListener()
@@ -3193,21 +3334,41 @@ throw new Error("NYI");
                 }
                 catch (NumberFormatException exception)
                 {
-                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
+                  if (!(Boolean)widget.getData("showedErrorDialog"))
+                  {
+                    widget.setData("showedErrorDialog",true);
+                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    widget.forceFocus();
+                  }
                 }
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Combo widget = (Combo)selectionEvent.widget;
-                long  n      = Units.parseByteSize(widget.getText());
-                volumeSize.set(n);
-                BARServer.setOption(selectedJobId,"volume-size",n);
+                Combo  widget = (Combo)selectionEvent.widget;
+                String s      = widget.getText();
+                try
+                {
+                  long  n = Units.parseByteSize(s);
+                  volumeSize.set(n);
+                  BARServer.setOption(selectedJobId,"volume-size",n);
+                }
+                catch (NumberFormatException exception)
+                {
+                  if (!(Boolean)widget.getData("showedErrorDialog"))
+                  {
+                    widget.setData("showedErrorDialog",true);
+                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    widget.forceFocus();
+                  }
+                }
               }
             });
             combo.addFocusListener(new FocusListener()
             {
               public void focusGained(FocusEvent focusEvent)
               {
+                Combo widget = (Combo)focusEvent.widget;
+                widget.setData("showedErrorDialog",false);
               }
               public void focusLost(FocusEvent focusEvent)
               {
@@ -3221,8 +3382,12 @@ throw new Error("NYI");
                 }
                 catch (NumberFormatException exception)
                 {
-                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
-                  widget.forceFocus();
+                  if (!(Boolean)widget.getData("showedErrorDialog"))
+                  {
+                    widget.setData("showedErrorDialog",true);
+                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    widget.forceFocus();
+                  }
                 }
               }
             });
@@ -3294,45 +3459,73 @@ throw new Error("NYI");
         {
           label = Widgets.newLabel(composite,"Device:");
           Widgets.layout(label,0,0,TableLayoutData.W);
-          text = Widgets.newText(composite);
-          Widgets.layout(text,0,1,TableLayoutData.WE);
-          text.addModifyListener(new ModifyListener()
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+          Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
-            public void modifyText(ModifyEvent modifyEvent)
+            text = Widgets.newText(subComposite);
+            Widgets.layout(text,0,0,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
             {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
-              widget.setBackground(color);
-            }
-          });
-          text.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text  widget = (Text)modifyEvent.widget;
+                Color color  = COLOR_MODIFIED;
+                String s = widget.getText();
+                if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
             {
-              Text widget = (Text)selectionEvent.widget;
-              storageDeviceName.set(widget.getText());
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text widget = (Text)selectionEvent.widget;
+                storageDeviceName.set(widget.getText());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+  throw new Error("NYI");
+              }
+            });
+            text.addFocusListener(new FocusListener()
             {
-throw new Error("NYI");
-            }
-          });
-          text.addFocusListener(new FocusListener()
-          {
-            public void focusGained(FocusEvent focusEvent)
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageDeviceName.set(widget.getText());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              }
+            });
+            Widgets.addModifyListener(new WidgetListener(text,storageDeviceName));
+
+            button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
             {
-            }
-            public void focusLost(FocusEvent focusEvent)
-            {
-              Text widget = (Text)focusEvent.widget;
-              storageDeviceName.set(widget.getText());
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-          });
-          Widgets.addModifyListener(new WidgetListener(text,storageDeviceName));
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget   = (Button)selectionEvent.widget;
+                String fileName = Dialogs.fileSave(shell,
+                                                   "Select incremental file",
+                                                   incrementalListFileName.getString(),
+                                                   new String[]{"All files","*",
+                                                               }
+                                                  );
+                if (fileName != null)
+                {
+                  storageDeviceName.set(fileName);
+                }
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+          }
 
           label = Widgets.newLabel(composite,"Size:");
           Widgets.layout(label,1,0,TableLayoutData.W);
@@ -3341,6 +3534,7 @@ throw new Error("NYI");
           {
             combo = Widgets.newCombo(subComposite);
             combo.setItems(new String[]{"2G","3G","3.6G","4G"});
+            combo.setData("showedErrorDialog",false);
             Widgets.layout(combo,0,0,TableLayoutData.W);
             combo.addModifyListener(new ModifyListener()
             {
@@ -3357,6 +3551,7 @@ throw new Error("NYI");
                 {
                 }
                 widget.setBackground(color);
+                widget.setData("showedErrorDialog",false);
               }
             });
             combo.addSelectionListener(new SelectionListener()
@@ -3373,21 +3568,41 @@ throw new Error("NYI");
                 }
                 catch (NumberFormatException exception)
                 {
-                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
+                  if (!(Boolean)widget.getData("showedErrorDialog"))
+                  {
+                    widget.setData("showedErrorDialog",true);
+                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    widget.forceFocus();
+                  }
                 }
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Combo widget = (Combo)selectionEvent.widget;
-                long  n      = Units.parseByteSize(widget.getText());
-                volumeSize.set(n);
-                BARServer.setOption(selectedJobId,"volume-size",n);
+                String s      = widget.getText();
+                try
+                {
+                  long  n = Units.parseByteSize(s);
+                  volumeSize.set(n);
+                  BARServer.setOption(selectedJobId,"volume-size",n);
+                }
+                catch (NumberFormatException exception)
+                {
+                  if (!(Boolean)widget.getData("showedErrorDialog"))
+                  {
+                    widget.setData("showedErrorDialog",true);
+                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    widget.forceFocus();
+                  }
+                }
               }
             });
             text.addFocusListener(new FocusListener()
             {
               public void focusGained(FocusEvent focusEvent)
               {
+                Combo widget = (Combo)focusEvent.widget;
+                widget.setData("showedErrorDialog",false);
               }
               public void focusLost(FocusEvent focusEvent)
               {
@@ -3401,8 +3616,12 @@ throw new Error("NYI");
                 }
                 catch (NumberFormatException exception)
                 {
-                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number or a number with unit KB, MB or GB.");
-                  widget.forceFocus();
+                  if (!(Boolean)widget.getData("showedErrorDialog"))
+                  {
+                    widget.setData("showedErrorDialog",true);
+                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    widget.forceFocus();
+                  }
                 }
               }
             });
@@ -3563,7 +3782,7 @@ throw new Error("NYI");
    */
   private String getArchiveName()
   {
-    ArchiveNameParts archiveNameParts = new ArchiveNameParts(storageType.getString(),
+    ArchiveNameParts archiveNameParts = new ArchiveNameParts(ArchiveTypes.parse(storageType.getString()),
                                                              storageLoginName.getString(),
                                                              storageLoginPassword.getString(),
                                                              storageHostName.getString(),
@@ -3589,13 +3808,13 @@ throw new Error("NYI");
   {
     ArchiveNameParts archiveNameParts = new ArchiveNameParts(name);
 
-    storageType.set         (archiveNameParts.type         );
-    storageLoginName.set    (archiveNameParts.loginName    );
-    storageLoginPassword.set(archiveNameParts.loginPassword);
-    storageHostName.set     (archiveNameParts.hostName     );
-    storageHostPort.set     (archiveNameParts.hostPort     );
-    storageDeviceName.set   (archiveNameParts.deviceName   );
-    storageFileName.set     (archiveNameParts.fileName     );
+    storageType.set         (archiveNameParts.type.toString());
+    storageLoginName.set    (archiveNameParts.loginName      );
+    storageLoginPassword.set(archiveNameParts.loginPassword  );
+    storageHostName.set     (archiveNameParts.hostName       );
+    storageHostPort.set     (archiveNameParts.hostPort       );
+    storageDeviceName.set   (archiveNameParts.deviceName     );
+    storageFileName.set     (archiveNameParts.fileName       );
   }
 
   //-----------------------------------------------------------------------
@@ -3626,7 +3845,7 @@ throw new Error("NYI");
 
       parseArchiveName(BARServer.getStringOption(selectedJobId,"archive-name"));
       archiveType.set(BARServer.getStringOption(selectedJobId,"archive-type"));
-      archivePartSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"archive-part-size")));
+      archivePartSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"archive-part-size"),0));
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
       compressAlgorithm.set(BARServer.getStringOption(selectedJobId,"compress-algorithm"));
       cryptAlgorithm.set(BARServer.getStringOption(selectedJobId,"crypt-algorithm"));
@@ -3642,7 +3861,7 @@ throw new Error("NYI");
       maxBandWidth.set(Units.parseByteSize(BARServer.getStringOption(jobId,"max-band-width")));
       maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
 */
-      volumeSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"volume-size")));
+      volumeSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"volume-size"),0));
       ecc.set(BARServer.getBooleanOption(selectedJobId,"ecc"));
       waitFirstVolume.set(BARServer.getBooleanOption(selectedJobId,"wait-first-volume"));
 
@@ -3679,7 +3898,7 @@ throw new Error("NYI");
   {
     // get job list
     ArrayList<String> result = new ArrayList<String>();
-    BARServer.executeCommand("JOB_LIST",result);
+    if (BARServer.executeCommand("JOB_LIST",result) != Errors.NONE) return;
 
     // update job list
     synchronized(widgetJobList)
@@ -3703,7 +3922,7 @@ throw new Error("NYI");
            <estimatedRestTime>
         */
   //System.err.println("BARControl.java"+", "+1357+": "+line);
-        if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+        if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
         {
   //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
           // get data
@@ -3790,7 +4009,7 @@ throw new Error("NYI");
           try
           {
             String[] result = new String[1];
-            int errorCode = BARServer.executeCommand("JOB_NEW "+StringParser.escape(jobName),result);
+            int errorCode = BARServer.executeCommand("JOB_NEW "+StringUtils.escape(jobName),result);
             if (errorCode == Errors.NONE)
             {
               updateJobList();
@@ -3886,7 +4105,7 @@ throw new Error("NYI");
           try
           {
             String[] result = new String[1];
-            int errorCode = BARServer.executeCommand("JOB_COPY "+selectedJobId+" "+StringParser.escape(jobName),result);
+            int errorCode = BARServer.executeCommand("JOB_COPY "+selectedJobId+" "+StringUtils.escape(jobName),result);
             if (errorCode == Errors.NONE)
             {
               updateJobList();
@@ -3991,7 +4210,7 @@ throw new Error("NYI");
           try
           {
             String[] result = new String[1];
-            int errorCode = BARServer.executeCommand("JOB_RENAME "+selectedJobId+" "+StringParser.escape(newJobName),result);
+            int errorCode = BARServer.executeCommand("JOB_RENAME "+selectedJobId+" "+StringUtils.escape(newJobName),result);
             if (errorCode == Errors.NONE)
             {
               updateJobList();
@@ -4220,7 +4439,7 @@ throw new Error("NYI");
     treeItem.removeAll();
 
     ArrayList<String> fileListResult = new ArrayList<String>();
-    int errorCode = BARServer.executeCommand("FILE_LIST file://"+StringParser.escape(fileTreeData.name),fileListResult);
+    int errorCode = BARServer.executeCommand("FILE_LIST file://"+StringUtils.escape(fileTreeData.name),fileListResult);
     if (errorCode == Errors.NONE)
     {
       for (String line : fileListResult)
@@ -4646,7 +4865,7 @@ Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTree
     assert selectedJobId != 0;
 
     ArrayList<String> result = new ArrayList<String>();
-    BARServer.executeCommand("INCLUDE_LIST "+selectedJobId,result);
+    if (BARServer.executeCommand("INCLUDE_LIST "+selectedJobId,result) != Errors.NONE) return;
 
     includeHashMap.clear();
     widgetIncludeTable.removeAll();
@@ -4695,7 +4914,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     assert selectedJobId != 0;
 
     ArrayList<String> result = new ArrayList<String>();
-    BARServer.executeCommand("EXCLUDE_LIST "+selectedJobId,result);
+    if (BARServer.executeCommand("EXCLUDE_LIST "+selectedJobId,result) != Errors.NONE) return;
 
     excludeHashSet.clear();
     widgetExcludeList.removeAll();
@@ -4928,7 +5147,12 @@ throw new Error("NYI");
 
     EntryData entryData = new EntryData(entryType,pattern);
 
-    BARServer.executeCommand("INCLUDE_ADD "+selectedJobId+" "+entryType.toString()+" GLOB "+StringParser.escape(entryData.pattern));
+    String[] result = new String[1];
+    if (BARServer.executeCommand("INCLUDE_ADD "+selectedJobId+" "+entryType.toString()+" GLOB "+StringUtils.escape(entryData.pattern),result) != Errors.NONE)
+    {
+      Dialogs.error(shell,"Cannot add include entry:\n\n"+result[0]);
+      return;
+    }
 
     includeHashMap.put(pattern,entryData);
     Widgets.insertTableEntry(widgetIncludeTable,
@@ -4949,7 +5173,12 @@ throw new Error("NYI");
   {
     assert selectedJobId != 0;
 
-    BARServer.executeCommand("EXCLUDE_ADD "+selectedJobId+" GLOB "+StringParser.escape(pattern));
+    String[] result = new String[1];
+    if (BARServer.executeCommand("EXCLUDE_ADD "+selectedJobId+" GLOB "+StringUtils.escape(pattern),result) != Errors.NONE)
+    {
+      Dialogs.error(shell,"Cannot add exclude entry:\n\n"+result[0]);
+      return;
+    }
 
     excludeHashSet.add(pattern);
     widgetExcludeList.add(pattern,findExcludeIndex(widgetExcludeList,pattern));
@@ -4998,7 +5227,7 @@ throw new Error("NYI");
     widgetIncludeTable.removeAll();
     for (EntryData entryData : includeHashMap.values())
     {
-      BARServer.executeCommand("INCLUDE_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringParser.escape(entryData.pattern));
+      BARServer.executeCommand("INCLUDE_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringUtils.escape(entryData.pattern));
       Widgets.insertTableEntry(widgetIncludeTable,
                                findIncludeIndex(widgetIncludeTable,entryData.pattern),
                                (Object)entryData,
@@ -5024,7 +5253,7 @@ throw new Error("NYI");
     widgetExcludeList.removeAll();
     for (String s : excludeHashSet)
     {
-      BARServer.executeCommand("EXCLUDE_ADD "+selectedJobId+" GLOB "+StringParser.escape(s));
+      BARServer.executeCommand("EXCLUDE_ADD "+selectedJobId+" GLOB "+StringUtils.escape(s));
       widgetExcludeList.add(s,findExcludeIndex(widgetExcludeList,s));
     }
 
@@ -5994,7 +6223,7 @@ throw new Error("NYI");
   {
     // get schedule list
     ArrayList<String> result = new ArrayList<String>();
-    BARServer.executeCommand("SCHEDULE_LIST "+selectedJobId,result);
+    if (BARServer.executeCommand("SCHEDULE_LIST "+selectedJobId,result) != Errors.NONE) return;
 
     // update schedule list
     synchronized(scheduleList)
