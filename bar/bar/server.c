@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -1026,7 +1026,7 @@ LOCAL bool readJobFile(JobNode *jobNode)
   uint       lineNb;
   String     line;
   String     name,value;
-  ulong      nextIndex;
+  long       nextIndex;
 
   assert(jobNode != NULL);
   assert(jobNode->fileName != NULL);
@@ -1076,21 +1076,7 @@ LOCAL bool readJobFile(JobNode *jobNode)
   jobNode->jobOptions.rawImagesFlag                = FALSE;
   jobNode->jobOptions.overwriteArchiveFilesFlag    = FALSE;
   jobNode->jobOptions.overwriteFilesFlag           = FALSE;
-/*
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("owner",                  JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",         JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
-
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",           JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
-
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",           JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
-
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",           JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",          JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                     configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
-
-  CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",               JobNode,scheduleList,                           configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
-*/
   /* parse file */
   failFlag = FALSE;
   lineNb   = 0;
@@ -1256,7 +1242,7 @@ LOCAL Errors rereadJobFiles(const char *jobsDirectory)
       }
       else
       {
-        /* not exists => delete job node */
+        /* do not exists => delete job node */
         deleteJobNode = jobNode;
         jobNode = jobNode->next;
         List_remove(&jobList,deleteJobNode);
@@ -4567,24 +4553,43 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
+  StringList_init(&archiveNameList);
+  EntryList_init(&includeEntryList);
+  PatternList_init(&excludePatternList);
+  initJobOptions(&jobOptions);
+
   /* get archive name, files */
   if (argumentCount < 1)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archive name");
+    freeJobOptions(&jobOptions);
+    PatternList_done(&excludePatternList);
+    EntryList_done(&includeEntryList);
+    StringList_done(&archiveNameList);
     return;
   }
-  StringList_init(&archiveNameList);
   StringList_append(&archiveNameList,arguments[0]);
   if (argumentCount < 2)
   {
     sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
+    freeJobOptions(&jobOptions);
+    PatternList_done(&excludePatternList);
+    EntryList_done(&includeEntryList);
+    StringList_done(&archiveNameList);
     return;
   }
-  initJobOptions(&jobOptions);
   jobOptions.destination = String_duplicate(arguments[1]);
-  EntryList_init(&includeEntryList);
-  PatternList_init(&excludePatternList);
-  for (z = 2; z < argumentCount; z++)
+  if (argumentCount < 3)
+  {
+    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
+    freeJobOptions(&jobOptions);
+    PatternList_done(&excludePatternList);
+    EntryList_done(&includeEntryList);
+    StringList_done(&archiveNameList);
+    return;
+  }
+  jobOptions.overwriteFilesFlag = String_equalsCString(arguments[2],"1");
+  for (z = 3; z < argumentCount; z++)
   {
     EntryList_append(&includeEntryList,
 //???
@@ -5224,11 +5229,6 @@ Errors Server_run(uint             port,
   ulong              z;
   ClientNode         *deleteClientNode;
 
-  if (Password_empty(password))
-  {
-    printWarning("No server password set - start without any password!\n");
-  }
-
   /* initialise variables */
   serverPassword          = password;
   serverJobsDirectory     = jobsDirectory;
@@ -5319,6 +5319,10 @@ Errors Server_run(uint             port,
       printError("Cannot start any server!\n");
     }
     return ERROR_INVALID_ARGUMENT;
+  }
+  if (Password_empty(password))
+  {
+    printWarning("No server password set!\n");
   }
 
   /* start threads */
@@ -5552,7 +5556,6 @@ String_setCString(commandString,"1 SET crypt-password 'muster'");processCommand(
 String_setCString(commandString,"2 ADD_INCLUDE_PATTERN REGEX test/[^/]*");processCommand(&clientInfo,commandString);
 String_setCString(commandString,"3 ARCHIVE_LIST test.bar");processCommand(&clientInfo,commandString);
 //String_setCString(commandString,"3 ARCHIVE_LIST backup/backup-torsten-bar-000.bar");processCommand(&clientInfo,commandString);
-//String_setCString(commandString,"4 ARCHIVE_LIST scp:torsten@it-zo.de:backup/backup-torsten-bar-000.bar");processCommand(&clientInfo,commandString);
 processCommand(&clientInfo,commandString);
 #endif /* 0 */
   String_delete(commandString);
