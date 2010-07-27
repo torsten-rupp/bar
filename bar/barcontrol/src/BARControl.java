@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -20,6 +20,8 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.security.KeyStore;
 import java.text.SimpleDateFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -27,6 +29,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Locale;
 
 // graphics
 import org.eclipse.swt.custom.SashForm;
@@ -87,17 +90,88 @@ import org.eclipse.swt.widgets.Widget;
 
 /****************************** Classes ********************************/
 
+/** archive types
+ */
+enum ArchiveTypes
+{
+  NONE,
+
+  FILESYSTEM,
+  FTP,
+  SCP,
+  SFTP,
+  DVD,
+  DEVICE;
+
+  /** parse type string
+   * @param string type string
+   * @return priority
+   */
+  static ArchiveTypes parse(String string)
+  {
+    ArchiveTypes type;
+
+    if      (string.equalsIgnoreCase("filesystem"))
+    {
+      type = ArchiveTypes.FILESYSTEM;
+    }
+    else if (string.equalsIgnoreCase("ftp"))
+    {
+      type = ArchiveTypes.FTP;
+    }
+    else if (string.equalsIgnoreCase("scp"))
+    {
+      type = ArchiveTypes.SCP;
+    }
+    else if (string.equalsIgnoreCase("sftp"))
+    {
+      type = ArchiveTypes.SFTP;
+    }
+    else if (string.equalsIgnoreCase("dvd"))
+    {
+      type = ArchiveTypes.DVD;
+    }
+    else if (string.equalsIgnoreCase("device"))
+    {
+      type = ArchiveTypes.DEVICE;
+    }
+    else
+    {
+      type = ArchiveTypes.NONE;
+    }
+
+    return type;
+  }
+
+  /** convert to string
+   * @return string
+   */
+  public String toString()
+  {
+    switch (this)
+    {
+      case FILESYSTEM: return "filesystem";
+      case FTP:        return "ftp";
+      case SCP:        return "scp";
+      case SFTP:       return "sftp";
+      case DVD:        return "dvd";
+      case DEVICE  :   return "device";
+      default:         return "";
+    }
+  }
+}
+
 /** archive name parts
 */
 class ArchiveNameParts
 {
-  public String type;
-  public String loginName;
-  public String loginPassword;
-  public String hostName;
-  public int    hostPort;
-  public String deviceName;
-  public String fileName;
+  public ArchiveTypes type;           // type
+  public String       loginName;      // login name
+  public String       loginPassword;  // login password
+  public String       hostName;       // host name
+  public int          hostPort;       // host port
+  public String       deviceName;     // device name
+  public String       fileName;       // file name
 
   /** parse archive name
    * @param type archive type
@@ -108,13 +182,13 @@ class ArchiveNameParts
    * @param deviceName device name
    * @param fileName file name
    */
-  public ArchiveNameParts(final String type,
-                          final String loginName,
-                          final String loginPassword,
-                          final String hostName,
-                          final int    hostPort,
-                          final String deviceName,
-                          final String fileName
+  public ArchiveNameParts(ArchiveTypes type,
+                          String       loginName,
+                          String       loginPassword,
+                          String       hostName,
+                          int          hostPort,
+                          String       deviceName,
+                          String       fileName
                          )
   {
     this.type          = type;
@@ -129,9 +203,9 @@ class ArchiveNameParts
   /** parse archive name
    * @param archiveName archive name string
    */
-  public ArchiveNameParts(final String archiveName)
+  public ArchiveNameParts(String archiveName)
   {
-    type          = "";
+    type          = ArchiveTypes.NONE;
     loginName     = "";
     loginPassword = "";
     hostName      = "";
@@ -142,7 +216,7 @@ class ArchiveNameParts
     if       (archiveName.startsWith("ftp://"))
     {
       // ftp
-      type = "ftp";
+      type = ArchiveTypes.FTP;
 
       String specifier = archiveName.substring(6);
       Object[] data = new Object[2];
@@ -171,7 +245,7 @@ class ArchiveNameParts
     else if (archiveName.startsWith("scp://"))
     {
       // scp
-      type = "scp";
+      type = ArchiveTypes.SCP;
 
       String specifier = archiveName.substring(6);
       Object[] data = new Object[3];
@@ -200,7 +274,7 @@ class ArchiveNameParts
     else if (archiveName.startsWith("sftp://"))
     {
       // sftp
-      type = "sftp";
+      type = ArchiveTypes.SFTP;
 
       String specifier = archiveName.substring(7);
       Object[] data = new Object[3];
@@ -229,7 +303,7 @@ class ArchiveNameParts
     else if (archiveName.startsWith("dvd://"))
     {
       // dvd
-      type = "dvd";
+      type = ArchiveTypes.DVD;
 
       String specifier = archiveName.substring(6);
       Object[] data = new Object[2];
@@ -246,7 +320,7 @@ class ArchiveNameParts
     else if (archiveName.startsWith("device://"))
     {
       // dvd
-      type = "device";
+      type = ArchiveTypes.DEVICE;
 
       String specifier = archiveName.substring(9);
       Object[] data = new Object[2];
@@ -263,7 +337,7 @@ class ArchiveNameParts
     else if (archiveName.startsWith("file://"))
     {
       // file
-      type = "filesystem";
+      type = ArchiveTypes.FILESYSTEM;
 
       String specifier = archiveName.substring(7);
       fileName = specifier.substring(2);
@@ -271,7 +345,7 @@ class ArchiveNameParts
     else
     {
       // file
-      type = "filesystem";
+      type = ArchiveTypes.FILESYSTEM;
 
       fileName = archiveName;
     }
@@ -285,64 +359,76 @@ class ArchiveNameParts
   {
     StringBuffer archiveNameBuffer = new StringBuffer();
 
-    if      (type.equals("ftp"))
+    switch (type)
     {
-      archiveNameBuffer.append("ftp://");
-      if (!loginName.equals("") || !hostName.equals(""))
-      {
-        if (!loginName.equals("") || !loginPassword.equals(""))
+      case FILESYSTEM:
+        break;
+      case FTP:
+        archiveNameBuffer.append("ftp://");
+        if (!loginName.equals("") || !hostName.equals(""))
         {
-          if (!loginName.equals("")) archiveNameBuffer.append(loginName);
-          if (!loginPassword.equals("")) { archiveNameBuffer.append(':'); archiveNameBuffer.append(loginPassword); }
-          archiveNameBuffer.append('@');
+          if (!loginName.equals("") || !loginPassword.equals(""))
+          {
+            if (!loginName.equals("")) archiveNameBuffer.append(loginName);
+            if (!loginPassword.equals("")) { archiveNameBuffer.append(':'); archiveNameBuffer.append(loginPassword); }
+            archiveNameBuffer.append('@');
+          }
+          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
+          archiveNameBuffer.append('/');
         }
-        if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-        archiveNameBuffer.append('/');
-      }
+        break;
+      case SCP:
+        archiveNameBuffer.append("scp://");
+        if (!loginName.equals("") || !hostName.equals(""))
+        {
+          if (!loginName.equals("")) { archiveNameBuffer.append(loginName); archiveNameBuffer.append('@'); }
+          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
+          if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
+          archiveNameBuffer.append('/');
+        }
+        break;
+      case SFTP:
+        archiveNameBuffer.append("sftp://");
+        if (!loginName.equals("") || !hostName.equals(""))
+        {
+          if (!loginName.equals("")) { archiveNameBuffer.append(loginName); archiveNameBuffer.append('@'); }
+          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
+          if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
+          archiveNameBuffer.append('/');
+        }
+        break;
+      case DVD:
+        archiveNameBuffer.append("dvd://");
+        if (!deviceName.equals(""))
+        {
+          archiveNameBuffer.append(deviceName);
+          archiveNameBuffer.append(':');
+        }
+        break;
+      case DEVICE:
+        archiveNameBuffer.append("device://");
+        if (!deviceName.equals(""))
+        {
+          archiveNameBuffer.append(deviceName);
+          archiveNameBuffer.append(':');
+        }
+        break;
     }
-    else if (type.equals("scp"))
+    if (fileName != null)
     {
-      archiveNameBuffer.append("scp://");
-      if (!loginName.equals("") || !hostName.equals(""))
-      {
-        if (!loginName.equals("")) { archiveNameBuffer.append(loginName); archiveNameBuffer.append('@'); }
-        if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-        if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
-        archiveNameBuffer.append('/');
-      }
+      archiveNameBuffer.append(fileName);
     }
-    else if (type.equals("sftp"))
-    {
-      archiveNameBuffer.append("sftp://");
-      if (!loginName.equals("") || !hostName.equals(""))
-      {
-        if (!loginName.equals("")) { archiveNameBuffer.append(loginName); archiveNameBuffer.append('@'); }
-        if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
-        if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
-        archiveNameBuffer.append('/');
-      }
-    }
-    else if (type.equals("dvd"))
-    {
-      archiveNameBuffer.append("dvd://");
-      if (!deviceName.equals(""))
-      {
-        archiveNameBuffer.append(deviceName);
-        archiveNameBuffer.append(':');
-      }
-    }
-    else if (type.equals("device"))
-    {
-      archiveNameBuffer.append("device://");
-      if (!deviceName.equals(""))
-      {
-        archiveNameBuffer.append(deviceName);
-        archiveNameBuffer.append(':');
-      }
-    }
-    archiveNameBuffer.append(fileName);
 
     return archiveNameBuffer.toString();
+  }
+
+  /** get archive path name
+   * @return archive path name (archive name without file name)
+   */
+  public String getArchivePathName()
+  {
+    File file = new File(fileName);
+    return getArchiveName(file.getParent());
   }
 
   /** get archive name
@@ -350,7 +436,15 @@ class ArchiveNameParts
    */
   public String getArchiveName()
   {
-    return getArchiveName(this.fileName);
+    return getArchiveName(fileName);
+  }
+
+  /** convert to string
+   * @return string
+   */
+  public String toString()
+  {
+    return getArchiveName();
   }
 }
 
@@ -364,10 +458,10 @@ class Units
    */
   public static String getByteSize(double n)
   {
-    if      (n >= 1024*1024*1024) return String.format("%.1f",n/(1024*1024*1024));
-    else if (n >=      1024*1024) return String.format("%.1f",n/(     1024*1024));
-    else if (n >=           1024) return String.format("%.1f",n/(          1024));
-    else                          return String.format("%d"  ,(long)n           );
+    if      (n >= 1024*1024*1024) return String.format(Locale.US,"%.1f",n/(1024*1024*1024));
+    else if (n >=      1024*1024) return String.format(Locale.US,"%.1f",n/(     1024*1024));
+    else if (n >=           1024) return String.format(Locale.US,"%.1f",n/(          1024));
+    else                          return String.format(Locale.US,"%d"  ,(long)n           );
   }
 
   /** get byte size unit
@@ -388,20 +482,22 @@ class Units
    */
   public static String getByteShortUnit(double n)
   {
-    if      (n >= 1024*1024*1024) return "GB";
-    else if (n >=      1024*1024) return "MB";
-    else if (n >=           1024) return "KB";
-    else                          return "B";
+    if      (n >= 1024*1024*1024) return "G";
+    else if (n >=      1024*1024) return "M";
+    else if (n >=           1024) return "K";
+    else                          return "";
   }
 
   /** parse byte size string
-   * @param string string to parse (<n>(%|B|M|MB|G|GB)
+   * @param string string to parse (<n>.<n>(%|B|M|MB|G|GB)
    * @return byte value
    */
   public static long parseByteSize(String string)
+    throws NumberFormatException
   {
     string = string.toUpperCase();
 
+    // try to parse with default locale
     if      (string.endsWith("GB"))
     {
       return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024*1024*1024);
@@ -436,6 +532,27 @@ class Units
     }
   }
 
+  /** parse byte size string
+   * @param string string to parse (<n>(%|B|M|MB|G|GB)
+   * @param defaultValue default value if number cannot be parsed
+   * @return byte value
+   */
+  public static long parseByteSize(String string, long defaultValue)
+  {
+    long n;
+
+    try
+    {
+      n = Units.parseByteSize(string);
+    }
+    catch (NumberFormatException exception)
+    {
+      n = defaultValue;
+    }
+
+    return n;
+  }
+
   /** format byte size
    * @param n byte value
    * @return string with unit
@@ -446,15 +563,24 @@ class Units
   }
 }
 
+/** BARControl
+ */
 public class BARControl
 {
+  /** login data
+   */
   class LoginData
   {
-    String serverName;
-    String password;
-    int    port;
-    int    tlsPort;
+    String serverName;       // server name
+    String password;         // login password
+    int    port;             // server port
+    int    tlsPort;          // server TLS port
 
+    /** create login data
+     * @param serverName server name
+     * @param port server port
+     * @param tlsPort server TLS port
+     */
     LoginData(String serverName, int port, int tlsPort)
     {
       this.serverName = !serverName.equals("")?serverName:Settings.serverName;
@@ -465,20 +591,41 @@ public class BARControl
   }
 
   // --------------------------- constants --------------------------------
-  final static String DEFAULT_SERVER_NAME     = "localhost";
-  final static int    DEFAULT_SERVER_PORT     = 38523;
-  final static int    DEFAULT_SERVER_TLS_PORT = 38524;
+  /* command line options */
+  private static final OptionEnumeration[] jobModeEnumeration =
+  {
+    new OptionEnumeration("normal",      Settings.JobModes.NORMAL),
+    new OptionEnumeration("full",        Settings.JobModes.FULL),
+    new OptionEnumeration("incremental", Settings.JobModes.INCREMENTAL),
+  };
+
+  private static final Option[] options =
+  {
+    new Option("--port",            "-p",Options.Types.INTEGER,    "serverPort"), 
+    new Option("--tls-port",        null,Options.Types.INTEGER,    "serverTLSPort"), 
+    new Option("--key-file",        null,Options.Types.STRING,     "keyFile"), 
+    new Option("--select-job",      null,Options.Types.STRING,     "selectJobName"),
+    new Option("--login-dialog",    null,Options.Types.BOOLEAN,    "loginDialogFlag"),    
+
+    new Option("--job",             "-j",Options.Types.STRING,     "runJobName"),  
+    new Option("--job-mode",        null,Options.Types.ENUMERATION,"jobMode",jobModeEnumeration),
+    new Option("--abort",           null,Options.Types.STRING,     "abortJobName"),   
+    new Option("--pause",           "-t",Options.Types.INTEGER,    "pauseTime"), 
+    new Option("--ping",            "-i",Options.Types.BOOLEAN,    "pingFlag"),    
+    new Option("--suspend",         "-s",Options.Types.BOOLEAN,    "suspendFlag"), 
+    new Option("--continue",        "-c",Options.Types.BOOLEAN,    "continueFlag"),  
+    new Option("--list",            "-l",Options.Types.BOOLEAN,    "listFlag"),    
+
+    new Option("--debug",           null,Options.Types.BOOLEAN,    "debugFlag"),  
+    new Option("--bar-server-debug",null,Options.Types.BOOLEAN,    "serverDebugFlag"),  
+
+    new Option("--help",            null,Options.Types.BOOLEAN,    "helpFlag"),    
+
+    // ignored
+    new Option("--swing",           null, Options.Types.BOOLEAN,   null),          
+  };
 
   // --------------------------- variables --------------------------------
-  private String     serverName        = DEFAULT_SERVER_NAME;
-  private int        serverPort        = DEFAULT_SERVER_PORT;
-  private int        serverTLSPort     = DEFAULT_SERVER_TLS_PORT;
-  private boolean    loginDialogFlag   = false;
-  private String     serverKeyFileName = null;
-  private String     selectedJobName   = null;
-
-  private boolean    debug = false;
-
   private Display    display;
   private Shell      shell;
   private TabFolder  tabFolder;
@@ -490,6 +637,24 @@ public class BARControl
 
   // ---------------------------- methods ---------------------------------
 
+  /** print error to stderr
+   * @param format format string
+   * @param args optional arguments
+   */
+  private void printError(String format, Object... args)
+  {
+    System.err.println("ERROR: "+String.format(format,args));
+  }
+
+  /** print warning to stderr
+   * @param format format string
+   * @param args optional arguments
+   */
+  private void printWarning(String format, Object... args)
+  {
+    System.err.println("Warning: "+String.format(format,args));
+  }
+
   /** print program usage
    * @param 
    * @return 
@@ -498,8 +663,8 @@ public class BARControl
   {
     System.out.println("barcontrol usage: <options> --");
     System.out.println("");
-    System.out.println("Options: -p|--port=<n>          - server port (default: "+DEFAULT_SERVER_PORT+")");
-    System.out.println("         --tls-port=<n>         - TLS server port (default: "+DEFAULT_SERVER_TLS_PORT+")");
+    System.out.println("Options: -p|--port=<n>          - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
+    System.out.println("         --tls-port=<n>         - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
     System.out.println("         --login-dialog         - force to open login dialog");
     System.out.println("         --key-file=<file name> - key file name (default: ");
     System.out.println("                                    ."+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
@@ -507,6 +672,19 @@ public class BARControl
     System.out.println("                                    "+Config.CONFIG_DIR+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME);
     System.out.println("                                  )");
     System.out.println("         --select-job=<name>    - select job");
+    System.out.println("");
+    System.out.println("         -j|--job=<name>        - start execution of job <name>");
+    System.out.println("         --job-mode=<mode>      - job mode");
+    System.out.println("                                    normal (default)");
+    System.out.println("                                    full");
+    System.out.println("                                    incremental");
+    System.out.println("         --abort=<name>         - abort execution of job <name>");
+    System.out.println("         -p|--pause=<n>         - pause job execution for <n> seconds");
+    System.out.println("         -i|--ping              - check connection to server");
+    System.out.println("         -s|--suspend           - suspend job execution");
+    System.out.println("         -c|--continue          - continue job execution");
+    System.out.println("         -l|--list              - list jobs");
+    System.out.println("");
     System.out.println("         -h|--help              - print this help");
   }
 
@@ -517,155 +695,45 @@ public class BARControl
   {
     // parse arguments
     int z = 0;
+    boolean endOfOptions = false;
     while (z < args.length)
     {
-      if      (args[z].startsWith("-h") || args[z].startsWith("--help"))
+      if      (!endOfOptions && args[z].equals("--"))
       {
-        printUsage();
-        System.exit(0);
+        endOfOptions = true;
+        z++;
       }
-      else if (args[z].startsWith("-p=") || args[z].startsWith("--port="))
+      else if (!endOfOptions && (args[z].startsWith("--") || args[z].startsWith("-")))
       {
-        String value = args[z].substring(args[z].indexOf('=')+1);
-        try
+        int i = Options.parse(options,args,z,Settings.class);
+        if (i < 0)
         {
-          serverPort = Integer.parseInt(value);
+          throw new Error("Unknown option '"+args[z]+"'!");
         }
-        catch (NumberFormatException exception)
-        {
-          throw new Error("Invalid value '"+value+"' for option --port (error: "+exception.getMessage()+")!");          
-        }
-        z += 1;
-      }
-      else if (args[z].equals("-p") || args[z].equals("--port"))
-      {
-        if ((z+1) >= args.length)
-        {
-          throw new Error("Expected value for option --port!");
-        }
-        try
-        {
-          serverPort = Integer.parseInt(args[z+1]);
-        }
-        catch (NumberFormatException exception)
-        {
-          throw new Error("Invalid value '"+args[z+1]+"' for option --port (error: "+exception.getMessage()+")!");          
-        }
-        z += 2;
-      }
-      else if (args[z].startsWith("--tls-port="))
-      {
-        String value = args[z].substring(args[z].indexOf('=')+1);
-        try
-        {
-          serverTLSPort = Integer.parseInt(value);
-        }
-        catch (NumberFormatException exception)
-        {
-          throw new Error("Invalid value '"+value+"' for option --tls-port (error: "+exception.getMessage()+")!");          
-        }
-        z += 1;
-      }
-      else if (args[z].equals("--tls-port"))
-      {
-        if ((z+1) >= args.length)
-        {
-          throw new Error("Expected value for option --tls-port!");
-        }
-        try
-        {
-          serverTLSPort = Integer.parseInt(args[z+1]);
-        }
-        catch (NumberFormatException exception)
-        {
-          throw new Error("Invalid value '"+args[z+1]+"' for option --tls-port (error: "+exception.getMessage()+")!");          
-        }
-        z += 2;
-      }
-      else if (args[z].startsWith("--login-dialog="))
-      {
-        String value = args[z].substring(args[z].indexOf('=')+1).toLowerCase();
-        if      (value.equals("yes") || value.equals("on")  || value.equals("1"))
-        {
-          loginDialogFlag = true;
-        }
-        else if (value.equals("no") || value.equals("off")  || value.equals("0"))
-        {
-          loginDialogFlag = false;
-        }
-        else
-        {
-          throw new Error("Invalid value '"+value+"' for option --login-dialog (error: expected yes,on,1 or no,off,0)!");
-        }
-        z += 1;
-      }
-      else if (args[z].equals("--login-dialog"))
-      {
-        loginDialogFlag = true;
-        z += 1;
-      }
-      else if (args[z].startsWith("--key-file="))
-      {
-        serverKeyFileName = args[z].substring(args[z].indexOf('=')+1);
-        z += 1;
-      }
-      else if (args[z].equals("--key-file"))
-      {
-        if ((z+1) >= args.length)
-        {
-          throw new Error("Expected value for option --key-file!");
-        }
-        serverKeyFileName = args[z+1];
-        z += 2;
-      }
-      else if (args[z].startsWith("--select-job="))
-      {
-        selectedJobName = args[z].substring(args[z].indexOf('=')+1);
-        z += 1;
-      }
-      else if (args[z].equals("--select-job"))
-      {
-        if ((z+1) >= args.length)
-        {
-          throw new Error("Expected value for option --select-job!");
-        }
-        selectedJobName = args[z+1];
-        z += 2;
-      }
-      else if (args[z].equals("--debug"))
-      {
-        debug = true;
-        z += 1;
-      }
-      else if (args[z].equals("--bar-server-debug"))
-      {
-        BARServer.debug = true;
-        z += 1;
-      }
-      else if (args[z].equals("--"))
-      {
-        z += 1;
-        break;
-      }
-      else if (args[z].startsWith("--"))
-      {
-        throw new Error("Unknown option '"+args[z]+"'!");
+        z = i;
       }
       else
       {
-        serverName = args[z];
-        z += 1;
+        Settings.serverName = args[z];
+        z++;
       }
     }
 
+    // help
+    if (Settings.helpFlag)
+    {
+      printUsage();
+      System.exit(0);
+    }
+
     // check arguments
-    if (serverKeyFileName != null)
+    if (Settings.serverKeyFileName != null)
     {
       // check if JKS file is readable
       try
       {
         KeyStore keyStore = java.security.KeyStore.getInstance("JKS");
-        keyStore.load(new java.io.FileInputStream(serverKeyFileName),null);
+        keyStore.load(new java.io.FileInputStream(Settings.serverKeyFileName),null);
       }
       catch (java.security.NoSuchAlgorithmException exception)
       {
@@ -681,14 +749,51 @@ public class BARControl
       }
       catch (FileNotFoundException exception)
       {
-        throw new Error("JKS file '"+serverKeyFileName+"' not found");
+        throw new Error("JKS file '"+Settings.serverKeyFileName+"' not found");
       }
       catch (IOException exception)
       {
-        throw new Error("not a JKS file '"+serverKeyFileName+"'");
+        throw new Error("not a JKS file '"+Settings.serverKeyFileName+"'");
       }
     }
   }
+
+  /** get job id
+   * @param name job name
+   * @return job id or -1 if not found
+   */
+  private static int getJobId(String name)
+  {
+    ArrayList<String> result = new ArrayList<String>();
+    BARServer.executeCommand("JOB_LIST",result);
+    for (String line : result)
+    {
+      Object data[] = new Object[11];
+      /* format:
+         <id>
+         <name>
+         <state>
+         <type>
+         <archivePartSize>
+         <compressAlgorithm>
+         <cryptAlgorithm>
+         <cryptType>
+         <cryptPasswordMode>
+         <lastExecutedDateTime>
+         <estimatedRestTime>
+      */
+      if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+      {
+        if (name.equalsIgnoreCase((String)data[1]))
+        {
+          return (Integer)data[0];
+        }
+      }
+    }
+
+    return -1;
+  }
+
 
   /** server/password dialog
    * @param loginData server login data 
@@ -1001,6 +1106,9 @@ public class BARControl
     }
   }
 
+  /** barcontrol main
+   * @param args command line arguments
+   */
   BARControl(String[] args)
   {
     try
@@ -1011,80 +1119,315 @@ public class BARControl
       // parse arguments
       parseArguments(args);
 
-      // init display
-      display = new Display();
-
-      // connect to server
-      LoginData loginData = new LoginData(serverName,serverPort,serverTLSPort);
-      boolean connectOkFlag = false;
-      if ((loginData.serverName != null) && !loginData.serverName.equals("") && (loginData.password != null) && !loginData.password.equals("") && !loginDialogFlag)
+      // commands
+      if (   (Settings.runJobName != null)
+          || (Settings.abortJobName != null)
+          || (Settings.pauseTime > 0)
+          || (Settings.pingFlag)
+          || (Settings.suspendFlag)
+          || (Settings.continueFlag)
+          || (Settings.listFlag)
+         )
       {
-        // connect to server with preset data
-        try
-        {
-          BARServer.connect(loginData.serverName,
-                            loginData.port,
-                            loginData.tlsPort,
-                            loginData.password,
-                            serverKeyFileName
-                           );
-          connectOkFlag = true;
-        }
-        catch (ConnectionError error)
-        {
-        }
-      }
-      while (!connectOkFlag)
-      {
-        // get login data
-        if (!getLoginData(loginData))
-        {
-          System.exit(0);
-        }
-        if ((loginData.port == 0) && (loginData.tlsPort == 0))
-        {
-          throw new Error("Cannot connect to server. No server ports specified!");
-        }
-/// ??? host name scheck
-
         // connect to server
+        LoginData loginData = new LoginData(Settings.serverName,Settings.serverPort,Settings.serverTLSPort);
         try
         {
           BARServer.connect(loginData.serverName,
                             loginData.port,
                             loginData.tlsPort,
                             loginData.password,
-                            serverKeyFileName
+                            Settings.serverKeyFileName
                            );
-          connectOkFlag = true;
         }
         catch (ConnectionError error)
         {
-          if (!Dialogs.confirmError(new Shell(),"Connection fail","Error: "+error.getMessage(),"Try again","Cancel"))
+          printError("cannot connect to server (error: %s)",error.getMessage());
+          System.exit(1);
+        }
+
+        // execute commands
+        if (Settings.runJobName != null)
+        {
+          // get job id
+          int jobId = getJobId(Settings.runJobName);
+          if (jobId < 0)
           {
+            printError("job '%s' not found",Settings.runJobName);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+
+          // start job
+          String[] result = new String[1];
+          int errorCode = BARServer.executeCommand("JOB_START "+jobId+" "+Settings.jobMode.toString());
+          if (errorCode != Errors.NONE)
+          {
+            printError("cannot start job '%s' (error: %s)",Settings.runJobName,result[0]);
+            BARServer.disconnect();
             System.exit(1);
           }
         }
+        if (Settings.pauseTime > 0)
+        {
+          // pause
+          String[] result = new String[1];
+          int errorCode = BARServer.executeCommand("PAUSE "+Settings.pauseTime);
+          if (errorCode != Errors.NONE)
+          {
+            printError("cannot pause (error: %s)",Settings.runJobName,result[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+        }
+        if (Settings.pingFlag)
+        {
+        }
+        if (Settings.suspendFlag)
+        {
+          // suspend
+          String[] result = new String[1];
+          int errorCode = BARServer.executeCommand("SUSPEND");
+          if (errorCode != Errors.NONE)
+          {
+            printError("cannot suspend (error: %s)",Settings.runJobName,result[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+        }
+        if (Settings.continueFlag)
+        {
+          // continue
+          String[] result = new String[1];
+          int errorCode = BARServer.executeCommand("CONTINUE");
+          if (errorCode != Errors.NONE)
+          {
+            printError("cannot continue (error: %s)",Settings.runJobName,result[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+        }
+        if (Settings.abortJobName != null)
+        {
+          // get job id
+          int jobId = getJobId(Settings.abortJobName);
+          if (jobId < 0)
+          {
+            printError("job '%s' not found",Settings.abortJobName);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+
+          // abort job
+          String[] result = new String[1];
+          int errorCode = BARServer.executeCommand("JOB_ABORT "+jobId);
+          if (errorCode != Errors.NONE)
+          {
+            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,result[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+        }
+        if (Settings.listFlag)
+        {
+          final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+          Object data[] = new Object[11];
+
+          // get server state          
+          String serverState = null;
+          String[] result1 = new String[1];
+          if (BARServer.executeCommand("STATUS",result1) != Errors.NONE)
+          {
+            printError("cannot get state (error: %s)",result1[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+          if      (StringParser.parse(result1[0],"running",data,StringParser.QUOTE_CHARS))
+          {
+          }
+          else if (StringParser.parse(result1[0],"pause %ld",data,StringParser.QUOTE_CHARS))
+          {
+            serverState = "pause";
+          }
+          else if (StringParser.parse(result1[0],"suspended",data,StringParser.QUOTE_CHARS))
+          {
+            serverState = "suspended";
+          }
+          else
+          {
+            printWarning("unknown server response '%s'",result1[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+
+          // get joblist
+          ArrayList<String> result2 = new ArrayList<String>();
+          int errorCode = BARServer.executeCommand("JOB_LIST",result2);
+          if (errorCode != Errors.NONE)
+          {
+            printError("cannot get job list (error: %s)",result2.get(0));
+            BARServer.disconnect();
+            System.exit(1);
+          }
+          for (String line : result2)
+          {
+            /* format:
+               <id>
+               <name>
+               <state>
+               <type>
+               <archivePartSize>
+               <compressAlgorithm>
+               <cryptAlgorithm>
+               <cryptType>
+               <cryptPasswordMode>
+               <lastExecutedDateTime>
+               <estimatedRestTime>
+            */
+      //System.err.println("BARControl.java"+", "+1357+": "+line);
+            if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+            {
+      //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
+              // get data
+              int    id                   = (Integer)data[ 0];
+              String name                 = (String) data[ 1];
+              String state                = (String) data[ 2];
+              String type                 = (String) data[ 3];
+              long   archivePartSize      = (Long)   data[ 4];
+              String compressAlgorithm    = (String) data[ 5];
+              String cryptAlgorithm       = (String) data[ 6];
+              String cryptType            = (String) data[ 7];
+              String cryptPasswordMode    = (String) data[ 8];
+              Long   lastExecutedDateTime = (Long)   data[ 9];
+              Long   estimatedRestTime    = (Long)   data[10];
+
+              System.out.println(String.format("%2d: %-40s %-10s %-11s %12d %-12s %-12s %-10s %-8s %s %8d",
+                                               id,
+                                               name,
+                                               (serverState == null)?state:serverState,
+                                               type,
+                                               archivePartSize,
+                                               compressAlgorithm,
+                                               cryptAlgorithm,
+                                               cryptType,
+                                               cryptPasswordMode,
+                                               simpleDateFormat.format(new Date(lastExecutedDateTime*1000)),
+                                               estimatedRestTime
+                                              )
+                                );
+            }
+          }
+        }
+
+        // disconnect
+        BARServer.disconnect();
       }
+      else
+      {
+        // interactive mode
 
-      // open main window
-      createWindow();
-      createTabs(selectedJobName);
-      createMenu();
+        // init display
+        display = new Display();
 
-      // run
-      run();
+        // connect to server
+        LoginData loginData = new LoginData(Settings.serverName,Settings.serverPort,Settings.serverTLSPort);
+        boolean connectOkFlag = false;
+        if (   (loginData.serverName != null)
+            && !loginData.serverName.equals("")
+            && !Settings.loginDialogFlag
+           )
+        {
+          if (   !connectOkFlag
+              && (loginData.password != null)
+              && !loginData.password.equals("")
+             )
+          {
+            // try to connect to server with preset data
+            try
+            {
+              BARServer.connect(loginData.serverName,
+                                loginData.port,
+                                loginData.tlsPort,
+                                loginData.password,
+                                Settings.serverKeyFileName
+                               );
+              connectOkFlag = true;
+            }
+            catch (ConnectionError error)
+            {
+            }
+          }
+          if (!connectOkFlag)
+          {
+            // try to connect to server with empty password
+            try
+            {
+              BARServer.connect(loginData.serverName,
+                                loginData.port,
+                                loginData.tlsPort,
+                                "",
+                                Settings.serverKeyFileName
+                               );
+              connectOkFlag = true;
+            }
+            catch (ConnectionError error)
+            {
+            }
+          }
+        }
+        while (!connectOkFlag)
+        {
+          // get login data
+          if (!getLoginData(loginData))
+          {
+            System.exit(0);
+          }
+          if ((loginData.port == 0) && (loginData.tlsPort == 0))
+          {
+            throw new Error("Cannot connect to server. No server ports specified!");
+          }
+/// ??? host name scheck
 
-      // disconnect
-      BARServer.disconnect();
+          // try to connect to server
+          try
+          {
+            BARServer.connect(loginData.serverName,
+                              loginData.port,
+                              loginData.tlsPort,
+                              loginData.password,
+                              Settings.serverKeyFileName
+                             );
+            connectOkFlag = true;
+          }
+          catch (ConnectionError error)
+          {
+            if (!Dialogs.confirmError(new Shell(),"Connection fail","Error: "+error.getMessage(),"Try again","Cancel"))
+            {
+              System.exit(1);
+            }
+          }
+        }
 
-      // save settings
-      Settings.save();
+        // open main window
+        createWindow();
+        createTabs(Settings.selectedJobName);
+        createMenu();
+
+        // run
+        run();
+
+        // disconnect
+        BARServer.disconnect();
+
+        // save settings
+        Settings.save();
+      }
     }
     catch (org.eclipse.swt.SWTException exception)
     {
       System.err.println("ERROR graphics: "+exception.getCause());
-      if (debug)
+      if (Settings.debugFlag)
       {
         for (StackTraceElement stackTraceElement : exception.getStackTrace())
         {
@@ -1113,7 +1456,7 @@ public class BARControl
     catch (Error error)
     {
       System.err.println("ERROR: "+error.getMessage());
-      if (debug)
+      if (Settings.debugFlag)
       {
         for (StackTraceElement stackTraceElement : error.getStackTrace())
         {
@@ -1123,6 +1466,9 @@ public class BARControl
     }
   }
 
+  /** main
+   * @param args command line arguments
+   */
   public static void main(String[] args)
   {
     BARControl barControl = new BARControl(args);
