@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BusyDialog.java,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: busy dialog
 * Systems: all
@@ -34,6 +34,9 @@ import org.eclipse.swt.widgets.Text;
  */
 class BusyDialog
 {
+  // --------------------------- constants --------------------------------
+
+  // --------------------------- variables --------------------------------
   private Display display;
 
   private Image   images[] = new Image[2];
@@ -49,12 +52,17 @@ class BusyDialog
   private boolean abortedFlag;
   private boolean resizedFlag;
 
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
+
   /** create busy dialog
    * @param parentShell parent shell
    * @param title dialog title
+   * @param width,height width/height of dialog
    * @param message dialog message
    */
-  public BusyDialog(Shell parentShell, String title, String message)
+  public BusyDialog(Shell parentShell, String title, int width, int height, String message)
   {
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
@@ -74,7 +82,8 @@ class BusyDialog
     dialog = new Shell(parentShell,SWT.DIALOG_TRIM|SWT.RESIZE|SWT.APPLICATION_MODAL);
     dialog.setText(title);
     tableLayout = new TableLayout(new double[]{1.0,0.0},1.0);
-    tableLayout.minWidth = 300;
+    tableLayout.minWidth  = width;
+    tableLayout.minHeight = height;
     dialog.setLayout(tableLayout);
     dialog.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
@@ -83,21 +92,6 @@ class BusyDialog
     composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},4));
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
     {
-if (false)
-{
-      widgetImage = new Label(composite,SWT.LEFT|SWT.BORDER);
-      widgetImage.setImage(images[imageIndex]);
-      widgetImage.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,2,0,4,4));
-
-      widgetMessage = new Label(composite,SWT.LEFT|SWT.BORDER);
-      if (message != null) widgetMessage.setText(message);
-      widgetMessage.setLayoutData(new TableLayoutData(0,1,TableLayoutData.N|TableLayoutData.WE,0,0,4,4));
-
-      widgetText = new Label(composite,SWT.LEFT|SWT.BORDER);
-      widgetText.setLayoutData(new TableLayoutData(1,1,TableLayoutData.S|TableLayoutData.W,0,0,4,4));
-}
-else
-{
       widgetImage = new Label(composite,SWT.LEFT);
       widgetImage.setImage(images[imageIndex]);
       widgetImage.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,4));
@@ -123,7 +117,6 @@ else
           widgetText.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
         }
       }
-}
     }
 
     // buttons
@@ -200,6 +193,35 @@ else
     dialog.open();
   }
 
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
+   * @param width,height width/height of dialog
+   */
+  public BusyDialog(Shell parentShell, String title, int width, int height)
+  {
+    this(parentShell,title,width,height,null);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
+   * @param message dialog message
+   */
+  public BusyDialog(Shell parentShell, String title, String message)
+  {
+    this(parentShell,title,300,150,message);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
+   */
+  public BusyDialog(Shell parentShell, String title)
+  {
+    this(parentShell,title,null);
+  }
+
   /** close busy dialog
    */
   public void close()
@@ -229,6 +251,9 @@ else
     return abortedFlag;
   }
 
+  /** set message
+   * @param message message to show
+   */
   public void setMessage(final String message)
   {
     if ((widgetMessage != null) && !dialog.isDisposed())
@@ -255,7 +280,7 @@ else
   }
 
   /** update busy dialog
-   * @param text text to show
+   * @param text text to show (can be null)
    * @return true if closed, false otherwise
    */
   public boolean update(final String text)
@@ -272,12 +297,11 @@ else
             imageTimestamp = timestamp;
             imageIndex     = (imageIndex+1)%2;
             widgetImage.setImage(images[imageIndex]);
-            display.update();
           }
+
           if (text != null)
           {
             widgetText.setText(text);
-            display.update();
 
             /* resize dialog (it not manually changed) */
             if (!resizedFlag)
@@ -289,6 +313,8 @@ else
               if (widgetText.getSize().x < width) dialog.pack();
             }
           }
+
+          display.update();
         }
       });
 
