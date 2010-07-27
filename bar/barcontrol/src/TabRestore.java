@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -63,9 +63,20 @@ import org.eclipse.swt.widgets.Widget;
  */
 abstract class BackgroundTask
 {
-  final BusyDialog busyDialog;
-  Thread           thread;
+  // --------------------------- constants --------------------------------
 
+  // --------------------------- variables --------------------------------
+  private final BusyDialog busyDialog;
+  private Thread           thread;
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
+
+  /** create background task
+   * @param busyDialog busy dialog
+   * @param userData user data
+   */
   BackgroundTask(final BusyDialog busyDialog, final Object userData)
   {
     final BackgroundTask backgroundTask = this;
@@ -83,6 +94,10 @@ abstract class BackgroundTask
     thread.start();
   }
 
+  /** run method
+   * @param busyDialog busy dialog
+   * @param userData user data
+   */
   abstract public void run(BusyDialog busyDialog, Object userData);
 }
 
@@ -112,6 +127,13 @@ class TabRestore
     long      datetime;
     String    title;
 
+    /** create archive file tree data
+     * @param name name
+     * @param type file type
+     * @param size size [bytes]
+     * @param datetime date/time (timestamp)
+     * @param title title to show
+     */
     ArchiveFileTreeData(String name, FileTypes type, long size, long datetime, String title)
     {
       this.name     = name;
@@ -121,6 +143,12 @@ class TabRestore
       this.title    = title;
     }
 
+    /** create archive file tree data
+     * @param name name
+     * @param type file type
+     * @param datetime date/time (timestamp)
+     * @param title title to show
+     */
     ArchiveFileTreeData(String name, FileTypes type, long datetime, String title)
     {
       this.name     = name;
@@ -130,6 +158,11 @@ class TabRestore
       this.title    = title;
     }
 
+    /** create archive file tree data
+     * @param name name
+     * @param type file type
+     * @param title title to show
+     */
     ArchiveFileTreeData(String name, FileTypes type, String title)
     {
       this.name     = name;
@@ -139,6 +172,9 @@ class TabRestore
       this.title    = title;
     }
 
+    /** convert to string
+     * @return string
+     */
     public String toString()
     {
       return "File {"+name+", "+type+", "+size+" bytes, datetime="+datetime+", title="+title+"}";
@@ -246,6 +282,13 @@ class TabRestore
     long      size;
     long      datetime;
 
+    /** create file data
+     * @param archiveName archive name
+     * @param name file name
+     * @param type file type
+     * @param size size [bytes]
+     * @param datetime date/time (timestamp)
+     */
     FileData(String archiveName, String name, FileTypes type, long size, long datetime)
     {
       this.archiveName = archiveName;
@@ -255,6 +298,12 @@ class TabRestore
       this.datetime    = datetime;
     }
 
+    /** create file data
+     * @param archiveName archive name
+     * @param name file name
+     * @param type file type
+     * @param datetime date/time (timestamp)
+     */
     FileData(String archiveName, String name, FileTypes type, long datetime)
     {
       this.archiveName = archiveName;
@@ -264,6 +313,9 @@ class TabRestore
       this.datetime    = datetime;
     }
 
+    /** convert to string
+     * @return string
+     */
     public String toString()
     {
       return "File {"+archiveName+", "+name+", "+type+", "+size+" bytes, datetime="+datetime+"}";
@@ -341,6 +393,7 @@ class TabRestore
     }
   }
 
+  // --------------------------- constants --------------------------------
   // colors
   private final Color COLOR_WHITE;
   private final Color COLOR_MODIFIED;
@@ -363,30 +416,37 @@ class TabRestore
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   // cursors
-  private final Cursor waitCursor;
+  private final Cursor         waitCursor;
+
+  // --------------------------- variables --------------------------------
 
   // global variable references
-  private Shell       shell;
-  private Display     display;
+  private Shell                shell;
+  private Display              display;
 
   // widgets
-  public  Composite   widgetTab;
-  private TabFolder   widgetTabFolder;
-  private Combo       widgetPath;
-  private Tree        widgetArchiveFileTree;
-  private Button      widgetListButton;
-  private Combo       widgetFilePattern;
-  private Table       widgetFileList;
-  private Button      widgetRestoreButton;
-  private Text        widgetRestoreTo;
-  private Button      widgetRestoreToSelectButton;
+  public  Composite            widgetTab;
+  private TabFolder            widgetTabFolder;
+  private Combo                widgetPath;
+  private Tree                 widgetArchiveFileTree;
+  private Button               widgetListButton;
+  private Combo                widgetFilePattern;
+  private Table                widgetFileList;
+  private Button               widgetRestoreButton;
+  private Button               widgetRestoreTo;
+  private Text                 widgetRestoreToDirectory;
+  private Button               widgetRestoreToSelectButton;
+  private Button               widgetOverwriteFiles;
 
-  // variables
   private ArchiveNameParts     archiveNameParts;
 
   private Pattern              filePattern        = null;
   private boolean              newestFileOnlyFlag = true;
   private LinkedList<FileData> fileList           = new LinkedList<FileData>();
+
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
 
   /** create restore tab
    * @param parentTabFolder parent tab folder
@@ -778,7 +838,7 @@ class TabRestore
 
     // restore
     composite = Widgets.newComposite(widgetTab,SWT.NONE);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0}));
+    composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0}));
     Widgets.layout(composite,5,0,TableLayoutData.WE);
     {
       widgetRestoreButton = Widgets.newButton(composite,"Restore");
@@ -790,16 +850,18 @@ class TabRestore
         {
           Button widget = (Button)selectionEvent.widget;
           restoreFiles(getSelectedFiles(),
-                       widgetRestoreTo.getEnabled()?widgetRestoreTo.getText():""
+                       widgetRestoreTo.getSelection()?widgetRestoreToDirectory.getText():"",
+                       widgetOverwriteFiles.getSelection()
                       );
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
       });
-      button = Widgets.newCheckbox(composite,"to");
-      Widgets.layout(button,0,1,TableLayoutData.W);
-      button.addSelectionListener(new SelectionListener()
+
+      widgetRestoreTo = Widgets.newCheckbox(composite,"to");
+      Widgets.layout(widgetRestoreTo,0,1,TableLayoutData.W);
+      widgetRestoreTo.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
@@ -812,11 +874,12 @@ class TabRestore
         {
         }
       });
-      widgetRestoreTo = Widgets.newText(composite);
-      widgetRestoreTo.setEnabled(false);
-      Widgets.layout(widgetRestoreTo,0,2,TableLayoutData.WE);
+
+      widgetRestoreToDirectory = Widgets.newText(composite);
+      widgetRestoreToDirectory.setEnabled(false);
+      Widgets.layout(widgetRestoreToDirectory,0,2,TableLayoutData.WE);
+
       widgetRestoreToSelectButton = Widgets.newButton(composite,IMAGE_DIRECTORY);
-      widgetRestoreToSelectButton.setEnabled(false);
       Widgets.layout(widgetRestoreToSelectButton,0,3,TableLayoutData.DEFAULT);
       widgetRestoreToSelectButton.addSelectionListener(new SelectionListener()
       {
@@ -829,13 +892,31 @@ class TabRestore
                                              );
           if (pathName != null)
           {
-            widgetRestoreTo.setText(pathName);
+            widgetRestoreTo.setSelection(true);
+            widgetRestoreToDirectory.setEnabled(true);
+            widgetRestoreToDirectory.setText(pathName);
           }
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
       });
+
+      widgetOverwriteFiles = Widgets.newCheckbox(composite,"overwrite existing files");
+      Widgets.layout(widgetOverwriteFiles,0,4,TableLayoutData.W);
+/*
+      widgetOverwriteFiles.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button  widget        = (Button)selectionEvent.widget;
+          boolean overwriteFlag = widget.getSelection();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+*/
     }
 
     // update data
@@ -873,7 +954,7 @@ class TabRestore
       HashSet <String> pathNames = new HashSet<String>();
       for (String line : result)
       {
-        Object data[] = new Object[10];
+        Object data[] = new Object[11];
         /* format:
            <id>
            <name>
@@ -882,11 +963,12 @@ class TabRestore
            <archivePartSize>
            <compressAlgorithm>
            <cryptAlgorithm>
-           <cryptTyp>
+           <cryptType>
+           <cryptPasswordMode>
            <lastExecutedDateTime>
            <estimatedRestTime>
         */
-        if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+        if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
         {
           // get data
           int id = (Integer)data[0];
@@ -894,23 +976,21 @@ class TabRestore
           // get archive name
           String archiveName = BARServer.getStringOption(id,"archive-name");
 
-          if (   !archiveName.startsWith("ssh")
+          // parse archive name
+          ArchiveNameParts archiveNameParts = new ArchiveNameParts(archiveName);
+
+/*
+          if (   !archiveNameParts.startsWith("ssh")
               && !archiveName.startsWith("scp:")
+              && !archiveName.startsWith("sftp:")
               && !archiveName.startsWith("dvd:")
               && !archiveName.startsWith("device:")
              )
           {
-            // parse archive name
-            ArchiveNameParts archiveNameParts = new ArchiveNameParts(archiveName);
-
+*/
             // get and save path
-            String path = new File(archiveNameParts.fileName).getParent();
-            if (path != null)
-            {
-              archiveNameParts.fileName = path;
-              pathNames.add(archiveNameParts.getArchiveName());
-            }
-          }
+            pathNames.add(archiveNameParts.getArchivePathName());
+//}
         }
 
         // update path list
@@ -953,7 +1033,7 @@ class TabRestore
     ArchiveFileTreeData archiveFileTreeData = (ArchiveFileTreeData)treeItem.getData();
 
     shell.setCursor(waitCursor);
-    BusyDialog busyDialog = new BusyDialog(shell,"List archives",null);
+    BusyDialog busyDialog = new BusyDialog(shell,"List archives",500,100);
 
     treeItem.removeAll();
 
@@ -966,7 +1046,7 @@ class TabRestore
 
         // start command
         String commandString = "FILE_LIST "+
-                               StringParser.escape(archiveFileTreeData.name)
+                               StringUtils.escape(archiveFileTreeData.name)
                                ;
         Command command = BARServer.runCommand(commandString);
 
@@ -1198,8 +1278,8 @@ class TabRestore
             // start command
             busyDialog.update("Opening...");
             String commandString = "ARCHIVE_LIST "+
-                                   StringParser.escape(archiveName)+" "+
-                                   StringParser.escape("")
+                                   StringUtils.escape(archiveName)+" "+
+                                   StringUtils.escape("")
                                    ;
             Command         command = null;
             int             errorCode = Errors.UNKNOWN;
@@ -1237,7 +1317,7 @@ class TabRestore
                       if (password != null)
                       {
                         String[] result = new String[1];
-                        BARServer.executeCommand("DECRYPT_PASSWORD_ADD "+StringParser.escape(password),result);
+                        BARServer.executeCommand("DECRYPT_PASSWORD_ADD "+StringUtils.escape(password),result);
                         tryAgainFlag[0] = true;
                       }
                     }
@@ -1588,46 +1668,95 @@ class TabRestore
     return getSelectedFiles().length > 0;
   }
 
-  private void restoreFiles(FileData fileData_[], String directory)
+  /** restore files
+   * @param files files to restore
+   * @param directory destination directory or ""
+   * @param overwriteFiles true to overwrite existing files
+   */
+  private void restoreFiles(FileData files[], String directory, boolean overwriteFiles)
   {
-    int errorCode;
-
     shell.setCursor(waitCursor);
 
-    if (!directory.equals(""))
-    {
-      BARServer.set("destination",directory);     
-    }
+    final BusyDialog busyDialog = new BusyDialog(shell,"Restore files",500,100);
 
-    final BusyDialog busyDialog = new BusyDialog(shell,"Restore files",null);
-    for (final FileData fileData : fileData_)
+    new BackgroundTask(busyDialog,new Object[]{files,directory,overwriteFiles})
     {
-//Dprintf.dprintf("restore %s to %s\n",fileData.name,directory);
-      ArrayList<String> result = new ArrayList<String>();
-      String command = "RESTORE "+
-                       StringParser.escape(fileData.archiveName)+" "+
-                       StringParser.escape(directory)+" "+
-                       StringParser.escape(fileData.name)
-                       ;
-      errorCode = BARServer.executeCommand(command,
-                                           result,
-                                           new Indicator()
-                                           {
-                                             public boolean busy(long n)
-                                             {
-                                               shell.getDisplay().update();
-                                               return busyDialog.update("Restore file '"+fileData.archiveName+"'...");
-                                             }
-                                           }
-                                          );
-      if (errorCode != Errors.NONE)
+      public void run(final BusyDialog busyDialog, Object userData)
       {
-        Dialogs.error(shell,"Cannot restore file '"+fileData.name+"' from archive\n'"+fileData.archiveName+"' (error: "+result.get(0)+")");
-      }
-    }
-    busyDialog.close();
+        final FileData[] files          = (FileData[])((Object[])userData)[0];
+        final String     directory      = (String    )((Object[])userData)[1];
+        final boolean    overwriteFiles = (Boolean   )((Object[])userData)[2];
 
-    shell.setCursor(null);
+        int errorCode;
+
+        // restore files
+        for (final FileData fileData : files)
+        {
+          if (!directory.equals(""))
+          {
+            busyDialog.update("'"+fileData.name+"' into '"+directory+"'");
+          }
+          else
+          {
+            busyDialog.update("'"+fileData.name+"'");
+          }
+
+          ArrayList<String> result = new ArrayList<String>();
+          String command = "RESTORE "+
+                           StringUtils.escape(fileData.archiveName)+" "+
+                           StringUtils.escape(directory)+" "+
+                           (overwriteFiles?"1":"0")+" "+
+                           StringUtils.escape(fileData.name)
+                           ;
+//Dprintf.dprintf("command=%s",command);
+          errorCode = BARServer.executeCommand(command,
+                                               result,
+                                               new BusyIndicator()
+                                               {
+                                                 public void busy(long n)
+                                                 {
+                                                   busyDialog.update();
+                                                 }
+
+                                                 public boolean isAborted()
+                                                 {
+                                                   return busyDialog.isAborted();
+                                                 }
+                                               }
+                                              );
+          // abort command if requested
+          if (!busyDialog.isAborted())
+          {
+            if (errorCode != Errors.NONE)
+            {
+              final String errorText = result.get(0);
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  Dialogs.error(shell,"Cannot restore file '"+fileData.name+"' from archive\n'"+fileData.archiveName+"' (error: "+errorText+")");
+                }
+              });
+            }
+          }
+          else
+          {
+            busyDialog.update("Aborting...");
+            break;
+          }
+        }
+
+        // close busy dialog, restore cursor
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            busyDialog.close();
+            shell.setCursor(null);
+           }
+        });
+      }
+    };
   }
 
   /** update all data
