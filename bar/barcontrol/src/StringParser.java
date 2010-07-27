@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/StringParser.java,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: String parser
 * Systems: all
@@ -90,7 +90,7 @@ class StringParser
    *     {<name>}s         - enumeration <name>
    *     <x>s, <x>S        - quoting character <x>
    *     <space>s,<space>S - accept spaces, ignore quotes
-   *     *s,*S             - accept all to eol
+   *     *s                - accept all to eol
    *     h,l,j,z,t         - length modifier
    * @param format format string
    * @param formatIndex index in format string
@@ -571,12 +571,12 @@ class StringParser
                      && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
-                if (string.charAt(index) == '\\')
+                if ((string.charAt(index) == '\\') && !formatToken.greedyFlag)
                 {
                   index++;
                   if (index < string.length())
                   {
-                    if (buffer.length() < formatToken.width-1)
+                    if ((formatToken.width == 0) || (buffer.length() < (formatToken.width-1)))
                     {
                       buffer.append(string.charAt(index));
                     }
@@ -585,60 +585,11 @@ class StringParser
                 }
                 else
                 {
-                  /* check for string quote */
-                  char stringQuote;
-
-                  stringQuote = getQuoteChar(string,index,formatToken,stringQuotes);
-                  if (stringQuote != '\0')
+                  if ((formatToken.width == 0) || (buffer.length() < (formatToken.width-1)))
                   {
-                    do
-                    {
-                      /* skip quote-char */
-                      index++;
-
-                      /* get string */
-                      while ((index < string.length()) && (string.charAt(index) != stringQuote))
-                      {
-                        if (string.charAt(index) == '\\')
-                        {
-                          index++;
-                          if (index < string.length())
-                          {
-                            if ((formatToken.width == 0) || (buffer.length() < (formatToken.width-1)))
-                            {
-                              buffer.append(string.charAt(index));
-                            }
-                            index++;
-                          }
-                        }
-                        else
-                        {
-                          if ((formatToken.width == 0) || (buffer.length() < (formatToken.width-1)))
-                          {
-                            buffer.append(string.charAt(index));
-                          }
-                          index++;
-                        }
-                      }
-
-                      /* skip quote-char */
-                      if (index < string.length())
-                      {
-                        index++;
-                      }
-
-                      stringQuote = getQuoteChar(string,index,formatToken,stringQuotes);
-                    }
-                    while (stringQuote != '\0');
+                    buffer.append(string.charAt(index));
                   }
-                  else
-                  {
-                    if ((formatToken.width == 0) || (buffer.length() < (formatToken.width-1)))
-                    {
-                      buffer.append(string.charAt(index));
-                    }
-                    index++;
-                  }
+                  index++;
                 }
               }
 
@@ -859,88 +810,6 @@ class StringParser
   public static boolean parse(String string, String format, Object arguments[])
   {
     return parse(string,format,arguments,null);
-  }
-
-  /** escape ' and \ in string, enclose in "
-   * @param string string to escape
-   * @param enclosingQuotes true to add enclosing quotes "
-   * @param quote quote character
-   * @return escaped string
-   */
-  public static String escape(String string, boolean enclosingQuotes, char quote)
-  {
-    StringBuffer buffer = new StringBuffer();
-
-    if (enclosingQuotes) buffer.append(quote);
-    for (int index = 0; index < string.length(); index++)
-    {
-      char ch = string.charAt(index);
-
-      if      (ch == quote)
-      {
-        buffer.append("\\"+quote);
-      }
-      else if (ch == '\\')
-      {
-        buffer.append("\\\\");
-      }
-      else
-      {
-        buffer.append(ch);
-      }
-    }
-    if (enclosingQuotes) buffer.append(quote);
-
-    return buffer.toString();
-  }
-
-  /** escape ' and \ in string, enclose in "
-   * @param string string to escape
-   * @param enclosingQuotes true to add enclosing quotes "
-   * @return escaped string
-   */
-  public static String escape(String string, boolean enclosingQuotes)
-  {
-    return escape(string,enclosingQuotes,'"');
-  }
-
-  /** escape ' and \ in string, enclose in "
-   * @param string string to escape
-   * @param quote quote character
-   * @return escaped string
-   */
-  public static String escape(String string, char quote)
-  {
-    return escape(string,true,quote);
-  }
-
-  /** escape ' and \ in string, enclose in "
-   * @param string string to escape
-   * @return escaped string
-   */
-  public static String escape(String string)
-  {
-    return escape(string,true);
-  }
-
-  /** remove enclosing ' or "
-   * @param string string to unescape
-   * @return unescaped string
-   */
-  public static String unescape(String string)
-  {
-    if      (string.startsWith("\"") && string.endsWith("\""))
-    {
-      return string.substring(1,string.length()-1);
-    }
-    else if (string.startsWith("'") && string.endsWith("'"))
-    {
-      return string.substring(1,string.length()-1);
-    }
-    else
-    {
-      return string;
-    }
   }
 }
 

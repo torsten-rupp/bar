@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TableLayout.java,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents:
 * Systems:
@@ -516,6 +516,10 @@ if (debug) System.err.println(indent()+"initialize "+this+": children="+children
       if (tableLayoutData == null) throw new Error("no layout data for "+children[i]);
 
       sizes[i] = children[i].computeSize(SWT.DEFAULT,SWT.DEFAULT,true);
+
+      if (tableLayoutData.width  != SWT.DEFAULT) sizes[i].x = tableLayoutData.width;
+      if (tableLayoutData.height != SWT.DEFAULT) sizes[i].y = tableLayoutData.height;
+
       if (tableLayoutData.minWidth  != SWT.DEFAULT) sizes[i].x = Math.max(sizes[i].x,tableLayoutData.minWidth );
       if (tableLayoutData.maxWidth  != SWT.DEFAULT) sizes[i].x = Math.min(sizes[i].x,tableLayoutData.maxWidth );
       if (tableLayoutData.minHeight != SWT.DEFAULT) sizes[i].y = Math.max(sizes[i].y,tableLayoutData.minHeight);

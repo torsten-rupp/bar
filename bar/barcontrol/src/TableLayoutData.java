@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TableLayoutData.java,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents:
 * Systems:
@@ -37,12 +37,13 @@ public class TableLayoutData
 
   // --------------------------- variables --------------------------------
 
-  // true iff widget should be exclued (not drawn)
-  public int     minWidth  = SWT.DEFAULT;
+  public int     width     = SWT.DEFAULT;  // requested size
+  public int     height    = SWT.DEFAULT;
+  public int     minWidth  = SWT.DEFAULT;  // min. size
   public int     minHeight = SWT.DEFAULT;
-  public int     maxWidth  = SWT.DEFAULT;
+  public int     maxWidth  = SWT.DEFAULT;  // max. size
   public int     maxHeight = SWT.DEFAULT;
-  public boolean exclude   = false;
+  public boolean exclude   = false;        // true iff widget should be excluded (not drawn)
 
   protected int row,column;
   protected int style;
@@ -61,7 +62,7 @@ public class TableLayoutData
    * @param minWidth,minHeight min. width/height
    * @param maxWidth,maxHeight max. width/height
    */
-  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int minWidth, int minHeight, int maxWidth, int maxHeight)
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight, int maxWidth, int maxHeight)
   {
     this.row         = row;
     this.column      = column;
@@ -70,10 +71,17 @@ public class TableLayoutData
     this.columnSpawn = Math.max(1,columnSpawn);
     this.padX        = padX;
     this.padY        = padY;
+    this.width       = width;
+    this.height      = height;
     this.minWidth    = minWidth;
     this.minHeight   = minHeight;
     this.maxWidth    = maxWidth;
     this.maxHeight   = maxHeight;
+  }
+
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight)
+  {
+    this(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,minWidth,minHeight,SWT.DEFAULT,SWT.DEFAULT);
   }
 
   /** create table layout data
