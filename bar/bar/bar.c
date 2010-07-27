@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.30 $
+* $Revision: 1.31 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -293,7 +293,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_INTEGER      ("directory-strip",              'p',1,0,jobOptions.directoryStripCount,            0,INT_MAX,NULL,                                       "number of directories to strip on extract"                                ),
   CMD_OPTION_STRING       ("destination",                  0,  0,0,jobOptions.destination,                                                                          "destination to restore files/image","path"                                ),
-  CMD_OPTION_SPECIAL      ("owner",                        0,  0,0,&jobOptions.owner,                         cmdOptionParseOwner,NULL,                             "owner and group of restored files","user:group"                           ),
+  CMD_OPTION_SPECIAL      ("owner",                        0,  0,0,&jobOptions.owner,                         cmdOptionParseOwner,NULL,                             "user and group of restored files","user:group"                            ),
 
   CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,globalOptions.niceLevel,                   0,19,NULL,                                            "general nice level of processes/threads"                                  ),
 
@@ -678,7 +678,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   uint       lineNb;
   String     line;
   String     name,value;
-  ulong      nextIndex;
+  long       nextIndex;
 
   assert(fileName != NULL);
 
@@ -2459,7 +2459,7 @@ ScheduleNode *parseSchedule(const String s)
   bool         errorFlag;
   String       s0,s1,s2;
   bool         b;
-  ulong        nextIndex;
+  long         nextIndex;
 
   assert(s != NULL);
 
