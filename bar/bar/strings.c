@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -942,7 +942,7 @@ LOCAL bool parseString(const char    *string,
                        const char    *format,
                        const va_list arguments,
                        const char    *stringQuotes,
-                       ulong         *nextIndex
+                       long          *nextIndex
                       )
 {
   FormatToken formatToken;
@@ -1309,10 +1309,6 @@ LOCAL bool parseString(const char    *string,
               }
               if (value.s != NULL) value.s[z] = '\0';
             }
-            else
-            {
-              return FALSE;
-            }
             break;
           case 'p':
           case 'n':
@@ -1413,10 +1409,6 @@ LOCAL bool parseString(const char    *string,
                   }
                 }
               }
-            }
-            else
-            {
-              return FALSE;
             }
             break;
   #if 0
@@ -3620,7 +3612,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
 bool String_scan(const String string, ulong index, const char *format, ...)
 {
   va_list arguments;
-  ulong   nextIndex;
+  long    nextIndex;
   bool    result;
 
   assert(string != NULL);
@@ -3640,7 +3632,7 @@ bool String_scan(const String string, ulong index, const char *format, ...)
 bool String_scanCString(const char *s, const char *format, ...)
 {
   va_list arguments;
-  ulong   nextIndex;
+  long    nextIndex;
   bool    result;
 
   assert(s != NULL);
@@ -3654,7 +3646,7 @@ bool String_scanCString(const char *s, const char *format, ...)
   return result;
 }
 
-bool String_parse(const String string, ulong index, const char *format, ulong *nextIndex, ...)
+bool String_parse(const String string, ulong index, const char *format, long *nextIndex, ...)
 {
   va_list arguments;
   bool    result;
@@ -3672,7 +3664,7 @@ bool String_parse(const String string, ulong index, const char *format, ulong *n
   return result;
 }
 
-bool String_parseCString(const char *s, const char *format, ulong *nextIndex, ...)
+bool String_parseCString(const char *s, const char *format, long *nextIndex, ...)
 {
   va_list arguments;
   bool    result;
@@ -3984,14 +3976,14 @@ LOCAL void String_debugPrintAllocated(void)
 
   for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
   {
-    fprintf(stderr,"DEBUG WARNING: string %p '%s' still allocated at %s, line %ld\n",
+    fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %ld\n",
             debugStringNode->string,
             debugStringNode->string->data,
             debugStringNode->fileName,
             debugStringNode->lineNb
            );
     #ifdef HAVE_BACKTRACE
-      String_debugPrintStackTrace("still allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+      String_debugPrintStackTrace("allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
     #endif /* HAVE_BACKTRACE */
   }
 }

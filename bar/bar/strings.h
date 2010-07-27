@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -246,11 +246,11 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 /***********************************************************************\
 * Name   : String_sub, String_subCString, String_subBuffer
 * Purpose: get sub-string from string
-* Input  : string/s/buffer - string/buffer to set
-*          fromString      - string to get sub-string from
-*          index           - start index (0..n-1)
-*          length          - length of sub-string (0..n) or STRING_END
-*                            (String_sub only!)
+* Input  : string/buffer - string/buffer to set
+*          fromString    - string to get sub-string from
+*          index         - start index (0..n-1)
+*          length        - length of sub-string (0..n) or STRING_END
+*                          (String_sub only!)
 * Output : -
 * Return : new sub-string/buffer
 * Notes  : -
@@ -720,8 +720,9 @@ bool String_scanCString(const char *s, const char *format, ...);
 * Input  : string,s - string
 *          format - format (like scanf)
 *          ...    - optional variables
-* Output : nextIndex - index of next character in string not parsed (can
-*                      be NULL)
+* Output : nextIndex - index of next character in string not parsed or
+*                      STRING_END if string completely parsed (can be
+*                      NULL)
 * Return : TRUE is parsed, FALSE on error
 * Notes  : extended scan-function:
 *            - match also specified text
@@ -733,8 +734,8 @@ bool String_scanCString(const char *s, const char *format, ...);
 *            - if a value is NULL, skip value
 \***********************************************************************/
 
-bool String_parse(const String string, ulong index, const char *format, ulong *nextIndex, ...);
-bool String_parseCString(const char *s, const char *format, ulong *nextIndex, ...);
+bool String_parse(const String string, ulong index, const char *format, long *nextIndex, ...);
+bool String_parseCString(const char *s, const char *format, long *nextIndex, ...);
 
 /***********************************************************************\
 * Name   : String_match, String_matchCString
