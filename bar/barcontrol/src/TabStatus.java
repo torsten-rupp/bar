@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -845,7 +845,7 @@ class TabStatus
   {
     // get status
     String[] result = new String[1];
-    if (BARServer.executeCommand("STATUS",result) != 0) return;
+    if (BARServer.executeCommand("STATUS",result) != Errors.NONE) return;
 
     Object[] data = new Object[1];
     if      (StringParser.parse(result[0],"pause %ld",data,StringParser.QUOTE_CHARS))
@@ -931,7 +931,7 @@ class TabStatus
     {
       // get job list
       final ArrayList<String> result = new ArrayList<String>();
-      if (BARServer.executeCommand("JOB_LIST",result) != 0) return;
+      if (BARServer.executeCommand("JOB_LIST",result) != Errors.NONE) return;
 
       display.syncExec(new Runnable()
       {
@@ -959,14 +959,14 @@ class TabStatus
                  <lastExecutedDateTime>
                  <estimatedRestTime>
               */
-              if (StringParser.parse(line,"%d %S %S %s %d %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+              if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
               {
                 // get data
                 int    id                   = (Integer)data[0];
                 String name                 = (String )data[1];
                 String state                = (String )data[2];
                 String type                 = (String )data[3];
-                int    archivePartSize      = (Integer)data[4];
+                long   archivePartSize      = (Long   )data[4];
                 String compressAlgorithm    = (String )data[5];
                 String cryptAlgorithm       = (String )data[6];
                 String cryptType            = (String )data[7];
@@ -1032,7 +1032,7 @@ class TabStatus
     {
       // get job info
       final String result[] = new String[1];
-      if (BARServer.executeCommand(String.format("JOB_INFO %d",selectedJobData.id),result) != 0) return;
+      if (BARServer.executeCommand(String.format("JOB_INFO %d",selectedJobData.id),result) != Errors.NONE) return;
 
       display.syncExec(new Runnable()
       {
@@ -1153,7 +1153,7 @@ class TabStatus
         return;
       }
 
-      errorCode = BARServer.executeCommand("CRYPT_PASSWORD "+selectedJobData.id+" "+StringParser.escape(password));
+      errorCode = BARServer.executeCommand("CRYPT_PASSWORD "+selectedJobData.id+" "+StringUtils.escape(password));
     }
 
     // start
