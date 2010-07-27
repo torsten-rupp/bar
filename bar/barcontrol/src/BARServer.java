@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -79,7 +79,7 @@ class CommunicationError extends Error
 
 /** busy indicator
  */
-class Indicator
+class BusyIndicator
 {
   // --------------------------- constants --------------------------------
 
@@ -90,10 +90,18 @@ class Indicator
   // ---------------------------- methods ---------------------------------
 
   /** called when busy
+   * @param n progress value
    */
-  public boolean busy(long n)
+  public void busy(long n)
   {
-    return true;
+  }
+
+  /** check if aborted
+   * @return true iff operation aborted
+   */
+  public boolean isAborted()
+  {
+    return false;
   }
 }
 
@@ -344,11 +352,16 @@ class Command
  */
 class ReadThread extends Thread
 {
+  // --------------------------- constants --------------------------------
+
+  // --------------------------- variables --------------------------------
   private BufferedReader        input;
   private boolean               quitFlag;
   private HashMap<Long,Command> commandHashMap = new HashMap<Long,Command>();
 
-  boolean debug = false;
+  // ------------------------ native functions ----------------------------
+
+  // ---------------------------- methods ---------------------------------
 
   /** create read thread
    * @param input input stream
@@ -385,7 +398,7 @@ class ReadThread extends Thread
             break;
           }
         }
-        if (debug) System.err.println("Network: received '"+line+"'");
+        if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
 
         // parse: line format <id> <error code> <completed flag> <data>
         String data[] = line.split(" ",4);
@@ -450,7 +463,8 @@ class ReadThread extends Thread
             }
             else
             {
-Dprintf.dprintf("not found %d: %s\n",commandId,line);
+              // result for unknown command -> currently ignored
+//Dprintf.dprintf("not found %d: %s\n",commandId,line);
             }
           }
         }
@@ -524,8 +538,6 @@ class BARServer
   private final static int    SOCKET_READ_TIMEOUT    = 20*1000;    // timeout reading socket [ms]
 
   // --------------------------- variables --------------------------------
-  public static boolean debug = false;
-
   private static long               commandId;
   private static Socket             socket;
   private static BufferedWriter     output;
@@ -755,7 +767,6 @@ class BARServer
 
     // start read thread
     readThread = new ReadThread(input);
-    readThread.debug = debug;
     readThread.start();
   }
 
@@ -811,7 +822,7 @@ class BARServer
       // send command
       try
       {
-        if (debug) System.err.println("Network: sent '"+line+"'");
+        if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
         output.write(line); output.write('\n'); output.flush();
       }
       catch (IOException exception)
@@ -854,18 +865,20 @@ class BARServer
   /** execute command
    * @param command command to send to BAR server
    * @param result result (String[] or ArrayList)
+   * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, Object result, Indicator indicator)
+  public static int executeCommand(String commandString, Object result, BusyIndicator busyIndicator)
   {
     Command command;
     int     errorCode;
 
     synchronized(output)
     {
-      if (indicator != null)
+      if (busyIndicator != null)
       {
-        if (!indicator.busy(0)) return -1;
+        busyIndicator.busy(0);
+        if (busyIndicator.isAborted()) return -1;
       }
 
       // new command
@@ -878,7 +891,7 @@ class BARServer
       // send command
       try
       {
-        if (debug) System.err.println("Network: sent '"+line+"'");
+        if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
         output.write(line); output.write('\n'); output.flush();
       }
       catch (IOException exception)
@@ -886,9 +899,9 @@ class BARServer
         readThread.commandRemove(command);
         return -1;
       }
-      if (indicator != null)
+      if (busyIndicator != null)
       {
-        if (!indicator.busy(0))
+        if (busyIndicator.isAborted())
         {
           abortCommand(command);
           return command.getErrorCode();
@@ -896,16 +909,22 @@ class BARServer
       }
     }
 
-    // wait until completed
-    while (!command.waitCompleted(250))
+    // wait until completed or aborted
+    while (  !command.waitCompleted(250)
+           && ((busyIndicator == null) || !busyIndicator.isAborted())
+          )
     {
-      if (indicator != null)
+      if (busyIndicator != null)
       {
-        if (!indicator.busy(0))
-        {
-          command.abort();
-          return command.getErrorCode();
-        }
+        busyIndicator.busy(0);
+      }
+    }
+    if (busyIndicator != null)
+    {
+      if (busyIndicator.isAborted())
+      {
+        command.abort();
+        return command.getErrorCode();
       }
     }
 
@@ -979,7 +998,7 @@ class BARServer
    */
   public static void set(String name, String s)
   {
-    executeCommand("SET "+name+" "+StringParser.escape(s));
+    executeCommand("SET "+name+" "+StringUtils.escape(s));
   }
 
   /** get boolean value from BAR server
@@ -1020,7 +1039,7 @@ class BARServer
     String[] result = new String[1];
 
     executeCommand("OPTION_GET "+jobId+" "+name,result);
-    return StringParser.unescape(result[0]);
+    return StringUtils.unescape(result[0]);
   }
 
   /** set boolean option value on BAR server
@@ -1050,7 +1069,7 @@ class BARServer
    */
   public static void setOption(int jobId, String name, String s)
   {
-    executeCommand("OPTION_SET "+jobId+" "+name+" "+StringParser.escape(s));
+    executeCommand("OPTION_SET "+jobId+" "+name+" "+StringUtils.escape(s));
   }
 
   //-----------------------------------------------------------------------

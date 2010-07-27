@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Settings.java,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: load/save program settings
 * Systems: all
@@ -19,14 +19,62 @@ import java.io.IOException;
 public class Settings
 {
   // --------------------------- constants --------------------------------
+  static final String DEFAULT_SERVER_NAME                 = "localhost";
+  static final int    DEFAULT_SERVER_PORT                 = 38523;
+  static final int    DEFAULT_SERVER_TLS_PORT             = 38524;
   static final String DEFAULT_BARCONTROL_CONFIG_FILE_NAME = System.getProperty("user.home")+File.separator+".bar"+File.separator+"barcontrol.cfg";
+
+  /** job modes
+   */
+  public enum JobModes
+  {
+    NORMAL,
+    FULL,
+    INCREMENTAL;
+
+    /** convert to string
+     * @return string
+     */
+    public String toString()
+    {
+      switch (this)
+      {
+        case NORMAL:      return "normal";
+        case FULL:        return "full";
+        case INCREMENTAL: return "incremental";
+        default:          return "normal";
+      }
+    }
+  };
 
   // --------------------------- variables --------------------------------
 
-  public static String serverName     = null;
-  public static String serverPassword = null;
-  public static int    serverPort     = 0;
-  public static int    serverTLSPort  = 0;
+  // server settings
+  public static String           serverName                     = DEFAULT_SERVER_NAME;
+  public static String           serverPassword                 = null;
+  public static int              serverPort                     = DEFAULT_SERVER_PORT;
+  public static int              serverTLSPort                  = DEFAULT_SERVER_TLS_PORT;
+  public static String           serverKeyFileName              = null;
+
+  public static String           selectedJobName                = null;
+  public static boolean          loginDialogFlag                = false;
+
+  // commands and data
+  public static String           runJobName                     = null;
+  public static JobModes         jobMode                        = JobModes.NORMAL;
+  public static String           abortJobName                   = null;
+  public static int              pauseTime                      = 0;
+  public static boolean          pingFlag                       = false;
+  public static boolean          suspendFlag                    = false;
+  public static boolean          continueFlag                   = false;
+  public static boolean          listFlag                       = false;
+
+  // debug
+  public static boolean          debugFlag                      = false;
+  public static boolean          serverDebugFlag                = false;
+
+  // help
+  public static boolean          helpFlag                       = false;
 
   // ------------------------ native functions ----------------------------
 
