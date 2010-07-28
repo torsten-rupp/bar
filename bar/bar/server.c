@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -4334,8 +4334,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   error = ERROR_NONE;
   while (!Archive_eof(&archiveInfo) && (error == ERROR_NONE) && !commandAborted(clientInfo,id))
   {
-//Misc_udelay(1000*100);
-
     /* get next file type */
     error = Archive_getNextArchiveEntryType(&archiveInfo,
                                             &archiveFileInfo,
@@ -4348,11 +4346,11 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
+            String             fileName;
             ArchiveFileInfo    archiveFileInfo;
             CompressAlgorithms compressAlgorithm;
             CryptAlgorithms    cryptAlgorithm;
             CryptTypes         cryptType;
-            String             fileName;
             FileInfo           fileInfo;
             uint64             fragmentOffset,fragmentSize;
 
@@ -4374,6 +4372,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
               String_delete(fileName);
               break;
             }
+//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(fileName));
 
             /* match pattern */
             if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -4396,11 +4395,61 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             String_delete(fileName);
           }
           break;
+        case ARCHIVE_ENTRY_TYPE_IMAGE:
+          {
+            String             imageName;
+            ArchiveFileInfo    archiveFileInfo;
+            CompressAlgorithms compressAlgorithm;
+            CryptAlgorithms    cryptAlgorithm;
+            CryptTypes         cryptType;
+            DeviceInfo         deviceInfo;
+            uint64             blockOffset,blockCount;
+
+            /* open archive file */
+            imageName = String_new();
+            error = Archive_readImageEntry(&archiveInfo,
+                                           &archiveFileInfo,
+                                           &compressAlgorithm,
+                                           &cryptAlgorithm,
+                                           &cryptType,
+                                           imageName,
+                                           &deviceInfo,
+                                           &blockOffset,
+                                           &blockCount
+                                          );
+            if (error != ERROR_NONE)
+            {
+              sendResult(clientInfo,id,TRUE,error,"Cannot not read content of archive '%S' (error: %s)",archiveName,Errors_getText(error));
+              String_delete(imageName);
+              break;
+            }
+//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(imageName));
+
+            /* match pattern */
+            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(&clientInfo->excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
+               )
+            {
+              sendResult(clientInfo,id,FALSE,0,
+                         "IMAGE %llu %llu %llu %llu %llu %'S",
+                         deviceInfo.size,
+                         archiveFileInfo.image.chunkInfoImageData.size,
+                         blockOffset,
+                         blockCount,
+                         imageName
+                        );
+            }
+
+            /* close archive file, free resources */
+            Archive_closeEntry(&archiveFileInfo);
+            String_delete(imageName);
+          }
+          break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
+            String          directoryName;
             CryptAlgorithms cryptAlgorithm;
             CryptTypes      cryptType;
-            String          directoryName;
             FileInfo        fileInfo;
 
             /* open archive directory */
@@ -4418,6 +4467,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
               String_delete(directoryName);
               break;
             }
+//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(directoryName));
 
             /* match pattern */
             if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
@@ -4438,10 +4488,10 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            CryptAlgorithms cryptAlgorithm;
-            CryptTypes      cryptType;
             String          linkName;
             String          fileName;
+            CryptAlgorithms cryptAlgorithm;
+            CryptTypes      cryptType;
             FileInfo        fileInfo;
 
             /* open archive link */
@@ -4462,6 +4512,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
               String_delete(linkName);
               break;
             }
+//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(linkName));
 
             /* match pattern */
             if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
@@ -4484,9 +4535,9 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
+            String          fileName;
             CryptAlgorithms cryptAlgorithm;
             CryptTypes      cryptType;
-            String          fileName;
             FileInfo        fileInfo;
 
             /* open archive link */
@@ -4504,6 +4555,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
               String_delete(fileName);
               break;
             }
+//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(fileName));
 
             /* match pattern */
             if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
