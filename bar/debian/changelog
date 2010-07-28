@@ -1,3 +1,22 @@
+bar (0.14-1) unstable; urgency=low
+
+  * added command line control functions to barcontrol:
+    --list, --job, --job-mode, --abort, --ping, --pause,
+    --suspend, --continue
+  * improved barcontrol command line parser
+  * barcontrol: added file selector buttons for ssh keys, device name
+  * fixed barcontrol restore tab: listing path names
+  * fix C string parser: %s and %S can be empty strings
+  * barcontrol: fixed abort in restore dialog, some clean-up. Note:
+    The restore tab will be improved in some of the next releases.
+  * barcontrol: fixed parsing of archive part size (job was ignored
+    when number was bigger than 32bit; now 63bit are allowed)
+  * fixed display of archive/device sizes: units are G,M,K
+  * add warning when no BAR server password given
+  * BAR server: added support to list image entries
+  * updated manual
+  * clean-up
+
 bar (0.13a-1) unstable; urgency=low
 
   * Initial release
