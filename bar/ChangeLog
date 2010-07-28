@@ -1,3 +1,25 @@
+2010-07-28 0.14
+  * added command line control functions to barcontrol:
+    --list, --job, --job-mode, --abort, --ping, --pause,
+    --suspend, --continue
+  * improved barcontrol command line parser
+  * barcontrol: added file selector buttons for ssh keys, device name
+  * fixed barcontrol restore tab: listing path names
+  * fix C string parser: %s and %S can be empty strings
+  * barcontrol: fixed abort in restore dialog, some clean-up. Note:
+    The restore tab will be improved in some of the next releases.
+  * barcontrol: fixed parsing of archive part size (job was ignored
+    when number was bigger than 32bit; now 63bit are allowed)
+  * fixed display of archive/device sizes: units are G,M,K
+  * add warning when no BAR server password given
+  * BAR server: added support to list image entries
+  * updated manual
+  * clean-up
+
+2010-07-24 0.13d
+  * fix wrong installation path "/man/man7" man pages: now
+    /usr/share/man/man7
+
 2010-06-11 0.13c
   * fix bar-keygen which caused broken Debian package: wrong template
     file names
