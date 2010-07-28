@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -3671,8 +3671,8 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-//      error = ERROR_FUNCTION_NOT_SUPPORTED;
-//      break;
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
