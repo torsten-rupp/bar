@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -438,7 +438,8 @@ class TabRestore
   private Button               widgetRestoreToSelectButton;
   private Button               widgetOverwriteFiles;
 
-  private ArchiveNameParts     archiveNameParts;
+  private String               archivePathName = "";
+  private ArchiveNameParts     archivePathNameParts;
 
   private Pattern              filePattern        = null;
   private boolean              newestFileOnlyFlag = true;
@@ -512,13 +513,13 @@ class TabRestore
         {
           Combo  widget   = (Combo)selectionEvent.widget;
           String pathName = widget.getText();
-          setPath(pathName);
+          setArchivePath(pathName);
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Combo widget = (Combo)selectionEvent.widget;
           String pathName = widget.getText();
-          setPath(pathName);
+          setArchivePath(pathName);
         }
       });
       widgetPath.addFocusListener(new FocusListener()
@@ -530,7 +531,7 @@ class TabRestore
         {
           Combo  widget   = (Combo)focusEvent.widget;
           String pathName = widget.getText();
-          setPath(pathName);
+          setArchivePath(pathName);
         }
       });
 
@@ -549,7 +550,7 @@ class TabRestore
           if (pathName != null)
           {
             widgetPath.setText(pathName);
-            setPath(pathName);
+            setArchivePath(pathName);
           }
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -920,29 +921,82 @@ class TabRestore
     }
 
     // update data
-    updatePathList();
-    setPath("/");
+    updateArchivePathList();
+    setArchivePath("/");
   }
 
   //-----------------------------------------------------------------------
 
-  /** set path to archives
+  /** set archive name in tree widget
+   * @param newArchivePathName new archive path name
    */
-  private void setPath(String pathName)
+  private void setArchivePath(String newArchivePathName)
   {
-    archiveNameParts = new ArchiveNameParts(pathName);
+    TreeItem treeItem;
 
-    widgetArchiveFileTree.removeAll();
+    if (!archivePathName.equals(newArchivePathName))
+    {
+      archivePathName      = newArchivePathName;
+      archivePathNameParts = new ArchiveNameParts(newArchivePathName);
 
-    TreeItem treeItem = Widgets.addTreeItem(widgetArchiveFileTree,new ArchiveFileTreeData(pathName,FileTypes.DIRECTORY,pathName),true);
-    treeItem.setText(pathName);
-    treeItem.setImage(IMAGE_DIRECTORY);
-    treeItem.setGrayed(true);
+      switch (archivePathNameParts.type)
+      {
+        case FILESYSTEM:
+        case SFTP:
+        case DVD:
+        case DEVICE:
+          widgetArchiveFileTree.removeAll();
+
+          treeItem = Widgets.addTreeItem(widgetArchiveFileTree,
+                                         new ArchiveFileTreeData(archivePathName,
+                                                                 FileTypes.DIRECTORY,
+                                                                 archivePathName
+                                                                ),
+                                         true
+                                        );
+          treeItem.setText(archivePathName);
+          treeItem.setImage(IMAGE_DIRECTORY);
+          treeItem.setGrayed(true);
+          break;
+        case FTP:
+          Dialogs.error(shell,"Sorry, FTP protocol does not support required operations to list archive content.");
+          break;
+        case SCP:
+          if (Dialogs.confirm(shell,"SCP protocol does not support required operations to list archive content.\n\nTry to open archive with SFTP protocol?"))
+          {
+            archivePathNameParts = new ArchiveNameParts(StorageTypes.SFTP,
+                                                        archivePathNameParts.loginName,
+                                                        archivePathNameParts.loginPassword,
+                                                        archivePathNameParts.hostName,
+                                                        archivePathNameParts.hostPort,
+                                                        archivePathNameParts.deviceName,
+                                                        archivePathNameParts.fileName
+                                                       );
+            String pathName = archivePathNameParts.getArchiveName();
+
+            widgetArchiveFileTree.removeAll();
+
+            treeItem = Widgets.addTreeItem(widgetArchiveFileTree,
+                                           new ArchiveFileTreeData(pathName,
+                                                                   FileTypes.DIRECTORY,
+                                                                   pathName
+                                                                  ),
+                                           true
+                                          );
+            treeItem.setText(pathName);
+            treeItem.setImage(IMAGE_DIRECTORY);
+            treeItem.setGrayed(true);
+          }
+          break;
+        default:
+          break;
+      }
+    }
   }
 
-  /** update path list
+  /** update archive path list
    */
-  private void updatePathList()
+  private void updateArchivePathList()
   {
     if (!widgetPath.isDisposed())
     {
@@ -979,18 +1033,16 @@ class TabRestore
           // parse archive name
           ArchiveNameParts archiveNameParts = new ArchiveNameParts(archiveName);
 
-/*
-          if (   !archiveNameParts.startsWith("ssh")
-              && !archiveName.startsWith("scp:")
-              && !archiveName.startsWith("sftp:")
-              && !archiveName.startsWith("dvd:")
-              && !archiveName.startsWith("device:")
+          if (   (archiveNameParts.type == StorageTypes.FILESYSTEM)
+              || (archiveNameParts.type == StorageTypes.SCP)
+              || (archiveNameParts.type == StorageTypes.SFTP)
+              || (archiveNameParts.type == StorageTypes.DVD)
+              || (archiveNameParts.type == StorageTypes.DEVICE)
              )
           {
-*/
             // get and save path
             pathNames.add(archiveNameParts.getArchivePathName());
-//}
+          }
         }
 
         // update path list
@@ -1235,7 +1287,7 @@ class TabRestore
     int i = 0;
     for (String archiveName : archiveNamesHashSet)
     {
-      archiveNames[i] = archiveNameParts.getArchiveName(archiveName);
+      archiveNames[i] = archivePathNameParts.getArchiveName(archiveName);
       i++;
     }
 
@@ -1276,7 +1328,7 @@ class TabRestore
             busyDialog.setMessage("Archive: '"+archiveName+"'");
 
             // start command
-            busyDialog.update("Opening...");
+            busyDialog.update("Open...");
             String commandString = "ARCHIVE_LIST "+
                                    StringUtils.escape(archiveName)+" "+
                                    StringUtils.escape("")
@@ -1435,11 +1487,12 @@ class TabRestore
               }
               else
               {
+                final String errorText = command.getErrorText();
                 display.syncExec(new Runnable()
                 {
                   public void run()
                   {
-                    Dialogs.error(shell,"Cannot list archive '"+archiveName+"' (error: )");
+                    Dialogs.error(shell,"Cannot list archive '"+archiveName+"' (error: "+errorText+")");
                   }
                 });
               }
@@ -1450,7 +1503,15 @@ class TabRestore
         }
         catch (CommunicationError error)
         {
-          Dialogs.error(shell,"Communication error while processing archives (error: "+error.toString()+")");
+          // sort, update
+          final String errorText = error.toString();
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              Dialogs.error(shell,"Communication error while processing archives (error: "+errorText+")");
+            }
+          });
         }
 
         if (!busyDialog.isAborted())
@@ -1763,7 +1824,7 @@ class TabRestore
    */
   private void update()
   {
-    updatePathList();
+    updateArchivePathList();
   }
 }
 
