@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -3782,7 +3782,7 @@ throw new Error("NYI");
    */
   private String getArchiveName()
   {
-    ArchiveNameParts archiveNameParts = new ArchiveNameParts(ArchiveTypes.parse(storageType.getString()),
+    ArchiveNameParts archiveNameParts = new ArchiveNameParts(StorageTypes.parse(storageType.getString()),
                                                              storageLoginName.getString(),
                                                              storageLoginPassword.getString(),
                                                              storageHostName.getString(),

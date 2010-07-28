@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -90,9 +90,9 @@ import org.eclipse.swt.widgets.Widget;
 
 /****************************** Classes ********************************/
 
-/** archive types
+/** storage types
  */
-enum ArchiveTypes
+enum StorageTypes
 {
   NONE,
 
@@ -107,37 +107,37 @@ enum ArchiveTypes
    * @param string type string
    * @return priority
    */
-  static ArchiveTypes parse(String string)
+  static StorageTypes parse(String string)
   {
-    ArchiveTypes type;
+    StorageTypes type;
 
     if      (string.equalsIgnoreCase("filesystem"))
     {
-      type = ArchiveTypes.FILESYSTEM;
+      type = StorageTypes.FILESYSTEM;
     }
     else if (string.equalsIgnoreCase("ftp"))
     {
-      type = ArchiveTypes.FTP;
+      type = StorageTypes.FTP;
     }
     else if (string.equalsIgnoreCase("scp"))
     {
-      type = ArchiveTypes.SCP;
+      type = StorageTypes.SCP;
     }
     else if (string.equalsIgnoreCase("sftp"))
     {
-      type = ArchiveTypes.SFTP;
+      type = StorageTypes.SFTP;
     }
     else if (string.equalsIgnoreCase("dvd"))
     {
-      type = ArchiveTypes.DVD;
+      type = StorageTypes.DVD;
     }
     else if (string.equalsIgnoreCase("device"))
     {
-      type = ArchiveTypes.DEVICE;
+      type = StorageTypes.DEVICE;
     }
     else
     {
-      type = ArchiveTypes.NONE;
+      type = StorageTypes.NONE;
     }
 
     return type;
@@ -155,7 +155,7 @@ enum ArchiveTypes
       case SCP:        return "scp";
       case SFTP:       return "sftp";
       case DVD:        return "dvd";
-      case DEVICE  :   return "device";
+      case DEVICE:     return "device";
       default:         return "";
     }
   }
@@ -165,7 +165,7 @@ enum ArchiveTypes
 */
 class ArchiveNameParts
 {
-  public ArchiveTypes type;           // type
+  public StorageTypes type;           // type
   public String       loginName;      // login name
   public String       loginPassword;  // login password
   public String       hostName;       // host name
@@ -182,7 +182,7 @@ class ArchiveNameParts
    * @param deviceName device name
    * @param fileName file name
    */
-  public ArchiveNameParts(ArchiveTypes type,
+  public ArchiveNameParts(StorageTypes type,
                           String       loginName,
                           String       loginPassword,
                           String       hostName,
@@ -205,7 +205,7 @@ class ArchiveNameParts
    */
   public ArchiveNameParts(String archiveName)
   {
-    type          = ArchiveTypes.NONE;
+    type          = StorageTypes.NONE;
     loginName     = "";
     loginPassword = "";
     hostName      = "";
@@ -216,7 +216,7 @@ class ArchiveNameParts
     if       (archiveName.startsWith("ftp://"))
     {
       // ftp
-      type = ArchiveTypes.FTP;
+      type = StorageTypes.FTP;
 
       String specifier = archiveName.substring(6);
       Object[] data = new Object[2];
@@ -245,7 +245,7 @@ class ArchiveNameParts
     else if (archiveName.startsWith("scp://"))
     {
       // scp
-      type = ArchiveTypes.SCP;
+      type = StorageTypes.SCP;
 
       String specifier = archiveName.substring(6);
       Object[] data = new Object[3];
@@ -274,7 +274,7 @@ class ArchiveNameParts
     else if (archiveName.startsWith("sftp://"))
     {
       // sftp
-      type = ArchiveTypes.SFTP;
+      type = StorageTypes.SFTP;
 
       String specifier = archiveName.substring(7);
       Object[] data = new Object[3];
@@ -303,7 +303,7 @@ class ArchiveNameParts
     else if (archiveName.startsWith("dvd://"))
     {
       // dvd
-      type = ArchiveTypes.DVD;
+      type = StorageTypes.DVD;
 
       String specifier = archiveName.substring(6);
       Object[] data = new Object[2];
@@ -320,7 +320,7 @@ class ArchiveNameParts
     else if (archiveName.startsWith("device://"))
     {
       // dvd
-      type = ArchiveTypes.DEVICE;
+      type = StorageTypes.DEVICE;
 
       String specifier = archiveName.substring(9);
       Object[] data = new Object[2];
@@ -337,7 +337,7 @@ class ArchiveNameParts
     else if (archiveName.startsWith("file://"))
     {
       // file
-      type = ArchiveTypes.FILESYSTEM;
+      type = StorageTypes.FILESYSTEM;
 
       String specifier = archiveName.substring(7);
       fileName = specifier.substring(2);
@@ -345,7 +345,7 @@ class ArchiveNameParts
     else
     {
       // file
-      type = ArchiveTypes.FILESYSTEM;
+      type = StorageTypes.FILESYSTEM;
 
       fileName = archiveName;
     }
