@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/download-third-party-packages.sh,v $
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # $Author: torsten $
 # Contents: download third-party packages
 # Systems: Unix
@@ -233,15 +233,15 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
-    # libssh2 1.2.4
+    # libssh2 1.2.7
     (
      cd $tmpDirectory
-     if test ! -f libssh2-1.2.4.tar.gz; then
-       $WGET 'http://www.libssh2.org/download/libssh2-1.2.4.tar.gz'
+     if test ! -f libssh2-1.2.7.tar.gz; then
+       $WGET 'http://www.libssh2.org/download/libssh2-1.2.7.tar.gz'
      fi
-     $TAR xzf libssh2-1.2.4.tar.gz
+     $TAR xzf libssh2-1.2.7.tar.gz
     )
-    $LN -f -s $tmpDirectory/libssh2-1.2.4 libssh2
+    $LN -f -s $tmpDirectory/libssh2-1.2.7 libssh2
   fi
 
   if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
