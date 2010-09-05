@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -731,6 +731,7 @@ bool String_scanCString(const char *s, const char *format, ...);
 *            - %s and %S are parsed as strings which could be enclosed
 *              in "..." or '...'
 *            - % s and % S parse rest of string (including spaces)
+*            - %y boolean
 *            - if a value is NULL, skip value
 \***********************************************************************/
 
@@ -766,6 +767,7 @@ bool String_matchCString(const String string, ulong index, const char *pattern, 
 *          stringUnitCount          - number of string units (for
 *                                     integer, double)
 *          trueStrings,falseStrings - string false texts (for boolean)
+*                                     or NULL for default values
 *          stringQuotes             - string quotes (for string)
 * Output : nextIndex - index of next character in string not parsed or
 *                      STRING_END if string completely parsed (can be
