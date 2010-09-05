@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/database.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: database functions (SQLite3)
 * Systems: all
@@ -26,6 +26,14 @@
 
 /***************************** Constants *******************************/
 
+/* database open modes */
+typedef enum
+{
+  DATABASE_OPENMODE_CREATE,
+  DATABASE_OPENMODE_READ,
+  DATABASE_OPENMODE_READWRITE,
+} DatabaseOpenModes;
+
 /***************************** Datatypes *******************************/
 
 typedef struct
@@ -33,8 +41,13 @@ typedef struct
   sqlite3 *handle;
 } DatabaseHandle;
 
+typedef struct
+{
+  sqlite3_stmt *handle;
+} DatabaseQueryHandle;
+
 /* execute callback function */
-typedef bool(*DatabaseFunction)(void *userData, int count, const char* names[], const char* vales[]);
+typedef bool(*DatabaseFunction)(void *userData, uint count, const char* names[], const char* vales[]);
 
 /***************************** Variables *******************************/
 
@@ -58,8 +71,9 @@ typedef bool(*DatabaseFunction)(void *userData, int count, const char* names[], 
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_open(DatabaseHandle *databaseHandle,
-                     const char     *fileName
+Errors Database_open(DatabaseHandle    *databaseHandle,
+                     const char        *fileName,
+                     DatabaseOpenModes databaseOpenMode
                     );
 
 /***********************************************************************\
@@ -114,8 +128,11 @@ Errors Database_select(DatabaseHandle *databaseHandle);
 * Input  : databaseHandle - database handle
 *          databaseFunction - callback function for row data
 *          databaseUserData - user data for callback function
-*          command          - SQL command string with %[l]d, %S, %s
+*          command          - SQL command string with %[l]d, %[']S,
+*                             %[']s
 *          ...              - optional arguments for SQL command string
+*                             special functions:
+*                               REGEXP(pattern,case-flag,text)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -127,6 +144,72 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
                         const char       *command,
                         ...
                        );
+
+/***********************************************************************\
+* Name   : Database_prepare
+* Purpose: prepare database query
+* Input  : databaseHandle - database handle
+*          command        - SQL command string with %[l]d, %[']S, %[']s
+*          ...            - optional arguments for SQL command string
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : databaseQueryHandle - initialized database query handle
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
+                        DatabaseHandle      *databaseHandle,
+                        const char          *command,
+                        ...
+                       );
+
+/***********************************************************************\
+* Name   : Database_getNextRow
+* Purpose: get next row from query result
+* Input  : databaseQueryHandle - database query handle
+* Output : format - format string with %[l]d, %[l]f, %s, %s, %S
+* Return : TRUE if row read, FALSE if not more rows
+* Notes  : -
+\***********************************************************************/
+
+bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
+                         const char          *format,
+                         ...
+                        );
+
+/***********************************************************************\
+* Name   : Database_finalize
+* Purpose: done database query
+* Input  : databaseQueryHandle - database query handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_finalize(DatabaseQueryHandle *databaseQueryHandle);
+
+/***********************************************************************\
+* Name   : Database_getInteger64
+* Purpose: get int64 value from database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : l - int64 value or -1 if not found
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getInteger64(DatabaseHandle *databaseHandle,
+                             uint64         *l,
+                             const char     *tableName,
+                             const char     *columnName,
+                             const char     *additional,
+                             ...
+                            );
 
 /***********************************************************************\
 * Name   : Database_getLastRowId
