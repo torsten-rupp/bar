@@ -4,15 +4,24 @@
 
 */
 
-CREATE TABLE archives(
+CREATE TABLE meta(
+  name  TEXT,
+  value TEXT
+);
+INSERT INTO meta (name,value) VALUES ('version',1);
+INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
+
+CREATE TABLE storage(
   id              INTEGER PRIMARY KEY,
   name            TEXT,
-  datetime        INTEGER
+  size            INTEGER,
+  created         INTEGER,
+  state           INTEGER
 );
 
 CREATE TABLE files(
   id              INTEGER PRIMARY KEY,
-  archiveId       INTEGER,
+  storageId       INTEGER,
   name            TEXT,
   size            INTEGER,
   timeLastAccess  INTEGER,
@@ -20,33 +29,37 @@ CREATE TABLE files(
   timeLastChanged INTEGER,
   userId          INTEGER,
   groupId         INTEGER,
-  permission      INTEGER
-);
-
-CREATE TABLE directories(
-  id              INTEGER PRIMARY KEY,
-  archiveId       INTEGER,
-  name            TEXT,
-  timeLastAccess  INTEGER,
-  timeModified    INTEGER,
-  timeLastChanged INTEGER,
-  userId          INTEGER,
-  groupId         INTEGER,
-  permission      INTEGER
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
 );
 
 CREATE TABLE images(
   id              INTEGER PRIMARY KEY,
-  archiveId       INTEGER,
+  storageId       INTEGER,
   name            TEXT,
   fileSystemType  INTEGER,
   size            INTEGER,
-  blockSize       INTEGER
+  blockSize       INTEGER,
+  blockOffset     INTEGER,
+  blockCount      INTEGER
+);
+
+CREATE TABLE directories(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
 );
 
 CREATE TABLE links(
   id              INTEGER PRIMARY KEY,
-  archiveId       INTEGER,
+  storageId       INTEGER,
   name            TEXT,
   destinationName TEXT,
   timeLastAccess  INTEGER,
@@ -59,7 +72,7 @@ CREATE TABLE links(
 
 CREATE TABLE special(
   id              INTEGER PRIMARY KEY,
-  archiveId       INTEGER,
+  storageId       INTEGER,
   name            TEXT,
   specialType     INTEGER,
   timeLastAccess  INTEGER,
