@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patterns.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -210,6 +210,37 @@ void Pattern_done(Pattern *pattern)
   regfree(&pattern->regexExact);
   regfree(&pattern->regexEnd);
   regfree(&pattern->regexBegin);
+}
+
+Pattern *Pattern_new(const String string, PatternTypes patternType)
+{
+  Pattern *pattern;
+  Errors  error;
+
+  assert(string != NULL);
+
+  pattern = (Pattern*)malloc(sizeof(Pattern));
+  if (pattern == NULL)
+  {
+    return NULL;
+  }
+
+  error = Pattern_init(pattern,string,patternType);
+  if (error != ERROR_NONE)
+  {
+    free(pattern);
+    return NULL;
+  }
+
+  return pattern;
+}
+
+void Pattern_delete(Pattern *pattern)
+{
+  assert(pattern != NULL);
+
+  Pattern_done(pattern);
+  free(pattern);
 }
 
 bool Pattern_match(const Pattern     *pattern,

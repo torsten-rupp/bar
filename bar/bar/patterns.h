@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patterns.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -96,8 +96,8 @@ void Pattern_doneAll(void);
 /***********************************************************************\
 * Name   : Pattern_init
 * Purpose: init pattern
-* Input  : pattern - pattern variable
-*          string  - pattern
+* Input  : pattern     - pattern variable
+*          string      - pattern
 *          patternType - pattern type; see PATTERN_TYPE_*
 * Output : pattern - initialzied variable
 * Return : ERROR_NONE or error code
@@ -117,6 +117,29 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
 \***********************************************************************/
 
 void Pattern_done(Pattern *pattern);
+
+/***********************************************************************\
+* Name   : Pattern_new
+* Purpose: create new pattern
+* Input  : string      - pattern
+*          patternType - pattern type; see PATTERN_TYPE_*
+* Output : -
+* Return : pattern or NULL
+* Notes  : -
+\***********************************************************************/
+
+Pattern *Pattern_new(const String string, PatternTypes patternType);
+
+/***********************************************************************\
+* Name   : Pattern_delete
+* Purpose: delete pattern
+* Input  : pattern - pattern to delete
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Pattern_delete(Pattern *pattern);
 
 /***********************************************************************\
 * Name   : Pattern_match
