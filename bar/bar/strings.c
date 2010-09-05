@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -396,7 +396,9 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   }
 
   /* precision */
-  if (((*format) != '\0') && ((*format) == '.'))
+  if (   ((*format) != '\0')
+      && ((*format) == '.')
+     )
   {
     ADD_CHAR(formatToken,(*format));
     format++;
@@ -410,7 +412,13 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   }
 
   /* quoting character */
-  if (((*format) != '\0') && ((*(format+1) == 's') || (*((format+1)) == 'S')))
+  if (   ((*format) != '\0')
+      && !isalpha(*format)
+      && ((*format) != '%')
+      && (   (*(format+1) == 's')
+          || (*((format+1)) == 'S')
+         )
+     )
   {
     formatToken->quoteChar = (*format);
     format++;
