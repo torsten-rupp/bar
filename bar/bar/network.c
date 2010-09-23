@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -1589,14 +1589,25 @@ void Network_executeFlush(NetworkExecuteHandle  *networkExecuteHandle,
 
 Errors Network_executeKeepAlive(NetworkExecuteHandle *networkExecuteHandle)
 {
+  #if defined(HAVE_SSH2_KEEPALIVE_SEND)
+    int dummy;
+  #endif
+
   assert(networkExecuteHandle != NULL);
+  assert(networkExecuteHandle->socketHandle != NULL);
 
   #ifdef HAVE_SSH2
-    #ifdef HAVE_SSH2_CHANNEL_SEND_KEEPALIVE
+    #if defined(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE)
       if (libssh2_channel_send_keepalive(networkExecuteHandle->channel) != 0)
       {
         return ERROR_NETWORK_SEND;
       }
+    #elif defined(HAVE_SSH2_KEEPALIVE_SEND)
+      if (libssh2_keepalive_send(networkExecuteHandle->socketHandle->ssh2.session,&dummy) != 0)
+      {
+        return ERROR_NETWORK_SEND;
+      }
+      UNUSED_VARIABLE(dummy);
     #else /* not HAVE_SSH2_CHANNEL_SEND_KEEPALIVE */
       UNUSED_VARIABLE(networkExecuteHandle);
     #endif /* HAVE_SSH2_CHANNEL_SEND_KEEPALIVE */
