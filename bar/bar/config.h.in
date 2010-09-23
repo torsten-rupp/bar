@@ -67,6 +67,9 @@
 /* SSH2 has libssh2_channel_send_keepalive() */
 #undef HAVE_SSH2_CHANNEL_SEND_KEEPALIVE
 
+/* SSH2 has libssh2_keepalive_send() */
+#undef HAVE_SSH2_KEEPALIVE_SEND
+
 /* SSH2 has libssh2_sftp_seek2() function. */
 #undef HAVE_SSH2_SFTP_SEEK2
 
