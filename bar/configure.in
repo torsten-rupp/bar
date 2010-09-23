@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.43 $
+dnl $Revision: 1.44 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -796,7 +796,7 @@ if test $ENABLE_FTP = "yes"; then
     AC_MSG_COMPILE([ftplib])
     result=1
     if test $result -eq 1; then
-      (cd ftplib; patch -N -p1 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
+      (cd packages; patch --batch -N -p0 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
     fi
     if test $result -eq 1; then
       (cd ftplib/linux; make) 1>/dev/null 2>/dev/null
@@ -844,7 +844,7 @@ if test $ENABLE_SSH = "yes"; then
     AC_MSG_COMPILE([libssh2])
     result=1
     if test $result -eq 1; then
-      (cd libssh2; patch -N -p1 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
+      (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
     fi
     if test $result -eq 1; then
       (cd libssh2; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
@@ -987,6 +987,7 @@ AC_CHECK_FUNC(ftello64,,AC_ERROR([function ftello64() is not available]))
 AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available]))
 
 AC_CHECK_FUNC(libssh2_channel_send_keepalive,AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,1,[SSH2 has libssh2_channel_send_keepalive()]))
+AC_CHECK_FUNC(libssh2_keepalive_send,        AC_DEFINE(HAVE_SSH2_KEEPALIVE_SEND,        1,[SSH2 has libssh2_keepalive_send()]))
 AC_CHECK_FUNC(libssh2_sftp_seek2,            AC_DEFINE(HAVE_SSH2_SFTP_SEEK2,            1,[SSH2 has libssh2_sftp_seek2() function.]))
 
 AC_CHECK_FUNC(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
