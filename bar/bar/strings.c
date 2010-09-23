@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1605,9 +1605,27 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
   return factor;
 }
 
+/***********************************************************************\
+* Name   : matchString
+* Purpose: match string
+* Input  : string            - string to patch
+*          index             - start index in string
+*          pattern           - regualar expression pattern
+*          nextIndex         - variable for index of next not matched
+*                              character (can be NULL)
+*          matchedString     - matched string (can be NULL)
+*          matchedSubStrings - matched sub-strings
+* Output : nextIndex         - index of next not matched character
+*          matchedString     - matched string (can be NULL)
+*          matchedSubStrings - matched sub-strings
+* Return : TRUE if string matched, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool matchString(const String  string,
                        ulong         index,
                        const char    *pattern,
+                       long          *nextIndex,
                        String        matchedString,
                        const va_list matchedSubStrings
                       )
@@ -1621,6 +1639,7 @@ LOCAL bool matchString(const String  string,
   uint       z;
 
   assert(string != NULL);
+  assert(string->data != NULL);
   assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
   assert(pattern != NULL);
 
@@ -1630,7 +1649,7 @@ LOCAL bool matchString(const String  string,
     return FALSE;
   }
 
-  /* count sub-patterns */
+  /* count sub-patterns (=1 for total matched string + number of matched-sub-strings) */
   va_copy(arguments,(va_list)matchedSubStrings);
   subMatchCount = 1;
   do
@@ -1650,11 +1669,16 @@ LOCAL bool matchString(const String  string,
   }
 
   /* match */
-  matchFlag = (regexec(&regex,String_cString(string)+index,subMatchCount,subMatches,0) == 0);
+  matchFlag = (regexec(&regex,&string->data[index],subMatchCount,subMatches,0) == 0);
 
   /* get sub-matches */
   if (matchFlag)
   {
+    if (nextIndex != NULL)
+    {
+      (*nextIndex) = subMatches[0].rm_eo-subMatches[0].rm_so;
+    }
+
     if (matchedString != NULL)
     {
       String_setBuffer(matchedString,&string->data[subMatches[0].rm_so],subMatches[0].rm_eo-subMatches[0].rm_so);
@@ -2121,8 +2145,6 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength)
 
     if (buffer != NULL)
     {
-      assert(buffer != NULL);
-
       ensureStringLength(string,bufferLength);
       memcpy(&string->data[0],buffer,bufferLength);
       string->data[bufferLength] = '\0';
@@ -2695,32 +2717,18 @@ int String_compare(const String          string1,
 
 bool String_equals(const String string1, const String string2)
 {
-  bool  equalFlag;
-  ulong z;
+  bool equalFlag;
 
   if ((string1 != NULL) && (string2 != NULL))
   {
     CHECK_VALID(string1);
     CHECK_VALID(string2);
 
-    if (string1->length == string2->length)
-    {
-      equalFlag = TRUE;
-      z         = 0;
-      while (equalFlag && (z < string1->length))
-      {
-        equalFlag = (string1->data[z] == string2->data[z]);
-        z++;
-      }
-    }
-    else
-    {
-      equalFlag = FALSE;
-    }
+    equalFlag = String_equalsBuffer(string1,string2->data,string2->length);
   }
   else
   {
-    equalFlag = (string1 == NULL) && (string2 == NULL);
+    equalFlag = ((string1 == NULL) && (string2 == NULL));
   }
 
   return equalFlag;
@@ -2742,7 +2750,7 @@ bool String_equalsCString(const String string, const char *s)
     }
     else
     {
-      equalFlag = (string->length == 0);
+      equalFlag = (string->length == 0L);
     }
   }
   else
@@ -2781,7 +2789,7 @@ bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLe
   assert(string != NULL);
   assert(buffer != NULL);
 
-  if ((string != NULL) && (buffer != NULL))
+  if (string != NULL)
   {
     CHECK_VALID(string);
 
@@ -2810,40 +2818,21 @@ bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLe
 
 bool String_subEquals(const String string1, const String string2, long index, ulong length)
 {
-  long  i;
   bool  equalFlag;
-  ulong z;
 
   assert(string1 != NULL);
   assert(string2 != NULL);
 
+  CHECK_VALID(string1);
+  CHECK_VALID(string2);
+
   if ((string1 != NULL) && (string2 != NULL))
   {
-    CHECK_VALID(string1);
-    CHECK_VALID(string2);
-
-    i = (index != STRING_END)?index:(long)string1->length-(long)length;
-    if (   (i >= 0)
-        && ((i+length) <= string1->length)
-        && (length <= string2->length)
-       )
-    {
-      equalFlag = TRUE;
-      z         = 0;
-      while (equalFlag && (z < length))
-      {
-        equalFlag = (string1->data[i+z] == string2->data[z]);
-        z++;
-      }
-    }
-    else
-    {
-      equalFlag = FALSE;
-    }
+    equalFlag = String_subEqualsBuffer(string1,string2->data,string2->length,index,length);
   }
   else
   {
-    equalFlag = (string1 == NULL) && (string2 == NULL);
+    equalFlag = ((string1 == NULL) && (string2 == NULL));
   }
 
   return equalFlag;
@@ -2902,10 +2891,9 @@ bool String_subEqualsBuffer(const String string, const char *buffer, ulong buffe
   bool  equalFlag;
   ulong z;
 
-  assert(string != NULL);
   assert(buffer != NULL);
 
-  if ((string != NULL) && (buffer != NULL))
+  if (string != NULL)
   {
     CHECK_VALID(string);
 
@@ -2930,7 +2918,192 @@ bool String_subEqualsBuffer(const String string, const char *buffer, ulong buffe
   }
   else
   {
-    equalFlag = (string == NULL) && (bufferLength == 0);
+    equalFlag = (bufferLength == 0L);
+  }
+
+  return equalFlag;
+}
+
+bool String_startsWith(const String string1, const String string2)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string1);
+  CHECK_VALID(string2);
+
+  if ((string1 != NULL) && (string2 != NULL))
+  {
+    equalFlag = String_startsWithBuffer(string1,string2->data,string2->length);
+  }
+  else
+  {
+    equalFlag = ((string1 == NULL) || (string1->length == 0L)) && ((string2 == NULL) || (string2->length == 0L));
+  }
+
+  return equalFlag;
+}
+
+bool String_startsWithCString(const String string, const char *s)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string);
+
+  if ((string != NULL) && (s != NULL))
+  {
+    equalFlag = String_startsWithBuffer(string,s,(ulong)strlen(s));
+  }
+  else
+  {
+    equalFlag = ((string == NULL) && (s == NULL));
+  }
+
+  return equalFlag;
+}
+
+bool String_startsWithChar(const String string, char ch)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    equalFlag = ((string->length > 0L) && (string->data[0] == ch));
+  }
+  else
+  {
+    equalFlag = FALSE;
+  }
+
+  return equalFlag;
+}
+
+bool String_startsWithBuffer(const String string, const char *buffer, ulong bufferLength)
+{
+  bool  equalFlag;
+  ulong z;
+
+  assert(buffer != NULL);
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    if (string->length >= bufferLength)
+    {
+      equalFlag = TRUE;
+      z         = 0L;
+      while (equalFlag && (z < bufferLength))
+      {
+        equalFlag = (string->data[z] == buffer[z]);
+        z++;
+      }
+    }
+    else
+    {
+      equalFlag = FALSE;
+    }
+  }
+  else
+  {
+    equalFlag = (bufferLength == 0L);
+  }
+
+  return equalFlag;
+}
+
+bool String_endsWith(const String string1, const String string2)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string1);
+  CHECK_VALID(string2);
+
+  if ((string1 != NULL) && (string2 != NULL))
+  {
+    equalFlag = String_endsWithBuffer(string1,string2->data,string2->length);
+  }
+  else
+  {
+    equalFlag = ((string1 == NULL) && (string2 == NULL));
+  }
+
+  return equalFlag;
+}
+
+bool String_endsWithCString(const String string, const char *s)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string);
+
+  if ((string != NULL) && (s != NULL))
+  {
+    equalFlag = String_endsWithBuffer(string,s,(ulong)strlen(s));
+  }
+  else
+  {
+    equalFlag = ((string == NULL) && (s == NULL));
+  }
+
+  return equalFlag;
+}
+
+bool String_endsWithChar(const String string, char ch)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    equalFlag = ((string->length > 0L) && (string->data[string->length-1] == ch));
+  }
+  else
+  {
+    equalFlag = FALSE;
+  }
+
+  return equalFlag;
+}
+
+bool String_endsWithBuffer(const String string, const char *buffer, ulong bufferLength)
+{
+  bool  equalFlag;
+  ulong z;
+  ulong i;
+
+  assert(buffer != NULL);
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    if (string->length >= bufferLength)
+    {
+      equalFlag = TRUE;
+      z         = 0L;
+      i         = string->length-bufferLength;
+      while (equalFlag && (z < bufferLength))
+      {
+        equalFlag = (string->data[i] == buffer[z]);
+        z++;
+        i++;
+      }
+    }
+    else
+    {
+      equalFlag = FALSE;
+    }
+  }
+  else
+  {
+    equalFlag = (bufferLength == 0L);
   }
 
   return equalFlag;
@@ -2968,8 +3141,8 @@ long String_find(const String string, ulong index, const String findString)
 
 long String_findCString(const String string, ulong index, const char *s)
 {
-  long findIndex;
-  long sLength;
+  long  findIndex;
+  long  sLength;
   long  i;
   ulong z;
 
@@ -3687,25 +3860,25 @@ bool String_parseCString(const char *s, const char *format, long *nextIndex, ...
   return result;
 }
 
-bool String_match(const String string, ulong index, const String pattern, String matchedString, ...)
+bool String_match(const String string, ulong index, const String pattern, long *nextIndex, String matchedString, ...)
 {
   va_list arguments;
   bool    matchFlag;
 
   va_start(arguments,matchedString);
-  matchFlag = matchString(string,index,String_cString(pattern),matchedString,arguments);
+  matchFlag = matchString(string,index,String_cString(pattern),nextIndex,matchedString,arguments);
   va_end(arguments);
 
   return matchFlag;
 }
 
-bool String_matchCString(const String string, ulong index, const char *pattern, String matchedString, ...)
+bool String_matchCString(const String string, ulong index, const char *pattern, long *nextIndex, String matchedString, ...)
 {
   va_list arguments;
   bool    matchFlag;
 
   va_start(arguments,matchedString);
-  matchFlag = matchString(string,index,pattern,matchedString,arguments);
+  matchFlag = matchString(string,index,pattern,nextIndex,matchedString,arguments);
   va_end(arguments);
 
   return matchFlag;

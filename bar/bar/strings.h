@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -21,8 +21,8 @@
 
 /***************************** Constants *******************************/
 
-#define STRING_BEGIN 0
-#define STRING_END   -1
+#define STRING_BEGIN 0L
+#define STRING_END   -1L
 
 #define STRING_WHITE_SPACES " \t\f\v\n\r"
 #define STRING_QUOTE        "'"
@@ -81,7 +81,8 @@ typedef struct
 
 #ifndef NDEBUG
   #define CHECK_VALID(string) \
-    do { \
+    do \
+    { \
       if (string != NULL) \
       { \
         if (((ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data) != (string)->checkSum) \
@@ -96,21 +97,28 @@ typedef struct
                              ); \
         } \
       } \
-    } while (0)
+    } \
+    while (0)
   #define UPDATE_VALID(string) \
-    do { \
+    do \
+    { \
       if (string != NULL) \
       { \
         (string)->checkSum = (ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data; \
-        } \
-    } while (0)
+      } \
+    } \
+    while (0)
 #else /* NDEBUG */
   #define CHECK_VALID(string) \
-    do { \
-    } while (0)
+    do \
+    { \
+    } \
+    while (0)
   #define UPDATE_VALID(string) \
-    do { \
-    } while (0)
+    do \
+    { \
+    } \
+    while (0)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -264,10 +272,11 @@ char *String_subBuffer(char *buffer, const String fromString, ulong index, long 
 * Name   : String_append, String_appendSub, String_appendCString,
 *          String_appendChar, String_appendBuffer
 * Purpose: append to string
-* Input  : string                - string
-*          appendString/s/buffer - string to append
-*          ch                    - character to append
-*          bufferLength          - buffer length
+* Input  : string         - string
+*          appendString/s - string to append
+*          ch             - character to append
+*          buffer         - buffer to append
+*          bufferLength   - length of buffer
 * Output : -
 * Return : string
 * Notes  : -
@@ -283,11 +292,12 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
 * Name   : String_insert, String_insertSub, String_insertCString,
 *          String_insertChar, String_insertBuffer
 * Purpose: insert into string
-* Input  : string                - string
-*          index                 - index where to insert
-*          insertString/s/buffer - string to insert
-*          ch                    - character to insert
-*          bufferLength          - buffer length
+* Input  : string         - string
+*          index          - index where to insert
+*          insertString/s - string to insert
+*          ch             - character to insert
+*          buffer         - bufer to insert
+*          bufferLength   - length of buffer
 * Output : -
 * Return : string
 * Notes  : -
@@ -317,12 +327,13 @@ String String_remove(String string, ulong index, ulong length);
 * Name   : String_replace, String_replaceCString, String_replaceChar,
 *          String_replaceBuffer
 * Purpose: replace part of string with other string
-* Input  : string                - string                
-*          index                 - index where to insert 
-*          length                - length to replace     
-*          insertString/s/buffer - string to insert
-*          ch                    - character to insert
-*          bufferLength          - buffer length
+* Input  : string         - string                
+*          index          - index where to insert 
+*          length         - length to replace     
+*          insertString/s - string to insert
+*          ch             - character to insert
+*          buffer         - buffer to insert
+*          bufferLength   - length of buffers
 * Output : -
 * Return : string
 * Notes  : -
@@ -337,10 +348,12 @@ String String_replaceBuffer(String string, ulong index, ulong length, const char
 * Name   : String_join, String_joinCString, String_joinChar,
 *          String_joinBuffer
 * Purpose: join strings with separator char
-* Input  : string              - string
-*          joinString/s/buffer - string to join
-*          ch                  - character to join
-*          joinChar            - separator character
+* Input  : string       - string
+*          joinString/s - string to join
+*          ch           - character to join
+*          buffer       - buffer to join
+*          bufferLength - length of buffer
+*          joinChar     - separator character
 * Output : -
 * Return : string
 * Notes  : -
@@ -474,10 +487,11 @@ int String_compare(const String          string1,
 * Name   : String_equals, String_equalsCString, String_equalsChar
 *          String_equalsBuffer
 * Purpose: check if strings are equal
-* Input  : string1,string2            - strings to compare
-*          string/buffer/bufferLength - string/buffer to compare
-*          string/s                   - string/C-string to compare
-*          string,ch                  - strings/character to compare
+* Input  : string1,string2 - strings to compare
+*          string/s        - string/C-string to compare
+*          string,ch       - strings/character to compare
+*          buffer          - buffer to compare
+*          bufferLength    - length of buffer
 * Output : -
 * Return : TRUE if strings equal, FALSE otherwise
 * Notes  : -
@@ -492,12 +506,13 @@ bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLe
 * Name   : String_subEquals, String_subEqualsCString,
 *          String_subEqualsChar, String_subEqualsBuffer
 * Purpose: check if string2 is equal to string1 at some position
-* Input  : string1,string2            - strings to compare
-*          string/buffer/bufferLength - string/buffer to compare
-*          string/s                   - string/C-string to compare
-*          string,ch                  - strings/character to compare
-*          index                      - position in string1
-*          length                     - length to compare
+* Input  : string1,string2 - strings to compare
+*          string/s        - string/C-string to compare
+*          ch              - character to compare
+*          buffer          - buffer to compare
+*          bufferLength    - length of buffer
+*          index           - position in string1
+*          length          - length to compare
 * Output : -
 * Return : TRUE if strings equal, FALSE otherwise
 * Notes  : -
@@ -507,6 +522,44 @@ bool String_subEquals(const String string1, const String string2, long index, ul
 bool String_subEqualsCString(const String string, const char *s, long index, ulong length);
 bool String_subEqualsChar(const String string, char ch, long index);
 bool String_subEqualsBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length);
+
+/***********************************************************************\
+* Name   : String_startsWith, String_startsWithCString,
+*          String_startsWithChar, String_startsWithBuffer
+* Purpose: check if string start with string/character/buffer
+* Input  : string1/string - string to check
+*          string2/s      - string/C-string to compare
+*          ch             - character to compare
+*          buffer         - buffer to compare
+*          bufferLength   - length of buffer
+* Output : -
+* Return : TRUE iff string1/string start with string2/s/ch/buffer
+* Notes  : -
+\***********************************************************************/
+
+bool String_startsWith(const String string1, const String string2);
+bool String_startsWithCString(const String string, const char *s);
+bool String_startsWithChar(const String string, char ch);
+bool String_startsWithBuffer(const String string, const char *buffer, ulong bufferLength);
+
+/***********************************************************************\
+* Name   : String_endsWith, String_endsWithCString,
+*          String_endsWithChar, String_endsWithBuffer
+* Purpose: check if string ends with string/character/buffer
+* Input  : string1/string - string to check
+*          string2/s      - string/C-string to compare
+*          ch             - character to compare
+*          buffer         - buffer to compare
+*          bufferLength   - length of buffer
+* Output : -
+* Return : TRUE iff string1/string ends with string2/s/ch/buffer
+* Notes  : -
+\***********************************************************************/
+
+bool String_endsWith(const String string1, const String string2);
+bool String_endsWithCString(const String string, const char *s);
+bool String_endsWithChar(const String string, char ch);
+bool String_endsWithBuffer(const String string, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : String_find, String_findCString, String_findChar,
@@ -741,19 +794,20 @@ bool String_parseCString(const char *s, const char *format, long *nextIndex, ...
 /***********************************************************************\
 * Name   : String_match, String_matchCString
 * Purpose: match string pattern
-* Input  : string      - string
-*          index       - start index in string
-*          pattern     - pattern
-*          matchString - regular expression match string
-*          ...         - optional sub-patterns (strings), last value
-*                        have to be NULL!
-* Output : -
+* Input  : string        - string
+*          index         - start index in string
+*          pattern       - pattern
+*          matchedString - string matching regular expression (can be NULL)
+*          ...           - optional matching strings of sub-patterns, last
+*                          value have to be NULL!
+* Output : nextIndex - index of next character in string not matched (can
+*                      be NULL)
 * Return : TRUE if pattern is matching, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool String_match(const String string, ulong index, const String pattern, String matchString, ...);
-bool String_matchCString(const String string, ulong index, const char *pattern, String matchString, ...);
+bool String_match(const String string, ulong index, const String pattern, long *nextIndex, String matchString, ...);
+bool String_matchCString(const String string, ulong index, const char *pattern, long *nextIndex, String matchString, ...);
 
 /***********************************************************************\
 * Name   : String_toInteger, String_toInteger64, String_toDouble,
