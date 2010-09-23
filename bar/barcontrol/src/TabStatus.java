@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -373,7 +373,7 @@ class TabStatus
     {
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        TableColumn       tableColumn = (TableColumn)selectionEvent.widget;
+        TableColumn       tableColumn       = (TableColumn)selectionEvent.widget;
         JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList,tableColumn);
         synchronized(jobList)
         {
@@ -388,20 +388,28 @@ class TabStatus
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn = Widgets.addTableColumn(widgetJobList,1,"Name",          SWT.LEFT,  80,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setToolTipText("Click to sort for name.");
     tableColumn = Widgets.addTableColumn(widgetJobList,2,"State",         SWT.LEFT,  90,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setToolTipText("Click to sort for state.");
     tableColumn = Widgets.addTableColumn(widgetJobList,3,"Type",          SWT.LEFT,  90,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setToolTipText("Click to sort for type.");
     tableColumn = Widgets.addTableColumn(widgetJobList,4,"Part size",     SWT.RIGHT,  0,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setToolTipText("Click to sort for part size.");
     tableColumn = Widgets.addTableColumn(widgetJobList,5,"Compress",      SWT.LEFT,  80,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setToolTipText("Click to sort for used compress algorithm.");
     tableColumn = Widgets.addTableColumn(widgetJobList,6,"Crypt",         SWT.LEFT, 100,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setToolTipText("Click to sort for used encryption algorithm.");
     tableColumn = Widgets.addTableColumn(widgetJobList,7,"Last executed", SWT.LEFT, 150,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setToolTipText("Click to sort for last date/time job was executed.");
     tableColumn = Widgets.addTableColumn(widgetJobList,8,"Estimated time",SWT.LEFT, 120,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn.setToolTipText("Click to sort for estimated rest time to execute job.");
 
     // selected job group
     widgetSelectedJob = Widgets.newGroup(widgetTab,"Selected ''",SWT.NONE);
@@ -442,7 +450,7 @@ class TabStatus
         }
       });
 
-      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
+      composite = Widgets.newComposite(widgetSelectedJob);
       composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
       Widgets.layout(composite,0,8,TableLayoutData.WE);
       {
@@ -459,7 +467,7 @@ class TabStatus
         Widgets.layout(label,0,1,TableLayoutData.W);
       }
 
-      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
+      composite = Widgets.newComposite(widgetSelectedJob);
       composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
       Widgets.layout(composite,0,9,TableLayoutData.WE);
       {
@@ -512,7 +520,7 @@ class TabStatus
         }
       });
 
-      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
+      composite = Widgets.newComposite(widgetSelectedJob);
       composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0}));
       Widgets.layout(composite,1,8,TableLayoutData.WE);
       {
@@ -531,7 +539,7 @@ class TabStatus
         Widgets.layout(label,0,2,TableLayoutData.W);
       }
 
-      composite = Widgets.newComposite(widgetSelectedJob,SWT.NONE);
+      composite = Widgets.newComposite(widgetSelectedJob);
       composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
       Widgets.layout(composite,1,9,TableLayoutData.WE);
       {
@@ -707,7 +715,7 @@ class TabStatus
     }
 
     // buttons
-    composite = Widgets.newComposite(widgetTab,SWT.NONE);
+    composite = Widgets.newComposite(widgetTab);
     composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0}));
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
@@ -725,6 +733,7 @@ class TabStatus
         {
         }
       });
+      widgetButtonStart.setToolTipText("Start selected job.");
 
       widgetButtonAbort = Widgets.newButton(composite,null,"Abort");
       Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
@@ -740,6 +749,7 @@ class TabStatus
         {
         }
       });
+      widgetButtonAbort.setToolTipText("Abort selected job.");
 
       widgetButtonPause = Widgets.newButton(composite,null,"Pause");
       Widgets.layout(widgetButtonPause,0,2,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{"Puase [xxxxs]"}));
@@ -754,6 +764,7 @@ class TabStatus
         {
         }
       });
+      widgetButtonPause.setToolTipText("Pause selected job for a specific time.");
 
       widgetButtonSuspendContinue = Widgets.newButton(composite,null,"Continue");
       Widgets.layout(widgetButtonSuspendContinue,0,3,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{"Suspend","Continue"}));
@@ -768,6 +779,7 @@ class TabStatus
         {
         }
       });
+      widgetButtonSuspendContinue.setToolTipText("Suspend selected job for an infinite time.");
 
       widgetButtonVolume = Widgets.newButton(composite,null,"Volume");
       Widgets.layout(widgetButtonVolume,0,4,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
@@ -783,6 +795,7 @@ class TabStatus
         {
         }
       });
+      widgetButtonVolume.setToolTipText("Click when a new volume is available in drive.");
 
       widgetButtonQuit = Widgets.newButton(composite,null,"Quit");
       Widgets.layout(widgetButtonQuit,0,5,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
@@ -800,6 +813,7 @@ class TabStatus
         {
         }
       });
+      widgetButtonQuit.setToolTipText("Quit BARControl program.");
     }
 
     // start status update thread
@@ -909,7 +923,7 @@ class TabStatus
    */
   private int findJobListIndex(JobData jobData)
   {
-    TableItem         tableItems[] = widgetJobList.getItems();
+    TableItem         tableItems[]      = widgetJobList.getItems();
     JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList);
 
     int index = 0;
@@ -1016,7 +1030,7 @@ class TabStatus
             // remove not existing entries
             for (int z = 0; z < tableItems.length; z++)
             {
-              if (!tableItemFlags[z]) widgetJobList.remove(z);
+              if (!tableItemFlags[z]) Widgets.removeTableEntry(widgetJobList,tableItems);
             }
           }
         }
