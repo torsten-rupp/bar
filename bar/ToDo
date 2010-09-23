@@ -26,3 +26,5 @@ ToDo
 - md5 file check sum?
 - support sparse file when restoring
 - add epm to download-third-party-tools
+- compile-info (what is included, which version)
+- delete temporary image directory when writing dvd

@@ -1,3 +1,28 @@
+2010-09-?? 0.15
+  * added command line option --job to execute a job from a job
+    file with bar
+  * clean-up BAR command line options:
+    - replaced -a|--crypt-asymmetric -> --crypt-type=<name>
+    - added opton --normal to select normal archive type
+      (required to overwrite setting in job file)
+    - fixed ordering of options in help
+  * clean-up barcontrol command line options:
+    renamed --job-mode -> --archive-type
+  * barcontrol: fix option --key-file
+  * renamed command line option --no-bar-on-dvd -> --no-bar-on-medium
+  * renamed configuration file option no-bar-on-dvd -> no-bar-on-medium
+  * set key valid time to 365 days when created with openssl
+  * barcontrol: added tool tips help
+  * barcontrol: complete redesign of restore tab
+     - added (optional) database of stored files to BAR (sqlite based)
+     - search for created archives in database
+     - search for stored files in archives in database
+     - store archives or single files
+     - automatic indexing of already created archives which are stored
+       on an external server
+     Note: to use this new feature, you must add the database-*
+           configuration options in bar.cfg!
+
 2010-07-28 0.14
   * added command line control functions to barcontrol:
     --list, --job, --job-mode, --abort, --ping, --pause,

@@ -1,7 +1,7 @@
 //***********************************************************************
 //
 // $Source: /home/torsten/cvs/bar/errors.def,v $
-// $Revision: 1.25 $
+// $Revision: 1.26 $
 // $Author: torsten $
 // Contents: Backup ARchiver errors definition
 // Systems: all
@@ -26,6 +26,7 @@ ERROR ABORTED                        "aborted"
 ERROR FUNCTION_NOT_SUPPORTED         "function not supported"
 ERROR STILL_NOT_IMPLEMENTED          "function still not implemented"
 ERROR DAEMON_FAIL                    "run as daemon fail"
+ERROR IPC                            "inter-process communication fail"
 
 // patterns
 ERROR INVALID_PATTERN                "init pattern matching"
@@ -51,6 +52,7 @@ ERROR SSH_AUTHENTIFICATION
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
   }
+  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR SSH
   strncpy(errorText,"ssh protocol error",sizeof(errorText));
@@ -59,6 +61,7 @@ ERROR SSH
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
   }
+  errorText[sizeof(errorText)-1] = '\0';
 
 // FTP
 ERROR INVALID_FTP_SPECIFIER          "invalid FTP specifier"
@@ -103,20 +106,22 @@ ERROR WRONG_PRIVATE_KEY              "wrong private key"
 ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
-  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
   }
+  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR IO_ERROR
-  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
   }
+  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR READ_FILE                      "read file fail"
 ERROR WRITE_FILE                     "write file fail"
@@ -125,21 +130,23 @@ ERROR DELETE_FILE                    "delete file fail"
 ERROR FILE_EXITS                     "file already exists"
 ERROR FILE_NOT_FOUND                 "file not found"
 ERROR NOT_A_DIRECTORY
-  strncpy(errorText,"not a directory",sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  strncpy(errorText,"not a directory",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
   }
+  errorText[sizeof(errorText)-1] = '\0';
 
 // device i/o
 ERROR OPEN_DEVICE
-  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
   }
+  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR INVALID_DEVICE_BLOCK_SIZE      "invalid device block size"
 ERROR READ_DEVICE                    "read device fail"
@@ -170,12 +177,13 @@ ERROR CORRUPT_INCREMENTAL_FILE       "corrupt incremental file"
 // network
 ERROR HOST_NOT_FOUND                 "host not found"
 ERROR CONNECT_FAIL
-  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
   }
+  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR NO_LOGIN_NAME                  "no login name given"
 ERROR NO_PASSWORD                    "no password given"
@@ -192,12 +200,13 @@ ERROR LOAD_VOLUME_FAIL               "load volume fail"
 // exec
 ERROR FORK_FAIL                      "fork for execute external program fail"
 ERROR EXEC_FAIL
-  strncpy(errorText,"execute external program fail",sizeof(errorText)-1); errorText[sizeof(errorText)-1] = '\0';
+  strncpy(errorText,"execute external program fail",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
   }
+  errorText[sizeof(errorText)-1] = '\0';
 
 // BARControl protocol
 ERROR PARSING                        "error parsing data"
@@ -206,5 +215,14 @@ ERROR UNKNOWN_VALUE                  "unknown value"
 ERROR AUTHORIZATION                  "authorization error"
 ERROR JOB_NOT_FOUND                  "job not found"
 ERROR JOB                            "job error"
+
+// database (SQLite3)
+ERROR DATABASE
+  strncpy(errorText,"database error: ",sizeof(errorText)-1);
+  strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR DATABASE_CREATE_INDEX          "error creating index"
+ERROR DATABASE_INDEX_NOT_FOUND       "index not found"
 
 // end of file
