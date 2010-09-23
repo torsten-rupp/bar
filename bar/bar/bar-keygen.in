@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # $Author: torsten $
 # Contents: generate BAR server keys (PEM files)
 # Systems: Unix
@@ -605,6 +605,7 @@ elif test $OPENSSL_OK -eq 1; then
     -key "$barServerKey" \
     -x509 \
     -nodes \
+    -days 365 \
     -out "$barServerCert" \
     1>$stdout 2>$stderr
   rc=$?
