@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -42,6 +42,7 @@
 #include "crypt.h"
 #include "storage.h"
 #include "misc.h"
+#include "database.h"
 
 #include "commands_create.h"
 
@@ -78,7 +79,7 @@ typedef struct
   FileCast              cast;
 } IncrementalListInfo;
 
-/* create status info  */
+/* create info  */
 typedef struct
 {
   String                      storageName;
@@ -110,10 +111,10 @@ typedef struct
   bool                        storageThreadExitFlag;
   StringList                  storageFileList;                    // list with stored storage files
 
-  Errors                      failError;
+  Errors                      failError;                          // failure error
 
-  CreateStatusInfoFunction    statusInfoFunction;
-  void                        *statusInfoUserData;
+  CreateStatusInfoFunction    statusInfoFunction;                 // status info call back
+  void                        *statusInfoUserData;                // user data for status info call back
   CreateStatusInfo            statusInfo;                         // status info
 } CreateInfo;
 
@@ -128,10 +129,10 @@ typedef struct
 /* storage message, send from main -> storage thread */
 typedef struct
 {
-  String fileName;
-  uint64 fileSize;
-  bool   completeFlag;
-  String destinationFileName;
+  DatabaseHandle *databaseHandle;
+  int64          storageId;
+  String         fileName;
+  String         destinationFileName;
 } StorageMsg;
 
 /***************************** Variables *******************************/
@@ -492,20 +493,24 @@ LOCAL void addIncrementalList(Dictionary     *filesDictionary,
 * Purpose: update status info
 * Input  : createInfo - create info
 * Output : -
-* Return : -
+* Return : bool TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateStatusInfo(const CreateInfo *createInfo)
+LOCAL bool updateStatusInfo(const CreateInfo *createInfo)
 {
   assert(createInfo != NULL);
 
   if (createInfo->statusInfoFunction != NULL)
   {
-    createInfo->statusInfoFunction(createInfo->statusInfoUserData,
-                                   createInfo->failError,
-                                   &createInfo->statusInfo
-                                  );
+    return createInfo->statusInfoFunction(createInfo->statusInfoUserData,
+                                          createInfo->failError,
+                                          &createInfo->statusInfo
+                                         );
+  }
+  else
+  {
+    return TRUE;
   }
 }
 
@@ -515,11 +520,11 @@ LOCAL void updateStatusInfo(const CreateInfo *createInfo)
 * Input  : createInfo        - create info
 *          storageStatusInfo - storage status info
 * Output : -
-* Return : -
+* Return : bool TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateStorageStatusInfo(CreateInfo              *createInfo,
+LOCAL bool updateStorageStatusInfo(CreateInfo              *createInfo,
                                    const StorageStatusInfo *storageStatusInfo
                                   )
 {
@@ -529,7 +534,7 @@ LOCAL void updateStorageStatusInfo(CreateInfo              *createInfo,
   createInfo->statusInfo.volumeNumber   = storageStatusInfo->volumeNumber;
   createInfo->statusInfo.volumeProgress = storageStatusInfo->volumeProgress;
 
-  updateStatusInfo(createInfo);
+  return updateStatusInfo(createInfo);
 }
 
 /***********************************************************************\
@@ -808,7 +813,7 @@ LOCAL String formatArchiveFileName(String       fileName,
         {
           /* % at end of string */
           i += 1;
-        }      
+        }
         break;
       case '#':
         /* #... */
@@ -826,7 +831,7 @@ LOCAL String formatArchiveFileName(String       fileName,
                 if (divisor < 1000000000) divisor*=10;
               }
 
-              /* replace #...# by part number */     
+              /* replace #...# by part number */
               n = partNumber;
               z = 0;
               while (divisor > 0)
@@ -846,7 +851,7 @@ LOCAL String formatArchiveFileName(String       fileName,
             else
             {
               i += 1;
-            }       
+            }
             break;
           case FORMAT_MODE_PATTERN:
             /* replace by "." */
@@ -1009,6 +1014,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
 {
   StringList          nameList;
   String              name;
+  bool                abortFlag;
   EntryNode           *includeEntryNode;
   StringTokenizer     fileNameTokenizer;
   String              basePath;
@@ -1027,10 +1033,12 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
   StringList_init(&nameList);
   name = String_new();
 
+  abortFlag = FALSE;
   includeEntryNode = createInfo->includeEntryList->head;
   while (   !createInfo->collectorSumThreadExitFlag
-         && (createInfo->failError == ERROR_NONE)
+         && !abortFlag
          && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+         && (createInfo->failError == ERROR_NONE)
          && (includeEntryNode != NULL)
         )
   {
@@ -1098,9 +1106,9 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
               case ENTRY_TYPE_FILE:
                 if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                 {
-                  createInfo->statusInfo.totalFiles++;
+                  createInfo->statusInfo.totalEntries++;
                   createInfo->statusInfo.totalBytes += fileInfo.size;
-                  updateStatusInfo(createInfo);
+                  abortFlag |= !updateStatusInfo(createInfo);
                 }
                 break;
               case ENTRY_TYPE_IMAGE:
@@ -1117,8 +1125,8 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                 {
                   if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                   {
-                    createInfo->statusInfo.totalFiles++;
-                    updateStatusInfo(createInfo);
+                    createInfo->statusInfo.totalEntries++;
+                    abortFlag |= !updateStatusInfo(createInfo);
                   }
                 }
                 break;
@@ -1170,9 +1178,9 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                         case ENTRY_TYPE_FILE:
                           if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                           {
-                            createInfo->statusInfo.totalFiles++;
+                            createInfo->statusInfo.totalEntries++;
                             createInfo->statusInfo.totalBytes += fileInfo.size;
-                            updateStatusInfo(createInfo);
+                            abortFlag |= !updateStatusInfo(createInfo);
                           }
                           break;
                         case ENTRY_TYPE_IMAGE:
@@ -1189,8 +1197,8 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                         case ENTRY_TYPE_FILE:
                           if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                           {
-                            createInfo->statusInfo.totalFiles++;
-                            updateStatusInfo(createInfo);
+                            createInfo->statusInfo.totalEntries++;
+                            abortFlag |= !updateStatusInfo(createInfo);
                           }
                           break;
                         case ENTRY_TYPE_IMAGE:
@@ -1203,7 +1211,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                         case ENTRY_TYPE_FILE:
                           if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo))
                           {
-                            createInfo->statusInfo.totalFiles++;
+                            createInfo->statusInfo.totalEntries++;
                             if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
                                 && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                 && (fileInfo.size >= 0L)
@@ -1211,15 +1219,15 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                             {
                               createInfo->statusInfo.totalBytes += fileInfo.size;
                             }
-                            updateStatusInfo(createInfo);
+                            abortFlag |= !updateStatusInfo(createInfo);
                           }
                           break;
                         case ENTRY_TYPE_IMAGE:
                           if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                           {
-                            createInfo->statusInfo.totalFiles++;
+                            createInfo->statusInfo.totalEntries++;
                             if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
-                            updateStatusInfo(createInfo);
+                            abortFlag |= !updateStatusInfo(createInfo);
                           }
                           break;
                       }
@@ -1241,8 +1249,8 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
               case ENTRY_TYPE_FILE:
                 if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                 {
-                  createInfo->statusInfo.totalFiles++;
-                  updateStatusInfo(createInfo);
+                  createInfo->statusInfo.totalEntries++;
+                  abortFlag |= !updateStatusInfo(createInfo);
                 }
                 break;
               case ENTRY_TYPE_IMAGE:
@@ -1255,8 +1263,8 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
               case ENTRY_TYPE_FILE:
                 if ((createInfo->archiveType != ARCHIVE_TYPE_INCREMENTAL) || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo))
                 {
-                  createInfo->statusInfo.totalFiles++;
-                  updateStatusInfo(createInfo);
+                  createInfo->statusInfo.totalEntries++;
+                  abortFlag |= !updateStatusInfo(createInfo);
                 }
                 break;
               case ENTRY_TYPE_IMAGE:
@@ -1270,9 +1278,9 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                   }
                   UNUSED_VARIABLE(deviceInfo);
 
-                  createInfo->statusInfo.totalFiles++;
+                  createInfo->statusInfo.totalEntries++;
                   if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
-                  updateStatusInfo(createInfo);
+                  abortFlag |= !updateStatusInfo(createInfo);
                 }
                 break;
             }
@@ -1311,6 +1319,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
 {
   StringList          nameList;
   String              name;
+  bool                abortFlag;
   EntryNode           *includeEntryNode;
   StringTokenizer     fileNameTokenizer;
   String              basePath;
@@ -1330,9 +1339,11 @@ LOCAL void collectorThread(CreateInfo *createInfo)
   name     = String_new();
   fileName = String_new();
 
+  abortFlag = FALSE;
   includeEntryNode = createInfo->includeEntryList->head;
-  while (   (createInfo->failError == ERROR_NONE)
+  while (   !abortFlag
          && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+         && (createInfo->failError == ERROR_NONE)
          && (includeEntryNode != NULL)
         )
   {
@@ -1364,8 +1375,9 @@ LOCAL void collectorThread(CreateInfo *createInfo)
 
     /* find files */
     StringList_append(&nameList,basePath);
-    while (   (createInfo->failError == ERROR_NONE)
+    while (   !abortFlag
            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+           && (createInfo->failError == ERROR_NONE)
            && !StringList_empty(&nameList)
           )
     {
@@ -1384,8 +1396,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
       {
         printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
         logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(name));
-        createInfo->statusInfo.errorFiles++;
-        updateStatusInfo(createInfo);
+        createInfo->statusInfo.errorEntries++;
+        abortFlag |= !updateStatusInfo(createInfo);
         continue;
       }
 
@@ -1452,9 +1464,9 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                 {
                   printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
                   logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(name));
-                  createInfo->statusInfo.errorFiles++;
+                  createInfo->statusInfo.errorEntries++;
                   createInfo->statusInfo.errorBytes += fileInfo.size;
-                  updateStatusInfo(createInfo);
+                  abortFlag |= !updateStatusInfo(createInfo);
                   continue;
                 }
 
@@ -1468,8 +1480,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   {
                     printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Errors_getText(error));
                     logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
-                    createInfo->statusInfo.errorFiles++;
-                    updateStatusInfo(createInfo);
+                    createInfo->statusInfo.errorEntries++;
+                    abortFlag |= !updateStatusInfo(createInfo);
                     continue;
                   }
 
@@ -1530,17 +1542,17 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                     default:
                       printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
                       logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"unknown type '%s'",String_cString(fileName));
-                      createInfo->statusInfo.errorFiles++;
+                      createInfo->statusInfo.errorEntries++;
                       createInfo->statusInfo.errorBytes += fileInfo.size;
-                      updateStatusInfo(createInfo);
+                      abortFlag |= !updateStatusInfo(createInfo);
                       break;
                   }
                 }
                 else
                 {
-                  createInfo->statusInfo.skippedFiles++;
+                  createInfo->statusInfo.skippedEntries++;
                   createInfo->statusInfo.skippedBytes += fileInfo.size;
-                  updateStatusInfo(createInfo);
+                  abortFlag |= !updateStatusInfo(createInfo);
                 }
               }
 
@@ -1551,8 +1563,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
             {
               printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
               logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(name));
-              createInfo->statusInfo.errorFiles++;
-              updateStatusInfo(createInfo);
+              createInfo->statusInfo.errorEntries++;
+              abortFlag |= !updateStatusInfo(createInfo);
             }
             break;
           case FILE_TYPE_LINK:
@@ -1588,8 +1600,8 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                   {
                     printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
                     logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(name));
-                    createInfo->statusInfo.errorFiles++;
-                    updateStatusInfo(createInfo);
+                    createInfo->statusInfo.errorEntries++;
+                    abortFlag |= !updateStatusInfo(createInfo);
                     continue;
                   }
                   UNUSED_VARIABLE(deviceInfo);
@@ -1603,18 +1615,18 @@ LOCAL void collectorThread(CreateInfo *createInfo)
           default:
             printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
             logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"unknown type '%s'",String_cString(name));
-            createInfo->statusInfo.errorFiles++;
+            createInfo->statusInfo.errorEntries++;
             createInfo->statusInfo.errorBytes += fileInfo.size;
-            updateStatusInfo(createInfo);
+            abortFlag |= !updateStatusInfo(createInfo);
             break;
         }
       }
       else
       {
         logMessage(LOG_TYPE_ENTRY_EXCLUDED,"excluded '%s'",String_cString(name));
-        createInfo->statusInfo.skippedFiles++;
+        createInfo->statusInfo.skippedEntries++;
         createInfo->statusInfo.skippedBytes += fileInfo.size;
-        updateStatusInfo(createInfo);
+        abortFlag |= !updateStatusInfo(createInfo);
       }
     }
 
@@ -1635,41 +1647,6 @@ LOCAL void collectorThread(CreateInfo *createInfo)
 }
 
 /*---------------------------------------------------------------------*/
-
-/***********************************************************************\
-* Name   : appendToStorageList
-* Purpose: put file into storage queue
-* Input  : storageMsgQueue     - storage message queue
-*          fileName            - file name (will be copied!)
-*          fileSize            - file size (in bytes)
-*          destinationFileName - destination file name (will be copied!)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void appendToStorageList(MsgQueue  *storageMsgQueue,
-                               String    fileName,
-                               uint64    fileSize,
-                               String    destinationFileName
-                              )
-{
-  StorageMsg storageMsg;
-
-  assert(storageMsgQueue != NULL);
-  assert(fileName != NULL);
-  assert(destinationFileName != NULL);
-
-  /* init */
-  storageMsg.fileName            = String_duplicate(fileName);
-  storageMsg.fileSize            = fileSize;
-  storageMsg.destinationFileName = String_duplicate(destinationFileName);
-  storageMsg.completeFlag        = TRUE;
-
-  /* put into message queue */
-  MsgQueue_put(storageMsgQueue,&storageMsg,sizeof(storageMsg));
-}
-
 
 /***********************************************************************\
 * Name   : freeStorageMsg
@@ -1694,60 +1671,80 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 /***********************************************************************\
 * Name   : storeArchiveFile
 * Purpose: storage archive call back
-* Input  : -
+* Input  : userData       - user data
+*          databaseHandle - database handle or NULL if no database
+*          storageId      - database id of storage
+*          fileName       - archive file name
+*          partNumber     - part number or -1 if no parts
+*          lastPartFlag   - TRUE iff last archive part, FALSE otherwise
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors storeArchiveFile(void   *userData,
-                              String fileName,
-                              uint64 fileSize,
-                              int    partNumber,
-                              bool   lastPartFlag
+LOCAL Errors storeArchiveFile(void           *userData,
+                              DatabaseHandle *databaseHandle,
+                              int64          storageId,
+                              String         fileName,
+                              int            partNumber,
+                              bool           lastPartFlag
                              )
 {
   CreateInfo *createInfo = (CreateInfo*)userData;
-  String     destinationName; 
+  Errors     error;
+  FileInfo   fileInfo;
+  String     destinationFileName;
+  StorageMsg storageMsg;
 
   assert(createInfo != NULL);
+  assert(fileName != NULL);
+
+  /* get file info */
+  error = File_getFileInfo(fileName,&fileInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   /* get destination file name */
-  destinationName = formatArchiveFileName(String_new(),
-                                          FORMAT_MODE_ARCHIVE_FILE_NAME,
-                                          createInfo->archiveType,
-                                          createInfo->archiveFileName,
-                                          createInfo->startTime,
-                                          partNumber,
-                                          lastPartFlag
-                                         );
+  destinationFileName = formatArchiveFileName(String_new(),
+                                              FORMAT_MODE_ARCHIVE_FILE_NAME,
+                                              createInfo->archiveType,
+                                              createInfo->archiveFileName,
+                                              createInfo->startTime,
+                                              partNumber,
+                                              lastPartFlag
+                                             );
 
   /* send to storage controller */
-  Semaphore_lock(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-  createInfo->storageCount += 1;
-  createInfo->storageBytes += fileSize;
-  appendToStorageList(&createInfo->storageMsgQueue,
-                      fileName,
-                      fileSize,
-                      destinationName
-                     );
-  Semaphore_unlock(&createInfo->storageSemaphore);
-  createInfo->statusInfo.storageTotalBytes += fileSize;
+  storageMsg.databaseHandle      = databaseHandle;
+  storageMsg.storageId           = storageId;
+  storageMsg.fileName            = String_duplicate(fileName);
+  storageMsg.destinationFileName = destinationFileName;
+  MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg));
+  SEMAPHORE_LOCKED_DO(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    createInfo->storageCount += 1;
+    createInfo->storageBytes += fileInfo.size;
+  }
+
+  /* update info */
+  createInfo->statusInfo.archiveTotalBytes += fileInfo.size;
   updateStatusInfo(createInfo);
 
   /* wait for space in temporary directory */
   if (globalOptions.maxTmpSize > 0)
   {
-    Semaphore_lock(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-    while ((createInfo->storageCount > 2) && (createInfo->storageBytes > globalOptions.maxTmpSize))
+    SEMAPHORE_LOCKED_DO(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      Semaphore_waitModified(&createInfo->storageSemaphore);
+      while ((createInfo->storageCount > 2) && (createInfo->storageBytes > globalOptions.maxTmpSize))
+      {
+        Semaphore_waitModified(&createInfo->storageSemaphore);
+      }
     }
-    Semaphore_unlock(&createInfo->storageSemaphore);
   }
 
   /* free resources */
-  String_delete(destinationName);
 
   return ERROR_NONE;
 }
@@ -1767,14 +1764,17 @@ LOCAL void storageThread(CreateInfo *createInfo)
 
   byte                       *buffer;
   String                     storageName;
+  bool                       abortFlag;
   StorageMsg                 storageMsg;
   Errors                     error;
+  FileInfo                   fileInfo;
   FileHandle                 fileHandle;
   uint                       retryCount;
   ulong                      n;
   String                     pattern;
   String                     storagePath;
   String                     fileName;
+  int64                      oldStorageId;
   StorageDirectoryListHandle storageDirectoryListHandle;
 
   assert(createInfo != NULL);
@@ -1811,9 +1811,12 @@ LOCAL void storageThread(CreateInfo *createInfo)
   }
 
   /* store data */
+  abortFlag = FALSE;
   while (MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg)))
   {
-    if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+    if (   !abortFlag
+        && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+       )
     {
       if (createInfo->failError == ERROR_NONE)
       {
@@ -1832,14 +1835,40 @@ LOCAL void storageThread(CreateInfo *createInfo)
                      Errors_getText(error)
                     );
           createInfo->failError = error;
+
+          if (indexDatabaseHandle != NULL)
+          {
+            Index_delete(indexDatabaseHandle,storageMsg.storageId);
+          }
+          File_delete(storageMsg.fileName,FALSE);
+          freeStorageMsg(&storageMsg,NULL);
+          continue;
+        }
+
+        /* get file info */
+        error = File_getFileInfo(storageMsg.fileName,&fileInfo);
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot get information for file '%s' (error: %s)!\n",
+                     String_cString(storageMsg.fileName),
+                     Errors_getText(error)
+                    );
+          createInfo->failError = error;
+
+          if (indexDatabaseHandle != NULL)
+          {
+            Index_delete(indexDatabaseHandle,storageMsg.storageId);
+          }
+          File_delete(storageMsg.fileName,FALSE);
+          freeStorageMsg(&storageMsg,NULL);
           continue;
         }
 
         /* get storage name */
-        Storage_getName(&createInfo->storageFileHandle,
-                        storageName,
-                        storageMsg.destinationFileName
-                       );
+        Storage_getHandleName(storageName,
+                              &createInfo->storageFileHandle,
+                              storageMsg.destinationFileName
+                             );
 
         /* open file to store */
         printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageName));
@@ -1851,13 +1880,18 @@ LOCAL void storageThread(CreateInfo *createInfo)
                      String_cString(storageMsg.fileName),
                      Errors_getText(error)
                     );
-          File_delete(storageMsg.fileName,FALSE);
-          String_delete(storageMsg.fileName);
-          String_delete(storageMsg.destinationFileName);
           createInfo->failError = error;
+
+          if (indexDatabaseHandle != NULL)
+          {
+            Index_delete(indexDatabaseHandle,storageMsg.storageId);
+          }
+          File_delete(storageMsg.fileName,FALSE);
+          freeStorageMsg(&storageMsg,NULL);
           continue;
         }
 
+        /* store file */
         retryCount = 0;
         do
         {
@@ -1875,7 +1909,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
           /* create storage file */
           error = Storage_create(&createInfo->storageFileHandle,
                                  storageMsg.destinationFileName,
-                                 storageMsg.fileSize
+                                 fileInfo.size
                                 );
           if (error != ERROR_NONE)
           {
@@ -1927,8 +1961,8 @@ LOCAL void storageThread(CreateInfo *createInfo)
               }
               break;
             }
-            createInfo->statusInfo.storageDoneBytes += n;
-            updateStatusInfo(createInfo);
+            createInfo->statusInfo.archiveDoneBytes += n;
+            abortFlag |= !updateStatusInfo(createInfo);
           }
           while (   (createInfo->failError == ERROR_NONE)
                  && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
@@ -1941,13 +1975,13 @@ LOCAL void storageThread(CreateInfo *createInfo)
 error = ERROR_NONE;
 #endif /* 0 */
 
-          if (error == ERROR_NONE)
+          if (createInfo->failError == ERROR_NONE)
           {
             printInfo(0,"ok\n");
             logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageName));
           }
         }
-        while (   (error != ERROR_NONE)
+        while (   (createInfo->failError != ERROR_NONE)
                && (createInfo->failError == ERROR_NONE)
                && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
               );
@@ -1955,19 +1989,73 @@ error = ERROR_NONE;
         /* close file to store */
         File_close(&fileHandle);
 
-        /* check for error */
-        if (   (error != ERROR_NONE)
-            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-           )
+        /* update database index and set state */
+        if (indexDatabaseHandle != NULL)
         {
-          File_delete(storageMsg.fileName,FALSE);
-          String_delete(storageMsg.fileName);
-          String_delete(storageMsg.destinationFileName);
-          continue;
-        }
+          if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+          {
+            /* delete old indizes for same storage file */
+            if (createInfo->failError == ERROR_NONE)
+            {
+              while (Index_findByName(indexDatabaseHandle,
+                                      storageName,
+                                      &oldStorageId
+                                     )
+                    )
+              {
+                Index_delete(indexDatabaseHandle,oldStorageId);
+              }
+              while ((error == ERROR_NONE) && (oldStorageId != DATABASE_ID_NONE));
+              if (error != ERROR_NONE)
+              {
+                printError("Cannot update index for storage '%s' (error: %s)!\n",
+                           String_cString(storageMsg.fileName),
+                           Errors_getText(error)
+                          );
+                createInfo->failError = error;
+              }
+            }
 
-        /* add to list of stored storage files */
-        StringList_append(&createInfo->storageFileList,storageMsg.destinationFileName);
+            /* set storage name, size */
+            if (createInfo->failError == ERROR_NONE)
+            {
+              error = Index_update(indexDatabaseHandle,
+                                   storageMsg.storageId,
+                                   storageName,
+                                   fileInfo.size
+                                  );
+              if (error != ERROR_NONE)
+              {
+                printError("Cannot update index for storage '%s' (error: %s)!\n",
+                           String_cString(storageMsg.fileName),
+                           Errors_getText(error)
+                          );
+                createInfo->failError = error;
+              }
+            }
+
+            /* set state */
+            if (createInfo->failError == ERROR_NONE)
+            {
+              error = Index_setState(indexDatabaseHandle,
+                                     storageMsg.storageId,
+                                     INDEX_STATE_OK
+                                    );
+              if (error != ERROR_NONE)
+              {
+                printError("Cannot update index for storage '%s' (error: %s)!\n",
+                           String_cString(storageMsg.fileName),
+                           Errors_getText(error)
+                          );
+                createInfo->failError = error;
+              }
+            }
+          }
+          else
+          {
+            Index_delete(indexDatabaseHandle,storageMsg.storageId);
+          }
+        }
 
         /* post-process */
         if (   (createInfo->failError == ERROR_NONE)
@@ -1984,6 +2072,32 @@ error = ERROR_NONE;
             createInfo->failError = error;
           }
         }
+
+        /* check for error */
+        if (   (createInfo->failError != ERROR_NONE)
+            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+           )
+        {
+          if (indexDatabaseHandle != NULL)
+          {
+            Index_setState(indexDatabaseHandle,storageMsg.storageId,INDEX_STATE_ERROR);
+          }
+          File_delete(storageMsg.fileName,FALSE);
+          freeStorageMsg(&storageMsg,NULL);
+          continue;
+        }
+
+        /* add to list of stored storage files */
+        StringList_append(&createInfo->storageFileList,storageMsg.destinationFileName);
+
+        /* update storage info */
+        SEMAPHORE_LOCKED_DO(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        {
+          assert(createInfo->storageCount > 0);
+          assert(createInfo->storageBytes >= fileInfo.size);
+          createInfo->storageCount -= 1;
+          createInfo->storageBytes -= fileInfo.size;
+        }
       }
     }
 
@@ -1996,14 +2110,6 @@ error = ERROR_NONE;
                    Errors_getText(error)
                   );
     }
-
-    /* update storage info */
-    Semaphore_lock(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-    assert(createInfo->storageCount > 0);
-    assert(createInfo->storageBytes >= storageMsg.fileSize);
-    createInfo->storageCount -= 1;
-    createInfo->storageBytes -= storageMsg.fileSize;
-    Semaphore_unlock(&createInfo->storageSemaphore);
 
     /* free resources */
     freeStorageMsg(&storageMsg,NULL);
@@ -2109,6 +2215,7 @@ Errors Command_create(const char                      *storageName,
   String          incrementalListFileName;
   bool            storeIncrementalFileInfoFlag;
   EntryTypes      entryType;
+  bool            abortFlag;
   String          fileName;
   FileTypes       fileType;
   ArchiveFileInfo archiveFileInfo;
@@ -2137,22 +2244,22 @@ Errors Command_create(const char                      *storageName,
   createInfo.failError                    = ERROR_NONE;
   createInfo.statusInfoFunction           = createStatusInfoFunction;
   createInfo.statusInfoUserData           = createStatusInfoUserData;
-  createInfo.statusInfo.doneFiles         = 0L;
+  createInfo.statusInfo.doneEntries       = 0L;
   createInfo.statusInfo.doneBytes         = 0LL;
-  createInfo.statusInfo.totalFiles        = 0L;
+  createInfo.statusInfo.totalEntries      = 0L;
   createInfo.statusInfo.totalBytes        = 0LL;
-  createInfo.statusInfo.skippedFiles      = 0L;
+  createInfo.statusInfo.skippedEntries    = 0L;
   createInfo.statusInfo.skippedBytes      = 0LL;
-  createInfo.statusInfo.errorFiles        = 0L;
+  createInfo.statusInfo.errorEntries      = 0L;
   createInfo.statusInfo.errorBytes        = 0LL;
   createInfo.statusInfo.archiveBytes      = 0LL;
   createInfo.statusInfo.compressionRatio  = 0.0;
-  createInfo.statusInfo.fileName          = String_new();
-  createInfo.statusInfo.fileDoneBytes     = 0LL;
-  createInfo.statusInfo.fileTotalBytes    = 0LL;
+  createInfo.statusInfo.name              = String_new();
+  createInfo.statusInfo.entryDoneBytes    = 0LL;
+  createInfo.statusInfo.entryTotalBytes   = 0LL;
   createInfo.statusInfo.storageName       = String_new();
-  createInfo.statusInfo.storageDoneBytes  = 0LL;
-  createInfo.statusInfo.storageTotalBytes = 0LL;
+  createInfo.statusInfo.archiveDoneBytes  = 0LL;
+  createInfo.statusInfo.archiveTotalBytes = 0LL;
   createInfo.statusInfo.volumeNumber      = 0;
   createInfo.statusInfo.volumeProgress    = 0.0;
 
@@ -2203,7 +2310,7 @@ Errors Command_create(const char                      *storageName,
     MsgQueue_done(&createInfo.entryMsgQueue,NULL,NULL);
     free(buffer);
     String_delete(createInfo.statusInfo.storageName);
-    String_delete(createInfo.statusInfo.fileName);
+    String_delete(createInfo.statusInfo.name);
     String_delete(createInfo.archiveFileName);
     StringList_done(&createInfo.storageFileList);
     String_delete(createInfo.storageName);
@@ -2247,13 +2354,19 @@ Errors Command_create(const char                      *storageName,
                    Errors_getText(error)
                   );
         String_delete(incrementalListFileName);
+#if 0
+        if (indexDatabaseHandle != NULL)
+        {
+          Storage_indexDiscard(&createInfo.storageIndexHandle);
+        }
+#endif /* 0 */
         Semaphore_done(&createInfo.storageSemaphore);
         MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
         MsgQueue_done(&createInfo.entryMsgQueue,NULL,NULL);
         free(buffer);
         Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
         String_delete(createInfo.statusInfo.storageName);
-        String_delete(createInfo.statusInfo.fileName);
+        String_delete(createInfo.statusInfo.name);
         String_delete(createInfo.archiveFileName);
         StringList_done(&createInfo.storageFileList);
         String_delete(createInfo.storageName);
@@ -2270,10 +2383,13 @@ Errors Command_create(const char                      *storageName,
   /* create new archive */
   error = Archive_create(&archiveInfo,
                          jobOptions,
+//                         newArchiveEntry,
+//                         &createInfo,
                          storeArchiveFile,
                          &createInfo,
                          archiveGetCryptPasswordFunction,
-                         archiveGetCryptPasswordUserData
+                         archiveGetCryptPasswordUserData,
+                         indexDatabaseHandle
                         );
   if (error != ERROR_NONE)
   {
@@ -2286,12 +2402,18 @@ Errors Command_create(const char                      *storageName,
       Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
       String_delete(incrementalListFileName);
     }
+#if 0
+    if (indexDatabaseHandle != NULL)
+    {
+      Storage_closeIndex(&createInfo.storageIndexHandle);
+    }
+#endif /* 0 */
     Semaphore_done(&createInfo.storageSemaphore);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
     MsgQueue_done(&createInfo.entryMsgQueue,NULL,NULL);
     free(buffer);
     String_delete(createInfo.statusInfo.storageName);
-    String_delete(createInfo.statusInfo.fileName);
+    String_delete(createInfo.statusInfo.name);
     String_delete(createInfo.archiveFileName);
     StringList_done(&createInfo.storageFileList);
     String_delete(createInfo.storageName);
@@ -2314,8 +2436,10 @@ Errors Command_create(const char                      *storageName,
   }
 
   /* store files */
+  abortFlag = FALSE;
   fileName = String_new();
-  while (   ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
+  while (   !abortFlag
+         && ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
          && getNextEntry(&createInfo.entryMsgQueue,&entryType,fileName,&fileType)
         )
   {
@@ -2343,7 +2467,7 @@ Errors Command_create(const char                      *storageName,
           {
             printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
             logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
-            createInfo.statusInfo.errorFiles++;
+            createInfo.statusInfo.errorEntries++;
           }
           else
           {
@@ -2354,7 +2478,7 @@ Errors Command_create(const char                      *storageName,
                       );
             createInfo.failError = error;
           }
-          updateStatusInfo(&createInfo);
+          abortFlag |= !updateStatusInfo(&createInfo);
           continue;
         }
 
@@ -2379,7 +2503,7 @@ Errors Command_create(const char                      *storageName,
                       {
                         printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
                         logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open file failed '%s'",String_cString(fileName));
-                        createInfo.statusInfo.errorFiles++;
+                        createInfo.statusInfo.errorEntries++;
                         createInfo.statusInfo.errorBytes += fileInfo.size;
                       }
                       else
@@ -2391,7 +2515,7 @@ Errors Command_create(const char                      *storageName,
                                   );
                         createInfo.failError = error;
                       }
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2410,13 +2534,13 @@ Errors Command_create(const char                      *storageName,
                                 );
                       File_close(&fileHandle);
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
-                    String_set(createInfo.statusInfo.fileName,fileName);
-                    createInfo.statusInfo.fileDoneBytes = 0LL;
-                    createInfo.statusInfo.fileTotalBytes = fileInfo.size;
-                    updateStatusInfo(&createInfo);
+                    String_set(createInfo.statusInfo.name,fileName);
+                    createInfo.statusInfo.entryDoneBytes  = 0LL;
+                    createInfo.statusInfo.entryTotalBytes = fileInfo.size;
+                    abortFlag |= !updateStatusInfo(&createInfo);
 
                     /* write file content to archive */
                     error = ERROR_NONE;
@@ -2433,10 +2557,10 @@ Errors Command_create(const char                      *storageName,
                       {
                         error = Archive_writeData(&archiveFileInfo,buffer,n,1);
                         createInfo.statusInfo.doneBytes += n;
-                        createInfo.statusInfo.fileDoneBytes += n;
-                        createInfo.statusInfo.archiveBytes = createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo);
-                        createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
-                        updateStatusInfo(&createInfo);
+                        createInfo.statusInfo.entryDoneBytes += n;
+                        createInfo.statusInfo.archiveBytes = createInfo.statusInfo.archiveTotalBytes+Archive_getSize(&archiveInfo);
+                        createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.archiveTotalBytes+Archive_getSize(&archiveInfo))*100.0/createInfo.statusInfo.doneBytes;
+                        abortFlag |= !updateStatusInfo(&createInfo);
                       }
                     }
                     while (   ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
@@ -2460,7 +2584,7 @@ Errors Command_create(const char                      *storageName,
                       File_close(&fileHandle);
                       Archive_closeEntry(&archiveFileInfo);
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2474,7 +2598,7 @@ Errors Command_create(const char                      *storageName,
                                 );
                       File_close(&fileHandle);
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2493,8 +2617,8 @@ Errors Command_create(const char                      *storageName,
 
                     printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
                     logMessage(LOG_TYPE_ENTRY_OK,"added '%s'",String_cString(fileName));
-                    createInfo.statusInfo.doneFiles++;
-                    updateStatusInfo(&createInfo);
+                    createInfo.statusInfo.doneEntries++;
+                    abortFlag |= !updateStatusInfo(&createInfo);
                   }
                   break;
                 case ENTRY_TYPE_IMAGE:
@@ -2521,7 +2645,7 @@ Errors Command_create(const char                      *storageName,
                                 );
                       logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2534,14 +2658,14 @@ Errors Command_create(const char                      *storageName,
                                  Errors_getText(error)
                                 );
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
                     printInfo(1,"ok\n");
                     logMessage(LOG_TYPE_ENTRY_OK,"added '%s'",String_cString(fileName));
-                    createInfo.statusInfo.doneFiles++;
-                    updateStatusInfo(&createInfo);
+                    createInfo.statusInfo.doneEntries++;
+                    abortFlag |= !updateStatusInfo(&createInfo);
                   }
                   break;
                 case ENTRY_TYPE_IMAGE:
@@ -2564,7 +2688,7 @@ Errors Command_create(const char                      *storageName,
                       {
                         printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
                         logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open failed '%s'",String_cString(fileName));
-                        createInfo.statusInfo.errorFiles++;
+                        createInfo.statusInfo.errorEntries++;
                         createInfo.statusInfo.errorBytes += fileInfo.size;
                       }
                       else
@@ -2577,7 +2701,7 @@ Errors Command_create(const char                      *storageName,
                         String_delete(name);
                         createInfo.failError = error;
                       }
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2597,7 +2721,7 @@ Errors Command_create(const char                      *storageName,
                                 );
                       String_delete(name);
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2610,14 +2734,14 @@ Errors Command_create(const char                      *storageName,
                                  Errors_getText(error)
                                 );
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
                     printInfo(1,"ok\n");
                     logMessage(LOG_TYPE_ENTRY_OK,"added '%s'",String_cString(fileName));
-                    createInfo.statusInfo.doneFiles++;
-                    updateStatusInfo(&createInfo);
+                    createInfo.statusInfo.doneEntries++;
+                    abortFlag |= !updateStatusInfo(&createInfo);
 
                     /* free resources */
                     String_delete(name);
@@ -2646,7 +2770,7 @@ Errors Command_create(const char                      *storageName,
                                  Errors_getText(error)
                                 );
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2659,14 +2783,14 @@ Errors Command_create(const char                      *storageName,
                                  Errors_getText(error)
                                 );
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
                     printInfo(1,"ok\n");
                     logMessage(LOG_TYPE_ENTRY_OK,"added '%s'",String_cString(fileName));
-                    createInfo.statusInfo.doneFiles++;
-                    updateStatusInfo(&createInfo);
+                    createInfo.statusInfo.doneEntries++;
+                    abortFlag |= !updateStatusInfo(&createInfo);
 
                     /* free resources */
                   }
@@ -2690,7 +2814,7 @@ Errors Command_create(const char                      *storageName,
                       {
                         printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
                         logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'",String_cString(fileName));
-                        createInfo.statusInfo.errorFiles++;
+                        createInfo.statusInfo.errorEntries++;
                       }
                       else
                       {
@@ -2701,7 +2825,7 @@ Errors Command_create(const char                      *storageName,
                                   );
                         createInfo.failError = error;
                       }
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2727,7 +2851,7 @@ Errors Command_create(const char                      *storageName,
                       {
                         printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
                         logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open device failed '%s'",String_cString(fileName));
-                        createInfo.statusInfo.errorFiles++;
+                        createInfo.statusInfo.errorEntries++;
                         createInfo.statusInfo.errorBytes += fileInfo.size;
                       }
                       else
@@ -2739,13 +2863,13 @@ Errors Command_create(const char                      *storageName,
                                   );
                         createInfo.failError = error;
                       }
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
-                    String_set(createInfo.statusInfo.fileName,fileName);
-                    createInfo.statusInfo.fileDoneBytes = 0LL;
-                    createInfo.statusInfo.fileTotalBytes = fileInfo.size;
-                    updateStatusInfo(&createInfo);
+                    String_set(createInfo.statusInfo.name,fileName);
+                    createInfo.statusInfo.entryDoneBytes  = 0LL;
+                    createInfo.statusInfo.entryTotalBytes = fileInfo.size;
+                    abortFlag |= !updateStatusInfo(&createInfo);
 
                     /* check if device contain a known file system */
                     if (!jobOptions->rawImagesFlag)
@@ -2771,7 +2895,7 @@ Errors Command_create(const char                      *storageName,
                                  Errors_getText(error)
                                 );
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2818,10 +2942,10 @@ Errors Command_create(const char                      *storageName,
                       {
                         error = Archive_writeData(&archiveFileInfo,buffer,bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize);
                         createInfo.statusInfo.doneBytes += bufferBlockCount*deviceInfo.blockSize;
-                        createInfo.statusInfo.fileDoneBytes += bufferBlockCount*deviceInfo.blockSize;
-                        createInfo.statusInfo.archiveBytes = createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo);
-                        createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.storageTotalBytes+Archive_getSize(&archiveFileInfo))*100.0/createInfo.statusInfo.doneBytes;
-                        updateStatusInfo(&createInfo);
+                        createInfo.statusInfo.entryDoneBytes += bufferBlockCount*deviceInfo.blockSize;
+                        createInfo.statusInfo.archiveBytes = createInfo.statusInfo.archiveTotalBytes+Archive_getSize(&archiveInfo);
+                        createInfo.statusInfo.compressionRatio = 100.0-(createInfo.statusInfo.archiveTotalBytes+Archive_getSize(&archiveInfo))*100.0/createInfo.statusInfo.doneBytes;
+                        abortFlag |= !updateStatusInfo(&createInfo);
                       }
                     }
                     if ((createInfo.requestedAbortFlag != NULL) && (*createInfo.requestedAbortFlag))
@@ -2840,7 +2964,7 @@ Errors Command_create(const char                      *storageName,
                       Device_close(&deviceHandle);
                       Archive_closeEntry(&archiveFileInfo);
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2854,7 +2978,7 @@ Errors Command_create(const char                      *storageName,
                                 );
                       Device_close(&deviceHandle);
                       createInfo.failError = error;
-                      updateStatusInfo(&createInfo);
+                      abortFlag |= !updateStatusInfo(&createInfo);
                       continue;
                     }
 
@@ -2879,8 +3003,8 @@ Errors Command_create(const char                      *storageName,
 
                     printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",deviceInfo.size,ratio);
                     logMessage(LOG_TYPE_ENTRY_OK,"added '%s'",String_cString(fileName));
-                    createInfo.statusInfo.doneFiles++;
-                    updateStatusInfo(&createInfo);
+                    createInfo.statusInfo.doneEntries++;
+                    abortFlag |= !updateStatusInfo(&createInfo);
 
                     /* free resources */
                   }
@@ -2909,14 +3033,14 @@ Errors Command_create(const char                      *storageName,
       {
         printInfo(1,"skipped (reason: own created file)\n");
         logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"skipped '%s'",String_cString(fileName));
-        createInfo.statusInfo.skippedFiles++;
-        updateStatusInfo(&createInfo);
+        createInfo.statusInfo.skippedEntries++;
+        abortFlag |= !updateStatusInfo(&createInfo);
       }
 
 // NYI: is this really useful? (avoid that sum-collector-thread is slower than file-collector-thread)
       /* slow down if too fast */
       while (   !createInfo.collectorSumThreadExitedFlag
-             && (createInfo.statusInfo.doneFiles >= createInfo.statusInfo.totalFiles)
+             && (createInfo.statusInfo.doneEntries >= createInfo.statusInfo.totalEntries)
             )
       {
         Misc_udelay(1000*1000);
@@ -2932,7 +3056,7 @@ Errors Command_create(const char                      *storageName,
   createInfo.collectorSumThreadExitFlag = TRUE;
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
-  updateStatusInfo(&createInfo);
+  abortFlag |= !updateStatusInfo(&createInfo);
 
   /* wait for threads */
   Thread_join(&createInfo.storageThread);
@@ -2966,7 +3090,7 @@ Errors Command_create(const char                      *storageName,
       free(buffer);
       Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
       String_delete(createInfo.statusInfo.storageName);
-      String_delete(createInfo.statusInfo.fileName);
+      String_delete(createInfo.statusInfo.name);
       String_delete(createInfo.archiveFileName);
       StringList_done(&createInfo.storageFileList);
       String_delete(createInfo.storageName);
@@ -2981,9 +3105,9 @@ Errors Command_create(const char                      *storageName,
   /* output statics */
   if (createInfo.failError == ERROR_NONE)
   {
-    printInfo(0,"%lu file/image(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneFiles,createInfo.statusInfo.doneBytes);
-    printInfo(2,"%lu file/image(s) skipped\n",createInfo.statusInfo.skippedFiles);
-    printInfo(2,"%lu file/image(s) with errors\n",createInfo.statusInfo.errorFiles);
+    printInfo(0,"%lu file/image(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneEntries,createInfo.statusInfo.doneBytes);
+    printInfo(2,"%lu file/image(s) skipped\n",createInfo.statusInfo.skippedEntries);
+    printInfo(2,"%lu file/image(s) with errors\n",createInfo.statusInfo.errorEntries);
   }
 
   /* free resources */
@@ -3001,7 +3125,7 @@ Errors Command_create(const char                      *storageName,
 #endif /* 0 */
   free(buffer);
   String_delete(createInfo.statusInfo.storageName);
-  String_delete(createInfo.statusInfo.fileName);
+  String_delete(createInfo.statusInfo.name);
   String_delete(createInfo.archiveFileName);
   StringList_done(&createInfo.storageFileList);
   String_delete(createInfo.storageName);

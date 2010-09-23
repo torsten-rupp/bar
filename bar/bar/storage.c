@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -25,7 +25,10 @@
 
 #include "global.h"
 #include "strings.h"
+#include "stringlists.h"
 #include "files.h"
+#include "network.h"
+#include "database.h"
 #include "errors.h"
 
 #include "bar.h"
@@ -33,10 +36,12 @@
 #include "passwords.h"
 #include "misc.h"
 
+#include "crypt.h"
+#include "archive.h"
+
 #include "storage.h"
 
-
-#include <fcntl.h>
+//#include <fcntl.h>
 
 /****************** Conditional compilation switches *******************/
 
@@ -49,9 +54,14 @@
 
 #define MAX_CD_SIZE  (700LL*1024LL*1024LL)
 #define MAX_DVD_SIZE (4613734LL*1024LL)
+#define MAX_BD_SIZE  (50LL*1024LL*1024LL)
 
-#define DVD_VOLUME_SIZE            MAX_DVD_SIZE
-#define DVD_VOLUME_ECC_SIZE        (3600LL*1024LL*1024LL)
+#define CD_VOLUME_SIZE      MAX_DVD_SIZE
+#define CD_VOLUME_ECC_SIZE  (560LL*1024LL*1024LL)
+#define DVD_VOLUME_SIZE     MAX_DVD_SIZE
+#define DVD_VOLUME_ECC_SIZE (3600LL*1024LL*1024LL)
+#define BD_VOLUME_SIZE      MAX_DVD_SIZE
+#define BD_VOLUME_ECC_SIZE  (40LL*1024LL*1024LL*1024LL)
 
 /***************************** Datatypes *******************************/
 
@@ -234,7 +244,7 @@ LOCAL Errors checkSSHLogin(const String loginName,
 {
   SocketHandle socketHandle;
   Errors       error;
-  
+
   error = Network_connect(&socketHandle,
                           SOCKET_TYPE_SSH,
                           hostName,
@@ -372,25 +382,25 @@ else {
 #endif /* defined(HAVE_FTP) || defined(HAVE_SSH2) */
 
 /***********************************************************************\
-* Name   : requestNewDVD
-* Purpose: request new dvd
+* Name   : requestNewMedium
+* Purpose: request new CD/DVD/BD medium
 * Input  : storageFileHandle - storage file handle
-*          waitFlag          - TRUE to wait for new dvd
+*          waitFlag          - TRUE to wait for new medium
 * Output : -
-* Return : TRUE if new dvd loaded, FALSE otherwise
+* Return : TRUE if new medium loaded, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
+LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFlag)
 {
   Errors                error;
   TextMacro             textMacros[2];
-  bool                  dvdRequestedFlag;
+  bool                  mediumRequestedFlag;
   StorageRequestResults storageRequestResult;
 
   error = ERROR_UNKNOWN;
 
-  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageFileHandle->dvd.name             );
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageFileHandle->opticalDisc.name     );
   TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageFileHandle->requestedVolumeNumber);
 
   if (   (storageFileHandle->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
@@ -398,9 +408,9 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
      )
   {
     /* sleep a short time to give hardware time for finishing volume, then unload current volume */
-    printInfo(0,"Unload DVD #%d...",storageFileHandle->volumeNumber);
+    printInfo(0,"Unload medium #%d...",storageFileHandle->volumeNumber);
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
-    Misc_executeCommand(String_cString(globalOptions.dvd.unloadVolumeCommand),
+    Misc_executeCommand(String_cString(storageFileHandle->opticalDisc.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
                         NULL,
                         NULL,
@@ -411,14 +421,14 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
     storageFileHandle->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
   }
 
-  /* request new dvd */
-  dvdRequestedFlag     = FALSE;
+  /* request new medium */
+  mediumRequestedFlag  = FALSE;
   storageRequestResult = STORAGE_REQUEST_VOLUME_UNKNOWN;
   if      (storageFileHandle->requestVolumeFunction != NULL)
   {
-    dvdRequestedFlag = TRUE;
+    mediumRequestedFlag = TRUE;
 
-    /* request new DVD via call back, unload if requested */
+    /* request new medium via call back, unload if requested */
     do
     {
       storageRequestResult = storageFileHandle->requestVolumeFunction(storageFileHandle->requestVolumeUserData,
@@ -426,9 +436,9 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
                                                                      );
       if (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD)
       {
-        /* sleep a short time to give hardware time for finishing volume, then unload current DVD */
-        printInfo(0,"Unload DVD...");
-        Misc_executeCommand(String_cString(globalOptions.dvd.unloadVolumeCommand),
+        /* sleep a short time to give hardware time for finishing volume, then unload current medium */
+        printInfo(0,"Unload medium...");
+        Misc_executeCommand(String_cString(storageFileHandle->opticalDisc.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             NULL,
                             NULL,
@@ -441,13 +451,13 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
 
     storageFileHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
-  else if (globalOptions.dvd.requestVolumeCommand != NULL)
+  else if (storageFileHandle->opticalDisc.requestVolumeCommand != NULL)
   {
-    dvdRequestedFlag = TRUE;
+    mediumRequestedFlag = TRUE;
 
     /* request new volume via external command */
-    printInfo(0,"Request new DVD #%d...",storageFileHandle->requestedVolumeNumber);
-    if (Misc_executeCommand(String_cString(globalOptions.dvd.requestVolumeCommand),
+    printInfo(0,"Request new medium #%d...",storageFileHandle->requestedVolumeNumber);
+    if (Misc_executeCommand(String_cString(storageFileHandle->opticalDisc.requestVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             NULL,
                             NULL,
@@ -470,11 +480,11 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
   {
     if (storageFileHandle->volumeState == STORAGE_VOLUME_STATE_UNLOADED)
     {
-      printInfo(0,"Please insert DVD #%d into drive '%s'\n",storageFileHandle->requestedVolumeNumber,String_cString(storageFileHandle->dvd.name));
+      printInfo(0,"Please insert medium #%d into drive '%s'\n",storageFileHandle->requestedVolumeNumber,String_cString(storageFileHandle->opticalDisc.name));
     }
     if (waitFlag)
     {
-      dvdRequestedFlag = TRUE;
+      mediumRequestedFlag = TRUE;
 
       printInfo(0,"<<press ENTER to continue>>\n");
       Misc_waitEnter();
@@ -485,14 +495,14 @@ LOCAL Errors requestNewDVD(StorageFileHandle *storageFileHandle, bool waitFlag)
     storageFileHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
 
-  if (dvdRequestedFlag)
+  if (mediumRequestedFlag)
   {
     switch (storageRequestResult)
     {
       case STORAGE_REQUEST_VOLUME_OK:
         /* load volume, then sleep a short time to give hardware time for reading volume information */
-        printInfo(0,"Load DVD #%d...",storageFileHandle->requestedVolumeNumber);
-        Misc_executeCommand(String_cString(globalOptions.dvd.loadVolumeCommand),
+        printInfo(0,"Load medium #%d...",storageFileHandle->requestedVolumeNumber);
+        Misc_executeCommand(String_cString(storageFileHandle->opticalDisc.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             NULL,
                             NULL,
@@ -554,7 +564,7 @@ LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFla
     /* sleep a short time to give hardware time for finishing volume; unload current volume */
     printInfo(0,"Unload volume #%d...",storageFileHandle->volumeNumber);
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
-    Misc_executeCommand(String_cString(storageFileHandle->device.device.unloadVolumeCommand),
+    Misc_executeCommand(String_cString(storageFileHandle->device.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
                         NULL,
                         NULL,
@@ -580,10 +590,10 @@ LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFla
                                                                      );
       if (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD)
       {
-        /* sleep a short time to give hardware time for finishing volume, then unload current DVD */
+        /* sleep a short time to give hardware time for finishing volume, then unload current medium */
         printInfo(0,"Unload volume...");
         Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
-        Misc_executeCommand(String_cString(storageFileHandle->device.device.unloadVolumeCommand),
+        Misc_executeCommand(String_cString(storageFileHandle->device.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             NULL,
                             NULL,
@@ -596,13 +606,13 @@ LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFla
 
     storageFileHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
-  else if (storageFileHandle->device.device.requestVolumeCommand != NULL)
+  else if (storageFileHandle->device.requestVolumeCommand != NULL)
   {
     volumeRequestedFlag = TRUE;
 
     /* request new volume via external command */
     printInfo(0,"Request new volume #%d...",storageFileHandle->requestedVolumeNumber);
-    if (Misc_executeCommand(String_cString(storageFileHandle->device.device.loadVolumeCommand),
+    if (Misc_executeCommand(String_cString(storageFileHandle->device.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             NULL,
                             NULL,
@@ -647,7 +657,7 @@ LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFla
       case STORAGE_REQUEST_VOLUME_OK:
         /* load volume; sleep a short time to give hardware time for reading volume information */
         printInfo(0,"Load volume #%d...",storageFileHandle->requestedVolumeNumber);
-        Misc_executeCommand(String_cString(storageFileHandle->device.device.loadVolumeCommand),
+        Misc_executeCommand(String_cString(storageFileHandle->device.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             NULL,
                             NULL,
@@ -699,11 +709,11 @@ LOCAL void processIOmkisofs(StorageFileHandle *storageFileHandle,
 
 //fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
-  if (String_matchCString(line,STRING_BEGIN,".* ([0-9\\.]+)% done.*",NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".* ([0-9\\.]+)% done.*",NULL,NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: mkisofs: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->dvd.step*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
+    storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->opticalDisc.step*100.0+p)/(double)(storageFileHandle->opticalDisc.steps*100);
     updateStatusInfo(storageFileHandle);
   }
   String_delete(s);
@@ -728,18 +738,18 @@ LOCAL void processIOdvdisaster(StorageFileHandle *storageFileHandle,
 
 //fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
-  if (String_matchCString(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: dvdisaster1: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->dvd.step+0)*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
+    storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->opticalDisc.step+0)*100.0+p)/(double)(storageFileHandle->opticalDisc.steps*100);
     updateStatusInfo(storageFileHandle);
   }
-  if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: dvdisaster2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->dvd.step+1)*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
+    storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->opticalDisc.step+1)*100.0+p)/(double)(storageFileHandle->opticalDisc.steps*100);
     updateStatusInfo(storageFileHandle);
   }
 
@@ -765,11 +775,11 @@ LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
 
 //fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
-  if (String_matchCString(line,STRING_BEGIN,".* \\(([0-9\\.]+)%\\) .*",NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".* \\(([0-9\\.]+)%\\) .*",NULL,NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: growisofs2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->dvd.step*100.0+p)/(double)(storageFileHandle->dvd.steps*100);
+    storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->opticalDisc.step*100.0+p)/(double)(storageFileHandle->opticalDisc.steps*100);
     updateStatusInfo(storageFileHandle);
   }
   String_delete(s);
@@ -800,158 +810,355 @@ void Storage_doneAll(void)
   #endif /* HAVE_FTP */
 }
 
-StorageTypes Storage_getType(const String storageName,
-                             String       storageSpecifier
-                            )
+StorageTypes Storage_getType(const String storageName)
 {
-  if      (String_subEqualsCString(storageName,"ftp://",STRING_BEGIN,6))
+  return Storage_parseName(storageName,NULL,NULL);
+}
+
+StorageTypes Storage_parseName(const String storageName,
+                               String       storageSpecifier,
+                               String       fileName
+                              )
+{
+  StorageTypes storageType;
+  String       string;
+  long         nextIndex;
+
+  string = String_new();
+
+  if      (String_startsWithCString(storageName,"ftp://"))
   {
-    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,6,STRING_END);
-    return STORAGE_TYPE_FTP;
+    String_sub(string,storageName,6,STRING_END);
+    if      (   String_matchCString(string,STRING_BEGIN,"[^:]*:[^@]*@[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^@]*@[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^/]*/",&nextIndex,NULL,NULL)
+            )
+    {
+      if (storageSpecifier != NULL) String_sub(storageSpecifier,string,0,nextIndex-1);
+      if (fileName != NULL) String_sub(fileName,string,nextIndex,STRING_END);
+    }
+    else
+    {
+      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
+      if (fileName != NULL) String_clear(fileName);
+    }
+
+    storageType = STORAGE_TYPE_FTP;
   }
-  else if (String_subEqualsCString(storageName,"ssh://",STRING_BEGIN,6))
+  else if (String_startsWithCString(storageName,"ssh://"))
   {
-    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,6,STRING_END);
-    return STORAGE_TYPE_SSH;
+    String_sub(string,storageName,6,STRING_END);
+    if      (   String_matchCString(string,STRING_BEGIN,"[^@]*@[^:]*:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^:]*:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^/]*/",&nextIndex,NULL,NULL)
+            )
+    {
+      if (storageSpecifier != NULL) String_sub(storageSpecifier,string,0,nextIndex-1);
+      if (fileName != NULL) String_sub(fileName,string,nextIndex,STRING_END);
+    }
+    else
+    {
+      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
+      if (fileName != NULL) String_clear(fileName);
+    }
+
+    storageType = STORAGE_TYPE_SSH;
   }
-  else if (String_subEqualsCString(storageName,"scp://",STRING_BEGIN,6))
+  else if (String_startsWithCString(storageName,"scp://"))
   {
-    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,6,STRING_END);
-    return STORAGE_TYPE_SCP;
+    String_sub(string,storageName,6,STRING_END);
+    if      (   String_matchCString(string,STRING_BEGIN,"[^@]*@[^:]*:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^:]*:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^/]*/",&nextIndex,NULL,NULL)
+            )
+    {
+      if (storageSpecifier != NULL) String_sub(storageSpecifier,string,0,nextIndex-1);
+      if (fileName != NULL) String_sub(fileName,string,nextIndex,STRING_END);
+    }
+    else
+    {
+      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
+      if (fileName != NULL) String_clear(fileName);
+    }
+
+    storageType = STORAGE_TYPE_SCP;
   }
-  else if (String_subEqualsCString(storageName,"sftp://",STRING_BEGIN,7))
+  else if (String_startsWithCString(storageName,"sftp://"))
   {
-    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,7,STRING_END);
-    return STORAGE_TYPE_SFTP;
+    String_sub(string,storageName,7,STRING_END);
+    if      (   String_matchCString(string,STRING_BEGIN,"[^@]*@[^:]*:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^:]*:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^/]*/",&nextIndex,NULL,NULL)
+            )
+    {
+      if (storageSpecifier != NULL) String_sub(storageSpecifier,string,0,nextIndex-1);
+      if (fileName != NULL) String_sub(fileName,string,nextIndex,STRING_END);
+    }
+    else
+    {
+      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
+      if (fileName != NULL) String_clear(fileName);
+    }
+
+    storageType = STORAGE_TYPE_SFTP;
   }
-/*
-  else if (String_subEqualsCString(storageName,"cd://",STRING_BEGIN,5))
+  else if (String_startsWithCString(storageName,"cd://"))
   {
-    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,5,STRING_END);
-    return STORAGE_TYPE_CD;
+    String_sub(string,storageName,5,STRING_END);
+    if      (   String_matchCString(string,STRING_BEGIN,"[^:]+:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^/]*/",&nextIndex,NULL,NULL)
+            )
+    {
+      if (storageSpecifier != NULL) String_sub(storageSpecifier,string,0,nextIndex-1);
+      if (fileName != NULL) String_sub(fileName,string,nextIndex,STRING_END);
+    }
+    else
+    {
+      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
+      if (fileName != NULL) String_clear(fileName);
+    }
+
+    storageType = STORAGE_TYPE_CD;
   }
-*/
-  else if (String_subEqualsCString(storageName,"dvd://",STRING_BEGIN,6))
+  else if (String_startsWithCString(storageName,"dvd://"))
   {
-    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,6,STRING_END);
-    return STORAGE_TYPE_DVD;
+    String_sub(string,storageName,6,STRING_END);
+    if      (   String_matchCString(string,STRING_BEGIN,"[^:]+:[^/]*/",NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^/]*/",NULL,NULL)
+            )
+    {
+      if (storageSpecifier != NULL) String_sub(storageSpecifier,string,0,nextIndex-1);
+      if (fileName != NULL) String_sub(fileName,string,nextIndex,STRING_END);
+    }
+    else
+    {
+      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
+      if (fileName != NULL) String_clear(fileName);
+    }
+
+    storageType = STORAGE_TYPE_DVD;
   }
-  else if (String_subEqualsCString(storageName,"device://",STRING_BEGIN,9))
+  else if (String_startsWithCString(storageName,"bd://"))
   {
-    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,9,STRING_END);
-    return STORAGE_TYPE_DEVICE;
+    String_sub(string,storageName,5,STRING_END);
+    if      (   String_matchCString(string,STRING_BEGIN,"[^:]+:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^/]*/",&nextIndex,NULL,NULL)
+            )
+    {
+      if (storageSpecifier != NULL) String_sub(storageSpecifier,string,0,nextIndex-1);
+      if (fileName != NULL) String_sub(fileName,string,nextIndex,STRING_END);
+    }
+    else
+    {
+      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
+      if (fileName != NULL) String_clear(fileName);
+    }
+
+    storageType = STORAGE_TYPE_BD;
   }
-  else if (String_subEqualsCString(storageName,"file://",STRING_BEGIN,7))
+  else if (String_startsWithCString(storageName,"device://"))
   {
-    if (storageSpecifier != NULL) String_sub(storageSpecifier,storageName,7,STRING_END);
-    return STORAGE_TYPE_FILESYSTEM;
+    String_sub(string,storageName,9,STRING_END);
+    if      (   String_matchCString(string,nextIndex,"[^:]+:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,nextIndex,"[^/]*/",&nextIndex,NULL,NULL)
+            )
+    {
+      if (storageSpecifier != NULL) String_sub(storageSpecifier,string,0,nextIndex-1);
+      if (fileName != NULL) String_sub(fileName,string,nextIndex,STRING_END);
+    }
+    else
+    {
+      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
+      if (fileName != NULL) String_clear(fileName);
+    }
+
+    storageType = STORAGE_TYPE_DEVICE;
+  }
+  else if (String_startsWithCString(storageName,"file://"))
+  {
+    if (storageSpecifier != NULL) String_clear(storageSpecifier);
+    if (fileName != NULL) String_sub(fileName,storageName,7,STRING_END);
+
+    storageType = STORAGE_TYPE_FILESYSTEM;
   }
   else
   {
-    if (storageSpecifier != NULL) String_set(storageSpecifier,storageName);
-    return STORAGE_TYPE_FILESYSTEM;
+    if (storageSpecifier != NULL) String_clear(storageSpecifier);
+    if (fileName != NULL) String_set(fileName,storageName);
+
+    storageType = STORAGE_TYPE_FILESYSTEM;
   }
+
+  String_delete(string);
+
+  return storageType;
+}
+
+String Storage_getName(String       name,
+                       StorageTypes storageType,
+                       const String storageSpecifier,
+                       const String fileName
+                      )
+{
+  assert(name != NULL);
+  assert(storageSpecifier != NULL);
+
+  String_clear(name);
+  switch (storageType)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      break;
+    case STORAGE_TYPE_SSH:
+      break;
+    case STORAGE_TYPE_FTP:
+      String_appendCString(name,"ftp://");
+      String_append(name,storageSpecifier);
+      break;
+    case STORAGE_TYPE_SCP:
+      String_appendCString(name,"scp://");
+      String_append(name,storageSpecifier);
+      break;
+    case STORAGE_TYPE_SFTP:
+      String_appendCString(name,"sftp://");
+      String_append(name,storageSpecifier);
+      break;
+    case STORAGE_TYPE_CD:
+      String_appendCString(name,"cd://");
+      String_append(name,storageSpecifier);
+      break;
+    case STORAGE_TYPE_DVD:
+      String_appendCString(name,"dvd://");
+      String_append(name,storageSpecifier);
+      break;
+    case STORAGE_TYPE_BD:
+      String_appendCString(name,"bd://");
+      String_append(name,storageSpecifier);
+      break;
+    case STORAGE_TYPE_DEVICE:
+      String_appendCString(name,"device://");
+      String_append(name,storageSpecifier);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+  if (!String_empty(fileName))
+  {
+    String_appendChar(name,'/');
+    String_append(name,fileName);
+  }
+
+  return name;
 }
 
 bool Storage_parseFTPSpecifier(const String ftpSpecifier,
                                String       loginName,
                                Password     *password,
-                               String       hostName,
-                               String       fileName
+                               String       hostName
                               )
 {
-  long   nextIndex;
+  bool   result;
   String s;
 
   assert(ftpSpecifier != NULL);
 
   String_clear(loginName);
   String_clear(hostName);
-  String_clear(fileName);
 
-  nextIndex = 0;
-  if      (String_matchCString(ftpSpecifier,nextIndex,"[[:alnum:]_]+:[[:alnum:]_]*@.*",NULL,NULL))
+  if      (String_matchCString(ftpSpecifier,STRING_BEGIN,"[^:]*:[^@]*@.*",NULL,NULL,NULL))
   {
     s = String_new();
-    String_parse(ftpSpecifier,nextIndex,"%S:%S@",&nextIndex,loginName,s);
+    String_parse(ftpSpecifier,STRING_BEGIN,"%S:%S@",NULL,loginName,s);
     if (password != NULL) Password_setString(password,s);
     String_delete(s);
+
+    result = TRUE;
   }
-  else if (String_matchCString(ftpSpecifier,nextIndex,"[[:alnum:]_]+@.*",NULL,NULL))
+  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"[^@]*@.*",NULL,NULL,NULL))
   {
-    String_parse(ftpSpecifier,nextIndex,"%S@",&nextIndex,loginName);
+    String_parse(ftpSpecifier,STRING_BEGIN,"%S@",NULL,loginName);
+
+    result = TRUE;
   }
-  if (String_matchCString(ftpSpecifier,nextIndex,"[[:alnum:]_]+/.*",NULL,NULL))
+  else if (!String_empty(ftpSpecifier))
   {
-    return String_parse(ftpSpecifier,nextIndex,"%S/%S",NULL,hostName,fileName);
+    String_set(hostName,ftpSpecifier);
+
+    result = TRUE;
   }
   else
   {
-    String_set(fileName,ftpSpecifier);
-    return TRUE;
+    result = FALSE;
   }
+
+  return result;
 }
 
 bool Storage_parseSSHSpecifier(const String sshSpecifier,
                                String       loginName,
                                String       hostName,
-                               uint         *hostPort,
-                               String       fileName
+                               uint         *hostPort
                               )
 {
-  long nextIndex;
+  bool result;
 
   assert(sshSpecifier != NULL);
 
   String_clear(loginName);
   String_clear(hostName);
   if (hostPort != NULL) (*hostPort) = 0;
-  String_clear(fileName);
 
-  nextIndex = 0;
-  if (String_matchCString(sshSpecifier,nextIndex,"[[:alnum:]_]+@.*",NULL,NULL))
+  if      (String_matchCString(sshSpecifier,STRING_BEGIN,"[^@]*@[^:]*:[:digit:]+",NULL,NULL,NULL))
   {
-    String_parse(sshSpecifier,nextIndex,"%S@",&nextIndex,loginName);
+    result = String_parse(sshSpecifier,STRING_BEGIN,"%S@",NULL,loginName);
   }
-  if      (String_matchCString(sshSpecifier,nextIndex,"[[:alnum:]_]+:[[:digit:]]+/.*",NULL,NULL))
+  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"[^:]*:[:digit:]+",NULL,NULL,NULL))
   {
-    return String_parse(sshSpecifier,nextIndex,"%S:%d/%S",NULL,hostName,hostPort,fileName);
+    result = String_parse(sshSpecifier,STRING_BEGIN,"%S:%d",NULL,hostName,hostPort);
   }
-  else if (String_matchCString(sshSpecifier,nextIndex,"[[:alnum:]_]+/.*",NULL,NULL))
+  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"[^@]*@.*",NULL,NULL,NULL))
   {
-    return String_parse(sshSpecifier,nextIndex,"%S/%S",NULL,hostName,fileName);
+    result = String_parse(sshSpecifier,STRING_BEGIN,"%S:%d",NULL,hostName,hostPort);
+  }
+  else if (!String_empty(sshSpecifier))
+  {
+    String_set(hostName,sshSpecifier);
+
+    result = TRUE;
   }
   else
   {
-    String_sub(fileName,sshSpecifier,nextIndex,STRING_END);
-    return TRUE;
+    result = FALSE;
   }
+
+  return result;
 }
 
 bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
                                   const String defaultDeviceName,
-                                  String       deviceName,
-                                  String       fileName
+                                  String       deviceName
                                  )
 {
-  ulong nextIndex;
+  bool result;
 
   assert(deviceSpecifier != NULL);
 
   String_clear(deviceName);
-  String_clear(fileName);
 
-  nextIndex = 0;
-  if (String_matchCString(deviceSpecifier,nextIndex,"[^:]*:.*",NULL,NULL))
+  if (String_matchCString(deviceSpecifier,STRING_BEGIN,"[^:]*:",NULL,NULL,NULL))
   {
-    return String_parse(deviceSpecifier,nextIndex,"%S:%S",NULL,deviceName,fileName);
+    result = String_parse(deviceSpecifier,STRING_BEGIN,"%S:",NULL,deviceName);
   }
   else
   {
     if (deviceName != NULL) String_set(deviceName,defaultDeviceName);
-    String_sub(fileName,deviceSpecifier,nextIndex,STRING_END);
-    return TRUE;
+
+    result =TRUE;
   }
+
+  return result;
 }
 
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
@@ -964,7 +1171,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     String                       fileName
                    )
 {
-  String storageSpecifier;
+  String       storageSpecifier;
+  StorageTypes storageType;
 
   assert(storageFileHandle != NULL);
   assert(storageName != NULL);
@@ -990,12 +1198,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   }
 
   storageSpecifier = String_new();
-  switch (Storage_getType(storageName,storageSpecifier))
+  storageType = Storage_parseName(storageName,storageSpecifier,fileName);
+  switch (storageType)
   {
     case STORAGE_TYPE_FILESYSTEM:
       /* init variables */
       storageFileHandle->type = STORAGE_TYPE_FILESYSTEM;
-      String_set(fileName,storageSpecifier);
+//      String_set(fileName,storageSpecifier);
 
       /* check if file can be created */
       break;
@@ -1025,12 +1234,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           storageFileHandle->ftp.bandWidth.measurementBytes     = 0;
           storageFileHandle->ftp.bandWidth.measurementTime      = 0;
 
-          /* parse storage string */
+          /* parse storage specifier string */
           if (!Storage_parseFTPSpecifier(storageSpecifier,
                                          storageFileHandle->ftp.loginName,
                                          storageFileHandle->ftp.password,
-                                         storageFileHandle->ftp.hostName,
-                                         fileName
+                                         storageFileHandle->ftp.hostName
                                         )
              )
           {
@@ -1041,8 +1249,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             return ERROR_INVALID_FTP_SPECIFIER;
           }
 
-          /* get FTP server data */
-          getFTPServer(storageFileHandle->ftp.hostName,jobOptions,&ftpServer);
+          /* get FTP server settings */
+          getFTPServerSettings(storageFileHandle->ftp.hostName,jobOptions,&ftpServer);
           if (String_empty(storageFileHandle->ftp.loginName)) String_set(storageFileHandle->ftp.loginName,ftpServer.loginName);
 
           /* check FTP login, get correct password */
@@ -1136,12 +1344,18 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           storageFileHandle->scp.bandWidth.measurementBytes     = 0;
           storageFileHandle->scp.bandWidth.measurementTime      = 0;
 
-          /* parse storage string */
+          /* allocate read-ahead buffer */
+          storageFileHandle->scp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
+          if (storageFileHandle->scp.readAheadBuffer.data == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+
+          /* parse storage specifier string */
           if (!Storage_parseSSHSpecifier(storageSpecifier,
                                          storageFileHandle->scp.loginName,
                                          storageFileHandle->scp.hostName,
-                                         &storageFileHandle->scp.hostPort,
-                                         fileName
+                                         &storageFileHandle->scp.hostPort
                                         )
              )
           {
@@ -1152,8 +1366,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             return ERROR_INVALID_SSH_SPECIFIER;
           }
 
-          /* get SSH server data */
-          getSSHServer(storageFileHandle->scp.hostName,jobOptions,&sshServer);
+          /* get SSH server settings */
+          getSSHServerSettings(storageFileHandle->scp.hostName,jobOptions,&sshServer);
           if (String_empty(storageFileHandle->scp.loginName)) String_set(storageFileHandle->scp.loginName,sshServer.loginName);
           if (storageFileHandle->scp.hostPort == 0) storageFileHandle->scp.hostPort = sshServer.port;
           storageFileHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
@@ -1221,13 +1435,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           SSHServer sshServer;
 
           /* init variables */
-          storageFileHandle->type                       = STORAGE_TYPE_SFTP;    
-          storageFileHandle->sftp.hostName              = String_new();         
-          storageFileHandle->sftp.hostPort              = 0;                    
-          storageFileHandle->sftp.loginName             = String_new();         
-          storageFileHandle->sftp.password              = Password_new();       
-          storageFileHandle->sftp.sshPublicKeyFileName  = NULL;                 
-          storageFileHandle->sftp.sshPrivateKeyFileName = NULL;                 
+          storageFileHandle->type                       = STORAGE_TYPE_SFTP;
+          storageFileHandle->sftp.hostName              = String_new();
+          storageFileHandle->sftp.hostPort              = 0;
+          storageFileHandle->sftp.loginName             = String_new();
+          storageFileHandle->sftp.password              = Password_new();
+          storageFileHandle->sftp.sshPublicKeyFileName  = NULL;
+          storageFileHandle->sftp.sshPrivateKeyFileName = NULL;
           storageFileHandle->sftp.bandWidth.max         = globalOptions.maxBandWidth;
           storageFileHandle->sftp.bandWidth.blockSize   = 64*1024;
           for (z = 0; z < MAX_BAND_WIDTH_MEASUREMENTS; z++)
@@ -1245,12 +1459,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             HALT_INSUFFICIENT_MEMORY();
           }
 
-          /* parse storage string */
+          /* parse storage specifier string */
           if (!Storage_parseSSHSpecifier(storageSpecifier,
                                          storageFileHandle->sftp.loginName,
                                          storageFileHandle->sftp.hostName,
-                                         &storageFileHandle->sftp.hostPort,
-                                         fileName
+                                         &storageFileHandle->sftp.hostPort
                                         )
              )
           {
@@ -1261,8 +1474,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             return ERROR_INVALID_SSH_SPECIFIER;
           }
 
-          /* get SSH server data */
-          getSSHServer(storageFileHandle->sftp.hostName,jobOptions,&sshServer);
+          /* get SSH server settings */
+          getSSHServerSettings(storageFileHandle->sftp.hostName,jobOptions,&sshServer);
           if (String_empty(storageFileHandle->sftp.loginName)) String_set(storageFileHandle->sftp.loginName,sshServer.loginName);
           if (storageFileHandle->sftp.hostPort == 0) storageFileHandle->sftp.hostPort = sshServer.port;
           storageFileHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
@@ -1318,19 +1531,21 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       {
-        FileSystemInfo fileSystemInfo;
         String         deviceName;
+        DVD            opticalDisc;
+        FileSystemInfo fileSystemInfo;
         Errors         error;
         String         sourceFileName,fileBaseName,destinationFileName;
 
-        /* parse storage string */
+        /* parse storage specifier string */
         deviceName = String_new();
         if (!Storage_parseDeviceSpecifier(storageSpecifier,
                                           jobOptions->deviceName,
-                                          deviceName,
-                                          fileName
+                                          deviceName
                                          )
            )
         {
@@ -1340,7 +1555,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         }
         if (String_empty(deviceName)) String_set(deviceName,globalOptions.defaultDeviceName);
 
-        /* check space in temporary directory */
+        /* get DVD settings */
+        getDVDSettings(jobOptions,&opticalDisc);
+
+        /* check space in temporary directory: should be enough to hold
+           raw DVD data (volumeSize) and DVD image (4G, single layer)
+           including error correction codes (2x)
+        */
         error = File_getFileSystemInfo(tmpDirectory,&fileSystemInfo);
         if (error != ERROR_NONE)
         {
@@ -1348,76 +1569,94 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           String_delete(storageSpecifier);
           return error;
         }
-        if (fileSystemInfo.freeBytes < (globalOptions.dvd.volumeSize+MAX_DVD_SIZE*(jobOptions->errorCorrectionCodesFlag?2:1)))
+        if (fileSystemInfo.freeBytes < (storageFileHandle->opticalDisc.volumeSize+MAX_DVD_SIZE*(jobOptions->errorCorrectionCodesFlag?2:1)))
         {
           printWarning("Insufficient space in temporary directory '%s' (%.1f%s free, %.1f%s recommended)!\n",
                        String_cString(tmpDirectory),
                        BYTES_SHORT(fileSystemInfo.freeBytes),BYTES_UNIT(fileSystemInfo.freeBytes),
-                       BYTES_SHORT((globalOptions.dvd.volumeSize+MAX_DVD_SIZE*(jobOptions->errorCorrectionCodesFlag?2:1))),BYTES_UNIT((globalOptions.dvd.volumeSize+MAX_DVD_SIZE*(jobOptions->errorCorrectionCodesFlag?2:1)))
+                       BYTES_SHORT((storageFileHandle->opticalDisc.volumeSize+MAX_DVD_SIZE*(jobOptions->errorCorrectionCodesFlag?2:1))),BYTES_UNIT((storageFileHandle->opticalDisc.volumeSize+MAX_DVD_SIZE*(jobOptions->errorCorrectionCodesFlag?2:1)))
                       );
         }
 
         /* init variables */
-        storageFileHandle->type             = STORAGE_TYPE_DVD;
-        storageFileHandle->dvd.name         = deviceName;
-        storageFileHandle->dvd.steps        = jobOptions->errorCorrectionCodesFlag?4:1;
-        storageFileHandle->dvd.directory    = String_new();
-        storageFileHandle->dvd.volumeSize   = (globalOptions.dvd.volumeSize > 0LL)?globalOptions.dvd.volumeSize:(jobOptions->errorCorrectionCodesFlag?DVD_VOLUME_ECC_SIZE:DVD_VOLUME_SIZE);
-        storageFileHandle->dvd.step         = 0;
+        storageFileHandle->type                               = storageType;
+        storageFileHandle->opticalDisc.name                   = deviceName;
+        storageFileHandle->opticalDisc.requestVolumeCommand   = opticalDisc.requestVolumeCommand;
+        storageFileHandle->opticalDisc.unloadVolumeCommand    = opticalDisc.unloadVolumeCommand;
+        storageFileHandle->opticalDisc.loadVolumeCommand      = opticalDisc.loadVolumeCommand;
+        storageFileHandle->opticalDisc.volumeSize             = (jobOptions->volumeSize > 0LL)
+                                                                ?jobOptions->volumeSize
+                                                                :(jobOptions->errorCorrectionCodesFlag
+                                                                  ?DVD_VOLUME_ECC_SIZE
+                                                                  :DVD_VOLUME_SIZE
+                                                                 );
+        storageFileHandle->opticalDisc.imagePreProcessCommand = opticalDisc.imagePreProcessCommand;
+        storageFileHandle->opticalDisc.imagePostProcessCommand= opticalDisc.imagePostProcessCommand;
+        storageFileHandle->opticalDisc.imageCommand           = opticalDisc.imageCommand;
+        storageFileHandle->opticalDisc.eccPreProcessCommand   = opticalDisc.eccPreProcessCommand;
+        storageFileHandle->opticalDisc.eccPostProcessCommand  = opticalDisc.eccPostProcessCommand;
+        storageFileHandle->opticalDisc.eccCommand             = opticalDisc.eccCommand;
+        storageFileHandle->opticalDisc.writePreProcessCommand = opticalDisc.writePreProcessCommand;
+        storageFileHandle->opticalDisc.writePostProcessCommand= opticalDisc.writePostProcessCommand;
+        storageFileHandle->opticalDisc.writeCommand           = opticalDisc.writeCommand;
+        storageFileHandle->opticalDisc.writeImageCommand      = opticalDisc.writeImageCommand;
+        storageFileHandle->opticalDisc.steps                  = jobOptions->errorCorrectionCodesFlag?4:1; 
+        storageFileHandle->opticalDisc.directory              = String_new();                             
+        storageFileHandle->opticalDisc.step                   = 0;                                        
         if (jobOptions->waitFirstVolumeFlag)
         {
-          storageFileHandle->dvd.number  = 0;
-          storageFileHandle->dvd.newFlag = TRUE;
+          storageFileHandle->opticalDisc.number  = 0;
+          storageFileHandle->opticalDisc.newFlag = TRUE;
         }
         else
         {
-          storageFileHandle->dvd.number  = 1;
-          storageFileHandle->dvd.newFlag = FALSE;
+          storageFileHandle->opticalDisc.number  = 1;
+          storageFileHandle->opticalDisc.newFlag = FALSE;
         }
-        StringList_init(&storageFileHandle->dvd.fileNameList);
-        storageFileHandle->dvd.fileName     = String_new();
-        storageFileHandle->dvd.totalSize    = 0LL;
+        StringList_init(&storageFileHandle->opticalDisc.fileNameList);
+        storageFileHandle->opticalDisc.fileName     = String_new();
+        storageFileHandle->opticalDisc.totalSize    = 0LL;
 
-        /* create temporary directory for DVD files */
-        error = File_getTmpDirectoryName(storageFileHandle->dvd.directory,NULL,tmpDirectory);
+        /* create temporary directory for medium files */
+        error = File_getTmpDirectoryName(storageFileHandle->opticalDisc.directory,NULL,tmpDirectory);
         if (error != ERROR_NONE)
         {
-          String_delete(storageFileHandle->dvd.fileName);
-          String_delete(storageFileHandle->dvd.directory);
+          String_delete(storageFileHandle->opticalDisc.fileName);
+          String_delete(storageFileHandle->opticalDisc.directory);
           String_delete(deviceName);
           String_delete(storageSpecifier);
           return error;
         }
 
-        if (!jobOptions->noBAROnDVDFlag)
+        if (!jobOptions->noBAROnMediumFlag)
         {
-          /* store a copy of BAR executable on DVD (ignore errors) */
+          /* store a copy of BAR executable on medium (ignore errors) */
           sourceFileName = String_newCString(globalOptions.barExecutable);
           fileBaseName = File_getFileBaseName(String_new(),sourceFileName);
-          destinationFileName = File_appendFileName(String_duplicate(storageFileHandle->dvd.directory),fileBaseName);
+          destinationFileName = File_appendFileName(String_duplicate(storageFileHandle->opticalDisc.directory),fileBaseName);
           File_copy(sourceFileName,destinationFileName);
-          StringList_append(&storageFileHandle->dvd.fileNameList,destinationFileName);
+          StringList_append(&storageFileHandle->opticalDisc.fileNameList,destinationFileName);
           String_delete(destinationFileName);
           String_delete(fileBaseName);
           String_delete(sourceFileName);
         }
 
-        /* request first DVD */
+        /* request first medium */
         storageFileHandle->requestedVolumeNumber = 1;
       }
       break;
     case STORAGE_TYPE_DEVICE:
       {
-        FileSystemInfo fileSystemInfo;
         String         deviceName;
+        Device         device;
+        FileSystemInfo fileSystemInfo;
         Errors         error;
 
-        /* parse storage string */
+        /* parse storage specifier string */
         deviceName = String_new();
         if (!Storage_parseDeviceSpecifier(storageSpecifier,
                                           jobOptions->deviceName,
-                                          deviceName,
-                                          fileName
+                                          deviceName
                                          )
            )
         {
@@ -1426,10 +1665,10 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           return ERROR_INVALID_DEVICE_SPECIFIER;
         }
 
-        /* get device */
-        getDevice(deviceName,jobOptions,&storageFileHandle->device.device);
+        /* get device settings */
+        getDeviceSettings(deviceName,jobOptions,&device);
 
-        /* check space in temporary directory */
+        /* check space in temporary directory: 2x volumeSize */
         error = File_getFileSystemInfo(tmpDirectory,&fileSystemInfo);
         if (error != ERROR_NONE)
         {
@@ -1437,19 +1676,32 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           String_delete(storageSpecifier);
           return error;
         }
-        if (fileSystemInfo.freeBytes < (storageFileHandle->device.device.volumeSize*2))
+        if (fileSystemInfo.freeBytes < (storageFileHandle->device.volumeSize*2))
         {
           printWarning("Insufficient space in temporary directory '%s' (%.1f%s free, %.1f%s recommended)!\n",
                        String_cString(tmpDirectory),
                        BYTES_SHORT(fileSystemInfo.freeBytes),BYTES_UNIT(fileSystemInfo.freeBytes),
-                       BYTES_SHORT(storageFileHandle->device.device.volumeSize*2),BYTES_UNIT(storageFileHandle->device.device.volumeSize*2)
+                       BYTES_SHORT(storageFileHandle->device.volumeSize*2),BYTES_UNIT(storageFileHandle->device.volumeSize*2)
                       );
         }
 
         /* init variables */
-        storageFileHandle->type             = STORAGE_TYPE_DEVICE;
-        storageFileHandle->device.name      = deviceName;
-        storageFileHandle->device.directory = String_new();
+        storageFileHandle->type                          = STORAGE_TYPE_DEVICE;
+        storageFileHandle->device.name                   = deviceName;
+        storageFileHandle->device.requestVolumeCommand   = device.requestVolumeCommand;
+        storageFileHandle->device.unloadVolumeCommand    = device.unloadVolumeCommand;
+        storageFileHandle->device.loadVolumeCommand      = device.loadVolumeCommand;
+        storageFileHandle->device.volumeSize             = device.volumeSize;
+        storageFileHandle->device.imagePreProcessCommand = device.imagePreProcessCommand;
+        storageFileHandle->device.imagePostProcessCommand= device.imagePostProcessCommand;
+        storageFileHandle->device.imageCommand           = device.imageCommand;
+        storageFileHandle->device.eccPreProcessCommand   = device.eccPreProcessCommand;
+        storageFileHandle->device.eccPostProcessCommand  = device.eccPostProcessCommand;
+        storageFileHandle->device.eccCommand             = device.eccCommand;
+        storageFileHandle->device.writePreProcessCommand = device.writePreProcessCommand;
+        storageFileHandle->device.writePostProcessCommand= device.writePostProcessCommand;
+        storageFileHandle->device.writeCommand           = device.writeCommand;
+        storageFileHandle->device.directory              = String_new();
         if (jobOptions->waitFirstVolumeFlag)
         {
           storageFileHandle->device.number  = 0;
@@ -1513,6 +1765,7 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
+        free(storageFileHandle->scp.readAheadBuffer.data);
         Password_delete(storageFileHandle->scp.password);
         String_delete(storageFileHandle->scp.loginName);
         String_delete(storageFileHandle->scp.hostName);
@@ -1528,16 +1781,18 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       {
         Errors error;
         String fileName;
 
         /* delete files */
         fileName = String_new();
-        while (!StringList_empty(&storageFileHandle->dvd.fileNameList))
+        while (!StringList_empty(&storageFileHandle->opticalDisc.fileNameList))
         {
-          StringList_getFirst(&storageFileHandle->dvd.fileNameList,fileName);
+          StringList_getFirst(&storageFileHandle->opticalDisc.fileNameList,fileName);
           error = File_delete(fileName,FALSE);
           if (error != ERROR_NONE)
           {
@@ -1548,12 +1803,12 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         String_delete(fileName);
 
         /* delete temporare directory */
-        File_delete(storageFileHandle->dvd.directory,FALSE);
+        File_delete(storageFileHandle->opticalDisc.directory,FALSE);
 
         /* free resources */
-        String_delete(storageFileHandle->dvd.fileName);
-        String_delete(storageFileHandle->dvd.directory);
-        String_delete(storageFileHandle->dvd.name);
+        String_delete(storageFileHandle->opticalDisc.fileName);
+        String_delete(storageFileHandle->opticalDisc.directory);
+        String_delete(storageFileHandle->opticalDisc.name);
       }
       break;
     case STORAGE_TYPE_DEVICE:
@@ -1594,14 +1849,20 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
   return ERROR_NONE;
 }
 
-String Storage_getName(const StorageFileHandle *storageFileHandle,
-                       String                  name,
-                       const String            fileName
-                      )
+String Storage_getHandleName(String                  storageName,
+                             const StorageFileHandle *storageFileHandle,
+                             const String            fileName
+                            )
 {
+  String storageSpecifier;
+
+  assert(storageName != NULL);
   assert(storageFileHandle != NULL);
 
-  String_clear(name);
+  /* initialize variables */
+  storageSpecifier = String_new(); 
+
+  /* format specifier */
   switch (storageFileHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
@@ -1610,70 +1871,79 @@ String Storage_getName(const StorageFileHandle *storageFileHandle,
       break;
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
-        String_appendCString(name,"ftp://");
         if (!String_empty(storageFileHandle->ftp.hostName))
         {
           if (!String_empty(storageFileHandle->ftp.loginName))
           {
-            String_format(name,"%S@",storageFileHandle->ftp.loginName);
+            String_format(storageSpecifier,"%S@",storageFileHandle->ftp.loginName);
           }
-          String_format(name,"%S/",storageFileHandle->ftp.hostName);
+          String_format(storageSpecifier,"%S/",storageFileHandle->ftp.hostName);
         }
       #else /* not HAVE_FTP */
       #endif /* HAVE_FTP */
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
-        String_appendCString(name,"scp://");
         if (!String_empty(storageFileHandle->scp.hostName))
         {
           if (!String_empty(storageFileHandle->scp.loginName))
           {
-            String_format(name,"%S@",storageFileHandle->scp.loginName);
+            String_format(storageSpecifier,"%S@",storageFileHandle->scp.loginName);
           }
-          String_append(name,storageFileHandle->scp.hostName);
+          String_append(storageSpecifier,storageFileHandle->scp.hostName);
           if (storageFileHandle->scp.hostPort != 0)
           {
-            String_format(name,":%d",storageFileHandle->scp.hostPort);
+            String_format(storageSpecifier,":%d",storageFileHandle->scp.hostPort);
           }
-          String_appendChar(name,'/');
+          String_appendChar(storageSpecifier,'/');
         }
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
-        String_appendCString(name,"sftp://");
         if (!String_empty(storageFileHandle->sftp.hostName))
         {
           if (!String_empty(storageFileHandle->sftp.loginName))
           {
-            String_format(name,"%S@",storageFileHandle->sftp.loginName);
+            String_format(storageSpecifier,"%S@",storageFileHandle->sftp.loginName);
           }
-          String_append(name,storageFileHandle->sftp.hostName);
+          String_append(storageSpecifier,storageFileHandle->sftp.hostName);
           if (storageFileHandle->sftp.hostPort != 0)
           {
-            String_format(name,":%d",storageFileHandle->sftp.hostPort);
+            String_format(storageSpecifier,":%d",storageFileHandle->sftp.hostPort);
           }
-          String_appendChar(name,'/');
+          String_appendChar(storageSpecifier,'/');
         }
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
-    case STORAGE_TYPE_DVD:
-      String_appendCString(name,"dvd://");
-      if (!String_empty(storageFileHandle->dvd.name))
+    case STORAGE_TYPE_CD:
+      if (!String_empty(storageFileHandle->opticalDisc.name))
       {
-        String_append(name,storageFileHandle->dvd.name);
-        String_appendChar(name,':');
+        String_append(storageSpecifier,storageFileHandle->opticalDisc.name);
+        String_appendChar(storageSpecifier,':');
+      }
+      break;
+    case STORAGE_TYPE_DVD:
+      if (!String_empty(storageFileHandle->opticalDisc.name))
+      {
+        String_append(storageSpecifier,storageFileHandle->opticalDisc.name);
+        String_appendChar(storageSpecifier,':');
+      }
+      break;
+    case STORAGE_TYPE_BD:
+      if (!String_empty(storageFileHandle->opticalDisc.name))
+      {
+        String_append(storageSpecifier,storageFileHandle->opticalDisc.name);
+        String_appendChar(storageSpecifier,':');
       }
       break;
     case STORAGE_TYPE_DEVICE:
-      String_appendCString(name,"device://");
       if (!String_empty(storageFileHandle->device.name))
       {
-        String_append(name,storageFileHandle->device.name);
-        String_appendChar(name,':');
+        String_append(storageSpecifier,storageFileHandle->device.name);
+        String_appendChar(storageSpecifier,':');
       }
       break;
     #ifndef NDEBUG
@@ -1682,9 +1952,14 @@ String Storage_getName(const StorageFileHandle *storageFileHandle,
         break; /* not reached */
     #endif /* NDEBUG */
   }
-  String_append(name,fileName);
 
-  return name;
+  /* get name */
+  Storage_getName(storageName,storageFileHandle->type,storageSpecifier,fileName);
+
+  /* free resources */
+  String_delete(storageSpecifier);
+
+  return storageName;
 }
 
 Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
@@ -1714,21 +1989,23 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle)
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
-    case STORAGE_TYPE_DVD:    
-      /* request next dvd */
-      if (storageFileHandle->dvd.newFlag)
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      /* request next medium */
+      if (storageFileHandle->opticalDisc.newFlag)
       {
-        storageFileHandle->dvd.number++;
-        storageFileHandle->dvd.newFlag = FALSE;
+        storageFileHandle->opticalDisc.number++;
+        storageFileHandle->opticalDisc.newFlag = FALSE;
 
-        storageFileHandle->requestedVolumeNumber = storageFileHandle->dvd.number;
+        storageFileHandle->requestedVolumeNumber = storageFileHandle->opticalDisc.number;
       }
 
-      /* check if new dvd is required */
+      /* check if new medium is required */
       if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
       {
-        /* request load new DVD */
-        error = requestNewDVD(storageFileHandle,FALSE);
+        /* request load new medium */
+        error = requestNewMedium(storageFileHandle,FALSE);
         if (error != ERROR_NONE)
         {
           return error;
@@ -1792,7 +2069,9 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       {
         String    imageFileName;
         TextMacro textMacros[5];
@@ -1800,8 +2079,10 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
         Errors    error;
         FileInfo  fileInfo;
 
-        if (finalFlag || (storageFileHandle->dvd.totalSize > storageFileHandle->dvd.volumeSize))
+        if (finalFlag || (storageFileHandle->opticalDisc.totalSize > storageFileHandle->opticalDisc.volumeSize))
         {
+          /* medium size limit reached -> create medium and request new volume */
+
           /* update info */
           storageFileHandle->runningInfo.volumeProgress = 0.0;
           updateStatusInfo(storageFileHandle);
@@ -1815,18 +2096,18 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           }
 
           /* init macros */
-          TEXT_MACRO_N_STRING (textMacros[0],"%device", storageFileHandle->dvd.name     );
-          TEXT_MACRO_N_STRING (textMacros[1],"%file",   storageFileHandle->dvd.directory);
-          TEXT_MACRO_N_STRING (textMacros[2],"%image",  imageFileName                   );
-          TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",0                               );
-          TEXT_MACRO_N_INTEGER(textMacros[4],"%number", storageFileHandle->volumeNumber );
+          TEXT_MACRO_N_STRING (textMacros[0],"%device", storageFileHandle->opticalDisc.name     );
+          TEXT_MACRO_N_STRING (textMacros[1],"%file",   storageFileHandle->opticalDisc.directory);
+          TEXT_MACRO_N_STRING (textMacros[2],"%image",  imageFileName                           );
+          TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",0                                       );
+          TEXT_MACRO_N_INTEGER(textMacros[4],"%number", storageFileHandle->volumeNumber         );
 
           if (storageFileHandle->jobOptions->errorCorrectionCodesFlag)
           {
-            /* create DVD image */
-            printInfo(0,"Make DVD image #%d with %d file(s)...",storageFileHandle->dvd.number,StringList_count(&storageFileHandle->dvd.fileNameList));
-            storageFileHandle->dvd.step = 0;
-            error = Misc_executeCommand(String_cString(globalOptions.dvd.imageCommand),
+            /* create medium image */
+            printInfo(0,"Make medium image #%d with %d file(s)...",storageFileHandle->opticalDisc.number,StringList_count(&storageFileHandle->opticalDisc.fileNameList));
+            storageFileHandle->opticalDisc.step = 0;
+            error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisc.imageCommand),
                                         textMacros,SIZE_OF_ARRAY(textMacros),
                                         (ExecuteIOFunction)processIOmkisofs,
                                         (ExecuteIOFunction)processIOmkisofs,
@@ -1842,10 +2123,10 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             File_getFileInfo(imageFileName,&fileInfo);
             printInfo(0,"ok (%llu bytes)\n",fileInfo.size);
 
-            /* add error-correction codes to DVD image */
-            printInfo(0,"Add ECC to image #%d...",storageFileHandle->dvd.number);
-            storageFileHandle->dvd.step = 1;
-            error = Misc_executeCommand(String_cString(globalOptions.dvd.eccCommand),
+            /* add error-correction codes to medium image */
+            printInfo(0,"Add ECC to image #%d...",storageFileHandle->opticalDisc.number);
+            storageFileHandle->opticalDisc.step = 1;
+            error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisc.eccCommand),
                                         textMacros,SIZE_OF_ARRAY(textMacros),
                                         (ExecuteIOFunction)processIOdvdisaster,
                                         (ExecuteIOFunction)processIOdvdisaster,
@@ -1867,11 +2148,11 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",(ulong)(fileInfo.size/2048LL));
             }
 
-            /* check if new dvd is required */
+            /* check if new medum is required */
             if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
             {
-              /* request load new DVD */
-              error = requestNewDVD(storageFileHandle,TRUE);
+              /* request load new medium */
+              error = requestNewMedium(storageFileHandle,TRUE);
               if (error != ERROR_NONE)
               {
                 File_delete(imageFileName,FALSE);
@@ -1881,10 +2162,10 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               updateStatusInfo(storageFileHandle);
             }
 
-            /* write to DVD */
-            printInfo(0,"Write DVD #%d...",storageFileHandle->dvd.number);
-            storageFileHandle->dvd.step = 3;
-            error = Misc_executeCommand(String_cString(globalOptions.dvd.writeCommand),
+            /* write to medium */
+            printInfo(0,"Write medium #%d...",storageFileHandle->opticalDisc.number);
+            storageFileHandle->opticalDisc.step = 3;
+            error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisc.writeCommand),
                                         textMacros,SIZE_OF_ARRAY(textMacros),
                                         (ExecuteIOFunction)processIOgrowisofs,
                                         (ExecuteIOFunction)processIOgrowisofs,
@@ -1901,11 +2182,11 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           }
           else
           {
-            /* check if new dvd is required */
+            /* check if new medium is required */
             if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
             {
-              /* request load new DVD */
-              error = requestNewDVD(storageFileHandle,TRUE);
+              /* request load new medium */
+              error = requestNewMedium(storageFileHandle,TRUE);
               if (error != ERROR_NONE)
               {
                 File_delete(imageFileName,FALSE);
@@ -1915,10 +2196,10 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               updateStatusInfo(storageFileHandle);
             }
 
-            /* write to DVD */
-            printInfo(0,"Write DVD #%d with %d file(s)...",storageFileHandle->dvd.number,StringList_count(&storageFileHandle->dvd.fileNameList));
-            storageFileHandle->dvd.step = 0;
-            error = Misc_executeCommand(String_cString(globalOptions.dvd.writeCommand),
+            /* write to medium */
+            printInfo(0,"Write medium #%d with %d file(s)...",storageFileHandle->opticalDisc.number,StringList_count(&storageFileHandle->opticalDisc.fileNameList));
+            storageFileHandle->opticalDisc.step = 0;
+            error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisc.writeCommand),
                                         textMacros,SIZE_OF_ARRAY(textMacros),
                                         (ExecuteIOFunction)processIOgrowisofs,
                                         NULL,
@@ -1944,9 +2225,9 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
 
           /* delete stored files */
           fileName = String_new();
-          while (!StringList_empty(&storageFileHandle->dvd.fileNameList))
+          while (!StringList_empty(&storageFileHandle->opticalDisc.fileNameList))
           {
-            StringList_getFirst(&storageFileHandle->dvd.fileNameList,fileName);
+            StringList_getFirst(&storageFileHandle->opticalDisc.fileNameList,fileName);
             error = File_delete(fileName,FALSE);
             if (error != ERROR_NONE)
             {
@@ -1957,8 +2238,8 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           String_delete(fileName);
 
           /* reset */
-          storageFileHandle->dvd.newFlag   = TRUE;
-          storageFileHandle->dvd.totalSize = 0;
+          storageFileHandle->opticalDisc.newFlag   = TRUE;
+          storageFileHandle->opticalDisc.totalSize = 0;
         }
       }
       break;
@@ -1969,8 +2250,10 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
         String    fileName;
         Errors    error;
 
-        if (finalFlag || (storageFileHandle->device.totalSize > storageFileHandle->device.device.volumeSize))
+        if (finalFlag || (storageFileHandle->device.totalSize > storageFileHandle->device.volumeSize))
         {
+          /* device size limit reached -> write to device volume and request new volume */
+
           /* check if new volume is required */
           if (storageFileHandle->volumeNumber != storageFileHandle->requestedVolumeNumber)
           {
@@ -2000,39 +2283,39 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           if (error == ERROR_NONE)
           {
             printInfo(0,"Make image pre-processing of volume #%d...",storageFileHandle->volumeNumber);
-            error = Misc_executeCommand(String_cString(storageFileHandle->device.device.imagePreProcessCommand ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+            error = Misc_executeCommand(String_cString(storageFileHandle->device.imagePreProcessCommand ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
             printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
           }
           if (error == ERROR_NONE)
           {
             printInfo(0,"Make image volume #%d...",storageFileHandle->volumeNumber);
-            error = Misc_executeCommand(String_cString(storageFileHandle->device.device.imageCommand           ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+            error = Misc_executeCommand(String_cString(storageFileHandle->device.imageCommand           ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
             printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
           }
           if (error == ERROR_NONE)
           {
             printInfo(0,"Make image post-processing of volume #%d...",storageFileHandle->volumeNumber);
-            error = Misc_executeCommand(String_cString(storageFileHandle->device.device.imagePostProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+            error = Misc_executeCommand(String_cString(storageFileHandle->device.imagePostProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
             printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
           }
 
-          /* write onto device */
+          /* write to device */
           if (error == ERROR_NONE)
           {
             printInfo(0,"Write device pre-processing of volume #%d...",storageFileHandle->volumeNumber);
-            error = Misc_executeCommand(String_cString(storageFileHandle->device.device.writePreProcessCommand ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+            error = Misc_executeCommand(String_cString(storageFileHandle->device.writePreProcessCommand ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
             printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
           }
           if (error == ERROR_NONE)
           {
             printInfo(0,"Write device volume #%d...",storageFileHandle->volumeNumber);
-            error = Misc_executeCommand(String_cString(storageFileHandle->device.device.writeCommand           ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+            error = Misc_executeCommand(String_cString(storageFileHandle->device.writeCommand           ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
             printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
           }
           if (error == ERROR_NONE)
           {
             printInfo(0,"Write device post-processing of volume #%d...",storageFileHandle->volumeNumber);
-            error = Misc_executeCommand(String_cString(storageFileHandle->device.device.writePostProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+            error = Misc_executeCommand(String_cString(storageFileHandle->device.writePostProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
             printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
           }
 
@@ -2063,7 +2346,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
           storageFileHandle->device.newFlag   = TRUE;
           storageFileHandle->device.totalSize = 0;
         }
-      }   
+      }
       break;
     #ifndef NDEBUG
       default:
@@ -2107,12 +2390,14 @@ Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_SFTP:
       error = ERROR_NONE;
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       {
         TextMacro textMacros[1];
 
-        TEXT_MACRO_N_STRING(textMacros[0],"%device",storageFileHandle->dvd.name);
-        error = Misc_executeCommand(String_cString(globalOptions.dvd.unloadVolumeCommand),
+        TEXT_MACRO_N_STRING(textMacros[0],"%device",storageFileHandle->opticalDisc.name);
+        error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisc.unloadVolumeCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
                                     NULL,
                                     NULL,
@@ -2125,13 +2410,13 @@ Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle)
         TextMacro textMacros[1];
 
         TEXT_MACRO_N_STRING(textMacros[0],"%device",storageFileHandle->device.name);
-        error = Misc_executeCommand(String_cString(storageFileHandle->device.device.unloadVolumeCommand),
+        error = Misc_executeCommand(String_cString(storageFileHandle->device.unloadVolumeCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
                                     NULL,
                                     NULL,
                                     NULL
                                    );
-      }   
+      }
       break;
     #ifndef NDEBUG
       default:
@@ -2230,7 +2515,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         {
-          /* open network connection */
+          /* connect */
           error = Network_connect(&storageFileHandle->scp.socketHandle,
                                   SOCKET_TYPE_SSH,
                                   storageFileHandle->scp.hostName,
@@ -2274,7 +2559,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          /* open network connection */
+          /* connect */
           error = Network_connect(&storageFileHandle->sftp.socketHandle,
                                   SOCKET_TYPE_SSH,
                                   storageFileHandle->sftp.hostName,
@@ -2331,13 +2616,15 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       /* create file name */
-      String_set(storageFileHandle->dvd.fileName,storageFileHandle->dvd.directory);
-      File_appendFileName(storageFileHandle->dvd.fileName,fileName);
+      String_set(storageFileHandle->opticalDisc.fileName,storageFileHandle->opticalDisc.directory);
+      File_appendFileName(storageFileHandle->opticalDisc.fileName,fileName);
 
       /* create directory if not existing */
-      directoryName = File_getFilePathName(String_new(),storageFileHandle->dvd.fileName);
+      directoryName = File_getFilePathName(String_new(),storageFileHandle->opticalDisc.fileName);
       if (!File_exists(directoryName))
       {
         error = File_makeDirectory(directoryName,
@@ -2354,8 +2641,8 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
       String_delete(directoryName);
 
       /* create file */
-      error = File_open(&storageFileHandle->dvd.fileHandle,
-                        storageFileHandle->dvd.fileName,
+      error = File_open(&storageFileHandle->opticalDisc.fileHandle,
+                        storageFileHandle->opticalDisc.fileName,
                         FILE_OPENMODE_CREATE
                        );
       if (error != ERROR_NONE)
@@ -2471,9 +2758,12 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           struct stat fileInfo;
 
           /* init variables */
-          storageFileHandle->scp.bandWidth.max = globalOptions.maxBandWidth;
+          storageFileHandle->scp.index                  = 0LL;
+          storageFileHandle->scp.readAheadBuffer.offset = 0LL;
+          storageFileHandle->scp.readAheadBuffer.length = 0L;
+          storageFileHandle->scp.bandWidth.max          = globalOptions.maxBandWidth;
 
-          /* open network connection */
+          /* connect */
           error = Network_connect(&storageFileHandle->scp.socketHandle,
                                   SOCKET_TYPE_SSH,
                                   storageFileHandle->scp.hostName,
@@ -2506,6 +2796,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             Network_disconnect(&storageFileHandle->scp.socketHandle);
             return error;
           }
+          storageFileHandle->scp.size = (uint64)fileInfo.st_size;
         }
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(fileName);
@@ -2522,8 +2813,8 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           storageFileHandle->sftp.readAheadBuffer.offset = 0LL;
           storageFileHandle->sftp.readAheadBuffer.length = 0L;
           storageFileHandle->sftp.bandWidth.max          = globalOptions.maxBandWidth;
-          
-          /* open network connection */
+
+          /* connect */
           error = Network_connect(&storageFileHandle->sftp.socketHandle,
                                   SOCKET_TYPE_SSH,
                                   storageFileHandle->sftp.hostName,
@@ -2593,7 +2884,9 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       /* init variables */
       /* open file */
 #if 0
@@ -2689,10 +2982,12 @@ void Storage_close(StorageFileHandle *storageFileHandle)
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
-      storageFileHandle->dvd.totalSize += File_getSize(&storageFileHandle->dvd.fileHandle);
-      File_close(&storageFileHandle->dvd.fileHandle);
-      StringList_append(&storageFileHandle->dvd.fileNameList,storageFileHandle->dvd.fileName);
+    case STORAGE_TYPE_BD:
+      storageFileHandle->opticalDisc.totalSize += File_getSize(&storageFileHandle->opticalDisc.fileHandle);
+      File_close(&storageFileHandle->opticalDisc.fileHandle);
+      StringList_append(&storageFileHandle->opticalDisc.fileNameList,storageFileHandle->opticalDisc.fileName);
       break;
     case STORAGE_TYPE_DEVICE:
       storageFileHandle->device.totalSize += File_getSize(&storageFileHandle->device.fileHandle);
@@ -2742,7 +3037,7 @@ whould this be a possible implementation?
           String command;
 
           /* there is no unlink command for scp: execute either 'rm' or 'del' on remote server */
-          command = String_new();        
+          command = String_new();
           if (error != ERROR_NONE)
           {
             String_format(String_clear(command),"rm %'S",fileName);
@@ -2803,7 +3098,9 @@ whould this be a possible implementation?
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       #ifdef HAVE_SSH2
         error = ERROR_NONE;
       #else /* not HAVE_SSH2 */
@@ -2845,7 +3142,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #ifdef HAVE_SSH2
+        return storageFileHandle->scp.index >= storageFileHandle->scp.size;
+      #else /* not HAVE_SSH2 */
+        return TRUE;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -2854,9 +3155,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         return TRUE;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       #ifdef HAVE_SSH2
-        return File_eof(&storageFileHandle->dvd.fileHandle);
+        return File_eof(&storageFileHandle->opticalDisc.fileHandle);
       #else /* not HAVE_SSH2 */
         return TRUE;
       #endif /* HAVE_SSH2 */
@@ -2911,12 +3214,86 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
-        assert(storageFileHandle->scp.channel != NULL);
+        {
+          ulong   i;
+          ssize_t n;
 
-        (*bytesRead) = libssh2_channel_read(storageFileHandle->scp.channel,
+          assert(storageFileHandle->scp.channel != NULL);
+          assert(storageFileHandle->scp.readAheadBuffer.data != NULL);
+
+#if 0
+          (*bytesRead) = 0;
+
+        n = libssh2_channel_read(storageFileHandle->scp.channel,
                                             buffer,
                                             size
                                            );
+        if (n < 0)
+        {
+                return ERROR(IO_ERROR,errno);
+        }
+        (*bytesRead) += n;
+        storageFileHandle->scp.index += n;
+#else /* 0 */
+          (*bytesRead) = 0;
+
+          /* copy as much as available from read-ahead buffer */
+          if (   (storageFileHandle->scp.index >= storageFileHandle->scp.readAheadBuffer.offset)
+              && (storageFileHandle->scp.index < (storageFileHandle->scp.readAheadBuffer.offset+storageFileHandle->scp.readAheadBuffer.length))
+             )
+          {
+            i = storageFileHandle->scp.index-storageFileHandle->scp.readAheadBuffer.offset;
+            n = MIN(size,storageFileHandle->scp.readAheadBuffer.length-i);
+            memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data+i,n);
+            buffer = (byte*)buffer+n;
+            size -= n;
+            (*bytesRead) += n;
+            storageFileHandle->scp.index += n;
+          }
+
+          /* read rest of data */
+          if (size > 0)
+          {
+            if (size < MAX_BUFFER_SIZE)
+            {
+              /* read into read-ahead buffer */
+              do
+              {
+                n = libssh2_channel_read(storageFileHandle->scp.channel,
+                                         (char*)storageFileHandle->scp.readAheadBuffer.data,
+                                         MIN((size_t)(storageFileHandle->scp.size-storageFileHandle->scp.index),MAX_BUFFER_SIZE)
+                                        );
+              }
+              while (n == LIBSSH2_ERROR_EAGAIN);
+              if (n < 0)
+              {
+                return ERROR(IO_ERROR,errno);
+              }
+              storageFileHandle->scp.readAheadBuffer.offset = storageFileHandle->scp.index;
+              storageFileHandle->scp.readAheadBuffer.length = n;
+//fprintf(stderr,"%s,%d: n=%ld storageFileHandle->scp.bufferOffset=%llu storageFileHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
+//storageFileHandle->scp.readAheadBuffer.offset,storageFileHandle->scp.readAheadBuffer.length);
+
+              n = MIN(size,storageFileHandle->scp.readAheadBuffer.length);
+              memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data,n);
+            }
+            else
+            {
+              /* read direct */
+              n = libssh2_channel_read(storageFileHandle->scp.channel,
+                                       buffer,
+                                       size
+                                      );
+              if (n < 0)
+              {
+                return ERROR(IO_ERROR,errno);
+              }
+            }
+            (*bytesRead) += n;
+            storageFileHandle->scp.index += n;
+          }
+#endif /* 0 */
+        }
       #else /* not HAVE_SSH2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -2924,8 +3301,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          ulong  i;
-          size_t n;
+          ulong   i;
+          ssize_t n;
 
           assert(storageFileHandle->sftp.sftpHandle != NULL);
           assert(storageFileHandle->sftp.readAheadBuffer.data != NULL);
@@ -2993,8 +3370,10 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
-      error = File_read(&storageFileHandle->dvd.fileHandle,buffer,size,bytesRead);
+    case STORAGE_TYPE_BD:
+      error = File_read(&storageFileHandle->opticalDisc.fileHandle,buffer,size,bytesRead);
       if (error != ERROR_NONE)
       {
         return error;
@@ -3221,8 +3600,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
-      error = File_write(&storageFileHandle->dvd.fileHandle,buffer,size);
+    case STORAGE_TYPE_BD:
+      error = File_write(&storageFileHandle->opticalDisc.fileHandle,buffer,size);
       if (error != ERROR_NONE)
       {
         return error;
@@ -3268,8 +3649,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+        return storageFileHandle->scp.size;
       #else /* not HAVE_SSH2 */
+        return 0LL;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
@@ -3279,9 +3661,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         return 0LL;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       #ifdef HAVE_SSH2
-        return File_getSize(&storageFileHandle->dvd.fileHandle);
+        return File_getSize(&storageFileHandle->opticalDisc.fileHandle);
       #else /* not HAVE_SSH2 */
         return 0LL;
       #endif /* HAVE_SSH2 */
@@ -3325,9 +3709,10 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
+        (*offset) = storageFileHandle->scp.index;
       #else /* not HAVE_SSH2 */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
-      return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -3337,9 +3722,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       #ifdef HAVE_SSH2
-        return File_tell(&storageFileHandle->dvd.fileHandle,offset);
+        return File_tell(&storageFileHandle->opticalDisc.fileHandle,offset);
       #else /* not HAVE_SSH2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -3382,9 +3769,60 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
+        {        
+          /* scp protocol does not support a seek-function. Thus try to
+             read and discard data to position the read index to the
+             requested offset.
+             Note: this is slow!
+          */
+          if      (offset > storageFileHandle->scp.index)
+          {
+            uint64 size;
+            ulong  i;
+            size_t n;
+
+            size = offset-storageFileHandle->scp.index;
+
+            /* skip data in read-ahead buffer */
+            if (   (storageFileHandle->scp.index >= storageFileHandle->scp.readAheadBuffer.offset)
+                && (storageFileHandle->scp.index < (storageFileHandle->scp.readAheadBuffer.offset+storageFileHandle->scp.readAheadBuffer.length))
+               )
+            {
+              i = storageFileHandle->scp.index-storageFileHandle->scp.readAheadBuffer.offset;
+              n = MIN(size,storageFileHandle->scp.readAheadBuffer.length-i);
+              size -= n;
+              storageFileHandle->scp.index += n;
+            }
+
+            /* skip rest of data */
+            if (size > 0)
+            {
+              while (size > 0LL)
+              {
+                n = libssh2_channel_read(storageFileHandle->scp.channel,
+                                         (char*)storageFileHandle->scp.readAheadBuffer.data,
+                                         MIN((size_t)size,MAX_BUFFER_SIZE)
+                                        );
+                if (n < 0)
+                {
+                  return ERROR(IO_ERROR,errno);
+                }
+                storageFileHandle->scp.readAheadBuffer.offset = storageFileHandle->scp.index;
+                storageFileHandle->scp.readAheadBuffer.length = n;
+
+                size -= n;
+                storageFileHandle->scp.index += n;
+              }
+            }
+          }
+          else if (offset < storageFileHandle->scp.index)
+          {
+            return ERROR_FUNCTION_NOT_SUPPORTED;
+          }
+        }
       #else /* not HAVE_SSH2 */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
-      return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -3402,9 +3840,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       #ifdef HAVE_SSH2
-        return File_seek(&storageFileHandle->dvd.fileHandle,offset);
+        return File_seek(&storageFileHandle->opticalDisc.fileHandle,offset);
       #else /* not HAVE_SSH2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -3429,17 +3869,23 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                                  const JobOptions           *jobOptions
                                 )
 {
-  String    storageSpecifier;
-  String    pathName;
-  Errors    error;
+  String       storageSpecifier;
+  String       pathName;
+  StorageTypes storageType;
+  Errors       error;
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageName != NULL);
   assert(jobOptions != NULL);
 
-  error = ERROR_UNKNOWN;
+  /* get storage specifier, file name, path name */
   storageSpecifier = String_new();
-  switch (Storage_getType(storageName,storageSpecifier))
+  pathName         = String_new();
+  storageType = Storage_parseName(storageName,storageSpecifier,pathName);
+
+  /* open directory listing */
+  error = ERROR_UNKNOWN;
+  switch (storageType)
   {
     case STORAGE_TYPE_FILESYSTEM:
       UNUSED_VARIABLE(jobOptions);
@@ -3448,18 +3894,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       storageDirectoryListHandle->type = STORAGE_TYPE_FILESYSTEM;
 
       /* open directory */
-      if (File_isDirectory(storageSpecifier))
-      {
-        pathName = String_duplicate(storageSpecifier);
-      }
-      else
-      {
-        pathName = File_getFilePathName(String_new(),storageSpecifier);
-      }
       error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
                                      pathName
                                     );
-      String_delete(pathName);
       break;
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
@@ -3467,7 +3904,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           String     loginName;
           Password   *password;
           String     hostName;
-          String     fileName;
           FTPServer  ftpServer;
           const char *plainPassword;
           netbuf     *control;
@@ -3477,7 +3913,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           storageDirectoryListHandle->ftp.fileListFileName = String_new();
           storageDirectoryListHandle->ftp.line             = String_new();
 
-          /* create temporary list file */           
+          /* create temporary list file */
           error = File_getTmpFileName(storageDirectoryListHandle->ftp.fileListFileName,NULL,tmpDirectory);
           if (error != ERROR_NONE)
           {
@@ -3486,14 +3922,12 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             return error;
           }
 
-          /* parse storage string */
+          /* parse storage specifier string */
           loginName = String_new();
           password  = Password_new();
           hostName  = String_new();
-          fileName  = String_new();
-          if (!Storage_parseFTPSpecifier(storageSpecifier,loginName,password,hostName,fileName))
+          if (!Storage_parseFTPSpecifier(storageSpecifier,loginName,password,hostName))
           {
-            String_delete(fileName);
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
@@ -3504,8 +3938,8 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             break;
           }
 
-          /* get FTP server data */
-          getFTPServer(hostName,jobOptions,&ftpServer);
+          /* get FTP server settings */
+          getFTPServerSettings(hostName,jobOptions,&ftpServer);
           if (String_empty(loginName)) String_set(loginName,ftpServer.loginName);
 
           /* check FTP login, get correct password */
@@ -3560,7 +3994,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           if (error != ERROR_NONE)
           {
-            String_delete(fileName);
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
@@ -3574,7 +4007,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           /* connect */
           if (!Network_hostExists(hostName))
           {
-            String_delete(fileName);
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
@@ -3586,7 +4018,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           if (FtpConnect(String_cString(hostName),&control) != 1)
           {
-            String_delete(fileName);
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
@@ -3606,7 +4037,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           {
             Password_undeploy(password);
             FtpQuit(control);
-            String_delete(fileName);
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
@@ -3619,9 +4049,8 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           Password_undeploy(password);
 
           /* read directory */
-          if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(fileName),control) != 1)
+          if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(pathName),control) != 1)
           {
-            String_delete(fileName);
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
@@ -3639,7 +4068,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           error = File_open(&storageDirectoryListHandle->ftp.fileHandle,storageDirectoryListHandle->ftp.fileListFileName,FILE_OPENMODE_READ);
           if (error != ERROR_NONE)
           {
-            String_delete(fileName);
             String_delete(hostName);
             Password_delete(password);
             String_delete(loginName);
@@ -3650,7 +4078,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           /* free resources */
-          String_delete(fileName);
           String_delete(hostName);
           Password_delete(password);
           String_delete(loginName);
@@ -3671,15 +4098,14 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
-      break;
+//      error = ERROR_FUNCTION_NOT_SUPPORTED;
+//      break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          String loginName;
-          String hostName;
-          uint   hostPort;
-          String hostFileName;
+          String    loginName;
+          String    hostName;
+          uint      hostPort;
           SSHServer sshServer;
 
           /* init variables */
@@ -3694,13 +4120,11 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           storageDirectoryListHandle->sftp.bufferLength  = 0;
           storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
 
-          /* parse storage string */
-          loginName    = String_new();
-          hostName     = String_new();
-          hostFileName = String_new();
-          if (!Storage_parseSSHSpecifier(storageSpecifier,loginName,hostName,&hostPort,hostFileName))
+          /* parse storage specifier string */
+          loginName = String_new();
+          hostName  = String_new();
+          if (!Storage_parseSSHSpecifier(storageSpecifier,loginName,hostName,&hostPort))
           {
-            String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
             free(storageDirectoryListHandle->sftp.buffer);
@@ -3708,10 +4132,10 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             error = ERROR_SSH_SESSION_FAIL;
             break;
           }
-          String_set(storageDirectoryListHandle->sftp.pathName,hostFileName);
+          String_set(storageDirectoryListHandle->sftp.pathName,pathName);
 
-          /* get SSH server data */
-          getSSHServer(hostName,jobOptions,&sshServer);
+          /* get SSH server settings */
+          getSSHServerSettings(hostName,jobOptions,&sshServer);
           if (String_empty(loginName)) String_set(loginName,sshServer.loginName);
 
           /* open network connection */
@@ -3727,7 +4151,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
                                  );
           if (error != ERROR_NONE)
           {
-            String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
             free(storageDirectoryListHandle->sftp.buffer);
@@ -3741,7 +4164,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           {
             error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
             Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
-            String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
             free(storageDirectoryListHandle->sftp.buffer);
@@ -3751,14 +4173,13 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
           /* open directory for reading */
           storageDirectoryListHandle->sftp.sftpHandle = libssh2_sftp_opendir(storageDirectoryListHandle->sftp.sftp,
-                                                                             String_cString(hostFileName)
+                                                                             String_cString(storageDirectoryListHandle->sftp.pathName)
                                                                             );
           if (storageDirectoryListHandle->sftp.sftpHandle == NULL)
           {
             error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
             libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp);
             Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
-            String_delete(hostFileName);
             String_delete(hostName);
             String_delete(loginName);
             free(storageDirectoryListHandle->sftp.buffer);
@@ -3767,7 +4188,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           }
 
           /* free resources */
-          String_delete(hostFileName);
           String_delete(hostName);
           String_delete(loginName);
         }
@@ -3777,14 +4197,16 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
       UNUSED_VARIABLE(jobOptions);
 
       /* init variables */
       storageDirectoryListHandle->type = STORAGE_TYPE_DEVICE;
 
       /* open directory */
-      error = File_openDirectoryList(&storageDirectoryListHandle->dvd.directoryListHandle,
+      error = File_openDirectoryList(&storageDirectoryListHandle->opticalDisc.directoryListHandle,
                                      storageName
                                     );
       break;
@@ -3799,6 +4221,9 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
         break; /* not reached */
     #endif /* NDEBUG */
   }
+
+  /* free resources */
+  String_delete(pathName);
   String_delete(storageSpecifier);
 
   return error;
@@ -3840,8 +4265,10 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
-      File_closeDirectoryList(&storageDirectoryListHandle->dvd.directoryListHandle);
+    case STORAGE_TYPE_BD:
+      File_closeDirectoryList(&storageDirectoryListHandle->opticalDisc.directoryListHandle);
       break;
     case STORAGE_TYPE_DEVICE:
       break;
@@ -3915,8 +4342,10 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
-      endOfDirectoryFlag = File_endOfDirectoryList(&storageDirectoryListHandle->dvd.directoryListHandle);
+    case STORAGE_TYPE_BD:
+      endOfDirectoryFlag = File_endOfDirectoryList(&storageDirectoryListHandle->opticalDisc.directoryListHandle);
       break;
     case STORAGE_TYPE_DEVICE:
       endOfDirectoryFlag = TRUE;
@@ -4202,8 +4631,10 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
+    case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
-      error = File_readDirectoryList(&storageDirectoryListHandle->dvd.directoryListHandle,fileName);
+    case STORAGE_TYPE_BD:
+      error = File_readDirectoryList(&storageDirectoryListHandle->opticalDisc.directoryListHandle,fileName);
       break;
     case STORAGE_TYPE_DEVICE:
       error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -4217,7 +4648,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
   return error;
 }
- 
+
 #ifdef __cplusplus
   }
 #endif

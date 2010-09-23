@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -26,10 +26,13 @@
 #include "strings.h"
 #include "stringlists.h"
 #include "files.h"
-#include "errors.h"
 #include "network.h"
+#include "database.h"
+#include "errors.h"
 
 #include "bar.h"
+#include "crypt.h"
+#include "passwords.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -51,7 +54,16 @@ typedef enum
   STORAGE_REQUEST_VOLUME_UNKNOWN,
 } StorageRequestResults;
 
-/* request new volume call-back */
+/***********************************************************************\
+* Name   : StorageRequestVolumeFunction
+* Purpose: request new volume call-back
+* Input  : userData - user data
+*          volumeNumber - requested volume number
+* Output : -
+* Return : storage request result; see StorageRequestResults
+* Notes  : -
+\***********************************************************************/
+
 typedef StorageRequestResults(*StorageRequestVolumeFunction)(void *userData,
                                                              uint volumeNumber
                                                             );
@@ -63,8 +75,17 @@ typedef struct
   double volumeProgress;                   // current volume progress [0..100]
 } StorageStatusInfo;
 
-/* storage status call-back */
-typedef bool(*StorageStatusInfoFunction)(void                    *userData,
+/***********************************************************************\
+* Name   : StorageStatusInfoFunction
+* Purpose: storage status call-back
+* Input  : userData          - user data
+*          storageStatusInfo - storage status info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*StorageStatusInfoFunction)(void                    *userData,
                                          const StorageStatusInfo *storageStatusInfo
                                         );
 
@@ -83,7 +104,9 @@ typedef enum
   STORAGE_TYPE_SSH,
   STORAGE_TYPE_SCP,
   STORAGE_TYPE_SFTP,
+  STORAGE_TYPE_CD,
   STORAGE_TYPE_DVD,
+  STORAGE_TYPE_BD,
   STORAGE_TYPE_DEVICE
 } StorageTypes;
 
@@ -129,102 +152,145 @@ typedef struct
     {
       FileHandle fileHandle;
     } fileSystem;
+
     #ifdef HAVE_FTP
       // FTP storage
       struct
       {
-        String           hostName;                     // FTP server host name       
-        String           loginName;                    // FTP login name             
-        Password         *password;                    // FTP login password         
+        String           hostName;                     // FTP server host name
+        String           loginName;                    // FTP login name
+        Password         *password;                    // FTP login password
 
         netbuf           *control;
         netbuf           *data;
-        StorageBandWidth bandWidth;                    // band width data            
+        StorageBandWidth bandWidth;                    // band width data
       } ftp;
     #endif /* HAVE_FTP */
+
     #ifdef HAVE_SSH2
       // ssh storage (remote BAR)
       struct
       {
-        String           hostName;                     // ssh server host name       
-        uint             hostPort;                     // ssh server port number     
-        String           loginName;                    // ssh login name             
-        Password         *password;                    // ssh login password         
-        String           sshPublicKeyFileName;         // ssh public key file name   
-        String           sshPrivateKeyFileName;        // ssh private key file name  
+        String           hostName;                     // ssh server host name
+        uint             hostPort;                     // ssh server port number
+        String           loginName;                    // ssh login name
+        Password         *password;                    // ssh login password
+        String           sshPublicKeyFileName;         // ssh public key file name
+        String           sshPrivateKeyFileName;        // ssh private key file name
 
         SocketHandle     socketHandle;
-        LIBSSH2_CHANNEL  *channel;                     // ssh channel                
-        StorageBandWidth bandWidth;                    // band width data            
+        LIBSSH2_CHANNEL  *channel;                     // ssh channel
+        StorageBandWidth bandWidth;                    // band width data
       } ssh;
+
       // scp storage
       struct
       {
-        String           hostName;                     // ssh server host name       
-        uint             hostPort;                     // ssh server port number     
-        String           loginName;                    // ssh login name             
-        Password         *password;                    // ssh login password         
-        String           sshPublicKeyFileName;         // ssh public key file name   
-        String           sshPrivateKeyFileName;        // ssh private key file name  
+        String           hostName;                     // ssh server host name
+        uint             hostPort;                     // ssh server port number
+        String           loginName;                    // ssh login name
+        Password         *password;                    // ssh login password
+        String           sshPublicKeyFileName;         // ssh public key file name
+        String           sshPrivateKeyFileName;        // ssh private key file name
 
         SocketHandle     socketHandle;
-        LIBSSH2_CHANNEL  *channel;                     // scp channel                
-        StorageBandWidth bandWidth;                    // band width data            
-      } scp;
-      // sftp storage
-      struct
-      {
-        String              hostName;                  // ssh server host name       
-        uint                hostPort;                  // ssh server port number     
-        String              loginName;                 // ssh login name             
-        Password            *password;                 // ssh login password         
-        String              sshPublicKeyFileName;      // ssh public key file name   
-        String              sshPrivateKeyFileName;     // ssh private key file name  
-
-        SocketHandle        socketHandle;
-        LIBSSH2_SFTP        *sftp;                     // sftp session               
-        LIBSSH2_SFTP_HANDLE *sftpHandle;               // sftp handle                
-        uint64              index;                     //                            
-        uint64              size;                      // size of file [bytes]       
-        struct
+        LIBSSH2_CHANNEL  *channel;                     // scp channel
+        uint64           index;                        // current read/write index in file [0..n-1]
+        uint64           size;                         // size of file [bytes]
+        struct                                         // read-ahead buffer
         {
           byte   *data;
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
-        StorageBandWidth bandWidth;                    // band width data            
+        StorageBandWidth bandWidth;                    // band width data
+      } scp;
+
+      // sftp storage
+      struct
+      {
+        String              hostName;                  // ssh server host name
+        uint                hostPort;                  // ssh server port number
+        String              loginName;                 // ssh login name
+        Password            *password;                 // ssh login password
+        String              sshPublicKeyFileName;      // ssh public key file name
+        String              sshPrivateKeyFileName;     // ssh private key file name
+
+        SocketHandle        socketHandle;
+        LIBSSH2_SFTP        *sftp;                     // sftp session
+        LIBSSH2_SFTP_HANDLE *sftpHandle;               // sftp handle
+        uint64              index;                     // current read/write index in file [0..n-1]
+        uint64              size;                      // size of file [bytes]
+        struct                                         // read-ahead buffer
+        {
+          byte   *data;
+          uint64 offset;
+          ulong  length;
+        } readAheadBuffer;
+        StorageBandWidth bandWidth;                    // band width data
       } sftp;
     #endif /* HAVE_SSH2 */
+
     // dvd storage
     struct
     {
-      String     name;                                 // device name
-      uint       steps;                                // total number of steps to create dvd
-      String     directory;                            // temporary directory for dvd files
-      uint64     volumeSize;                           // size of dvd [bytes]
+      String     name;                                 // DVD device name
+
+      String     requestVolumeCommand;                 // command to request new DVD
+      String     unloadVolumeCommand;                  // command to unload DVD
+      String     loadVolumeCommand;                    // command to load DVD
+      uint64     volumeSize;                           // size of DVD [bytes]
+      String     imagePreProcessCommand;               // command to execute before creating image
+      String     imagePostProcessCommand;              // command to execute after created image
+      String     imageCommand;                         // command to create DVD image
+      String     eccPreProcessCommand;                 // command to execute before ECC calculation
+      String     eccPostProcessCommand;                // command to execute after ECC calculation
+      String     eccCommand;                           // command for ECC calculation
+      String     writePreProcessCommand;               // command to execute before writing DVD
+      String     writePostProcessCommand;              // command to execute after writing DVD
+      String     writeCommand;                         // command to write DVD
+      String     writeImageCommand;                    // command to write image on DVD
+
+      uint       steps;                                // total number of steps to create DVD
+      String     directory;                            // temporary directory for DVD files
 
       uint       step;                                 // current step number
       double     progress;                             // progress of current step
 
-      uint       number;                               // current dvd number
-      bool       newFlag;                              // TRUE iff new dvd needed
+      uint       number;                               // current DVD number
+      bool       newFlag;                              // TRUE iff new DVD needed
       StringList fileNameList;                         // list with file names
       String     fileName;                             // current file name
       FileHandle fileHandle;
-      uint64     totalSize;                            // current size of dvd [bytes]
-    } dvd;
+      uint64     totalSize;                            // current size of DVD [bytes]
+    } opticalDisc;
+
     // device storage
     struct
     {
-      Device     device;                               // device
       String     name;                                 // device name
+
+      String     requestVolumeCommand;                 // command to request new volume
+      String     unloadVolumeCommand;                  // command to unload volume
+      String     loadVolumeCommand;                    // command to load volume
+      uint64     volumeSize;                           // size of volume [bytes]
+      String     imagePreProcessCommand;               // command to execute before creating image
+      String     imagePostProcessCommand;              // command to execute after created image
+      String     imageCommand;                         // command to create volume image
+      String     eccPreProcessCommand;                 // command to execute before ECC calculation
+      String     eccPostProcessCommand;                // command to execute after ECC calculation
+      String     eccCommand;                           // command for ECC calculation
+      String     writePreProcessCommand;               // command to execute before writing volume
+      String     writePostProcessCommand;              // command to execute after writing volume
+      String     writeCommand;                         // command to write volume
+
       String     directory;                            // temporary directory for files
 
       uint       number;                               // volume number
       bool       newFlag;                              // TRUE iff new volume needed
       StringList fileNameList;                         // list with file names
       String     fileName;                             // current file name
-      FileHandle fileHandle;
+      FileHandle fileHandle;               
       uint64     totalSize;                            // current size [bytes]
     } device;
   };
@@ -270,7 +336,7 @@ typedef struct
     struct
     {
       DirectoryListHandle directoryListHandle;
-    } dvd;
+    } opticalDisc;
   };
 } StorageDirectoryListHandle;
 
@@ -312,27 +378,76 @@ void Storage_doneAll(void);
 * Name   : Storage_getType
 * Purpose: get storage type from storage name
 * Input  : storageName - storage name
-* Output : storageSpecifier - storage specific data (can be NULL)
+* Output : -
 * Return : storage type
-* Notes  : storage types support:
-*            ftp://
-*            ssh://
-*            scp://
-*            sftp://
-*            dvd://
-*            device://
-*            file://
+* Notes  : storage types supported:
+*            ftp://[<user name>[:<password>]@]<host name>/<file name>
+*            ssh://[<user name>@]<host name>[:<port>]/<file name>
+*            scp://[<user name>@]<host name>[:<port>]/<file name>
+*            sftp://[<user name>@]<host name>[:<port>]/<file name>
+*            cd://[<device name>:]<file name>
+*            dvd://[<device name>:]<file name>
+*            bd://[<device name>:]<file name>
+*            device://[<device name>:]<file name>
+*            file://<file name>
 *            plain file name
+*
+*          name structure:
+*            <type>://<storage specifier>/<filename>
 \***********************************************************************/
 
-StorageTypes Storage_getType(const String storageName,
-                             String       storageSpecifier
-                            );
+StorageTypes Storage_getType(const String storageName);
+
+/***********************************************************************\
+* Name   : Storage_parseName
+* Purpose: parse storage name and get storage type
+* Input  : storageName - storage name
+* Output : storageSpecifier - storage specific data (can be NULL)                             
+*          fileName         - storage file name (can be NULL)
+* Return : storage type
+* Notes  : storage types supported:
+*            ftp://[<user name>[:<password>]@]<host name>/<file name>
+*            ssh://[<user name>@]<host name>[:<port>]/<file name>
+*            scp://[<user name>@]<host name>[:<port>]/<file name>
+*            sftp://[<user name>@]<host name>[:<port>]/<file name>
+*            cd://[<device name>:]<file name>
+*            dvd://[<device name>:]<file name>
+*            bd://[<device name>:]<file name>
+*            device://[<device name>:]<file name>
+*            file://<file name>
+*            plain file name
+*
+*          name structure:
+*            <type>://<storage specifier>/<filename>
+\***********************************************************************/
+
+StorageTypes Storage_parseName(const String storageName,
+                               String       storageSpecifier,
+                               String       fileName
+                              );
+
+/***********************************************************************\
+* Name   : Storage_getName
+* Purpose: get storage name
+* Input  : storageName      - storage name variable
+*          storageType      - storage type; see StorageTypes
+*          storageSpecifier - storage specifier
+*          fileName         - file name (can be NULL)
+* Output : storageName - storage name
+* Return : storage name variable
+* Notes  : -
+\***********************************************************************/
+
+String Storage_getName(String       storageName,
+                       StorageTypes storageType,
+                       const String storageSpecifier,
+                       const String fileName
+                      );
 
 /***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
 * Purpose: parse FTP specifier:
-*            [[<user name>[:<password>]@]<host name>/]<file name>
+*            [<user name>[:<password>]@]<host name>
 * Input  : ftpSpecifier  - FTP specifier string
 *          loginName     - login user name variable (can be NULL)
 *          password      - password variable (can be NULL)
@@ -349,14 +464,13 @@ StorageTypes Storage_getType(const String storageName,
 bool Storage_parseFTPSpecifier(const String ftpSpecifier,
                                String       loginName,
                                Password     *password,
-                               String       hostName,
-                               String       fileName
+                               String       hostName
                               );
 
 /***********************************************************************\
 * Name   : Storage_parseSSHSpecifier
 * Purpose: parse ssh specifier:
-*            [//[<user name>@]<host name>[:<port>]/]<file name>
+*            [<user name>@]<host name>[:<port>]
 * Input  : sshSpecifier - ssh specifier string
 *          loginName    - login user name variable (can be NULL)
 *          hostName     - host name variable (can be NULL)
@@ -373,28 +487,26 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 bool Storage_parseSSHSpecifier(const String sshSpecifier,
                                String       loginName,
                                String       hostName,
-                               uint         *hostPort,
-                               String       fileName
+                               uint         *hostPort
                               );
 
 /***********************************************************************\
 * Name   : Storage_parseDeviceSpecifier
 * Purpose: parse device specifier:
-*            [//<device name>/]<file name>
+*            <device name>:
 * Input  : deviceSpecifier   - device specifier string
 *          defaultDeviceName - default device name
 *          deviceName        - device name variable (can be NULL)
 *          fileName          - file name variable (can be NULL)
 * Output : deviceName - device name (can be NULL)
 *          fileName   - file name (can be NULL)
-* Return : TRUE if DVD specifier parsed, FALSE if specifier invalid
+* Return : TRUE if device specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
 
 bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
                                   const String defaultDeviceName,
-                                  String       deviceName,
-                                  String       fileName
+                                  String       deviceName
                                  );
 
 /***********************************************************************\
@@ -429,7 +541,9 @@ Errors Storage_prepare(const String     storageName,
 *            ssh://
 *            scp://
 *            sftp://
+*            cd://
 *            dvd://
+*            bd://
 *            device://
 *            file://
 *            plain file name
@@ -457,20 +571,20 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 Errors Storage_done(StorageFileHandle *storageFileHandle);
 
 /***********************************************************************\
-* Name   : Storage_getName
-* Purpose: get complete storage name
-* Input  : storageFileHandle - storage file handle
-*          name              - name variable
-*          fileName          - archive file name
-* Output : -
-* Return : name
+* Name   : Storage_getHandleName
+* Purpose: get storage name from storage handle
+* Input  : storageName       - storage name variable
+*          storageFileHandle - storage file handle
+*          fileName          - file name (can be NULL)
+* Output : storageName - storage name
+* Return : storage name variable
 * Notes  : -
 \***********************************************************************/
 
-String Storage_getName(const StorageFileHandle *storageFileHandle,
-                       String                  name,
-                       const String            fileName
-                      );
+String Storage_getHandleName(String                  storageName,
+                             const StorageFileHandle *storageFileHandle,
+                             const String            fileName
+                            );
 
 /***********************************************************************\
 * Name   : Storage_preProcess
@@ -677,6 +791,7 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
 * Input  : storageDirectoryListHandle - storage directory list handle
 *                                       variable
 *          storageName                - storage name
+*                                       (prefix+specifier+path only)
 *          jobOptions                 - job options
 * Output : storageDirectoryListHandle - initialized storage directory
 *                                       list handle
@@ -717,7 +832,7 @@ bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryList
 * Input  : storageDirectoryListHandle - storage directory list handle
 *          fileName                   - file name variable
 *          fileInfo                   - file info (can be NULL)
-* Output : fileName - next file name
+* Output : fileName - next file name (including path)
 *          fileInfo - next file info
 * Return : ERROR_NONE or error code
 * Notes  : -
