@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/database.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: database functions (SQLite3)
 * Systems: all
@@ -18,6 +18,7 @@
 
 #include "global.h"
 #include "strings.h"
+#include "semaphores.h"
 #include "errors.h"
 
 #include "sqlite3.h"  
@@ -34,16 +35,23 @@ typedef enum
   DATABASE_OPENMODE_READWRITE,
 } DatabaseOpenModes;
 
+// no id
+#define DATABASE_ID_NONE -1LL
+
 /***************************** Datatypes *******************************/
 
+/* database handle */
 typedef struct
 {
-  sqlite3 *handle;
+  Semaphore lock;
+  sqlite3   *handle;
 } DatabaseHandle;
 
+/* database query handle */
 typedef struct
 {
-  sqlite3_stmt *handle;
+  DatabaseHandle *databaseHandle;
+  sqlite3_stmt   *handle;
 } DatabaseQueryHandle;
 
 /* execute callback function */
@@ -52,6 +60,22 @@ typedef bool(*DatabaseFunction)(void *userData, uint count, const char* names[],
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+/***********************************************************************\
+* Name   : DATABASE_LOCKED_DO
+* Purpose: execute block with database locked
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : usage:
+*            DATABASE_LOCKED_DO(databaseHandle)
+*            {
+*              ...
+*            }
+\***********************************************************************/
+
+#define DATABASE_LOCKED_DO(databaseHandle) \
+  for (Database_lock(databaseHandle); Database_isLocked(databaseHandle); Database_unlock(databaseHandle))
 
 /***************************** Forwards ********************************/
 
@@ -88,39 +112,37 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
 void Database_close(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Database_lock
+* Purpose: lock database access
+* Input  : databaseHandle - database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_insert(DatabaseHandle *databaseHandle
-                      );
+void Database_lock(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Database_unlock
+* Purpose: unlock database access
+* Input  : databaseHandle - database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_delete(DatabaseHandle *databaseHandle
-                      );
+void Database_unlock(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : Database_isLocked
+* Purpose: check if database access is locked
+* Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : TRUE if database access is locked, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_select(DatabaseHandle *databaseHandle);
+bool Database_isLocked(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
 * Name   : Database_execute
@@ -198,13 +220,13 @@ void Database_finalize(DatabaseQueryHandle *databaseQueryHandle);
 *          additional     - additional string (e. g. WHERE...)
 *                           special functions:
 *                             REGEXP(pattern,case-flag,text)
-* Output : l - int64 value or -1 if not found
+* Output : l - int64 value or DATABASE_ID_NONE if not found
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
-                             uint64         *l,
+                             int64          *l,
                              const char     *tableName,
                              const char     *columnName,
                              const char     *additional,
@@ -220,7 +242,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-uint64 Database_getLastRowId(DatabaseHandle *databaseHandle);
+int64 Database_getLastRowId(DatabaseHandle *databaseHandle);
 
 #ifdef __cplusplus
   }

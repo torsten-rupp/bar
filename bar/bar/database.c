@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/database.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Database functions
 * Systems: all
@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <errno.h>
 #include <regex.h>
 #include <assert.h>
 
@@ -25,6 +26,7 @@
 #include "database.h"
 
 /****************** Conditional compilation switches *******************/
+#define _DATABASE_DEBUG
 
 /***************************** Constants *******************************/
 
@@ -178,9 +180,6 @@ LOCAL String formatSQLString(String     sqlString,
               {
                 switch (ch)
                 {
-                  case '\\':
-                    String_appendCString(sqlString,"\\\\");
-                    break;
                   case '\'':
                     if (quoteFlag)
                     {
@@ -214,9 +213,6 @@ LOCAL String formatSQLString(String     sqlString,
                 ch = String_index(value.string,i);
                 switch (ch)
                 {
-                  case '\\':
-                    String_appendCString(sqlString,"\\\\");
-                    break;
                   case '\'':
                     if (quoteFlag)
                     {
@@ -295,7 +291,9 @@ LOCAL void regexpMatch(sqlite3_context *context, int argc, sqlite3_value *argv[]
   regex_t    *regex;
   int        result;
 
+  assert(context != NULL);
   assert(argc == 3);
+  assert(argv != NULL);
 
   UNUSED_VARIABLE(argc);
 
@@ -339,7 +337,7 @@ LOCAL void regexpMatch(sqlite3_context *context, int argc, sqlite3_value *argv[]
 }
 
 /***********************************************************************\
-* Name   : Database_callback
+* Name   : executeCallback
 * Purpose: SQLite3 callback wrapper
 * Input  : userData - user data
 *          count    - number of columns
@@ -350,11 +348,11 @@ LOCAL void regexpMatch(sqlite3_context *context, int argc, sqlite3_value *argv[]
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int Database_callback(void *userData,
-                            int  count,
-                            char *values[],
-                            char *names[]
-                           )
+LOCAL int executeCallback(void *userData,
+                          int  count,
+                          char *values[],
+                          char *names[]
+                         )
 {
   DatabaseCallback *databaseCallback = (DatabaseCallback*)userData;
 
@@ -382,6 +380,12 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
   assert(databaseHandle != NULL);
   assert(fileName != NULL);
 
+  /* create lock */
+  if (!Semaphore_init(&databaseHandle->lock))
+  {
+    return ERRORX(DATABASE,errno,"create database lock fail");
+  }
+
   /* create directory if needed */
   directory = File_getFilePathNameCString(String_new(),fileName);
   if (   !String_empty(directory)
@@ -396,6 +400,7 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
     if (error != ERROR_NONE)
     {
       File_deleteFileName(directory);
+      Semaphore_done(&databaseHandle->lock);
       return error;
     }
   }
@@ -414,6 +419,7 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
   sqliteResult = sqlite3_open_v2(fileName,&databaseHandle->handle,sqliteMode,NULL);
   if (sqliteResult != SQLITE_OK)
   {
+    Semaphore_done(&databaseHandle->lock);
     return ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
   }
 
@@ -436,27 +442,28 @@ void Database_close(DatabaseHandle *databaseHandle)
   assert(databaseHandle != NULL);
 
   sqlite3_close(databaseHandle->handle);
+  Semaphore_done(&databaseHandle->lock);
 }
 
-Errors Database_insert(DatabaseHandle *databaseHandle)
+void Database_lock(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
 
-  return ERROR_NONE;
+  Semaphore_lock(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 }
 
-Errors Database_delete(DatabaseHandle *databaseHandle)
+void Database_unlock(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
 
-  return ERROR_NONE;
+  Semaphore_unlock(&databaseHandle->lock);
 }
 
-Errors Database_select(DatabaseHandle *databaseHandle)
+bool Database_isLocked(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
 
-  return ERROR_NONE;
+  return Semaphore_isLocked(&databaseHandle->lock);
 }
 
 Errors Database_execute(DatabaseHandle   *databaseHandle,
@@ -468,6 +475,7 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
 {
   String           sqlString;
   va_list          arguments;
+  Errors           error;
   DatabaseCallback databaseCallback;
   int              sqliteResult;
 
@@ -483,20 +491,32 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
   va_end(arguments);
 
   /* execute SQL command */
-  databaseCallback.function = databaseFunction;
-  databaseCallback.userData = databaseUserData;
-//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
-  sqliteResult = sqlite3_exec(databaseHandle->handle,
-                              String_cString(sqlString),
-                              (databaseFunction != NULL) ? Database_callback : NULL,
-                              (databaseFunction != NULL) ? &databaseCallback : NULL,
-                              NULL
-                             );
-  if (sqliteResult != SQLITE_OK)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-//fprintf(stderr,"%s,%d: sqliteResult=%d %d errrrrrrr=%s\n",__FILE__,__LINE__,sqliteResult,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    #ifdef DATABASE_DEBUG
+     fprintf(stderr,"Database debug: execute command: %s\n",String_cString(sqlString));
+    #endif
+    databaseCallback.function = databaseFunction;
+    databaseCallback.userData = databaseUserData;
+    sqliteResult = sqlite3_exec(databaseHandle->handle,
+                                String_cString(sqlString),
+                                (databaseFunction != NULL) ? executeCallback : NULL,
+                                (databaseFunction != NULL) ? &databaseCallback : NULL,
+                                NULL
+                               );
+    if (sqliteResult == SQLITE_OK)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    }
+  }
+  if (error != ERROR_NONE)
+  {
     String_delete(sqlString);
-    return ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    return error;
   }
 
   /* free resources */
@@ -513,11 +533,15 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
 {
   String  sqlString;
   va_list arguments;
+  Errors  error;
   int     sqliteResult;
 
   assert(databaseHandle != NULL);
   assert(databaseQueryHandle != NULL);
   assert(command != NULL);
+
+  /* initialize variables */
+  databaseQueryHandle->databaseHandle = databaseHandle;
 
   /* format SQL command string */
   va_start(arguments,command);
@@ -528,18 +552,30 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
   va_end(arguments);
 
   /* prepare SQL command execution */
-//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
-  sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
-                                    String_cString(sqlString),
-                                    -1,
-                                    &databaseQueryHandle->handle,
-                                    NULL
-                                   );
-  if (sqliteResult != SQLITE_OK)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    #ifdef DATABASE_DEBUG
+     fprintf(stderr,"Database debug: prepare command: %s\n",String_cString(sqlString));
+    #endif
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+                                      String_cString(sqlString),
+                                      -1,
+                                      &databaseQueryHandle->handle,
+                                      NULL
+                                     );
+    if (sqliteResult == SQLITE_OK)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    }
+  }
+  if (error != ERROR_NONE)
   {
     String_delete(sqlString);
-//fprintf(stderr,"%s,%d: sqliteResult=%d %d errrrrrrr=%s\n",__FILE__,__LINE__,sqliteResult,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
-    return ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    return error;
   }
 
   /* free resources */
@@ -567,169 +603,179 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
     char   *s;
     String *string;
   }       value;
+  bool    result;
 
   assert(databaseQueryHandle != NULL);
+  assert(format != NULL);
 
-  if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
+  SEMAPHORE_LOCKED_DO(&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    /* get data */
-    column = 0;
-    va_start(arguments,format);
-    while ((*format) != '\0')
+    if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
-      /* find next format specifier */
-      while (((*format) != '\0') && ((*format) != '%'))
+      /* get data */
+      column = 0;
+      va_start(arguments,format);
+      while ((*format) != '\0')
       {
-        format++;
-      }
-
-      if ((*format) == '%')
-      {
-        format++;
-
-        /* skip align specifier */
-        if (    ((*format) != '\0')
-             && (   ((*format) == '-')
-                 || ((*format) == '-')
-                )
-           )
+        /* find next format specifier */
+        while (((*format) != '\0') && ((*format) != '%'))
         {
           format++;
         }
 
-        /* get length specifier */
-        maxLength = -1;
-        if (    ((*format) != '\0')
-             && isdigit(*format)
-           )
+        if ((*format) == '%')
         {
-          maxLength = 0;
-          while (   ((*format) != '\0')
-                 && isdigit(*format)
-                )
+          format++;
+
+          /* skip align specifier */
+          if (    ((*format) != '\0')
+               && (   ((*format) == '-')
+                   || ((*format) == '-')
+                  )
+             )
           {
-            maxLength = maxLength*10+(uint)((*format)-'0');
             format++;
           }
-        }
 
-        /* check for long flag */
-        if (    ((*format) != '\0')
-             && ((*format) == 'l')
-           )
-        {
-          longFlag = TRUE;
-          format++;
-        }
-        else
-        {
-          longFlag = FALSE;
-        }
-
-        /* handle format type */
-        switch (*format)
-        {
-          case 'd':
-            /* integer */
-            format++;
-
-            if (longFlag)
+          /* get length specifier */
+          maxLength = -1;
+          if (    ((*format) != '\0')
+               && isdigit(*format)
+             )
+          {
+            maxLength = 0;
+            while (   ((*format) != '\0')
+                   && isdigit(*format)
+                  )
             {
-              value.l = va_arg(arguments,int64*);
-              assert(value.l != NULL);
-
-              (*value.l) = (int64)sqlite3_column_int64(databaseQueryHandle->handle,column);
+              maxLength = maxLength*10+(uint)((*format)-'0');
+              format++;
             }
-            else
-            {
-              value.i = va_arg(arguments,int*);
-              assert(value.i != NULL);
+          }
 
-              (*value.i) = sqlite3_column_int(databaseQueryHandle->handle,column);
-            }
-            break;
-          case 'f':
-            /* float */
+          /* check for long flag */
+          if (    ((*format) != '\0')
+               && ((*format) == 'l')
+             )
+          {
+            longFlag = TRUE;
             format++;
+          }
+          else
+          {
+            longFlag = FALSE;
+          }
 
-            if (longFlag)
-            {
-              value.d = va_arg(arguments,double*);
-              assert(value.d != NULL);
+          /* handle format type */
+          switch (*format)
+          {
+            case 'd':
+              /* integer */
+              format++;
 
-              (*value.d) = atof((const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
-            }
-            else
-            {
-              value.f = va_arg(arguments,float*);
-              assert(value.f != NULL);
-
-              (*value.f) = (float)atof((const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
-            }
-            break;
-          case 'c':
-            /* char */
-            format++;
-
-            value.ch = va_arg(arguments,char*);
-            assert(value.s != NULL);
-            (*value.ch) = ((char*)sqlite3_column_text(databaseQueryHandle->handle,column))[0];
-            break;
-          case 's':
-            /* C string */
-            format++;
-
-            value.s = va_arg(arguments,char*);
-            if (value.s != NULL)
-            {
-              if (maxLength >= 0)
+              if (longFlag)
               {
-                strncpy(value.s,(const char*)sqlite3_column_text(databaseQueryHandle->handle,column),maxLength-1);
-                value.s[maxLength-1] = '\0';
+                value.l = va_arg(arguments,int64*);
+                assert(value.l != NULL);
+
+                (*value.l) = (int64)sqlite3_column_int64(databaseQueryHandle->handle,column);
               }
               else
               {
-                strcpy(value.s,(const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
+                value.i = va_arg(arguments,int*);
+                assert(value.i != NULL);
+
+                (*value.i) = sqlite3_column_int(databaseQueryHandle->handle,column);
               }
-            }
-            break;
-          case 'S':
-            /* string */
-            format++;
+              break;
+            case 'f':
+              /* float */
+              format++;
 
-            value.string = va_arg(arguments,String*);
-            if (value.string != NULL)
-            {
-              String_setCString(*value.string,(const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
-            }
-            break;
-          default:
-            return FALSE;
-            break;
+              if (longFlag)
+              {
+                value.d = va_arg(arguments,double*);
+                assert(value.d != NULL);
+
+                (*value.d) = atof((const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
+              }
+              else
+              {
+                value.f = va_arg(arguments,float*);
+                assert(value.f != NULL);
+
+                (*value.f) = (float)atof((const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
+              }
+              break;
+            case 'c':
+              /* char */
+              format++;
+
+              value.ch = va_arg(arguments,char*);
+              assert(value.s != NULL);
+              (*value.ch) = ((char*)sqlite3_column_text(databaseQueryHandle->handle,column))[0];
+              break;
+            case 's':
+              /* C string */
+              format++;
+
+              value.s = va_arg(arguments,char*);
+              if (value.s != NULL)
+              {
+                if (maxLength >= 0)
+                {
+                  strncpy(value.s,(const char*)sqlite3_column_text(databaseQueryHandle->handle,column),maxLength-1);
+                  value.s[maxLength-1] = '\0';
+                }
+                else
+                {
+                  strcpy(value.s,(const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
+                }
+              }
+              break;
+            case 'S':
+              /* string */
+              format++;
+
+              value.string = va_arg(arguments,String*);
+              if (value.string != NULL)
+              {
+                String_setCString(*value.string,(const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
+              }
+              break;
+            default:
+              return FALSE;
+              break;
+          }
+
+          column++;
         }
-
-        column++;
       }
-    }
-    va_end(arguments);
+      va_end(arguments);
 
-    return TRUE;
+      result = TRUE;
+    }
+    else
+    {
+      result = FALSE;
+    }
   }
-  else
-  {
-    return FALSE;
-  }
+
+  return result;
 }
 
 void Database_finalize(DatabaseQueryHandle *databaseQueryHandle)
 {
   assert(databaseQueryHandle != NULL);
 
-  sqlite3_finalize(databaseQueryHandle->handle);
+  SEMAPHORE_LOCKED_DO(&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    sqlite3_finalize(databaseQueryHandle->handle);
+  }
 }
 
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
-                             uint64         *l,
+                             int64          *l,
                              const char     *tableName,
                              const char     *columnName,
                              const char     *additional,
@@ -739,10 +785,16 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   String       sqlString;
   va_list      arguments;
   sqlite3_stmt *handle;
+  Errors       error;
   int          sqliteResult;
 
   assert(databaseHandle != NULL);
   assert(l != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  /* init variables */
+  (*l) = DATABASE_ID_NONE;
 
   /* format SQL command string */
   sqlString = String_format(String_new(),
@@ -765,29 +817,38 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   String_appendCString(sqlString," LIMIT 0,1");
 
   /* execute SQL command */
-//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
-  sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
-                                    String_cString(sqlString),
-                                    -1,
-                                    &handle,
-                                    NULL
-                                   );
-  if (sqliteResult != SQLITE_OK)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    #ifdef DATABASE_DEBUG
+     fprintf(stderr,"Database debug: get integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+    #endif
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+                                      String_cString(sqlString),
+                                      -1,
+                                      &handle,
+                                      NULL
+                                     );
+    if (sqliteResult == SQLITE_OK)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    }
+
+    if (sqlite3_step(handle) == SQLITE_ROW)
+    {
+      (*l) = (int64)sqlite3_column_int64(handle,0);
+    }
+
+    sqlite3_finalize(handle);
+  }
+  if (error != ERROR_NONE)
   {
     String_delete(sqlString);
-    return ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    return error;
   }
-
-  if (sqlite3_step(handle) == SQLITE_ROW)
-  {
-    (*l) = (int64)sqlite3_column_int64(handle,0);
-  }
-  else
-  {
-    (*l) = -1LL;
-  }
-
-  sqlite3_finalize(handle);
 
   /* free resources */
   String_delete(sqlString);
@@ -795,11 +856,18 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   return ERROR_NONE;
 }
 
-uint64 Database_getLastRowId(DatabaseHandle *databaseHandle)
+int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
 {
+  int64 databaseId;
+
   assert(databaseHandle != NULL);
 
-  return (uint64)sqlite3_last_insert_rowid(databaseHandle->handle);
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    databaseId = (uint64)sqlite3_last_insert_rowid(databaseHandle->handle);
+  }
+
+  return databaseId;
 }
 
 #ifdef __cplusplus
