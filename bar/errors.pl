@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all
@@ -88,7 +88,7 @@ sub writeCPrefix()
 #define GET_ERROR_TEXT(error)      ((GET_ERROR_TEXTINDEX(error)>0)?errorTexts[GET_ERROR_TEXTINDEX(error)-1].text:\"unknown\")
 #define GET_ERRNO(error)           ((long)((error) & $ERROR_ERRNO_MASK) >> $ERROR_ERRNO_SHIFT)
 
-#define ERROR_CPDE GET_ERROR_CODE(error)
+#define ERROR_CODE GET_ERROR_CODE(error)
 #define ERROR_TEXT GET_ERROR_TEXT(error)
 #define ERRNO      GET_ERRNO(error)
 
