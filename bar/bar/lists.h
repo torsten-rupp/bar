@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/lists.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -76,6 +76,26 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
   { \
     LIST_HEADER(type ## Node); \
   } type ## List
+
+/***********************************************************************\
+* Name   : LIST_ITERATE
+* Purpose: iterated over list and execute block
+* Input  : list     - list
+*          variable - iterator variable
+* Output : -
+* Return : -
+* Notes  : usage:
+*            LIST_ITERATE(list,variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define LIST_ITERATE(list,variable) \
+  for (variable = list.head; \
+       variable != NULL; \
+       variable = variable->next \
+      )
 
 /***************************** Forwards ********************************/
 

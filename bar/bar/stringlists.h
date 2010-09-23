@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/stringlists.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems: all
@@ -43,6 +43,12 @@ typedef struct
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+#define STRINGLIST_ITERATE(stringList,variable,value) \
+  for (variable = stringList.head, (stringList.head != NULL) ? String_set(value,stringList.head->string) : String_clear(value); \
+       variable != NULL; \
+       variable = variable->next, (variable != NULL) ? String_set(value,variable->string) : String_clear(value) \
+      )
 
 /***************************** Forwards ********************************/
 
