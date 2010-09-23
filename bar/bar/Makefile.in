@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.28 $
+# $Revision: 1.29 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -141,6 +141,7 @@ BAR_SOURCES          = bar.c \
                        passwords.c \
                        misc.c \
                        storage.c \
+                       index.c \
                        network.c \
                        server.c \
                        \
@@ -157,6 +158,9 @@ BAR_SOURCES          = bar.c \
                        arrays.c \
                        dictionaries.c \
                        bitmaps.c \
+                       database.c \
+                       \
+                       sqlite3.c
 
 BAR_OBJECTS          = $(foreach z,$(BAR_SOURCES),$(subst .c,.o,$z)) \
                        errors.o \
@@ -184,6 +188,7 @@ INTERMEDIATE         = errors.c \
                        errors.h \
                        archive_format.c \
                        archive_format.h \
+                       database_definition.h \
 
 TARGETS              = bar \
                        bar-keygen \
@@ -286,6 +291,10 @@ archive_format.h: archive_format.def
 archive_format.c: archive_format.def
 	$(PERL) archive_format.pl < $^ -c $@ -i archive_format.h
 
+# database definition
+database_definition.h: database_definition.sql
+	$(PERL) database_definition.pl < $^ > $@
+
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
 	$(LD) $(LD_FLAGS) -o $@ $^ -lc -lpthread
@@ -298,13 +307,15 @@ runserver barserver: bar
 	$(INSTALL) -d jobs
 	nice ./bar \
           --daemon -D \
-          --server-jobs-directory jobs
+          --database-file=bar-index.db \
+          --server-jobs-directory=jobs
 
 runserver_ssl barserver_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	nice ./bar \
           --daemon -D \
-          --server-jobs-directory jobs \
+          --database-file=bar-index.db \
+          --server-jobs-directory=jobs \
           --server-ca-file=../bar-ca.pem \
           --server-cert-file=../bar-server-cert.pem \
           --server-key-file=../bar-server-key.pem
