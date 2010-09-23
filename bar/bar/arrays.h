@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/arrays.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -54,26 +54,26 @@ typedef char(*ArrayElementIterateFunction)(void *userData, void *data);
 
 /***********************************************************************\
 * Name   : Array_new
-* Purpose: create new string
-* Input  : s            - C-string
-*          ch           - character
-*          buffer       - buffer
-*          bufferLength - length of buffer
+* Purpose: create new array
+* Input  : elementSize - element size (in bytes)
+*          length      - start length of array
 * Output : -
 * Return : array or NULL
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-void *Array_new(ulong elementSize, ulong length);
+Array Array_new(ulong elementSize, ulong length);
 #else /* not NDEBUG */
-void *__Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong length);
+Array __Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong length);
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Array_delete
 * Purpose: delete array
-* Input  : array - array to delete
+* Input  : array                    - array to delete
+*          arrayElementFreeFunction - array element free function or NULL
+*          arrayElementFreeUserData - free function user data or NULL
 * Output : -
 * Return : -
 * Notes  : -
@@ -84,9 +84,11 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
 /***********************************************************************\
 * Name   : Array_clear
 * Purpose: clear array
-* Input  : array - array to clear
+* Input  : array                    - array to clear
+*          arrayElementFreeFunction - array element free function or NULL
+*          arrayElementFreeUserData - free function user data or NULL
 * Output : -
-* Return : cleared array (empty)
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
@@ -124,7 +126,8 @@ bool Array_put(Array array, ulong index, const void *data);
 *          data  - variable for data (can be NULL)
 * Output : data
 * Return : -
-* Notes  : -
+* Notes  : if no data variable is supplied (NULL) a pointer to the
+*          data element in the array is returned
 \***********************************************************************/
 
 void *Array_get(Array array, ulong index, void *data);
@@ -159,8 +162,8 @@ bool Array_append(Array array, const void *data);
 * Purpose: remove element from array
 * Input  : array                    - array
 *          index                    - index of element to remove
-*          arrayElementFreeFunction - element free function
-*          arrayElementFreeUserData - user data for free functions
+*          arrayElementFreeFunction - array element free function or NULL
+*          arrayElementFreeUserData - free function user data or NULL
 * Output : -
 * Return : -
 * Notes  : -
@@ -173,11 +176,11 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
 * Purpose: get C-array data pointer
 * Input  : array - array
 * Output : -
-* Return : C-array data pointer
+* Return : C-array with data pointers
 * Notes  : -
 \***********************************************************************/
 
-void *Array_cArray(Array array);
+const void *Array_cArray(Array array);
 
 #ifndef NDEBUG
 /***********************************************************************\
@@ -210,4 +213,6 @@ void Array_debugDone(void);
 
 #endif /* __ARRAYS__ */
 
+
 /* end of file */
+

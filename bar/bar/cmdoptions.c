@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/bar/cmdoptions.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -872,7 +872,7 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
 void CmdOption_printHelp(FILE                    *outputHandle,
                          const CommandLineOption commandLineOptions[],
                          uint                    commandLineOptionCount,
-                         int                     level
+                         int                     helpLevel
                         )
 {
   #define PREFIX "Options: "
@@ -892,7 +892,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
   maxNameLength = 0;
   for (i = 0; i < commandLineOptionCount; i++)
   {
-    if ((level == CMD_LEVEL_ALL) || (level >= commandLineOptions[i].level))
+    if ((helpLevel == CMD_HELP_LEVEL_ALL) || (helpLevel >= commandLineOptions[i].helpLevel))
     {
       n = 0;
 
@@ -983,7 +983,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
   /* output help */
   for (i = 0; i < commandLineOptionCount; i++)
   {
-    if ((level == CMD_LEVEL_ALL) || (level >= commandLineOptions[i].level))
+    if ((helpLevel == CMD_HELP_LEVEL_ALL) || (helpLevel >= commandLineOptions[i].helpLevel))
     {
       /* output prefix */
       if (i == 0)

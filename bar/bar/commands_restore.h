@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -33,23 +33,34 @@
 /* status info data */
 typedef struct
 {
-  ulong  doneFiles;                        // number of files processed
+  ulong  doneEntries;                      // number of entries processed
   uint64 doneBytes;                        // number of bytes processed
-  ulong  skippedFiles;                     // number of skipped files
+  ulong  skippedEntries;                   // number of skipped entries
   uint64 skippedBytes;                     // sum of skipped bytes
-  ulong  errorFiles;                       // number of files with errors
-  uint64 errorBytes;                       // sum of byste in files with errors
-  String fileName;                         // current file name
-  uint64 fileDoneBytes;                    // number of bytes processed of current file
-  uint64 fileTotalBytes;                   // total number of bytes of current file
+  ulong  errorEntries;                     // number of entries with errors
+  uint64 errorBytes;                       // sum of byste in entries with errors
+  String name;                             // current file name
+  uint64 entryDoneBytes;                   // number of bytes processed of current entry
+  uint64 entryTotalBytes;                  // total number of bytes of current entry
   String storageName;                      // current storage name
-  uint64 storageDoneBytes;                 // number of bytes processed of current storage
-  uint64 storageTotalBytes;                // total bytes of current storage
+  uint64 archiveDoneBytes;                 // number of bytes processed of current archive
+  uint64 archiveTotalBytes;                // total bytes of current archive
 } RestoreStatusInfo;
 
-typedef void(*RestoreStatusInfoFunction)(Errors                  error,
-                                         const RestoreStatusInfo *restoreStatusInfo,
-                                         void                    *userData
+/***********************************************************************\
+* Name   : RestoreStatusInfoFunction
+* Purpose: restore status info call-back
+* Input  : userData          - user data
+* @param   error             - error code
+* @param   restoreStatusInfo - restore status info
+* Output : -
+* Return : bool TRUE to continue, FALSE to abort
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*RestoreStatusInfoFunction)(void                    *userData,
+                                         Errors                  error,
+                                         const RestoreStatusInfo *restoreStatusInfo
                                         );
 
 /***************************** Variables *******************************/

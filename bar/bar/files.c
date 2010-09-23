@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -853,7 +853,7 @@ Errors File_openDirectoryList(DirectoryListHandle *directoryListHandle,
 }
 
 Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
-                                     const char      *pathName
+                                     const char          *pathName
                                     )
 {
   assert(directoryListHandle != NULL);

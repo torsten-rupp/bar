@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems : all
@@ -46,7 +46,7 @@
 /***********************************************************************\
 * Name   : Command_list
 * Purpose: list content of archive(s)
-* Input  : archiveFileNameList              - list with archive files
+* Input  : storageNameList                  - list with storage names
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
 *          jobOptions                       - job options
@@ -58,7 +58,7 @@
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_list(StringList                      *archiveFileNameList,
+Errors Command_list(StringList                      *storageNameList,
                     EntryList                       *includeEntryList,
                     PatternList                     *excludePatternList,
                     JobOptions                      *jobOptions,

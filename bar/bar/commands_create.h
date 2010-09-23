@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -34,27 +34,38 @@
 /* status info data */
 typedef struct
 {
-  ulong  doneFiles;                        // number of files processed
+  ulong  doneEntries;                      // number of enttries processed
   uint64 doneBytes;                        // number of bytes processed
-  ulong  totalFiles;                       // total number of files
+  ulong  totalEntries;                     // total number of enttries
   uint64 totalBytes;                       // total bytes
-  ulong  skippedFiles;                     // number of skipped files
+  ulong  skippedEntries;                   // number of skipped enttries
   uint64 skippedBytes;                     // sum of skipped bytes
-  ulong  errorFiles;                       // number of files with errors
-  uint64 errorBytes;                       // sum of byste in files with errors
+  ulong  errorEntries;                     // number of enttries with errors
+  uint64 errorBytes;                       // sum of byste in entries with errors
   uint64 archiveBytes;                     // number of bytes in stored in archive
   double compressionRatio;                 // compression ratio
-  String fileName;                         // current file name
-  uint64 fileDoneBytes;                    // number of bytes processed of current file
-  uint64 fileTotalBytes;                   // total number of bytes of current file
+  String name;                             // current name
+  uint64 entryDoneBytes;                   // number of bytes processed of current entry
+  uint64 entryTotalBytes;                  // total number of bytes of current entry
   String storageName;                      // current storage name
-  uint64 storageDoneBytes;                 // number of bytes processed of current storage
-  uint64 storageTotalBytes;                // total bytes of current storage
+  uint64 archiveDoneBytes;                 // number of bytes processed of current archive
+  uint64 archiveTotalBytes;                // total bytes of current archive
   uint   volumeNumber;                     // current volume number
   double volumeProgress;                   // current volume progress [0..100]
 } CreateStatusInfo;
 
-typedef void(*CreateStatusInfoFunction)(void                   *userData,
+/***********************************************************************\
+* Name   : CreateStatusInfoFunction
+* Purpose: create status info call-back
+* Input  : userData         - user data
+* @param   error            - error code
+* @param   createStatusInfo - create status info
+* Output : -
+* Return : bool TRUE to continue, FALSE to abort
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*CreateStatusInfoFunction)(void                   *userData,
                                         Errors                 error,
                                         const CreateStatusInfo *createStatusInfo
                                        );

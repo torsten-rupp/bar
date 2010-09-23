@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bitmaps.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Bitmap functions
 * Systems: all
@@ -14,6 +14,7 @@
 #include <assert.h>
 
 #include "global.h"
+
 #include "bitmaps.h"
 
 /****************** Conditional compilation switches *******************/

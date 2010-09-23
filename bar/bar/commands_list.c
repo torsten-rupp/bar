@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -59,12 +59,12 @@
 
 /***************************** Datatypes *******************************/
 
-/* archive entry node */
-typedef struct ArchiveEntryNode
+/* archive content node */
+typedef struct ArchiveContentNode
 {
-  LIST_NODE_HEADER(struct ArchiveEntryNode);
+  LIST_NODE_HEADER(struct ArchiveContentNode);
 
-  String            archiveFileName;
+  String            storageName;
   ArchiveEntryTypes type;
   union
   {
@@ -118,13 +118,13 @@ typedef struct ArchiveEntryNode
 
   String       name;
   SocketHandle socketHandle;
-} ArchiveEntryNode;
+} ArchiveContentNode;
 
-/* archive entry list */
+/* archive content list */
 typedef struct
 {
-  LIST_HEADER(ArchiveEntryNode);
-} ArchiveEntryList;
+  LIST_HEADER(ArchiveContentNode);
+} ArchiveContentList;
 
 // obsolete?
 typedef struct SSHSocketNode
@@ -141,7 +141,7 @@ typedef struct
 } SSHSocketList;
 
 /***************************** Variables *******************************/
-LOCAL ArchiveEntryList archiveEntryList;
+LOCAL ArchiveContentList archiveContentList;
 
 /****************************** Macros *********************************/
 
@@ -198,7 +198,7 @@ LOCAL const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printHeader(const String archiveFileName)
+LOCAL void printHeader(const String storageName)
 {
   const TextMacro MACROS[] =
   {
@@ -225,20 +225,20 @@ LOCAL void printHeader(const String archiveFileName)
   if (!globalOptions.noHeaderFooterFlag)
   {
     /* header */
-    if (archiveFileName != NULL)
+    if (storageName != NULL)
     {
-      printInfo(0,"List archive '%s':\n",String_cString(archiveFileName));
+      printInfo(0,"List storage '%s':\n",String_cString(storageName));
       printInfo(0,"\n");
     }
 
     /* title line */
     if (globalOptions.longFormatFlag)
     {
-      template = (archiveFileName != NULL) ? DEFAULT_FORMAT_TITLE_NORMAL_LONG : DEFAULT_FORMAT_TITLE_GROUP_LONG;
+      template = (storageName != NULL) ? DEFAULT_FORMAT_TITLE_NORMAL_LONG : DEFAULT_FORMAT_TITLE_GROUP_LONG;
     }
     else
     {
-      template = (archiveFileName != NULL) ? DEFAULT_FORMAT_TITLE_NORMAL : DEFAULT_FORMAT_TITLE_GROUP;
+      template = (storageName != NULL) ? DEFAULT_FORMAT_TITLE_NORMAL : DEFAULT_FORMAT_TITLE_GROUP;
     }
     Misc_expandMacros(String_clear(string),template,MACROS,SIZE_OF_ARRAY(MACROS));
     printInfo(0,"%s\n",String_cString(string));
@@ -270,7 +270,7 @@ LOCAL void printFooter(ulong fileCount)
 /***********************************************************************\
 * Name   : printFileInfo
 * Purpose: print file information
-* Input  : archiveFileName   - archive name or NULL if archive name
+* Input  : storageName       - storage name or NULL if storage name
 *                              should not be printed
 *          fileName          - file name
 *          fileSize          - file size [bytes]
@@ -285,7 +285,7 @@ LOCAL void printFooter(ulong fileCount)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printFileInfo(const String       archiveFileName,
+LOCAL void printFileInfo(const String       storageName,
                          const String       fileName,
                          uint64             size,
                          uint64             timeModified,
@@ -315,9 +315,9 @@ LOCAL void printFileInfo(const String       archiveFileName,
     ratio = 0;
   }
 
-  if (archiveFileName != NULL)
+  if (storageName != NULL)
   {
-    printf("%-20s ",String_cString(archiveFileName));
+    printf("%-20s ",String_cString(storageName));
   }
   printf("FILE  ");
   if (globalOptions.humanFormatFlag)
@@ -356,7 +356,7 @@ LOCAL void printFileInfo(const String       archiveFileName,
 /***********************************************************************\
 * Name   : printImageInfo
 * Purpose: print image information
-* Input  : archiveFileName   - archive name or NULL if archive name
+* Input  : storageName       - storage name or NULL if storage name
 *                              should not be printed
 *          iamgeName         - image name
 *          size              - image size [bytes]
@@ -372,7 +372,7 @@ LOCAL void printFileInfo(const String       archiveFileName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printImageInfo(const String       archiveFileName,
+LOCAL void printImageInfo(const String       storageName,
                           const String       imageName,
                           uint64             size,
                           uint64             archiveSize,
@@ -399,9 +399,9 @@ LOCAL void printImageInfo(const String       archiveFileName,
     ratio = 0;
   }
 
-  if (archiveFileName != NULL)
+  if (storageName != NULL)
   {
-    printf("%-20s ",String_cString(archiveFileName));
+    printf("%-20s ",String_cString(storageName));
   }
   printf("IMAGE ");
   if (globalOptions.humanFormatFlag)
@@ -436,7 +436,7 @@ LOCAL void printImageInfo(const String       archiveFileName,
 /***********************************************************************\
 * Name   : printDirectoryInfo
 * Purpose: print directory information
-* Input  : archiveFileName - archive name or NULL if archive name should
+* Input  : storageName     - storage name or NULL if storage name should
 *                            not be printed
 *          directoryName   - directory name
 *          cryptAlgorithm  - used crypt algorithm
@@ -446,7 +446,7 @@ LOCAL void printImageInfo(const String       archiveFileName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printDirectoryInfo(const String    archiveFileName,
+LOCAL void printDirectoryInfo(const String    storageName,
                               const String    directoryName,
                               CryptAlgorithms cryptAlgorithm,
                               CryptTypes      cryptType
@@ -456,9 +456,9 @@ LOCAL void printDirectoryInfo(const String    archiveFileName,
 
   assert(directoryName != NULL);
 
-  if (archiveFileName != NULL)
+  if (storageName != NULL)
   {
-    printf("%-30s ",String_cString(archiveFileName));
+    printf("%-30s ",String_cString(storageName));
   }
   if (globalOptions.longFormatFlag)
   {
@@ -480,7 +480,7 @@ LOCAL void printDirectoryInfo(const String    archiveFileName,
 /***********************************************************************\
 * Name   : printLinkInfo
 * Purpose: print link information
-* Input  : archiveFileName - archive name or NULL if archive name should
+* Input  : storageName     - storage name or NULL if storage name should
 *                            not be printed
 *          linkName        - link name
 *          destinationName - name of referenced file
@@ -491,7 +491,7 @@ LOCAL void printDirectoryInfo(const String    archiveFileName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printLinkInfo(const String    archiveFileName,
+LOCAL void printLinkInfo(const String    storageName,
                          const String    linkName,
                          const String    destinationName,
                          CryptAlgorithms cryptAlgorithm,
@@ -503,9 +503,9 @@ LOCAL void printLinkInfo(const String    archiveFileName,
   assert(linkName != NULL);
   assert(destinationName != NULL);
 
-  if (archiveFileName != NULL)
+  if (storageName != NULL)
   {
-    printf("%-30s ",String_cString(archiveFileName));
+    printf("%-30s ",String_cString(storageName));
   }
   if (globalOptions.longFormatFlag)
   {
@@ -529,7 +529,7 @@ LOCAL void printLinkInfo(const String    archiveFileName,
 /***********************************************************************\
 * Name   : printSpecialInfo
 * Purpose: print special information
-* Input  : archiveFileName - archive name or NULL if archive name should
+* Input  : storageName     - storage name or NULL if storage name should
 *                            not be printed
 *          fileName        - file name
 *          cryptAlgorithm  - used crypt algorithm
@@ -542,7 +542,7 @@ LOCAL void printLinkInfo(const String    archiveFileName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printSpecialInfo(const String     archiveFileName,
+LOCAL void printSpecialInfo(const String     storageName,
                             const String     fileName,
                             CryptAlgorithms  cryptAlgorithm,
                             CryptTypes       cryptType,
@@ -555,9 +555,9 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
 
   assert(fileName != NULL);
 
-  if (archiveFileName != NULL)
+  if (storageName != NULL)
   {
-    printf("%-30s ",String_cString(archiveFileName));
+    printf("%-30s ",String_cString(storageName));
   }
   switch (fileSpecialType)
   {
@@ -644,7 +644,8 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
 /***********************************************************************\
 * Name   : addListFileInfo
 * Purpose: add file info to archive entry list
-* Input  : fileName          - file name
+* Input  : storageName       - storage name
+*          fileName          - file name
 *          fileSize          - file size [bytes]
 *          archiveSize       - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
@@ -657,7 +658,7 @@ LOCAL void printSpecialInfo(const String     archiveFileName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListFileInfo(const String       archiveFileName,
+LOCAL void addListFileInfo(const String       storageName,
                            const String       fileName,
                            uint64             size,
                            uint64             timeModified,
@@ -669,37 +670,38 @@ LOCAL void addListFileInfo(const String       archiveFileName,
                            uint64             fragmentSize
                           )
 {
-  ArchiveEntryNode *archiveEntryNode;
+  ArchiveContentNode *archiveContentNode;
 
   /* allocate node */
-  archiveEntryNode = LIST_NEW_NODE(ArchiveEntryNode);
-  if (archiveEntryNode == NULL)
+  archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
+  if (archiveContentNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
   /* init node */
-  archiveEntryNode->archiveFileName        = String_duplicate(archiveFileName);
-  archiveEntryNode->type                   = ARCHIVE_ENTRY_TYPE_FILE;
-  archiveEntryNode->file.fileName          = String_duplicate(fileName);
-  archiveEntryNode->file.size              = size;
-  archiveEntryNode->file.timeModified      = timeModified;
-  archiveEntryNode->file.archiveSize       = archiveSize;
-  archiveEntryNode->file.compressAlgorithm = compressAlgorithm;
-  archiveEntryNode->file.cryptAlgorithm    = cryptAlgorithm;
-  archiveEntryNode->file.cryptType         = cryptType;
-  archiveEntryNode->file.fragmentOffset    = fragmentOffset;
-  archiveEntryNode->file.fragmentSize      = fragmentSize;
+  archiveContentNode->storageName            = String_duplicate(storageName);
+  archiveContentNode->type                   = ARCHIVE_ENTRY_TYPE_FILE;
+  archiveContentNode->file.fileName          = String_duplicate(fileName);
+  archiveContentNode->file.size              = size;
+  archiveContentNode->file.timeModified      = timeModified;
+  archiveContentNode->file.archiveSize       = archiveSize;
+  archiveContentNode->file.compressAlgorithm = compressAlgorithm;
+  archiveContentNode->file.cryptAlgorithm    = cryptAlgorithm;
+  archiveContentNode->file.cryptType         = cryptType;
+  archiveContentNode->file.fragmentOffset    = fragmentOffset;
+  archiveContentNode->file.fragmentSize      = fragmentSize;
 
   /* append to list */
-  List_append(&archiveEntryList,archiveEntryNode);
+  List_append(&archiveContentList,archiveContentNode);
 }
 
 /***********************************************************************\
 * Name   : addListImageInfo
 * Purpose: add image info to archive entry list
-* Input  : imageName         - image name
-*          size              - iamge size [bytes]
+* Input  : storageName       - storage name
+*          imageName         - image name
+*          size              - image size [bytes]
 *          archiveSize       - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
 *          cryptAlgorithm    - used crypt algorithm
@@ -712,7 +714,7 @@ LOCAL void addListFileInfo(const String       archiveFileName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListImageInfo(const String       archiveFileName,
+LOCAL void addListImageInfo(const String       storageName,
                             const String       imageName,
                             uint64             size,
                             uint64             archiveSize,
@@ -724,114 +726,126 @@ LOCAL void addListImageInfo(const String       archiveFileName,
                             uint64             blockCount
                            )
 {
-  ArchiveEntryNode *archiveEntryNode;
+  ArchiveContentNode *archiveContentNode;
 
   /* allocate node */
-  archiveEntryNode = LIST_NEW_NODE(ArchiveEntryNode);
-  if (archiveEntryNode == NULL)
+  archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
+  if (archiveContentNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
   /* init node */
-  archiveEntryNode->archiveFileName         = String_duplicate(archiveFileName);
-  archiveEntryNode->type                    = ARCHIVE_ENTRY_TYPE_IMAGE;
-  archiveEntryNode->image.imageName         = String_duplicate(imageName);
-  archiveEntryNode->image.size              = size;
-  archiveEntryNode->image.archiveSize       = archiveSize;
-  archiveEntryNode->image.compressAlgorithm = compressAlgorithm;
-  archiveEntryNode->image.cryptAlgorithm    = cryptAlgorithm;
-  archiveEntryNode->image.cryptType         = cryptType;
-  archiveEntryNode->image.blockSize         = blockSize;
-  archiveEntryNode->image.blockOffset       = blockOffset;
-  archiveEntryNode->image.blockCount        = blockCount;
+  archiveContentNode->storageName             = String_duplicate(storageName);
+  archiveContentNode->type                    = ARCHIVE_ENTRY_TYPE_IMAGE;
+  archiveContentNode->image.imageName         = String_duplicate(imageName);
+  archiveContentNode->image.size              = size;
+  archiveContentNode->image.archiveSize       = archiveSize;
+  archiveContentNode->image.compressAlgorithm = compressAlgorithm;
+  archiveContentNode->image.cryptAlgorithm    = cryptAlgorithm;
+  archiveContentNode->image.cryptType         = cryptType;
+  archiveContentNode->image.blockSize         = blockSize;
+  archiveContentNode->image.blockOffset       = blockOffset;
+  archiveContentNode->image.blockCount        = blockCount;
 
   /* append to list */
-  List_append(&archiveEntryList,archiveEntryNode);
+  List_append(&archiveContentList,archiveContentNode);
 }
 
 /***********************************************************************\
 * Name   : addListDirectoryInfo
 * Purpose: add directory info to archive entry list
-* Input  : -
+* Input  : storageName    - storage name
+*          directoryName  - directory name
+*          cryptAlgorithm - used crypt algorithm
+*          cryptType      - crypt type; see CRYPT_TYPES
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListDirectoryInfo(const String    archiveFileName,
+LOCAL void addListDirectoryInfo(const String    storageName,
                                 const String    directoryName,
                                 CryptAlgorithms cryptAlgorithm,
                                 CryptTypes      cryptType
                                )
 {
-  ArchiveEntryNode *archiveEntryNode;
+  ArchiveContentNode *archiveContentNode;
 
   /* allocate node */
-  archiveEntryNode = LIST_NEW_NODE(ArchiveEntryNode);
-  if (archiveEntryNode == NULL)
+  archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
+  if (archiveContentNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
   /* init node */
-  archiveEntryNode->archiveFileName          = String_duplicate(archiveFileName);
-  archiveEntryNode->type                     = ARCHIVE_ENTRY_TYPE_DIRECTORY;
-  archiveEntryNode->directory.directoryName  = String_duplicate(directoryName);
-  archiveEntryNode->directory.cryptAlgorithm = cryptAlgorithm;
-  archiveEntryNode->directory.cryptType      = cryptType;
+  archiveContentNode->storageName              = String_duplicate(storageName);
+  archiveContentNode->type                     = ARCHIVE_ENTRY_TYPE_DIRECTORY;
+  archiveContentNode->directory.directoryName  = String_duplicate(directoryName);
+  archiveContentNode->directory.cryptAlgorithm = cryptAlgorithm;
+  archiveContentNode->directory.cryptType      = cryptType;
 
   /* append to list */
-  List_append(&archiveEntryList,archiveEntryNode);
+  List_append(&archiveContentList,archiveContentNode);
 }
 
 /***********************************************************************\
 * Name   : addListLinkInfo
 * Purpose: add link info to archive entry list
-* Input  : -
+* Input  : storageName     - storage name
+*          linkName        - link name
+*          destinationName - destination name
+*          cryptAlgorithm  - used crypt algorithm
+*          cryptType       - crypt type; see CRYPT_TYPES
+*          blockSize       - block size
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListLinkInfo(const String    archiveFileName,
+LOCAL void addListLinkInfo(const String    storageName,
                            const String    linkName,
                            const String    destinationName,
                            CryptAlgorithms cryptAlgorithm,
                            CryptTypes      cryptType
                           )
 {
-  ArchiveEntryNode *archiveEntryNode;
+  ArchiveContentNode *archiveContentNode;
 
   /* allocate node */
-  archiveEntryNode = LIST_NEW_NODE(ArchiveEntryNode);
-  if (archiveEntryNode == NULL)
+  archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
+  if (archiveContentNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
   /* init node */
-  archiveEntryNode->archiveFileName      = String_duplicate(archiveFileName);
-  archiveEntryNode->type                 = ARCHIVE_ENTRY_TYPE_LINK;
-  archiveEntryNode->link.linkName        = String_duplicate(linkName);
-  archiveEntryNode->link.destinationName = String_duplicate(destinationName);
-  archiveEntryNode->link.cryptAlgorithm  = cryptAlgorithm;
-  archiveEntryNode->link.cryptType       = cryptType;
+  archiveContentNode->storageName          = String_duplicate(storageName);
+  archiveContentNode->type                 = ARCHIVE_ENTRY_TYPE_LINK;
+  archiveContentNode->link.linkName        = String_duplicate(linkName);
+  archiveContentNode->link.destinationName = String_duplicate(destinationName);
+  archiveContentNode->link.cryptAlgorithm  = cryptAlgorithm;
+  archiveContentNode->link.cryptType       = cryptType;
 
   /* append to list */
-  List_append(&archiveEntryList,archiveEntryNode);
+  List_append(&archiveContentList,archiveContentNode);
 }
 
 /***********************************************************************\
 * Name   : addListSpecialInfo
 * Purpose: add special info to archive entry list
-* Input  : -
+* Input  : storageName      - storage name
+*          cryptAlgorithm   - used crypt algorithm
+*          cryptType        - crypt type; see CRYPT_TYPES
+*          FileSpecialTypes - special type
+*          major,minor      - special major/minor number
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListSpecialInfo(const String     archiveFileName,
+LOCAL void addListSpecialInfo(const String     storageName,
                               const String     fileName,
                               CryptAlgorithms  cryptAlgorithm,
                               CryptTypes       cryptType,
@@ -840,58 +854,60 @@ LOCAL void addListSpecialInfo(const String     archiveFileName,
                               ulong            minor
                              )
 {
-  ArchiveEntryNode *archiveEntryNode;
+  ArchiveContentNode *archiveContentNode;
 
   /* allocate node */
-  archiveEntryNode = LIST_NEW_NODE(ArchiveEntryNode);
-  if (archiveEntryNode == NULL)
+  archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
+  if (archiveContentNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
   /* init node */
-  archiveEntryNode->archiveFileName         = String_duplicate(archiveFileName);
-  archiveEntryNode->type                    = ARCHIVE_ENTRY_TYPE_SPECIAL;
-  archiveEntryNode->special.fileName        = String_duplicate(fileName);
-  archiveEntryNode->special.cryptAlgorithm  = cryptAlgorithm;
-  archiveEntryNode->special.cryptType       = cryptType;
-  archiveEntryNode->special.fileSpecialType = fileSpecialType;
-  archiveEntryNode->special.major           = major;
-  archiveEntryNode->special.minor           = minor;
+  archiveContentNode->storageName             = String_duplicate(storageName);
+  archiveContentNode->type                    = ARCHIVE_ENTRY_TYPE_SPECIAL;
+  archiveContentNode->special.fileName        = String_duplicate(fileName);
+  archiveContentNode->special.cryptAlgorithm  = cryptAlgorithm;
+  archiveContentNode->special.cryptType       = cryptType;
+  archiveContentNode->special.fileSpecialType = fileSpecialType;
+  archiveContentNode->special.major           = major;
+  archiveContentNode->special.minor           = minor;
 
   /* append to list */
-  List_append(&archiveEntryList,archiveEntryNode);
+  List_append(&archiveContentList,archiveContentNode);
 }
 
 /***********************************************************************\
-* Name   : freeArchiveEntryNode
+* Name   : freeArchiveContentNode
 * Purpose: free archive entry node
-* Input  : archiveEntryNode - node to free
+* Input  : archiveContentNode - node to free
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeArchiveEntryNode(ArchiveEntryNode *archiveEntryNode)
+LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *userData)
 {
-  assert(archiveEntryNode != NULL);
+  assert(archiveContentNode != NULL);
 
-  switch (archiveEntryNode->type)
+  UNUSED_VARIABLE(userData);
+
+  switch (archiveContentNode->type)
   {
     case ARCHIVE_ENTRY_TYPE_NONE:
       break;
     case ARCHIVE_ENTRY_TYPE_FILE:
-      String_delete(archiveEntryNode->file.fileName);
+      String_delete(archiveContentNode->file.fileName);
       break;
     case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-      String_delete(archiveEntryNode->directory.directoryName);
+      String_delete(archiveContentNode->directory.directoryName);
       break;
     case ARCHIVE_ENTRY_TYPE_LINK:
-      String_delete(archiveEntryNode->link.destinationName);
-      String_delete(archiveEntryNode->link.linkName);
+      String_delete(archiveContentNode->link.destinationName);
+      String_delete(archiveContentNode->link.linkName);
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      String_delete(archiveEntryNode->special.fileName);
+      String_delete(archiveContentNode->special.fileName);
       break;
     default:
       #ifndef NDEBUG
@@ -899,13 +915,13 @@ LOCAL void freeArchiveEntryNode(ArchiveEntryNode *archiveEntryNode)
       #endif /* NDEBUG */
       break; /* not reached */
   }
-  String_delete(archiveEntryNode->archiveFileName);
+  String_delete(archiveContentNode->storageName);
 }
 
 /***********************************************************************\
-* Name   : compareArchiveEntryNode
-* Purpose: compare archive entries
-* Input  : archiveEntryNode1,archiveEntryNode2 - nodes to compare
+* Name   : compareArchiveContentNode
+* Purpose: compare archive content entries
+* Input  : archiveContentNode1,archiveContentNode2 - nodes to compare
 * Output : -
 * Return : -1 iff name1 < name2 or
 *                 name1 == name2 && timeModified1 < timeModified2
@@ -915,13 +931,13 @@ LOCAL void freeArchiveEntryNode(ArchiveEntryNode *archiveEntryNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int compareArchiveEntryNode(ArchiveEntryNode *archiveEntryNode1, ArchiveEntryNode *archiveEntryNode2, void *dummy)
+LOCAL int compareArchiveContentNode(ArchiveContentNode *archiveContentNode1, ArchiveContentNode *archiveContentNode2, void *dummy)
 {
   String name1,name2;
   uint64 modifiedTime1,modifiedTime2;
 
-  assert(archiveEntryNode1 != NULL);
-  assert(archiveEntryNode2 != NULL);
+  assert(archiveContentNode1 != NULL);
+  assert(archiveContentNode2 != NULL);
 
   UNUSED_VARIABLE(dummy);
 
@@ -930,22 +946,22 @@ LOCAL int compareArchiveEntryNode(ArchiveEntryNode *archiveEntryNode1, ArchiveEn
   modifiedTime1 = 0LL;
   name2         = NULL;
   modifiedTime2 = 0LL;
-  switch (archiveEntryNode1->type)
+  switch (archiveContentNode1->type)
   {
     case ARCHIVE_ENTRY_TYPE_FILE:
-      name1         = archiveEntryNode1->file.fileName;
-      modifiedTime1 = archiveEntryNode1->file.timeModified;
+      name1         = archiveContentNode1->file.fileName;
+      modifiedTime1 = archiveContentNode1->file.timeModified;
       break;
     case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-      name1         = archiveEntryNode1->directory.directoryName;
+      name1         = archiveContentNode1->directory.directoryName;
       modifiedTime1 = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_LINK:
-      name1         = archiveEntryNode1->link.linkName;
+      name1         = archiveContentNode1->link.linkName;
       modifiedTime1 = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      name1         = archiveEntryNode1->special.fileName;
+      name1         = archiveContentNode1->special.fileName;
       modifiedTime1 = 0LL;
       break;
     default:
@@ -954,22 +970,22 @@ LOCAL int compareArchiveEntryNode(ArchiveEntryNode *archiveEntryNode1, ArchiveEn
       #endif /* NDEBUG */
       break; /* not reached */
   }
-  switch (archiveEntryNode2->type)
+  switch (archiveContentNode2->type)
   {
     case ARCHIVE_ENTRY_TYPE_FILE:
-      name2         = archiveEntryNode2->file.fileName;
-      modifiedTime2 = archiveEntryNode2->file.timeModified;
+      name2         = archiveContentNode2->file.fileName;
+      modifiedTime2 = archiveContentNode2->file.timeModified;
       break;
     case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-      name2         = archiveEntryNode2->directory.directoryName;
+      name2         = archiveContentNode2->directory.directoryName;
       modifiedTime2 = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_LINK:
-      name2         = archiveEntryNode2->link.linkName;
+      name2         = archiveContentNode2->link.linkName;
       modifiedTime2 = 0LL;
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      name2         = archiveEntryNode2->special.fileName;
+      name2         = archiveContentNode2->special.fileName;
       modifiedTime2 = 0LL;
       break;
     default:
@@ -1009,114 +1025,114 @@ LOCAL int compareArchiveEntryNode(ArchiveEntryNode *archiveEntryNode1, ArchiveEn
 
 LOCAL void printList(void)
 {
-  ArchiveEntryNode  *archiveEntryNode;
-  ArchiveEntryTypes prevArchiveEntryType;
-  String            prevArchiveName;
+  ArchiveContentNode *archiveContentNode;
+  ArchiveEntryTypes  prevArchiveEntryType;
+  String             prevArchiveName;
 
   /* sort list */
-  List_sort(&archiveEntryList,
-            (ListNodeCompareFunction)compareArchiveEntryNode,
+  List_sort(&archiveContentList,
+            (ListNodeCompareFunction)compareArchiveContentNode,
             NULL
            );
 
   /* output list */
   prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_NONE;
   prevArchiveName      = NULL;
-  archiveEntryNode = archiveEntryList.head;
-  while (archiveEntryNode != NULL)
+  archiveContentNode   = archiveContentList.head;
+  while (archiveContentNode != NULL)
   {
     /* output */
-    switch (archiveEntryNode->type)
+    switch (archiveContentNode->type)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
         if (   globalOptions.allFlag
             || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_FILE)
-            || !String_equals(prevArchiveName,archiveEntryNode->file.fileName)
+            || !String_equals(prevArchiveName,archiveContentNode->file.fileName)
            )
         {
-          printFileInfo(archiveEntryNode->archiveFileName,
-                        archiveEntryNode->file.fileName,
-                        archiveEntryNode->file.size,
-                        archiveEntryNode->file.timeModified,
-                        archiveEntryNode->file.archiveSize,
-                        archiveEntryNode->file.compressAlgorithm,
-                        archiveEntryNode->file.cryptAlgorithm,
-                        archiveEntryNode->file.cryptType,
-                        archiveEntryNode->file.fragmentOffset,
-                        archiveEntryNode->file.fragmentSize
+          printFileInfo(archiveContentNode->storageName,
+                        archiveContentNode->file.fileName,
+                        archiveContentNode->file.size,
+                        archiveContentNode->file.timeModified,
+                        archiveContentNode->file.archiveSize,
+                        archiveContentNode->file.compressAlgorithm,
+                        archiveContentNode->file.cryptAlgorithm,
+                        archiveContentNode->file.cryptType,
+                        archiveContentNode->file.fragmentOffset,
+                        archiveContentNode->file.fragmentSize
                        );
           prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_FILE;
-          prevArchiveName      = archiveEntryNode->file.fileName;
+          prevArchiveName      = archiveContentNode->file.fileName;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
         if (   globalOptions.allFlag
             || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_IMAGE)
-            || !String_equals(prevArchiveName,archiveEntryNode->image.imageName)
+            || !String_equals(prevArchiveName,archiveContentNode->image.imageName)
            )
         {
-          printImageInfo(archiveEntryNode->archiveFileName,
-                         archiveEntryNode->image.imageName,
-                         archiveEntryNode->image.size,
-                         archiveEntryNode->image.archiveSize,
-                         archiveEntryNode->image.compressAlgorithm,
-                         archiveEntryNode->image.cryptAlgorithm,
-                         archiveEntryNode->image.cryptType,
-                         archiveEntryNode->image.blockSize,
-                         archiveEntryNode->image.blockOffset,
-                         archiveEntryNode->image.blockCount
+          printImageInfo(archiveContentNode->storageName,
+                         archiveContentNode->image.imageName,
+                         archiveContentNode->image.size,
+                         archiveContentNode->image.archiveSize,
+                         archiveContentNode->image.compressAlgorithm,
+                         archiveContentNode->image.cryptAlgorithm,
+                         archiveContentNode->image.cryptType,
+                         archiveContentNode->image.blockSize,
+                         archiveContentNode->image.blockOffset,
+                         archiveContentNode->image.blockCount
                         );
           prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_IMAGE;
-          prevArchiveName      = archiveEntryNode->image.imageName;
+          prevArchiveName      = archiveContentNode->image.imageName;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         if (   globalOptions.allFlag
             || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_DIRECTORY)
-            || !String_equals(prevArchiveName,archiveEntryNode->file.fileName)
+            || !String_equals(prevArchiveName,archiveContentNode->file.fileName)
            )
         {
-          printDirectoryInfo(archiveEntryNode->archiveFileName,
-                             archiveEntryNode->directory.directoryName,
-                             archiveEntryNode->directory.cryptAlgorithm,
-                             archiveEntryNode->directory.cryptType
+          printDirectoryInfo(archiveContentNode->storageName,
+                             archiveContentNode->directory.directoryName,
+                             archiveContentNode->directory.cryptAlgorithm,
+                             archiveContentNode->directory.cryptType
                             );
           prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
-          prevArchiveName      = archiveEntryNode->directory.directoryName;
+          prevArchiveName      = archiveContentNode->directory.directoryName;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
         if (   globalOptions.allFlag
             || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_LINK)
-            || !String_equals(prevArchiveName,archiveEntryNode->file.fileName)
+            || !String_equals(prevArchiveName,archiveContentNode->file.fileName)
            )
         {
-          printLinkInfo(archiveEntryNode->archiveFileName,
-                        archiveEntryNode->link.linkName,
-                        archiveEntryNode->link.destinationName,
-                        archiveEntryNode->link.cryptAlgorithm,
-                        archiveEntryNode->link.cryptType
+          printLinkInfo(archiveContentNode->storageName,
+                        archiveContentNode->link.linkName,
+                        archiveContentNode->link.destinationName,
+                        archiveContentNode->link.cryptAlgorithm,
+                        archiveContentNode->link.cryptType
                        );
           prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
-          prevArchiveName      = archiveEntryNode->link.linkName;
+          prevArchiveName      = archiveContentNode->link.linkName;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         if (   globalOptions.allFlag
             || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_SPECIAL)
-            || !String_equals(prevArchiveName,archiveEntryNode->file.fileName)
+            || !String_equals(prevArchiveName,archiveContentNode->file.fileName)
            )
         {
-          printSpecialInfo(archiveEntryNode->archiveFileName,
-                           archiveEntryNode->special.fileName,
-                           archiveEntryNode->special.cryptAlgorithm,
-                           archiveEntryNode->special.cryptType,
-                           archiveEntryNode->special.fileSpecialType,
-                           archiveEntryNode->special.major,
-                           archiveEntryNode->special.minor
+          printSpecialInfo(archiveContentNode->storageName,
+                           archiveContentNode->special.fileName,
+                           archiveContentNode->special.cryptAlgorithm,
+                           archiveContentNode->special.cryptType,
+                           archiveContentNode->special.fileSpecialType,
+                           archiveContentNode->special.major,
+                           archiveContentNode->special.minor
                           );
           prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
-          prevArchiveName      = archiveEntryNode->special.fileName;
+          prevArchiveName      = archiveContentNode->special.fileName;
         }
         break;
       default:
@@ -1127,13 +1143,13 @@ LOCAL void printList(void)
     }
 
     /* next entry */
-    archiveEntryNode = archiveEntryNode->next;
+    archiveContentNode = archiveContentNode->next;
   }
 }
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_list(StringList                      *archiveFileNameList,
+Errors Command_list(StringList                      *storageNameList,
                     EntryList                       *includeEntryList,
                     PatternList                     *excludePatternList,
                     JobOptions                      *jobOptions,
@@ -1141,8 +1157,9 @@ Errors Command_list(StringList                      *archiveFileNameList,
                     void                            *archiveGetCryptPasswordUserData
                    )
 {
-  String       archiveFileName;
+  String       storageName;
   String       storageSpecifier;
+  String       archiveFileName;
   bool         printedInfoFlag;
   ulong        fileCount;
   Errors       failError;
@@ -1152,7 +1169,7 @@ bool         remoteBarFlag;
 //  SSHSocketNode *sshSocketNode;
   SocketHandle socketHandle;
 
-  assert(archiveFileNameList != NULL);
+  assert(storageNameList != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
@@ -1160,19 +1177,21 @@ bool         remoteBarFlag;
 remoteBarFlag=FALSE;
 
   /* init variables */
-  List_init(&archiveEntryList);
-  archiveFileName  = String_new();
+  List_init(&archiveContentList);
+  storageName      = String_new();
   storageSpecifier = String_new();
+  archiveFileName  = String_new();
 
   /* list archive content */
   failError = ERROR_NONE;
-  while (!StringList_empty(archiveFileNameList))
+  while (!StringList_empty(storageNameList))
   {
-    StringList_getFirst(archiveFileNameList,archiveFileName);
+    StringList_getFirst(storageNameList,storageName);
     printedInfoFlag = FALSE;
     fileCount       = 0;
 
-    switch (Storage_getType(archiveFileName,storageSpecifier))
+//??? NULL,NULL
+    switch (Storage_parseName(storageName,storageSpecifier,archiveFileName))
     {
       case STORAGE_TYPE_FILESYSTEM:
       case STORAGE_TYPE_FTP:
@@ -1185,15 +1204,15 @@ remoteBarFlag=FALSE;
 
           /* open archive */
           error = Archive_open(&archiveInfo,
-                               archiveFileName,
+                               storageName,
                                jobOptions,
                                archiveGetCryptPasswordFunction,
                                archiveGetCryptPasswordUserData
                               );
           if (error != ERROR_NONE)
           {
-            printError("Cannot open file '%s' (error: %s)!\n",
-                       String_cString(archiveFileName),
+            printError("Cannot open storage '%s' (error: %s)!\n",
+                       String_cString(storageName),
                        Errors_getText(error)
                       );
             if (failError == ERROR_NONE) failError = error;
@@ -1207,13 +1226,12 @@ remoteBarFlag=FALSE;
           {
             /* get next archive entry type */
             error = Archive_getNextArchiveEntryType(&archiveInfo,
-                                                    &archiveFileInfo,
                                                     &archiveEntryType
                                                    );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+              printError("Cannot not read next entry from storage '%s' (error: %s)!\n",
+                         String_cString(storageName),
                          Errors_getText(error)
                         );
               if (failError == ERROR_NONE) failError = error;
@@ -1246,8 +1264,8 @@ remoteBarFlag=FALSE;
                                                );
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read 'file' content of archive '%s' (error: %s)!\n",
-                               String_cString(archiveFileName),
+                    printError("Cannot not read 'file' content from storage '%s' (error: %s)!\n",
+                               String_cString(storageName),
                                Errors_getText(error)
                               );
                     String_delete(fileName);
@@ -1262,7 +1280,7 @@ remoteBarFlag=FALSE;
                     if (globalOptions.groupFlag)
                     {
                       /* add file info to list */
-                      addListFileInfo(archiveFileName,
+                      addListFileInfo(storageName,
                                       fileName,
                                       fileInfo.size,
                                       fileInfo.timeModified,
@@ -1278,7 +1296,7 @@ remoteBarFlag=FALSE;
                     {
                       if (!printedInfoFlag)
                       {
-                        printHeader(archiveFileName);
+                        printHeader(storageName);
                         printedInfoFlag = TRUE;
                       }
 
@@ -1327,8 +1345,8 @@ remoteBarFlag=FALSE;
                                                 );
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read 'image' content of archive '%s' (error: %s)!\n",
-                               String_cString(archiveFileName),
+                    printError("Cannot not read 'image' content from storage '%s' (error: %s)!\n",
+                               String_cString(storageName),
                                Errors_getText(error)
                               );
                     String_delete(imageName);
@@ -1343,7 +1361,7 @@ remoteBarFlag=FALSE;
                     if (globalOptions.groupFlag)
                     {
                       /* add image info to list */
-                      addListImageInfo(archiveFileName,
+                      addListImageInfo(storageName,
                                        imageName,
                                        deviceInfo.size,
                                        archiveFileInfo.image.chunkInfoImageData.size,
@@ -1359,7 +1377,7 @@ remoteBarFlag=FALSE;
                     {
                       if (!printedInfoFlag)
                       {
-                        printHeader(archiveFileName);
+                        printHeader(storageName);
                         printedInfoFlag = TRUE;
                       }
 
@@ -1402,8 +1420,8 @@ remoteBarFlag=FALSE;
                                                     );
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read 'directory' content of archive '%s' (error: %s)!\n",
-                               String_cString(archiveFileName),
+                    printError("Cannot not read 'directory' content from storage '%s' (error: %s)!\n",
+                               String_cString(storageName),
                                Errors_getText(error)
                               );
                     String_delete(directoryName);
@@ -1418,7 +1436,7 @@ remoteBarFlag=FALSE;
                     if (globalOptions.groupFlag)
                     {
                       /* add directory info to list */
-                      addListDirectoryInfo(archiveFileName,
+                      addListDirectoryInfo(storageName,
                                            directoryName,
                                            cryptAlgorithm,
                                            cryptType
@@ -1428,7 +1446,7 @@ remoteBarFlag=FALSE;
                     {
                       if (!printedInfoFlag)
                       {
-                        printHeader(archiveFileName);
+                        printHeader(storageName);
                         printedInfoFlag = TRUE;
                       }
 
@@ -1468,8 +1486,8 @@ remoteBarFlag=FALSE;
                                                );
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read 'link' content of archive '%s' (error: %s)!\n",
-                               String_cString(archiveFileName),
+                    printError("Cannot not read 'link' content from storage '%s' (error: %s)!\n",
+                               String_cString(storageName),
                                Errors_getText(error)
                               );
                     String_delete(fileName);
@@ -1485,7 +1503,7 @@ remoteBarFlag=FALSE;
                     if (globalOptions.groupFlag)
                     {
                       /* add link info to list */
-                      addListLinkInfo(archiveFileName,
+                      addListLinkInfo(storageName,
                                       linkName,
                                       fileName,
                                       cryptAlgorithm,
@@ -1496,7 +1514,7 @@ remoteBarFlag=FALSE;
                     {
                       if (!printedInfoFlag)
                       {
-                        printHeader(archiveFileName);
+                        printHeader(storageName);
                         printedInfoFlag = TRUE;
                       }
 
@@ -1535,8 +1553,8 @@ remoteBarFlag=FALSE;
                                                   );
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read 'special' content of archive '%s' (error: %s)!\n",
-                               String_cString(archiveFileName),
+                    printError("Cannot not read 'special' content from storage '%s' (error: %s)!\n",
+                               String_cString(storageName),
                                Errors_getText(error)
                               );
                     String_delete(fileName);
@@ -1551,7 +1569,7 @@ remoteBarFlag=FALSE;
                     if (globalOptions.groupFlag)
                     {
                       /* add special info to list */
-                      addListSpecialInfo(archiveFileName,
+                      addListSpecialInfo(storageName,
                                          fileName,
                                          cryptAlgorithm,
                                          cryptType,
@@ -1564,7 +1582,7 @@ remoteBarFlag=FALSE;
                     {
                       if (!printedInfoFlag)
                       {
-                        printHeader(archiveFileName);
+                        printHeader(storageName);
                         printedInfoFlag = TRUE;
                       }
 
@@ -1604,7 +1622,6 @@ remoteBarFlag=FALSE;
           String               loginName;
           String               hostName;
           uint                 hostPort;
-          String               archiveFileName;
           SSHServer            sshServer;
           NetworkExecuteHandle networkExecuteHandle;
           String               line;
@@ -1629,16 +1646,13 @@ remoteBarFlag=FALSE;
           loginName       = String_new();
           hostName        = String_new();
           hostPort        = 0;
-          archiveFileName = String_new();
           if (!Storage_parseSSHSpecifier(storageSpecifier,
                                          loginName,
                                          hostName,
-                                         &hostPort,
-                                         archiveFileName
+                                         &hostPort
                                         )
              )
           {
-            String_delete(archiveFileName);
             String_delete(hostName);
             String_delete(loginName);
             printError("Cannot not parse storage name '%s'!\n",
@@ -1651,7 +1665,7 @@ remoteBarFlag=FALSE;
           /* start remote BAR via SSH (if not already started) */
           if (!remoteBarFlag)
           {
-            getSSHServer(hostName,jobOptions,&sshServer);
+            getSSHServerSettings(hostName,jobOptions,&sshServer);
             if (String_empty(loginName)) String_set(loginName,sshServer.loginName);
             if (hostPort == 0) hostPort = sshServer.port;
             error = Network_connect(&socketHandle,
@@ -1671,7 +1685,6 @@ remoteBarFlag=FALSE;
                          hostPort,
                          Errors_getText(error)
                         );
-              String_delete(archiveFileName);
               String_delete(hostName);
               String_delete(loginName);
               if (failError == ERROR_NONE) failError = error;
@@ -1696,7 +1709,6 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                        Errors_getText(error)
                       );
             String_delete(line);
-            String_delete(archiveFileName);
             String_delete(hostName);
             String_delete(loginName);
             if (failError == ERROR_NONE) failError = error;
@@ -1708,7 +1720,6 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
             exitcode = Network_terminate(&networkExecuteHandle);
             printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_empty(line)?String_cString(line):"unknown",exitcode);
             String_delete(line);
-            String_delete(archiveFileName);
             String_delete(hostName);
             String_delete(loginName);
             if (failError == ERROR_NONE) failError = ERROR_NO_RESPONSE;
@@ -1722,7 +1733,6 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
             exitcode = Network_terminate(&networkExecuteHandle);
             printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_empty(line)?String_cString(line):"unknown",exitcode);
             String_delete(line);
-            String_delete(archiveFileName);
             String_delete(hostName);
             String_delete(loginName);
             if (failError == ERROR_NONE) failError = ERROR_INVALID_RESPONSE;
@@ -1781,7 +1791,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   if (globalOptions.groupFlag)
                   {
                       /* add file info to list */
-                    addListFileInfo(archiveFileName,
+                    addListFileInfo(storageName,
                                     fileName,
                                     fileSize,
                                     timeModified,
@@ -1797,7 +1807,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   {
                     if (!printedInfoFlag)
                     {
-                      printHeader(archiveFileName);
+                      printHeader(storageName);
                       printedInfoFlag = TRUE;
                     }
 
@@ -1837,7 +1847,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   if (globalOptions.groupFlag)
                   {
                     /* add directory info to list */
-                    addListDirectoryInfo(archiveFileName,
+                    addListDirectoryInfo(storageName,
                                          directoryName,
                                          cryptAlgorithm,
                                          cryptType
@@ -1847,7 +1857,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   {
                     if (!printedInfoFlag)
                     {
-                      printHeader(archiveFileName);
+                      printHeader(storageName);
                       printedInfoFlag = TRUE;
                     }
 
@@ -1882,7 +1892,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   if (globalOptions.groupFlag)
                   {
                     /* add linkinfo to list */
-                    addListLinkInfo(archiveFileName,
+                    addListLinkInfo(storageName,
                                     linkName,
                                     fileName,
                                     cryptAlgorithm,
@@ -1893,7 +1903,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   {
                     if (!printedInfoFlag)
                     {
-                      printHeader(archiveFileName);
+                      printHeader(storageName);
                       printedInfoFlag = TRUE;
                     }
 
@@ -1931,7 +1941,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   if (globalOptions.groupFlag)
                   {
                     /* add special info to list */
-                    addListSpecialInfo(archiveFileName,
+                    addListSpecialInfo(storageName,
                                        fileName,
                                        cryptAlgorithm,
                                        cryptType,
@@ -1944,7 +1954,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   {
                     if (!printedInfoFlag)
                     {
-                      printHeader(archiveFileName);
+                      printHeader(storageName);
                       printedInfoFlag = TRUE;
                     }
 
@@ -1997,7 +2007,6 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
           }
 
           /* free resources */
-          String_delete(archiveFileName);
           String_delete(hostName);
           String_delete(loginName);
         }
@@ -2023,9 +2032,10 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
   }
 
   /* free resources */
-  String_delete(storageSpecifier);
   String_delete(archiveFileName);
-  List_done(&archiveEntryList,(ListNodeFreeFunction)freeArchiveEntryNode,NULL);
+  String_delete(storageSpecifier);
+  String_delete(storageName);
+  List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
 
   return failError;
 }

@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * $Source: /home/torsten/cvs/bar/bar/configvalues.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: command line options parser
 * Systems: all
@@ -1364,3 +1364,4 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 #endif
 
 /* end of file */
+

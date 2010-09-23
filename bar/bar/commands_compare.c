@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_compare.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive compare function
 * Systems : all
@@ -159,7 +159,6 @@ Errors Command_compare(StringList                      *archiveFileNameList,
     {
       /* get next archive entry type */
       error = Archive_getNextArchiveEntryType(&archiveInfo,
-                                              &archiveFileInfo,
                                               &archiveEntryType
                                              );
       if (error != ERROR_NONE)

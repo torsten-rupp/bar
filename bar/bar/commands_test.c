@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_test.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -125,7 +125,6 @@ Errors Command_test(StringList                      *archiveFileNameList,
     {
       /* get next archive entry type */
       error = Archive_getNextArchiveEntryType(&archiveInfo,
-                                              &archiveFileInfo,
                                               &archiveEntryType
                                              );
       if (error != ERROR_NONE)

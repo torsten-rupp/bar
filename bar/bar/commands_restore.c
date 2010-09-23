@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -44,18 +44,20 @@
 #define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
+
+/* restore information */
 typedef struct
 {
-  EntryList                 *includeEntryList;
-  PatternList               *excludePatternList;
+  EntryList                 *includeEntryList;       // included entries (can be empty)
+  PatternList               *excludePatternList;     // excluded entries (can be empty)
   const JobOptions          *jobOptions;
   bool                      *pauseFlag;              // pause flag (can be NULL)
   bool                      *requestedAbortFlag;     // request abort flag (can be NULL)
 
-  Errors                    error;
+  Errors                    failError;               // restore error
 
-  RestoreStatusInfoFunction statusInfoFunction;
-  void                      *statusInfoUserData;
+  RestoreStatusInfoFunction statusInfoFunction;      // status info call back
+  void                      *statusInfoUserData;     // user data for status info call back
   RestoreStatusInfo         statusInfo;              // status info
 } RestoreInfo;
 
@@ -171,17 +173,21 @@ LOCAL String getDestinationDeviceName(String       destinationDeviceName,
 * Purpose: update status info
 * Input  : createInfo - create info
 * Output : -
-* Return : -
+* Return : bool TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateStatusInfo(const RestoreInfo *restoreInfo)
+LOCAL bool updateStatusInfo(const RestoreInfo *restoreInfo)
 {
   assert(restoreInfo != NULL);
 
   if (restoreInfo->statusInfoFunction != NULL)
   {
-    restoreInfo->statusInfoFunction(restoreInfo->error,&restoreInfo->statusInfo,restoreInfo->statusInfoUserData);
+    return restoreInfo->statusInfoFunction(restoreInfo->statusInfoUserData,restoreInfo->failError,&restoreInfo->statusInfo);
+  }
+  else
+  {
+    return TRUE;
   }
 }
 
@@ -203,6 +209,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   byte              *buffer;
   FragmentList      fragmentList;
   String            archiveFileName;
+  bool              abortFlag;
   Errors            error;
   ArchiveInfo       archiveInfo;
   ArchiveFileInfo   archiveFileInfo;
@@ -220,21 +227,21 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   restoreInfo.jobOptions                   = jobOptions;
   restoreInfo.pauseFlag                    = pauseFlag;
   restoreInfo.requestedAbortFlag           = requestedAbortFlag;
-  restoreInfo.error                        = ERROR_NONE;
+  restoreInfo.failError                    = ERROR_NONE;
   restoreInfo.statusInfoFunction           = restoreStatusInfoFunction;
   restoreInfo.statusInfoUserData           = restoreStatusInfoUserData;
-  restoreInfo.statusInfo.doneFiles         = 0L;
+  restoreInfo.statusInfo.doneEntries       = 0L;
   restoreInfo.statusInfo.doneBytes         = 0LL;
-  restoreInfo.statusInfo.skippedFiles      = 0L;
+  restoreInfo.statusInfo.skippedEntries    = 0L;
   restoreInfo.statusInfo.skippedBytes      = 0LL;
-  restoreInfo.statusInfo.errorFiles        = 0L;
+  restoreInfo.statusInfo.errorEntries      = 0L;
   restoreInfo.statusInfo.errorBytes        = 0LL;
-  restoreInfo.statusInfo.fileName          = String_new();
-  restoreInfo.statusInfo.fileDoneBytes     = 0LL;
-  restoreInfo.statusInfo.fileTotalBytes    = 0LL;
+  restoreInfo.statusInfo.name              = String_new();
+  restoreInfo.statusInfo.entryDoneBytes    = 0LL;
+  restoreInfo.statusInfo.entryTotalBytes   = 0LL;
   restoreInfo.statusInfo.storageName       = String_new();
-  restoreInfo.statusInfo.storageDoneBytes  = 0LL;
-  restoreInfo.statusInfo.storageTotalBytes = 0LL;
+  restoreInfo.statusInfo.archiveDoneBytes  = 0LL;
+  restoreInfo.statusInfo.archiveTotalBytes = 0LL;
 
   /* allocate resources */
   buffer = malloc(BUFFER_SIZE);
@@ -245,9 +252,11 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   FragmentList_init(&fragmentList);
   archiveFileName = String_new();
 
-  while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
+  abortFlag = FALSE;
+  while (   !abortFlag
+         && ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
          && !StringList_empty(archiveFileNameList)
-         && (restoreInfo.error == ERROR_NONE)
+         && (restoreInfo.failError == ERROR_NONE)
         )
   {
     /* pause */
@@ -272,16 +281,16 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                  String_cString(archiveFileName),
                  Errors_getText(error)
                 );
-      if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+      if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
       continue;
     }
     String_set(restoreInfo.statusInfo.storageName,archiveFileName);
-    updateStatusInfo(&restoreInfo);
+    abortFlag = !updateStatusInfo(&restoreInfo);
 
     /* read files */
     while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
            && !Archive_eof(&archiveInfo)
-           && (restoreInfo.error == ERROR_NONE)
+           && (restoreInfo.failError == ERROR_NONE)
           )
     {
       /* pause */
@@ -292,7 +301,6 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
       /* get next archive entry type */
       error = Archive_getNextArchiveEntryType(&archiveInfo,
-                                              &archiveFileInfo,
                                               &archiveEntryType
                                              );
       if (error != ERROR_NONE)
@@ -301,7 +309,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                    String_cString(archiveFileName),
                    Errors_getText(error)
                   );
-        if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+        if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
         break;
       }
 
@@ -339,7 +347,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                          Errors_getText(error)
                         );
               String_delete(fileName);
-              if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+              if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               continue;
             }
 
@@ -347,10 +355,10 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              String_set(restoreInfo.statusInfo.fileName,fileName);
-              restoreInfo.statusInfo.fileDoneBytes = 0LL;
-              restoreInfo.statusInfo.fileTotalBytes = fragmentSize;
-              updateStatusInfo(&restoreInfo);
+              String_set(restoreInfo.statusInfo.name,fileName);
+              restoreInfo.statusInfo.entryDoneBytes  = 0LL;
+              restoreInfo.statusInfo.entryTotalBytes = fragmentSize;
+              abortFlag = !updateStatusInfo(&restoreInfo);
 
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
@@ -413,7 +421,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveFileInfo);
                   String_delete(fileName);
-                  if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+                  if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                   continue;
                 }
 
@@ -435,7 +443,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                     String_delete(destinationFileName);
                     Archive_closeEntry(&archiveFileInfo);
                     String_delete(fileName);
-                    if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+                    if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                     continue;
                   }
                   else
@@ -464,7 +472,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = error;
+                  restoreInfo.failError = error;
                 }
                 continue;
               }
@@ -482,7 +490,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = error;
+                  restoreInfo.failError = error;
                 }
                 continue;
               }
@@ -508,7 +516,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                              String_cString(archiveFileName),
                              Errors_getText(error)
                             );
-                  if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+                  if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                   break;
                 }
                 error = File_write(&fileHandle,buffer,n);
@@ -521,12 +529,12 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    restoreInfo.error = error;
+                    restoreInfo.failError = error;
                   }
                   break;
                 }
-                restoreInfo.statusInfo.fileDoneBytes += n;
-                updateStatusInfo(&restoreInfo);
+                restoreInfo.statusInfo.entryDoneBytes += n;
+                abortFlag = !updateStatusInfo(&restoreInfo);
 
                 length += n;
               }
@@ -544,7 +552,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 continue;
               }
 #if 0
-              if (restoreInfo.error != ERROR_NONE)
+              if (restoreInfo.failError != ERROR_NONE)
               {
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -569,7 +577,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveFileInfo);
                   String_delete(fileName);
-                  restoreInfo.error = error;
+                  restoreInfo.failError = error;
                   continue;
                 }
                 else
@@ -637,7 +645,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                          Errors_getText(error)
                         );
               String_delete(imageName);
-              if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+              if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               break;
             }
 
@@ -645,10 +653,10 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              String_set(restoreInfo.statusInfo.fileName,imageName);
-              restoreInfo.statusInfo.fileDoneBytes = 0LL;
-              restoreInfo.statusInfo.fileTotalBytes = blockCount;
-              updateStatusInfo(&restoreInfo);
+              String_set(restoreInfo.statusInfo.name,imageName);
+              restoreInfo.statusInfo.entryDoneBytes  = 0LL;
+              restoreInfo.statusInfo.entryTotalBytes = blockCount;
+              abortFlag = !updateStatusInfo(&restoreInfo);
 
               /* get destination filename */
               destinationDeviceName = getDestinationDeviceName(String_new(),
@@ -695,7 +703,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 String_delete(imageName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = error;
+                  restoreInfo.failError = error;
                 }
                 continue;
               }
@@ -713,7 +721,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 String_delete(imageName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = error;
+                  restoreInfo.failError = error;
                 }
                 continue;
               }
@@ -740,7 +748,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                              String_cString(archiveFileName),
                              Errors_getText(error)
                             );
-                  if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+                  if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                   break;
                 }
                 error = Device_write(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
@@ -753,12 +761,12 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    restoreInfo.error = error;
+                    restoreInfo.failError = error;
                   }
                   break;
                 }
-                restoreInfo.statusInfo.fileDoneBytes += bufferBlockCount*deviceInfo.blockSize;
-                updateStatusInfo(&restoreInfo);
+                restoreInfo.statusInfo.entryDoneBytes += bufferBlockCount*deviceInfo.blockSize;
+                abortFlag = !updateStatusInfo(&restoreInfo);
 
                 block += (uint64)bufferBlockCount;
               }
@@ -772,7 +780,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 continue;
               }
 #if 0
-              if (restoreInfo.error != ERROR_NONE)
+              if (restoreInfo.failError != ERROR_NONE)
               {
                 String_delete(destinationDeviceName);
                 Archive_closeEntry(&archiveFileInfo);
@@ -829,7 +837,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                          Errors_getText(error)
                         );
               String_delete(directoryName);
-              if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+              if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               break;
             }
 
@@ -837,10 +845,10 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              String_set(restoreInfo.statusInfo.fileName,directoryName);
-              restoreInfo.statusInfo.fileDoneBytes = 0LL;
-              restoreInfo.statusInfo.fileTotalBytes = 00L;
-              updateStatusInfo(&restoreInfo);
+              String_set(restoreInfo.statusInfo.name,directoryName);
+              restoreInfo.statusInfo.entryDoneBytes  = 0LL;
+              restoreInfo.statusInfo.entryTotalBytes = 00L;
+              abortFlag = !updateStatusInfo(&restoreInfo);
 
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
@@ -883,7 +891,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 String_delete(directoryName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = error;
+                  restoreInfo.failError = error;
                 }
                 continue;
               }
@@ -906,7 +914,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   String_delete(directoryName);
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    restoreInfo.error = error;
+                    restoreInfo.failError = error;
                   }
                   continue;
                 }
@@ -962,7 +970,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                         );
               String_delete(fileName);
               String_delete(linkName);
-              if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+              if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               break;
             }
 
@@ -970,10 +978,10 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              String_set(restoreInfo.statusInfo.fileName,linkName);
-              restoreInfo.statusInfo.fileDoneBytes = 0LL;
-              restoreInfo.statusInfo.fileTotalBytes = 00L;
-              updateStatusInfo(&restoreInfo);
+              String_set(restoreInfo.statusInfo.name,linkName);
+              restoreInfo.statusInfo.entryDoneBytes  = 0LL;
+              restoreInfo.statusInfo.entryTotalBytes = 00L;
+              abortFlag = !updateStatusInfo(&restoreInfo);
 
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
@@ -996,7 +1004,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = ERROR_FILE_EXITS;
+                  restoreInfo.failError = ERROR_FILE_EXITS;
                 }
                 continue;
               }
@@ -1018,7 +1026,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = error;
+                  restoreInfo.failError = error;
                 }
                 continue;
               }
@@ -1042,7 +1050,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   String_delete(linkName);
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    restoreInfo.error = error;
+                    restoreInfo.failError = error;
                   }
                   continue;
                 }
@@ -1095,7 +1103,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                          Errors_getText(error)
                         );
               String_delete(fileName);
-              if (restoreInfo.error == ERROR_NONE) restoreInfo.error = error;
+              if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               break;
             }
 
@@ -1103,10 +1111,10 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              String_set(restoreInfo.statusInfo.fileName,fileName);
-              restoreInfo.statusInfo.fileDoneBytes = 0LL;
-              restoreInfo.statusInfo.fileTotalBytes = 00L;
-              updateStatusInfo(&restoreInfo);
+              String_set(restoreInfo.statusInfo.name,fileName);
+              restoreInfo.statusInfo.entryDoneBytes  = 0LL;
+              restoreInfo.statusInfo.entryTotalBytes = 00L;
+              abortFlag = !updateStatusInfo(&restoreInfo);
 
               /* get destination filename */
               destinationFileName = getDestinationFileName(String_new(),
@@ -1128,7 +1136,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = ERROR_FILE_EXITS;
+                  restoreInfo.failError = ERROR_FILE_EXITS;
                 }
                 continue;
               }
@@ -1152,7 +1160,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.error = error;
+                  restoreInfo.failError = error;
                 }
                 continue;
               }
@@ -1175,7 +1183,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    restoreInfo.error = error;
+                    restoreInfo.failError = error;
                   }
                   continue;
                 }
@@ -1224,7 +1232,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
       if (!FragmentList_checkEntryComplete(fragmentNode))
       {
         printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
-        if (restoreInfo.error == ERROR_NONE) restoreInfo.error = ERROR_FILE_INCOMPLETE;
+        if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = ERROR_FILE_INCOMPLETE;
       }
     }
   }
@@ -1233,12 +1241,12 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   String_delete(archiveFileName);
   FragmentList_done(&fragmentList);
   free(buffer);
-  String_delete(restoreInfo.statusInfo.fileName);
+  String_delete(restoreInfo.statusInfo.name);
   String_delete(restoreInfo.statusInfo.storageName);
 
   if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
   {
-    return restoreInfo.error;
+    return restoreInfo.failError;
   }
   else
   {

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/threads.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: thread functions
 * Systems: all
@@ -27,11 +27,11 @@
 /***************************** Datatypes *******************************/
 typedef struct
 {
-  sem_t lock;
+  sem_t      lock;
   const char *name;
-  int   niceLevel;
-  void  (*entryFunction)(void*);
-  void  *userData;
+  int        niceLevel;
+  void       (*entryFunction)(void*);
+  void       *userData;
 } ThreadStartInfo;
 
 /***************************** Variables *******************************/
@@ -95,7 +95,7 @@ bool Thread_init(Thread     *thread,
 
   /* init thread info */
   sem_init(&startInfo.lock,0,0);
-startInfo.name = name;
+  startInfo.name          = name;
   startInfo.niceLevel     = niceLevel;
   startInfo.entryFunction = entryFunction;
   startInfo.userData      = userData;

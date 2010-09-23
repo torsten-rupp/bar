@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/arrays.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -33,10 +33,10 @@
 
 struct __Array
 {
-  ulong elementSize;
-  ulong length;
-  ulong maxLength;
-  byte  *data;
+  ulong elementSize;                 // size of element
+  ulong length;                      // current length of array
+  ulong maxLength;                   // current maximal length of array
+  byte  *data;                       // array data
 };
 
 #ifndef NDEBUG
@@ -67,7 +67,6 @@ struct __Array
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
-
 #ifdef __cplusplus
   extern "C" {
 #endif
@@ -81,9 +80,9 @@ LOCAL void debugArrayInit(void)
 #endif /* not NDEBUG */
 
 #ifdef NDEBUG
-void *Array_new(ulong elementSize, ulong length)
+Array Array_new(ulong elementSize, ulong length)
 #else /* not NDEBUG */
-void *__Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong length)
+Array __Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong length)
 #endif /* NDEBUG */
 {
   struct __Array *array;
@@ -119,6 +118,8 @@ void *__Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong l
   array->maxLength   = length;
 
   #ifndef NDEBUG
+    pthread_once(&debugArrayInitFlag,debugArrayInit);
+
     pthread_mutex_lock(&debugArrayLock);
     debugArrayNode = LIST_NEW_NODE(DebugArrayNode);
     if (debugArrayNode == NULL)
@@ -156,6 +157,8 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
     }
 
     #ifndef NDEBUG
+      pthread_once(&debugArrayInitFlag,debugArrayInit);
+
       pthread_mutex_lock(&debugArrayLock);
       debugArrayNode = debugArrayList.head;
       while ((debugArrayNode != NULL) && (debugArrayNode->array != array))
@@ -365,7 +368,7 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
   }
 }
 
-void *Array_cArray(Array array)
+const void *Array_cArray(Array array)
 {
   return (array != NULL)?array->data:0;
 }
@@ -396,12 +399,15 @@ void Array_debugDone(void)
 
   pthread_mutex_lock(&debugArrayLock);
   List_done(&debugArrayList,NULL,NULL);
+
   pthread_mutex_unlock(&debugArrayLock);
 }
 #endif /* not NDEBUG */
-
 #ifdef __cplusplus
   }
 #endif
 
 /* end of file */
+
+
+

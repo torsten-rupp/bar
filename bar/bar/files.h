@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -431,7 +431,7 @@ Errors File_printLine(FileHandle *fileHandle,
                      );
 
 /***********************************************************************\
-* Name   : File_size
+* Name   : File_getSize
 * Purpose: get file size
 * Input  : fileHandle - file handle
 * Output : -
@@ -528,7 +528,7 @@ bool File_endOfDirectoryList(DirectoryListHandle *directoryListHandle);
 * Purpose: read next directory list entry
 * Input  : directoryHandleList - directory list handle
 *          fileName            - file name variable
-* Output : fileName - next file name
+* Output : fileName - next file name (including path)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -574,7 +574,7 @@ FileTypes File_getType(const String fileName);
 
 /***********************************************************************\
 * Name   : File_getData
-* Purpose: get file data
+* Purpose: read file content into buffer
 * Input  : fileName - file name
 * Output : data - data
 *          size - size of data
@@ -764,7 +764,10 @@ Errors File_setFileInfo(const String fileName,
 /***********************************************************************\
 * Name   : File_makeDirectory
 * Purpose: create directory including intermedate directories
-* Input  : pathName - path name
+* Input  : pathName   - path name
+*          userId     - user id or FILE_DEFAULT_USER_ID
+*          groupId    - group id or FILE_DEFAULT_GROUP_ID
+*          permission - permission or FILE_DEFAULT_PERMISSION
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -

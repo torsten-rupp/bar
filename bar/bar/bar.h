@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -22,12 +22,14 @@
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
+#include "configvalues.h"
 
 #include "patterns.h"
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
 #include "misc.h"
+#include "database.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -126,7 +128,7 @@ typedef enum
   PASSWORD_MODE_UNKNOWN,
 } PasswordModes;
 
-/* FTP server */
+/* FTP server settings */
 typedef struct
 {
   String   loginName;                   // login name
@@ -146,12 +148,12 @@ typedef struct
   LIST_HEADER(FTPServerNode);
 } FTPServerList;
 
-/* SSH server */
+/* SSH server settings */
 typedef struct
 {
+  uint     port;                        // server port (ssh,scp,sftp)
   String   loginName;                   // login name
   Password *password;                   // login password
-  uint     port;                        // server port (ssh,scp,sftp)
   String   publicKeyFileName;           // public key file name (ssh,scp,sftp)
   String   privateKeyFileName;          // private key file name (ssh,scp,sftp)
 } SSHServer;
@@ -169,13 +171,13 @@ typedef struct
   LIST_HEADER(SSHServerNode);
 } SSHServerList;
 
-/* dvd */
+/* dvd settings */
 typedef struct
 {
   String requestVolumeCommand;          // command to request new dvd
   String unloadVolumeCommand;           // command to unload dvd
   String loadVolumeCommand;             // command to load dvd
-  uint64 volumeSize;                    // size of dvd (bytes)
+  uint64 volumeSize;                    // size of dvd [bytes] (0 for default)
 
   String imagePreProcessCommand;        // command to execute before creating image
   String imagePostProcessCommand;       // command to execute after created image
@@ -189,13 +191,13 @@ typedef struct
   String writeImageCommand;             // command to write image on dvd
 } DVD;
 
-/* device */
+/* device settings */
 typedef struct
 {
   String requestVolumeCommand;          // command to request new volume
   String unloadVolumeCommand;           // command to unload volume
   String loadVolumeCommand;             // command to load volume
-  uint64 volumeSize;                    // size of volume (bytes)
+  uint64 volumeSize;                    // size of volume [bytes]
 
   String imagePreProcessCommand;        // command to execute before creating image
   String imagePostProcessCommand;       // command to execute after created image
@@ -239,20 +241,20 @@ typedef struct
 
   Password               *cryptPassword;               // default password for encryption/decryption
 
-  FTPServer              *ftpServer;                   // FTP server
+  FTPServer              *ftpServer;                   // current selected FTP server
   const FTPServerList    *ftpServerList;               // list with remote servers
   FTPServer              *defaultFTPServer;            // default FTP server
 
-  SSHServer              *sshServer;                   // SSH server
+  SSHServer              *sshServer;                   // current selected SSH server
   const SSHServerList    *sshServerList;               // list with remote servers
   SSHServer              *defaultSSHServer;            // default SSH server
 
   String                 remoteBARExecutable;
 
-  DVD                    dvd;
+  DVD                    dvd;                          // DVD settings
 
-  String                 defaultDeviceName;
-  Device                 *device;                      // device
+  String                 defaultDeviceName;            // default device name
+  Device                 *device;                      // current selected device
   const DeviceList       *deviceList;                  // list with devices
   Device                 *defaultDevice;               // default device
 
@@ -317,11 +319,15 @@ typedef struct
   String              cryptPublicKeyFileName;
   String              cryptPrivateKeyFileName;
 
-  FTPServer           ftpServer;
-  SSHServer           sshServer;
+  FTPServer           ftpServer;                       // job specific FTP server settings
+  SSHServer           sshServer;                       // job specific SSH server settings
 
-  String              deviceName;
-  Device              device;
+  DVD                 dvd;                             // job specific DVD settings
+
+  String              deviceName;                      // device name to use
+  Device              device;                          // job specific device settings
+
+  uint64              volumeSize;                      // volume size or 0LL for default [bytes]
 
   bool                skipUnreadableFlag;              // TRUE for skipping unreadable files
   bool                overwriteArchiveFilesFlag;
@@ -330,13 +336,14 @@ typedef struct
   bool                waitFirstVolumeFlag;
   bool                rawImagesFlag;                   // TRUE for storing raw images
   bool                noStorageFlag;
-  bool                noBAROnDVDFlag;                  // TRUE for not storing BAR on DVDs
+  bool                noBAROnMediumFlag;               // TRUE for not storing BAR on medium
   bool                stopOnErrorFlag;
 } JobOptions;
 
 /***************************** Variables *******************************/
-extern GlobalOptions globalOptions;
-extern String        tmpDirectory;
+extern GlobalOptions  globalOptions;
+extern String         tmpDirectory;
+extern DatabaseHandle *indexDatabaseHandle;
 
 /****************************** Macros *********************************/
 
@@ -487,52 +494,65 @@ void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions);
 void freeJobOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
-* Name   : getFTPServer
-* Purpose: get FTP server data
+* Name   : getFTPServerSettings
+* Purpose: get FTP server settings
 * Input  : name       - FTP server name
 *          jobOptions - job options
-* Output : ftperver   - FTP server data from server list or default
-*                       server values
+* Output : ftperver   - FTP server settings from job options, server
+*                       list or default FTP server values
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void getFTPServer(const String     name,
-                  const JobOptions *jobOptions,
-                  FTPServer        *ftpServer
-                 );
+void getFTPServerSettings(const String     name,
+                          const JobOptions *jobOptions,
+                          FTPServer        *ftpServer
+                         );
 
 /***********************************************************************\
-* Name   : getSSHServer
-* Purpose: get SSH server data
+* Name   : getSSHServerSettings
+* Purpose: get SSH server settings
 * Input  : name       - SSH server name
 *          jobOptions - job options
-* Output : sshServer  - SSH server data from server list or default
-*                       server values
+* Output : sshServer  - SSH server settings from job options, server
+*                       list or default SSH server values
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void getSSHServer(const String     name,
-                  const JobOptions *jobOptions,
-                  SSHServer        *sshServer
-                 );
+void getSSHServerSettings(const String     name,
+                          const JobOptions *jobOptions,
+                          SSHServer        *sshServer
+                         );
 
 /***********************************************************************\
-* Name   : getDevice
-* Purpose: get device data
-* Input  : name       - device name
-*          jobOptions - job options
-* Output : device - device data from devie list or default
-*                   device values
+* Name   : getDVDSettings
+* Purpose: get DVD settings
+* Input  : jobOptions - job options
+* Output : dvd - dvd settings from job options or default DVD values
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void getDevice(const String     name,
-               const JobOptions *jobOptions,
-               Device           *device
-              );
+void getDVDSettings(const JobOptions *jobOptions,
+                    DVD              *dvd
+                   );
+
+/***********************************************************************\
+* Name   : getDeviceSettings
+* Purpose: get device settings
+* Input  : name       - device name
+*          jobOptions - job options
+* Output : device - device settings from job options, device list or
+*                   default device values
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void getDeviceSettings(const String     name,
+                       const JobOptions *jobOptions,
+                       Device           *device
+                      );
 
 /***********************************************************************\
 * Name   : inputCryptPassword
@@ -846,6 +866,24 @@ void configValueFormatDoneSchedule(void **formatUserData, void *userData);
 \***********************************************************************/
 
 bool configValueFormatSchedule(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : readJobFile
+* Purpose: read job from file
+* Input  : fileName         - file name
+*          configValues     - job configuration values
+*          configValueCount - number of job configuration values
+*          configData       - configuration data
+* Output : -
+* Return : TRUE iff job read, FALSE otherwise (error)
+* Notes  : -
+\***********************************************************************/
+
+bool readJobFile(const String      fileName,
+                 const ConfigValue *configValues,
+                 uint              configValueCount,
+                 void              *configData
+                );
 
 #ifdef __cplusplus
   }
