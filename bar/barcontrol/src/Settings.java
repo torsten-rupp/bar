@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Settings.java,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: load/save program settings
 * Systems: all
@@ -24,9 +24,9 @@ public class Settings
   static final int    DEFAULT_SERVER_TLS_PORT             = 38524;
   static final String DEFAULT_BARCONTROL_CONFIG_FILE_NAME = System.getProperty("user.home")+File.separator+".bar"+File.separator+"barcontrol.cfg";
 
-  /** job modes
+  /** archive types
    */
-  public enum JobModes
+  public enum ArchiveTypes
   {
     NORMAL,
     FULL,
@@ -61,8 +61,11 @@ public class Settings
 
   // commands and data
   public static String           runJobName                     = null;
-  public static JobModes         jobMode                        = JobModes.NORMAL;
+  public static ArchiveTypes     archiveType                    = ArchiveTypes.NORMAL;
   public static String           abortJobName                   = null;
+  public static String           indexAddStorageName            = null;
+  public static String           indexRemoveStorageName         = null;
+  public static String           indexListPattern               = null;
   public static int              pauseTime                      = 0;
   public static boolean          pingFlag                       = false;
   public static boolean          suspendFlag                    = false;
