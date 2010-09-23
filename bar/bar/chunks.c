@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/chunks.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunks functions
 * Systems: all
@@ -614,7 +614,7 @@ Errors Chunk_next(const ChunkIO *io,
                         );
   if (error != ERROR_NONE)
   {
-    return FALSE;
+    return error;
   }
   chunkHeader->id   = chunk.id;
   chunkHeader->size = chunk.size;
