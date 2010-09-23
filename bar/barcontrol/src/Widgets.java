@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -1665,37 +1665,57 @@ class Widgets
    * @param index insert before this index in table [0..n-1] or -1
    * @param table entry data
    * @param values values list
+   * @return insert index
    */
-  static void insertTableEntry(final Table table, final int index, final Object data, final Object... values)
+  static int insertTableEntry(final Table table, final int index, final Object data, final Object... values)
   {
-    if (!table.isDisposed())
+    /** table insert runnable
+     */
+    class TableRunnable implements Runnable
     {
-      table.getDisplay().syncExec(new Runnable()
+      int insertIndex = -1;
+
+      public void run()
       {
-        public void run()
+        if (!table.isDisposed())
         {
-          if (!table.isDisposed())
+          TableItem tableItem;
+          if (index >= 0)
           {
-            TableItem tableItem = (index >= 0) ? new TableItem(table,SWT.NONE,index) : new TableItem(table,SWT.NONE);
-            tableItem.setData(data);
-            for (int i = 0; i < values.length; i++)
+            insertIndex = index;
+            tableItem = new TableItem(table,SWT.NONE,index);
+          }
+          else
+          {
+            insertIndex = table.getItemCount();
+            tableItem = new TableItem(table,SWT.NONE);
+          }
+          tableItem.setData(data);
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
             {
-              if (values[i] != null)
+              if      (values[i] instanceof String)
               {
-                if      (values[i] instanceof String)
-                {
-                  tableItem.setText(i,(String)values[i]);
-                }
-                else if (values[i] instanceof Image)
-                {
-                  tableItem.setImage(i,(Image)values[i]);
-                }
+                tableItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Image)
+              {
+                tableItem.setImage(i,(Image)values[i]);
               }
             }
           }
         }
-      });
+      }
     }
+
+    TableRunnable tableRunnable = new TableRunnable();
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(tableRunnable);
+    }
+
+    return tableRunnable.insertIndex;
   }
 
   /** add table entry
@@ -1703,92 +1723,114 @@ class Widgets
    * @param comparator table entry comperator
    * @param table entry data
    * @param values values list
+   * @return insert index
    */
-  static void insertTableEntry(final Table table, final Comparator comparator, final Object data, final Object... values)
+  static int insertTableEntry(final Table table, final Comparator comparator, final Object data, final Object... values)
   {
-    if (!table.isDisposed())
+    /** table insert runnable
+     */
+    class TableRunnable implements Runnable
     {
-      table.getDisplay().syncExec(new Runnable()
+      int insertIndex = -1;
+
+      public void run()
       {
-        public void run()
+        if (!table.isDisposed())
         {
-          if (!table.isDisposed())
+          TableItem tableItem = new TableItem(table,
+                                              SWT.NONE,
+                                              getTableItemIndex(table,comparator,data)
+                                             );
+          tableItem.setData(data);
+          for (int i = 0; i < values.length; i++)
           {
-            TableItem tableItem = new TableItem(table,
-                                                SWT.NONE,
-                                                getTableItemIndex(table,comparator,data)
-                                               );
-            tableItem.setData(data);
-            for (int i = 0; i < values.length; i++)
+            if (values[i] != null)
             {
-              if (values[i] != null)
+              if      (values[i] instanceof String)
               {
-                if      (values[i] instanceof String)
-                {
-                  tableItem.setText(i,(String)values[i]);
-                }
-                else if (values[i] instanceof Image)
-                {
-                  tableItem.setImage(i,(Image)values[i]);
-                }
+                tableItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Image)
+              {
+                tableItem.setImage(i,(Image)values[i]);
               }
             }
           }
         }
-      });
+      }
+    };
+
+    TableRunnable tableRunnable = new TableRunnable();
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(tableRunnable);
     }
+
+    return tableRunnable.insertIndex;
   }
 
   /** add table entry
    * @param table table
    * @param table entry data
    * @param values values list
+   * @return insert index
    */
-  static void addTableEntry(Table table, Object data, Object... values)
+  static int addTableEntry(Table table, Object data, Object... values)
   {
-    insertTableEntry(table,-1,data,values);
+    return insertTableEntry(table,-1,data,values);
   }
 
   /** update table entry
    * @param table table
    * @param data entry data
    * @param values values list
+   * @param true if updated, false if not found
    */
-  static void updateTableEntry(final Table table, final Object data, final Object... values)
+  static boolean updateTableEntry(final Table table, final Object data, final Object... values)
   {
-    if (!table.isDisposed())
+    /** table update runnable
+     */
+    class TableRunnable implements Runnable
     {
-      table.getDisplay().syncExec(new Runnable()
+      boolean updatedFlag = false;
+
+      public void run()
       {
-        public void run()
+        if (!table.isDisposed())
         {
-          if (!table.isDisposed())
+          for (TableItem tableItem : table.getItems())
           {
-            for (TableItem tableItem : table.getItems())
+            if (tableItem.getData() == data)
             {
-              if (tableItem.getData() == data)
+              for (int i = 0; i < values.length; i++)
               {
-                for (int i = 0; i < values.length; i++)
+                if (values[i] != null)
                 {
-                  if (values[i] != null)
+                  if      (values[i] instanceof String)
                   {
-                    if      (values[i] instanceof String)
-                    {
-                      tableItem.setText(i,(String)values[i]);
-                    }
-                    else if (values[i] instanceof Image)
-                    {
-                      tableItem.setImage(i,(Image)values[i]);
-                    }
+                    tableItem.setText(i,(String)values[i]);
+                  }
+                  else if (values[i] instanceof Image)
+                  {
+                    tableItem.setImage(i,(Image)values[i]);
                   }
                 }
-                break;
               }
+              updatedFlag = true;
+              break;
             }
           }
         }
-      });
+      }
     }
+
+    TableRunnable tableRunnable = new TableRunnable();
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(tableRunnable);
+    }
+
+    return tableRunnable.updatedFlag;
   }
 
   /** set table entry color
@@ -1830,6 +1872,35 @@ class Widgets
   static void setTableEntryColor(Table table, Object data, Color backgroundColor)
   {
     setTableEntryColor(table,data,null,backgroundColor);
+  }
+
+  /** set table entry checked
+   * @param table table
+   * @param table entry data
+   * @param checked checked flag
+   */
+  static void setTableEntryChecked(final Table table, final Object data, final boolean checked)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            for (TableItem tableItem : table.getItems())
+            {
+              if (tableItem.getData() == data)
+              {
+                tableItem.setChecked(checked);
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
   }
 
   /** remove table entry
@@ -2480,6 +2551,17 @@ private static void printTree(Tree tree)
     return menu;
   }
 
+  /** create new popup bar
+   * @param shell shell
+   * @return new popup menu
+   */
+  static Menu newPopupMenu(Shell shell)
+  {
+    Menu menu = new Menu(shell,SWT.POP_UP);
+
+    return menu;
+  }
+
   /** create new menu
    * @param menu menu bar
    * @param text menu text
@@ -2766,6 +2848,16 @@ private static void printTree(Tree tree)
   static Group newGroup(Composite composite, String title, int style)
   {
     return newGroup(composite,title,style,0);
+  }
+
+  /** new group widget
+   * @param composite composite widget
+   * @param title group title
+   * @return new group widget
+   */
+  static Group newGroup(Composite composite, String title)
+  {
+    return newGroup(composite,title,SWT.NONE);
   }
 
   //-----------------------------------------------------------------------
