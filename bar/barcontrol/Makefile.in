@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -117,6 +117,11 @@ SOURCES        = src/BARControl.java \
                  src/Widgets.java \
                  src/Dialogs.java \
                  src/StringParser.java \
+                 src/StringUtils.java \
+                 src/Option.java \
+                 src/Options.java \
+                 src/OptionEnumeration.java \
+                 src/OptionSpecial.java \
                  src/Dprintf.java \
 
 OTHER_SOURCES  = barcontrol.in \
