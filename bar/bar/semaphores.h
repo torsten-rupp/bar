@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/semaphores.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -51,6 +51,23 @@ typedef struct
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+/***********************************************************************\
+* Name   : SEMAPHORE_LOCKED_DO
+* Purpose: execute block with semaphore locked
+* Input  : semaphore         - semaphore
+*          semaphoreLockType - lock type
+* Output : -
+* Return : -
+* Notes  : usage:
+*            SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType)
+*            {
+*              ...
+*            }
+\***********************************************************************/
+
+#define SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType) \
+  for (Semaphore_lock(semaphore,semaphoreLockType); Semaphore_isLocked(semaphore); Semaphore_unlock(semaphore))
 
 /***************************** Forwards ********************************/
 
@@ -127,6 +144,17 @@ void Semaphore_lock(Semaphore          *semaphore,
 \***********************************************************************/
 
 void Semaphore_unlock(Semaphore *semaphore);
+
+/***********************************************************************\
+* Name   : Semaphore_isLocked
+* Purpose: check if semaphore is currently locked
+* Input  : semaphore - semaphore
+* Output : -
+* Return : TRUE iff currently locked
+* Notes  : -
+\***********************************************************************/
+
+bool Semaphore_isLocked(Semaphore *semaphore);
 
 /***********************************************************************\
 * Name   : Semaphore_waitModified

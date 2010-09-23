@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/semaphores.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -205,6 +205,13 @@ LOCAL void unlock(Semaphore *semaphore)
   }
 }
 
+LOCAL bool isLocked(Semaphore *semaphore)
+{
+  assert(semaphore != NULL);
+
+  return semaphore->lockType != SEMAPHORE_LOCK_TYPE_NONE;
+}
+
 LOCAL void waitModified(Semaphore *semaphore)
 {
   assert(semaphore != NULL);
@@ -383,6 +390,13 @@ void Semaphore_unlock(Semaphore *semaphore)
   assert(semaphore != NULL);
 
   unlock(semaphore);
+}
+
+bool Semaphore_isLocked(Semaphore *semaphore)
+{
+  assert(semaphore != NULL);
+
+  return isLocked(semaphore);
 }
 
 void Semaphore_waitModified(Semaphore *semaphore)
