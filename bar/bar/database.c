@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/database.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Database functions
 * Systems: all
@@ -676,16 +676,18 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               if (longFlag)
               {
                 value.l = va_arg(arguments,int64*);
-                assert(value.l != NULL);
-
-                (*value.l) = (int64)sqlite3_column_int64(databaseQueryHandle->handle,column);
+                if (value.l != NULL)
+                {
+                  (*value.l) = (int64)sqlite3_column_int64(databaseQueryHandle->handle,column);
+                }
               }
               else
               {
                 value.i = va_arg(arguments,int*);
-                assert(value.i != NULL);
-
-                (*value.i) = sqlite3_column_int(databaseQueryHandle->handle,column);
+                if (value.i != NULL)
+                {
+                  (*value.i) = sqlite3_column_int(databaseQueryHandle->handle,column);
+                }
               }
               break;
             case 'f':
@@ -695,16 +697,18 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               if (longFlag)
               {
                 value.d = va_arg(arguments,double*);
-                assert(value.d != NULL);
-
-                (*value.d) = atof((const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
+                if (value.d != NULL)
+                {
+                  (*value.d) = atof((const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
+                }
               }
               else
               {
                 value.f = va_arg(arguments,float*);
-                assert(value.f != NULL);
-
-                (*value.f) = (float)atof((const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
+                if (value.f != NULL)
+                {
+                  (*value.f) = (float)atof((const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
+                }
               }
               break;
             case 'c':
@@ -712,8 +716,10 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               format++;
 
               value.ch = va_arg(arguments,char*);
-              assert(value.s != NULL);
-              (*value.ch) = ((char*)sqlite3_column_text(databaseQueryHandle->handle,column))[0];
+              if (value.ch != NULL)
+              {
+                (*value.ch) = ((char*)sqlite3_column_text(databaseQueryHandle->handle,column))[0];
+              }
               break;
             case 's':
               /* C string */
@@ -840,6 +846,88 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
     if (sqlite3_step(handle) == SQLITE_ROW)
     {
       (*l) = (int64)sqlite3_column_int64(handle,0);
+    }
+
+    sqlite3_finalize(handle);
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(sqlString);
+    return error;
+  }
+
+  /* free resources */
+  String_delete(sqlString);
+
+  return ERROR_NONE;
+}
+
+Errors Database_getString(DatabaseHandle *databaseHandle,
+                          String         string,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          ...
+                         )
+{
+  String       sqlString;
+  va_list      arguments;
+  sqlite3_stmt *handle;
+  Errors       error;
+  int          sqliteResult;
+
+  assert(databaseHandle != NULL);
+  assert(string != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  /* init variables */
+  String_clear(string);
+
+  /* format SQL command string */
+  sqlString = String_format(String_new(),
+                            "SELECT %s \
+                             FROM %s \
+                            ",
+                            columnName,
+                            tableName
+                           );
+  if (additional != NULL)
+  {
+    String_appendChar(sqlString,' ');
+    va_start(arguments,additional);
+    formatSQLString(sqlString,
+                    additional,
+                    arguments
+                   );
+    va_end(arguments);
+  }
+  String_appendCString(sqlString," LIMIT 0,1");
+
+  /* execute SQL command */
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    #ifdef DATABASE_DEBUG
+     fprintf(stderr,"Database debug: get integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+    #endif
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+                                      String_cString(sqlString),
+                                      -1,
+                                      &handle,
+                                      NULL
+                                     );
+    if (sqliteResult == SQLITE_OK)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    }
+
+    if (sqlite3_step(handle) == SQLITE_ROW)
+    {
+      String_setCString(string,(const char*)sqlite3_column_text(handle,0));
     }
 
     sqlite3_finalize(handle);

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/database.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: database functions (SQLite3)
 * Systems: all
@@ -56,6 +56,8 @@ typedef struct
 
 /* execute callback function */
 typedef bool(*DatabaseFunction)(void *userData, uint count, const char* names[], const char* vales[]);
+
+typedef int64 DatabaseId;
 
 /***************************** Variables *******************************/
 
@@ -232,6 +234,28 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
                              const char     *additional,
                              ...
                             );
+
+/***********************************************************************\
+* Name   : Database_getString
+* Purpose: get string value from database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : string - string value or empty if not found
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getString(DatabaseHandle *databaseHandle,
+                          String         string,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          ...
+                         );
 
 /***********************************************************************\
 * Name   : Database_getLastRowId
