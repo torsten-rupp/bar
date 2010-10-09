@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 
 // graphics
@@ -100,7 +101,9 @@ enum StorageTypes
   FTP,
   SCP,
   SFTP,
+  CD,
   DVD,
+  BD,
   DEVICE;
 
   /** parse type string
@@ -127,9 +130,17 @@ enum StorageTypes
     {
       type = StorageTypes.SFTP;
     }
+    else if (string.equalsIgnoreCase("cd"))
+    {
+      type = StorageTypes.CD;
+    }
     else if (string.equalsIgnoreCase("dvd"))
     {
       type = StorageTypes.DVD;
+    }
+    else if (string.equalsIgnoreCase("bd"))
+    {
+      type = StorageTypes.BD;
     }
     else if (string.equalsIgnoreCase("device"))
     {
@@ -154,7 +165,9 @@ enum StorageTypes
       case FTP:        return "ftp";
       case SCP:        return "scp";
       case SFTP:       return "sftp";
+      case CD:         return "cd";
       case DVD:        return "dvd";
+      case BD:         return "bd";
       case DEVICE:     return "device";
       default:         return "";
     }
@@ -300,6 +313,23 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
+    else if (archiveName.startsWith("cd://"))
+    {
+      // cd
+      type = StorageTypes.CD;
+
+      String specifier = archiveName.substring(6);
+      Object[] data = new Object[2];
+      if (StringParser.parse(specifier,"%S:%S",data,StringParser.QUOTE_CHARS))
+      {
+        deviceName = (String)data[0];
+        fileName   = (String)data[1];
+      }
+      else
+      {
+        fileName = specifier;
+      }
+    }
     else if (archiveName.startsWith("dvd://"))
     {
       // dvd
@@ -317,9 +347,26 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
+    else if (archiveName.startsWith("bd://"))
+    {
+      // bd
+      type = StorageTypes.BD;
+
+      String specifier = archiveName.substring(6);
+      Object[] data = new Object[2];
+      if (StringParser.parse(specifier,"%S:%S",data,StringParser.QUOTE_CHARS))
+      {
+        deviceName = (String)data[0];
+        fileName   = (String)data[1];
+      }
+      else
+      {
+        fileName = specifier;
+      }
+    }
     else if (archiveName.startsWith("device://"))
     {
-      // dvd
+      // device
       type = StorageTypes.DEVICE;
 
       String specifier = archiveName.substring(9);
@@ -397,8 +444,24 @@ class ArchiveNameParts
           archiveNameBuffer.append('/');
         }
         break;
+      case CD:
+        archiveNameBuffer.append("cd://");
+        if (!deviceName.equals(""))
+        {
+          archiveNameBuffer.append(deviceName);
+          archiveNameBuffer.append(':');
+        }
+        break;
       case DVD:
         archiveNameBuffer.append("dvd://");
+        if (!deviceName.equals(""))
+        {
+          archiveNameBuffer.append(deviceName);
+          archiveNameBuffer.append(':');
+        }
+        break;
+      case BD:
+        archiveNameBuffer.append("bd://");
         if (!deviceName.equals(""))
         {
           archiveNameBuffer.append(deviceName);
@@ -592,37 +655,41 @@ public class BARControl
 
   // --------------------------- constants --------------------------------
   /* command line options */
-  private static final OptionEnumeration[] jobModeEnumeration =
+  private static final OptionEnumeration[] archiveTypeEnumeration =
   {
-    new OptionEnumeration("normal",      Settings.JobModes.NORMAL),
-    new OptionEnumeration("full",        Settings.JobModes.FULL),
-    new OptionEnumeration("incremental", Settings.JobModes.INCREMENTAL),
+    new OptionEnumeration("normal",      Settings.ArchiveTypes.NORMAL),
+    new OptionEnumeration("full",        Settings.ArchiveTypes.FULL),
+    new OptionEnumeration("incremental", Settings.ArchiveTypes.INCREMENTAL),
   };
 
   private static final Option[] options =
   {
-    new Option("--port",            "-p",Options.Types.INTEGER,    "serverPort"), 
-    new Option("--tls-port",        null,Options.Types.INTEGER,    "serverTLSPort"), 
-    new Option("--key-file",        null,Options.Types.STRING,     "keyFile"), 
-    new Option("--select-job",      null,Options.Types.STRING,     "selectJobName"),
-    new Option("--login-dialog",    null,Options.Types.BOOLEAN,    "loginDialogFlag"),    
+    new Option("--port",              "-p",Options.Types.INTEGER,    "serverPort"),
+    new Option("--tls-port",          null,Options.Types.INTEGER,    "serverTLSPort"),
+    new Option("--key-file",          null,Options.Types.STRING,     "serverKeyFileName"),
+    new Option("--select-job",        null,Options.Types.STRING,     "selectJobName"),
+    new Option("--login-dialog",      null,Options.Types.BOOLEAN,    "loginDialogFlag"),
 
-    new Option("--job",             "-j",Options.Types.STRING,     "runJobName"),  
-    new Option("--job-mode",        null,Options.Types.ENUMERATION,"jobMode",jobModeEnumeration),
-    new Option("--abort",           null,Options.Types.STRING,     "abortJobName"),   
-    new Option("--pause",           "-t",Options.Types.INTEGER,    "pauseTime"), 
-    new Option("--ping",            "-i",Options.Types.BOOLEAN,    "pingFlag"),    
-    new Option("--suspend",         "-s",Options.Types.BOOLEAN,    "suspendFlag"), 
-    new Option("--continue",        "-c",Options.Types.BOOLEAN,    "continueFlag"),  
-    new Option("--list",            "-l",Options.Types.BOOLEAN,    "listFlag"),    
+    new Option("--job",               "-j",Options.Types.STRING,     "runJobName"),
+    new Option("--archive-type",      null,Options.Types.ENUMERATION,"archiveType",archiveTypeEnumeration),
+    new Option("--abort",             null,Options.Types.STRING,     "abortJobName"),
+    new Option("--index-add",         null,Options.Types.STRING,     "indexAddStorageName"),
+    new Option("--index-remove",      null,Options.Types.STRING,     "indexRemoveStorageName"),
+    new Option("--index-storage-list",null,Options.Types.STRING,     "indexStorageListPattern"),
+    new Option("--index-entries-list",null,Options.Types.STRING,     "indexEntriesListPattern"),
+    new Option("--pause",             "-t",Options.Types.INTEGER,    "pauseTime"),
+    new Option("--ping",              "-i",Options.Types.BOOLEAN,    "pingFlag"),
+    new Option("--suspend",           "-s",Options.Types.BOOLEAN,    "suspendFlag"),
+    new Option("--continue",          "-c",Options.Types.BOOLEAN,    "continueFlag"),
+    new Option("--list",              "-l",Options.Types.BOOLEAN,    "listFlag"),
 
-    new Option("--debug",           null,Options.Types.BOOLEAN,    "debugFlag"),  
-    new Option("--bar-server-debug",null,Options.Types.BOOLEAN,    "serverDebugFlag"),  
+    new Option("--debug",             null,Options.Types.BOOLEAN,    "debugFlag"),
+    new Option("--bar-server-debug",  null,Options.Types.BOOLEAN,    "serverDebugFlag"),
 
-    new Option("--help",            null,Options.Types.BOOLEAN,    "helpFlag"),    
+    new Option("--help",              "-h",Options.Types.BOOLEAN,    "helpFlag"),
 
     // ignored
-    new Option("--swing",           null, Options.Types.BOOLEAN,   null),          
+    new Option("--swing",             null, Options.Types.BOOLEAN,   null),
   };
 
   // --------------------------- variables --------------------------------
@@ -656,36 +723,40 @@ public class BARControl
   }
 
   /** print program usage
-   * @param 
-   * @return 
+   * @param
+   * @return
    */
   private void printUsage()
   {
     System.out.println("barcontrol usage: <options> --");
     System.out.println("");
-    System.out.println("Options: -p|--port=<n>          - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
-    System.out.println("         --tls-port=<n>         - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
-    System.out.println("         --login-dialog         - force to open login dialog");
-    System.out.println("         --key-file=<file name> - key file name (default: ");
-    System.out.println("                                    ."+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
-    System.out.println("                                    "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
-    System.out.println("                                    "+Config.CONFIG_DIR+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME);
-    System.out.println("                                  )");
-    System.out.println("         --select-job=<name>    - select job");
+    System.out.println("Options: -p|--port=<n>                  - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
+    System.out.println("         --tls-port=<n>                 - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
+    System.out.println("         --login-dialog                 - force to open login dialog");
+    System.out.println("         --key-file=<file name>         - key file name (default: ");
+    System.out.println("                                            ."+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
+    System.out.println("                                            "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
+    System.out.println("                                            "+Config.CONFIG_DIR+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME);
+    System.out.println("                                         )");
+    System.out.println("         --select-job=<name>            - select job");
     System.out.println("");
-    System.out.println("         -j|--job=<name>        - start execution of job <name>");
-    System.out.println("         --job-mode=<mode>      - job mode");
-    System.out.println("                                    normal (default)");
-    System.out.println("                                    full");
-    System.out.println("                                    incremental");
-    System.out.println("         --abort=<name>         - abort execution of job <name>");
-    System.out.println("         -p|--pause=<n>         - pause job execution for <n> seconds");
-    System.out.println("         -i|--ping              - check connection to server");
-    System.out.println("         -s|--suspend           - suspend job execution");
-    System.out.println("         -c|--continue          - continue job execution");
-    System.out.println("         -l|--list              - list jobs");
+    System.out.println("         -j|--job=<name>                - start execution of job <name>");
+    System.out.println("         --archive-type=<mode>          - archive type");
+    System.out.println("                                            normal (default)");
+    System.out.println("                                            full");
+    System.out.println("                                            incremental");
+    System.out.println("         --abort=<name>                 - abort execution of job <name>");
+    System.out.println("         --index-add=<name>             - add storage archive <name> to index");
+    System.out.println("         --index-remove=<pattern>       - remove storage archive <name> from index");
+    System.out.println("         --index-storage-list=<pattern> - list storage archives matching pattern <pattern>");
+    System.out.println("         --index-enries-list=<pattern>  - list entries matching pattern <pattern>");
+    System.out.println("         -p|--pause=<n>                 - pause job execution for <n> seconds");  
+    System.out.println("         -i|--ping                      - check connection to server");           
+    System.out.println("         -s|--suspend                   - suspend job execution");                
+    System.out.println("         -c|--continue                  - continue job execution");               
+    System.out.println("         -l|--list                      - list jobs");                            
     System.out.println("");
-    System.out.println("         -h|--help              - print this help");
+    System.out.println("         -h|--help                      - print this help");
   }
 
   /** parse arguments
@@ -796,7 +867,7 @@ public class BARControl
 
 
   /** server/password dialog
-   * @param loginData server login data 
+   * @param loginData server login data
    * @return true iff login data ok, false otherwise
    */
   private boolean getLoginData(final LoginData loginData)
@@ -964,7 +1035,7 @@ public class BARControl
   private void createMenu()
   {
     Menu     menuBar;
-    Menu     menu;
+    Menu     menu,subMenu;
     MenuItem menuItem;
 
     // create menu
@@ -984,6 +1055,7 @@ public class BARControl
         {
         }
       });
+
       menuItem = Widgets.addMenuItem(menu,"Abort",SWT.CTRL+'A');
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -996,44 +1068,107 @@ public class BARControl
         {
         }
       });
-      menuItem = Widgets.addMenuItem(menu,"Pause 10min",SWT.NONE);
-      menuItem.addSelectionListener(new SelectionListener()
+
+      subMenu = Widgets.addMenu(menu,"Pause");
       {
-        public void widgetSelected(SelectionEvent selectionEvent)
+        menuItem = Widgets.addMenuItem(subMenu,"10min");
+        menuItem.addSelectionListener(new SelectionListener()
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
-          tabStatus.jobPause(10*60);
-//          Widgets.notify(tabStatus.widgetButtonPause);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            tabStatus.jobPause(10*60);
+  //          Widgets.notify(tabStatus.widgetButtonPause);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(subMenu,"60min",SWT.CTRL+'P');
+        menuItem.addSelectionListener(new SelectionListener()
         {
-        }
-      });
-      menuItem = Widgets.addMenuItem(menu,"Pause 60min",SWT.CTRL+'P');
-      menuItem.addSelectionListener(new SelectionListener()
-      {
-        public void widgetSelected(SelectionEvent selectionEvent)
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            tabStatus.jobPause(60*60);
+  //          Widgets.notify(tabStatus.widgetButtonPause);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(subMenu,"120min");
+        menuItem.addSelectionListener(new SelectionListener()
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
-          tabStatus.jobPause(60*60);
-//          Widgets.notify(tabStatus.widgetButtonPause);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            tabStatus.jobPause(120*60);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+
+        menuItem = Widgets.addMenuSeparator(subMenu);
+
+        menuItem = Widgets.addMenuCheckbox(subMenu,"Create operation",Settings.pauseCreateFlag);
+        menuItem.addSelectionListener(new SelectionListener()
         {
-        }
-      });
-      menuItem = Widgets.addMenuItem(menu,"Pause 120min",SWT.NONE);
-      menuItem.addSelectionListener(new SelectionListener()
-      {
-        public void widgetSelected(SelectionEvent selectionEvent)
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            Settings.pauseCreateFlag = widget.getSelection();
+            tabStatus.jobPause(60*60);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+
+        menuItem = Widgets.addMenuCheckbox(subMenu,"Storage operation",Settings.pauseStorageFlag);
+        menuItem.addSelectionListener(new SelectionListener()
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
-          tabStatus.jobPause(120*60);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            Settings.pauseStorageFlag = widget.getSelection();
+            tabStatus.jobPause(60*60);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+
+        menuItem = Widgets.addMenuCheckbox(subMenu,"Restore operation",Settings.pauseRestoreFlag);
+        menuItem.addSelectionListener(new SelectionListener()
         {
-        }
-      });
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            Settings.pauseRestoreFlag = widget.getSelection();
+            tabStatus.jobPause(60*60);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        menuItem = Widgets.addMenuCheckbox(subMenu,"Index update operation",Settings.pauseIndexUpdateFlag);
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            Settings.pauseIndexUpdateFlag = widget.getSelection();
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+      }
+
       menuItem = Widgets.addMenuItem(menu,"Toggle suspend/continue",SWT.CTRL+'S');
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -1111,6 +1246,8 @@ public class BARControl
    */
   BARControl(String[] args)
   {
+    final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     try
     {
       // load settings
@@ -1122,6 +1259,10 @@ public class BARControl
       // commands
       if (   (Settings.runJobName != null)
           || (Settings.abortJobName != null)
+          || (Settings.indexAddStorageName != null)
+          || (Settings.indexRemoveStorageName != null)
+          || (Settings.indexStorageListPattern != null)
+          || (Settings.indexEntriesListPattern != null)
           || (Settings.pauseTime > 0)
           || (Settings.pingFlag)
           || (Settings.suspendFlag)
@@ -1160,10 +1301,215 @@ public class BARControl
 
           // start job
           String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("JOB_START "+jobId+" "+Settings.jobMode.toString());
+          int errorCode = BARServer.executeCommand("JOB_START "+jobId+" "+Settings.archiveType.toString(),result);
           if (errorCode != Errors.NONE)
           {
             printError("cannot start job '%s' (error: %s)",Settings.runJobName,result[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+        }
+        if (Settings.indexAddStorageName != null)
+        {
+          // add index for storage
+          String[] result = new String[1];
+          int errorCode = BARServer.executeCommand("INDEX_STORAGE_ADD "+StringUtils.escape(Settings.indexAddStorageName),result);
+          if (errorCode != Errors.NONE)
+          {
+            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexAddStorageName,result[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+        }
+        if (Settings.indexRemoveStorageName != null)
+        {
+          // remote index for storage
+          String[] result = new String[1];
+          int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+StringUtils.escape(Settings.indexRemoveStorageName),result);
+          if (errorCode != Errors.NONE)
+          {
+            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexRemoveStorageName,result[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+        }
+        if (Settings.indexStorageListPattern != null)
+        {
+          // list storage index
+          Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * "+StringUtils.escape(Settings.indexStorageListPattern));
+          String   line;
+          Object[] data = new Object[5];
+          while (!command.endOfData())
+          {
+            line = command.getNextResult(5*1000);
+            if (line != null)
+            {
+              if      (StringParser.parse(line,"%ld %ld %S %S %S",data,StringParser.QUOTE_CHARS))
+              {
+                /* get data
+                   format:
+                     size
+                     date/time
+                     state
+                     storage name
+                     error message
+                */
+                long   size        = (Long)data[0];
+                long   datetime    = (Long)data[1];
+                String storageName = (String)data[3];
+
+                System.out.println(String.format("%12d %s %s",
+                                                 size,
+                                                 simpleDateFormat.format(new Date(datetime*1000)),
+                                                 storageName
+                                                )
+                                  );
+
+              }
+// else { Dprintf.dprintf("XXXXXXXXXXXXXXxline=%s",line); }
+            }
+          }
+          if (command.getErrorCode() != Errors.NONE)
+          {
+            printError("cannot list storage index (error: %s)",command.getErrorText());
+            BARServer.disconnect();
+            System.exit(1);
+          }
+        }
+        if (Settings.indexEntriesListPattern != null)
+        {
+          // list storage index
+          Command  command = BARServer.runCommand("INDEX_ENTRIES_LIST 100 0 "+StringUtils.escape(Settings.indexEntriesListPattern));
+          String   line;
+          Object[] data = new Object[9];
+          while (!command.endOfData())
+          {
+            line = command.getNextResult(5*1000);
+            if (line != null)
+            {
+              if      (StringParser.parse(line,"FILE %ld %ld %d %d %d %ld %ld %S %S",data,StringParser.QUOTE_CHARS))
+              {
+                /* get data
+                   format:
+                     size
+                     date/time
+                     user id
+                     group id
+                     permission
+                     fragment offset
+                     fragment size
+                     storage name
+                     file name
+                */
+                long   size           = (Long  )data[0];
+                long   datetime       = (Long  )data[1];
+                long   fragmentOffset = (Long  )data[5];
+                long   fragmentSize   = (Long  )data[6];
+                String storageName    = (String)data[7];
+                String fileName       = (String)data[8];
+
+                System.out.println(String.format("%s: FILE %-40s %12d",
+                                                 storageName,
+                                                 fileName,
+                                                 size
+                                                )
+                                  );
+              }
+              else if (StringParser.parse(line,"IMAGE %ld %ld %ld %S %S",data,StringParser.QUOTE_CHARS))
+              {
+                /* get data
+                   format:
+                     size
+                     blockOffset
+                     blockCount
+                     storage name
+                     name
+                */
+                long   size        = (Long  )data[0];
+                long   blockOffset = (Long  )data[1];
+                long   blockCount  = (Long  )data[2];
+                String storageName = (String)data[3];
+                String imageName   = (String)data[4];
+
+                System.out.println(String.format("%s: IMAGE %-40s %12d",
+                                                 storageName,
+                                                 imageName,
+                                                 size
+                                                )
+                                  );
+              }
+              else if (StringParser.parse(line,"DIRECTORY %ld %d %d %d %S %S",data,StringParser.QUOTE_CHARS))
+              {
+                /* get data
+                   format:
+                     date/time
+                     user id
+                     group id
+                     permission
+                     storage name
+                     directory name
+                */
+                long   datetime      = (Long  )data[0];
+                String storageName   = (String)data[4];
+                String directoryName = (String)data[5];
+
+                System.out.println(String.format("%s: DIR %-40s",
+                                                 storageName,
+                                                 directoryName
+                                                )
+                                  );
+              }
+              else if (StringParser.parse(line,"LINK %ld %d %d %d %S %S %S",data,StringParser.QUOTE_CHARS))
+              {
+                /* get data
+                   format:
+                     date/time
+                     user id
+                     group id
+                     permission
+                     storage name
+                     link name
+                     destination name
+                */
+                long   datetime        = (Long  )data[0];
+                String storageName     = (String)data[4];
+                String linkName        = (String)data[5];
+                String destinationName = (String)data[6];
+
+                System.out.println(String.format("%s: LINK %s -> %s",
+                                                 storageName,
+                                                 linkName,
+                                                 destinationName
+                                                )
+                                  );
+              }
+              else if (StringParser.parse(line,"SPECIAL %ld %d %d %d %S %S",data,StringParser.QUOTE_CHARS))
+              {
+                /* get data
+                   format:
+                     date/time
+                     user id
+                     group id
+                     permission
+                     storage name
+                     name
+                */
+                long   datetime    = (Long  )data[0];
+                String storageName = (String)data[4];
+                String name        = (String)data[5];
+
+                System.out.println(String.format("%s: SPECIAL %-40s",
+                                                 storageName,
+                                                 name
+                                                )
+                                  );
+              }
+            }
+//else { Dprintf.dprintf("XXXXXXXXXXXXXXxline=%s",line); }
+          }
+          if (command.getErrorCode() != Errors.NONE)
+          {
+            printError("cannot list archive files index (error: %s)",command.getErrorText());
             BARServer.disconnect();
             System.exit(1);
           }
@@ -1172,7 +1518,7 @@ public class BARControl
         {
           // pause
           String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("PAUSE "+Settings.pauseTime);
+          int errorCode = BARServer.executeCommand("PAUSE "+Settings.pauseTime,result);
           if (errorCode != Errors.NONE)
           {
             printError("cannot pause (error: %s)",Settings.runJobName,result[0]);
@@ -1187,7 +1533,7 @@ public class BARControl
         {
           // suspend
           String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("SUSPEND");
+          int errorCode = BARServer.executeCommand("SUSPEND",result);
           if (errorCode != Errors.NONE)
           {
             printError("cannot suspend (error: %s)",Settings.runJobName,result[0]);
@@ -1199,7 +1545,7 @@ public class BARControl
         {
           // continue
           String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("CONTINUE");
+          int errorCode = BARServer.executeCommand("CONTINUE",result);
           if (errorCode != Errors.NONE)
           {
             printError("cannot continue (error: %s)",Settings.runJobName,result[0]);
@@ -1220,7 +1566,7 @@ public class BARControl
 
           // abort job
           String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("JOB_ABORT "+jobId);
+          int errorCode = BARServer.executeCommand("JOB_ABORT "+jobId,result);
           if (errorCode != Errors.NONE)
           {
             printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,result[0]);
@@ -1230,11 +1576,9 @@ public class BARControl
         }
         if (Settings.listFlag)
         {
-          final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
           Object data[] = new Object[11];
 
-          // get server state          
+          // get server state
           String serverState = null;
           String[] result1 = new String[1];
           if (BARServer.executeCommand("STATUS",result1) != Errors.NONE)
