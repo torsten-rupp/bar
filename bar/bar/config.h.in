@@ -67,6 +67,9 @@
 /* SSH2 has libssh2_channel_send_keepalive() */
 #undef HAVE_SSH2_CHANNEL_SEND_KEEPALIVE
 
+/* SSH2 has libssh2_keepalive_config() */
+#undef HAVE_SSH2_KEEPALIVE_CONFIG
+
 /* SSH2 has libssh2_keepalive_send() */
 #undef HAVE_SSH2_KEEPALIVE_SEND
 
