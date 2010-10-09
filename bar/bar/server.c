@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.24 $
+* $Revision: 1.25 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -38,6 +38,7 @@
 #include "patternlists.h"
 #include "archive.h"
 #include "storage.h"
+#include "index.h"
 #include "misc.h"
 
 #include "commands_create.h"
@@ -54,7 +55,7 @@
 /***************************** Constants *******************************/
 
 #define PROTOCOL_VERSION_MAJOR 1
-#define PROTOCOL_VERSION_MINOR 0
+#define PROTOCOL_VERSION_MINOR 1
 
 #define SESSION_ID_LENGTH 64                   // max. length of session id
 
@@ -130,25 +131,25 @@ typedef struct JobNode
   {
     Errors            error;                   // error code
     ulong             estimatedRestTime;       // estimated rest running time [s]
-    ulong             doneFiles;               // number of processed files
+    ulong             doneEntries;             // number of processed entries
     uint64            doneBytes;               // sum of processed bytes
-    ulong             totalFiles;              // number of total files
+    ulong             totalEntries;            // number of total entries
     uint64            totalBytes;              // sum of total bytes
-    ulong             skippedFiles;            // number of skipped files
+    ulong             skippedEntries;          // number of skipped entries
     uint64            skippedBytes;            // sum of skippped bytes
-    ulong             errorFiles;              // number of files with errors
+    ulong             errorEntries;            // number of entries with errors
     uint64            errorBytes;              // sum of bytes of files with errors
-    PerformanceFilter filesPerSecond;          // average processed files per second
+    PerformanceFilter entriesPerSecond;        // average processed entries per second
     PerformanceFilter bytesPerSecond;          // average processed bytes per second
     PerformanceFilter storageBytesPerSecond;   // average processed storage bytes per second
     uint64            archiveBytes;            // number of bytes stored in archive
     double            compressionRatio;        // compression ratio: saved "space" [%]
-    String            fileName;                // current file
-    uint64            fileDoneBytes;           // current file bytes done
-    uint64            fileTotalBytes;          // current file bytes total
-    String            storageName;             // current storage file
-    uint64            storageDoneBytes;        // current storage file bytes done
-    uint64            storageTotalBytes;       // current storage file bytes total
+    String            name;                    // current entry
+    uint64            entryDoneBytes;          // current entry bytes done
+    uint64            entryTotalBytes;         // current entry bytes total
+    String            storageName;             // current storage name
+    uint64            archiveDoneBytes;        // current archive bytes done
+    uint64            archiveTotalBytes;       // current archive bytes total
     uint              volumeNumber;            // current volume number
     double            volumeProgress;          // current volume progress
     String            message;                 // message text
@@ -182,6 +183,85 @@ typedef struct
 {
   LIST_HEADER(DirectoryInfoNode);
 } DirectoryInfoList;
+
+typedef struct IndexCryptPasswordNode
+{
+  LIST_NODE_HEADER(struct IndexCryptPasswordNode);
+
+  Password *cryptPassword;
+  String   cryptPrivateKeyFileName;
+} IndexCryptPasswordNode;
+
+/* list with index decrypt passwords */
+typedef struct
+{
+  LIST_HEADER(IndexCryptPasswordNode);
+} IndexCryptPasswordList;
+
+/* index operations */
+typedef enum
+{
+  INDEX_OPERATION_ADD,
+  INDEX_OPERATION_REMOVE,
+  INDEX_OPERATION_REFRESH
+} IndexOperations;
+
+/* database index entry node */
+typedef struct IndexNode
+{
+  LIST_NODE_HEADER(struct IndexNode);
+
+  ArchiveEntryTypes type;
+  String            storageName;
+  String            name;
+  uint64            timeModified;
+  union
+  {
+    struct
+    {
+      uint64   size;
+      uint32   userId;
+      uint32   groupId;
+      uint32   permission;
+      uint64   fragmentOffset;
+      uint64   fragmentSize;
+    } file;
+    struct
+    {
+      uint64 size;
+      uint   blockSize;
+      uint64 blockOffset;
+      uint64 blockCount;
+    } image;
+    struct
+    {
+      uint32 userId;
+      uint32 groupId;
+      uint32 permission;
+    } directory;
+    struct
+    {
+      String destinationName;
+      uint32 userId;
+      uint32 groupId;
+      uint32 permission;
+    } link;
+    struct
+    {
+      ulong  major;
+      ulong  minor;
+      uint32 userId;
+      uint32 groupId;
+      uint32 permission;
+    } special;
+  };
+} IndexNode;
+
+/* database index node list */
+typedef struct
+{
+  LIST_HEADER(IndexNode);
+} IndexList;
 
 /* session id */
 typedef byte SessionId[SESSION_ID_LENGTH];
@@ -375,9 +455,10 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 {
   CONFIG_STRUCT_VALUE_STRING   ("archive-name",           JobNode,archiveName                             ),
   CONFIG_STRUCT_VALUE_SELECT   ("archive-type",           JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
-  CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",      JobNode,jobOptions.archivePartSize,             0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
 
   CONFIG_STRUCT_VALUE_STRING   ("incremental-list-file",  JobNode,jobOptions.incrementalListFileName      ),
+
+  CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",      JobNode,jobOptions.archivePartSize,             0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
 
   CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",        JobNode,jobOptions.directoryStripCount,         0,INT_MAX,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("destination",            JobNode,jobOptions.destination                  ),
@@ -402,18 +483,18 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_STRING   ("ssh-public-key",         JobNode,jobOptions.sshServer.publicKeyFileName  ),
   CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",        JobNode,jobOptions.sshServer.privateKeyFileName ),
 
-  CONFIG_STRUCT_VALUE_INTEGER64("volume-size",            JobNode,jobOptions.device.volumeSize,           0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",      JobNode,jobOptions.waitFirstVolumeFlag          ),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",           JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",          JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                     configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
+
+  CONFIG_STRUCT_VALUE_INTEGER64("volume-size",            JobNode,jobOptions.volumeSize,           0LL,LONG_LONG_MAX,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                    JobNode,jobOptions.errorCorrectionCodesFlag     ),
 
   CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",        JobNode,jobOptions.skipUnreadableFlag           ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("raw-images",             JobNode,jobOptions.rawImagesFlag                ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files",JobNode,jobOptions.overwriteArchiveFilesFlag    ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",        JobNode,jobOptions.overwriteFilesFlag           ),
-
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",           JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",          JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                     configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",      JobNode,jobOptions.waitFirstVolumeFlag          ),
 
   CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",               JobNode,scheduleList,                           configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
 };
@@ -427,10 +508,18 @@ LOCAL JobList          jobList;
 LOCAL Thread           jobThread;
 LOCAL Thread           schedulerThread;
 LOCAL Thread           pauseThread;
+LOCAL Thread           indexThread;
+LOCAL Thread           indexUpdateThread;
 LOCAL ClientList       clientList;
 LOCAL Semaphore        serverStateLock;
 LOCAL ServerStates     serverState;
-LOCAL bool             pauseFlag;
+LOCAL struct
+      {
+        bool create;
+        bool storage;
+        bool restore;
+        bool indexUpdate;
+      } pauseFlags;
 LOCAL uint64           pauseEndTimestamp;
 LOCAL bool             quitFlag;
 
@@ -533,28 +622,28 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
 
   jobNode->runningInfo.error              = ERROR_NONE;
   jobNode->runningInfo.estimatedRestTime  = 0;
-  jobNode->runningInfo.doneFiles          = 0L;
+  jobNode->runningInfo.doneEntries        = 0L;
   jobNode->runningInfo.doneBytes          = 0LL;
-  jobNode->runningInfo.totalFiles         = 0L;
+  jobNode->runningInfo.totalEntries       = 0L;
   jobNode->runningInfo.totalBytes         = 0LL;
-  jobNode->runningInfo.skippedFiles       = 0L;
+  jobNode->runningInfo.skippedEntries     = 0L;
   jobNode->runningInfo.skippedBytes       = 0LL;
-  jobNode->runningInfo.errorFiles         = 0L;
+  jobNode->runningInfo.errorEntries       = 0L;
   jobNode->runningInfo.errorBytes         = 0LL;
   jobNode->runningInfo.archiveBytes       = 0LL;
   jobNode->runningInfo.compressionRatio   = 0.0;
-  jobNode->runningInfo.fileDoneBytes      = 0LL;
-  jobNode->runningInfo.fileTotalBytes     = 0LL;
-  jobNode->runningInfo.storageDoneBytes   = 0LL;
-  jobNode->runningInfo.storageTotalBytes  = 0LL;
+  jobNode->runningInfo.entryDoneBytes     = 0LL;
+  jobNode->runningInfo.entryTotalBytes    = 0LL;
+  jobNode->runningInfo.archiveDoneBytes   = 0LL;
+  jobNode->runningInfo.archiveTotalBytes  = 0LL;
   jobNode->runningInfo.volumeNumber       = 0;
   jobNode->runningInfo.volumeProgress     = 0.0;
 
-  String_clear(jobNode->runningInfo.fileName   );
+  String_clear(jobNode->runningInfo.name       );
   String_clear(jobNode->runningInfo.storageName);
   String_clear(jobNode->runningInfo.message    );
 
-  Misc_performanceFilterClear(&jobNode->runningInfo.filesPerSecond       );
+  Misc_performanceFilterClear(&jobNode->runningInfo.entriesPerSecond     );
   Misc_performanceFilterClear(&jobNode->runningInfo.bytesPerSecond       );
   Misc_performanceFilterClear(&jobNode->runningInfo.storageBytesPerSecond);
 }
@@ -608,11 +697,11 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->volumeNumber                   = 0;
   jobNode->volumeUnloadFlag               = FALSE;
 
-  jobNode->runningInfo.fileName           = String_new();
+  jobNode->runningInfo.name               = String_new();
   jobNode->runningInfo.storageName        = String_new();
   jobNode->runningInfo.message            = String_new();
 
-  Misc_performanceFilterInit(&jobNode->runningInfo.filesPerSecond,       10*60);
+  Misc_performanceFilterInit(&jobNode->runningInfo.entriesPerSecond,     10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecond,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecond,10*60);
 
@@ -710,11 +799,11 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->volumeNumber                   = 0;
   newJobNode->volumeUnloadFlag               = FALSE;
 
-  newJobNode->runningInfo.fileName           = String_new();
+  newJobNode->runningInfo.name               = String_new();
   newJobNode->runningInfo.storageName        = String_new();
   newJobNode->runningInfo.message            = String_new();
 
-  Misc_performanceFilterInit(&newJobNode->runningInfo.filesPerSecond,       10*60);
+  Misc_performanceFilterInit(&newJobNode->runningInfo.entriesPerSecond,     10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecond,       10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.storageBytesPerSecond,10*60);
 
@@ -732,17 +821,19 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeJobNode(JobNode *jobNode)
+LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 {
   assert(jobNode != NULL);
 
+  UNUSED_VARIABLE(userData);
+
   Misc_performanceFilterDone(&jobNode->runningInfo.storageBytesPerSecond);
   Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecond);
-  Misc_performanceFilterDone(&jobNode->runningInfo.filesPerSecond);
+  Misc_performanceFilterDone(&jobNode->runningInfo.entriesPerSecond);
 
   String_delete(jobNode->runningInfo.message);
   String_delete(jobNode->runningInfo.storageName);
-  String_delete(jobNode->runningInfo.fileName);
+  String_delete(jobNode->runningInfo.name);
 
   if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
   if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
@@ -770,7 +861,8 @@ LOCAL void deleteJob(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  freeJobNode(jobNode);
+  freeJobNode(jobNode,NULL);
+
   LIST_DELETE_NODE(jobNode);
 }
 
@@ -881,15 +973,15 @@ LOCAL JobNode *findJobByName(const String name)
 }
 
 /***********************************************************************\
-* Name   : readJobFileScheduleInfo
-* Purpose: read job file schedule info
+* Name   : readJobScheduleInfo
+* Purpose: read job schedule info
 * Input  : jobNode - job node
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors readJobFileScheduleInfo(JobNode *jobNode)
+LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
 {
   String     fileName,pathName,baseName;
   FileHandle fileHandle;
@@ -959,15 +1051,15 @@ LOCAL Errors readJobFileScheduleInfo(JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : writeJobFileScheduleInfo
-* Purpose: write job file schedule info
+* Name   : writeJobScheduleInfo
+* Purpose: write job schedule info
 * Input  : jobNode - job node
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeJobFileScheduleInfo(JobNode *jobNode)
+LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 {
   String     fileName,pathName,baseName;
   FileHandle fileHandle;
@@ -1010,7 +1102,7 @@ LOCAL Errors writeJobFileScheduleInfo(JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : readJobFile
+* Name   : readJob
 * Purpose: read job from file
 * Input  : fileName - file name
 * Output : -
@@ -1018,33 +1110,10 @@ LOCAL Errors writeJobFileScheduleInfo(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool readJobFile(JobNode *jobNode)
+LOCAL bool readJob(JobNode *jobNode)
 {
-  Errors     error;
-  FileHandle fileHandle;
-  bool       failFlag;
-  uint       lineNb;
-  String     line;
-  String     name,value;
-  long       nextIndex;
-
   assert(jobNode != NULL);
   assert(jobNode->fileName != NULL);
-
-  /* initialise variables */
-  line = String_new();
-
-  /* open file */
-  error = File_open(&fileHandle,jobNode->fileName,FILE_OPENMODE_READ);
-  if (error != ERROR_NONE)
-  {
-    printError("Cannot open file '%s' (error: %s)!\n",
-               String_cString(jobNode->fileName),
-               Errors_getText(error)
-              );
-    String_delete(line);
-    return FALSE;
-  }
 
   /* reset values */
   String_clear(jobNode->archiveName);
@@ -1077,93 +1146,36 @@ LOCAL bool readJobFile(JobNode *jobNode)
   jobNode->jobOptions.overwriteArchiveFilesFlag    = FALSE;
   jobNode->jobOptions.overwriteFilesFlag           = FALSE;
 
-  /* parse file */
-  failFlag = FALSE;
-  lineNb   = 0;
-  name     = String_new();
-  value    = String_new();
-  while (!File_eof(&fileHandle) && !failFlag)
+  /* read file */
+  if (!readJobFile(jobNode->fileName,
+                   CONFIG_VALUES,
+                   SIZE_OF_ARRAY(CONFIG_VALUES),
+                   jobNode
+                  )
+     )
   {
-    /* read line */
-    error = File_readLine(&fileHandle,line);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot read file '%s' (error: %s)!\n",
-                 String_cString(jobNode->fileName),
-                 Errors_getText(error)
-                );
-      failFlag = TRUE;
-      break;
-    }
-    String_trim(line,STRING_WHITE_SPACES);
-    lineNb++;
-
-    /* skip comments, empty lines */
-    if ((String_length(line) == 0) || (String_index(line,0) == '#'))
-    {
-      continue;
-    }
-
-    /* parse line */
-    if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-    {
-      if (!ConfigValue_parse(String_cString(name),
-                             String_cString(value),
-                             CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
-                             NULL,
-                             NULL,
-                             jobNode
-                            )
-         )
-      {
-        printError("Unknown or invalid config value '%s' in %s, line %ld - skipped\n",
-                   String_cString(name),
-                   String_cString(jobNode->fileName),
-                   lineNb
-                  );
-//        failFlag = TRUE;
-//        break;
-      }
-    }
-    else
-    {
-      printError("Error in %s, line %ld: '%s' - skipped\n",
-                 String_cString(jobNode->fileName),
-                 lineNb,
-                 String_cString(line)
-                );
-//      failFlag = TRUE;
-//      break;
-    }
-  }
-  String_delete(value);
-  String_delete(name);
-
-  /* close file */
-  File_close(&fileHandle);
+    return FALSE;
+  }                   
 
   /* save time modified */
   jobNode->timeModified = File_getFileTimeModified(jobNode->fileName);
 
   /* read schedule info */
-  readJobFileScheduleInfo(jobNode);
+  readJobScheduleInfo(jobNode);
 
-  /* free resources */
-  String_delete(line);
-
-  return !failFlag;
+  return TRUE;
 }
 
 /***********************************************************************\
-* Name   : rereadJobFiles
-* Purpose: re-read job files
-* Input  : jobsDirectory - jobs directory
+* Name   : rereadAllJobs
+* Purpose: re-read all jobs
+* Input  : jobsDirectory - directory with job files
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors rereadJobFiles(const char *jobsDirectory)
+LOCAL Errors rereadAllJobs(const char *jobsDirectory)
 {
   Errors              error;
   DirectoryListHandle directoryListHandle;
@@ -1196,65 +1208,63 @@ LOCAL Errors rereadJobFiles(const char *jobsDirectory)
     /* check if readable file and not ".*" */
     if (File_isFile(fileName) && File_isReadable(fileName) && (String_index(baseName,0) != '.'))
     {
-      /* lock */
-      Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-      /* find/create job */
-      jobNode = jobList.head;
-      while ((jobNode != NULL) && !String_equals(jobNode->name,baseName))
+      SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        jobNode = jobNode->next;
-      }
-      if (jobNode == NULL)
-      {
-        jobNode = newJob(JOB_TYPE_CREATE,fileName);
-        List_append(&jobList,jobNode);
-      }
+        /* find/create job */
+        jobNode = jobList.head;
+        while ((jobNode != NULL) && !String_equals(jobNode->name,baseName))
+        {
+          jobNode = jobNode->next;
+        }
+        if (jobNode == NULL)
+        {
+          jobNode = newJob(JOB_TYPE_CREATE,fileName);
+          List_append(&jobList,jobNode);
+        }
 
-      if (   !CHECK_JOB_IS_ACTIVE(jobNode)
-          && (jobNode->timeModified < File_getFileTimeModified(fileName))
-         )
-      {
-        /* read job */
-        readJobFile(jobNode);
+        if (   !CHECK_JOB_IS_ACTIVE(jobNode)
+            && (jobNode->timeModified < File_getFileTimeModified(fileName))
+           )
+        {
+          /* read job */
+          readJob(jobNode);
+        }
       }
-
-      /* unlock */
-      Semaphore_unlock(&jobList.lock);
     }
   }
   File_deleteFileName(baseName);
   File_closeDirectoryList(&directoryListHandle);
 
   /* remove not existing jobs */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-  jobNode = jobList.head;
-  while (jobNode != NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    if (jobNode->state == JOB_STATE_NONE)
+    jobNode = jobList.head;
+    while (jobNode != NULL)
     {
-      File_setFileNameCString(fileName,jobsDirectory);
-      File_appendFileName(fileName,jobNode->name);
-      if (File_isFile(fileName) && File_isReadable(fileName))
+      if (jobNode->state == JOB_STATE_NONE)
       {
-        /* exists => ok */
-        jobNode = jobNode->next;
+        File_setFileNameCString(fileName,jobsDirectory);
+        File_appendFileName(fileName,jobNode->name);
+        if (File_isFile(fileName) && File_isReadable(fileName))
+        {
+          /* exists => ok */
+          jobNode = jobNode->next;
+        }
+        else
+        {
+          /* do not exists => delete job node */
+          deleteJobNode = jobNode;
+          jobNode = jobNode->next;
+          List_remove(&jobList,deleteJobNode);
+          deleteJob(deleteJobNode);
+        }
       }
       else
       {
-        /* do not exists => delete job node */
-        deleteJobNode = jobNode;
         jobNode = jobNode->next;
-        List_remove(&jobList,deleteJobNode);
-        deleteJob(deleteJobNode);
       }
     }
-    else
-    {
-      jobNode = jobNode->next;
-    }
   }
-  Semaphore_unlock(&jobList.lock);
 
   /* free resources */
   File_deleteFileName(fileName);
@@ -1263,8 +1273,8 @@ LOCAL Errors rereadJobFiles(const char *jobsDirectory)
 }
 
 /***********************************************************************\
-* Name   : deleteJobFileEntries
-* Purpose: delete entries from job file
+* Name   : deleteJobEntries
+* Purpose: delete entries from job
 * Input  : stringList - job file string list to modify
 *          name       - name of value
 * Output : -
@@ -1272,9 +1282,9 @@ LOCAL Errors rereadJobFiles(const char *jobsDirectory)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL StringNode *deleteJobFileEntries(StringList *stringList,
-                                       const char *name
-                                      )
+LOCAL StringNode *deleteJobEntries(StringList *stringList,
+                                   const char *name
+                                  )
 {
   StringNode *nextNode;
 
@@ -1311,15 +1321,15 @@ LOCAL StringNode *deleteJobFileEntries(StringList *stringList,
 }
 
 /***********************************************************************\
-* Name   : updateJobFile
-* Purpose: update job file
+* Name   : updateJob
+* Purpose: update job
 * Input  : jobNode - job node
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors updateJobFile(JobNode *jobNode)
+LOCAL Errors updateJob(JobNode *jobNode)
 {
   StringList jobFileList;
   String     line;
@@ -1363,7 +1373,7 @@ LOCAL Errors updateJobFile(JobNode *jobNode)
   for (z = 0; z < SIZE_OF_ARRAY(CONFIG_VALUES); z++)
   {
     /* delete old entries, get position for insert new entries */
-    nextNode = deleteJobFileEntries(&jobFileList,CONFIG_VALUES[z].name);
+    nextNode = deleteJobEntries(&jobFileList,CONFIG_VALUES[z].name);
 
     /* insert new entries */
     ConfigValue_formatInit(&configValueFormat,
@@ -1414,7 +1424,7 @@ LOCAL Errors updateJobFile(JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : updateAllJobFiles
+* Name   : updateAllJobs
 * Purpose: update all job files
 * Input  : -
 * Output : -
@@ -1422,19 +1432,19 @@ LOCAL Errors updateJobFile(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateAllJobFiles(void)
+LOCAL void updateAllJobs(void)
 {
   JobNode *jobNode;
 
-  jobNode = jobList.head;
-  while (jobNode != NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    if (jobNode->modifiedFlag)
+    LIST_ITERATE(jobList,jobNode)
     {
-      updateJobFile(jobNode);
+      if (jobNode->modifiedFlag)
+      {
+        updateJob(jobNode);
+      }
     }
-
-    jobNode = jobNode->next;
   }
 }
 
@@ -1478,22 +1488,22 @@ LOCAL Errors getCryptPassword(void         *userData,
 }
 
 /***********************************************************************\
-* Name   : updateCreateStatus
+* Name   : updateCreateJobStatus
 * Purpose: update create status
 * Input  : jobNode          - job node
 *          error            - error code
 *          createStatusInfo - create status info data
 * Output : -
-* Return : -
+* Return : bool TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateCreateStatus(JobNode                *jobNode,
-                              Errors                 error,
-                              const CreateStatusInfo *createStatusInfo
-                             )
+LOCAL bool updateCreateJobStatus(JobNode                *jobNode,
+                                 Errors                 error,
+                                 const CreateStatusInfo *createStatusInfo
+                                )
 {
-  double filesPerSecond,bytesPerSecond,storageBytesPerSecond;
+  double entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
   ulong  restFiles;
   uint64 restBytes;
   uint64 restStorageBytes;
@@ -1501,116 +1511,120 @@ LOCAL void updateCreateStatus(JobNode                *jobNode,
 
   assert(jobNode != NULL);
   assert(createStatusInfo != NULL);
-  assert(createStatusInfo->fileName != NULL);
+  assert(createStatusInfo->name != NULL);
   assert(createStatusInfo->storageName != NULL);
 
   /* calculate estimated rest time */
-  Misc_performanceFilterAdd(&jobNode->runningInfo.filesPerSecond,       createStatusInfo->doneFiles);
+  Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecond,     createStatusInfo->doneEntries);
   Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecond,       createStatusInfo->doneBytes);
-  Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecond,createStatusInfo->storageDoneBytes);
-  filesPerSecond        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.filesPerSecond       );
+  Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecond,createStatusInfo->archiveDoneBytes);
+  entriesPerSecond      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecond     );
   bytesPerSecond        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecond       );
   storageBytesPerSecond = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecond);
 
-  restFiles        = (createStatusInfo->totalFiles        > createStatusInfo->doneFiles       )?createStatusInfo->totalFiles       -createStatusInfo->doneFiles       :0L;
+  restFiles        = (createStatusInfo->totalEntries      > createStatusInfo->doneEntries     )?createStatusInfo->totalEntries     -createStatusInfo->doneEntries     :0L;
   restBytes        = (createStatusInfo->totalBytes        > createStatusInfo->doneBytes       )?createStatusInfo->totalBytes       -createStatusInfo->doneBytes       :0LL;
-  restStorageBytes = (createStatusInfo->storageTotalBytes > createStatusInfo->storageDoneBytes)?createStatusInfo->storageTotalBytes-createStatusInfo->storageDoneBytes:0LL;
+  restStorageBytes = (createStatusInfo->archiveTotalBytes > createStatusInfo->archiveDoneBytes)?createStatusInfo->archiveTotalBytes-createStatusInfo->archiveDoneBytes:0LL;
   estimatedRestTime = 0;
-  if (filesPerSecond        > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)round((double)restFiles/filesPerSecond              )); }
+  if (entriesPerSecond      > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)round((double)restFiles/entriesPerSecond            )); }
   if (bytesPerSecond        > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)round((double)restBytes/bytesPerSecond              )); }
   if (storageBytesPerSecond > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)round((double)restStorageBytes/storageBytesPerSecond)); }
 
 /*
-fprintf(stderr,"%s,%d: createStatusInfo->doneFiles=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- filesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
-createStatusInfo->doneFiles,
+fprintf(stderr,"%s,%d: createStatusInfo->doneEntries=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalEntries=%lu jobNode->runningInfo.totalBytes %llu -- entriesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
+createStatusInfo->doneEntries,
 createStatusInfo->doneBytes,
-jobNode->runningInfo.totalFiles,
+jobNode->runningInfo.totalEntries,
 jobNode->runningInfo.totalBytes,
-filesPerSecond,bytesPerSecond,estimatedRestTime);
+entriesPerSecond,bytesPerSecond,estimatedRestTime);
 */
 
   jobNode->runningInfo.error                 = error;
-  jobNode->runningInfo.doneFiles             = createStatusInfo->doneFiles;
+  jobNode->runningInfo.doneEntries           = createStatusInfo->doneEntries;
   jobNode->runningInfo.doneBytes             = createStatusInfo->doneBytes;
-  jobNode->runningInfo.totalFiles            = createStatusInfo->totalFiles;
+  jobNode->runningInfo.totalEntries          = createStatusInfo->totalEntries;
   jobNode->runningInfo.totalBytes            = createStatusInfo->totalBytes;
-  jobNode->runningInfo.skippedFiles          = createStatusInfo->skippedFiles;
+  jobNode->runningInfo.skippedEntries        = createStatusInfo->skippedEntries;
   jobNode->runningInfo.skippedBytes          = createStatusInfo->skippedBytes;
-  jobNode->runningInfo.errorFiles            = createStatusInfo->errorFiles;
+  jobNode->runningInfo.errorEntries          = createStatusInfo->errorEntries;
   jobNode->runningInfo.errorBytes            = createStatusInfo->errorBytes;
   jobNode->runningInfo.archiveBytes          = createStatusInfo->archiveBytes;
   jobNode->runningInfo.compressionRatio      = createStatusInfo->compressionRatio;
   jobNode->runningInfo.estimatedRestTime     = estimatedRestTime;
-  String_set(jobNode->runningInfo.fileName,createStatusInfo->fileName);
-  jobNode->runningInfo.fileDoneBytes         = createStatusInfo->fileDoneBytes;
-  jobNode->runningInfo.fileTotalBytes        = createStatusInfo->fileTotalBytes;
+  String_set(jobNode->runningInfo.name,createStatusInfo->name);
+  jobNode->runningInfo.entryDoneBytes        = createStatusInfo->entryDoneBytes;
+  jobNode->runningInfo.entryTotalBytes       = createStatusInfo->entryTotalBytes;
   String_set(jobNode->runningInfo.storageName,createStatusInfo->storageName);
-  jobNode->runningInfo.storageDoneBytes      = createStatusInfo->storageDoneBytes;
-  jobNode->runningInfo.storageTotalBytes     = createStatusInfo->storageTotalBytes;
+  jobNode->runningInfo.archiveDoneBytes      = createStatusInfo->archiveDoneBytes;
+  jobNode->runningInfo.archiveTotalBytes     = createStatusInfo->archiveTotalBytes;
   jobNode->runningInfo.volumeNumber          = createStatusInfo->volumeNumber;
   jobNode->runningInfo.volumeProgress        = createStatusInfo->volumeProgress;
 //fprintf(stderr,"%s,%d: createStatusInfo->fileName=%s\n",__FILE__,__LINE__,String_cString(jobNode->runningInfo.fileName));
+
+  return TRUE;
 }
 
 /***********************************************************************\
-* Name   : updateRestoreStatus
-* Purpose: update restore status
+* Name   : updateRestoreJobStatus
+* Purpose: update restore job status
 * Input  : jobNode           - job node
 *          error             - error code
 *          restoreStatusInfo - create status info data
 * Output : -
-* Return : -
+* Return : bool TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateRestoreStatus(JobNode                 *jobNode,
-                               Errors                  error,
-                               const RestoreStatusInfo *restoreStatusInfo
-                              )
+LOCAL bool updateRestoreJobStatus(JobNode                 *jobNode,
+                                  Errors                  error,
+                                  const RestoreStatusInfo *restoreStatusInfo
+                                 )
 {
-  double filesPerSecond,bytesPerSecond,storageBytesPerSecond;
+  double entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
 
   assert(jobNode != NULL);
   assert(restoreStatusInfo != NULL);
-  assert(restoreStatusInfo->fileName != NULL);
+  assert(restoreStatusInfo->name != NULL);
   assert(restoreStatusInfo->storageName != NULL);
 
   /* calculate estimated rest time */
-  Misc_performanceFilterAdd(&jobNode->runningInfo.filesPerSecond,       restoreStatusInfo->doneFiles);
+  Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecond,     restoreStatusInfo->doneEntries);
   Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecond,       restoreStatusInfo->doneBytes);
-  Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecond,restoreStatusInfo->storageDoneBytes);
-  filesPerSecond        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.filesPerSecond       );
+  Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecond,restoreStatusInfo->archiveDoneBytes);
+  entriesPerSecond      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecond     );
   bytesPerSecond        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecond       );
   storageBytesPerSecond = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecond);
 
 /*
-fprintf(stderr,"%s,%d: restoreStatusInfo->doneFiles=%lu restoreStatusInfo->doneBytes=%llu jobNode->runningInfo.totalFiles=%lu jobNode->runningInfo.totalBytes %llu -- filesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
-restoreStatusInfo->doneFiles,
+fprintf(stderr,"%s,%d: restoreStatusInfo->doneEntries=%lu restoreStatusInfo->doneBytes=%llu jobNode->runningInfo.totalEntries=%lu jobNode->runningInfo.totalBytes %llu -- entriesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
+restoreStatusInfo->doneEntries,
 restoreStatusInfo->doneBytes,
-jobNode->runningInfo.totalFiles,
+jobNode->runningInfo.totalEntries,
 jobNode->runningInfo.totalBytes,
-filesPerSecond,bytesPerSecond,estimatedRestTime);
+entriesPerSecond,bytesPerSecond,estimatedRestTime);
 */
 
   jobNode->runningInfo.error                 = error;
-  jobNode->runningInfo.doneFiles             = restoreStatusInfo->doneFiles;
+  jobNode->runningInfo.doneEntries           = restoreStatusInfo->doneEntries;
   jobNode->runningInfo.doneBytes             = restoreStatusInfo->doneBytes;
-  jobNode->runningInfo.skippedFiles          = restoreStatusInfo->skippedFiles;
+  jobNode->runningInfo.skippedEntries        = restoreStatusInfo->skippedEntries;
   jobNode->runningInfo.skippedBytes          = restoreStatusInfo->skippedBytes;
-  jobNode->runningInfo.errorFiles            = restoreStatusInfo->errorFiles;
+  jobNode->runningInfo.errorEntries          = restoreStatusInfo->errorEntries;
   jobNode->runningInfo.errorBytes            = restoreStatusInfo->errorBytes;
   jobNode->runningInfo.archiveBytes          = 0LL;
   jobNode->runningInfo.compressionRatio      = 0.0;
   jobNode->runningInfo.estimatedRestTime     = 0;
-  String_set(jobNode->runningInfo.fileName,restoreStatusInfo->fileName);
-  jobNode->runningInfo.fileDoneBytes         = restoreStatusInfo->fileDoneBytes;
-  jobNode->runningInfo.fileTotalBytes        = restoreStatusInfo->fileTotalBytes;
+  String_set(jobNode->runningInfo.name,restoreStatusInfo->name);
+  jobNode->runningInfo.entryDoneBytes        = restoreStatusInfo->entryDoneBytes;
+  jobNode->runningInfo.entryTotalBytes       = restoreStatusInfo->entryTotalBytes;
   String_set(jobNode->runningInfo.storageName,restoreStatusInfo->storageName);
-  jobNode->runningInfo.storageDoneBytes      = restoreStatusInfo->storageDoneBytes;
-  jobNode->runningInfo.storageTotalBytes     = restoreStatusInfo->storageTotalBytes;
+  jobNode->runningInfo.archiveDoneBytes      = restoreStatusInfo->archiveDoneBytes;
+  jobNode->runningInfo.archiveTotalBytes     = restoreStatusInfo->archiveTotalBytes;
   jobNode->runningInfo.volumeNumber          = 0; // ???
   jobNode->runningInfo.volumeProgress        = 0.0; // ???
-//fprintf(stderr,"%s,%d: restoreStatusInfo->fileName=%s\n",__FILE__,__LINE__,String_cString(jobNode->runningInfo.fileName));
+//fprintf(stderr,"%s,%d: restoreStatusInfo->fileName=%s\n",__FILE__,__LINE__,String_cString(jobNode->runningInfo.name));
+
+  return TRUE;
 }
 
 /***********************************************************************\
@@ -1631,43 +1645,40 @@ LOCAL StorageRequestResults storageRequestVolume(JobNode *jobNode,
 
   assert(jobNode != NULL);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
 //??? lock nicht readwrite
 
-  /* request volume */
-  jobNode->requestedVolumeNumber = volumeNumber;
-  String_format(String_clear(jobNode->runningInfo.message),"Please insert DVD #%d",volumeNumber);
+    /* request volume */
+    jobNode->requestedVolumeNumber = volumeNumber;
+    String_format(String_clear(jobNode->runningInfo.message),"Please insert DVD #%d",volumeNumber);
 
-  /* wait until volume is available or job is aborted */
-  assert(jobNode->state == JOB_STATE_RUNNING);
-  jobNode->state = JOB_STATE_REQUEST_VOLUME;
+    /* wait until volume is available or job is aborted */
+    assert(jobNode->state == JOB_STATE_RUNNING);
+    jobNode->state = JOB_STATE_REQUEST_VOLUME;
 
-  storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
-  do
-  {
-    Semaphore_waitModified(&jobList.lock);
+    storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
+    do
+    {
+      Semaphore_waitModified(&jobList.lock);
 
-    if      (jobNode->volumeUnloadFlag)
-    {
-      storageRequestResult = STORAGE_REQUEST_VOLUME_UNLOAD;
-      jobNode->volumeUnloadFlag = FALSE;
+      if      (jobNode->volumeUnloadFlag)
+      {
+        storageRequestResult = STORAGE_REQUEST_VOLUME_UNLOAD;
+        jobNode->volumeUnloadFlag = FALSE;
+      }
+      else if (jobNode->volumeNumber == jobNode->requestedVolumeNumber)
+      {
+        storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+      }
+      else if (jobNode->requestedAbortFlag)
+      {
+        storageRequestResult = STORAGE_REQUEST_VOLUME_ABORTED;
+      }
     }
-    else if (jobNode->volumeNumber == jobNode->requestedVolumeNumber)
-    {
-      storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
-    }
-    else if (jobNode->requestedAbortFlag)
-    {
-      storageRequestResult = STORAGE_REQUEST_VOLUME_ABORTED;
-    }
+    while (storageRequestResult == STORAGE_REQUEST_VOLUME_NONE);
+    jobNode->state = JOB_STATE_RUNNING;
   }
-  while (storageRequestResult == STORAGE_REQUEST_VOLUME_NONE);
-  jobNode->state = JOB_STATE_RUNNING;
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
 
   return storageRequestResult;
 }
@@ -1675,7 +1686,7 @@ LOCAL StorageRequestResults storageRequestVolume(JobNode *jobNode,
 /***********************************************************************\
 * Name   : jobThreadEntry
 * Purpose: job thread entry
-* Input  : jobList - job list
+* Input  : -
 * Output : -
 * Return : -
 * Notes  : -
@@ -1739,7 +1750,7 @@ LOCAL void jobThreadEntry(void)
 
   jobNode->runningInfo.estimatedRestTime=120;
 
-  jobNode->runningInfo.totalFiles += 60;
+  jobNode->runningInfo.totalEntries += 60;
   jobNode->runningInfo.totalBytes += 6000;
 
   for (z=0;z<120;z++)
@@ -1751,13 +1762,13 @@ LOCAL void jobThreadEntry(void)
     sleep(1);
 
     if (z==40) {
-      jobNode->runningInfo.totalFiles += 80;
+      jobNode->runningInfo.totalEntries += 80;
       jobNode->runningInfo.totalBytes += 8000;
     }
 
-    jobNode->runningInfo.doneFiles++;
+    jobNode->runningInfo.doneEntries++;
     jobNode->runningInfo.doneBytes += 100;
-  //  jobNode->runningInfo.totalFiles += 3;
+  //  jobNode->runningInfo.totalEntries += 3;
   //  jobNode->runningInfo.totalBytes += 181;
     jobNode->runningInfo.estimatedRestTime=120-z;
     String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
@@ -1779,11 +1790,12 @@ LOCAL void jobThreadEntry(void)
                                                     archiveType,
                                                     getCryptPassword,
                                                     jobNode,
-                                                    (CreateStatusInfoFunction)updateCreateStatus,
+                                                    (CreateStatusInfoFunction)updateCreateJobStatus,
                                                     jobNode,
                                                     (StorageRequestVolumeFunction)storageRequestVolume,
                                                     jobNode,
-                                                    &pauseFlag,
+                                                    &pauseFlags.create,
+                                                    &pauseFlags.storage,
                                                     &jobNode->requestedAbortFlag
                                                    );
         logMessage(LOG_TYPE_ALWAYS,"done create archive '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
@@ -1798,9 +1810,9 @@ LOCAL void jobThreadEntry(void)
                                                      &jobOptions,
                                                      getCryptPassword,
                                                      jobNode,
-                                                     (RestoreStatusInfoFunction)updateRestoreStatus,
+                                                     (RestoreStatusInfoFunction)updateRestoreJobStatus,
                                                      jobNode,
-                                                     &pauseFlag,
+                                                     &pauseFlags.restore,
                                                      &jobNode->requestedAbortFlag
                                                     );
         StringList_done(&archiveFileNameList);
@@ -1828,7 +1840,7 @@ LOCAL void jobThreadEntry(void)
     doneJob(jobNode);
 
     /* store schedule info */
-    writeJobFileScheduleInfo(jobNode);
+    writeJobScheduleInfo(jobNode);
 
     /* unlock */
     Semaphore_unlock(&jobList.lock);
@@ -1841,6 +1853,15 @@ LOCAL void jobThreadEntry(void)
 }
 
 /*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : schedulerThreadEntry
+* Purpose: schedule thread entry
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 LOCAL void schedulerThreadEntry(void)
 {
@@ -1857,85 +1878,129 @@ LOCAL void schedulerThreadEntry(void)
   while (!quitFlag)
   {
     /* update job files */
-    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-    updateAllJobFiles();
-    Semaphore_unlock(&jobList.lock);
+    updateAllJobs();
 
     /* re-read config files */
-    rereadJobFiles(serverJobsDirectory);
+    rereadAllJobs(serverJobsDirectory);
 
     /* trigger jobs */
-    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
-    currentDateTime = Misc_getCurrentDateTime();
-    jobNode         = jobList.head;
-    pendingFlag     = FALSE;
-    while ((jobNode != NULL) && !pendingFlag)
+    SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
     {
-      /* check if job have to be executed */
-      executeScheduleNode = NULL;
-      if (!CHECK_JOB_IS_ACTIVE(jobNode))
+      currentDateTime = Misc_getCurrentDateTime();
+      jobNode         = jobList.head;
+      pendingFlag     = FALSE;
+      while ((jobNode != NULL) && !pendingFlag)
       {
-        dateTime = currentDateTime;
-        while (   ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
-               && (executeScheduleNode == NULL)
-               && !pendingFlag
-              )
+        /* check if job have to be executed */
+        executeScheduleNode = NULL;
+        if (!CHECK_JOB_IS_ACTIVE(jobNode))
         {
-          // get date/time values
-          Misc_splitDateTime(dateTime,
-                             &year,
-                             &month,
-                             &day,
-                             &hour,
-                             &minute,
-                             NULL,
-                             &weekDay
-                            );
-
-          // check if matching with schedule list node
-          scheduleNode = jobNode->scheduleList.head;
-          while ((scheduleNode != NULL) && (executeScheduleNode == NULL))
+          dateTime = currentDateTime;
+          while (   ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
+                 && (executeScheduleNode == NULL)
+                 && !pendingFlag
+                )
           {
-            if (   ((scheduleNode->year     == SCHEDULE_ANY    ) || (scheduleNode->year   == year  )      )
-                && ((scheduleNode->month    == SCHEDULE_ANY    ) || (scheduleNode->month  == month )      )
-                && ((scheduleNode->day      == SCHEDULE_ANY    ) || (scheduleNode->day    == day   )      )
-                && ((scheduleNode->hour     == SCHEDULE_ANY    ) || (scheduleNode->hour   == hour  )      )
-                && ((scheduleNode->minute   == SCHEDULE_ANY    ) || (scheduleNode->minute == minute)      )
-                && ((scheduleNode->weekDays == SCHEDULE_ANY_DAY) || IN_SET(scheduleNode->weekDays,weekDay))
-                && scheduleNode->enabled
-               )
+            // get date/time values
+            Misc_splitDateTime(dateTime,
+                               &year,
+                               &month,
+                               &day,
+                               &hour,
+                               &minute,
+                               NULL,
+                               &weekDay
+                              );
+
+            // check if matching with schedule list node
+            scheduleNode = jobNode->scheduleList.head;
+            while ((scheduleNode != NULL) && (executeScheduleNode == NULL))
             {
-              executeScheduleNode = scheduleNode;
+              if (   ((scheduleNode->year     == SCHEDULE_ANY    ) || (scheduleNode->year   == year  )      )
+                  && ((scheduleNode->month    == SCHEDULE_ANY    ) || (scheduleNode->month  == month )      )
+                  && ((scheduleNode->day      == SCHEDULE_ANY    ) || (scheduleNode->day    == day   )      )
+                  && ((scheduleNode->hour     == SCHEDULE_ANY    ) || (scheduleNode->hour   == hour  )      )
+                  && ((scheduleNode->minute   == SCHEDULE_ANY    ) || (scheduleNode->minute == minute)      )
+                  && ((scheduleNode->weekDays == SCHEDULE_ANY_DAY) || IN_SET(scheduleNode->weekDays,weekDay))
+                  && scheduleNode->enabled
+                 )
+              {
+                executeScheduleNode = scheduleNode;
+              }
+              scheduleNode = scheduleNode->next;
             }
-            scheduleNode = scheduleNode->next;
+
+            // check if other thread pending for job list
+            pendingFlag = Semaphore_checkPending(&jobList.lock);
+
+            // next time
+            dateTime -= 60LL;
           }
-
-          // check if other thread pending for job list
-          pendingFlag = Semaphore_checkPending(&jobList.lock);
-
-          // next time
-          dateTime -= 60LL;
+          if (!pendingFlag)
+          {
+            jobNode->lastCheckDateTime = currentDateTime;
+          }
         }
-        if (!pendingFlag)
+
+        /* trigger job */
+        if (executeScheduleNode != NULL)
         {
-          jobNode->lastCheckDateTime = currentDateTime;
+          /* set state */
+          jobNode->state              = JOB_STATE_WAITING;
+          jobNode->archiveType        = executeScheduleNode->archiveType;
+          jobNode->requestedAbortFlag = FALSE;
+          resetJobRunningInfo(jobNode);
+        }
+
+        /* check next job */
+        jobNode = jobNode->next;
+      }
+    }
+
+    /* sleep 1min, check quit flag */
+    z = 0;
+    while ((z < 60) && !quitFlag)
+    {
+      Misc_udelay(10LL*1000LL*1000LL);
+      z += 10;
+    }
+  }
+}
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : pauseThreadEntry
+* Purpose: pause thread entry
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void pauseThreadEntry(void)
+{
+  uint64 nowTimestamp;
+  int    z;
+
+  while (!quitFlag)
+  {
+    /* decrement pause time, continue */
+    SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    {
+      if (serverState == SERVER_STATE_PAUSE)
+      {
+        nowTimestamp = Misc_getCurrentDateTime();
+        if (nowTimestamp > pauseEndTimestamp)
+        {
+          serverState = SERVER_STATE_RUNNING;
+          pauseFlags.create      = FALSE;
+          pauseFlags.storage     = FALSE;
+          pauseFlags.restore     = FALSE;
+          pauseFlags.indexUpdate = FALSE;
         }
       }
-
-      /* trigger job */
-      if (executeScheduleNode != NULL)
-      {
-        /* set state */
-        jobNode->state              = JOB_STATE_WAITING;
-        jobNode->archiveType        = executeScheduleNode->archiveType;
-        jobNode->requestedAbortFlag = FALSE;
-        resetJobRunningInfo(jobNode);
-      }
-
-      /* check next job */
-      jobNode = jobNode->next;
     }
-    Semaphore_unlock(&jobList.lock);
 
     /* sleep 1min, check update and quit flag */
     z = 0;
@@ -1949,27 +2014,351 @@ LOCAL void schedulerThreadEntry(void)
 
 /*---------------------------------------------------------------------*/
 
-LOCAL void pauseThreadEntry(void)
-{
-  uint64 nowTimestamp;
-  int    z;
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
+LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordList, Password *cryptPassword, String cryptPrivateKeyFileName)
+{
+  IndexCryptPasswordNode *indexCryptPasswordNode;
+
+  indexCryptPasswordNode = LIST_NEW_NODE(IndexCryptPasswordNode);
+  if (indexCryptPasswordNode == NULL)
+  {
+    return;
+  }
+
+  indexCryptPasswordNode->cryptPassword           = Password_duplicate(cryptPassword);
+  indexCryptPasswordNode->cryptPrivateKeyFileName = String_duplicate(cryptPrivateKeyFileName);
+
+  List_append(indexCryptPasswordList,indexCryptPasswordNode);
+}
+
+/***********************************************************************\
+* Name   : freeIndexCryptPasswordNode
+* Purpose: free index crypt password
+* Input  : indexCryptPasswordNode - crypt password node
+*          userData               - user data (ignored)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeIndexCryptPasswordNode(IndexCryptPasswordNode *indexCryptPasswordNode, void *userData)
+{
+  assert(indexCryptPasswordNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  if (indexCryptPasswordNode->cryptPrivateKeyFileName != NULL) String_delete(indexCryptPasswordNode->cryptPrivateKeyFileName);
+  if (indexCryptPasswordNode->cryptPassword != NULL) Password_delete(indexCryptPasswordNode->cryptPassword);
+}
+
+/***********************************************************************\
+* Name   : indexThreadEntry
+* Purpose: index thread entry
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexThreadEntry(void)
+{
+  String                 storageName;
+  IndexCryptPasswordList indexCryptPasswordList;
+  DatabaseQueryHandle    databaseQueryHandle;
+  int64                  storageId;
+  Errors                 error;
+  JobNode                *jobNode;
+  IndexCryptPasswordNode *indexCryptPasswordNode;
+  int                    z;
+
+  /* initialize variables */
+  storageName = String_new();
+  List_init(&indexCryptPasswordList);
+
+  /* reset/delete incomplete database entries (ignore possible errors) */
+  error = ERROR_NONE;
+  while (Index_findByState(indexDatabaseHandle,
+                           INDEX_STATE_UPDATE,
+                           &storageId,
+                           NULL
+                          )
+         && (error == ERROR_NONE)
+        )
+  {
+    error = Index_setState(indexDatabaseHandle,
+                           storageId,
+                           INDEX_STATE_UPDATE_REQUESTED,
+                           NULL
+                          );
+  }
+  if (globalOptions.noAutoUpdateDatabaseIndexFlag)
+  {
+    while (Index_findByState(indexDatabaseHandle,
+                             INDEX_STATE_UPDATE_REQUESTED,
+                             &storageId,
+                             NULL
+                            )
+           && (error == ERROR_NONE)
+          )
+    {
+      error = Index_setState(indexDatabaseHandle,
+                             storageId,
+                             INDEX_STATE_ERROR,
+                             NULL
+                            );
+    }
+  }
+  while (Index_findByState(indexDatabaseHandle,
+                           INDEX_STATE_CREATE,
+                           &storageId,
+                           NULL
+                          )
+         && (error == ERROR_NONE)
+        )
+  {
+    error = Index_delete(indexDatabaseHandle,
+                         storageId
+                        );
+  }
+
+  /* add/update index database */
   while (!quitFlag)
   {
-    /* decrement pause time, continue */
-    Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-    if (serverState == SERVER_STATE_PAUSE)
+    // get index entry to update
+    storageId = DATABASE_ID_NONE;
+    do
     {
-      nowTimestamp = Misc_getCurrentDateTime();
-      if (nowTimestamp > pauseEndTimestamp)
+      /* get next entry */
+      error = Database_prepare(&databaseQueryHandle,
+                               indexDatabaseHandle,
+                               "SELECT id, \
+                                       name \
+                                FROM storage \
+                                WHERE state=%d \
+                                LIMIT 0,1 \
+                               ",
+                               INDEX_STATE_UPDATE_REQUESTED
+                              );
+      if (error == ERROR_NONE)
       {
-        serverState = SERVER_STATE_RUNNING;
-        pauseFlag   = FALSE;
+        Database_getNextRow(&databaseQueryHandle,
+                            "%ld %S",
+                            &storageId,
+                            &storageName
+                           );
+        Database_finalize(&databaseQueryHandle);
+      }
+
+      if ((error != ERROR_NONE) || (storageId == DATABASE_ID_NONE))
+      {
+        /* sleep a short time */
+        z = 0;
+        while ((z < 60) && !quitFlag)
+        {
+          Misc_udelay(10LL*1000LL*1000LL);
+          z += 10;
+        }
       }
     }
-    Semaphore_unlock(&serverStateLock);
+    while (   !quitFlag
+           && (storageId == DATABASE_ID_NONE)
+          );
+    if (quitFlag) break;
 
-    /* sleep 1min, check update and quit flag */
+    // get all job crypt passwords and crypt public keys (including no password and default)
+    addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
+    addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
+    SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+    {
+      LIST_ITERATE(jobList,jobNode)
+      {
+        if (jobNode->jobOptions.cryptPassword != NULL)
+        {
+          addIndexCryptPasswordNode(&indexCryptPasswordList,jobNode->jobOptions.cryptPassword,jobNode->jobOptions.cryptPrivateKeyFileName);
+        }
+      }
+    }
+
+    // try to create index
+    LIST_ITERATE(indexCryptPasswordList,indexCryptPasswordNode)
+    {
+      error = Archive_updateIndex(indexDatabaseHandle,
+                                  storageId,
+                                  storageName,
+                                  indexCryptPasswordNode->cryptPassword,
+                                  indexCryptPasswordNode->cryptPrivateKeyFileName,
+                                  &pauseFlags.indexUpdate,
+                                  &quitFlag
+                                 );
+      if (error == ERROR_NONE) break;
+    }
+    if (error != ERROR_NONE)
+    {
+      logMessage(LOG_TYPE_ERROR,
+                 "cannot create storage index '%s' (error: %s)",
+                 String_cString(storageName),
+                 Errors_getText(error)
+                );
+    }
+
+    /* free resources */
+    List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
+  }
+
+  /* free resources */
+  List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
+  String_delete(storageName);
+}
+
+/***********************************************************************\
+* Name   : getStorageDirectories
+* Purpose: get list of storage directories from jobs
+* Input  : storageDirectoryList - storage directory list
+* Output : storageDirectoryList - updated storage directory list
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getStorageDirectories(StringList *storageDirectoryList)
+{
+  String  storagePathName;
+  JobNode *jobNode;
+
+  // collect storage locations to check for BAR files
+  storagePathName = String_new();
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    LIST_ITERATE(jobList,jobNode)
+    {
+      File_getFilePathName(storagePathName,jobNode->archiveName);
+      if (StringList_find(storageDirectoryList,storagePathName) == NULL)
+      {
+        StringList_append(storageDirectoryList,storagePathName);
+      }
+    }
+  }
+  String_delete(storagePathName);
+}
+
+/***********************************************************************\
+* Name   : indexUpdateThreadEntry
+* Purpose: index update thread entry
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexUpdateThreadEntry(void)
+{
+  String     storageSpecifier;
+  String     fileName;
+  String     storageName;
+  StringList storageDirectoryList;
+  StringNode *storageDirectoryNode;
+  Errors     error;
+  StorageDirectoryListHandle storageDirectoryListHandle;
+  FileInfo   fileInfo;
+  StorageTypes storageType;
+  int64        storageId;
+//  IndexStates  indexState;
+  int          z;
+JobOptions jobOptions;
+
+  /* initialize variables */
+  StringList_init(&storageDirectoryList);
+
+  /* restart requested/not completed index updates */
+
+  /* run continous check for index updates */
+  storageSpecifier = File_newFileName();
+  fileName         = File_newFileName();
+  storageName      = File_newFileName();
+  while (!quitFlag)
+  {
+    // collect storage locations to check for BAR files
+    getStorageDirectories(&storageDirectoryList);
+
+    /* check storage locations for BAR files, send index update request */
+    initJobOptions(&jobOptions);
+    copyJobOptions(serverDefaultJobOptions,&jobOptions);
+    STRINGLIST_ITERATE(storageDirectoryList,storageDirectoryNode,storageName)
+    {
+      storageType = Storage_parseName(storageName,storageSpecifier,NULL);
+      if (   (storageType == STORAGE_TYPE_FILESYSTEM)
+          || (storageType == STORAGE_TYPE_FTP       )
+          || (storageType == STORAGE_TYPE_SSH       )
+          || (storageType == STORAGE_TYPE_SCP       )
+          || (storageType == STORAGE_TYPE_SFTP      )
+         )
+      {
+        // list directory
+        error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                          storageName,
+                                          &jobOptions
+                                         );
+        if (error == ERROR_NONE)
+        {
+          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
+          {
+            // read next directory entry
+            error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
+            if (error != ERROR_NONE)
+            {
+              continue;
+            }
+
+            // check entry type and file name
+            if (    (fileInfo.type != FILE_TYPE_FILE)
+                 || !String_endsWithCString(fileName,".bar")
+                )
+            {
+              continue;
+            }
+            // check index update state of file, add index
+/*
+            DATABASE_LOCKED_DO(indexDatabaseHandle)
+            {
+            }
+*/
+            Storage_getName(storageName,storageType,storageSpecifier,fileName);
+
+            /* get index id, request index update */
+            if (!Index_findByName(indexDatabaseHandle,
+                                  storageName,
+                                  &storageId
+                                 )
+               )
+            {
+fprintf(stderr,"%s,%d: file=%s\n",__FILE__,__LINE__,String_cString(fileName));
+              error = Index_create(indexDatabaseHandle,
+                                   storageName,
+                                   INDEX_STATE_UPDATE_REQUESTED,
+                                   &storageId
+                                  );
+              if (error != ERROR_NONE)
+              {
+                continue;
+              }
+            }
+          }
+
+          /* close directory */
+          Storage_closeDirectoryList(&storageDirectoryListHandle);
+        }
+      }
+    }
+    freeJobOptions(&jobOptions);
+
+    /* sleep 1min, check quit flag */
     z = 0;
     while ((z < 60) && !quitFlag)
     {
@@ -1977,6 +2366,12 @@ LOCAL void pauseThreadEntry(void)
       z += 10;
     }
   }
+  File_deleteFileName(storageName);
+  File_deleteFileName(fileName);
+  File_deleteFileName(storageSpecifier);
+
+  /* free resources */
+  StringList_done(&storageDirectoryList);
 }
 
 /*---------------------------------------------------------------------*/
@@ -2023,7 +2418,7 @@ fflush(stdout);
 }
 
 /***********************************************************************\
-* Name   : sendResult
+* Name   : sendClientResult
 * Purpose: send result to client
 * Input  : clientInfo   - client info
 *          id           - command id
@@ -2036,7 +2431,7 @@ fflush(stdout);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void sendResult(ClientInfo *clientInfo, uint id, bool completeFlag, uint errorCode, const char *format, ...)
+LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, uint errorCode, const char *format, ...)
 {
   String  result;
   va_list arguments;
@@ -2168,9 +2563,11 @@ LOCAL DirectoryInfoNode *newDirectoryInfo(const String pathName)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeDirectoryInfoNode(DirectoryInfoNode *directoryInfoNode)
+LOCAL void freeDirectoryInfoNode(DirectoryInfoNode *directoryInfoNode, void *userData)
 {
   assert(directoryInfoNode != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   if (directoryInfoNode->directoryOpenFlag)
   {
@@ -2325,6 +2722,57 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
 
 /*---------------------------------------------------------------------*/
 
+/***********************************************************************\
+* Name   : serverCommand_errorInfo
+* Purpose: get error info
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <storage name>
+*            <destination directory>
+*            <overwrite flag>
+*            <files>...
+\***********************************************************************/
+
+LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  Errors error;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get error code */
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected error code");
+    return;
+  }
+  error = (Errors)String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  /* format result */
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                   "%s",
+                   Errors_getText(error)
+                  );
+}
+
+/***********************************************************************\
+* Name   : serverCommand_authorize
+* Purpose: user authorization: check password
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <password>
+\***********************************************************************/
+
 LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   bool okFlag;
@@ -2339,7 +2787,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
   /* get encoded password (to avoid plain text passwords in memory) */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
     return;
   }
 
@@ -2373,8 +2821,21 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
     clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
   }
 
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_abort
+* Purpose: abort command execution
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <command id>
+\***********************************************************************/
 
 LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2386,7 +2847,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const String arg
   /* get job id */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id");
     return;
   }
   commandId = String_toInteger(arguments[0],0,NULL,NULL,0);
@@ -2395,8 +2856,20 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const String arg
   clientInfo->abortId = commandId;
 
   /* format result */
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_status
+* Purpose: get status
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+\***********************************************************************/
 
 LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2409,26 +2882,44 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const String ar
   UNUSED_VARIABLE(argumentCount);
 
   /* format result */
-  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ);
-  switch (serverState)
+  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    case SERVER_STATE_RUNNING:
-      sendResult(clientInfo,id,TRUE,0,"running");
-      break;
-    case SERVER_STATE_PAUSE:
-      nowTimestamp = Misc_getCurrentDateTime();
-      sendResult(clientInfo,id,TRUE,0,"pause %llu",(pauseEndTimestamp > nowTimestamp)?pauseEndTimestamp-nowTimestamp:0LL);
-      break;
-    case SERVER_STATE_SUSPENDED:
-      sendResult(clientInfo,id,TRUE,0,"suspended");
-      break;
+    switch (serverState)
+    {
+      case SERVER_STATE_RUNNING:
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"running");
+        break;
+      case SERVER_STATE_PAUSE:
+        nowTimestamp = Misc_getCurrentDateTime();
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"pause %llu",(pauseEndTimestamp > nowTimestamp)?pauseEndTimestamp-nowTimestamp:0LL);
+        break;
+      case SERVER_STATE_SUSPENDED:
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"suspended");
+        break;
+    }
   }
-  Semaphore_unlock(&serverStateLock);
 }
+
+/***********************************************************************\
+* Name   : serverCommand_pause
+* Purpose: pause job execution
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <pause time [s]>
+*            [CREATE,STORAGE,RESTORE,INDEX_UPDATE]
+\***********************************************************************/
 
 LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  uint pauseTime;
+  uint            pauseTime;
+  String          modeMask;
+  StringTokenizer stringTokenizer;
+  String          token;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -2436,37 +2927,145 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const String arg
   /* get pause time */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pause time");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pause time");
     return;
   }
   pauseTime = (uint)String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount >= 2)
+  {
+    modeMask = arguments[1];
+  }
+  else
+  {
+    modeMask = NULL;
+  }
 
   /* set pause time */
-  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-  serverState       = SERVER_STATE_PAUSE;
-  pauseFlag         = TRUE;
-  pauseEndTimestamp = Misc_getCurrentDateTime()+(uint64)pauseTime;
-  Semaphore_unlock(&serverStateLock);
+  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    serverState = SERVER_STATE_PAUSE;
+    if (modeMask == NULL)
+    {
+      pauseFlags.create      = TRUE;
+      pauseFlags.storage     = TRUE;
+      pauseFlags.restore     = TRUE;
+      pauseFlags.indexUpdate = TRUE;
+    }
+    else
+    {
+      String_initTokenizer(&stringTokenizer,modeMask,STRING_BEGIN,",",NULL,TRUE);
+      while (String_getNextToken(&stringTokenizer,&token,NULL))
+      {
+        if (String_equalsIgnoreCaseCString(token,"CREATE"))
+        {
+          pauseFlags.create      = TRUE;
+        }
+        else if (String_equalsIgnoreCaseCString(token,"STORAGE"))
+        {
+          pauseFlags.storage     = TRUE;
+        }
+        else if (String_equalsIgnoreCaseCString(token,"RESTORE"))
+        {
+          pauseFlags.restore     = TRUE;
+        }
+        else if (String_equalsIgnoreCaseCString(token,"INDEX_UPDATE"))
+        {
+          pauseFlags.indexUpdate = TRUE;
+        }
+      }
+      String_doneTokenizer(&stringTokenizer);
+    }
+    pauseEndTimestamp = Misc_getCurrentDateTime()+(uint64)pauseTime;
+  }
 
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_suspend
+* Purpose: suspend job execution
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            [CREATE,STORAGE,RESTORE,INDEX_UPDATE]
+\***********************************************************************/
 
 LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  String          modeMask;
+  StringTokenizer stringTokenizer;
+  String          token;
+
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  /* set suspend */
-  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-  serverState = SERVER_STATE_SUSPENDED;
-  pauseFlag   = TRUE;
-  Semaphore_unlock(&serverStateLock);
+  if (argumentCount >= 1)
+  {
+    modeMask = arguments[0];
+  }
+  else
+  {
+    modeMask = NULL;
+  }
 
-  sendResult(clientInfo,id,TRUE,0,"");
+  /* set suspend */
+  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    serverState = SERVER_STATE_SUSPENDED;
+    if (modeMask == NULL)
+    {
+      pauseFlags.create      = TRUE;
+      pauseFlags.storage     = TRUE;
+      pauseFlags.restore     = TRUE;
+      pauseFlags.indexUpdate = TRUE;
+    }
+    else
+    {
+      String_initTokenizer(&stringTokenizer,modeMask,STRING_BEGIN,",",NULL,TRUE);
+      while (String_getNextToken(&stringTokenizer,&token,NULL))
+      {
+        if (String_equalsIgnoreCaseCString(token,"CREATE"))
+        {
+          pauseFlags.create      = TRUE;
+        }
+        else if (String_equalsIgnoreCaseCString(token,"STORAGE"))
+        {
+          pauseFlags.storage     = TRUE;
+        }
+        else if (String_equalsIgnoreCaseCString(token,"RESTORE"))
+        {
+          pauseFlags.restore     = TRUE;
+        }
+        else if (String_equalsIgnoreCaseCString(token,"INDEX_UPDATE"))
+        {
+          pauseFlags.indexUpdate = TRUE;
+        }
+      }
+      String_doneTokenizer(&stringTokenizer);
+    }
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_continue
+* Purpose: continue job execution
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+\***********************************************************************/
 
 LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2477,35 +3076,29 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const String 
   UNUSED_VARIABLE(argumentCount);
 
   /* clear pause/suspend */
-  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-  serverState = SERVER_STATE_RUNNING;
-  pauseFlag   = FALSE;
-  Semaphore_unlock(&serverStateLock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
-}
-
-LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  Errors error;
-
-  assert(clientInfo != NULL);
-  assert(arguments != NULL);
-
-  /* get error code */
-  if (argumentCount < 1)
+  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected error code");
-    return;
+    serverState            = SERVER_STATE_RUNNING;
+    pauseFlags.create      = FALSE;
+    pauseFlags.storage     = FALSE;
+    pauseFlags.restore     = FALSE;
+    pauseFlags.indexUpdate = FALSE;
   }
-  error = (Errors)String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* format result */
-  sendResult(clientInfo,id,TRUE,0,
-             "%s",
-             Errors_getText(error)
-            );
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_deviceList
+* Purpose: get device list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+\***********************************************************************/
 
 LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2524,7 +3117,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
   error = Device_openDeviceList(&deviceListHandle);
   if (error != ERROR_NONE)
   {
-    sendResult(clientInfo,id,TRUE,error,"cannot open device list (error: %s)",Errors_getText(error));
+    sendClientResult(clientInfo,id,TRUE,error,"cannot open device list (error: %s)",Errors_getText(error));
     return;
   }
 
@@ -2536,7 +3129,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
     error = Device_readDeviceList(&deviceListHandle,deviceName);
     if (error != ERROR_NONE)
     {
-      sendResult(clientInfo,id,TRUE,error,"cannot read device list (error: %s)",Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"cannot read device list (error: %s)",Errors_getText(error));
       Device_closeDeviceList(&deviceListHandle);
       String_delete(deviceName);
       return;
@@ -2546,7 +3139,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
     error = Device_getDeviceInfo(deviceName,&deviceInfo);
     if (error != ERROR_NONE)
     {
-      sendResult(clientInfo,id,TRUE,error,"cannot read device info (error: %s)",Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"cannot read device info (error: %s)",Errors_getText(error));
       Device_closeDeviceList(&deviceListHandle);
       String_delete(deviceName);
       return;
@@ -2556,13 +3149,13 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
         && (deviceInfo.size > 0)
        )
     {
-      sendResult(clientInfo,
-                 id,FALSE,0,
-                 "%lld %d %'S",
-                 deviceInfo.size,
-0,//                 deviceInfo.mountedFlag?1:0,
-                 deviceName
-                );
+      sendClientResult(clientInfo,
+                       id,FALSE,ERROR_NONE,
+                       "%lld %d %'S",
+                       deviceInfo.size,
+0,//                     deviceInfo.mountedFlag?1:0,
+                       deviceName
+                      );
     }
   }
   String_delete(deviceName);
@@ -2570,8 +3163,21 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
   /* close device */
   Device_closeDeviceList(&deviceListHandle);
 
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_fileList
+* Purpose: file list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <directory>
+\***********************************************************************/
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2586,7 +3192,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
   /* get path name */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected path name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected path name");
     return;
   }
 
@@ -2597,7 +3203,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
                                    );
   if (error != ERROR_NONE)
   {
-    sendResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
+    sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
     return;
   }
 
@@ -2611,65 +3217,65 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
       switch (fileInfo.type)
       {
         case FILE_TYPE_FILE:
-          sendResult(clientInfo,id,FALSE,0,
-                     "FILE %llu %llu %'S",
-                     fileInfo.size,
-                     fileInfo.timeModified,
-                     fileName
-                    );
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "FILE %llu %llu %'S",
+                           fileInfo.size,
+                           fileInfo.timeModified,
+                           fileName
+                          );
           break;
         case FILE_TYPE_DIRECTORY:
-          sendResult(clientInfo,id,FALSE,0,
-                     "DIRECTORY %llu %'S",
-                     fileInfo.timeModified,
-                     fileName
-                    );
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "DIRECTORY %llu %'S",
+                           fileInfo.timeModified,
+                           fileName
+                          );
           break;
         case FILE_TYPE_LINK:
-          sendResult(clientInfo,id,FALSE,0,
-                     "LINK %llu %'S",
-                     fileInfo.timeModified,
-                     fileName
-                    );
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "LINK %llu %'S",
+                           fileInfo.timeModified,
+                           fileName
+                          );
           break;
         case FILE_TYPE_SPECIAL:
           switch (fileInfo.specialType)
           {
             case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
-              sendResult(clientInfo,id,FALSE,0,
-                         "DEVICE CHARACTER %llu %'S",
-                         fileInfo.timeModified,
-                         fileName
-                        );
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                               "DEVICE CHARACTER %llu %'S",
+                               fileInfo.timeModified,
+                               fileName
+                              );
               break;
             case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
-              sendResult(clientInfo,id,FALSE,0,
-                         "DEVICE BLOCK %lld %llu %'S",
-                         fileInfo.size,
-                         fileInfo.timeModified,
-                         fileName
-                        );
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                               "DEVICE BLOCK %lld %llu %'S",
+                               fileInfo.size,
+                               fileInfo.timeModified,
+                               fileName
+                              );
               break;
             case FILE_SPECIAL_TYPE_FIFO:
-              sendResult(clientInfo,id,FALSE,0,
-                         "FIFO %llu %'S",
-                         fileInfo.timeModified,
-                         fileName
-                        );
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                               "FIFO %llu %'S",
+                               fileInfo.timeModified,
+                               fileName
+                              );
               break;
             case FILE_SPECIAL_TYPE_SOCKET:
-              sendResult(clientInfo,id,FALSE,0,
-                         "SOCKET %llu %'S",
-                         fileInfo.timeModified,
-                         fileName
-                        );
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                               "SOCKET %llu %'S",
+                               fileInfo.timeModified,
+                               fileName
+                              );
               break;
             default:
-              sendResult(clientInfo,id,FALSE,0,
-                         "SPECIAL %llu %'S",
-                         fileInfo.timeModified,
-                         fileName
-                        );
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                               "SPECIAL %llu %'S",
+                               fileInfo.timeModified,
+                               fileName
+                              );
               break;
           }
           break;
@@ -2679,10 +3285,10 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
     }
     else
     {
-      sendResult(clientInfo,id,FALSE,0,
-                 "UNKNOWN %'S",
-                 fileName
-                );
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "UNKNOWN %'S",
+                       fileName
+                      );
     }
   }
   String_delete(fileName);
@@ -2690,8 +3296,22 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
   /* close directory */
   Storage_closeDirectoryList(&storageDirectoryListHandle);
 
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_directoryInfo
+* Purpose: get directory info
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <directory>
+*            <timeout [s]>
+\***********************************************************************/
 
 LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2707,7 +3327,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
   /* get path name */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected file name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected file name");
     return;
   }
   timeout = (argumentCount >= 2)?String_toInteger(arguments[1],0,NULL,NULL,0):0L;
@@ -2728,8 +3348,22 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
                    &timeoutFlag
                   );
 
-  sendResult(clientInfo,id,TRUE,0,"%llu %llu %d",fileCount,totalFileSize,timeoutFlag?1:0);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"%llu %llu %d",fileCount,totalFileSize,timeoutFlag?1:0);
 }
+
+/***********************************************************************\
+* Name   : serverCommand_optionGet
+* Purpose: get job options
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <option name>
+\***********************************************************************/
 
 LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2746,59 +3380,71 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
   /* get job id, name, value */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected config value name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected config value name");
     return;
   }
   name = arguments[1];
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* find config value */
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
-         && !String_equalsCString(name,CONFIG_VALUES[z].name)
-        )
-  {
-    z++;
-  }
-  if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
+    /* find config value */
+    z = 0;
+    while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
+           && !String_equalsCString(name,CONFIG_VALUES[z].name)
+          )
+    {
+      z++;
+    }
+    if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* send value */
-  s = String_new();
-  ConfigValue_formatInit(&configValueFormat,
-                         &CONFIG_VALUES[z],
-                         CONFIG_VALUE_FORMAT_MODE_VALUE,
-                         jobNode
-                        );
-  ConfigValue_format(&configValueFormat,s);
-  ConfigValue_formatDone(&configValueFormat);
-  sendResult(clientInfo,id,TRUE,0,"%S",s);
-  String_delete(s);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
+    /* send value */
+    s = String_new();
+    ConfigValue_formatInit(&configValueFormat,
+                           &CONFIG_VALUES[z],
+                           CONFIG_VALUE_FORMAT_MODE_VALUE,
+                           jobNode
+                          );
+    ConfigValue_format(&configValueFormat,s);
+    ConfigValue_formatDone(&configValueFormat);
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"%S",s);
+    String_delete(s);
+  }
 }
+
+/***********************************************************************\
+* Name   : serverCommand_optionSet
+* Purpose: set job option
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <option name>
+*            <value>
+\***********************************************************************/
 
 LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2812,56 +3458,67 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
   /* get job id, name, value */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected config name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected config name");
     return;
   }
   name = arguments[1];
   if (argumentCount < 3)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected config value for '%S'",arguments[1]);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected config value for '%S'",arguments[1]);
     return;
   }
   value = arguments[2];
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* parse */
-  if (ConfigValue_parse(String_cString(name),
-                        String_cString(value),
-                        CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
-                        NULL,
-                        NULL,
-                        jobNode
-                       )
-     )
-  {
-    jobNode->modifiedFlag = TRUE;
-    sendResult(clientInfo,id,TRUE,0,"");
+    /* parse */
+    if (ConfigValue_parse(String_cString(name),
+                          String_cString(value),
+                          CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                          NULL,
+                          NULL,
+                          jobNode
+                         )
+       )
+    {
+      jobNode->modifiedFlag = TRUE;
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    }
+    else
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+    }
   }
-  else
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
-  }
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
 }
+
+/***********************************************************************\
+* Name   : serverCommand_optionDelete
+* Purpose: delete job option
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <option name>
+\***********************************************************************/
 
 LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2873,53 +3530,63 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get job id, name, value */
+  /* get job id, name */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected config value name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected config value name");
     return;
   }
   name = arguments[1];
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
 
-  /* find config value */
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
-         && !String_equalsCString(name,CONFIG_VALUES[z].name)
-        )
-  {
-    z++;
-  }
-  if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* delete value */
-//  ConfigValue_reset(&CONFIG_VALUES[z],jobNode);
+    /* find config value */
+    z = 0;
+    while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
+           && !String_equalsCString(name,CONFIG_VALUES[z].name)
+          )
+    {
+      z++;
+    }
+    if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
+    /* delete value */
+//    ConfigValue_reset(&CONFIG_VALUES[z],jobNode);
+  }
 }
+
+/***********************************************************************\
+* Name   : serverCommand_jobList
+* Purpose: get job list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+\***********************************************************************/
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2931,31 +3598,45 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
-  jobNode = jobList.head;
-  while (jobNode != NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    sendResult(clientInfo,id,FALSE,0,
-               "%u %'S %'s %s %llu %'s %'s %'s %'s %llu %lu",
-               jobNode->id,
-               jobNode->name,
-               getJobStateText(jobNode->state),
-               getArchiveTypeName(((jobNode->archiveType == ARCHIVE_TYPE_FULL) || (jobNode->archiveType == ARCHIVE_TYPE_INCREMENTAL))?jobNode->archiveType:jobNode->jobOptions.archiveType),
-               jobNode->jobOptions.archivePartSize,
-               Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm),
-               Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm),
-               Crypt_getTypeName(jobNode->jobOptions.cryptType),
-               getCryptPasswordModeName(jobNode->jobOptions.cryptPasswordMode),
-               jobNode->lastExecutedDateTime,
-               jobNode->runningInfo.estimatedRestTime
-              );
+    jobNode = jobList.head;
+    while ((jobNode != NULL) && !commandAborted(clientInfo,id))
+    {
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "%u %'S %'s %s %llu %'s %'s %'s %'s %llu %lu",
+                       jobNode->id,
+                       jobNode->name,
+                       getJobStateText(jobNode->state),
+                       getArchiveTypeName(((jobNode->archiveType == ARCHIVE_TYPE_FULL) || (jobNode->archiveType == ARCHIVE_TYPE_INCREMENTAL))?jobNode->archiveType:jobNode->jobOptions.archiveType),
+                       jobNode->jobOptions.archivePartSize,
+                       Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm),
+                       Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm),
+                       Crypt_getTypeName(jobNode->jobOptions.cryptType),
+                       getCryptPasswordModeName(jobNode->jobOptions.cryptPasswordMode),
+                       jobNode->lastExecutedDateTime,
+                       jobNode->runningInfo.estimatedRestTime
+                      );
 
-    jobNode = jobNode->next;
+      jobNode = jobNode->next;
+    }
   }
-  Semaphore_unlock(&jobList.lock);
 
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_jobInfo
+* Purpose: get job info
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -2969,24 +3650,23 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   /* get job id */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
-
-  /* find job */
-  jobNode = jobList.head;
-  while ((jobNode != NULL) && (jobNode->id != jobId))
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    jobNode = jobNode->next;
-  }
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* format result */
-  if (jobNode != NULL)
-  {
+    /* format and send result */
     if      (jobNode->runningInfo.error != ERROR_NONE)
     {
       message = Errors_getText(jobNode->runningInfo.error);
@@ -2999,42 +3679,48 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
     {
       message = "";
     }
-    sendResult(clientInfo,id,TRUE,0,
-               "%'s %'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %f %d",
-               getJobStateText(jobNode->state),
-               message,
-               jobNode->runningInfo.doneFiles,
-               jobNode->runningInfo.doneBytes,
-               jobNode->runningInfo.totalFiles,
-               jobNode->runningInfo.totalBytes,
-               jobNode->runningInfo.skippedFiles,
-               jobNode->runningInfo.skippedBytes,
-               jobNode->runningInfo.errorFiles,
-               jobNode->runningInfo.errorBytes,
-               Misc_performanceFilterGetValue(&jobNode->runningInfo.filesPerSecond,       10),
-               Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecond,       10),
-               Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecond,60),
-               jobNode->runningInfo.archiveBytes,
-               jobNode->runningInfo.compressionRatio,
-               jobNode->runningInfo.fileName,
-               jobNode->runningInfo.fileDoneBytes,
-               jobNode->runningInfo.fileTotalBytes,
-               jobNode->runningInfo.storageName,
-               jobNode->runningInfo.storageDoneBytes,
-               jobNode->runningInfo.storageTotalBytes,
-               jobNode->runningInfo.volumeNumber,
-               jobNode->runningInfo.volumeProgress,
-               jobNode->requestedVolumeNumber
-              );
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                     "%'s %'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %f %d",
+                     getJobStateText(jobNode->state),
+                     message,
+                     jobNode->runningInfo.doneEntries,
+                     jobNode->runningInfo.doneBytes,
+                     jobNode->runningInfo.totalEntries,
+                     jobNode->runningInfo.totalBytes,
+                     jobNode->runningInfo.skippedEntries,
+                     jobNode->runningInfo.skippedBytes,
+                     jobNode->runningInfo.errorEntries,
+                     jobNode->runningInfo.errorBytes,
+                     Misc_performanceFilterGetValue(&jobNode->runningInfo.entriesPerSecond,     10),
+                     Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecond,       10),
+                     Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecond,60),
+                     jobNode->runningInfo.archiveBytes,
+                     jobNode->runningInfo.compressionRatio,
+                     jobNode->runningInfo.name,
+                     jobNode->runningInfo.entryDoneBytes,
+                     jobNode->runningInfo.entryTotalBytes,
+                     jobNode->runningInfo.storageName,
+                     jobNode->runningInfo.archiveDoneBytes,
+                     jobNode->runningInfo.archiveTotalBytes,
+                     jobNode->runningInfo.volumeNumber,
+                     jobNode->runningInfo.volumeProgress,
+                     jobNode->requestedVolumeNumber
+                    );
   }
-  else
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-  }
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
 }
+
+/***********************************************************************\
+* Name   : serverCommand_jobNew
+* Purpose: create new job
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job name>
+\***********************************************************************/
 
 LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3050,57 +3736,68 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   /* get filename */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name");
     return;
   }
   name = arguments[0];
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* check if job already exists */
-  if (findJobByName(name) != NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
+    /* check if job already exists */
+    if (findJobByName(name) != NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* create empty job file */
-  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
-  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
-  if (error != ERROR_NONE)
-  {
+    /* create empty job file */
+    fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
+    error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+    if (error != ERROR_NONE)
+    {
+      File_deleteFileName(fileName);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Errors_getText(error));
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+    File_close(&fileHandle);
+
+    /* create new job */
+    jobNode = newJob(JOB_TYPE_CREATE,fileName);
+    if (jobNode == NULL)
+    {
+      File_delete(fileName,FALSE);
+      File_deleteFileName(fileName);
+      sendClientResult(clientInfo,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"insufficient memory");
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+    copyJobOptions(serverDefaultJobOptions,&jobNode->jobOptions);
+
+    /* free resources */
     File_deleteFileName(fileName);
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Errors_getText(error));
-    Semaphore_unlock(&jobList.lock);
-    return;
+
+    /* add new job to list */
+    List_append(&jobList,jobNode);
   }
-  File_close(&fileHandle);
 
-  /* create new job */
-  jobNode = newJob(JOB_TYPE_CREATE,fileName);
-  if (jobNode == NULL)
-  {
-    File_delete(fileName,FALSE);
-    File_deleteFileName(fileName);
-    sendResult(clientInfo,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"insufficient memory");
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-  copyJobOptions(serverDefaultJobOptions,&jobNode->jobOptions);
-
-  /* add new job to list */
-  List_append(&jobList,jobNode);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"%d",jobNode->id);
-
-  /* free resources */
-  File_deleteFileName(fileName);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"%d",jobNode->id);
 }
+
+/***********************************************************************\
+* Name   : serverCommand_jobCopy
+* Purpose: copy job
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <new job name>
+\***********************************************************************/
 
 LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3118,68 +3815,81 @@ LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String a
   /* get job id */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name");
     return;
   }
   name = arguments[1];
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* check if job already exists */
-  if (findJobByName(name) != NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
+    /* check if job already exists */
+    if (findJobByName(name) != NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* create empty job file */
-  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
-  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
-  if (error != ERROR_NONE)
-  {
+    /* create empty job file */
+    fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
+    error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+    if (error != ERROR_NONE)
+    {
+      File_deleteFileName(fileName);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Errors_getText(error));
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+    File_close(&fileHandle);
+
+    /* copy job */
+    newJobNode = copyJob(jobNode,fileName);
+    if (newJobNode == NULL)
+    {
+      File_deleteFileName(fileName);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error copy job #%d",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* free resources */
     File_deleteFileName(fileName);
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Errors_getText(error));
-    Semaphore_unlock(&jobList.lock);
-    return;
+
+    /* add new job to list */
+    List_append(&jobList,newJobNode);
   }
-  File_close(&fileHandle);
 
-  /* copy job */
-  newJobNode = copyJob(jobNode,fileName);
-  if (newJobNode == NULL)
-  {
-    File_deleteFileName(fileName);
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"error copy job #%d",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-  File_deleteFileName(fileName);
-
-  /* add new job to list */
-  List_append(&jobList,newJobNode);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_jobRename
+* Purpose: rename job
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <new job name>
+\***********************************************************************/
 
 LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3195,58 +3905,70 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
   /* get job id */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name");
     return;
   }
   name = arguments[1];
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* check if job already exists */
-  if (findJobByName(name) != NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
+    /* check if job already exists */
+    if (findJobByName(name) != NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* rename job */
-  fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
-  error = File_rename(jobNode->fileName,fileName);
-  if (error != ERROR_NONE)
-  {
+    /* rename job */
+    fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
+    error = File_rename(jobNode->fileName,fileName);
+    if (error != ERROR_NONE)
+    {
+      File_deleteFileName(fileName);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error renaming job #%d: %s",jobId,Errors_getText(error));
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* free resources */
     File_deleteFileName(fileName);
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"error renaming job #%d: %s",jobId,Errors_getText(error));
-    Semaphore_unlock(&jobList.lock);
-    return;
+
+    /* store new file name */
+    File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobsDirectory),name);
+    String_set(jobNode->name,name);
   }
-  File_deleteFileName(fileName);
 
-  /* store new file name */
-  File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobsDirectory),name);
-  String_set(jobNode->name,name);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_jobDelete
+* Purpose: delete job
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3260,47 +3982,57 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   /* get job id */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* remove job in list if not running or requested volume */
+    if (CHECK_JOB_IS_RUNNING(jobNode))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job #%d running",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* delete job file */
+    error = File_delete(jobNode->fileName,FALSE);
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error deleting job #%d: %s",jobId,Errors_getText(error));
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+    List_remove(&jobList,jobNode);
+    deleteJob(jobNode);
   }
 
-  /* remove job in list if not running or requested volume */
-  if (CHECK_JOB_IS_RUNNING(jobNode))
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"job #%d running",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* delete job file */
-  error = File_delete(jobNode->fileName,FALSE);
-  if (error != ERROR_NONE)
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB,"error deleting job #%d: %s",jobId,Errors_getText(error));
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-  List_remove(&jobList,jobNode);
-  deleteJob(jobNode);
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_jobStart
+* Purpose: start job execution
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3314,7 +4046,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
   /* get job id */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
@@ -3322,7 +4054,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
   /* get archive type */
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archive type");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storage archive type");
     return;
   }
   if      (String_equalsCString(arguments[1],"normal"     )) archiveType = ARCHIVE_TYPE_NORMAL;
@@ -3330,37 +4062,47 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
   else if (String_equalsCString(arguments[1],"incremental")) archiveType = ARCHIVE_TYPE_INCREMENTAL;
   else
   {
-    sendResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown archive type '%S'",arguments[1]);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown archive type '%S'",arguments[1]);
     return;
   }
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* run job */
+    if  (!CHECK_JOB_IS_ACTIVE(jobNode))
+    {
+      /* set state */
+      jobNode->state              = JOB_STATE_WAITING;
+      jobNode->archiveType        = archiveType;
+      jobNode->requestedAbortFlag = FALSE;
+      resetJobRunningInfo(jobNode);
+    }
   }
 
-  /* run job */
-  if  (!CHECK_JOB_IS_ACTIVE(jobNode))
-  {
-    /* set state */
-    jobNode->state              = JOB_STATE_WAITING;
-    jobNode->archiveType        = archiveType;
-    jobNode->requestedAbortFlag = FALSE;
-    resetJobRunningInfo(jobNode);
-  }
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_jobAbort
+* Purpose: abort job execution
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3373,42 +4115,51 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
   /* get job id */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* abort job */
-  if      (CHECK_JOB_IS_RUNNING(jobNode))
-  {
-    jobNode->requestedAbortFlag = TRUE;
-    while (CHECK_JOB_IS_RUNNING(jobNode))
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
     {
-      Semaphore_waitModified(&jobList.lock);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* abort job */
+    if      (CHECK_JOB_IS_RUNNING(jobNode))
+    {
+      jobNode->requestedAbortFlag = TRUE;
+      while (CHECK_JOB_IS_RUNNING(jobNode))
+      {
+        Semaphore_waitModified(&jobList.lock);
+      }
+    }
+    else if (CHECK_JOB_IS_ACTIVE(jobNode))
+    {
+      jobNode->state = JOB_STATE_NONE;
     }
   }
-  else if (CHECK_JOB_IS_ACTIVE(jobNode))
-  {
-    jobNode->state = JOB_STATE_NONE;
-  }
 
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_jobFlush
+* Purpose: flush job data (write to disk)
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+\***********************************************************************/
 
 LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3418,17 +4169,24 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const String 
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
   /* update all job files */
-  updateAllJobFiles();
+  updateAllJobs();
 
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_includeList
+* Purpose: get include list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3443,63 +4201,72 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
   /* get job id, type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* send include list */
+    LIST_ITERATE(jobNode->includeEntryList,entryNode)
+    {
+      entryType   = NULL;
+      patternType = NULL;
+      switch (entryNode->type)
+      {
+        case ENTRY_TYPE_FILE : entryType = "FILE";  break;
+        case ENTRY_TYPE_IMAGE: entryType = "IMAGE"; break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
+      }
+      switch (entryNode->pattern.type)
+      {
+        case PATTERN_TYPE_GLOB          : patternType = "GLOB";           break;
+        case PATTERN_TYPE_REGEX         : patternType = "REGEX";          break;
+        case PATTERN_TYPE_EXTENDED_REGEX: patternType = "EXTENDED_REGEX"; break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
+      }
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "%s %s %'S",
+                       entryType,
+                       patternType,
+                       entryNode->string
+                      );
+    }
   }
 
-  /* send include list */
-  entryNode = jobNode->includeEntryList.head;
-  while (entryNode != NULL)
-  {
-    entryType   = NULL;
-    patternType = NULL;
-    switch (entryNode->type)
-    {
-      case ENTRY_TYPE_FILE : entryType = "FILE";  break;
-      case ENTRY_TYPE_IMAGE: entryType = "IMAGE"; break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-    switch (entryNode->pattern.type)
-    {
-      case PATTERN_TYPE_GLOB          : patternType = "GLOB";           break;
-      case PATTERN_TYPE_REGEX         : patternType = "REGEX";          break;
-      case PATTERN_TYPE_EXTENDED_REGEX: patternType = "EXTENDED_REGEX"; break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-    sendResult(clientInfo,id,FALSE,0,
-               "%s %s %'S",
-               entryType,
-               patternType,
-               entryNode->string
-              );
-    entryNode = entryNode->next;
-  }
-  sendResult(clientInfo,id,TRUE,0,"");
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_includeClear
+* Purpose: clear job include list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_includeClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3512,31 +4279,44 @@ LOCAL void serverCommand_includeClear(ClientInfo *clientInfo, uint id, const Str
   /* get job id, type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* clear include list */
+    EntryList_clear(&jobNode->includeEntryList);
+    jobNode->modifiedFlag = TRUE;
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
   }
-
-  /* clear include list */
-  EntryList_clear(&jobNode->includeEntryList);
-  jobNode->modifiedFlag = TRUE;
-  sendResult(clientInfo,id,TRUE,0,"");
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
 }
+
+/***********************************************************************\
+* Name   : serverCommand_includeAdd
+* Purpose: add entry to job include list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <entry type>
+*            <pattern type>
+*            <pattern>
+\***********************************************************************/
 
 LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3549,16 +4329,16 @@ LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const Strin
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get job id, type, pattern */
+  /* get job id, type, pattern type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entry type");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entry type");
     return;
   }
   if      (String_equalsCString(arguments[1],"FILE"))
@@ -3571,12 +4351,12 @@ LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const Strin
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown entry type '%S'",arguments[1]);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown entry type '%S'",arguments[1]);
     return;
   }
   if (argumentCount < 3)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern type");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern type");
     return;
   }
   if      (String_equalsCString(arguments[2],"GLOB"))
@@ -3593,37 +4373,47 @@ LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const Strin
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown pattern type '%S'",arguments[2]);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown pattern type '%S'",arguments[2]);
     return;
   }
   if (argumentCount < 4)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern");
     return;
   }
   pattern = arguments[3];
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* add to include list */
+    EntryList_append(&jobNode->includeEntryList,entryType,pattern,patternType);
+    jobNode->modifiedFlag = TRUE;
   }
 
-  /* add to include list */
-  EntryList_append(&jobNode->includeEntryList,entryType,pattern,patternType);
-  jobNode->modifiedFlag = TRUE;
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_excludeList
+* Purpose: get jon exclude list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3638,51 +4428,60 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
   /* get job id, type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
-
-  /* send exclude list */
-  patternNode = jobNode->excludePatternList.head;
-  while (patternNode != NULL)
-  {
-    type = NULL;
-    switch (patternNode->pattern.type)
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
     {
-      case PATTERN_TYPE_GLOB          : type = "GLOB";           break;
-      case PATTERN_TYPE_REGEX         : type = "REGEX";          break;
-      case PATTERN_TYPE_EXTENDED_REGEX: type = "EXTENDED_REGEX"; break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
     }
-    sendResult(clientInfo,id,FALSE,0,
-               "%s %'S",
-               type,
-               patternNode->string
-              );
-    patternNode = patternNode->next;
-  }
-  sendResult(clientInfo,id,TRUE,0,"");
 
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
+    /* send exclude list */
+    LIST_ITERATE(jobNode->excludePatternList,patternNode)
+    {
+      type = NULL;
+      switch (patternNode->pattern.type)
+      {
+        case PATTERN_TYPE_GLOB          : type = "GLOB";           break;
+        case PATTERN_TYPE_REGEX         : type = "REGEX";          break;
+        case PATTERN_TYPE_EXTENDED_REGEX: type = "EXTENDED_REGEX"; break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
+      }
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "%s %'S",
+                       type,
+                       patternNode->string
+                      );
+    }
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_excludeClear
+* Purpose: clear job exclude list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_excludeClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3695,31 +4494,45 @@ LOCAL void serverCommand_excludeClear(ClientInfo *clientInfo, uint id, const Str
   /* get job id, type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* clear exclude list */
+    PatternList_clear(&jobNode->excludePatternList);
+    jobNode->modifiedFlag = TRUE;
   }
 
-  /* clear exclude list */
-  PatternList_clear(&jobNode->excludePatternList);
-  jobNode->modifiedFlag = TRUE;
-  sendResult(clientInfo,id,TRUE,0,"");
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_excludeAdd
+* Purpose: add entry to job exclude list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <entry type>
+*            <pattern type>
+*            <pattern>
+\***********************************************************************/
 
 LOCAL void serverCommand_excludeAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3731,16 +4544,16 @@ LOCAL void serverCommand_excludeAdd(ClientInfo *clientInfo, uint id, const Strin
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get job id, type, pattern */
+  /* get job id, type, pattern type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern type");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern type");
     return;
   }
   if      (String_equalsCString(arguments[1],"GLOB"))
@@ -3757,37 +4570,47 @@ LOCAL void serverCommand_excludeAdd(ClientInfo *clientInfo, uint id, const Strin
   }
   else
   {
-    sendResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown pattern type '%S'",arguments[1]);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown pattern type '%S'",arguments[1]);
     return;
   }
   if (argumentCount < 3)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern");
     return;
   }
   pattern = arguments[2];
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* add to exclude list */
+    PatternList_append(&jobNode->excludePatternList,pattern,patternType);
+    jobNode->modifiedFlag = TRUE;
   }
 
-  /* add to exclude list */
-  PatternList_append(&jobNode->excludePatternList,pattern,patternType);
-  jobNode->modifiedFlag = TRUE;
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleList
+* Purpose: get job schedule list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3800,122 +4623,131 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get job id, type, pattern */
+  /* get job id */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
-  }
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  /* send schedule list */
-  line = String_new();
-  scheduleNode = jobNode->scheduleList.head;
-  while (scheduleNode != NULL)
-  {
-    String_clear(line);
+    /* send schedule list */
+    line = String_new();
+    LIST_ITERATE(jobNode->scheduleList,scheduleNode)
+    {
+      String_clear(line);
 
-    if (scheduleNode->year != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleNode->year);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,'-');
-    if (scheduleNode->month != SCHEDULE_ANY)
-    {
-      String_format(line,"%02d",scheduleNode->month);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,'-');
-    if (scheduleNode->day != SCHEDULE_ANY)
-    {
-      String_format(line,"%02d",scheduleNode->day);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,' ');
-    if (scheduleNode->weekDays != SCHEDULE_ANY_DAY)
-    {
-      names = String_new();
-
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
-
-      String_append(line,names);
+      if (scheduleNode->year != SCHEDULE_ANY)
+      {
+        String_format(line,"%d",scheduleNode->year);
+      }
+      else
+      {
+        String_appendCString(line,"*");
+      }
+      String_appendChar(line,'-');
+      if (scheduleNode->month != SCHEDULE_ANY)
+      {
+        String_format(line,"%02d",scheduleNode->month);
+      }
+      else
+      {
+        String_appendCString(line,"*");
+      }
+      String_appendChar(line,'-');
+      if (scheduleNode->day != SCHEDULE_ANY)
+      {
+        String_format(line,"%02d",scheduleNode->day);
+      }
+      else
+      {
+        String_appendCString(line,"*");
+      }
       String_appendChar(line,' ');
+      if (scheduleNode->weekDays != SCHEDULE_ANY_DAY)
+      {
+        names = String_new();
 
-      String_delete(names);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,' ');
-    if (scheduleNode->hour != SCHEDULE_ANY)
-    {
-      String_format(line,"%02d",scheduleNode->hour);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,':');
-    if (scheduleNode->minute != SCHEDULE_ANY)
-    {
-      String_format(line,"%02d",scheduleNode->minute);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,' ');
-    String_format(line,"%y",scheduleNode->enabled);
-    String_appendChar(line,' ');
-    switch (scheduleNode->archiveType)
-    {
-      case ARCHIVE_TYPE_NORMAL     : String_appendCString(line,"normal"     ); break;
-      case ARCHIVE_TYPE_FULL       : String_appendCString(line,"full"       ); break;
-      case ARCHIVE_TYPE_INCREMENTAL: String_appendCString(line,"incremental"); break;
-      default                      : String_appendCString(line,"*"          ); break;
-    }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
 
-    sendResult(clientInfo,id,FALSE,0,
-               "%S",
-               line
-              );
-    scheduleNode = scheduleNode->next;
+        String_append(line,names);
+        String_appendChar(line,' ');
+
+        String_delete(names);
+      }
+      else
+      {
+        String_appendCString(line,"*");
+      }
+      String_appendChar(line,' ');
+      if (scheduleNode->hour != SCHEDULE_ANY)
+      {
+        String_format(line,"%02d",scheduleNode->hour);
+      }
+      else
+      {
+        String_appendCString(line,"*");
+      }
+      String_appendChar(line,':');
+      if (scheduleNode->minute != SCHEDULE_ANY)
+      {
+        String_format(line,"%02d",scheduleNode->minute);
+      }
+      else
+      {
+        String_appendCString(line,"*");
+      }
+      String_appendChar(line,' ');
+      String_format(line,"%y",scheduleNode->enabled);
+      String_appendChar(line,' ');
+      switch (scheduleNode->archiveType)
+      {
+        case ARCHIVE_TYPE_NORMAL     : String_appendCString(line,"normal"     ); break;
+        case ARCHIVE_TYPE_FULL       : String_appendCString(line,"full"       ); break;
+        case ARCHIVE_TYPE_INCREMENTAL: String_appendCString(line,"incremental"); break;
+        default                      : String_appendCString(line,"*"          ); break;
+      }
+
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "%S",
+                       line
+                      );
+    }
+    String_delete(line);
   }
-  sendResult(clientInfo,id,TRUE,0,"");
-  String_delete(line);
 
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleClear
+* Purpose: clear job schedule list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3928,31 +4760,47 @@ LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const St
   /* get job id, type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* clear schedule list */
+    List_clear(&jobNode->scheduleList,NULL,NULL);
+    jobNode->modifiedFlag = TRUE;
   }
 
-  /* clear schedule list */
-  List_clear(&jobNode->scheduleList,NULL,NULL);
-  jobNode->modifiedFlag = TRUE;
-  sendResult(clientInfo,id,TRUE,0,"");
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleAdd
+* Purpose: add entry to job schedule list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <date>
+*            <week day>
+*            <time>
+*            <enabled/disabled 0|1>
+*            <type>
+\***********************************************************************/
 
 LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -3966,36 +4814,36 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
 
   /* initialise variables */
 
-  /* get job id, date, weekday, time, type */
+  /* get job id, date, weekday, time, enable, type */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected date");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected date");
     return;
   }
   if (argumentCount < 3)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected week day");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected week day");
     return;
   }
   if (argumentCount < 4)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected time");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected time");
     return;
   }
   if (argumentCount < 5)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected enable/disable");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected enable/disable");
     return;
   }
   if (argumentCount < 6)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type");
     return;
   }
 
@@ -4004,34 +4852,46 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   scheduleNode = parseSchedule(s);
   if (scheduleNode == NULL)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_PARSING,"cannot parse schedule '%S'",s);
+    sendClientResult(clientInfo,id,TRUE,ERROR_PARSING,"cannot parse schedule '%S'",s);
     String_delete(s);
     return;
   }
   String_delete(s);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* add to schedule list */
+    List_append(&jobNode->scheduleList,scheduleNode);
+    jobNode->modifiedFlag = TRUE;
   }
 
-  /* add to schedule list */
-  List_append(&jobNode->scheduleList,scheduleNode);
-  jobNode->modifiedFlag = TRUE;
-  sendResult(clientInfo,id,TRUE,0,"");
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  /* free resources */
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_decryptPasswordsClear
+* Purpose: clear decrypt password in internal list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <storage name>
+*            <destination directory>
+*            <overwrite flag>
+*            <files>...
+\***********************************************************************/
 
 LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -4043,11 +4903,24 @@ LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, uint id, 
 
   /* clear decrypt password list */
   Archive_clearDecryptPasswords();
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   /* unlock */
   Semaphore_unlock(&jobList.lock);
 }
+
+/***********************************************************************\
+* Name   : serverCommand_decryptPasswordAdd
+* Purpose: add password to internal list of decrypt passwords
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <password>
+\***********************************************************************/
 
 LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -4062,7 +4935,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
   /* get password */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
     return;
   }
 
@@ -4070,11 +4943,25 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
   Password_init(&password);
   Password_setString(&password,arguments[0]);
   Archive_appendDecryptPassword(&password);
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   /* free resources */
   Password_done(&password);
 }
+
+/***********************************************************************\
+* Name   : serverCommand_ftpPassword
+* Purpose: set job FTP password
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <password>
+\***********************************************************************/
 
 LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -4088,37 +4975,48 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
   /* get job id, type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
     return;
   }
   password = Password_newString(arguments[1]);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* set password */
+    jobNode->ftpPassword = password;
   }
 
-  /* set password */
-  jobNode->ftpPassword = password;
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_sshPassword
+* Purpose: set job SSH password
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <password>
+\***********************************************************************/
 
 LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -4132,37 +5030,48 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const Stri
   /* get job id, type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
     return;
   }
   password = Password_newString(arguments[1]);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* set password */
+    jobNode->sshPassword = password;
   }
 
-  /* set password */
-  jobNode->sshPassword = password;
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_cryptPassword
+* Purpose: set job encryption password
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <password>
+\***********************************************************************/
 
 LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -4176,38 +5085,49 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
   /* get job id, type, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
     return;
   }
   password = Password_newString(arguments[1]);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = findJobById(jobId);
-  if (jobNode == NULL)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-    Semaphore_unlock(&jobList.lock);
-    return;
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* set password */
+    if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
+    jobNode->cryptPassword = password;
   }
 
-  /* set password */
-  if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
-  jobNode->cryptPassword = password;
-
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
-
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_volumeLoad
+* Purpose: set number of loaded volume
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <volume number>
+\***********************************************************************/
 
 LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -4221,7 +5141,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
   /* get job id */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
@@ -4229,34 +5149,41 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
   /* get volume number */
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected volume number");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected volume number");
     return;
   }
   volumeNumber = String_toInteger(arguments[1],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = jobList.head;
-  while ((jobNode != NULL) && (jobNode->id != jobId))
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    jobNode = jobNode->next;
-  }
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  if (jobNode != NULL)
-  {
+    /* set volume number */
     jobNode->volumeNumber = volumeNumber;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
   }
 
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_volumeUnload
+* Purpose: unload volumne
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
 
 LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -4269,38 +5196,45 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
   /* get job id */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
     return;
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  /* lock */
-  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  /* find job */
-  jobNode = jobList.head;
-  while ((jobNode != NULL) && (jobNode->id != jobId))
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    jobNode = jobNode->next;
-  }
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
 
-  if (jobNode != NULL)
-  {
+    /* set unload flag */
     jobNode->volumeUnloadFlag = TRUE;
-    sendResult(clientInfo,id,TRUE,0,"");
-  }
-  else
-  {
-    sendResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
   }
 
-  /* unlock */
-  Semaphore_unlock(&jobList.lock);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+/***********************************************************************\
+* Name   : serverCommand_archiveList
+* Purpose: list content of archive
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <storage name>
+\***********************************************************************/
 
 LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  String            archiveName;
+  String            storageName;
   Errors            error;
   ArchiveInfo       archiveInfo;
   ArchiveFileInfo   archiveFileInfo;
@@ -4312,21 +5246,21 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   /* get archive name, pattern */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archive name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storage name");
     return;
   }
-  archiveName = arguments[0];
+  storageName = arguments[0];
 
   /* open archive */
   error = Archive_open(&archiveInfo,
-                       archiveName,
+                       storageName,
                        &clientInfo->jobOptions,
                        NULL,
                        NULL
                       );
   if (error != ERROR_NONE)
   {
-    sendResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
+    sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
     return;
   }
 
@@ -4336,7 +5270,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   {
     /* get next file type */
     error = Archive_getNextArchiveEntryType(&archiveInfo,
-                                            &archiveFileInfo,
                                             &archiveEntryType
                                            );
     if (error == ERROR_NONE)
@@ -4368,18 +5301,17 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                          );
             if (error != ERROR_NONE)
             {
-              sendResult(clientInfo,id,TRUE,error,"Cannot not read content of archive '%S' (error: %s)",archiveName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot not read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
               String_delete(fileName);
               break;
             }
-//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(fileName));
 
             /* match pattern */
             if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendResult(clientInfo,id,FALSE,0,
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                          "FILE %llu %llu %llu %llu %llu %'S",
                          fileInfo.size,
                          fileInfo.timeModified,
@@ -4419,18 +5351,17 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                           );
             if (error != ERROR_NONE)
             {
-              sendResult(clientInfo,id,TRUE,error,"Cannot not read content of archive '%S' (error: %s)",archiveName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot not read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
               String_delete(imageName);
               break;
             }
-//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(imageName));
 
             /* match pattern */
             if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendResult(clientInfo,id,FALSE,0,
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                          "IMAGE %llu %llu %llu %llu %llu %'S",
                          deviceInfo.size,
                          archiveFileInfo.image.chunkInfoImageData.size,
@@ -4463,18 +5394,17 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                               );
             if (error != ERROR_NONE)
             {
-              sendResult(clientInfo,id,TRUE,error,"Cannot not read content of archive '%S' (error: %s)",archiveName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot not read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
               String_delete(directoryName);
               break;
             }
-//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(directoryName));
 
             /* match pattern */
             if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendResult(clientInfo,id,FALSE,0,
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                          "DIRECTORY %llu %'S",
                          fileInfo.timeModified,
                          directoryName
@@ -4507,24 +5437,23 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                          );
             if (error != ERROR_NONE)
             {
-              sendResult(clientInfo,id,TRUE,error,"Cannot not read content of archive '%S' (error: %s)",archiveName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot not read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
               String_delete(fileName);
               String_delete(linkName);
               break;
             }
-//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(linkName));
 
             /* match pattern */
             if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendResult(clientInfo,id,FALSE,0,
-                         "LINK %llu %'S %'S",
-                         fileInfo.timeModified,
-                         linkName,
-                         fileName
-                        );
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                               "LINK %llu %'S %'S",
+                               fileInfo.timeModified,
+                               linkName,
+                               fileName
+                              );
             }
 
             /* close archive file, free resources */
@@ -4551,21 +5480,20 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                             );
             if (error != ERROR_NONE)
             {
-              sendResult(clientInfo,id,TRUE,error,"Cannot not read content of archive '%S' (error: %s)",archiveName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot not read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
               String_delete(fileName);
               break;
             }
-//fprintf(stderr,"%s,%d: %s\n",__FILE__,__LINE__,String_cString(fileName));
 
             /* match pattern */
             if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendResult(clientInfo,id,FALSE,0,
-                         "SPECIAL %'S",
-                         fileName
-                        );
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                               "SPECIAL %'S",
+                               fileName
+                              );
             }
 
             /* close archive file, free resources */
@@ -4582,7 +5510,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
     }
     else
     {
-      sendResult(clientInfo,id,TRUE,error,"Cannot not read next entry of archive '%S' (error: %s)",archiveName,Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"Cannot not read next entry of storage '%S' (error: %s)",storageName,Errors_getText(error));
       break;
     }
   }
@@ -4590,8 +5518,68 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   /* close archive */
   Archive_close(&archiveInfo);
 
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+
+typedef struct
+{
+  ClientInfo *clientInfo;
+  uint       id;
+} RestoreCommandInfo;
+
+/***********************************************************************\
+* Name   : updateRestoreCommandStatus
+* Purpose: update restore job status
+* Input  : jobNode           - job node
+*          error             - error code
+*          restoreStatusInfo - create status info data
+* Output : -
+* Return : TRUE to continue, FALSE to abort
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInfo,
+                                      Errors                  error,
+                                      const RestoreStatusInfo *restoreStatusInfo
+                                     )
+{
+  assert(restoreCommandInfo != NULL);
+  assert(restoreStatusInfo != NULL);
+  assert(restoreStatusInfo->name != NULL);
+  assert(restoreStatusInfo->storageName != NULL);
+
+  UNUSED_VARIABLE(error);
+
+  sendClientResult(restoreCommandInfo->clientInfo,
+                   restoreCommandInfo->id,
+                   FALSE,
+                   ERROR_NONE,
+                   "%llu %llu %llu %llu %'S",
+                   restoreStatusInfo->entryDoneBytes,
+                   restoreStatusInfo->entryTotalBytes,
+                   restoreStatusInfo->archiveDoneBytes,
+                   restoreStatusInfo->archiveTotalBytes,
+                   restoreStatusInfo->name
+                  );
+
+  return !commandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_restore
+* Purpose: restore archives/files
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <storage name>
+*            <destination directory>
+*            <overwrite flag>
+*            <files>...
+\***********************************************************************/
 
 LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
@@ -4600,6 +5588,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   PatternList excludePatternList;
   JobOptions  jobOptions;
   uint        z;
+  RestoreCommandInfo restoreCommandInfo;
   Errors      error;
 
   assert(clientInfo != NULL);
@@ -4613,7 +5602,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   /* get archive name, files */
   if (argumentCount < 1)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archive name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storage name");
     freeJobOptions(&jobOptions);
     PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
@@ -4623,7 +5612,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   StringList_append(&archiveNameList,arguments[0]);
   if (argumentCount < 2)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
     freeJobOptions(&jobOptions);
     PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
@@ -4633,7 +5622,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   jobOptions.destination = String_duplicate(arguments[1]);
   if (argumentCount < 3)
   {
-    sendResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
     freeJobOptions(&jobOptions);
     PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
@@ -4652,18 +5641,20 @@ ENTRY_TYPE_FILE,
   }
 
   /* restore */
+  restoreCommandInfo.clientInfo = clientInfo;
+  restoreCommandInfo.id         = id;
   error = Command_restore(&archiveNameList,
                           &includeEntryList,
                           &excludePatternList,
                           &jobOptions,
                           NULL,
                           NULL,
-                          NULL,
-                          NULL,
+                          (RestoreStatusInfoFunction)updateRestoreCommandStatus,
+                          &restoreCommandInfo,
                           NULL,
                           NULL
                          );
-  sendResult(clientInfo,id,TRUE,error,Errors_getText(error));
+  sendClientResult(clientInfo,id,TRUE,error,Errors_getText(error));
 
   /* free resources */
   freeJobOptions(&jobOptions);
@@ -4672,7 +5663,901 @@ ENTRY_TYPE_FILE,
   StringList_done(&archiveNameList);
 }
 
+/***********************************************************************\
+* Name   : serverCommand_indexStorageList
+* Purpose: get database index storage list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <max. count>|0
+*            <status>|*
+*            <name pattern>
+\***********************************************************************/
+
+LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  ulong               maxCount;
+  String              statusText;
+  String              patternText;
+  String              regexpString;
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  ulong               n;
+  DatabaseId          databaseId;
+  String              name;
+  String              errorMessage;
+  uint64              size;
+  uint64              datetime;
+  uint                state;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get filter pattern */
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected max. number of entries to send");
+    return;
+  }
+  maxCount = String_toInteger64(arguments[0],STRING_BEGIN,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter status");
+    return;
+  }
+  statusText = arguments[1];
+  if (argumentCount < 3)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
+    return;
+  }
+  patternText = arguments[2];
+
+  if (indexDatabaseHandle != NULL)
+  {
+    /* initialise variables */
+    regexpString = String_new();
+    name         = String_new();
+    errorMessage = String_new();
+
+    /* list index */
+    error = Index_initListStorage(&databaseQueryHandle,
+                                  indexDatabaseHandle,
+                                  patternText
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+      return;
+    }
+    n = 0L;
+    while (   ((maxCount == 0L) || (n < maxCount))
+           && Index_getNextStorage(&databaseQueryHandle,
+                                   &databaseId,
+                                   name,
+                                   &size,
+                                   &datetime,
+                                   &state,
+                                   errorMessage
+                                  )
+          )
+    {
+      UNUSED_VARIABLE(databaseId);
+
+      assert((0 <= state) && (state < SIZE_OF_ARRAY(INDEX_STATE_STRINGS)));
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "%llu %llu %'s %'S %'S",
+                       size,
+                       datetime,
+                       INDEX_STATE_STRINGS[state],
+                       name,
+                       errorMessage
+                      );
+      n++;
+    }
+    Index_doneList(&databaseQueryHandle);
+
+    /* free resources */
+    String_delete(name);
+    String_delete(regexpString);
+
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+  }
+}
+
+/***********************************************************************\
+* Name   : serverCommand_indexStorageAdd
+* Purpose: add storage to database index
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <storage name>
+\***********************************************************************/
+
+LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  String   storageName;
+  int64    storageId;
+  Errors   error;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get archive name */
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storage name");
+    return;
+  }
+  storageName = arguments[0];
+
+  if (indexDatabaseHandle != NULL)
+  {
+    /* create index */
+    error = Index_create(indexDatabaseHandle,
+                         storageName,
+                         INDEX_STATE_UPDATE_REQUESTED,
+                         &storageId                         
+                        );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,error,"send index add request fail");
+      return;
+    }
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    return;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_indexStorageRemove
+* Purpose: remove storage from database index
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <status>|*
+*            <name pattern>
+\***********************************************************************/
+
+LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  bool                stateAny;
+  IndexStates         state;
+  String              patternText;
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  int64               storageId;
+  IndexStates         storageState;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get archive name */
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter status");
+    return;
+  }
+  stateAny = FALSE;
+  state    = INDEX_STATE_NONE;
+  if      (String_equalsCString(arguments[0],"*"))
+  {
+    stateAny = TRUE;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"OK"))
+  {
+    state = INDEX_STATE_OK;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE_REQUESTED"))
+  {
+    state = INDEX_STATE_UPDATE_REQUESTED;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE"))
+  {
+    state = INDEX_STATE_UPDATE;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"ERROR"))
+  {
+    state = INDEX_STATE_ERROR;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state *,OK,UPDATE_REQUESTED,UPDATE,ERROR");
+    return;
+  }
+  if (argumentCount < 2)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
+    return;
+  }
+  patternText = arguments[1];
+
+  if (indexDatabaseHandle != NULL)
+  {
+    /* find index */
+    if (!Index_findByName(indexDatabaseHandle,
+                          patternText,
+                          &storageId
+                         )
+       )
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"cannot find index for refresh");
+      return;
+    }
+
+    /* delete index */
+    error = Index_delete(indexDatabaseHandle,
+                         storageId
+                        );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,error,"remove index fail");
+      return;
+    }
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    return;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_indexStorageRefresh
+* Purpose: refresh database index for storage
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <status>|*
+*            <name pattern>
+\***********************************************************************/
+
+LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  bool                stateAny;
+  IndexStates         state;
+  String              patternText;
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  int64               storageId;
+  IndexStates         storageState;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get archive name */
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter status");
+    return;
+  }
+  stateAny = FALSE;
+  state    = INDEX_STATE_NONE;
+  if      (String_equalsCString(arguments[0],"*"))
+  {
+    stateAny = TRUE;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"OK"))
+  {
+    state = INDEX_STATE_OK;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE_REQUESTED"))
+  {
+    state = INDEX_STATE_UPDATE_REQUESTED;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE"))
+  {
+    state = INDEX_STATE_UPDATE;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"ERROR"))
+  {
+    state = INDEX_STATE_ERROR;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state *,OK,UPDATE_REQUESTED,UPDATE,ERROR");
+    return;
+  }
+  if (argumentCount < 2)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
+    return;
+  }
+  patternText = arguments[1];
+
+  if (indexDatabaseHandle != NULL)
+  {
+    error = Index_initListStorage(&databaseQueryHandle,
+                                  indexDatabaseHandle,
+                                  patternText
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+      return;
+    }
+    while (   Index_getNextStorage(&databaseQueryHandle,
+                                   &storageId,
+                                   NULL,
+                                   NULL,
+                                   NULL,
+                                   &storageState,
+                                   NULL
+                                  )
+           && (stateAny || (state == storageState))
+          )
+    {
+      /* set state */
+      Index_setState(indexDatabaseHandle,
+                     storageId,
+                     INDEX_STATE_UPDATE_REQUESTED,
+                     NULL
+                    );
+    }
+    Index_doneList(&databaseQueryHandle);
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    return;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+
+/***********************************************************************\
+* Name   : freeIndexNode
+* Purpose: free allocated index node
+* Input  : indexNode - index node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeIndexNode(IndexNode *indexNode, void *userData)
+{
+  assert(indexNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(indexNode->name);
+  String_delete(indexNode->storageName);
+  LIST_DELETE_NODE(indexNode);
+}
+
+/***********************************************************************\
+* Name   : newIndexEntryNode
+* Purpose: create new index entry node
+* Input  : indexList        - index list
+*          archiveEntryType - archive entry type
+*          storageName      - storage name
+*          name             - entry name
+*          timeModified     - modification time stamp [s]
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL IndexNode *newIndexEntryNode(IndexList *indexList, ArchiveEntryTypes archiveEntryType, const String storageName, const String name, uint64 timeModified)
+{
+  IndexNode *indexNode;
+  bool       foundFlag;
+  IndexNode *nextIndexNode;
+
+  // allocate node
+  indexNode = LIST_NEW_NODE(IndexNode);
+  if (indexNode == NULL)
+  {
+    return NULL;
+  }
+
+  // initialize
+  indexNode->type         = archiveEntryType;
+  indexNode->storageName  = String_duplicate(storageName);
+  indexNode->name         = String_duplicate(name);
+  indexNode->timeModified = timeModified;
+
+  // insert into list
+  foundFlag     = FALSE;
+  nextIndexNode = indexList->head;
+  while (   (nextIndexNode != NULL)
+         && !foundFlag
+        )
+  {
+    switch (String_compare(nextIndexNode->storageName,indexNode->storageName,NULL,NULL))
+    {
+      case -1:
+        // next
+        nextIndexNode = nextIndexNode->next;
+        break;
+      case  0:
+      case  1:
+        // compare
+        switch (String_compare(nextIndexNode->name,indexNode->name,NULL,NULL))
+        {
+          case -1:
+            // next
+            nextIndexNode = nextIndexNode->next;
+            break;
+          case  0:
+          case  1:
+            // found
+            foundFlag = TRUE;
+            break;
+        }
+        break;
+    }
+  }
+  List_insert(indexList,indexNode,nextIndexNode);
+
+  return indexNode;
+}
+
+/***********************************************************************\
+* Name   : getIndexEntryNode
+* Purpose: get index entry node (find existing or create new one)
+* Input  : indexList         - index list
+*          type              - archive entry type
+*          storageName       - storage name
+*          name              - entry name
+*          timeModified      - modification time stamp [s]
+*          newestEntriesOnly - TRUE for collecting newest entries only
+* Output : -
+* Return : index node or NULL if insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+LOCAL IndexNode *getIndexEntryNode(IndexList *indexList, ArchiveEntryTypes type, const String storageName, const String name, uint64 timeModified, bool newestEntriesOnly)
+{
+  IndexNode *foundIndexNode;
+  IndexNode *indexNode;
+
+  assert(indexList != NULL);
+  assert(storageName != NULL);
+  assert(name != NULL);
+
+  /* find node */
+  foundIndexNode = NULL;
+  if (newestEntriesOnly)
+  {
+    indexNode      = indexList->head;
+    while (   (indexNode != NULL)
+           && (foundIndexNode == NULL)
+          )
+    {
+      if      (indexNode->type < type)
+      {
+        // next
+        indexNode = indexNode->next;
+      }
+      else if (indexNode->type == type)
+      {
+        // compare
+        switch (String_compare(indexNode->name,name,NULL,NULL))
+        {
+          case -1:
+            // next
+            indexNode = indexNode->next;
+            break;
+          case  0:
+            // found
+            foundIndexNode = indexNode;
+            break;
+          case  1:
+            // not found
+            indexNode = NULL;
+            break;
+        }
+      }
+      else
+      {
+        // not found
+        indexNode = NULL;
+      }
+    }
+  }
+
+  /* allocate if not found or not only newest entries */
+  if (foundIndexNode == NULL)
+  {
+    foundIndexNode = newIndexEntryNode(indexList,ARCHIVE_ENTRY_TYPE_FILE,storageName,name,timeModified);
+  }
+
+  return foundIndexNode;
+}
+
+/***********************************************************************\
+* Name   : serverCommand_indexEntriesList
+* Purpose: get database index entry list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <max. count>
+*            <newestEntriesOnly 0|1>
+*            <name pattern>
+\***********************************************************************/
+
+LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+
+  ulong               maxCount;
+  bool                newestEntriesOnly;
+  String              patternText;
+  IndexList           indexList;
+  IndexNode           *indexNode;
+  String              regexpString;
+  DatabaseId          databaseId;
+  String              storageName;
+  String              name;
+  String              destinationName;
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  uint64              size;
+  uint64              timeModified;
+  uint                userId,groupId;
+  uint                permission;
+  uint64              fragmentOffset,fragmentSize;
+  uint64              blockOffset,blockCount;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get filter pattern */
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected max. number of entries to send");
+    return;
+  }
+  maxCount = String_toInteger64(arguments[0],STRING_BEGIN,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newest entries only flag");
+    return;
+  }
+  newestEntriesOnly = String_toBoolean(arguments[1],STRING_BEGIN,NULL,NULL,0,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
+    return;
+  }
+  patternText = arguments[2];
+
+  if (indexDatabaseHandle != NULL)
+  {
+    /* initialise variables */
+    List_init(&indexList);
+    regexpString    = String_new();
+    storageName     = String_new();
+    name            = String_new();
+    destinationName = String_new();
+
+    /* collect index data */
+    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    {
+      error = Index_initListFiles(&databaseQueryHandle,
+                                  indexDatabaseHandle,
+                                  patternText
+                                  );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        return;
+      }
+      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+             && Index_getNextFile(&databaseQueryHandle,
+                                  &databaseId,
+                                  storageName,
+                                  name,
+                                  &size,
+                                  &timeModified,
+                                  &userId,
+                                  &groupId,
+                                  &permission,
+                                  &fragmentOffset,
+                                  &fragmentSize
+                                 )
+            )
+      {
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,storageName,name,timeModified,newestEntriesOnly);
+        if (indexNode == NULL) break;
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->timeModified        = timeModified;
+          indexNode->file.size           = size;
+          indexNode->file.userId         = userId;
+          indexNode->file.groupId        = groupId;
+          indexNode->file.permission     = permission;
+          indexNode->file.fragmentOffset = fragmentOffset;
+          indexNode->file.fragmentSize   = fragmentSize;
+        }
+      }
+      Index_doneList(&databaseQueryHandle);
+    }
+
+    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    {
+      error = Index_initListImages(&databaseQueryHandle,
+                                   indexDatabaseHandle,
+                                   patternText
+                                  );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        return;
+      }
+      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+             && Index_getNextImage(&databaseQueryHandle,
+                                   &databaseId,
+                                   storageName,
+                                   name,
+                                   &size,
+                                   &blockOffset,
+                                   &blockCount
+                                  )
+            )
+      {
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,storageName,name,timeModified,newestEntriesOnly);
+        if (indexNode == NULL) break;
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->timeModified      = timeModified;
+          indexNode->image.size        = size;
+          indexNode->image.blockOffset = blockOffset;
+          indexNode->image.blockCount  = blockCount;
+        }
+      }
+      Index_doneList(&databaseQueryHandle);
+    }
+
+    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    {
+      error = Index_initListDirectories(&databaseQueryHandle,
+                                        indexDatabaseHandle,
+                                        patternText
+                                       );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        return;
+      }
+      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+             && Index_getNextDirectory(&databaseQueryHandle,
+                                       &databaseId,
+                                       storageName,
+                                       name,
+                                       &timeModified,
+                                       &userId,
+                                       &groupId,
+                                       &permission
+                                      )
+            )
+      {
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,storageName,name,timeModified,newestEntriesOnly);
+        if (indexNode == NULL) break;
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->timeModified         = timeModified;
+          indexNode->directory.userId     = userId;
+          indexNode->directory.groupId    = groupId;
+          indexNode->directory.permission = permission;
+        }
+      }
+      Index_doneList(&databaseQueryHandle);
+    }
+
+    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    {
+      error = Index_initListLinks(&databaseQueryHandle,
+                                  indexDatabaseHandle,
+                                  patternText
+                                  );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        return;
+      }
+      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+             && Index_getNextLink(&databaseQueryHandle,
+                                  &databaseId,
+                                  storageName,
+                                  name,
+                                  destinationName,
+                                  &timeModified,
+                                  &userId,
+                                  &groupId,
+                                  &permission
+                                 )
+            )
+      {
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,storageName,name,timeModified,newestEntriesOnly);
+        if (indexNode == NULL) break;
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->timeModified         = timeModified;
+          indexNode->link.destinationName = destinationName;
+          indexNode->link.userId          = userId;
+          indexNode->link.groupId         = groupId;
+          indexNode->link.permission      = permission;
+        }
+      }
+      Index_doneList(&databaseQueryHandle);
+    }
+
+    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    {
+      error = Index_initListSpecial(&databaseQueryHandle,
+                                    indexDatabaseHandle,
+                                    patternText
+                                    );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        return;
+      }
+      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+             && Index_getNextSpecial(&databaseQueryHandle,
+                                     &databaseId,
+                                     storageName,
+                                     name,
+                                     &timeModified,
+                                     &userId,
+                                     &groupId,
+                                     &permission
+                                    )
+            )
+      {
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,storageName,name,timeModified,newestEntriesOnly);
+        if (indexNode == NULL) break;
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->timeModified       = timeModified;
+          indexNode->special.userId     = userId;
+          indexNode->special.groupId    = groupId;
+          indexNode->special.permission = permission;
+        }
+      }
+      Index_doneList(&databaseQueryHandle);
+    }
+//fprintf(stderr,"%s,%d: patternText=#%s# count=%ld\n",__FILE__,__LINE__,String_cString(patternText),List_count(&indexList));
+
+    /* send data */
+    indexNode = indexList.head;
+    while ((indexNode != NULL) && !commandAborted(clientInfo,id))
+    {
+      switch (indexNode->type)
+      {
+        case ARCHIVE_ENTRY_TYPE_FILE:
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "FILE %llu %llu %u %u %u %llu %llu %'S %'S",
+                           indexNode->file.size,
+                           indexNode->timeModified,
+                           indexNode->file.userId,
+                           indexNode->file.groupId,
+                           indexNode->file.permission,
+                           indexNode->file.fragmentOffset,
+                           indexNode->file.fragmentSize,
+                           indexNode->storageName,
+                           indexNode->name
+                          );
+          break;
+        case ARCHIVE_ENTRY_TYPE_IMAGE:
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "IMAGE %llu %ll %llu %'S %'S",
+                           indexNode->image.size,
+                           indexNode->image.blockOffset,
+                           indexNode->image.blockCount,
+                           indexNode->storageName,
+                           indexNode->name
+                          );
+          break;
+        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "DIRECTORY %llu %u %u %u %'S %'S",
+                           indexNode->timeModified,
+                           indexNode->directory.userId,
+                           indexNode->directory.groupId,
+                           indexNode->directory.permission,
+                           indexNode->storageName,
+                           indexNode->name
+                          );
+          break;
+        case ARCHIVE_ENTRY_TYPE_LINK:
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "LINK %llu %u %u %u %'S %'S %'S",
+                           indexNode->timeModified,
+                           indexNode->link.userId,
+                           indexNode->link.groupId,
+                           indexNode->link.permission,
+                           indexNode->storageName,
+                           indexNode->name,
+                           indexNode->link.destinationName
+                          );
+          break;
+        case ARCHIVE_ENTRY_TYPE_SPECIAL:
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "SPECIAL %llu %u %u %u %'S %'S",
+                           indexNode->timeModified,
+                           indexNode->special.userId,
+                           indexNode->special.groupId,
+                           indexNode->special.permission,
+                           indexNode->storageName,
+                           indexNode->name
+                          );
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
+      }
+      indexNode = indexNode->next;
+    }
+
+    /* free resources */
+    List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+    String_delete(destinationName);
+    String_delete(name);
+    String_delete(storageName);
+    String_delete(regexpString);
+
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+  }
+}
+
 #ifndef NDEBUG
+/***********************************************************************\
+* Name   : serverCommand_debugMemoryInfo
+* Purpose: execute array/string debug functions
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+\***********************************************************************/
+
 LOCAL void serverCommand_debugMemoryInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   assert(clientInfo != NULL);
@@ -4683,7 +6568,7 @@ LOCAL void serverCommand_debugMemoryInfo(ClientInfo *clientInfo, uint id, const 
   Array_debug();
   String_debug();
 
-  sendResult(clientInfo,id,TRUE,0,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 #endif /* NDEBUG */
 
@@ -4697,48 +6582,55 @@ const struct
 }
 SERVER_COMMANDS[] =
 {
-  { "AUTHORIZE",             "S",  serverCommand_authorize,            AUTHORIZATION_STATE_WAITING },
-  { "ABORT",                 "i",  serverCommand_abort,                AUTHORIZATION_STATE_OK      },
-  { "STATUS",                "",   serverCommand_status,               AUTHORIZATION_STATE_OK      },
-  { "PAUSE",                 "i",  serverCommand_pause,                AUTHORIZATION_STATE_OK      },
-  { "SUSPEND",               "",   serverCommand_suspend,              AUTHORIZATION_STATE_OK      },
-  { "CONTINUE",              "",   serverCommand_continue,             AUTHORIZATION_STATE_OK      },
-  { "ERROR_INFO",            "i",  serverCommand_errorInfo,            AUTHORIZATION_STATE_OK      },
-  { "DEVICE_LIST",           "",   serverCommand_deviceList,           AUTHORIZATION_STATE_OK      },
-  { "FILE_LIST",             "S",  serverCommand_fileList,             AUTHORIZATION_STATE_OK      },
-  { "DIRECTORY_INFO",        "S",  serverCommand_directoryInfo,        AUTHORIZATION_STATE_OK      },
-  { "JOB_LIST",              "",   serverCommand_jobList,              AUTHORIZATION_STATE_OK      },
-  { "JOB_INFO",              "i",  serverCommand_jobInfo,              AUTHORIZATION_STATE_OK      },
-  { "JOB_NEW",               "S",  serverCommand_jobNew,               AUTHORIZATION_STATE_OK      },
-  { "JOB_COPY",              "i S",serverCommand_jobCopy,              AUTHORIZATION_STATE_OK      },
-  { "JOB_RENAME",            "i S",serverCommand_jobRename,            AUTHORIZATION_STATE_OK      },
-  { "JOB_DELETE",            "i",  serverCommand_jobDelete,            AUTHORIZATION_STATE_OK      },
-  { "JOB_START",             "i",  serverCommand_jobStart,             AUTHORIZATION_STATE_OK      },
-  { "JOB_ABORT",             "i",  serverCommand_jobAbort,             AUTHORIZATION_STATE_OK      },
-  { "JOB_FLUSH",             "",   serverCommand_jobFlush,             AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_LIST",          "i",  serverCommand_includeList,          AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_CLEAR",         "i",  serverCommand_includeClear,         AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_ADD",           "i S",serverCommand_includeAdd,           AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST",          "i",  serverCommand_excludeList,          AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_CLEAR",         "i",  serverCommand_excludeClear,         AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_ADD",           "i S",serverCommand_excludeAdd,           AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_LIST",         "i",  serverCommand_scheduleList,         AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_CLEAR",        "i",  serverCommand_scheduleClear,        AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_ADD",          "i S",serverCommand_scheduleAdd,          AUTHORIZATION_STATE_OK      },
-  { "OPTION_GET",            "s",  serverCommand_optionGet,            AUTHORIZATION_STATE_OK      },
-  { "OPTION_SET",            "s S",serverCommand_optionSet,            AUTHORIZATION_STATE_OK      },
-  { "OPTION_DELETE",         "s S",serverCommand_optionDelete,         AUTHORIZATION_STATE_OK      },
-  { "DECRYPT_PASSWORD_CLEAR","",   serverCommand_decryptPasswordsClear,AUTHORIZATION_STATE_OK      },
-  { "DECRYPT_PASSWORD_ADD",  "i S",serverCommand_decryptPasswordAdd,   AUTHORIZATION_STATE_OK      },
-  { "FTP_PASSWORD",          "i S",serverCommand_ftpPassword,          AUTHORIZATION_STATE_OK      },
-  { "SSH_PASSWORD",          "i S",serverCommand_sshPassword,          AUTHORIZATION_STATE_OK      },
-  { "CRYPT_PASSWORD",        "S",  serverCommand_cryptPassword,        AUTHORIZATION_STATE_OK      },
-  { "VOLUME_LOAD",           "i i",serverCommand_volumeLoad,           AUTHORIZATION_STATE_OK      },
-  { "VOLUME_UNLOAD",         "",   serverCommand_volumeUnload,         AUTHORIZATION_STATE_OK      },
-  { "ARCHIVE_LIST",          "S S",serverCommand_archiveList,          AUTHORIZATION_STATE_OK      },
-  { "RESTORE",               "S S",serverCommand_restore,              AUTHORIZATION_STATE_OK      },
+  { "ERROR_INFO",            "i",    serverCommand_errorInfo,            AUTHORIZATION_STATE_OK      },
+  { "AUTHORIZE",             "S",    serverCommand_authorize,            AUTHORIZATION_STATE_WAITING },
+  { "ABORT",                 "i",    serverCommand_abort,                AUTHORIZATION_STATE_OK      },
+  { "STATUS",                "",     serverCommand_status,               AUTHORIZATION_STATE_OK      },
+  { "PAUSE",                 "i",    serverCommand_pause,                AUTHORIZATION_STATE_OK      },
+  { "SUSPEND",               "",     serverCommand_suspend,              AUTHORIZATION_STATE_OK      },
+  { "CONTINUE",              "",     serverCommand_continue,             AUTHORIZATION_STATE_OK      },
+  { "DEVICE_LIST",           "",     serverCommand_deviceList,           AUTHORIZATION_STATE_OK      },
+  { "FILE_LIST",             "S",    serverCommand_fileList,             AUTHORIZATION_STATE_OK      },
+  { "DIRECTORY_INFO",        "S",    serverCommand_directoryInfo,        AUTHORIZATION_STATE_OK      },
+  { "JOB_LIST",              "",     serverCommand_jobList,              AUTHORIZATION_STATE_OK      },
+  { "JOB_INFO",              "i",    serverCommand_jobInfo,              AUTHORIZATION_STATE_OK      },
+  { "JOB_NEW",               "S",    serverCommand_jobNew,               AUTHORIZATION_STATE_OK      },
+  { "JOB_COPY",              "i S",  serverCommand_jobCopy,              AUTHORIZATION_STATE_OK      },
+  { "JOB_RENAME",            "i S",  serverCommand_jobRename,            AUTHORIZATION_STATE_OK      },
+  { "JOB_DELETE",            "i",    serverCommand_jobDelete,            AUTHORIZATION_STATE_OK      },
+  { "JOB_START",             "i",    serverCommand_jobStart,             AUTHORIZATION_STATE_OK      },
+  { "JOB_ABORT",             "i",    serverCommand_jobAbort,             AUTHORIZATION_STATE_OK      },
+  { "JOB_FLUSH",             "",     serverCommand_jobFlush,             AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST",          "i",    serverCommand_includeList,          AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_CLEAR",         "i",    serverCommand_includeClear,         AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_ADD",           "i S",  serverCommand_includeAdd,           AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST",          "i",    serverCommand_excludeList,          AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_CLEAR",         "i",    serverCommand_excludeClear,         AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_ADD",           "i S",  serverCommand_excludeAdd,           AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST",         "i",    serverCommand_scheduleList,         AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_CLEAR",        "i",    serverCommand_scheduleClear,        AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_ADD",          "i S",  serverCommand_scheduleAdd,          AUTHORIZATION_STATE_OK      },
+  { "OPTION_GET",            "s",    serverCommand_optionGet,            AUTHORIZATION_STATE_OK      },
+  { "OPTION_SET",            "s S",  serverCommand_optionSet,            AUTHORIZATION_STATE_OK      },
+  { "OPTION_DELETE",         "s S",  serverCommand_optionDelete,         AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_CLEAR","",     serverCommand_decryptPasswordsClear,AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_ADD",  "i S",  serverCommand_decryptPasswordAdd,   AUTHORIZATION_STATE_OK      },
+  { "FTP_PASSWORD",          "i S",  serverCommand_ftpPassword,          AUTHORIZATION_STATE_OK      },
+  { "SSH_PASSWORD",          "i S",  serverCommand_sshPassword,          AUTHORIZATION_STATE_OK      },
+  { "CRYPT_PASSWORD",        "S",    serverCommand_cryptPassword,        AUTHORIZATION_STATE_OK      },
+  { "VOLUME_LOAD",           "i i",  serverCommand_volumeLoad,           AUTHORIZATION_STATE_OK      },
+  { "VOLUME_UNLOAD",         "",     serverCommand_volumeUnload,         AUTHORIZATION_STATE_OK      },
+  { "ARCHIVE_LIST",          "S S",  serverCommand_archiveList,          AUTHORIZATION_STATE_OK      },
+  { "RESTORE",               "S S",  serverCommand_restore,              AUTHORIZATION_STATE_OK      },
+
+  { "INDEX_STORAGE_LIST",    "i S S",serverCommand_indexStorageList,     AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_ADD",     "S",    serverCommand_indexStorageAdd,      AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_REMOVE",  "S",    serverCommand_indexStorageRemove,   AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_REFRESH", "S",    serverCommand_indexStorageRefresh,  AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTRIES_LIST",    "i b S",serverCommand_indexEntriesList,     AUTHORIZATION_STATE_OK      },
+
   #ifndef NDEBUG
-  { "DEBUG_MEMORY_INFO",     "",   serverCommand_debugMemoryInfo,      AUTHORIZATION_STATE_OK      },
+  { "DEBUG_MEMORY_INFO",     "",     serverCommand_debugMemoryInfo,      AUTHORIZATION_STATE_OK      },
   #endif /* NDEBUG */
 };
 
@@ -4765,17 +6657,20 @@ LOCAL void freeArgumentsArrayElement(String *string, void *userData)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : freeCommand
-* Purpose: free allocated command message
+* Name   : freeCommandMsg
+* Purpose: free command msg
 * Input  : commandMsg - command message
+*          userData   - user data (ignored)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeCommand(CommandMsg *commandMsg)
+LOCAL void freeCommandMsg(CommandMsg *commandMsg, void *userData)
 {
   assert(commandMsg != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   Array_delete(commandMsg->arguments,(ArrayElementFreeFunction)freeArgumentsArrayElement,NULL);
 }
@@ -4890,35 +6785,16 @@ LOCAL void networkClientThread(ClientInfo *clientInfo)
     else
     {
       /* authorization failure -> mark for disconnect */
-      sendResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+      sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
     }
 
     /* free resources */
-    freeCommand(&commandMsg);
+    freeCommandMsg(&commandMsg,NULL);
   }
   String_delete(result);
 
   clientInfo->network.exitFlag = TRUE;
-}
-
-/***********************************************************************\
-* Name   : freeCommandMsg
-* Purpose: free command msg
-* Input  : commandMsg - command message
-*          userData   - user data (ignored)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeCommandMsg(CommandMsg *commandMsg, void *userData)
-{
-  assert(commandMsg != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  freeCommand(commandMsg);
 }
 
 /***********************************************************************\
@@ -5108,9 +6984,11 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeClientNode(ClientNode *clientNode)
+LOCAL void freeClientNode(ClientNode *clientNode, void *userData)
 {
   assert(clientNode != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   doneClient(&clientNode->clientInfo);
   String_delete(clientNode->commandString);
@@ -5157,7 +7035,7 @@ LOCAL void deleteClient(ClientNode *clientNode)
 {
   assert(clientNode != NULL);
 
-  freeClientNode(clientNode);
+  freeClientNode(clientNode,NULL);
 
   LIST_DELETE_NODE(clientNode);
 }
@@ -5186,12 +7064,12 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
     if (clientInfo->authorizationState == AUTHORIZATION_STATE_OK)
     {
       /* version info */
-      sendResult(clientInfo,0,TRUE,0,"%d %d",PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR);
+      sendClientResult(clientInfo,0,TRUE,ERROR_NONE,"%d %d",PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR);
     }
     else
     {
       /* authorization failure -> mark for disconnect */
-      sendResult(clientInfo,0,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+      sendClientResult(clientInfo,0,TRUE,ERROR_AUTHORIZATION,"authorization failure");
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
     }
   }
@@ -5199,7 +7077,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
     else if (String_equalsCString(command,"QUIT"))
     {
       quitFlag = TRUE;
-      sendResult(clientInfo,0,TRUE,0,"ok");
+      sendClientResult(clientInfo,0,TRUE,ERROR_NONE,"ok");
     }
   #endif /* not NDEBUG */
   else
@@ -5207,7 +7085,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
     /* parse command */
     if (!parseCommand(&commandMsg,command))
     {
-      sendResult(clientInfo,commandMsg.id,TRUE,ERROR_PARSING,"parse error");
+      sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_PARSING,"parse error");
       return;
     }
 
@@ -5227,12 +7105,12 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
         else
         {
           /* authorization failure -> mark for disconnect */
-          sendResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+          sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
           clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
         }
 
         /* free resources */
-        freeCommand(&commandMsg);
+        freeCommandMsg(&commandMsg,NULL);
         break;
       case CLIENT_TYPE_NETWORK:
         /* send command to client thread */
@@ -5287,10 +7165,12 @@ Errors Server_run(uint             port,
   serverDefaultJobOptions = defaultJobOptions;
   List_init(&jobList);
   Semaphore_init(&jobList.lock);
-  List_init(&clientList);
   Semaphore_init(&serverStateLock);
+  List_init(&clientList);
   serverState             = SERVER_STATE_RUNNING;
-  pauseFlag               = FALSE;
+  pauseFlags.create       = FALSE;
+  pauseFlags.restore      = FALSE;
+  pauseFlags.indexUpdate  = FALSE;
   pauseEndTimestamp       = 0LL;
   quitFlag                = FALSE;
 
@@ -5390,6 +7270,20 @@ Errors Server_run(uint             port,
   {
     HALT_FATAL_ERROR("Cannot initialise pause thread!");
   }
+  if (indexDatabaseHandle != NULL)
+  {
+    if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadEntry,NULL))
+    {
+      HALT_FATAL_ERROR("Cannot initialise index thread!");
+    }
+    if (!globalOptions.noAutoUpdateDatabaseIndexFlag)
+    {
+      if (!Thread_init(&indexUpdateThread,"BAR update index",globalOptions.niceLevel,indexUpdateThreadEntry,NULL))
+      {
+        HALT_FATAL_ERROR("Cannot initialise index update thread!");
+      }
+    }
+  }
 
   /* run server */
   clientName = String_new();
@@ -5399,11 +7293,9 @@ Errors Server_run(uint             port,
     FD_ZERO(&selectSet);
     if (serverFlag   ) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
     if (serverTLSFlag) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
-    clientNode = clientList.head;
-    while (clientNode != NULL)
+    LIST_ITERATE(clientList,clientNode)
     {
       FD_SET(Network_getSocket(&clientNode->clientInfo.network.socketHandle),&selectSet);
-      clientNode = clientNode->next;
     }
     select(FD_SETSIZE,&selectSet,NULL,NULL,NULL);
 
@@ -5530,6 +7422,14 @@ Errors Server_run(uint             port,
 
   /* wait for thread exit */
   Semaphore_setEnd(&jobList.lock);
+  if (indexDatabaseHandle != NULL)
+  {
+    if (!globalOptions.noAutoUpdateDatabaseIndexFlag)
+    {
+      Thread_join(&indexUpdateThread);
+    }
+    Thread_join(&indexThread);
+  }
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);
@@ -5539,6 +7439,14 @@ Errors Server_run(uint             port,
   if (serverTLSFlag) Network_doneServer(&serverTLSSocketHandle);
 
   /* free resources */
+  if (indexDatabaseHandle != NULL)
+  {
+    if (!globalOptions.noAutoUpdateDatabaseIndexFlag)
+    {
+      Thread_done(&indexUpdateThread);
+    }
+    Thread_done(&indexThread);
+  }
   Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
   Thread_done(&jobThread);
