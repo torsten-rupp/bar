@@ -16,7 +16,8 @@ CREATE TABLE storage(
   name            TEXT,
   size            INTEGER,
   created         INTEGER,
-  state           INTEGER
+  state           INTEGER,
+  errorMessage    TEXT
 );
 
 CREATE TABLE files(
