@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.23 $
+* $Revision: 1.24 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -46,7 +46,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define MAX_BUFFER_SIZE     (4*1024)
+#define MAX_BUFFER_SIZE     (64*1024)
 #define MAX_FILENAME_LENGTH (8*1024)
 
 #define UNLOAD_VOLUME_DELAY_TIME (10LL*1000LL*1000LL) /* [us] */
@@ -268,14 +268,15 @@ LOCAL Errors checkSSHLogin(const String loginName,
 #ifdef HAVE_SSH2
 /***********************************************************************\
 * Name   : waitSessionSocket
-* Purpose: delay a little until session socket can be read/write
+* Purpose: wait a little until session socket can be read/write
 * Input  : socketHandle - socket handle
 * Output : -
-* Return : -
+* Return : TRUE if session socket can be read/write, FALSE on
++          error/timeout
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void waitSessionSocket(SocketHandle *socketHandle)
+LOCAL bool waitSessionSocket(SocketHandle *socketHandle)
 {
   LIBSSH2_SESSION *session;
   struct timeval  tv;
@@ -287,17 +288,18 @@ LOCAL void waitSessionSocket(SocketHandle *socketHandle)
   session = Network_getSSHSession(socketHandle);
   assert(session != NULL);
 
-  // sleep for max. 5s
-  tv.tv_sec  = 5;
+  // wait for max. 60s
+  tv.tv_sec  = 60;
   tv.tv_usec = 0;
   FD_ZERO(&fdSet);
   FD_SET(socketHandle->handle,&fdSet);
-  (void)select(socketHandle->handle+1,
-               ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_INBOUND ) != 0) ? &fdSet : NULL,
-               ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_OUTBOUND) != 0) ? &fdSet : NULL,
-               NULL,
-               &tv
-              );
+  return (select(socketHandle->handle+1,
+                 ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_INBOUND ) != 0) ? &fdSet : NULL,
+                 ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_OUTBOUND) != 0) ? &fdSet : NULL,
+                 NULL,
+                 &tv
+                ) > 0
+         );
 }
 #endif /* HAVE_SSH2 */
 
@@ -923,8 +925,8 @@ StorageTypes Storage_parseName(const String storageName,
   else if (String_startsWithCString(storageName,"dvd://"))
   {
     String_sub(string,storageName,6,STRING_END);
-    if      (   String_matchCString(string,STRING_BEGIN,"[^:]+:[^/]*/",NULL,NULL)
-             || String_matchCString(string,STRING_BEGIN,"[^/]*/",NULL,NULL)
+    if      (   String_matchCString(string,STRING_BEGIN,"[^:]+:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^/]*/",&nextIndex,NULL,NULL)
             )
     {
       if (storageSpecifier != NULL) String_sub(storageSpecifier,string,0,nextIndex-1);
@@ -959,8 +961,8 @@ StorageTypes Storage_parseName(const String storageName,
   else if (String_startsWithCString(storageName,"device://"))
   {
     String_sub(string,storageName,9,STRING_END);
-    if      (   String_matchCString(string,nextIndex,"[^:]+:[^/]*/",&nextIndex,NULL,NULL)
-             || String_matchCString(string,nextIndex,"[^/]*/",&nextIndex,NULL,NULL)
+    if      (   String_matchCString(string,STRING_BEGIN,"[^:]+:[^/]*/",&nextIndex,NULL,NULL)
+             || String_matchCString(string,STRING_BEGIN,"[^/]*/",&nextIndex,NULL,NULL)
             )
     {
       if (storageSpecifier != NULL) String_sub(storageSpecifier,string,0,nextIndex-1);
@@ -1112,7 +1114,7 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
 
   if      (String_matchCString(sshSpecifier,STRING_BEGIN,"[^@]*@[^:]*:[:digit:]+",NULL,NULL,NULL))
   {
-    result = String_parse(sshSpecifier,STRING_BEGIN,"%S@",NULL,loginName);
+    result = String_parse(sshSpecifier,STRING_BEGIN,"%S@%S:%d",NULL,loginName,hostName,hostPort);
   }
   else if (String_matchCString(sshSpecifier,STRING_BEGIN,"[^:]*:[:digit:]+",NULL,NULL,NULL))
   {
@@ -1120,7 +1122,7 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
   }
   else if (String_matchCString(sshSpecifier,STRING_BEGIN,"[^@]*@.*",NULL,NULL,NULL))
   {
-    result = String_parse(sshSpecifier,STRING_BEGIN,"%S:%d",NULL,hostName,hostPort);
+    result = String_parse(sshSpecifier,STRING_BEGIN,"%S@%S",NULL,loginName,hostName);
   }
   else if (!String_empty(sshSpecifier))
   {
@@ -1147,9 +1149,9 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
 
   String_clear(deviceName);
 
-  if (String_matchCString(deviceSpecifier,STRING_BEGIN,"[^:]*:",NULL,NULL,NULL))
+  if (String_matchCString(deviceSpecifier,STRING_BEGIN,"[^:]*:.*",NULL,NULL,NULL))
   {
-    result = String_parse(deviceSpecifier,STRING_BEGIN,"%S:",NULL,deviceName);
+    result = String_parse(deviceSpecifier,STRING_BEGIN,"%S:%S",NULL,deviceName,NULL);
   }
   else
   {
@@ -3509,15 +3511,26 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             /* get end time, transmission time */
             endTimestamp = Misc_getTimestamp();
 
+// ??? is it possible in blocking-mode that write() return 0 and this is not an error?
+#if 1
             if      (n == 0)
             {
               // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
-              waitSessionSocket(&storageFileHandle->scp.socketHandle);
+              if (!waitSessionSocket(&storageFileHandle->scp.socketHandle))
+              {
+                return ERROR_NETWORK_SEND;
+              }
             }
             else if (n < 0)
             {
               return ERROR_NETWORK_SEND;
             }
+#else /* 0 */
+            if (n <= 0)
+            {
+              return ERROR_NETWORK_SEND;
+            }
+#endif /* 0 */
             buffer = (byte*)buffer+n;
             writtenBytes += n;
 
@@ -3574,15 +3587,26 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             /* get end time, transmission time */
             endTimestamp = Misc_getTimestamp();
 
+// ??? is it possible in blocking-mode that write() return 0 and this is not an error?
+#if 1
             if      (n == 0)
             {
               // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
-              waitSessionSocket(&storageFileHandle->scp.socketHandle);
+              if (!waitSessionSocket(&storageFileHandle->sftp.socketHandle))
+              {
+                return ERROR_NETWORK_SEND;
+              }
             }
             else if (n < 0)
             {
               return ERROR_NETWORK_SEND;
             }
+#else /* 0 */
+            if (n <= 0)
+            {
+              return ERROR_NETWORK_SEND;
+            }
+#endif /* 0 */
             buffer = (byte*)buffer+n;
             size -= n;
 
@@ -3775,11 +3799,15 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
              requested offset.
              Note: this is slow!
           */
+
+          assert(storageFileHandle->scp.channel != NULL);
+          assert(storageFileHandle->scp.readAheadBuffer.data != NULL);
+
           if      (offset > storageFileHandle->scp.index)
           {
-            uint64 size;
-            ulong  i;
-            size_t n;
+            uint64  size;
+            ulong   i;
+            ssize_t n;
 
             size = offset-storageFileHandle->scp.index;
 

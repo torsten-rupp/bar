@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/crypt.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Backup ARchiver crypt functions
 * Systems: all
@@ -954,7 +954,6 @@ LOCAL Errors getKeyData(const CryptKey *cryptKey,
 
     /* allocate file key */
     fileCryptKeyLength = sizeof(FileCryptKey)+ALIGN(dataLength,blockLength);
-  //fprintf(stderr,"%s,%d: dataLength=%d fileCryptKeyLength=%d blokc=%d\n",__FILE__,__LINE__,dataLength,fileCryptKeyLength,blockLength);
     fileCryptKey = (FileCryptKey*)Password_allocSecure(fileCryptKeyLength);
     if (fileCryptKey == NULL)
     {
@@ -966,14 +965,14 @@ LOCAL Errors getKeyData(const CryptKey *cryptKey,
 
     /* get key data */
     gcry_sexp_sprint(sexpToken,GCRYSEXP_FMT_ADVANCED,(char*)fileCryptKey->data,dataLength);
-    #if 0
-    {
-    int z;
-    byte *p=fileCryptKey->data;
-    printf("raw data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
-    p++;
-    }
-    #endif /* 0 */
+#if 0
+{
+int z;
+byte *p=fileCryptKey->data;
+printf("raw data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
+p++;
+}
+#endif /* 0 */
 
     /* encrypt key */
     if (password != NULL)
@@ -1084,7 +1083,6 @@ LOCAL Errors setKeyData(CryptKey       *cryptKey,
     {
       return ERROR_INVALID_KEY;
     }
-  //fprintf(stderr,"%s,%d: datalength=%d fileCryptKeyLength=%d\n",__FILE__,__LINE__,ntohs(fileCryptKey->dataLength),fileCryptKeyLength);
 
     /* get data length */
     dataLength = ntohs(fileCryptKey->dataLength);
@@ -1095,15 +1093,14 @@ LOCAL Errors setKeyData(CryptKey       *cryptKey,
     {
       return ERROR_INVALID_KEY;
     }
-
-    #if 0
-    {
-    int z;
-    byte *p=data;
-    printf("cry data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
-    p++;
-    }
-    #endif /* 0 */
+#if 0
+{
+int z;
+byte *p=data;
+printf("cry data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
+p++;
+}
+#endif /* 0 */
 
     /* decrypt key */
     if (password != NULL)
@@ -1128,14 +1125,14 @@ LOCAL Errors setKeyData(CryptKey       *cryptKey,
       /* done crypt */
       Crypt_done(&cryptInfo);
     }
-    #if 0
-    {
-    int z;
-    byte *p=data;
-    printf("decryp data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
-    p++;
-    }
-    #endif /* 0 */
+#if 0
+{
+int z;
+byte *p=data;
+printf("decryp data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
+p++;
+}
+#endif /* 0 */
 
     /* create S-expression with key */
     if (cryptKey->key != NULL)
@@ -1373,7 +1370,6 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
     n = gcry_mpi_new(0);
     if (n == NULL)
     {
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
     p = (byte*)buffer;
@@ -1388,7 +1384,6 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
     gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (value %b))",bufferLength,buffer);
     if (gcryptError != 0)
     {
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       gcry_mpi_release(n);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
@@ -1398,7 +1393,6 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
     gcryptError = gcry_pk_encrypt(&sexpEncryptData,sexpData,cryptKey->key);
     if (gcryptError != 0)
     {
-//fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
       gcry_sexp_release(sexpData);
       gcry_mpi_release(n);
       return ERROR_KEY_ENCRYPT_FAIL;
@@ -1409,7 +1403,6 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
     sexpToken = gcry_sexp_find_token(sexpEncryptData,"a",0);
     if (sexpToken == NULL)
     {
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       gcry_sexp_release(sexpEncryptData);
       gcry_sexp_release(sexpData);
       gcry_mpi_release(n);
@@ -1419,7 +1412,6 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
     encryptData = gcry_sexp_nth_data(sexpToken,1,&encryptDataLength);
     if (encryptData == NULL)
     {
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       gcry_sexp_release(sexpEncryptData);
       gcry_sexp_release(sexpData);
       gcry_mpi_release(n);
