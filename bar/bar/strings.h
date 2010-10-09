@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -502,6 +502,11 @@ bool String_equalsCString(const String string, const char *s);
 bool String_equalsChar(const String string, char ch);
 bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength);
 
+bool String_equalsIgnoreCase(const String string1, const String string2);
+bool String_equalsIgnoreCaseCString(const String string, const char *s);
+bool String_equalsIgnoreCaseChar(const String string, char ch);
+bool String_equalsIgnoreCaseBuffer(const String string, const char *buffer, ulong bufferLength);
+
 /***********************************************************************\
 * Name   : String_subEquals, String_subEqualsCString,
 *          String_subEqualsChar, String_subEqualsBuffer
@@ -522,6 +527,11 @@ bool String_subEquals(const String string1, const String string2, long index, ul
 bool String_subEqualsCString(const String string, const char *s, long index, ulong length);
 bool String_subEqualsChar(const String string, char ch, long index);
 bool String_subEqualsBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length);
+
+bool String_subEqualsIgnoreCase(const String string1, const String string2, long index, ulong length);
+bool String_subEqualsIgnoreCaseCString(const String string, const char *s, long index, ulong length);
+bool String_subEqualsIgnoreCaseChar(const String string, char ch, long index);
+bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length);
 
 /***********************************************************************\
 * Name   : String_startsWith, String_startsWithCString,
@@ -776,7 +786,7 @@ bool String_scanCString(const char *s, const char *format, ...);
 * Output : nextIndex - index of next character in string not parsed or
 *                      STRING_END if string completely parsed (can be
 *                      NULL)
-* Return : TRUE is parsed, FALSE on error
+* Return : TRUE is fully parsed or nextIndex != NULL , FALSE on error
 * Notes  : extended scan-function:
 *            - match also specified text
 *            - %<n>s will return max. <n-1> characters and always add

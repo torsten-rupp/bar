@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -2816,6 +2816,107 @@ bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLe
   return equalFlag;
 }
 
+bool String_equalsIgnoreCase(const String string1, const String string2)
+{
+  bool equalFlag;
+
+  if ((string1 != NULL) && (string2 != NULL))
+  {
+    CHECK_VALID(string1);
+    CHECK_VALID(string2);
+
+    equalFlag = String_equalsIgnoreCaseBuffer(string1,string2->data,string2->length);
+  }
+  else
+  {
+    equalFlag = ((string1 == NULL) && (string2 == NULL));
+  }
+
+  return equalFlag;
+}
+
+bool String_equalsIgnoreCaseCString(const String string, const char *s)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    if (s != NULL)
+    {
+      equalFlag = String_equalsIgnoreCaseBuffer(string,s,strlen(s));
+    }
+    else
+    {
+      equalFlag = (string->length == 0L);
+    }
+  }
+  else
+  {
+    equalFlag = (s == NULL);
+  }
+
+  return equalFlag;
+}
+
+bool String_equalsIgnoreCaseChar(const String string, char ch)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    equalFlag = ((string->length == 1) && (toupper(string->data[0]) == toupper(ch)));
+  }
+  else
+  {
+    equalFlag = FALSE;
+  }
+
+  return equalFlag;
+}
+
+bool String_equalsIgnoreCaseBuffer(const String string, const char *buffer, ulong bufferLength)
+{
+  bool  equalFlag;
+  ulong z;
+
+  assert(string != NULL);
+  assert(buffer != NULL);
+
+  if (string != NULL)
+  {
+    CHECK_VALID(string);
+
+    if (string->length == bufferLength)
+    {
+      equalFlag = TRUE;
+      z         = 0;
+      while (equalFlag && (z < string->length))
+      {
+        equalFlag = (toupper(string->data[z]) == toupper(buffer[z]));
+        z++;
+      }
+    }
+    else
+    {
+      equalFlag = FALSE;
+    }
+  }
+  else
+  {
+    equalFlag = (string == NULL) && (bufferLength == 0);
+  }
+
+  return equalFlag;
+}
+
 bool String_subEquals(const String string1, const String string2, long index, ulong length)
 {
   bool  equalFlag;
@@ -2908,6 +3009,114 @@ bool String_subEqualsBuffer(const String string, const char *buffer, ulong buffe
       while (equalFlag && (z < length))
       {
         equalFlag = (string->data[i+z] == buffer[z]);
+        z++;
+      }
+    }
+    else
+    {
+      equalFlag = FALSE;
+    }
+  }
+  else
+  {
+    equalFlag = (bufferLength == 0L);
+  }
+
+  return equalFlag;
+}
+
+bool String_subEqualsIgnoreCase(const String string1, const String string2, long index, ulong length)
+{
+  bool  equalFlag;
+
+  assert(string1 != NULL);
+  assert(string2 != NULL);
+
+  CHECK_VALID(string1);
+  CHECK_VALID(string2);
+
+  if ((string1 != NULL) && (string2 != NULL))
+  {
+    equalFlag = String_subEqualsIgnoreCaseBuffer(string1,string2->data,string2->length,index,length);
+  }
+  else
+  {
+    equalFlag = ((string1 == NULL) && (string2 == NULL));
+  }
+
+  return equalFlag;
+}
+
+bool String_subEqualsIgnoreCaseCString(const String string, const char *s, long index, ulong length)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    if (s != NULL)
+    {
+      equalFlag = String_subEqualsIgnoreCaseBuffer(string,s,strlen(s),index,length);
+    }
+    else
+    {
+      equalFlag = (string->length == 0);
+    }
+  }
+  else
+  {
+    equalFlag = (s == NULL);
+  }
+
+  return equalFlag;
+}
+
+bool String_subEqualsIgnoreCaseChar(const String string, char ch, long index)
+{
+  bool equalFlag;
+
+  CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    equalFlag = ((index < string->length) && (toupper(string->data[index]) == toupper(ch)));
+  }
+  else
+  {
+    equalFlag = FALSE;
+  }
+
+  return equalFlag;
+}
+
+bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length)
+{
+  long  i;
+  bool  equalFlag;
+  ulong z;
+
+  assert(buffer != NULL);
+
+  if (string != NULL)
+  {
+    CHECK_VALID(string);
+
+    i = (index != STRING_END)?index:(long)string->length-(long)length;
+    if (   (i >= 0)
+        && ((i+length) <= string->length)
+        && (length <= bufferLength)
+       )
+    {
+      equalFlag = TRUE;
+      z         = 0;
+      while (equalFlag && (z < length))
+      {
+        equalFlag = (toupper(string->data[i+z]) == toupper(buffer[z]));
         z++;
       }
     }
