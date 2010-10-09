@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.h,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -103,7 +103,10 @@ typedef bool(*CreateStatusInfoFunction)(void                   *userData,
 *                                             function
 *          storageRequestVolumeUserData     - user data for request
 *                                             volume
-*          pauseFlag                        - pause flag (can be NULL)
+*          pauseCreateFlag                  - pause creation flag (can
+*                                             be NULL)
+*          pauseStorageFlag                 - pause storage flag (can
+*                                             be NULL)
 *          requestedAbortFlag               - request abort flag (can be
 *                                             NULL)
 * Output : -
@@ -122,7 +125,8 @@ Errors Command_create(const char                      *storageName,
                       void                            *createStatusInfoUserData,
                       StorageRequestVolumeFunction    storageRequestVolumeFunction,
                       void                            *storageRequestVolumeUserData,
-                      bool                            *pauseFlag,
+                      bool                            *pauseCreateFlag,
+                      bool                            *pauseStorageFlag,
                       bool                            *requestedAbortFlag
                      );
 

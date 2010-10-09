@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -87,7 +87,8 @@ typedef struct
   PatternList                 *excludePatternList;
   const JobOptions            *jobOptions;
   ArchiveTypes                archiveType;                        // archive type to create
-  bool                        *pauseFlag;                         // TRUE for pause
+  bool                        *pauseCreateFlag;                   // TRUE for pause creation
+  bool                        *pauseStorageFlag;                  // TRUE for pause storage
   bool                        *requestedAbortFlag;                // TRUE to abort create
 
   Dictionary                  filesDictionary;                    // dictionary with files (used for incremental backup)
@@ -1043,7 +1044,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
         )
   {
     /* pause */
-    while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+    while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
     {
       Misc_udelay(500*1000);
     }
@@ -1077,7 +1078,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
           )
     {
       /* pause */
-      while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+      while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
       {
         Misc_udelay(500*1000);
       }
@@ -1147,7 +1148,7 @@ LOCAL void collectorSumThread(CreateInfo *createInfo)
                     )
               {
                 /* pause */
-                while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+                while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
                 {
                   Misc_udelay(500*1000);
                 }
@@ -1348,7 +1349,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
         )
   {
     /* pause */
-    while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+    while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
     {
       Misc_udelay(500*1000);
     }
@@ -1382,7 +1383,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
           )
     {
       /* pause */
-      while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+      while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
       {
         Misc_udelay(500*1000);
       }
@@ -1453,7 +1454,7 @@ LOCAL void collectorThread(CreateInfo *createInfo)
                     )
               {
                 /* pause */
-                while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+                while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
                 {
                   Misc_udelay(500*1000);
                 }
@@ -1793,7 +1794,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
     if (createInfo->failError == ERROR_NONE)
     {
       /* pause */
-      while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+      while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
       {
         Misc_udelay(500*1000);
       }
@@ -1821,7 +1822,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
       if (createInfo->failError == ERROR_NONE)
       {
         /* pause */
-        while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+        while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
         {
           Misc_udelay(500*1000);
         }
@@ -1896,7 +1897,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
         do
         {
           /* pause */
-          while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+          while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
           {
             Misc_udelay(500*1000);
           }
@@ -1931,7 +1932,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
           do
           {
             /* pause */
-            while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+            while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
             {
               Misc_udelay(500*1000);
             }
@@ -2039,7 +2040,8 @@ error = ERROR_NONE;
             {
               error = Index_setState(indexDatabaseHandle,
                                      storageMsg.storageId,
-                                     INDEX_STATE_OK
+                                     INDEX_STATE_OK,
+                                     NULL
                                     );
               if (error != ERROR_NONE)
               {
@@ -2080,7 +2082,7 @@ error = ERROR_NONE;
         {
           if (indexDatabaseHandle != NULL)
           {
-            Index_setState(indexDatabaseHandle,storageMsg.storageId,INDEX_STATE_ERROR);
+            Index_setState(indexDatabaseHandle,storageMsg.storageId,INDEX_STATE_ERROR,"%s (error code: %d)",Errors_getText(error),error);
           }
           File_delete(storageMsg.fileName,FALSE);
           freeStorageMsg(&storageMsg,NULL);
@@ -2121,7 +2123,7 @@ error = ERROR_NONE;
     if (createInfo->failError == ERROR_NONE)
     {
       /* pause */
-      while ((createInfo->pauseFlag != NULL) && (*createInfo->pauseFlag))
+      while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
       {
         Misc_udelay(500*1000);
       }
@@ -2204,7 +2206,8 @@ Errors Command_create(const char                      *storageName,
                       void                            *createStatusInfoUserData,
                       StorageRequestVolumeFunction    storageRequestVolumeFunction,
                       void                            *storageRequestVolumeUserData,
-                      bool                            *pauseFlag,
+                      bool                            *pauseCreateFlag,
+                      bool                            *pauseStorageFlag,
                       bool                            *requestedAbortFlag
                      )
 {
@@ -2230,7 +2233,8 @@ Errors Command_create(const char                      *storageName,
   createInfo.excludePatternList           = excludePatternList;
   createInfo.jobOptions                   = jobOptions;
   createInfo.archiveType                  = ((archiveType == ARCHIVE_TYPE_FULL) || (archiveType == ARCHIVE_TYPE_INCREMENTAL))?archiveType:jobOptions->archiveType;
-  createInfo.pauseFlag                    = pauseFlag;
+  createInfo.pauseCreateFlag              = pauseCreateFlag;
+  createInfo.pauseStorageFlag             = pauseStorageFlag;
   createInfo.requestedAbortFlag           = requestedAbortFlag;
   createInfo.archiveFileName              = String_new();
   createInfo.startTime                    = time(NULL);
@@ -2446,7 +2450,7 @@ Errors Command_create(const char                      *storageName,
     if (createInfo.failError == ERROR_NONE)
     {
       /* pause */
-      while ((createInfo.pauseFlag != NULL) && (*createInfo.pauseFlag))
+      while ((createInfo.pauseCreateFlag != NULL) && (*createInfo.pauseCreateFlag))
       {
         Misc_udelay(500*1000);
       }
@@ -2547,7 +2551,7 @@ Errors Command_create(const char                      *storageName,
                     do
                     {
                       /* pause */
-                      while ((createInfo.pauseFlag != NULL) && (*createInfo.pauseFlag))
+                      while ((createInfo.pauseCreateFlag != NULL) && (*createInfo.pauseCreateFlag))
                       {
                         Misc_udelay(500*1000);
                       }
@@ -2909,7 +2913,7 @@ Errors Command_create(const char                      *storageName,
                           )
                     {
                       /* pause */
-                      while ((createInfo.pauseFlag != NULL) && (*createInfo.pauseFlag))
+                      while ((createInfo.pauseCreateFlag != NULL) && (*createInfo.pauseCreateFlag))
                       {
                         Misc_udelay(500*1000);
                       }
