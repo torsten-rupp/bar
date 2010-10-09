@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -26,8 +26,13 @@ import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseTrackListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
@@ -39,6 +44,8 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
@@ -57,11 +64,24 @@ import org.eclipse.swt.widgets.Widget;
  */
 class TabStatus
 {
+  /** running states
+   */
   enum States
   {
     RUNNING,
     PAUSE,
     SUSPEND,
+  };
+
+  /** pause modes
+   */
+  enum PauseModes
+  {
+    NONE,
+    CREATE,
+    RESTORE,
+    UPDATE_INDEX,
+    NETWORK;
   };
 
   /** job data
@@ -254,6 +274,7 @@ class TabStatus
   // widgets
   public  Composite   widgetTab;
   private Table       widgetJobList;
+  private Shell       widgetMessageToolTip = null;
   private Group       widgetSelectedJob;
   public  Button      widgetButtonStart;
   public  Button      widgetButtonAbort;
@@ -290,9 +311,9 @@ class TabStatus
   private WidgetVariable message               = new WidgetVariable("");
 
   // variables
-  private HashMap<String,JobData> jobList = new HashMap<String,JobData> ();
-  private JobData selectedJobData         = null;
-  private States  status                  = States.RUNNING;
+  private HashMap<String,JobData> jobList         = new HashMap<String,JobData> ();
+  private JobData                 selectedJobData = null;
+  private States                  status          = States.RUNNING;
 
   /** status update thread
    */
@@ -337,6 +358,8 @@ class TabStatus
   TabStatus(TabFolder parentTabFolder, int accelerator)
   {
     TableColumn tableColumn;
+    Menu        menu;
+    MenuItem    menuItem;
     Group       group;
     Composite   composite;
     Button      button;
@@ -410,6 +433,75 @@ class TabStatus
     tableColumn = Widgets.addTableColumn(widgetJobList,8,"Estimated time",SWT.LEFT, 120,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for estimated rest time to execute job.");
+
+    menu = Widgets.newPopupMenu(shell);
+    {
+      menuItem = Widgets.addMenuItem(menu,"Start");
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          jobStart();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      menuItem = Widgets.addMenuItem(menu,"Abort");
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          jobAbort();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      menuItem = Widgets.addMenuItem(menu,"Pause");
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          jobPause(60*60);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      menuItem = Widgets.addMenuItem(menu,"Continue");
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          jobSuspendContinue();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      menuItem = Widgets.addMenuItem(menu,"Volume");
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          volume();
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+    widgetJobList.setMenu(menu);
 
     // selected job group
     widgetSelectedJob = Widgets.newGroup(widgetTab,"Selected ''",SWT.NONE);
@@ -712,6 +804,68 @@ class TabStatus
       label = Widgets.newView(widgetSelectedJob);
       Widgets.layout(label,12,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetListener(label,message));
+      label.addMouseTrackListener(new MouseTrackListener()
+      {
+        public void mouseEnter(MouseEvent mouseEvent)
+        {
+        }
+
+        public void mouseExit(MouseEvent mouseEvent)
+        {
+        }
+
+        public void mouseHover(MouseEvent mouseEvent)
+        {
+          Label label = (Label)mouseEvent.widget;
+          Text  text;
+        
+          if (widgetMessageToolTip != null)
+          {
+            widgetMessageToolTip.dispose();
+            widgetMessageToolTip = null;
+          }
+
+          if (!message.getString().equals(""))
+          {
+            final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+            final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+
+            widgetMessageToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+            widgetMessageToolTip.setBackground(COLOR_BACKGROUND);
+            widgetMessageToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+            Widgets.layout(widgetMessageToolTip,0,0,TableLayoutData.NSWE);
+            widgetMessageToolTip.addMouseTrackListener(new MouseTrackListener()
+            {
+              public void mouseEnter(MouseEvent mouseEvent)
+              {
+              }
+
+              public void mouseExit(MouseEvent mouseEvent)
+              {
+                widgetMessageToolTip.dispose();
+                widgetMessageToolTip = null;
+              }
+
+              public void mouseHover(MouseEvent mouseEvent)
+              {
+              }
+            });
+
+            text = Widgets.newText(widgetMessageToolTip,SWT.LEFT|SWT.V_SCROLL|SWT.MULTI|SWT.WRAP);
+            text.setText(message.getString());
+            text.setForeground(COLOR_FORGROUND);
+            text.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(text,0,0,TableLayoutData.NSWE,0,0,0,0,300,100);
+
+            Point size = widgetMessageToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+            Rectangle bounds = label.getBounds();
+            Point point = label.getParent().toDisplay(bounds.x,bounds.y);
+            widgetMessageToolTip.setBounds(point.x+2,point.y+2,size.x,size.y);
+            widgetMessageToolTip.setVisible(true);
+          }
+        }
+      });
+
     }
 
     // buttons
@@ -1200,12 +1354,21 @@ class TabStatus
     }
   }
 
-  /** pause all jobs for 60min
+  /** pause create/restore for all jobs
    * @param pauseTime pause time [s]
    */
   public void jobPause(long pauseTime)
   {
-    BARServer.executeCommand("PAUSE "+pauseTime);
+    StringBuffer buffer = new StringBuffer();
+    if (Settings.pauseCreateFlag     ) { if (buffer.length() > 0) buffer.append(','); buffer.append("CREATE"      ); }
+    if (Settings.pauseStorageFlag    ) { if (buffer.length() > 0) buffer.append(','); buffer.append("STORAGE"     ); }
+    if (Settings.pauseRestoreFlag    ) { if (buffer.length() > 0) buffer.append(','); buffer.append("RESTORE"     ); }
+    if (Settings.pauseIndexUpdateFlag) { if (buffer.length() > 0) buffer.append(','); buffer.append("INDEX_UPDATE"); }
+
+    if (buffer.length() > 0)
+    {
+      BARServer.executeCommand("PAUSE "+pauseTime+" "+buffer.toString());
+    }
   }
 
   /** suspend/continue paused jobs
