@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.c,v $
-* $Revision: 1.7 $
+* $Revision: 1.8 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -425,7 +425,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(commandLine);
-      return ERROR_EXEC_FAIL;
+      return ERRORX(PARSE_COMMAND,0,String_cString(commandLine));
     }
     File_setFileName(command,token);
 
@@ -471,9 +471,10 @@ stringNode = stringNode->next;
     /* create i/o pipes */
     if (pipe(pipeStdin) != 0)
     {
-      error = ERRORX(EXEC_FAIL,errno,String_cString(commandLine));
-      printError("Execute extern command '%s' fail!\n",
-                 String_cString(command)
+      error = ERRORX(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
+      printError("Execute external command '%s' fail (error: %s)!\n",
+                 String_cString(command),
+                 Errors_getText(error)
                 );
       StringList_done(&argumentList);
       String_delete(command);
@@ -482,9 +483,10 @@ stringNode = stringNode->next;
     }
     if (pipe(pipeStdout) != 0)
     {
-      error = ERRORX(EXEC_FAIL,errno,String_cString(commandLine));
-      printError("Execute extern command '%s' fail!\n",
-                 String_cString(command)
+      error = ERRORX(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
+      printError("Execute external command '%s' fail (error: %s)!\n",
+                 String_cString(command),
+                 Errors_getText(error)
                 );
       close(pipeStdin[0]);
       close(pipeStdin[1]);
@@ -495,9 +497,10 @@ stringNode = stringNode->next;
     }
     if (pipe(pipeStderr) != 0)
     {
-      error = ERRORX(EXEC_FAIL,errno,String_cString(commandLine));
-      printError("Execute extern command '%s' fail!\n",
-                 String_cString(command)
+      error = ERRORX(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
+      printError("Execute external command '%s' fail (error: %s)!\n",
+                 String_cString(command),
+                 Errors_getText(error)
                 );
       close(pipeStdout[0]);
       close(pipeStdout[1]);
@@ -546,7 +549,6 @@ stringNode = stringNode->next;
       {
         assert(z < n);
         arguments[z] = String_cString(stringNode->string); z++;
-//fprintf(stderr,"%s,%d: arg %d=%s\n",__FILE__,__LINE__,z,arguments[z]);
         stringNode = stringNode->next;
       }
       assert(z < n);
@@ -554,15 +556,15 @@ stringNode = stringNode->next;
       execvp(String_cString(command),(char**)arguments);
 
       /* in case exec() fail, return a default exitcode */
-fprintf(stderr,"%s,%d: hier?\n",__FILE__,__LINE__);
 HALT_INTERNAL_ERROR("not reachable");
     }
     else if (pid < 0)
     {
       error = ERRORX(EXEC_FAIL,errno,String_cString(commandLine));
       printInfo(3,"FAIL!\n");
-      printError("Execute extern command '%s' fail!\n",
-                 String_cString(command)
+      printError("Execute external command '%s' fail (error: %s)!\n",
+                 String_cString(command),
+                 Errors_getText(error)
                 );
 
       close(pipeStderr[0]);
