@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -828,7 +828,8 @@ class BARServer
       catch (IOException exception)
       {
         readThread.commandRemove(command);
-        throw new CommunicationError("i/o error on "+socket.getInetAddress()+":"+socket.getPort()+" (error: "+exception.getMessage()+")");
+//        throw new CommunicationError("i/o error on "+socket.getInetAddress()+":"+socket.getPort()+" (error: "+exception.getMessage()+")");
+        throw new CommunicationError(exception.getMessage());
       }
     }
 
@@ -1010,10 +1011,16 @@ class BARServer
   {
     String[] result = new String[1];
 
-    executeCommand("OPTION_GET "+jobId+" "+name,result);
-    return    result[0].toLowerCase().equals("yes")
-           || result[0].toLowerCase().equals("on")
-           || result[0].equals("1");
+    if (executeCommand("OPTION_GET "+jobId+" "+name,result) == Errors.NONE)
+    {
+      return    result[0].toLowerCase().equals("yes")
+             || result[0].toLowerCase().equals("on")
+             || result[0].equals("1");
+    }
+    else
+    {
+      return false;
+    }
   }
 
   /** get long value from BAR server
@@ -1025,8 +1032,14 @@ class BARServer
   {
     String[] result = new String[1];
 
-    executeCommand("OPTION_GET "+jobId+" "+name,result);
-    return Long.parseLong(result[0]);
+    if (executeCommand("OPTION_GET "+jobId+" "+name,result) == Errors.NONE)
+    {
+      return Long.parseLong(result[0]);
+    }
+    else
+    {
+      return 0L;
+    }
   }
 
   /** get string value from BAR server
@@ -1038,8 +1051,14 @@ class BARServer
   {
     String[] result = new String[1];
 
-    executeCommand("OPTION_GET "+jobId+" "+name,result);
-    return StringUtils.unescape(result[0]);
+    if (executeCommand("OPTION_GET "+jobId+" "+name,result) == Errors.NONE)
+    {
+      return StringUtils.unescape(result[0]);
+    }
+    else
+    {
+      return "";
+    }
   }
 
   /** set boolean option value on BAR server
