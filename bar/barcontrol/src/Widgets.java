@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -1121,13 +1121,14 @@ class Widgets
    * @param data data structure to store text value or null
    * @param field field name in data structure to set on selection
    * @param value value for text input field
+   * @param style text style
    * @return new text widget
    */
-  static Text newText(Composite composite, final Object data, final String field, String value)
+  static Text newText(Composite composite, final Object data, final String field, String value, int style)
   {
     Text text;
 
-    text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.SINGLE);
+    text = new Text(composite,style);
     if      (value != null)
     {
       text.setText(value);
@@ -1176,11 +1177,45 @@ class Widgets
    * @param composite composite widget
    * @param data data structure to store text value or null
    * @param field field name in data structure to set on selection
+   * @param value value for text input field
+   * @return new text widget
+   */
+  static Text newText(Composite composite, final Object data, final String field, String value)
+  {
+    return newText(composite,data,field,value,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.SINGLE);
+  }
+
+  /** create new text input widget (single line)
+   * @param composite composite widget
+   * @param data data structure to store text value or null
+   * @param field field name in data structure to set on selection
+   * @param style text style
+   * @return new text widget
+   */
+  static Text newText(Composite composite, final Object data, final String field, int style)
+  {
+    return newText(composite,data,field,"",style);
+  }
+
+  /** create new text input widget (single line)
+   * @param composite composite widget
+   * @param data data structure to store text value or null
+   * @param field field name in data structure to set on selection
    * @return new text widget
    */
   static Text newText(Composite composite, final Object data, final String field)
   {
     return newText(composite,data,field,"");
+  }
+
+  /** create new text input widget (single line)
+   * @param composite composite widget
+   * @param style text style
+   * @return new text widget
+   */
+  static Text newText(Composite composite, int style)
+  {
+    return newText(composite,null,null,style);
   }
 
   /** create new text input widget (single line)
@@ -2615,9 +2650,9 @@ private static void printTree(Tree tree)
   /** add new menu item
    * @param menu menu
    * @param text menu item text
-   * @param data data structure to store radio value or null
+   * @param data data structure to store checkbox value or null
    * @param field field name in data structure to set on selection
-   * @param value value for radio button
+   * @param value value for checkbox button
    * @param accelerator accelerator key or 0
    * @return new menu item
    */
@@ -2658,9 +2693,9 @@ private static void printTree(Tree tree)
   /** add new menu item
    * @param menu menu
    * @param text menu item text
-   * @param data data structure to store radio value or null
+   * @param data data structure to store checkbox value or null
    * @param field field name in data structure to set on selection
-   * @param value value for radio button
+   * @param value value for checkbox button
    * @param accelerator accelerator key or 0
    * @return new menu item
    */
