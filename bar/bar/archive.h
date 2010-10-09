@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -30,6 +30,7 @@
 #include "files.h"
 #include "devices.h"
 #include "storage.h"
+#include "index.h"
 
 #include "bar.h"
 
@@ -46,23 +47,125 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+/* archive entry types */
+typedef enum
+{
+  ARCHIVE_ENTRY_TYPE_NONE,
+
+  ARCHIVE_ENTRY_TYPE_FILE,
+  ARCHIVE_ENTRY_TYPE_IMAGE,
+  ARCHIVE_ENTRY_TYPE_DIRECTORY,
+  ARCHIVE_ENTRY_TYPE_LINK,
+  ARCHIVE_ENTRY_TYPE_SPECIAL,
+
+  ARCHIVE_ENTRY_TYPE_UNKNOWN
+} ArchiveEntryTypes;
+
+#if 0
+/* archive entry node */
+typedef struct ArchiveEntryNode
+{
+  LIST_NODE_HEADER(struct ArchiveEntryNode);
+
+  ArchiveEntryTypes type;
+  union
+  {
+    struct
+    {
+      String             fileName;
+      FileInfo           fileInfo;
+      uint64             size;
+      uint64             timeModified;
+      uint64             archiveSize;
+      CompressAlgorithms compressAlgorithm;
+      CryptAlgorithms    cryptAlgorithm;
+      CryptTypes         cryptType;
+      uint64             fragmentOffset;
+      uint64             fragmentSize;
+    } file;
+    struct
+    {
+      String             imageName;
+      uint64             size;
+      uint64             archiveSize;
+      CompressAlgorithms compressAlgorithm;
+      CryptAlgorithms    cryptAlgorithm;
+      CryptTypes         cryptType;
+      uint               blockSize;
+      uint64             blockOffset;
+      uint64             blockCount;
+    } image;
+    struct
+    {
+      String          directoryName;
+      FileInfo           fileInfo;
+      CryptAlgorithms cryptAlgorithm;
+      CryptTypes      cryptType;
+    } directory;
+    struct
+    {
+      String          linkName;
+      String          destinationName;
+      FileInfo           fileInfo;
+      CryptAlgorithms cryptAlgorithm;
+      CryptTypes      cryptType;
+    } link;
+    struct
+    {
+      String           fileName;
+      FileInfo           fileInfo;
+      CryptAlgorithms  cryptAlgorithm;
+      CryptTypes       cryptType;
+      FileSpecialTypes fileSpecialType;
+      ulong            major;
+      ulong            minor;
+    } special;
+  };
+} ArchiveEntryNode;
+
+/* archive entry list */
+typedef struct
+{
+  LIST_HEADER(ArchiveEntryNode);
+} ArchiveEntryList;
+#endif /* 0 */
+
 /***********************************************************************\
-* Name   : ArchiveNewFileFunction
-* Purpose: call back when archive file is created/written
+* Name   : ArchiveNewEntryFunction
+* Purpose: call back when new archive entry is created/written
 * Input  : userData     - user data
-*          fileName     - archive file name
-*          partNumber   - part number or -1 if no parts
-*          lastPartFlag - TRUE iff last archive part, FALSE otherwise
+*          archiveEntry - archive entry
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveNewFileFunction)(void   *userData,
-                                        String fileName,
-                                        uint64 length,
-                                        int    partNumber,
-                                        bool   lastPartFlag
+/*
+typedef Errors(*ArchiveNewEntryFunction)(void               *userData,
+                                         const ArchiveEntry *archiveEntry
+                                        );
+*/
+
+/***********************************************************************\
+* Name   : ArchiveNewFileFunction
+* Purpose: call back when archive file is created/written
+* Input  : userData       - user data
+*          databaseHandle - database handle or NULL if no database
+*          storageId      - database id of storage
+*          fileName       - archive file name
+*          partNumber     - part number or -1 if no parts
+*          lastPartFlag   - TRUE iff last archive part, FALSE otherwise
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*ArchiveNewFileFunction)(void           *userData,
+                                        DatabaseHandle *databaseHandle,
+                                        int64          storageId,
+                                        String         fileName,
+                                        int            partNumber,
+                                        bool           lastPartFlag
                                        );
 
 /***********************************************************************\
@@ -90,14 +193,15 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
 
 typedef struct
 {
-  ArchiveNewFileFunction          archiveNewFileFunction;            // call back for new archive file               
-  void                            *archiveNewFileUserData;           // user data for call back for new archive file 
+//  ArchiveNewEntryFunction         archiveNewEntryFunction;           // call back for new archive entry
+//  void                            *archiveNewEntryUserData;          // user data for call back for new archive entry
+  ArchiveNewFileFunction          archiveNewFileFunction;            // call back for new archive file
+  void                            *archiveNewFileUserData;           // user data for call back for new archive file
   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;   // call back to get crypt password
   void                            *archiveGetCryptPasswordUserData;  // user data for call back to get crypt password
   JobOptions                      *jobOptions;
 
   CryptTypes                      cryptType;                         // crypt type (symmetric/asymmetric; see CryptTypes)
-//  PasswordModes                   passwordMode;                      // password mode (PASSWORD_MODE_DEFAULT for using settings in jobOptions)
   Password                        *cryptPassword;                    // cryption password for encryption/decryption
   CryptKey                        cryptKey;                          // public/private key for encryption/decryption of random key used for asymmetric encryption
   void                            *cryptKeyData;                     // encrypted random key used for asymmetric encryption
@@ -119,6 +223,10 @@ typedef struct
       StorageFileHandle           storageFileHandle;                 // storage file handle
     } storageFile;
   };
+
+  DatabaseHandle                  *databaseHandle;
+  int64                           storageId;
+
   const ChunkIO                   *chunkIO;                          // chunk i/o functions
   void                            *chunkIOUserData;                  // chunk i/o functions data
 
@@ -127,20 +235,6 @@ typedef struct
   bool                            nextChunkHeaderReadFlag;           // TRUE iff next chunk header read
   ChunkHeader                     nextChunkHeader;                   // next chunk header
 } ArchiveInfo;
-
-/* archive entry types */
-typedef enum
-{
-  ARCHIVE_ENTRY_TYPE_NONE,
-
-  ARCHIVE_ENTRY_TYPE_FILE,
-  ARCHIVE_ENTRY_TYPE_IMAGE,
-  ARCHIVE_ENTRY_TYPE_DIRECTORY,
-  ARCHIVE_ENTRY_TYPE_LINK,
-  ARCHIVE_ENTRY_TYPE_SPECIAL,
-
-  ARCHIVE_ENTRY_TYPE_UNKNOWN
-} ArchiveEntryTypes;
 
 typedef struct
 {
@@ -300,12 +394,36 @@ void Archive_clearDecryptPasswords(void);
 void Archive_appendDecryptPassword(const Password *password);
 
 /***********************************************************************\
+* Name   : Archive_freeArchiveEntryNode
+* Purpose: free archive entry node
+* Input  : archiveEntryNode - archive entry node to free
+*          userData         - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+//void Archive_freeArchiveEntryNode(ArchiveEntryNode *archiveEntryNode, void *userData);
+
+/***********************************************************************\
+* Name   : Archive_copyArchiveEntryNode
+* Purpose: copy archive entry node
+* Input  : archiveEntryNode - archive entry node to copy
+*          userData         - user data (not used)
+* Output : -
+* Return : copy of archive entry node
+* Notes  : -
+\***********************************************************************/
+
+//ArchiveEntryNode *Archive_copyArchiveEntryNode(ArchiveEntryNode *archiveEntryNode, void *userData);
+
+/***********************************************************************\
 * Name   : Archive_create
 * Purpose: create archive
 * Input  : archiveInfo                 - archive info block
 *          jobOptions                  - job option settings
 *          archiveNewFileFunction      - call back for creating new
-*                                        archive file 
+*                                        archive file
 *          archiveNewFileUserData      - user data for call back
 *          archiveGetCryptPassword     - get password call back
 *          archiveGetCryptPasswordData - user data for get password call
@@ -317,21 +435,21 @@ void Archive_appendDecryptPassword(const Password *password);
 
 Errors Archive_create(ArchiveInfo                     *archiveInfo,
                       JobOptions                      *jobOptions,
+//                      ArchiveNewEntryFunction         archiveNewEntryFunction,
+//                      void                            *archiveNewEntryUserData,
                       ArchiveNewFileFunction          archiveNewFileFunction,
                       void                            *archiveNewFileUserData,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
-                      void                            *archiveGetCryptPasswordData
+                      void                            *archiveGetCryptPasswordData,
+                      DatabaseHandle                  *databaseHandle
                      );
 
 /***********************************************************************\
 * Name   : Archive_open
 * Purpose: open archive
-* Input  : archiveInfo                 - archive info block  
-*          archiveFileName             - archive file name   
-*          jobOptions                  - option settings     
-*          archiveNewFileFunction      - call back for creating new
-*                                        archive file 
-*          archiveNewFileUserData      - user data for call back
+* Input  : archiveInfo                 - archive info block
+*          storageName                 - storage name
+*          jobOptions                  - option settings
 *          archiveGetCryptPassword     - get password call back
 *          archiveGetCryptPasswordData - user data for get password call
 *                                        back
@@ -341,7 +459,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 \***********************************************************************/
 
 Errors Archive_open(ArchiveInfo                     *archiveInfo,
-                    const String                    archiveFileName,
+                    const String                    storageName,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
                     void                            *archiveGetCryptPasswordData
@@ -374,7 +492,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo);
 * Purpose: add new file to archive
 * Input  : archiveInfo     - archive info block
 *          archiveFileInfo - archive file info block
-*          name            - file name
+*          fileName        - file name
 *          fileInfo        - file info
 * Output : -
 * Return : ERROR_NONE or error code
@@ -383,7 +501,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo);
 
 Errors Archive_newFileEntry(ArchiveInfo     *archiveInfo,
                             ArchiveFileInfo *archiveFileInfo,
-                            const String    name,
+                            const String    fileName,
                             const FileInfo  *fileInfo
                            );
 
@@ -465,14 +583,12 @@ Errors Archive_newSpecialEntry(ArchiveInfo     *archiveInfo,
 * Name   : Archive_getNextArchiveEntryType
 * Purpose: get type of next entry in archive
 * Input  : archiveInfo     - archive info block
-*          archiveFileInfo - archive file info block
 * Output : archiveEntryType - archive entry type
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
-                                       ArchiveFileInfo   *archiveFileInfo,
                                        ArchiveEntryTypes *archiveEntryType
                                       );
 
@@ -641,15 +757,84 @@ Errors Archive_readData(ArchiveFileInfo *archiveFileInfo,
                        );
 
 /***********************************************************************\
-* Name   : Archive_getSize
-* Purpose: get size of archive file
-* Input  : archiveFileInfo - archive file info block
+* Name   : Archive_tell
+* Purpose: get current read/write position in archive file
+* Input  : archiveInfo - archive info block
 * Output : -
-* Return : -
+* Return : current position in archive [bytes]
 * Notes  : -
 \***********************************************************************/
 
-uint64 Archive_getSize(ArchiveFileInfo *archiveFileInfo);
+uint64 Archive_tell(ArchiveInfo *archiveInfo);
+
+/***********************************************************************\
+* Name   : Archive_getSize
+* Purpose: get size of archive file
+* Input  : archiveInfo - archive info block
+* Output : -
+* Return : size of archive [bytes]
+* Notes  : -
+\***********************************************************************/
+
+uint64 Archive_getSize(ArchiveInfo *archiveInfo);
+
+/***********************************************************************\
+* Name   : Archive_addIndex
+* Purpose: add storage index
+* Input  : databaseHandle              - database handle
+*          storageName                 - storage name
+*          jobOptions                  - option settings
+*          archiveGetCryptPassword     - get password call back
+*          archiveGetCryptPasswordData - user data for get password call
+*                                        back
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_addIndex(DatabaseHandle *databaseHandle,
+                        const String   storageName,
+                        Password       *cryptPassword,
+                        String         cryptPrivateKeyFileName
+                       );
+
+/***********************************************************************\
+* Name   : Archive_updateIndex
+* Purpose: update storage index
+* Input  : databaseHandle              - database handle
+*          storageId      - storage id
+*          storageName                 - storage name
+*          jobOptions                  - option settings
+*          archiveGetCryptPassword     - get password call back
+*          archiveGetCryptPasswordData - user data for get password call
+*                                        back
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
+                           int64          storageId,
+                           const String   storageName,
+                           Password       *cryptPassword,
+                           String         cryptPrivateKeyFileName,
+                           bool           *pauseFlag,
+                           bool           *requestedAbortFlag
+                          );
+
+/***********************************************************************\
+* Name   : Archive_remIndex
+* Purpose: remove storage index
+* Input  : databaseHandle - database handle
+*          storageId      - storage id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_remIndex(DatabaseHandle *databaseHandle,
+                        int64          storageId
+                       );
 
 #ifdef __cplusplus
   }
