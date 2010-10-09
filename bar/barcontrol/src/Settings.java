@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Settings.java,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: load/save program settings
 * Systems: all
@@ -49,6 +49,12 @@ public class Settings
 
   // --------------------------- variables --------------------------------
 
+  // program settings
+  public static boolean          pauseCreateFlag                = true;
+  public static boolean          pauseStorageFlag               = false;
+  public static boolean          pauseRestoreFlag               = true;
+  public static boolean          pauseIndexUpdateFlag           = false;
+
   // server settings
   public static String           serverName                     = DEFAULT_SERVER_NAME;
   public static String           serverPassword                 = null;
@@ -65,7 +71,8 @@ public class Settings
   public static String           abortJobName                   = null;
   public static String           indexAddStorageName            = null;
   public static String           indexRemoveStorageName         = null;
-  public static String           indexListPattern               = null;
+  public static String           indexStorageListPattern        = null;
+  public static String           indexEntriesListPattern        = null;
   public static int              pauseTime                      = 0;
   public static boolean          pingFlag                       = false;
   public static boolean          suspendFlag                    = false;
@@ -102,7 +109,26 @@ public class Settings
         {
           Object[] data = new Object[1];
 
-          if      (StringParser.parse(line,"server = %S",data,StringParser.QUOTE_CHARS))
+          // program
+          if      (StringParser.parse(line,"pause-create = %y",data,StringParser.QUOTE_CHARS))
+          {
+            pauseCreateFlag = (Boolean)data[0];
+          }
+          else if (StringParser.parse(line,"pause-storage = %y",data,StringParser.QUOTE_CHARS))
+          {
+            pauseStorageFlag = (Boolean)data[0];
+          }
+          else if (StringParser.parse(line,"pause-restore = %y",data,StringParser.QUOTE_CHARS))
+          {
+            pauseRestoreFlag = (Boolean)data[0];
+          }
+          else if (StringParser.parse(line,"pause-index-update = %y",data,StringParser.QUOTE_CHARS))
+          {
+            pauseIndexUpdateFlag = (Boolean)data[0];
+          }
+
+          // server
+          else if (StringParser.parse(line,"server = %S",data,StringParser.QUOTE_CHARS))
           {
             serverName = (String)data[0];
           }
