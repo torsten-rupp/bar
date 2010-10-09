@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -228,45 +228,47 @@ typedef struct
 {
   RunModes               runMode;
 
-  const char             *barExecutable;               // name of BAR executable
+  const char             *barExecutable;                 // name of BAR executable
 
   uint                   niceLevel;
   
-  String                 tmpDirectory;                 // directory for temporary files
-  uint64                 maxTmpSize;                   // max. size of temporary files
+  String                 tmpDirectory;                   // directory for temporary files
+  uint64                 maxTmpSize;                     // max. size of temporary files
 
-  ulong                  maxBandWidth;                 // max. bandwidth to use [bytes/s]
+  ulong                  maxBandWidth;                   // max. bandwidth to use [bytes/s]
 
-  ulong                  compressMinFileSize;          // min. size of file for using compression
+  ulong                  compressMinFileSize;            // min. size of file for using compression
 
-  Password               *cryptPassword;               // default password for encryption/decryption
+  Password               *cryptPassword;                 // default password for encryption/decryption
 
-  FTPServer              *ftpServer;                   // current selected FTP server
-  const FTPServerList    *ftpServerList;               // list with remote servers
-  FTPServer              *defaultFTPServer;            // default FTP server
+  FTPServer              *ftpServer;                     // current selected FTP server
+  const FTPServerList    *ftpServerList;                 // list with remote servers
+  FTPServer              *defaultFTPServer;              // default FTP server
 
-  SSHServer              *sshServer;                   // current selected SSH server
-  const SSHServerList    *sshServerList;               // list with remote servers
-  SSHServer              *defaultSSHServer;            // default SSH server
+  SSHServer              *sshServer;                     // current selected SSH server
+  const SSHServerList    *sshServerList;                 // list with remote servers
+  SSHServer              *defaultSSHServer;              // default SSH server
 
   String                 remoteBARExecutable;
 
-  DVD                    dvd;                          // DVD settings
+  DVD                    dvd;                            // DVD settings
 
-  String                 defaultDeviceName;            // default device name
-  Device                 *device;                      // current selected device
-  const DeviceList       *deviceList;                  // list with devices
-  Device                 *defaultDevice;               // default device
+  String                 defaultDeviceName;              // default device name
+  Device                 *device;                        // current selected device
+  const DeviceList       *deviceList;                    // list with devices
+  Device                 *defaultDevice;                 // default device
 
-  bool                   groupFlag;                    // TRUE iff entries in list should be grouped
-  bool                   allFlag;                      // TRUE iff all entries should be listed/restored
-  bool                   longFormatFlag;               // TRUE iff long format list
-  bool                   humanFormatFlag;              // TRUE iff human format list
-  bool                   noHeaderFooterFlag;           // TRUE iff no header/footer should be printed in list
-  bool                   deleteOldArchiveFilesFlag;    // TRUE iff old archive files should be deleted after creating new files
+  bool                   noAutoUpdateDatabaseIndexFlag;  // TRUE for no automatic update of datbase indizes
 
-  bool                   noDefaultConfigFlag;          // TRUE iff default config should not be read 
-  bool                   quietFlag;                    // TRUE iff suppress any output
+  bool                   groupFlag;                      // TRUE iff entries in list should be grouped
+  bool                   allFlag;                        // TRUE iff all entries should be listed/restored
+  bool                   longFormatFlag;                 // TRUE iff long format list
+  bool                   humanFormatFlag;                // TRUE iff human format list
+  bool                   noHeaderFooterFlag;             // TRUE iff no header/footer should be printed in list
+  bool                   deleteOldArchiveFilesFlag;      // TRUE iff old archive files should be deleted after creating new files
+
+  bool                   noDefaultConfigFlag;            // TRUE iff default config should not be read 
+  bool                   quietFlag;                      // TRUE iff suppress any output
   long                   verboseLevel;
 } GlobalOptions;
 
@@ -293,50 +295,50 @@ typedef struct
 /* job options */
 typedef struct
 {
-  uint32              userId;                          // user id
-  uint32              groupId;                         // group id 
+  uint32              userId;                            // user id
+  uint32              groupId;                           // group id 
 } Owner;
 
 typedef struct
 {
-  ArchiveTypes        archiveType;                     // archive type (normal, full, incremental)
+  ArchiveTypes        archiveType;                       // archive type (normal, full, incremental)
 
-  uint64              archivePartSize;                 // archive part size [bytes]
+  uint64              archivePartSize;                   // archive part size [bytes]
 
-  String              incrementalListFileName;         // name of incremental list file
+  String              incrementalListFileName;           // name of incremental list file
 
-  uint                directoryStripCount;             // number of directories to strip in restore
-  String              destination     ;                // destination for restore
-  Owner               owner;                           // restore owner
+  uint                directoryStripCount;               // number of directories to strip in restore
+  String              destination     ;                  // destination for restore
+  Owner               owner;                             // restore owner
 
   PatternTypes        patternType;
 
-  CompressAlgorithms  compressAlgorithm;               // compress algorithm to use
-  CryptTypes          cryptType;                       // crypt type (symmetric, asymmetric)
-  CryptAlgorithms     cryptAlgorithm;                  // crypt algorithm to use
-  PasswordModes       cryptPasswordMode;               // crypt password mode
-  Password            *cryptPassword;                  // crypt password
+  CompressAlgorithms  compressAlgorithm;                 // compress algorithm to use
+  CryptTypes          cryptType;                         // crypt type (symmetric, asymmetric)
+  CryptAlgorithms     cryptAlgorithm;                    // crypt algorithm to use
+  PasswordModes       cryptPasswordMode;                 // crypt password mode
+  Password            *cryptPassword;                    // crypt password
   String              cryptPublicKeyFileName;
   String              cryptPrivateKeyFileName;
 
-  FTPServer           ftpServer;                       // job specific FTP server settings
-  SSHServer           sshServer;                       // job specific SSH server settings
+  FTPServer           ftpServer;                         // job specific FTP server settings
+  SSHServer           sshServer;                         // job specific SSH server settings
 
-  DVD                 dvd;                             // job specific DVD settings
+  DVD                 dvd;                               // job specific DVD settings
 
-  String              deviceName;                      // device name to use
-  Device              device;                          // job specific device settings
+  String              deviceName;                        // device name to use
+  Device              device;                            // job specific device settings
 
-  uint64              volumeSize;                      // volume size or 0LL for default [bytes]
+  uint64              volumeSize;                        // volume size or 0LL for default [bytes]
 
-  bool                skipUnreadableFlag;              // TRUE for skipping unreadable files
+  bool                skipUnreadableFlag;                // TRUE for skipping unreadable files
   bool                overwriteArchiveFilesFlag;
   bool                overwriteFilesFlag;
   bool                errorCorrectionCodesFlag;
   bool                waitFirstVolumeFlag;
-  bool                rawImagesFlag;                   // TRUE for storing raw images
+  bool                rawImagesFlag;                     // TRUE for storing raw images
   bool                noStorageFlag;
-  bool                noBAROnMediumFlag;               // TRUE for not storing BAR on medium
+  bool                noBAROnMediumFlag;                 // TRUE for not storing BAR on medium
   bool                stopOnErrorFlag;
 } JobOptions;
 
