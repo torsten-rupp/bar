@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -209,15 +209,14 @@ class TabStatus
     {
       TableColumn sortColumn = table.getSortColumn();
 
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_ID;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_STATE;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_TYPE;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_PARTSIZE;
-      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_COMPRESS;
-      else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_CRYPT;
-      else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
-      else if (table.getColumn(8) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
+      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
+      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_STATE;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_PARTSIZE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_COMPRESS;
+      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_CRYPT;
+      else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
+      else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
       else                                       sortMode = SORTMODE_NAME;
     }
 
@@ -407,30 +406,28 @@ class TabStatus
       {
       }
     };
-    tableColumn = Widgets.addTableColumn(widgetJobList,0,"#",             SWT.RIGHT, 30,false);
-    tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,1,"Name",          SWT.LEFT,  80,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,0,"Name",          SWT.LEFT, 110,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for name.");
-    tableColumn = Widgets.addTableColumn(widgetJobList,2,"State",         SWT.LEFT,  90,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,1,"State",         SWT.LEFT,  90,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for state.");
-    tableColumn = Widgets.addTableColumn(widgetJobList,3,"Type",          SWT.LEFT,  90,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,2,"Type",          SWT.LEFT,  90,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for type.");
-    tableColumn = Widgets.addTableColumn(widgetJobList,4,"Part size",     SWT.RIGHT,  0,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,3,"Part size",     SWT.RIGHT,  0,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for part size.");
-    tableColumn = Widgets.addTableColumn(widgetJobList,5,"Compress",      SWT.LEFT,  80,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,4,"Compress",      SWT.LEFT,  80,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for used compress algorithm.");
-    tableColumn = Widgets.addTableColumn(widgetJobList,6,"Crypt",         SWT.LEFT, 100,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,5,"Crypt",         SWT.LEFT, 100,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for used encryption algorithm.");
-    tableColumn = Widgets.addTableColumn(widgetJobList,7,"Last executed", SWT.LEFT, 150,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,6,"Last executed", SWT.LEFT, 150,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for last date/time job was executed.");
-    tableColumn = Widgets.addTableColumn(widgetJobList,8,"Estimated time",SWT.LEFT, 120,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,7,"Estimated time",SWT.LEFT, 120,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for estimated rest time to execute job.");
 
@@ -1169,15 +1166,14 @@ class TabStatus
                 tableItem.setData(jobData);
 
                 jobList.put(name,jobData);
-                tableItem.setText(0,Integer.toString(jobData.id));
-                tableItem.setText(1,jobData.name);
-                tableItem.setText(2,(status == States.RUNNING)?jobData.state:"suspended");
-                tableItem.setText(3,jobData.type);
-                tableItem.setText(4,(jobData.archivePartSize > 0)?Units.formatByteSize(jobData.archivePartSize):"unlimited");
-                tableItem.setText(5,jobData.compressAlgorithm);
-                tableItem.setText(6,jobData.getCryptAlgorithm());
-                tableItem.setText(7,jobData.formatLastExecutedDateTime());
-                tableItem.setText(8,jobData.formatEstimatedRestTime());
+                tableItem.setText(0,jobData.name);
+                tableItem.setText(1,(status == States.RUNNING)?jobData.state:"suspended");
+                tableItem.setText(2,jobData.type);
+                tableItem.setText(3,(jobData.archivePartSize > 0)?Units.formatByteSize(jobData.archivePartSize):"unlimited");
+                tableItem.setText(4,jobData.compressAlgorithm);
+                tableItem.setText(5,jobData.getCryptAlgorithm());
+                tableItem.setText(6,jobData.formatLastExecutedDateTime());
+                tableItem.setText(7,jobData.formatEstimatedRestTime());
               }
             }
 
