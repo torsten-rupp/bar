@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -1645,9 +1645,10 @@ LOCAL StorageRequestResults storageRequestVolume(JobNode *jobNode,
 
   assert(jobNode != NULL);
 
+  storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
   SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-//??? lock nicht readwrite
+// NYI ???: lock not read/write?
 
     /* request volume */
     jobNode->requestedVolumeNumber = volumeNumber;
@@ -2259,19 +2260,18 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
 LOCAL void indexUpdateThreadEntry(void)
 {
-  String     storageSpecifier;
-  String     fileName;
-  String     storageName;
-  StringList storageDirectoryList;
-  StringNode *storageDirectoryNode;
-  Errors     error;
+  String                     storageSpecifier;
+  String                     fileName;
+  String                     storageName;
+  StringList                 storageDirectoryList;
+  JobOptions                 jobOptions;
+  StringNode                 *storageDirectoryNode;
+  Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
-  FileInfo   fileInfo;
-  StorageTypes storageType;
-  int64        storageId;
-//  IndexStates  indexState;
-  int          z;
-JobOptions jobOptions;
+  FileInfo                   fileInfo;
+  StorageTypes               storageType;
+  int64                      storageId;
+  int                        z;
 
   /* initialize variables */
   StringList_init(&storageDirectoryList);
@@ -2338,7 +2338,6 @@ JobOptions jobOptions;
                                  )
                )
             {
-fprintf(stderr,"%s,%d: file=%s\n",__FILE__,__LINE__,String_cString(fileName));
               error = Index_create(indexDatabaseHandle,
                                    storageName,
                                    INDEX_STATE_UPDATE_REQUESTED,
@@ -3741,6 +3740,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   }
   name = arguments[0];
 
+  jobNode = NULL;
   SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     /* check if job already exists */
@@ -3781,6 +3781,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
     /* add new job to list */
     List_append(&jobList,jobNode);
   }
+  assert(jobNode != NULL);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"%d",jobNode->id);
 }
@@ -5836,19 +5837,14 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <status>|*
-*            <name pattern>
+*            <name>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  bool                stateAny;
-  IndexStates         state;
-  String              patternText;
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-  int64               storageId;
-  IndexStates         storageState;
+  String name;
+  Errors error;
+  int64  storageId;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -5856,53 +5852,21 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   /* get archive name */
   if (argumentCount < 1)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter status");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name");
     return;
   }
-  stateAny = FALSE;
-  state    = INDEX_STATE_NONE;
-  if      (String_equalsCString(arguments[0],"*"))
-  {
-    stateAny = TRUE;
-  }
-  else if (String_equalsIgnoreCaseCString(arguments[0],"OK"))
-  {
-    state = INDEX_STATE_OK;
-  }
-  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE_REQUESTED"))
-  {
-    state = INDEX_STATE_UPDATE_REQUESTED;
-  }
-  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE"))
-  {
-    state = INDEX_STATE_UPDATE;
-  }
-  else if (String_equalsIgnoreCaseCString(arguments[0],"ERROR"))
-  {
-    state = INDEX_STATE_ERROR;
-  }
-  else
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state *,OK,UPDATE_REQUESTED,UPDATE,ERROR");
-    return;
-  }
-  if (argumentCount < 2)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
-    return;
-  }
-  patternText = arguments[1];
+  name = arguments[1];
 
   if (indexDatabaseHandle != NULL)
   {
     /* find index */
     if (!Index_findByName(indexDatabaseHandle,
-                          patternText,
+                          name,
                           &storageId
                          )
        )
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"cannot find index for refresh");
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"cannot find index to remove");
       return;
     }
 
@@ -6463,6 +6427,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       switch (indexNode->type)
       {
+        case ARCHIVE_ENTRY_TYPE_NONE:
+          break;
         case ARCHIVE_ENTRY_TYPE_FILE:
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "FILE %llu %llu %u %u %u %llu %llu %'S %'S",
@@ -6520,6 +6486,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                            indexNode->storageName,
                            indexNode->name
                           );
+          break;
+        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
           break;
         #ifndef NDEBUG
           default:
