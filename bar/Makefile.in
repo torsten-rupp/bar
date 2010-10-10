@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.67 $
+# $Revision: 1.68 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -56,6 +56,7 @@ RMF        = rm -f
 RMRF       = rm -rf
 SED        = sed
 TAR        = tar
+ZIP        = zip
 
 #------------------------ specific variables/settings ------------------------
 
@@ -469,7 +470,7 @@ endif
 
 # packages
 
-# create RPM
+# --- create RPM
 .PHONY: rpm clean_rpm
 
 rpm: \
@@ -608,4 +609,61 @@ ifeq ($(PLATFORM),Windows)
 endif
 endif
 
+# --- create GUI package
+.PHONY: gui clean_gui
+
+gui: \
+  bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip
+
+clean_gui:
+	$(RMF) bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip
+
+bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip: \
+  barcontrol/barcontrol \
+  barcontrol/barcontrol-linux.jar \
+  barcontrol/barcontrol-linux_64.jar \
+  barcontrol/barcontrol.bat \
+  barcontrol/barcontrol-windows.jar \
+  barcontrol/barcontrol-windows_64.jar \
+  barcontrol/barcontrol-solaris.jar \
+  barcontrol/barcontrol-macosx.jar \
+  barcontrol/barcontrol-macosx_64.jar
+	$(INSTALL) -d tmp/gui/linux
+	$(INSTALL) -m 775 \
+                   barcontrol/barcontrol \
+                   tmp/gui/linux
+	$(INSTALL) -m 664 \
+                   barcontrol/barcontrol-linux.jar \
+                   barcontrol/barcontrol-linux_64.jar \
+                   tmp/gui/linux
+	
+	$(INSTALL) -d tmp/gui/windows
+	$(INSTALL) -m 775 \
+                   barcontrol/barcontrol.bat \
+                   tmp/gui/windows
+	$(INSTALL) -m 664 \
+                   barcontrol/barcontrol-windows.jar \
+                   barcontrol/barcontrol-windows_64.jar \
+                   tmp/gui/windows
+	
+	$(INSTALL) -d tmp/gui/solaris
+	$(INSTALL) -m 775 \
+                   barcontrol/barcontrol \
+                   tmp/gui/solaris
+	$(INSTALL) -m 664 \
+                   barcontrol/barcontrol-solaris.jar \
+                   tmp/gui/solaris
+	
+	$(INSTALL) -d tmp/gui/macosx
+	$(INSTALL) -m 775 \
+                   barcontrol/barcontrol \
+                   tmp/gui/macosx
+	$(INSTALL) -m 664 \
+                   barcontrol/barcontrol-macosx.jar \
+                   barcontrol/barcontrol-macosx_64.jar \
+                   tmp/gui/macosx
+	
+	($(CD) tmp/gui; $(ZIP) -r ../../$@ linux windows solaris macosx)
+	$(RMRF) tmp/gui
+        
 # end of file
