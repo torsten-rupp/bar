@@ -1,7 +1,7 @@
 //***********************************************************************
 //
 // $Source: /home/torsten/cvs/bar/errors.def,v $
-// $Revision: 1.26 $
+// $Revision: 1.27 $
 // $Author: torsten $
 // Contents: Backup ARchiver errors definition
 // Systems: all
@@ -198,13 +198,30 @@ ERROR INVALID_DEVICE_SPECIFIER       "invalid device specifier"
 ERROR LOAD_VOLUME_FAIL               "load volume fail"
 
 // exec
+ERROR PARSE_COMMAND                  "parse command fail"
 ERROR FORK_FAIL                      "fork for execute external program fail"
-ERROR EXEC_FAIL
-  strncpy(errorText,"execute external program fail",sizeof(errorText)-1);
+ERROR IO_REDIRECT_FAIL
+  strncpy(errorText,"i/o external program fail",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR EXEC_FAIL
+  strncpy(errorText,"execute external program fail",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    char s[64];
+    \
+    snprintf(s,sizeof(s),"%d",ERRNO);
+    \
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText," (exitcode: ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,s,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,")",sizeof(errorText)-1-strlen(errorText));
   }
   errorText[sizeof(errorText)-1] = '\0';
 
