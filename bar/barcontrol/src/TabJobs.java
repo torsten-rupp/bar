@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -6036,6 +6036,7 @@ throw new Error("NYI");
           {
           }
         });
+        widgetFileName.setToolTipText("Drag to trashcan icon to the right to remove name part.");
         dragSource = new DragSource(widgetFileName,DND.DROP_MOVE);
         dragSource.setTransfer(new Transfer[]{StorageNamePartTransfer.getInstance()});
         dragSource.addDragListener(new DragSourceListener()
@@ -6114,6 +6115,7 @@ throw new Error("NYI");
 
         control = Widgets.newImage(composite,Widgets.loadImage(display,"trashcan.gif"),SWT.BORDER);
         Widgets.layout(control,0,2,TableLayoutData.NONE);
+        control.setToolTipText("Use drag&drop to remove name parts.");
         dropTarget = new DropTarget(control,DND.DROP_MOVE);
         dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance(),StorageNamePartTransfer.getInstance()});
         dropTarget.addDropListener(new DropTargetAdapter()
@@ -6156,8 +6158,9 @@ throw new Error("NYI");
       }
 
       composite = Widgets.newComposite(parentComposite,SWT.NONE);
-      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,1.0}));
       Widgets.layout(composite,1,0,TableLayoutData.NSWE);
+      composite.setToolTipText("Use drag&drop to add name parts.");
       {
         // column 1
         addDragAndDrop(composite,"-","text '-'",                          0, 0);
@@ -6324,8 +6327,8 @@ throw new Error("NYI");
         }
       });
 
-      label = Widgets.newLabel(composite,description,SWT.LEFT|SWT.BORDER);
-      Widgets.layout(label,row,column*2+1,TableLayoutData.W);
+      label = Widgets.newLabel(composite,description,SWT.LEFT);
+      Widgets.layout(label,row,column*2+1,TableLayoutData.WE);
     }
 
     /** add part
@@ -6638,7 +6641,7 @@ throw new Error("NYI");
     assert selectedJobId != 0;
 
     // create dialog
-    final Shell dialog = Dialogs.open(shell,"Edit storage file name",SWT.DEFAULT,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.open(shell,"Edit storage file name",700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final StorageFileNameEditor storageFileNameEditor;
