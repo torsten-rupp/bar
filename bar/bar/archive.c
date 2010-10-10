@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -5066,11 +5066,9 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
   ArchiveInfo       archiveInfo;
   ArchiveFileInfo   archiveFileInfo;
   ArchiveEntryTypes archiveEntryType;
-uint xxx=0;
 
   assert(databaseHandle != NULL);
   assert(storageName != NULL);
-fprintf(stderr,"%s,%d: start index %s\n",__FILE__,__LINE__,String_cString(storageName));
 
   /* init job options */
   initJobOptions(&jobOptions);
@@ -5088,7 +5086,6 @@ fprintf(stderr,"%s,%d: start index %s\n",__FILE__,__LINE__,String_cString(storag
   {
     Index_setState(databaseHandle,storageId,INDEX_STATE_ERROR,"%s (error code: %d)",Errors_getText(error),Errors_getCode(error));
     freeJobOptions(&jobOptions);
-fprintf(stderr,"%s,%d: index error %d\n",__FILE__,__LINE__,String_cString(storageName),error);
     return error;
   }
 
@@ -5101,7 +5098,6 @@ fprintf(stderr,"%s,%d: index error %d\n",__FILE__,__LINE__,String_cString(storag
     Archive_close(&archiveInfo);
     Index_setState(databaseHandle,storageId,INDEX_STATE_ERROR,"%s (error code: %d)",Errors_getText(error),Errors_getCode(error));
     freeJobOptions(&jobOptions);
-fprintf(stderr,"%s,%d: index error %d\n",__FILE__,__LINE__,String_cString(storageName),error);
     return error;
   }
 
@@ -5117,12 +5113,6 @@ fprintf(stderr,"%s,%d: index error %d\n",__FILE__,__LINE__,String_cString(storag
          && (error == ERROR_NONE)
         )
   {
-if ((xxx % 100) == 0)
-{
-fprintf(stderr,"%s,%d: index count %d: %s\n",__FILE__,__LINE__,xxx,String_cString(storageName));
-}
-xxx++;
-
     /* pause */
     while ((pauseFlag != NULL) && (*pauseFlag))
     {
@@ -5162,7 +5152,6 @@ xxx++;
                                          );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
               String_delete(name);
               break;
             }
@@ -5184,7 +5173,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
                                  );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
               Archive_closeEntry(&archiveFileInfo);
               String_delete(name);
               break;
@@ -5219,7 +5207,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
                                           );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
               String_delete(name);
               break;
             }
@@ -5235,7 +5222,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
                                   );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
               Archive_closeEntry(&archiveFileInfo);
               String_delete(name);
               break;
@@ -5264,7 +5250,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
                                               );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
               String_delete(name);
               break;
             }
@@ -5282,7 +5267,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
                                       );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
               Archive_closeEntry(&archiveFileInfo);
               String_delete(name);
               break;
@@ -5314,7 +5298,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
                                          );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
               String_delete(destinationName);
               String_delete(name);
               break;
@@ -5334,7 +5317,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
                                  );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
               Archive_closeEntry(&archiveFileInfo);
               String_delete(destinationName);
               String_delete(name);
@@ -5365,7 +5347,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
                                             );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
               String_delete(name);
               break;
             }
@@ -5386,7 +5367,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
                                     );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
               Archive_closeEntry(&archiveFileInfo);
               String_delete(name);
               break;
@@ -5430,7 +5410,6 @@ fprintf(stderr,"%s,%d: %d %s\n",__FILE__,__LINE__,error,Errors_getText(error));
                    Errors_getCode(error)
                   );
   }
-fprintf(stderr,"%s,%d: done index %s %d %d\n",__FILE__,__LINE__,String_cString(storageName),error,xxx);
 
   /* update name/size */
   error = Index_update(databaseHandle,
@@ -5443,7 +5422,6 @@ fprintf(stderr,"%s,%d: done index %s %d %d\n",__FILE__,__LINE__,String_cString(s
     Archive_close(&archiveInfo);
     Index_setState(databaseHandle,storageId,INDEX_STATE_ERROR,"%s (error code: %d)",Errors_getText(error),Errors_getCode(error));
     freeJobOptions(&jobOptions);
-fprintf(stderr,"%s,%d: index error %d\n",__FILE__,__LINE__,String_cString(storageName),error);
     return error;
   }
 
