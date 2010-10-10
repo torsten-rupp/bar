@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -324,6 +324,10 @@ Errors Network_connect(SocketHandle *socketHandle,
           close(socketHandle->handle);
           return ERROR_SSH_SESSION_FAIL;
         }
+        #ifdef HAVE_SSH2_KEEPALIVE_CONFIG
+// NYI/???: does not work?
+//          libssh2_keepalive_config(socketHandle->ssh2.session,0,2*60);
+        #endif /* HAVE_SSH2_KEEPALIVE_CONFIG */
 
 #if 1
         plainPassword = Password_deploy(password);
