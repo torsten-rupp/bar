@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # $Author: torsten $
 # Contents: create header/c file definition from errors definition
 # Systems: all
@@ -38,7 +38,7 @@ my $ERROR_TEXTINDEX_SHIFT     = 10;
 my $ERROR_ERRNO_MASK          = "0xFFFF0000";
 my $ERROR_ERRNO_SHIFT         = 16;
 
-my $MAX_ERRORTEXT_LENGTH      = 128;
+my $MAX_ERRORTEXT_LENGTH      = 512;
 my $ERROR_TEXTINDEX_MAX_COUNT = 63;;
 
 my $PREFIX                    = "ERROR_";
@@ -86,7 +86,7 @@ sub writeCPrefix()
 #define GET_ERROR_CODE(error)      (((error) & $ERROR_CODE_MASK) >> $ERROR_CODE_SHIFT)
 #define GET_ERROR_TEXTINDEX(error) (((error) & $ERROR_TEXTINDEX_MASK) >> $ERROR_TEXTINDEX_SHIFT)
 #define GET_ERROR_TEXT(error)      ((GET_ERROR_TEXTINDEX(error)>0)?errorTexts[GET_ERROR_TEXTINDEX(error)-1].text:\"unknown\")
-#define GET_ERRNO(error)           ((long)((error) & $ERROR_ERRNO_MASK) >> $ERROR_ERRNO_SHIFT)
+#define GET_ERRNO(error)           ((int)((error) & $ERROR_ERRNO_MASK) >> $ERROR_ERRNO_SHIFT)
 
 #define ERROR_CODE GET_ERROR_CODE(error)
 #define ERROR_TEXT GET_ERROR_TEXT(error)
