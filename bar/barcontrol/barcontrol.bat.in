@@ -1,1 +1,21 @@
-@java.exe -jar barcontrol-windows.jar BARControl %*
+@echo off
+
+java.exe @JAVA_FLAGS@ -cp barcontrol-windows.jar DataModel
+if errorlevel 64 goto 64
+if errorlevel 32 goto 32
+goto error
+
+:64
+  java.exe @JAVA_FLAGS@ -jar barcontrol-windows_64.jar BARControl %*
+goto end
+
+:32
+  java.exe @JAVA_FLAGS@ -jar barcontrol-windows.jar BARControl %*
+goto end
+
+:error
+  echo ERROR: cannot detect data model (32/64 bit) - VM failure?
+goto end
+
+:end
+@echo on

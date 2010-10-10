@@ -1,6 +1,68 @@
 #!/bin/sh
 
-@JAVA@ -jar `dirname $0`/barcontrol-linux.jar "$@"
+# get base directory
+if test -h "$0"; then
+  BASE_DIRECTORY=`dirname \`readlink $0\``
+else
+  BASE_DIRECTORY=`dirname $0`
+fi
+if test "$BASE_DIRECTORY" = ""; then
+  BASE_DIRECTORY="."
+fi
+
+# detect host, host-platform (get first part in full-name if given)
+HOST_NAME=`hostname|sed 's/^\([^\.]*\)\..*/\1/g'`
+case `uname` in
+  Linux*)
+    HOST_PLATFORM="linux"
+    ;;
+  SunOS* | Solaris*)
+    HOST_PLATFORM="solaris"
+    ;;
+  Darwin)
+    HOST_PLATFORM="macos"
+    ;;
+  *)
+    echo >&2 "ERROR: Cannot detect host system: '`uname`'!"
+    exit 1
+    ;;
+esac
+
+# java, java flags, JAR
+JAVA="@JAVA@"
+JAVA_FLAGS="@JAVA_FLAGS@"
+case $HOST_PLATFORM in
+  linux)
+    $JAVA $JAVA_FLAGS -cp $BASE_DIRECTORY/barcontrol-linux.jar DataModel
+    rc=$?
+    if   test $rc -eq 32; then
+      BARCONTROL_JAR="$BASE_DIRECTORY/barcontrol-linux.jar"
+    elif test $rc -eq 64; then
+      BARCONTROL_JAR="$BASE_DIRECTORY/barcontrol-linux_64.jar"
+    else
+      echo >&2 "ERROR: cannot detect data model (32/64 bit) - VM failure?"
+      exit 1
+    fi
+    ;;
+  solaris)
+    BARCONTROL_JAR="$BASE_DIRECTORY/barcontrol-solaris.jar"
+    ;;
+  macos)
+    $JAVA $JAVA_FLAGS -cp $BASE_DIRECTORY/barcontrol-macosx.jar DataModel
+    rc=$?
+    if   test $rc -eq 32; then
+      BARCONTROL_JAR="$BASE_DIRECTORY/barcontrol-macosx.jar"
+    elif test $rc -eq 64; then
+      BARCONTROL_JAR="$BASE_DIRECTORY/barcontrol-macosx.jar"
+    else
+      echo >&2 "ERROR: cannot detect data model (32/64 bit) - VM failure?"
+      exit 1
+    fi
+    ;;
+esac
+
+# run main
+$JAVA $JAVA_FLAGS -jar $BARCONTROL_JAR "$@"
 rc=$?
 
 exit $rc
