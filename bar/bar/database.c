@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/database.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Database functions
 * Systems: all
@@ -491,6 +491,7 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
   va_end(arguments);
 
   /* execute SQL command */
+  error = ERROR_NONE;
   SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
@@ -552,6 +553,7 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
   va_end(arguments);
 
   /* prepare SQL command execution */
+  error = ERROR_NONE;
   SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
@@ -608,6 +610,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle != NULL);
   assert(format != NULL);
 
+  result = FALSE;
   SEMAPHORE_LOCKED_DO(&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
@@ -823,6 +826,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   String_appendCString(sqlString," LIMIT 0,1");
 
   /* execute SQL command */
+  error = ERROR_NONE;
   SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
@@ -905,6 +909,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
   String_appendCString(sqlString," LIMIT 0,1");
 
   /* execute SQL command */
+  error = ERROR_NONE;
   SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
@@ -950,6 +955,7 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
 
   assert(databaseHandle != NULL);
 
+  databaseId = DATABASE_ID_NONE;
   SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     databaseId = (uint64)sqlite3_last_insert_rowid(databaseHandle->handle);
