@@ -308,6 +308,33 @@ On CentOS system you can use the following packages (or newer versions):
 
   Note 2: download EPM and apply the patch to get a working EPM on SuSE.
 
+On a Ubuntu system you can use the following packages (or newer versions):
+
+  gcc
+  openjdk-6-jdk
+  make
+  perl
+  zlib1g
+  zlib1g-dev
+  libbz2-1.0
+  libbz2-dev
+  liblzma
+  liblzma-dev
+  libssl0.9.8
+  libssl-dev
+  libssh2-1
+  libssh2-1-dev
+  libgcrypt11
+  libgcrypt11-dev
+  libgpg-error0
+  libgpg-error-dev
+  gnutls-bin
+  libgnutls26
+  libgnutls-dev
+  ftplib3
+  ftplib-dev
+  patch
+
 2)
 
 Then compile and install BAR with:
