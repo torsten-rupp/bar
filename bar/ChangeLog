@@ -2,10 +2,11 @@
   * added command line option --job to execute a job from a job
     file with bar
   * clean-up BAR command line options:
-    - replaced -a|--crypt-asymmetric -> --crypt-type=<name>
-    - added opton --normal to select normal archive type
-      (required to overwrite setting in job file)
-    - fixed ordering of options in help
+     - replaced -a|--crypt-asymmetric -> --crypt-type=<name>
+     - added opton --normal to select normal archive type
+       (required to overwrite setting in job file)
+     - fixed ordering of options in help
+  * replaced option -crypt-asymmetric with --crypt-type=symmetric|asymmetric
   * clean-up barcontrol command line options:
     renamed --job-mode -> --archive-type
   * barcontrol: fix option --key-file
@@ -22,6 +23,15 @@
        on an external server
      Note: to use this new feature, you must add the database-*
            configuration options in bar.cfg!
+  * temporary base directory is now named bar-XXXXXX
+  * barcontrol: improved pause-function: settings for create, storage,
+    restore and update index
+  * barcontrol: add destination types "cd" and "bd"
+  * barcontrol: clean-up layout, rearranged some buttons
+  * barcontrol: updated to SWT 3.6.1
+  * create package bar-gui-*.zip with compiled GUI only
+  * documentation: renewed screen shots, added documentation of
+    new options, fixed documentation of some options, clean-up
 
 2010-07-28 0.14
   * added command line control functions to barcontrol:
