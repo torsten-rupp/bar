@@ -1,7 +1,7 @@
 //***********************************************************************
 //
 // $Source: /home/torsten/cvs/bar/errors.def,v $
-// $Revision: 1.27 $
+// $Revision: 1.28 $
 // $Author: torsten $
 // Contents: Backup ARchiver errors definition
 // Systems: all
@@ -217,11 +217,10 @@ ERROR EXEC_FAIL
     \
     snprintf(s,sizeof(s),"%d",ERRNO);
     \
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText," (exitcode: ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"', exitcode: ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,s,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,")",sizeof(errorText)-1-strlen(errorText));
   }
   errorText[sizeof(errorText)-1] = '\0';
 

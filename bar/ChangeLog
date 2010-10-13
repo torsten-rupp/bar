@@ -1,37 +1,42 @@
-2010-09-?? 0.15
+2010-10-13 0.15
   * added command line option --job to execute a job from a job
-    file with bar
+    file with BAR
   * clean-up BAR command line options:
      - replaced -a|--crypt-asymmetric -> --crypt-type=<name>
      - added opton --normal to select normal archive type
        (required to overwrite setting in job file)
      - fixed ordering of options in help
-  * replaced option -crypt-asymmetric with --crypt-type=symmetric|asymmetric
+  * added support for CD and BD (options --cd-.../--bd-... and configuration
+    entries cd-.../bd-...)
   * clean-up barcontrol command line options:
     renamed --job-mode -> --archive-type
+  * fixed name of option --dvd-write-image-command
   * barcontrol: fix option --key-file
-  * renamed command line option --no-bar-on-dvd -> --no-bar-on-medium
-  * renamed configuration file option no-bar-on-dvd -> no-bar-on-medium
+  * renamed command line option --no-bar-on-dvd -> --no-bar-on-medium and
+    configuration file entry no-bar-on-dvd -> no-bar-on-medium
   * set key valid time to 365 days when created with openssl
   * barcontrol: added tool tips help
   * barcontrol: complete redesign of restore tab
-     - added (optional) database of stored files to BAR (sqlite based)
+     - added database of stored files to BAR (sqlite based)
      - search for created archives in database
      - search for stored files in archives in database
-     - store archives or single files
+     - restore archives or single files
      - automatic indexing of already created archives which are stored
-       on an external server
+       in file system or on an external server
      Note: to use this new feature, you must add the database-*
            configuration options in bar.cfg!
   * temporary base directory is now named bar-XXXXXX
   * barcontrol: improved pause-function: settings for create, storage,
-    restore and update index
-  * barcontrol: add destination types "cd" and "bd"
+    restore and update index. See menu in barcontrol. By default create
+    and restored are paused only
+  * barcontrol: add destination types "cd" and "bd", add different images
+    sizes for cd/bd
   * barcontrol: clean-up layout, rearranged some buttons
   * barcontrol: updated to SWT 3.6.1
   * create package bar-gui-*.zip with compiled GUI only
   * documentation: renewed screen shots, added documentation of
     new options, fixed documentation of some options, clean-up
+  * updated man-page
 
 2010-07-28 0.14
   * added command line control functions to barcontrol:
