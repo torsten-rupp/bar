@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.68 $
+# $Revision: 1.69 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -79,7 +79,10 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 TARGETS              = bar/bar \
                        bar/bar-keygen \
-                       $(if $(findstring $(ENABLE_GUI),yes),barcontrol/barcontrol) \
+                       $(if $(findstring $(ENABLE_GUI),yes),\
+                         barcontrol/barcontrol \
+                         barcontrol/barcontrol.bat \
+                       ) \
 
 MAN                  = doc/bar.7 \
                        doc/bar.pdf \
@@ -153,7 +156,21 @@ barcontrol barcontrol/barcontrol:
 ifeq ($(ENABLE_GUI),yes)
 	$(MAKE) -C barcontrol barcontrol
 else
-	@$(ECHO) "ERROR: GUI components not configured - cannot be built."
+	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+endif
+
+barcontrol/barcontrol.bat:
+ifeq ($(ENABLE_GUI),yes)
+	$(MAKE) -C barcontrol barcontrol.bat
+else
+	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+endif
+
+barcontrol/barcontrol%.jar:
+ifeq ($(ENABLE_GUI),yes)
+	$(MAKE) -C barcontrol barcontrol%.jar
+else
+	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
 endif
 
 # ----------------------------------------------------------------------------
