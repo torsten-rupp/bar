@@ -17,6 +17,8 @@ CREATE TABLE storage(
   size            INTEGER,
   created         INTEGER,
   state           INTEGER,
+  mode            INTEGER,
+  lastChecked     INTEGER,
   errorMessage    TEXT
 );
 
