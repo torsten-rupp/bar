@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.19 $
+* $Revision: 1.20 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -208,21 +208,20 @@ class WidgetVariable
     {
       case STRING:
         this.string = string;
+        Widgets.modified(this);
         break;
       case ENUMERATION:
-        boolean OKFlag = false;
         for (String s : enumeration)
         {
           if (s.equals(string))
           {
-            OKFlag = true;
+            this.string = string;
+            Widgets.modified(this);
+            break;
           }
         }
-        if (!OKFlag) throw new Error("Unknown enumeration value '"+string+"'");
-        this.string = string;
         break;
     }
-    Widgets.modified(this);
   }
 
   /** compare string values
