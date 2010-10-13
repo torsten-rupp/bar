@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.h,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -783,6 +783,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 * Purpose: add storage index
 * Input  : databaseHandle              - database handle
 *          storageName                 - storage name
+*          indexMode                   - index mode
 *          jobOptions                  - option settings
 *          archiveGetCryptPassword     - get password call back
 *          archiveGetCryptPasswordData - user data for get password call
@@ -794,6 +795,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 
 Errors Archive_addIndex(DatabaseHandle *databaseHandle,
                         const String   storageName,
+                        IndexModes     indexMode,
                         Password       *cryptPassword,
                         String         cryptPrivateKeyFileName
                        );

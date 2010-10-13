@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive functions
 * Systems: all
@@ -781,6 +781,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
     error = Index_create(archiveInfo->databaseHandle,
                          NULL,
                          INDEX_STATE_CREATE,
+                         INDEX_MODE_MANUAL,
                          &archiveInfo->storageId
                         );
     if (error != ERROR_NONE)
@@ -5013,6 +5014,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo)
 
 Errors Archive_addIndex(DatabaseHandle *databaseHandle,
                         const String   storageName,
+                        IndexModes     indexMode,
                         Password       *cryptPassword,
                         String         cryptPrivateKeyFileName
                        )
@@ -5027,6 +5029,7 @@ Errors Archive_addIndex(DatabaseHandle *databaseHandle,
   error = Index_create(databaseHandle,
                        storageName,
                        INDEX_STATE_UPDATE,
+                       indexMode,
                        &storageId
                       );
   if (error != ERROR_NONE)
@@ -5084,7 +5087,14 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
                       );
   if (error != ERROR_NONE)
   {
-    Index_setState(databaseHandle,storageId,INDEX_STATE_ERROR,"%s (error code: %d)",Errors_getText(error),Errors_getCode(error));
+    Index_setState(databaseHandle,
+                   storageId,
+                   INDEX_STATE_ERROR,
+                   0LL,
+                   "%s (error code: %d)",
+                   Errors_getText(error),
+                   Errors_getCode(error)
+                  );
     freeJobOptions(&jobOptions);
     return error;
   }
@@ -5096,7 +5106,14 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
   if (error != ERROR_NONE)
   {
     Archive_close(&archiveInfo);
-    Index_setState(databaseHandle,storageId,INDEX_STATE_ERROR,"%s (error code: %d)",Errors_getText(error),Errors_getCode(error));
+    Index_setState(databaseHandle,
+                   storageId,
+                   INDEX_STATE_ERROR,
+                   0LL,
+                   "%s (error code: %d)",
+                   Errors_getText(error),
+                   Errors_getCode(error)
+                  );
     freeJobOptions(&jobOptions);
     return error;
   }
@@ -5105,6 +5122,7 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
   Index_setState(databaseHandle,
                  storageId,
                  INDEX_STATE_UPDATE,
+                 0LL,
                  NULL
                 );
   error = ERROR_NONE;
@@ -5397,6 +5415,7 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
     Index_setState(databaseHandle,
                    storageId,
                    INDEX_STATE_OK,
+                   Misc_getCurrentDateTime(),
                    NULL
                   );
   }
@@ -5405,6 +5424,7 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
     Index_setState(databaseHandle,
                    storageId,
                    INDEX_STATE_ERROR,
+                   0LL,
                    "%s (error code: %d)",
                    Errors_getText(error),
                    Errors_getCode(error)
@@ -5420,7 +5440,14 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
   if (error != ERROR_NONE)
   {
     Archive_close(&archiveInfo);
-    Index_setState(databaseHandle,storageId,INDEX_STATE_ERROR,"%s (error code: %d)",Errors_getText(error),Errors_getCode(error));
+    Index_setState(databaseHandle,
+                   storageId,
+                   INDEX_STATE_ERROR,
+                   0LL,
+                   "%s (error code: %d)",
+                   Errors_getText(error),
+                   Errors_getCode(error)
+                  );
     freeJobOptions(&jobOptions);
     return error;
   }

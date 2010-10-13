@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1926,6 +1926,7 @@ LOCAL void storageThread(CreateInfo *createInfo)
             continue;
           }
           String_set(createInfo->statusInfo.storageName,storageName);
+          abortFlag |= !updateStatusInfo(createInfo);
 
           /* store data */
           File_seek(&fileHandle,0);
@@ -2000,7 +2001,9 @@ error = ERROR_NONE;
             {
               while (Index_findByName(indexDatabaseHandle,
                                       storageName,
-                                      &oldStorageId
+                                      &oldStorageId,
+                                      NULL,
+                                      NULL
                                      )
                     )
               {
@@ -2041,6 +2044,7 @@ error = ERROR_NONE;
               error = Index_setState(indexDatabaseHandle,
                                      storageMsg.storageId,
                                      INDEX_STATE_OK,
+                                     Misc_getCurrentDateTime(),
                                      NULL
                                     );
               if (error != ERROR_NONE)
@@ -2082,7 +2086,14 @@ error = ERROR_NONE;
         {
           if (indexDatabaseHandle != NULL)
           {
-            Index_setState(indexDatabaseHandle,storageMsg.storageId,INDEX_STATE_ERROR,"%s (error code: %d)",Errors_getText(error),error);
+            Index_setState(indexDatabaseHandle,
+                           storageMsg.storageId,
+                           INDEX_STATE_ERROR,
+                           0LL,
+                           "%s (error code: %d)",
+                           Errors_getText(error),
+                           error
+                          );
           }
           File_delete(storageMsg.fileName,FALSE);
           freeStorageMsg(&storageMsg,NULL);
