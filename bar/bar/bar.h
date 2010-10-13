@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.17 $
+* $Revision: 1.18 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -171,25 +171,25 @@ typedef struct
   LIST_HEADER(SSHServerNode);
 } SSHServerList;
 
-/* dvd settings */
+/* optical disk settings */
 typedef struct
 {
-  String requestVolumeCommand;          // command to request new dvd
-  String unloadVolumeCommand;           // command to unload dvd
-  String loadVolumeCommand;             // command to load dvd
-  uint64 volumeSize;                    // size of dvd [bytes] (0 for default)
+  String requestVolumeCommand;          // command to request new medium
+  String unloadVolumeCommand;           // command to unload medium
+  String loadVolumeCommand;             // command to load medium
+  uint64 volumeSize;                    // size of medium [bytes] (0 for default)
 
   String imagePreProcessCommand;        // command to execute before creating image
   String imagePostProcessCommand;       // command to execute after created image
-  String imageCommand;                  // command to create dvd image
+  String imageCommand;                  // command to create medium image
   String eccPreProcessCommand;          // command to execute before ECC calculation
   String eccPostProcessCommand;         // command to execute after ECC calculation
   String eccCommand;                    // command for ECC calculation
-  String writePreProcessCommand;        // command to execute before writing dvd
-  String writePostProcessCommand;       // command to execute after writing dvd
-  String writeCommand;                  // command to write dvd
-  String writeImageCommand;             // command to write image on dvd
-} DVD;
+  String writePreProcessCommand;        // command to execute before writing medium
+  String writePostProcessCommand;       // command to execute after writing medium
+  String writeCommand;                  // command to write medium
+  String writeImageCommand;             // command to write image on medium
+} OpticalDisk;
 
 /* device settings */
 typedef struct
@@ -251,7 +251,9 @@ typedef struct
 
   String                 remoteBARExecutable;
 
-  DVD                    dvd;                            // DVD settings
+  OpticalDisk            cd;                             // CD settings
+  OpticalDisk            dvd;                            // DVD settings
+  OpticalDisk            bd;                             // BD settings
 
   String                 defaultDeviceName;              // default device name
   Device                 *device;                        // current selected device
@@ -324,7 +326,7 @@ typedef struct
   FTPServer           ftpServer;                         // job specific FTP server settings
   SSHServer           sshServer;                         // job specific SSH server settings
 
-  DVD                 dvd;                               // job specific DVD settings
+  OpticalDisk         opticalDisk;                       // job specific optical disk settings
 
   String              deviceName;                        // device name to use
   Device              device;                            // job specific device settings
@@ -528,6 +530,19 @@ void getSSHServerSettings(const String     name,
                          );
 
 /***********************************************************************\
+* Name   : getCDSettings
+* Purpose: get CD settings
+* Input  : jobOptions - job options
+* Output : cd - cd settings from job options or default CD values
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void getCDSettings(const JobOptions *jobOptions,
+                   OpticalDisk      *cd
+                  );
+
+/***********************************************************************\
 * Name   : getDVDSettings
 * Purpose: get DVD settings
 * Input  : jobOptions - job options
@@ -537,8 +552,21 @@ void getSSHServerSettings(const String     name,
 \***********************************************************************/
 
 void getDVDSettings(const JobOptions *jobOptions,
-                    DVD              *dvd
+                    OpticalDisk      *dvd
                    );
+
+/***********************************************************************\
+* Name   : getDVDSettings
+* Purpose: get DVD settings
+* Input  : jobOptions - job options
+* Output : bd - bd settings from job options or default BD values
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void getBDSettings(const JobOptions *jobOptions,
+                   OpticalDisk      *bd
+                  );
 
 /***********************************************************************\
 * Name   : getDeviceSettings
