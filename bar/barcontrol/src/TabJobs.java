@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -2024,7 +2024,7 @@ Dprintf.dprintf("treeItem=%s",treeItem);
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,skipUnreadable));
+          Widgets.addModifyListener(new WidgetListener(button,rawImages));
           button.setToolTipText("If enabled store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image.");
         }
       }
