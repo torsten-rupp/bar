@@ -2,31 +2,30 @@ NAME
   bar - backup archiver program
 
 SYNOPSIS
-  bar [<options>] [--] <archive name> [<files>...]
+  bar [<options>] [--] <archive name> [<file>|<device>...]
   bar [<options>] [--] <key file name>
 
 DESCRIPTION
-bar is a backup archiver program to create compressed, encrypted and
-splitted archive files which can be stored on a local hard disk, via
-network on a server or (with additional external tools) an optical
-medium like a CD or DVD.
+BAR is a backup archiver program for files and disk images to create compressed,
+encrypted and splitted archive files which can be stored on a local hard disk,
+via network on a server or (with additional external tools) an optical medium
+like a CD, DVD, or BD.
 
 Archive files can be created, the content can be listed, tested, compared and
 extracted. Individual archive files can be read independent. Listing the contents
 of an archive is fast, even when the content is compressed and encrypted. The
-content can be compressed with either zip(1) or bzip2(1). For encryption
-several encryption algorithms from the libcrypt project like AES or TWOFISH can
-be used. Public key encryption (RSA) is also supported.
+content can be compressed with either zip(1), bzip2(1) or lzma(1). For encryption
+several encryption algorithms from the libcrypt project like AES or TWOFISH can be
+used. Public key encryption (RSA) is also supported.
 
-CDs and DVDs with archive files can be created when the external tools
+CDs, DVDs, BDs with archive files can be created when the external tools
 growisofs(1) and mkisofs(1) are installed. If the tool dvdisaster(1) is
-available CDs and DVDs with additional error correction codes can be
-created.
+available CDs and DVDs with additional error correction codes can be created.
 
-bar can be executed as a daemon and can created backups in the background
-via the integrated scheduler. The bar daemon can be controlled via a
-network connection (either plain or SSL encrypted) with the graphical
-front end barcontrol(3).
+BAR can be executed as a daemon and can created backups in the background via
+the integrated scheduler. The BAR daemon can be controlled via a network
+connection (either plain or SSL encrypted) with the graphical front end
+barcontrol(3).
 
 OPTIONS
 
@@ -38,24 +37,24 @@ OPTIONS
          -x|--extract                              restore archive
          --generate-keys                           generate new public/private key pair
          --generate-keys-bits=<n>[K]               key bits (default: 1024)
-         --config=<file name>                      configuration file
-         -s|--archive-part-size=<n>[G|M|K]         approximated archive part size
-         --tmp-directory=<path>                    temporary directory (default: /tmp)
-         --max-tmp-size=<n>[G|M|K]                 max. size of temporary files
+         --job=<name>                              execute job
+         --normal                                  create normal archive (no incremental list file)
          -f|--full                                 create full archive and incremental list file
          -i|--incremental                          create incremental archive
          -I|--incremental-list-file=<file name>    incremental list file name (default: <archive name>.bid)
-         -p|--directory-strip=<n>                  number of directories to strip on extract
-         --destination=<path>                      destination to restore files/image
-         --owner=<user:group>                      owner and group of restored files
-         --nice-level=<n>                          general nice level of processes/threads
-         --max-band-width=<n>[K]                   max. network band width to use
          --pattern-type=<name>                     select pattern type
                                                      * glob: glob patterns: * and ? (default)
                                                      * regex: regular expression pattern matching
                                                      * extended: extended regular expression pattern matching
          -#|--include=<pattern>                    include pattern
          -!|--exclude=<pattern>                    exclude pattern
+         --config=<file name>                      configuration file
+         --tmp-directory=<path>                    temporary directory (default: /tmp)
+         --max-tmp-size=<n>[G|M|K]                 max. size of temporary files
+         -s|--archive-part-size=<n>[G|M|K]         approximated archive part size
+         -p|--directory-strip=<n>                  number of directories to strip on extract
+         --destination=<path>                      destination to restore files/image
+         --owner=<user:group>                      user and group of restored files
          -z|--compress-algorithm=<name>            select compress algorithm to use
                                                      * none : no compression (default)
                                                      * zip0 : ZIP compression level 0
@@ -97,7 +96,9 @@ OPTIONS
                                                      * AES256: AES cipher 256bit
                                                      * TWOFISH128: Twofish cipher 128bit
                                                      * TWOFISH256: Twofish cipher 256bit
-         -a|--crypt-asymmetric                     use asymmetric encryption
+         --crypt-type=<name>                       select crypt type
+                                                     * symmetric: symmetric
+                                                     * asymmetric: asymmetric
          --crypt-password=<password>               crypt password (use with care!)
          --crypt-public-key=<file name>            public key for encryption
          --crypt-private-key=<file name>           private key for decryption
@@ -117,7 +118,23 @@ OPTIONS
          --server-key-file=<file name>             TLS (SSL) server key file (default: /etc/ssl/private/bar-server-key.pem)
          --server-password=<password>              server password (use with care!)
          --server-jobs-directory=<path name>       server job directory (default: /etc/bar/jobs)
+         --nice-level=<n>                          general nice level of processes/threads
+         --max-band-width=<n>[K]                   max. network band width to use
          --remote-bar-executable=<file name>       remote BAR executable
+         --cd-request-volume-command=<command>     request new CD volume command
+         --cd-unload-volume-command=<command>      unload CD volume command (default: eject -r %device)
+         --cd-load-volume-command=<command>        load CD volume command (default: eject -t %device)
+         --cd-volume-size=<n>[G|M|K]               CD volume size
+         --cd-image-pre-command=<command>          make CD image pre-process command
+         --cd-image-post-command=<command>         make CD image post-process command
+         --cd-image-command=<command>              make CD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %file)
+         --cd-ecc-pre-command=<command>            make CD error-correction codes pre-process command
+         --cd-ecc-post-command=<command>           make CD error-correction codes post-process command
+         --cd-ecc-command=<command>                make CD error-correction codes command (default: nice dvdisaster -mRS02 -n dvd -c -i %image -v)
+         --cd-write-pre-command=<command>          write CD pre-process command
+         --cd-write-post-command=<command>         write CD post-process command
+         --cd-write-command=<command>              write CD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file)
+         --cd-write-image-command=<command>        write CD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload)
          --dvd-request-volume-command=<command>    request new DVD volume command
          --dvd-unload-volume-command=<command>     unload DVD volume command (default: eject -r %device)
          --dvd-load-volume-command=<command>       load DVD volume command (default: eject -t %device)
@@ -131,7 +148,21 @@ OPTIONS
          --dvd-write-pre-command=<command>         write DVD pre-process command
          --dvd-write-post-command=<command>        write DVD post-process command
          --dvd-write-command=<command>             write DVD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file)
-         --dvd-write-command=<command>             write DVD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload)
+         --dvd-write-image-command=<command>       write DVD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload)
+         --bd-request-volume-command=<command>     request new BD volume command
+         --bd-unload-volume-command=<command>      unload BD volume command (default: eject -r %device)
+         --bd-load-volume-command=<command>        load BD volume command (default: eject -t %device)
+         --bd-volume-size=<n>[G|M|K]               BD volume size
+         --bd-image-pre-command=<command>          make BD image pre-process command
+         --bd-image-post-command=<command>         make BD image post-process command
+         --bd-image-command=<command>              make BD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %file)
+         --bd-ecc-pre-command=<command>            make BD error-correction codes pre-process command
+         --bd-ecc-post-command=<command>           make BD error-correction codes post-process command
+         --bd-ecc-command=<command>                make BD error-correction codes command (default: nice dvdisaster -mRS02 -n dvd -c -i %image -v)
+         --bd-write-pre-command=<command>          write BD pre-process command
+         --bd-write-post-command=<command>         write BD post-process command
+         --bd-write-command=<command>              write BD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file)
+         --bd-write-image-command=<command>        write BD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload)
          --device=<device name>                    default device (default: /dev/dvd)
          --device-request-volume-command=<command> request new volume command
          --device-load-volume-command=<command>    load volume command
@@ -147,6 +178,8 @@ OPTIONS
          --device-write-post-command=<command>     write device post-process command
          --device-write-command=<command>          write device command
          --ecc                                     add error-correction codes with 'dvdisaster' tool
+         --database-file=<file name>               index database file name
+         --no-auto-update-database-index           disabled automatic update database index
          --log=<name>[,<name>...]                  log types
                                                      * none: no logging (default)
                                                      * errors: log errors
@@ -165,6 +198,7 @@ OPTIONS
          -g|--group                                group files in list
          --all                                     show all files
          -L|--long-format                          list in long format
+         -H|--human-format                         list in human readable format
          --no-header-footer                        output no header/footer in list
          --delete-old-archive-files                delete old archive files after creating new files
          --skip-unreadable                         skip unreadable files
@@ -173,7 +207,7 @@ OPTIONS
          --wait-first-volume                       wait for first volume
          --raw-images                              store raw images (store all image blocks)
          --no-storage                              do not store archives (skip storage)
-         --no-bar-on-dvd                           do not store a copy of BAR on DVDs
+         --no-bar-on-medium                        do not store a copy of BAR on medium
          --stop-on-error                           immediately stop on error
          --no-default-config                       do not read personal config file ~/.bar/bar.cfg
          --quiet                                   suppress any output
