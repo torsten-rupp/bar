@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.69 $
+# $Revision: 1.70 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -653,7 +653,7 @@ bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip: \
                    barcontrol/barcontrol-linux.jar \
                    barcontrol/barcontrol-linux_64.jar \
                    tmp/gui/linux
-	
+	#
 	$(INSTALL) -d tmp/gui/windows
 	$(INSTALL) -m 775 \
                    barcontrol/barcontrol.bat \
@@ -662,7 +662,7 @@ bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip: \
                    barcontrol/barcontrol-windows.jar \
                    barcontrol/barcontrol-windows_64.jar \
                    tmp/gui/windows
-	
+	#
 	$(INSTALL) -d tmp/gui/solaris
 	$(INSTALL) -m 775 \
                    barcontrol/barcontrol \
@@ -670,7 +670,7 @@ bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip: \
 	$(INSTALL) -m 664 \
                    barcontrol/barcontrol-solaris.jar \
                    tmp/gui/solaris
-	
+	#
 	$(INSTALL) -d tmp/gui/macosx
 	$(INSTALL) -m 775 \
                    barcontrol/barcontrol \
@@ -682,5 +682,9 @@ bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip: \
 	
 	($(CD) tmp/gui; $(ZIP) -r ../../$@ linux windows solaris macosx)
 	$(RMRF) tmp/gui
+	#
+ifneq ($(MD5SUM),)
+	$(MD5SUM) $@
+endif
         
 # end of file
