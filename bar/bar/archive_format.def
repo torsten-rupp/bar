@@ -1,7 +1,7 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/bar/archive_format.def,v $
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems: all
@@ -9,21 +9,25 @@
 #***********************************************************************
 
 # archive info header
+# never compress/encrypted
 CHUNK BAR "BAR0" Bar
   crc32  crc
 
 # asymmetric encryption key
+# never compress/encrypted
 CHUNK KEY "KEY0" Key
   data   data
   crc32  crc
 
 # file info header
+# never compress/encrypted
 CHUNK FILE "FIL0" File
   uint16 compressAlgorithm;
   uint16 cryptAlgorithm;
   crc32  crc
 
 # file entry
+# compress/encrypted as specified in FIL0
 CHUNK FILE_ENTRY "FENT" FileEntry
   uint64 size
   uint64 timeLastAccess
@@ -36,6 +40,7 @@ CHUNK FILE_ENTRY "FENT" FileEntry
   crc32  crc
 
 # file data
+# compress/encrypted as specified in FIL0
 CHUNK FILE_DATA "FDAT" FileData
   uint64 fragmentOffset
   uint64 fragmentSize
@@ -43,12 +48,14 @@ CHUNK FILE_DATA "FDAT" FileData
   data   data
 
 # image info header
+# never compress/encrypted
 CHUNK IMAGE "IMG0" Image
   uint16 compressAlgorithm;
   uint16 cryptAlgorithm;
   crc32  crc
 
 # image entry
+# compress/encrypted as specified in IMG0
 CHUNK IMAGE_ENTRY "IENT" ImageEntry
   uint16 fileSystemType
   uint64 size
@@ -57,6 +64,7 @@ CHUNK IMAGE_ENTRY "IENT" ImageEntry
   crc32  crc
 
 # image data
+# compress/encrypted as specified in IMG0
 CHUNK IMAGE_DATA "IDAT" ImageData
   uint64 blockOffset
   uint64 blockCount
@@ -64,11 +72,13 @@ CHUNK IMAGE_DATA "IDAT" ImageData
   data   data
 
 # directory info header
+# never compress/encrypted
 CHUNK DIRECTORY "DIR0" Directory
   uint16 cryptAlgorithm;
   crc32  crc
 
 # directory entry
+# compress/encrypted as specified in DIR0
 CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   uint64 timeLastAccess
   uint64 timeModified
@@ -80,11 +90,13 @@ CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   crc32  crc
 
 # link info header
+# never compress/encrypted
 CHUNK LINK "LNK0" Link
   uint16 cryptAlgorithm;
   crc32  crc
 
 # link entry
+# compress/encrypted as specified in LNK0
 CHUNK LINK_ENTRY "LENT" LinkEntry
   uint64 timeLastAccess
   uint64 timeModified
@@ -97,11 +109,13 @@ CHUNK LINK_ENTRY "LENT" LinkEntry
   crc32  crc
 
 # special info header
+# never compress/encrypted
 CHUNK SPECIAL "SPE0" Special
   uint16 cryptAlgorithm;
   crc32  crc
 
 # special entry
+# compress/encrypted as specified in SPE0
 CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
   uint16 specialType
   uint64 timeLastAccess
