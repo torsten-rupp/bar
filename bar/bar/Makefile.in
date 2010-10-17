@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.30 $
+# $Revision: 1.31 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -180,6 +180,8 @@ OTHER_SOURCES        = filesystems_ext.c \
                        \
                        archive_format.pl \
                        archive_format.def \
+                       database_definition.pl \
+                       database_definition.sql \
                        valgrind.supp \
                        bar.cfg \
                        bar-keygen.in \
