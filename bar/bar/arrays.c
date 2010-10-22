@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/arrays.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -168,6 +168,7 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
       if (debugArrayNode != NULL)
       {
         List_remove(&debugArrayList,debugArrayNode);
+        LIST_DELETE_NODE(debugArrayNode);
       }
       else
       {
