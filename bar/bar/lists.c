@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/lists.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -135,23 +135,24 @@ void List_clear(void                 *list,
 
   if (listNodeFreeFunction != NULL)
   {
-    while (((List*)list)->head != NULL)
+    while (((List*)list)->tail != NULL)
     {
-      node = ((List*)list)->head;
-      ((List*)list)->head = ((List*)list)->head->next;
+      node = ((List*)list)->tail;
+      ((List*)list)->tail = ((List*)list)->tail->prev;
       listNodeFreeFunction(node,listNodeFreeUserData);
+      LIST_DELETE_NODE(node);
     }
   }
   else
   {
-    while (((List*)list)->head != NULL)
+    while (((List*)list)->tail != NULL)
     {
-      node = ((List*)list)->head;
-      ((List*)list)->head = ((List*)list)->head->next;
+      node = ((List*)list)->tail;
+      ((List*)list)->tail = ((List*)list)->tail->prev;
       LIST_DELETE_NODE(node);
     }
   }
-  ((List*)list)->tail  = NULL;
+  ((List*)list)->head  = NULL;
   ((List*)list)->count = 0;
 }
 
