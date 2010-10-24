@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -1627,7 +1627,7 @@ LOCAL bool matchString(const String  string,
                        const char    *pattern,
                        long          *nextIndex,
                        String        matchedString,
-                       const va_list matchedSubStrings
+                       va_list       matchedSubStrings
                       )
 {
   regex_t    regex;
@@ -1650,7 +1650,7 @@ LOCAL bool matchString(const String  string,
   }
 
   /* count sub-patterns (=1 for total matched string + number of matched-sub-strings) */
-  va_copy(arguments,(va_list)matchedSubStrings);
+  va_copy(arguments,matchedSubStrings);
   subMatchCount = 1;
   do
   {
@@ -1684,7 +1684,7 @@ LOCAL bool matchString(const String  string,
       String_setBuffer(matchedString,&string->data[subMatches[0].rm_so],subMatches[0].rm_eo-subMatches[0].rm_so);
     }
 
-    va_copy(arguments,(va_list)matchedSubStrings);
+    va_copy(arguments,matchedSubStrings);
     for (z = 1; z < subMatchCount; z++)
     {
       matchedSubString = (String)va_arg(arguments,void*);
