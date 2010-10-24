@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -198,14 +198,6 @@ typedef struct
   LIST_HEADER(IndexCryptPasswordNode);
 } IndexCryptPasswordList;
 
-/* index operations */
-typedef enum
-{
-  INDEX_OPERATION_ADD,
-  INDEX_OPERATION_REMOVE,
-  INDEX_OPERATION_REFRESH
-} IndexOperations;
-
 /* database index entry node */
 typedef struct IndexNode
 {
@@ -309,6 +301,7 @@ typedef struct
       SocketHandle socketHandle;
 
       /* thread */
+      Semaphore    writeLock;
       Thread       threads[MAX_NETWORK_CLIENT_THREADS];
       MsgQueue     commandMsgQueue;
       bool         exitFlag;
@@ -862,7 +855,6 @@ LOCAL void deleteJob(JobNode *jobNode)
   assert(jobNode != NULL);
 
   freeJobNode(jobNode,NULL);
-
   LIST_DELETE_NODE(jobNode);
 }
 
@@ -1206,9 +1198,9 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
     File_getFileBaseName(baseName,fileName);
 
     /* check if readable file and not ".*" */
-    if (File_isFile(fileName) && File_isReadable(fileName) && (String_index(baseName,0) != '.'))
+    if (File_isFile(fileName) && File_isReadable(fileName) && !String_startsWithChar(baseName,'.'))
     {
-      SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(&jobList.lock)
       {
         /* find/create job */
         jobNode = jobList.head;
@@ -1236,7 +1228,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
   File_closeDirectoryList(&directoryListHandle);
 
   /* remove not existing jobs */
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     jobNode = jobList.head;
     while (jobNode != NULL)
@@ -1436,7 +1428,7 @@ LOCAL void updateAllJobs(void)
 {
   JobNode *jobNode;
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     LIST_ITERATE(jobList,jobNode)
     {
@@ -1646,7 +1638,7 @@ LOCAL StorageRequestResults storageRequestVolume(JobNode *jobNode,
   assert(jobNode != NULL);
 
   storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
 // NYI ???: lock not read/write?
 
@@ -1885,7 +1877,7 @@ LOCAL void schedulerThreadEntry(void)
     rereadAllJobs(serverJobsDirectory);
 
     /* trigger jobs */
-    SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
     {
       currentDateTime = Misc_getCurrentDateTime();
       jobNode         = jobList.head;
@@ -1957,6 +1949,7 @@ LOCAL void schedulerThreadEntry(void)
         jobNode = jobNode->next;
       }
     }
+    Semaphore_unlock(&jobList.lock);
 
     /* sleep 1min, check quit flag */
     z = 0;
@@ -1987,7 +1980,7 @@ LOCAL void pauseThreadEntry(void)
   while (!quitFlag)
   {
     /* decrement pause time, continue */
-    SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(&serverStateLock)
     {
       if (serverState == SERVER_STATE_PAUSE)
       {
@@ -2089,6 +2082,7 @@ LOCAL void indexThreadEntry(void)
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_UPDATE,
                            &storageId,
+                           NULL,
                            NULL
                           )
          && (error == ERROR_NONE)
@@ -2097,6 +2091,7 @@ LOCAL void indexThreadEntry(void)
     error = Index_setState(indexDatabaseHandle,
                            storageId,
                            INDEX_STATE_UPDATE_REQUESTED,
+                           0LL,
                            NULL
                           );
   }
@@ -2105,6 +2100,7 @@ LOCAL void indexThreadEntry(void)
     while (Index_findByState(indexDatabaseHandle,
                              INDEX_STATE_UPDATE_REQUESTED,
                              &storageId,
+                             NULL,
                              NULL
                             )
            && (error == ERROR_NONE)
@@ -2113,6 +2109,7 @@ LOCAL void indexThreadEntry(void)
       error = Index_setState(indexDatabaseHandle,
                              storageId,
                              INDEX_STATE_ERROR,
+                             0LL,
                              NULL
                             );
     }
@@ -2120,6 +2117,7 @@ LOCAL void indexThreadEntry(void)
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_CREATE,
                            &storageId,
+                           NULL,
                            NULL
                           )
          && (error == ERROR_NONE)
@@ -2177,7 +2175,7 @@ LOCAL void indexThreadEntry(void)
     // get all job crypt passwords and crypt public keys (including no password and default)
     addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
     addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
-    SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
     {
       LIST_ITERATE(jobList,jobNode)
       {
@@ -2187,6 +2185,7 @@ LOCAL void indexThreadEntry(void)
         }
       }
     }
+    Semaphore_unlock(&jobList.lock);
 
     // try to create index
     LIST_ITERATE(indexCryptPasswordList,indexCryptPasswordNode)
@@ -2235,7 +2234,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
   // collect storage locations to check for BAR files
   storagePathName = String_new();
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     LIST_ITERATE(jobList,jobNode)
     {
@@ -2260,6 +2259,8 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
 LOCAL void indexUpdateThreadEntry(void)
 {
+  #define MAX_INDEX_CHECK_TIME (7*24*60*60)
+
   String                     storageSpecifier;
   String                     fileName;
   String                     storageName;
@@ -2271,12 +2272,17 @@ LOCAL void indexUpdateThreadEntry(void)
   FileInfo                   fileInfo;
   StorageTypes               storageType;
   int64                      storageId;
+  IndexStates                indexState;
+  uint64                     lastChecked;
   int                        z;
+#if 0
+  uint64                     now;
+  DatabaseQueryHandle        databaseQueryHandle;
+  IndexModes                 indexMode;
+#endif /* 0 */
 
   /* initialize variables */
   StringList_init(&storageDirectoryList);
-
-  /* restart requested/not completed index updates */
 
   /* run continous check for index updates */
   storageSpecifier = File_newFileName();
@@ -2300,7 +2306,7 @@ LOCAL void indexUpdateThreadEntry(void)
           || (storageType == STORAGE_TYPE_SFTP      )
          )
       {
-        // list directory
+        // list directory, update index checked/request create index
         error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                           storageName,
                                           &jobOptions
@@ -2332,15 +2338,36 @@ LOCAL void indexUpdateThreadEntry(void)
             Storage_getName(storageName,storageType,storageSpecifier,fileName);
 
             /* get index id, request index update */
-            if (!Index_findByName(indexDatabaseHandle,
-                                  storageName,
-                                  &storageId
-                                 )
+            if (Index_findByName(indexDatabaseHandle,
+                                 storageName,
+                                 &storageId,
+                                 &indexState,
+                                 &lastChecked
+                                )
                )
             {
+              if (indexState == INDEX_STATE_OK)
+              {
+                // set checked date/time
+                error = Index_setState(indexDatabaseHandle,
+                                       storageId,
+                                       INDEX_STATE_OK,
+                                       Misc_getCurrentDateTime(),
+                                       NULL
+                                      );
+                if (error != ERROR_NONE)
+                {
+                  continue;
+                }
+              }
+            }
+            else            
+            {
+              // add index
               error = Index_create(indexDatabaseHandle,
                                    storageName,
                                    INDEX_STATE_UPDATE_REQUESTED,
+                                   INDEX_MODE_AUTO,
                                    &storageId
                                   );
               if (error != ERROR_NONE)
@@ -2352,10 +2379,43 @@ LOCAL void indexUpdateThreadEntry(void)
 
           /* close directory */
           Storage_closeDirectoryList(&storageDirectoryListHandle);
-        }
+        }      
       }
     }
     freeJobOptions(&jobOptions);
+
+#if 0
+// NYI: how to remove old/not existing indizes in a safe way?  
+    /* delete old indizes */
+    error = Index_initListStorage(&databaseQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL
+                                 );
+    if (error == ERROR_NONE)
+    {
+      now = Misc_getCurrentDateTime();
+      while (Index_getNextStorage(&databaseQueryHandle,
+                                  &storageId,
+                                  NULL,
+                                  NULL,
+                                  NULL,
+                                  &indexState,
+                                  &indexMode,
+                                  &lastChecked,
+                                  NULL
+                                 )
+            )
+      {
+        if (   (indexMode == INDEX_MODE_AUTO)
+            && (now > (lastChecked+MAX_INDEX_CHECK_TIME))
+           )
+        {
+          Index_delete(indexDatabaseHandle,storageId);
+        }
+      }
+      Index_doneList(&databaseQueryHandle);
+    }
+#endif /* 0 */
 
     /* sleep 1min, check quit flag */
     z = 0;
@@ -2400,12 +2460,14 @@ LOCAL void sendClient(ClientInfo *clientInfo, String data)
   {
     case CLIENT_TYPE_BATCH:
       error = File_write(&clientInfo->file.fileHandle,String_cString(data),String_length(data));
-//if (error != ERROR_NONE) fprintf(stderr,"%s,%d: WRITE ERROR X1\n",__FILE__,__LINE__);
+// NYI: ???
 fflush(stdout);
       break;
     case CLIENT_TYPE_NETWORK:
-      error = Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
-//if (error != ERROR_NONE) fprintf(stderr,"%s,%d: WRITE ERROR X2\n",__FILE__,__LINE__);
+      SEMAPHORE_LOCKED_DO(&clientInfo->network.writeLock)
+      {
+        error = Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
+      }
       break;
     default:
       #ifndef NDEBUG
@@ -2881,7 +2943,7 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const String ar
   UNUSED_VARIABLE(argumentCount);
 
   /* format result */
-  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ)
+  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ);
   {
     switch (serverState)
     {
@@ -2897,6 +2959,7 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const String ar
         break;
     }
   }
+  Semaphore_unlock(&serverStateLock);
 }
 
 /***********************************************************************\
@@ -2940,7 +3003,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const String arg
   }
 
   /* set pause time */
-  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&serverStateLock)
   {
     serverState = SERVER_STATE_PAUSE;
     if (modeMask == NULL)
@@ -3015,7 +3078,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const String a
   }
 
   /* set suspend */
-  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&serverStateLock)
   {
     serverState = SERVER_STATE_SUSPENDED;
     if (modeMask == NULL)
@@ -3075,7 +3138,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const String 
   UNUSED_VARIABLE(argumentCount);
 
   /* clear pause/suspend */
-  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&serverStateLock)
   {
     serverState            = SERVER_STATE_RUNNING;
     pauseFlags.create      = FALSE;
@@ -3390,7 +3453,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
   }
   name = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -3428,6 +3491,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"%S",s);
     String_delete(s);
   }
+  Semaphore_unlock(&jobList.lock);
 }
 
 /***********************************************************************\
@@ -3474,7 +3538,7 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
   }
   value = arguments[2];
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -3543,7 +3607,7 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
   }
   name = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
 
     /* find job */
@@ -3597,7 +3661,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
   {
     jobNode = jobList.head;
     while ((jobNode != NULL) && !commandAborted(clientInfo,id))
@@ -3620,6 +3684,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
       jobNode = jobNode->next;
     }
   }
+  Semaphore_unlock(&jobList.lock);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -3654,7 +3719,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -3706,6 +3771,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
                      jobNode->requestedVolumeNumber
                     );
   }
+  Semaphore_unlock(&jobList.lock);
 }
 
 /***********************************************************************\
@@ -3741,7 +3807,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
   name = arguments[0];
 
   jobNode = NULL;
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* check if job already exists */
     if (findJobByName(name) != NULL)
@@ -3827,7 +3893,7 @@ LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String a
   }
   name = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* check if job already exists */
     if (findJobByName(name) != NULL)
@@ -3917,7 +3983,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
   }
   name = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* check if job already exists */
     if (findJobByName(name) != NULL)
@@ -3988,7 +4054,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4067,7 +4133,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4121,7 +4187,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4207,7 +4273,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4252,6 +4318,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
                       );
     }
   }
+  Semaphore_unlock(&jobList.lock);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -4285,7 +4352,7 @@ LOCAL void serverCommand_includeClear(ClientInfo *clientInfo, uint id, const Str
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4384,7 +4451,7 @@ LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const Strin
   }
   pattern = arguments[3];
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4434,7 +4501,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4467,6 +4534,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
                       );
     }
   }
+  Semaphore_unlock(&jobList.lock);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -4500,7 +4568,7 @@ LOCAL void serverCommand_excludeClear(ClientInfo *clientInfo, uint id, const Str
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4581,7 +4649,7 @@ LOCAL void serverCommand_excludeAdd(ClientInfo *clientInfo, uint id, const Strin
   }
   pattern = arguments[2];
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4632,7 +4700,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4733,6 +4801,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
     }
     String_delete(line);
   }
+  Semaphore_unlock(&jobList.lock);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -4766,7 +4835,7 @@ LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const St
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4859,7 +4928,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   }
   String_delete(s);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -4987,7 +5056,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
   }
   password = Password_newString(arguments[1]);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -5042,7 +5111,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const Stri
   }
   password = Password_newString(arguments[1]);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -5097,7 +5166,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
   }
   password = Password_newString(arguments[1]);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -5155,7 +5224,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
   }
   volumeNumber = String_toInteger(arguments[1],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -5202,7 +5271,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&jobList.lock)
   {
     /* find job */
     jobNode = findJobById(jobId);
@@ -5743,6 +5812,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                    &size,
                                    &datetime,
                                    &state,
+                                   NULL,
+                                   NULL,
                                    errorMessage
                                   )
           )
@@ -5810,6 +5881,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
     error = Index_create(indexDatabaseHandle,
                          storageName,
                          INDEX_STATE_UPDATE_REQUESTED,
+                         INDEX_MODE_MANUAL,
                          &storageId                         
                         );
     if (error != ERROR_NONE)
@@ -5862,7 +5934,9 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     /* find index */
     if (!Index_findByName(indexDatabaseHandle,
                           name,
-                          &storageId
+                          &storageId,
+                          NULL,
+                          NULL
                          )
        )
     {
@@ -5973,6 +6047,8 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                                    NULL,
                                    NULL,
                                    &storageState,
+                                   NULL,
+                                   NULL,
                                    NULL
                                   )
            && (stateAny || (state == storageState))
@@ -5982,6 +6058,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
       Index_setState(indexDatabaseHandle,
                      storageId,
                      INDEX_STATE_UPDATE_REQUESTED,
+                     0LL,
                      NULL
                     );
     }
@@ -6014,7 +6091,6 @@ LOCAL void freeIndexNode(IndexNode *indexNode, void *userData)
 
   String_delete(indexNode->name);
   String_delete(indexNode->storageName);
-  LIST_DELETE_NODE(indexNode);
 }
 
 /***********************************************************************\
@@ -6707,6 +6783,10 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
 
   /* get arguments */
   commandMsg->arguments = Array_new(sizeof(String),0);
+  if (commandMsg->arguments == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
   while (String_getNextToken(&stringTokenizer,&token,NULL))
   {
     argument = String_duplicate(token);
@@ -6881,6 +6961,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   {
     HALT_FATAL_ERROR("Cannot initialise client command message queue!");
   }
+  Semaphore_init(&clientInfo->network.writeLock);
   for (z = 0; z < MAX_NETWORK_CLIENT_THREADS; z++)
   {
     if (!Thread_init(&clientInfo->network.threads[z],"Client",0,networkClientThread,clientInfo))
@@ -6929,7 +7010,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       {
         Thread_done(&clientInfo->network.threads[z]);
       }
-      List_done(&clientInfo->directoryInfoList,(ListNodeFreeFunction)freeDirectoryInfoNode,NULL);
+      Semaphore_done(&clientInfo->network.writeLock);
       break;
     default:
       #ifndef NDEBUG
@@ -6938,6 +7019,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       break;
   }
 
+  List_done(&clientInfo->directoryInfoList,(ListNodeFreeFunction)freeDirectoryInfoNode,NULL);
   freeJobOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
@@ -7004,7 +7086,6 @@ LOCAL void deleteClient(ClientNode *clientNode)
   assert(clientNode != NULL);
 
   freeClientNode(clientNode,NULL);
-
   LIST_DELETE_NODE(clientNode);
 }
 
@@ -7413,7 +7494,7 @@ Errors Server_run(uint             port,
     {
       Thread_done(&indexUpdateThread);
     }
-    Thread_done(&indexThread);
+//    Thread_done(&indexThread);
   }
   Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
