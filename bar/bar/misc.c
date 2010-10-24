@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.c,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -472,10 +472,6 @@ stringNode = stringNode->next;
     if (pipe(pipeStdin) != 0)
     {
       error = ERRORX(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
-      printError("Execute external command '%s' fail (error: %s)!\n",
-                 String_cString(command),
-                 Errors_getText(error)
-                );
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(commandLine);
@@ -484,10 +480,6 @@ stringNode = stringNode->next;
     if (pipe(pipeStdout) != 0)
     {
       error = ERRORX(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
-      printError("Execute external command '%s' fail (error: %s)!\n",
-                 String_cString(command),
-                 Errors_getText(error)
-                );
       close(pipeStdin[0]);
       close(pipeStdin[1]);
       StringList_done(&argumentList);
@@ -498,10 +490,6 @@ stringNode = stringNode->next;
     if (pipe(pipeStderr) != 0)
     {
       error = ERRORX(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
-      printError("Execute external command '%s' fail (error: %s)!\n",
-                 String_cString(command),
-                 Errors_getText(error)
-                );
       close(pipeStdout[0]);
       close(pipeStdout[1]);
       close(pipeStdin[0]);
@@ -562,10 +550,6 @@ HALT_INTERNAL_ERROR("not reachable");
     {
       error = ERRORX(EXEC_FAIL,errno,String_cString(commandLine));
       printInfo(3,"FAIL!\n");
-      printError("Execute external command '%s' fail (error: %s)!\n",
-                 String_cString(command),
-                 Errors_getText(error)
-                );
 
       close(pipeStderr[0]);
       close(pipeStderr[1]);
@@ -634,10 +618,6 @@ error = ERROR_NONE;
       if (exitcode != 0)
       {
         error = ERRORX(EXEC_FAIL,exitcode,String_cString(commandLine));
-        printError("Execute external command '%s' fail (exitcode: %d)!\n",
-                   String_cString(commandLine),
-                   exitcode
-                  );
         StringList_done(&argumentList);
         String_delete(command);
         String_delete(commandLine);
@@ -649,10 +629,6 @@ error = ERROR_NONE;
       terminateSignal = WTERMSIG(status);
       error = ERRORX(EXEC_FAIL,terminateSignal,String_cString(commandLine));
       printInfo(3,"FAIL (signal %d)\n",terminateSignal);
-      printError("Execute external command '%s' fail (signal: %d)!\n",
-                 String_cString(commandLine),
-                 terminateSignal
-                );
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(commandLine);
