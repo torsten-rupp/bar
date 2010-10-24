@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/entrylists.c,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver entry list functions
 * Systems: all
@@ -108,7 +108,6 @@ LOCAL void freeEntryNode(EntryNode *entryNode,
 
   Pattern_done(&entryNode->pattern);
   String_delete(entryNode->string);
-  LIST_DELETE_NODE(entryNode);
 }
 
 /*---------------------------------------------------------------------*/

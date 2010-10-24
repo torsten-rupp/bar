@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/stringlists.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -81,7 +81,6 @@ LOCAL void freeStringNode(StringNode *stringNode, void *userData)
   UNUSED_VARIABLE(userData);
 
   String_delete(stringNode->string);
-  LIST_DELETE_NODE(stringNode);
 }
 
 /*---------------------------------------------------------------------*/

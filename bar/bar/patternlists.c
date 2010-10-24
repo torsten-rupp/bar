@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patternlists.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -107,7 +107,6 @@ LOCAL void freePatternNode(PatternNode *patternNode,
 
   Pattern_done(&patternNode->pattern);
   String_delete(patternNode->string);
-  LIST_DELETE_NODE(patternNode);
 }
 
 /*---------------------------------------------------------------------*/
