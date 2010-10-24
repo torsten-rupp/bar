@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.14 $
+* $Revision: 1.15 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -91,9 +91,9 @@ typedef struct
           HALT_INTERNAL_ERROR("Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!",\
                               (string)->checkSum,\
                               string,\
-                              (ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data,\
                               (string)->length,\
-                              (string)->maxLength\
+                              (string)->maxLength,\
+                              (ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data\
                              ); \
         } \
       } \
