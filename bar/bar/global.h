@@ -64,6 +64,8 @@
 #define MAX_INT            INT_MAX
 #define MIN_LONG           LONG_MIN
 #define MAX_LONG           LONG_MAX
+#define MIN_LONG_LONG      LLONG_MIN
+#define MAX_LONG_LONG      LLONG_MAX
 
 #define MIN_UCHAR          0
 #define MAX_UCHAR          UCHAR_MAX
@@ -73,6 +75,8 @@
 #define MAX_UINT           UINT_MAX
 #define MIN_ULONG          0
 #define MAX_ULONG          ULONG_MAX
+#define MIN_ULONG_LONG     0
+#define MAX_ULONG_LONG     ULLONG_MAX
 
 #define MIN_FLOAT          FLT_MIN
 #define MAX_FLOAT          FLT_MAX
