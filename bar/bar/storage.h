@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.h,v $
-* $Revision: 1.13 $
+* $Revision: 1.14 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -16,6 +16,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef HAVE_FTP
+  #include <ftplib.h>
+#endif /* HAVE_FTP */
 #ifdef HAVE_SSH2
   #include <libssh2.h>
   #include <libssh2_sftp.h>
@@ -263,7 +266,7 @@ typedef struct
       String     fileName;                             // current file name
       FileHandle fileHandle;
       uint64     totalSize;                            // current size of DVD [bytes]
-    } opticalDisc;
+    } opticalDisk;
 
     // device storage
     struct
@@ -336,7 +339,7 @@ typedef struct
     struct
     {
       DirectoryListHandle directoryListHandle;
-    } opticalDisc;
+    } opticalDisk;
   };
 } StorageDirectoryListHandle;
 
