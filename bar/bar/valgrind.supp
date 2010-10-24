@@ -89,6 +89,28 @@
    fun:pthread_handle_create
 }
 
+# glibc implizit mallocs
+{
+   glibc-21-getpwname_r-leak
+   Memcheck:Leak
+   fun:malloc
+   fun:nss_parse_service_list
+   fun:__nss_database_lookup
+   obj:*
+   obj:*
+   fun:getpwnam_r@@GLIBC_2.1.2
+}
+{
+   glibc-21-getgrnam_r-leak
+   Memcheck:Leak
+   fun:malloc
+   fun:nss_parse_service_list
+   fun:__nss_database_lookup
+   obj:*
+   obj:*
+   fun:getgrnam_r@@GLIBC_2.1.2
+}
+
 # zlib errors
 {
    crc32-uninitialized-value
