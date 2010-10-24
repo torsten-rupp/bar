@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/database.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: Database functions
 * Systems: all
@@ -492,7 +492,7 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
 
   /* execute SQL command */
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock)
   {
     #ifdef DATABASE_DEBUG
      fprintf(stderr,"Database debug: execute command: %s\n",String_cString(sqlString));
@@ -554,7 +554,7 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
 
   /* prepare SQL command execution */
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock)
   {
     #ifdef DATABASE_DEBUG
      fprintf(stderr,"Database debug: prepare command: %s\n",String_cString(sqlString));
@@ -611,7 +611,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   assert(format != NULL);
 
   result = FALSE;
-  SEMAPHORE_LOCKED_DO(&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&databaseQueryHandle->databaseHandle->lock)
   {
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
@@ -777,7 +777,7 @@ void Database_finalize(DatabaseQueryHandle *databaseQueryHandle)
 {
   assert(databaseQueryHandle != NULL);
 
-  SEMAPHORE_LOCKED_DO(&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&databaseQueryHandle->databaseHandle->lock)
   {
     sqlite3_finalize(databaseQueryHandle->handle);
   }
@@ -827,7 +827,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 
   /* execute SQL command */
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock)
   {
     #ifdef DATABASE_DEBUG
      fprintf(stderr,"Database debug: get integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
@@ -910,7 +910,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 
   /* execute SQL command */
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock)
   {
     #ifdef DATABASE_DEBUG
      fprintf(stderr,"Database debug: get integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
@@ -956,7 +956,7 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
   assert(databaseHandle != NULL);
 
   databaseId = DATABASE_ID_NONE;
-  SEMAPHORE_LOCKED_DO(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock)
   {
     databaseId = (uint64)sqlite3_last_insert_rowid(databaseHandle->handle);
   }

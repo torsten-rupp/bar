@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems: all
@@ -1723,7 +1723,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
   storageMsg.fileName            = String_duplicate(fileName);
   storageMsg.destinationFileName = destinationFileName;
   MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg));
-  SEMAPHORE_LOCKED_DO(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(&createInfo->storageSemaphore)
   {
     createInfo->storageCount += 1;
     createInfo->storageBytes += fileInfo.size;
@@ -1736,7 +1736,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
   /* wait for space in temporary directory */
   if (globalOptions.maxTmpSize > 0)
   {
-    SEMAPHORE_LOCKED_DO(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(&createInfo->storageSemaphore)
     {
       while ((createInfo->storageCount > 2) && (createInfo->storageBytes > globalOptions.maxTmpSize))
       {
@@ -2104,7 +2104,7 @@ error = ERROR_NONE;
         StringList_append(&createInfo->storageFileList,storageMsg.destinationFileName);
 
         /* update storage info */
-        SEMAPHORE_LOCKED_DO(&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        SEMAPHORE_LOCKED_DO(&createInfo->storageSemaphore)
         {
           assert(createInfo->storageCount > 0);
           assert(createInfo->storageBytes >= fileInfo.size);

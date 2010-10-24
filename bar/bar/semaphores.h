@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/semaphores.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
@@ -54,20 +54,21 @@ typedef struct
 
 /***********************************************************************\
 * Name   : SEMAPHORE_LOCKED_DO
-* Purpose: execute block with semaphore locked
-* Input  : semaphore         - semaphore
-*          semaphoreLockType - lock type
+* Purpose: execute block with semaphore locked (only
+*          SEMAPHORE_LOCK_TYPE_READ_WRITE, because of
+*          Semaphore_isLocked())
+* Input  : semaphore - semaphore
 * Output : -
 * Return : -
 * Notes  : usage:
-*            SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType)
+*            SEMAPHORE_LOCKED_DO(semaphore)
 *            {
 *              ...
 *            }
 \***********************************************************************/
 
-#define SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType) \
-  for (Semaphore_lock(semaphore,semaphoreLockType); Semaphore_isLocked(semaphore); Semaphore_unlock(semaphore))
+#define SEMAPHORE_LOCKED_DO(semaphore) \
+  for (Semaphore_lock(semaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE); Semaphore_isLocked(semaphore); Semaphore_unlock(semaphore))
 
 /***************************** Forwards ********************************/
 
