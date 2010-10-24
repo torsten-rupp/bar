@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -949,18 +949,22 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 
 uint32 File_userNameToUserId(const char *name)
 {
-  struct passwd *passwordEntry;
+  struct passwd passwordEntry;
+  char          buffer[1024];
+  struct passwd *result;
 
-  passwordEntry = getpwnam(name);
-  return (passwordEntry != NULL)?passwordEntry->pw_uid:FILE_DEFAULT_USER_ID;
+  getpwnam_r(name,&passwordEntry,buffer,sizeof(buffer),&result);
+  return (result != NULL)?result->pw_uid:FILE_DEFAULT_USER_ID;
 }
 
 uint32 File_groupNameToGroupId(const char *name)
 {
-  struct group *groupEntry;
+  struct group groupEntry;
+  char         buffer[1024];
+  struct group *result;
 
-  groupEntry = getgrnam(name);
-  return (groupEntry != NULL)?groupEntry->gr_gid:FILE_DEFAULT_GROUP_ID;
+  getgrnam_r(name,&groupEntry,buffer,sizeof(buffer),&result);
+  return (result != NULL)?result->gr_gid:FILE_DEFAULT_GROUP_ID;
 }
 
 FileTypes File_getType(const String fileName)
