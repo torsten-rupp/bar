@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Network functions
 * Systems: all
@@ -62,6 +62,10 @@
   LOCAL String defaultSSHPrivateKeyFileName;
 #endif /* HAVE_SSH2 */
 
+#ifdef HAVE_GNU_TLS
+  GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#endif /* HAVE_GNU_TLS */
+
 /****************************** Macros *********************************/
 
 /***************************** Forwards ********************************/
@@ -71,6 +75,8 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+//void tlslog(int level, char *s) { fprintf(stderr,"%s,%d: %d %s",__FILE__,__LINE__,level,s); }
 
 Errors Network_initAll(void)
 {
@@ -87,8 +93,10 @@ Errors Network_initAll(void)
   #endif /* HAVE_SSH2 */
 
   #ifdef HAVE_GNU_TLS
+    gcry_control (GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
     gnutls_global_init();
-    gnutls_global_set_log_level(10);
+//gnutls_global_set_log_level(10);
+//gnutls_global_set_log_function(tlslog);
   #endif /* HAVE_GNU_TLS */
 
   /* ignore SIGPIPE which may triggered in some socket read/write
@@ -163,8 +171,10 @@ Errors Network_connect(SocketHandle *socketHandle,
   struct hostent     *hostAddressEntry;
   in_addr_t          ipAddress;
   struct sockaddr_in socketAddress;
-  int                ssh2Error;
-  char               *ssh2ErrorText;
+  #ifdef HAVE_SSH2
+    int                ssh2Error;
+    char               *ssh2ErrorText;
+  #endif /* HAVE_SSH2 */
   Errors             error;
   long               socketFlags;
 
@@ -1178,7 +1188,9 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
                        const char           *command
                       )
 {
-  long socketFlags;
+  #ifdef HAVE_SSH2
+    long socketFlags;
+  #endif /* HAVE_SSH2 */
 
   assert(networkExecuteHandle != NULL);
   assert(socketHandle != NULL);
