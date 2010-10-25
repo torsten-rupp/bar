@@ -2043,14 +2043,17 @@ case "$host_os" in
   linux-*)
     PLATFORM=Linux
     ;;
+  windows*)
+    PLATFORM=Windows
+    ;;
   mingw*)
     PLATFORM=Windows
     ;;
   sunos | solaris*)
     PLATFORM=Solaris
     ;;
-  windows*)
-    PLATFORM=Windows
+  darwin*)
+    PLATFORM=MacOSX
     ;;
   *)
     { { $as_echo "$as_me:$LINENO: error: unknown host operation system '$host_os'. Please specify host as (cpu-vendor-os or cpu-os). Supported host operating systems: $host_supported_os" >&5
