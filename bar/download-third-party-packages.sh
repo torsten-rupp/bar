@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/download-third-party-packages.sh,v $
-# $Revision: 1.16 $
+# $Revision: 1.17 $
 # $Author: torsten $
 # Contents: download third-party packages
 # Systems: Unix
@@ -245,15 +245,15 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
-    # gnutls 2.8.5
+    # gnutls 2.10.2
     (
      cd $tmpDirectory
-     if test ! -f gnutls-2.8.5.tar.bz2; then
-       $WGET 'ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.8.5.tar.bz2'
+     if test ! -f gnutls-2.10.2.tar.bz2; then
+       $WGET 'ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.10.2.tar.bz2'
      fi
-     $TAR xjf gnutls-2.8.5.tar.bz2
+     $TAR xjf gnutls-2.10.2.tar.bz2
     )
-    $LN -f -s $tmpDirectory/gnutls-2.8.5 gnutls
+    $LN -f -s $tmpDirectory/gnutls-2.10.2 gnutls
   fi
 
   if test $allFlag -eq 1 -o $epmFlag -eq 1; then
