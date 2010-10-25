@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/server.c,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: Backup ARchiver server
 * Systems: all
@@ -2198,9 +2198,9 @@ LOCAL void indexThreadEntry(void)
                                   &pauseFlags.indexUpdate,
                                   &quitFlag
                                  );
-      if (error == ERROR_NONE) break;
+      if (quitFlag || (error == ERROR_NONE)) break;
     }
-    if (error != ERROR_NONE)
+    if (!quitFlag && (error != ERROR_NONE))
     {
       logMessage(LOG_TYPE_ERROR,
                  "cannot create storage index '%s' (error: %s)",
@@ -2313,7 +2313,7 @@ LOCAL void indexUpdateThreadEntry(void)
                                          );
         if (error == ERROR_NONE)
         {
-          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
+          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && !quitFlag)
           {
             // read next directory entry
             error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
@@ -5753,7 +5753,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   ulong               maxCount;
   String              statusText;
   String              patternText;
-  String              regexpString;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   ulong               n;
@@ -5790,7 +5789,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   if (indexDatabaseHandle != NULL)
   {
     /* initialise variables */
-    regexpString = String_new();
     name         = String_new();
     errorMessage = String_new();
 
@@ -5801,6 +5799,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  );
     if (error != ERROR_NONE)
     {
+      String_delete(errorMessage);
+      String_delete(name);
+
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
       return;
     }
@@ -5834,8 +5835,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     Index_doneList(&databaseQueryHandle);
 
     /* free resources */
+    String_delete(errorMessage);
     String_delete(name);
-    String_delete(regexpString);
 
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
   }
@@ -7494,7 +7495,7 @@ Errors Server_run(uint             port,
     {
       Thread_done(&indexUpdateThread);
     }
-//    Thread_done(&indexThread);
+    Thread_done(&indexThread);
   }
   Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
