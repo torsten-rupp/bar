@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -127,12 +127,14 @@ class Command
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
-  ProcessResult      processResult;
-  long               id;                // unique command id
-  int                errorCode;         // error code
-  String             errorText;         // error text
-  boolean            completedFlag;     // true iff command completed
-  LinkedList<String> result;            // result
+  public  ProcessResult      processResult;
+  public  long               id;                // unique command id
+  public  int                errorCode;         // error code
+  public  String             errorText;         // error text
+  public  boolean            completedFlag;     // true iff command completed
+  public  LinkedList<String> result;            // result
+
+  private long               timeoutTimestamp;  // timeout timestamp [ms]
 
   // ------------------------ native functions ----------------------------
 
@@ -140,16 +142,27 @@ class Command
 
   /** create new command
    * @param id command id
+   * @param timeout timeout or 0 [ms]
    * @param processResult process result handler
    */
-  Command(long id, ProcessResult processResult)
+  Command(long id, int timeout, ProcessResult processResult)
   {
-    this.id            = id;
-    this.errorCode     = -1;
-    this.errorText     = "";
-    this.completedFlag = false;
-    this.processResult = processResult;
-    this.result        = new LinkedList<String>();
+    this.id               = id;
+    this.errorCode        = -1;
+    this.errorText        = "";
+    this.completedFlag    = false;
+    this.processResult    = processResult;
+    this.result           = new LinkedList<String>();
+    this.timeoutTimestamp = (timeout != 0) ? System.currentTimeMillis()+timeout : 0L;
+  }
+
+  /** create new command
+   * @param id command id
+   * @param timeout timeout or 0 [ms]
+   */
+  Command(long id, int timeout)
+  {
+    this(id,timeout,null);
   }
 
   /** create new command
@@ -157,12 +170,7 @@ class Command
    */
   Command(long id)
   {
-    this.id            = id;
-    this.errorCode     = -1;
-    this.errorText     = "";
-    this.completedFlag = false;
-    this.processResult = null;
-    this.result        = new LinkedList<String>();
+    this(id,0);
   }
 
   /** check if end of data
@@ -187,22 +195,35 @@ class Command
    */
   public synchronized boolean waitForResult(long timeout)
   {
-    while (!completedFlag && (result.size() == 0) && (timeout != 0))
+    while (   !completedFlag
+           && (result.size() == 0)
+           && (timeout != 0)
+         )
     {
-      try
+      if ((timeoutTimestamp == 0L) || (System.currentTimeMillis() < timeoutTimestamp))
       {
-        if (timeout > 0)
+        // wait for result
+        try
         {
-          this.wait(timeout);
-          timeout = 0;
+          if (timeout > 0)
+          {
+            this.wait(timeout);
+            timeout = 0;
+          }
+          else
+          {
+            this.wait();
+          }
         }
-        else
+        catch (InterruptedException exception)
         {
-          this.wait();
+          /* ignored */
         }
       }
-      catch (InterruptedException exception)
+      else
       {
+        // overall timeout
+        timeout();
       }
     }
 
@@ -222,22 +243,34 @@ class Command
    */
   public synchronized boolean waitCompleted(long timeout)
   {
-    while (!completedFlag && (timeout != 0))
+    while (   !completedFlag
+           && (timeout != 0)
+          )
     {
-      try
+      if ((timeoutTimestamp == 0L) || (System.currentTimeMillis() < timeoutTimestamp))
       {
-        if (timeout > 0)
+        // wait for result
+        try
         {
-          this.wait(timeout);
-          timeout = 0;
+          if (timeout > 0)
+          {
+            this.wait(timeout);
+            timeout = 0;
+          }
+          else
+          {
+            this.wait();
+          }
         }
-        else
+        catch (InterruptedException exception)
         {
-          this.wait();
+          /* ignored */
         }
       }
-      catch (InterruptedException exception)
+      else
       {
+        // overall timeout
+        timeout();
       }
     }
 
@@ -273,7 +306,9 @@ class Command
    */
   public synchronized String getNextResult(long timeout)
   {
-    if (!completedFlag && (result.size() == 0))
+    if (   !completedFlag
+        && (result.size() == 0)
+       )
     {
       try
       {
@@ -281,6 +316,7 @@ class Command
       }
       catch (InterruptedException exception)
       {
+        /* ignored */
       }
     }
 
@@ -346,6 +382,13 @@ class Command
   {
     BARServer.abortCommand(this);
   }
+
+  /** timeout command
+   */
+  public void timeout()
+  {
+    BARServer.timeoutCommand(this);
+  }
 }
 
 /** server result read thread
@@ -386,7 +429,6 @@ class ReadThread extends Thread
       {
         // next line
         line = input.readLine();
-//Dprintf.dprintf("line=%s\n",line);
         if (line == null)
         {
           if (!quitFlag)
@@ -471,14 +513,12 @@ class ReadThread extends Thread
         catch (NumberFormatException exception)
         {
           // ignored
-//          throw new CommunicationError("malformed command result '"+line+"'");
         }
       }
       catch (IOException exception)
       {
-        // ignored
-//        throw new CommunicationError("Command fail (error: "+exception.getMessage()+")");
-        break;
+//new Throwable().printStackTrace();
+        throw new Error("network i/o error (error: "+exception.getMessage()+")");
       }
     }
   }
@@ -493,17 +533,28 @@ class ReadThread extends Thread
 
   /** add command
    * @param commandId command id
+   * @param timeout timeout or 0 [ms]
    * @param processResult process result handler
    * @return command
    */
-  public Command commandAdd(long commandId, ProcessResult processResult)
+  public Command commandAdd(long commandId, int timeout, ProcessResult processResult)
   {
     synchronized(commandHashMap)
     {
-      Command command = new Command(commandId,processResult);
+      Command command = new Command(commandId,timeout,processResult);
       commandHashMap.put(commandId,command);
       return command;
     }
+  }
+
+  /** add command
+   * @param commandId command id
+   * @param timeout timeout or 0 [ms]
+   * @return command
+   */
+  public Command commandAdd(long commandId, int timeout)
+  {
+    return commandAdd(commandId,timeout,null);
   }
 
   /** add command
@@ -512,7 +563,7 @@ class ReadThread extends Thread
    */
   public Command commandAdd(long commandId)
   {
-    return commandAdd(commandId,null);
+    return commandAdd(commandId,0);
   }
 
   /** remove command
@@ -603,6 +654,29 @@ class BARServer
 
             sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
             sslSocket        = (SSLSocket)sslSocketFactory.createSocket(hostname,tlsPort);
+
+/*
+String[] ss;
+
+ss = sslSocket.getSupportedCipherSuites();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedCipherSuites=%s",s);
+}
+ss = sslSocket.getSupportedProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedProtocols=%s",s);
+}
+ss = sslSocket.getEnabledProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getEnabledProtocols=%s",s);
+}
+//sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
+*/
             sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
             sslSocket.startHandshake();
 
@@ -778,10 +852,13 @@ class BARServer
     {
       // flush data (ignore errors)
       executeCommand("JOB_FLUSH");
-//output.write("QUIT"); output.write('\n'); output.flush();
+//synchronized(output) { output.write("QUIT"); output.write('\n'); output.flush(); }
+
+      // stop read thread
+      readThread.quit();
+      try { readThread.join(); } catch (InterruptedException exception) { /* ignored */ }
 
       // close connection, wait until read thread stopped
-      readThread.quit();
       socket.close();
       try
       {
@@ -808,6 +885,8 @@ class BARServer
    */
   public static Command runCommand(String commandString, ProcessResult processResult)
   {
+    final int TIMEOUT = 120*1000; // total timeout [ms]
+
     Command command;
 
     synchronized(output)
@@ -817,13 +896,13 @@ class BARServer
       String line = String.format("%d %s",commandId,commandString);
 
       // add command
-      command = readThread.commandAdd(commandId,processResult);
+      command = readThread.commandAdd(commandId,TIMEOUT,processResult);
 
       // send command
       try
       {
-        if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
         output.write(line); output.write('\n'); output.flush();
+        if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
       }
       catch (IOException exception)
       {
@@ -857,8 +936,26 @@ class BARServer
     readThread.commandRemove(command);
 
     // set abort error
-    command.errorCode     = -1;
+    command.errorCode     = -2;
     command.errorText     = "aborted";
+    command.completedFlag = true;
+    command.result.clear();
+  }
+
+  /** timeout command execution
+   * @param command command to abort
+   * @param result result (String[] or ArrayList)
+   * @return Errors.NONE or error code
+   */
+  static void timeoutCommand(Command command)
+  {
+    // send abort command to command
+    executeCommand(String.format("ABORT %d",command.id));
+    readThread.commandRemove(command);
+
+    // set abort error
+    command.errorCode     = -3;
+    command.errorText     = "timeout";
     command.completedFlag = true;
     command.result.clear();
   }
@@ -871,6 +968,8 @@ class BARServer
    */
   public static int executeCommand(String commandString, Object result, BusyIndicator busyIndicator)
   {
+    final int TIMEOUT = 120*1000; // total timeout [ms]
+
     Command command;
     int     errorCode;
 
@@ -887,13 +986,13 @@ class BARServer
       String line = String.format("%d %s",commandId,commandString);
 
       // add command
-      command = readThread.commandAdd(commandId);
+      command = readThread.commandAdd(commandId,TIMEOUT);
 
       // send command
       try
       {
-        if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
         output.write(line); output.write('\n'); output.flush();
+        if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
       }
       catch (IOException exception)
       {
@@ -910,8 +1009,8 @@ class BARServer
       }
     }
 
-    // wait until completed or aborted
-    while (  !command.waitCompleted(250)
+    // wait until completed, aborted or timeout
+    while (   !command.waitCompleted(250)
            && ((busyIndicator == null) || !busyIndicator.isAborted())
           )
     {
