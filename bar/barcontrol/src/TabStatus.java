@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -332,10 +332,9 @@ class TabStatus
      */
     public void run()
     {
-//      Display display = tabStatus.widgetTab.getDisplay();
-
       for (;;)
       {
+        // update
         try
         {
           tabStatus.update();
@@ -345,7 +344,8 @@ class TabStatus
           // ignore SWT exceptions
         }
 
-        try { Thread.sleep(1000); } catch (InterruptedException exception) {};
+        // sleep a short time
+        try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ };
       }
     }
   }
@@ -415,7 +415,7 @@ class TabStatus
     tableColumn = Widgets.addTableColumn(widgetJobList,2,"Type",          SWT.LEFT,  90,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for type.");
-    tableColumn = Widgets.addTableColumn(widgetJobList,3,"Part size",     SWT.RIGHT,  0,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,3,"Part size",     SWT.RIGHT, 80,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for part size.");
     tableColumn = Widgets.addTableColumn(widgetJobList,4,"Compress",      SWT.LEFT,  80,true );
@@ -1265,7 +1265,7 @@ class TabStatus
              widgetButtonAbort.setEnabled(state.equals("waiting") || state.equals("running")  || state.equals("request volume"));
              widgetButtonVolume.setEnabled(state.equals("request volume"));
           }
-          else { Dprintf.dprintf("unexecpted "+result[0]); }
+//          else { Dprintf.dprintf("unexecpted "+result[0]); }
         }
       });
     }
