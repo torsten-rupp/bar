@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.70 $
+# $Revision: 1.71 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -106,7 +106,6 @@ SCRIPTS              = scripts/barserver-SuSE \
 all: \
   $(TARGETS) \
   $(MAN)\
-  $(KEY_FILES)
 
 clean: \
   clean_keys \
@@ -251,12 +250,12 @@ endif
 
 # --- install/uninstall
 
-.PHONY: install install_base install_man install_keys uninstall
+.PHONY: install install_base install_man install_keys uninstall install_dist
 
 install: \
   install_base \
   install_man \
-  install_keys
+  $(if $(DIST),,install_keys)
 
 # install base files
 install_base: \
@@ -264,7 +263,6 @@ install_base: \
   $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
                                        $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar)) \
   ) \
-  $(KEY_FILES) \
   $(SCRIPTS) \
   $(MAN)
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_DIR)"
@@ -274,12 +272,25 @@ ifeq ($(ENABLE_GUI),yes)
 ifeq ($(PLATFORM),Linux)
 	$(INSTALL) barcontrol/barcontrol \
                    barcontrol/barcontrol-linux.jar \
+                   barcontrol/barcontrol-linux_64.jar \
                    "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
 ifeq ($(PLATFORM),Windows)
 	$(INSTALL) $(if $(LAUNCH4J),barcontrol/barcontrol.exe,\
                                     barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar \
+                                    barcontrol/barcontrol.bat barcontrol/barcontrol-windows_64.jar \
                     ) \
+                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+ifeq ($(PLATFORM),Solaris)
+	$(INSTALL) barcontrol/barcontrol \
+                   barcontrol/barcontrol-solaris.jar \
+                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+ifeq ($(PLATFORM),MacOSX)
+	$(INSTALL) barcontrol/barcontrol \
+                   barcontrol/barcontrol-macosx.jar \
+                   barcontrol/barcontrol-macosx_64.jar \
                    "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
 endif
@@ -292,10 +303,12 @@ endif
 	$(INSTALL) -d "$(DESTDIR)$(CONFIG_DIR)/jobs"
 	if test ! -f $(DESTDIR)$(ETC_DIR)/init.d/barserver; then \
           $(INSTALL) -d "$(DESTDIR)$(ETC_DIR)/init.d"; \
-          if test -f $(ETC_DIR)/SuSE-release; then \
-            $(INSTALL) -m 600 scripts/barserver-SuSE "$(DESTDIR)$(ETC_DIR)/init.d/barserver"; \
-          else \
-            $(INSTALL) -m 600 scripts/barserver-debian "$(DESTDIR)$(ETC_DIR)/init.d/barserver"; \
+          if   test -f $(ETC_DIR)/SuSE-release -o -d $(ETC_DIR)/SuSEconfig; then \
+            $(INSTALL) -m 755 scripts/barserver-SuSE "$(DESTDIR)$(ETC_DIR)/init.d/barserver"; \
+          elif test -f $(ETC_DIR)/lsb-release; then \
+            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(ETC_DIR)/init.d/barserver"; \
+          elif test -f $(ETC_DIR)/debian_release; then \
+            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(ETC_DIR)/init.d/barserver"; \
           fi; \
         else \
           echo "$(ETC_DIR)/init.d/barserver NOT installed - file already exists!"; \
@@ -304,8 +317,9 @@ endif
 # install man-page
 install_man: \
   doc/bar.7
-	$(INSTALL) -d "$(DESTDIR)$(MAN_DIR)/7"
+	$(INSTALL) -d "$(DESTDIR)$(MAN_DIR)/man7"
 	$(INSTALL) -m 644 doc/bar.7 "$(DESTDIR)$(MAN_DIR)/man7"
+	ls -la "$(DESTDIR)$(MAN_DIR)/man7"
 
 # install keys
 install_keys: \
