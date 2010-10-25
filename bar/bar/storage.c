@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.25 $
+* $Revision: 1.26 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -3917,6 +3917,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             {
               while (size > 0LL)
               {
+                // wait for data
+                if (!waitSessionSocket(&storageFileHandle->scp.socketHandle))
+                {
+                  return ERROR(IO_ERROR,errno);
+                }
+
+                // read data
                 n = libssh2_channel_read(storageFileHandle->scp.channel,
                                          (char*)storageFileHandle->scp.readAheadBuffer.data,
                                          MIN((size_t)size,MAX_BUFFER_SIZE)
