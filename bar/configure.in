@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.45 $
+dnl $Revision: 1.46 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -276,14 +276,17 @@ case "$host_os" in
   linux-*)
     PLATFORM=Linux
     ;;
+  windows*)
+    PLATFORM=Windows
+    ;;
   mingw*)
     PLATFORM=Windows
     ;;
   sunos | solaris*)
     PLATFORM=Solaris
     ;;
-  windows*)
-    PLATFORM=Windows
+  darwin*)
+    PLATFORM=MacOSX
     ;;
   *)
     AC_MSG_ERROR([unknown host operation system '$host_os'. Please specify host as (cpu-vendor-os or cpu-os). Supported host operating systems: $host_supported_os])
