@@ -1,9 +1,5 @@
 #! /bin/sh
 
-# /etc/init.d/FOO
-#   and its symbolic link
-# /(usr/)sbin/rcFOO
-
 ### BEGIN INIT INFO
 # Provides:          barserver
 # Required-Start:    $syslog $local_fs $network $remote_fs
@@ -46,6 +42,11 @@ case "$1" in
 	echo -n "Shutting down BAR server "
 	killproc -TERM $BAR_BIN
 	rc_status -v
+	;;
+    reload)
+	$0 stop
+	$0 start
+	rc_status
 	;;
     restart)
 	$0 stop
