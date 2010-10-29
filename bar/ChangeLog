@@ -1,14 +1,20 @@
-2010-10-25 0.15a
+2010-10-26 0.15a
   * fix compilation problems with LONG_LONG_MAX
   * fix typecast in strings.c for 64bit systems
   * fix man create install path
-  * support build service: add DIST to install
+  * support build service (thanks to lilu42)
+  * add make variale DIST, SYSTEM to install
   * update download-script: gnutls 2.10.2
   * fix typing error in strings debug code
   * use getpwnam_r and getgrnam_r to avoid multi-threaded problems
   * fixed wrong locking code in semaphore read-lock
   * fixed possible infinite blocking in index update (ssh read)
   * fixed memory leak in index thread
+  * fixed test for large file support on 64bit systems
+  * fixed ssh-communication problem ("bad record mac" in barcontrol),
+    improved error messages
+  * added different BAR daemon start scripts, fixed start script
+  * enable dynamic linkage of system internal libraries
 
 2010-10-13 0.15
   * added command line option --job to execute a job from a job
