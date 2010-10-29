@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.31 $
+# $Revision: 1.32 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -32,11 +32,12 @@ ifdef WERROR
 endif
 
 LD                  = @CC@
-LD_FLAGS            = @LD_FLAGS@
+LD_FLAGS            = @LD_FLAGS@ -v
 LD_LIBRARY_PATHS    = @LIBRARY_PATHS@
 LD_LIBRARIES        = @LIBRARIES@ pthread c m
 LD_STATIC_LIBRARIES = @STATIC_LIBRARIES@
-LD_STATIC_PREFIX    = -Wl,-static
+LD_STATIC_PREFIX    = -Wl,-Bstatic
+LD_DYNAMIC_PREFIX   = -Wl,-Bdynamic
 
 #---------------------------------- commands----------------------------------
 
@@ -116,7 +117,7 @@ endif
 %:%.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z) \
-          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z))
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX))
 
 #--------------------------------- objects -----------------------------------
 
