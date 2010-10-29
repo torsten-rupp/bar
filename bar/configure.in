@@ -1,7 +1,7 @@
 dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 1.46 $
+dnl $Revision: 1.47 $
 dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
@@ -58,9 +58,12 @@ EOF
       else
         ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
-          ac_cv_largefile_defines="_LARGEFILE64_SOURCE _FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
+          ac_cv_largefile_defines="_LARGEFILE64_SOURCE"
         else
-          ac_cv_largefile_defines="_FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
+          ac_cv_largefile_defines=""
+        fi
+        if test "$ac_cv_sys_file_offset_bits" != "no"; then
+          ac_cv_largefile_defines="$ac_cv_largefile_defines _FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
         fi
       fi
       rm -f conftest.c conftest.o
@@ -683,9 +686,9 @@ if test $ENABLE_LZMA = "yes"; then
   else
     dnl search for installed lzma library
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
+      AC_SEARCH_LIBS(lzma_code,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
     else
-      AC_SEARCH_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
+      AC_SEARCH_LIBS(lzma_code,lzma,[HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
     fi
   fi
 fi

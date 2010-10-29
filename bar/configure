@@ -4783,9 +4783,12 @@ EOF
       else
         ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
-          ac_cv_largefile_defines="_LARGEFILE64_SOURCE _FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
+          ac_cv_largefile_defines="_LARGEFILE64_SOURCE"
         else
-          ac_cv_largefile_defines="_FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
+          ac_cv_largefile_defines=""
+        fi
+        if test "$ac_cv_sys_file_offset_bits" != "no"; then
+          ac_cv_largefile_defines="$ac_cv_largefile_defines _FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
         fi
       fi
       rm -f conftest.c conftest.o
@@ -6573,9 +6576,9 @@ _ACEOF
     fi
   else
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      { $as_echo "$as_me:$LINENO: checking for library containing lzma_easy_encoder" >&5
-$as_echo_n "checking for library containing lzma_easy_encoder... " >&6; }
-if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then
+      { $as_echo "$as_me:$LINENO: checking for library containing lzma_code" >&5
+$as_echo_n "checking for library containing lzma_code... " >&6; }
+if test "${ac_cv_search_lzma_code+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_func_search_save_LIBS=$LIBS
@@ -6592,11 +6595,11 @@ cat >>conftest.$ac_ext <<_ACEOF
 #ifdef __cplusplus
 extern "C"
 #endif
-char lzma_easy_encoder ();
+char lzma_code ();
 int
 main ()
 {
-return lzma_easy_encoder ();
+return lzma_code ();
   ;
   return 0;
 }
@@ -6629,7 +6632,7 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_search_lzma_easy_encoder=$ac_res
+  ac_cv_search_lzma_code=$ac_res
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
@@ -6640,21 +6643,21 @@ fi
 rm -rf conftest.dSYM
 rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext
-  if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then
+  if test "${ac_cv_search_lzma_code+set}" = set; then
   break
 fi
 done
-if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then
+if test "${ac_cv_search_lzma_code+set}" = set; then
   :
 else
-  ac_cv_search_lzma_easy_encoder=no
+  ac_cv_search_lzma_code=no
 fi
 rm conftest.$ac_ext
 LIBS=$ac_func_search_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_search_lzma_easy_encoder" >&5
-$as_echo "$ac_cv_search_lzma_easy_encoder" >&6; }
-ac_res=$ac_cv_search_lzma_easy_encoder
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_search_lzma_code" >&5
+$as_echo "$ac_cv_search_lzma_code" >&6; }
+ac_res=$ac_cv_search_lzma_code
 if test "$ac_res" != no; then
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
   HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";
@@ -6665,9 +6668,9 @@ _ACEOF
 fi
 
     else
-      { $as_echo "$as_me:$LINENO: checking for library containing lzma_easy_encoder" >&5
-$as_echo_n "checking for library containing lzma_easy_encoder... " >&6; }
-if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then
+      { $as_echo "$as_me:$LINENO: checking for library containing lzma_code" >&5
+$as_echo_n "checking for library containing lzma_code... " >&6; }
+if test "${ac_cv_search_lzma_code+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
   ac_func_search_save_LIBS=$LIBS
@@ -6684,11 +6687,11 @@ cat >>conftest.$ac_ext <<_ACEOF
 #ifdef __cplusplus
 extern "C"
 #endif
-char lzma_easy_encoder ();
+char lzma_code ();
 int
 main ()
 {
-return lzma_easy_encoder ();
+return lzma_code ();
   ;
   return 0;
 }
@@ -6721,7 +6724,7 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_search_lzma_easy_encoder=$ac_res
+  ac_cv_search_lzma_code=$ac_res
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
@@ -6732,21 +6735,21 @@ fi
 rm -rf conftest.dSYM
 rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext
-  if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then
+  if test "${ac_cv_search_lzma_code+set}" = set; then
   break
 fi
 done
-if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then
+if test "${ac_cv_search_lzma_code+set}" = set; then
   :
 else
-  ac_cv_search_lzma_easy_encoder=no
+  ac_cv_search_lzma_code=no
 fi
 rm conftest.$ac_ext
 LIBS=$ac_func_search_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_search_lzma_easy_encoder" >&5
-$as_echo "$ac_cv_search_lzma_easy_encoder" >&6; }
-ac_res=$ac_cv_search_lzma_easy_encoder
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_search_lzma_code" >&5
+$as_echo "$ac_cv_search_lzma_code" >&6; }
+ac_res=$ac_cv_search_lzma_code
 if test "$ac_res" != no; then
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
   HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";
