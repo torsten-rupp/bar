@@ -1,10 +1,10 @@
 BAR - BAckup aRchiver
 
-BAR is backup archiver program. It can create compressed and
-encrypted archives of files and harddisk images which can be
-stored on a harddisk, cd or dvd or directly on a server via
-ftp, scp or sftp. A server-mode and a scheduler is integrated
-for making automated backups in the background.
+BAR is backup archiver program. It can create compressed, encrypted
+and splitted archives of files and harddisk images which can be
+stored on a harddisk, cd, dvd, bd or directly on a server via ftp,
+scp or sftp. A server-mode and a scheduler is integrated for making
+automated backups in the background.
 
 --- Features
 
