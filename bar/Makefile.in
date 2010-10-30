@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.72 $
+# $Revision: 1.73 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -408,10 +408,13 @@ memcheck_extended:
 # ----------------------------------------------------------------------------
 
 # --- distribution
-.PHONY: dist $(DISTRIBUTION_NAME).tar.bz2
+.PHONY: dist clean_dist $(DISTRIBUTION_NAME).tar.bz2
 
 dist: \
   $(DISTRIBUTION_NAME).tar.bz2
+
+clean_dist:
+	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
 
 # create distribution
 $(DISTRIBUTION_NAME).tar.bz2: \
@@ -446,12 +449,12 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   doc/bar.odt \
   doc/*.txt \
   $(MAN)
-	$(INSTALL) -d $(DISTRIBUTION_NAME)
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)
 	$(INSTALL) -m 775 \
                    configure \
                    download-third-party-packages.sh \
                    $(OTHER_SOURCES) \
-                   $(DISTRIBUTION_NAME)
+                   tmp/$(DISTRIBUTION_NAME)
 	$(INSTALL) -m 664 \
                    configure.in \
                    Makefile.in \
@@ -459,43 +462,43 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    version \
                    ToDo \
                    ChangeLog \
-                   $(DISTRIBUTION_NAME)
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/bin
+                   tmp/$(DISTRIBUTION_NAME)
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
 	$(INSTALL) -m 664 \
                    bin/config.guess \
                    bin/config.sub \
                    bin/install-sh \
-                   $(DISTRIBUTION_NAME)/bin
-	$(MAKE) -C bar dist DIRECTORY="../$(DISTRIBUTION_NAME)"
-	$(MAKE) -C barcontrol dist DIRECTORY="../$(DISTRIBUTION_NAME)"
+                   tmp/$(DISTRIBUTION_NAME)/bin
+	$(MAKE) -C bar dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
+	$(MAKE) -C barcontrol dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
 	#
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/bin
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
 	$(INSTALL) -m 664 \
                    bin/config.guess \
                    bin/config.sub bin/install-sh \
-                   $(DISTRIBUTION_NAME)/bin
+                   tmp/$(DISTRIBUTION_NAME)/bin
 	#
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/ssl
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/ssl/certtool
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl/certtool
 	$(INSTALL) -m 664 \
                    ssl/certtool/*.tmpl \
-                   $(DISTRIBUTION_NAME)/ssl/certtool
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/ssl/openssl
+                   tmp/$(DISTRIBUTION_NAME)/ssl/certtool
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl/openssl
 	$(INSTALL) -m 664 \
                    ssl/openssl/*.tmpl \
-                   $(DISTRIBUTION_NAME)/ssl/openssl
+                   tmp/$(DISTRIBUTION_NAME)/ssl/openssl
 	#
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/scripts
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/scripts
 	$(INSTALL) -m 664 \
                    $(SCRIPTS) \
-                   $(DISTRIBUTION_NAME)/scripts
+                   tmp/$(DISTRIBUTION_NAME)/scripts
 	#
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/misc
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/misc
 	$(INSTALL) -m 664 \
                    misc/*.patch \
-                   $(DISTRIBUTION_NAME)/misc
+                   tmp/$(DISTRIBUTION_NAME)/misc
 	#
-	$(INSTALL) -d $(DISTRIBUTION_NAME)/doc
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc
 	$(INSTALL) -m 664 \
                    doc/README \
                    doc/COPYING \
@@ -503,14 +506,33 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    doc/bar.pdf \
                    doc/*.txt \
                    doc/bar.7 \
-                   $(DISTRIBUTION_NAME)/doc
+                   tmp/$(DISTRIBUTION_NAME)/doc
 	#
-	$(TAR) cjf $@ $(DISTRIBUTION_NAME)
-	$(RMRF) $(DISTRIBUTION_NAME)
+	($(CD) tmp; $(TAR) cjf ../$@ $(DISTRIBUTION_NAME))
+	$(RMRF) tmp/$(DISTRIBUTION_NAME)
 	#
 ifneq ($(MD5SUM),)
 	$(MD5SUM) $@
 endif
+
+# Debian distribution file
+.PHONY: debian_dist clean_debian_dist $(DISTRIBUTION_NAME).orig.tar.gz
+
+debian_dist: \
+  $(DISTRIBUTION_NAME).orig.tar.gz
+
+clean_debian_dist:
+	$(RMF) $(DISTRIBUTION_NAME).orig.tar.gz
+
+# create debian distribution
+$(DISTRIBUTION_NAME).orig.tar.gz: \
+  $(DISTRIBUTION_NAME).tar.bz2 \
+  download-third-party-packages.sh
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig
+	$(CP) $(DISTRIBUTION_NAME).tar.bz2 tmp/$(DISTRIBUTION_NAME).orig
+	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig
+	($(CD) tmp; $(TAR) czf ../$@ $(DISTRIBUTION_NAME).orig)
+	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
 
 # ----------------------------------------------------------------------------
 
