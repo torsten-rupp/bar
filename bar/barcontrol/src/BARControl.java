@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -1210,6 +1210,25 @@ public class BARControl
         {
         }
       });
+    }
+
+    if (Settings.debugFlag)
+    {
+      menu = Widgets.addMenu(menuBar,"Debug");
+      {
+        menuItem = Widgets.addMenuItem(menu,"Dump memory info");
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            BARServer.executeCommand("DEBUG_MEMORY_INFO");
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+      }
     }
   }
 
