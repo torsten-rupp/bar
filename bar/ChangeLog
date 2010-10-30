@@ -15,6 +15,7 @@
     improved error messages
   * added different BAR daemon start scripts, fixed start script
   * enable dynamic linkage of system internal libraries
+  * clean-up Makefile file
 
 2010-10-13 0.15
   * added command line option --job to execute a job from a job
