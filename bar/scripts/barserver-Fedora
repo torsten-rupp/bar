@@ -35,7 +35,7 @@ fi
 case "$1" in
     start)
 	echo -n "Starting BAR server "
-	startproc nice $BAR_BIN --daemon --verbose=3
+	startproc -n 20 $BAR_BIN --daemon --verbose=3
 	rc_status -v
 	;;
     stop)
@@ -44,14 +44,13 @@ case "$1" in
 	rc_status -v
 	;;
     reload)
-	$0 stop
-	$0 start
-	rc_status
+        rc_failed 3
+	rc_status -v
 	;;
     restart)
 	$0 stop
 	$0 start
-	rc_status
+	rc_status -v
 	;;
     status)
 	echo -n "Checking for service BAR server "
@@ -59,7 +58,7 @@ case "$1" in
 	rc_status -v
 	;;
     *)
-	echo "Usage: $0 {start|stop|status|restart}"
+	echo "Usage: $0 {start|stop|reload|restart|status}"
 	exit 1
 	;;
 esac
