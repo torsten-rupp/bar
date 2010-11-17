@@ -1,8 +1,18 @@
+2010-11-17 0.15b
+  * barcontrol: fix sorting of columns
+  * barcontrol: fix not working context menu "exclude", "none" in
+    status tab, files list, removed debug code
+  * fix archive file name for CD/DVD/BD
+  * barcontrol: fix sorting of columns in jobs tab file/device tree
+  * barcontrol: fix calculating directory size (context menu in
+    file list in jobs tab)
+  * fixed parsing of storage specification for cd/dvd/bd
+
 2010-10-26 0.15a
   * fix compilation problems with LONG_LONG_MAX
   * fix typecast in strings.c for 64bit systems
   * fix man create install path
-  * support build service (thanks to lilu42)
+  * support build service (thanks to lalalu42)
   * add make variale DIST, SYSTEM to install
   * update download-script: gnutls 2.10.2
   * fix typing error in strings debug code
