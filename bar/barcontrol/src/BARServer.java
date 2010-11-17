@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -428,36 +428,33 @@ class ReadThread extends Thread
       try
       {
         // next line
-        line = input.readLine();
-        if (line == null)
-        {
-          if (!quitFlag)
-          {
-            throw new CommunicationError("disconnected");
-          }
-          else
-          {
-            break;
-          }
-        }
-        if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
-
-        // parse: line format <id> <error code> <completed flag> <data>
-        String data[] = line.split(" ",4);
-        if (data.length < 4)
-        {
-          throw new CommunicationError("malformed command result '"+line+"'");
-        }
         try
         {
-          long    commandId;
-          int     errorCode;
-          boolean completedFlag;
+          line = input.readLine();
+          if (line == null)
+          {
+            if (!quitFlag)
+            {
+              throw new IOException("disconnected");
+            }
+            else
+            {
+              break;
+            }
+          }
+          if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
+
+          // parse: line format <id> <error code> <completed flag> <data>
+          String data[] = line.split(" ",4);
+          if (data.length < 4)
+          {
+            throw new CommunicationError("malformed command result '"+line+"'");
+          }
 
           // get command id, completed flag, error code
-          commandId     = Long.parseLong(data[0]);
-          completedFlag = (Integer.parseInt(data[1]) != 0);
-          errorCode     = Integer.parseInt(data[2]);
+          long    commandId     = Long.parseLong(data[0]);
+          boolean completedFlag = (Integer.parseInt(data[1]) != 0);;
+          int     errorCode     = Integer.parseInt(data[2]);
 
           // store result
           synchronized(commandHashMap)
@@ -510,6 +507,10 @@ class ReadThread extends Thread
             }
           }
         }
+        catch (SocketTimeoutException exception)
+        {
+          // ignored
+        }
         catch (NumberFormatException exception)
         {
           // ignored
@@ -517,8 +518,21 @@ class ReadThread extends Thread
       }
       catch (IOException exception)
       {
-//new Throwable().printStackTrace();
-        throw new Error("network i/o error (error: "+exception.getMessage()+")");
+        /* communication impossible, cancel all commands with error and wait for termination */
+        synchronized(commandHashMap)
+        {
+          while (!quitFlag)
+          {
+            for (Command command : commandHashMap.values())
+            {
+              command.errorCode     = Errors.NETWORK_RECEIVE;
+              command.errorText     = exception.getMessage();
+              command.completedFlag = true;
+            }
+
+            try { commandHashMap.wait(); } catch (InterruptedException interruptedException) { /* ignored */ }
+          }
+        }
       }
     }
   }
@@ -543,6 +557,7 @@ class ReadThread extends Thread
     {
       Command command = new Command(commandId,timeout,processResult);
       commandHashMap.put(commandId,command);
+      commandHashMap.notifyAll();
       return command;
     }
   }
@@ -574,6 +589,7 @@ class ReadThread extends Thread
     synchronized(commandHashMap)
     {
       commandHashMap.remove(command.id);
+      commandHashMap.notifyAll();
       return command.errorCode;
     }
   }
