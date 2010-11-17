@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.21 $
+* $Revision: 1.22 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -161,6 +161,9 @@ class TabStatus
                           );
     }
 
+    /** convert data to string
+     * @return string
+     */
     public String toString()
     {
       return "Job {"+id+", "+name+", "+state+", "+type+"}";
@@ -172,15 +175,14 @@ class TabStatus
   class JobDataComparator implements Comparator<JobData>
   {
     // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_ID                     = 0;
-    private final static int SORTMODE_NAME                   = 1;
-    private final static int SORTMODE_STATE                  = 2;
-    private final static int SORTMODE_TYPE                   = 3;
-    private final static int SORTMODE_PARTSIZE               = 4;
-    private final static int SORTMODE_COMPRESS               = 5;
-    private final static int SORTMODE_CRYPT                  = 6;
-    private final static int SORTMODE_LAST_EXECUTED_DATETIME = 7;
-    private final static int SORTMODE_ESTIMATED_TIME         = 8;
+    private final static int SORTMODE_NAME                   = 0;
+    private final static int SORTMODE_STATE                  = 1;
+    private final static int SORTMODE_TYPE                   = 2;
+    private final static int SORTMODE_PARTSIZE               = 3;
+    private final static int SORTMODE_COMPRESS               = 4;
+    private final static int SORTMODE_CRYPT                  = 5;
+    private final static int SORTMODE_LAST_EXECUTED_DATETIME = 6;
+    private final static int SORTMODE_ESTIMATED_TIME         = 7;
 
     private int sortMode;
 
@@ -190,15 +192,14 @@ class TabStatus
      */
     JobDataComparator(Table table, TableColumn sortColumn)
     {
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_ID;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_STATE;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_TYPE;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_PARTSIZE;
-      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_COMPRESS;
-      else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_CRYPT;
-      else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
-      else if (table.getColumn(8) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
+      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
+      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_STATE;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_PARTSIZE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_COMPRESS;
+      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_CRYPT;
+      else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
+      else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
       else                                       sortMode = SORTMODE_NAME;
     }
 
@@ -230,10 +231,6 @@ class TabStatus
     {
       switch (sortMode)
       {
-        case SORTMODE_ID:
-          if (jobData1.id < jobData2.id) return -1;
-          if (jobData1.id > jobData2.id) return  1;
-          else                           return  0;
         case SORTMODE_NAME:
           return jobData1.name.compareTo(jobData2.name);
         case SORTMODE_STATE:
@@ -499,6 +496,7 @@ class TabStatus
       });
     }
     widgetJobList.setMenu(menu);
+    widgetJobList.setToolTipText("List with job entries.\nClick to select job, right-click to open context menu.");
 
     // selected job group
     widgetSelectedJob = Widgets.newGroup(widgetTab,"Selected ''",SWT.NONE);
@@ -1346,7 +1344,11 @@ class TabStatus
 
     if (Dialogs.confirm(shell,"Abort job '"+selectedJobData.name+"'?",false))
     {
-      BARServer.executeCommand("JOB_ABORT "+selectedJobData.id);
+      String[] result = new String[1];
+      if (BARServer.executeCommand("JOB_ABORT "+selectedJobData.id,result) != Errors.NONE)
+      {
+        Dialogs.error(shell,"Cannot abort job (error: %s)",result[0]);
+      }
     }
   }
 
@@ -1363,7 +1365,11 @@ class TabStatus
 
     if (buffer.length() > 0)
     {
-      BARServer.executeCommand("PAUSE "+pauseTime+" "+buffer.toString());
+      String[] result = new String[1];
+      if (BARServer.executeCommand("PAUSE "+pauseTime+" "+buffer.toString(),result) != Errors.NONE)
+      {
+        Dialogs.error(shell,"Cannot pause job (error: %s)",result[0]);
+      }
     }
   }
 
@@ -1371,14 +1377,19 @@ class TabStatus
    */
   private void jobSuspendContinue()
   {
+    String[] result = new String[1];
+    int      error  = Errors.NONE;   
     switch (status)
     {
-      case RUNNING: BARServer.executeCommand("SUSPEND" ); break;
+      case RUNNING: error = BARServer.executeCommand("SUSPEND" ,result); break;
       case PAUSE:
-      case SUSPEND: BARServer.executeCommand("CONTINUE"); break;
+      case SUSPEND: error = BARServer.executeCommand("CONTINUE",result); break;
+    }
+    if (error != Errors.NONE)
+    {
+      Dialogs.error(shell,"Cannot suspend job (error: %s)",result[0]);
     }
   }
-
 
   /** new volume
    */
@@ -1386,17 +1397,23 @@ class TabStatus
   {
     assert selectedJobData != null;
 
-    long volumeNumber = requestedVolumeNumber.getLong();
+    long     volumeNumber = requestedVolumeNumber.getLong();
+    String[] result       = new String[1];
+    int      error        = Errors.NONE;   
     switch (Dialogs.select(shell,"Volume request","Load volume number "+volumeNumber+".",new String[]{"OK","Unload tray","Cancel"},0))
     {
       case 0:
-        BARServer.executeCommand("VOLUME_LOAD "+selectedJobData.id+" "+volumeNumber);
+        error = BARServer.executeCommand("VOLUME_LOAD "+selectedJobData.id+" "+volumeNumber,result);
         break;
       case 1:
-        BARServer.executeCommand("VOLUME_UNLOAD "+selectedJobData.id);
+        error = BARServer.executeCommand("VOLUME_UNLOAD "+selectedJobData.id,result);
         break;
       case 2:
         break;
+    }
+    if (error != Errors.NONE)
+    {
+      Dialogs.error(shell,"Cannot change volume job (error: %s)",result[0]);
     }
   }
 }
