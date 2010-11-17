@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/misc.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: miscellaneous functions
 * Systems: all
@@ -544,7 +544,7 @@ stringNode = stringNode->next;
       execvp(String_cString(command),(char**)arguments);
 
       /* in case exec() fail, return a default exitcode */
-HALT_INTERNAL_ERROR("not reachable");
+      HALT_INTERNAL_ERROR("execvp() returned");
     }
     else if (pid < 0)
     {
