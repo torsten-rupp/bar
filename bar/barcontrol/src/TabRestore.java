@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -126,7 +126,7 @@ class TabRestore
     ERROR,
     UNKNOWN;
 
-    /** convert to string
+    /** convert data to string
      * @return string
      */
     public String toString()
@@ -209,7 +209,7 @@ class TabRestore
       this.tagged = tagged;
     }
 
-    /** convert to string
+    /** convert data to string
      * @return string
      */
     public String toString()
@@ -303,7 +303,7 @@ class TabRestore
       }
     }
 
-    /** convert to string
+    /** convert data to string
      * @return string
      */
     public String toString()
@@ -610,7 +610,7 @@ class TabRestore
       this.tagged = tagged;
     }
 
-    /** convert to string
+    /** convert data to string
      * @return string
      */
     public String toString()
