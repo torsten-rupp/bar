@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/Makefile.in,v $
-# $Revision: 1.32 $
+# $Revision: 1.33 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
@@ -32,7 +32,7 @@ ifdef WERROR
 endif
 
 LD                  = @CC@
-LD_FLAGS            = @LD_FLAGS@ -v
+LD_FLAGS            = @LD_FLAGS@
 LD_LIBRARY_PATHS    = @LIBRARY_PATHS@
 LD_LIBRARIES        = @LIBRARIES@ pthread c m
 LD_STATIC_LIBRARIES = @STATIC_LIBRARIES@
