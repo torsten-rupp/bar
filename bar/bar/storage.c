@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.26 $
+* $Revision: 1.27 $
 * $Author: torsten $
 * Contents: storage functions
 * Systems: all
@@ -919,8 +919,8 @@ StorageTypes Storage_parseName(const String storageName,
     }
     else
     {
-      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
-      if (fileName != NULL) String_clear(fileName);
+      if (storageSpecifier != NULL) String_clear(storageSpecifier);
+      if (fileName != NULL) String_set(fileName,string);
     }
 
     storageType = STORAGE_TYPE_CD;
@@ -937,8 +937,8 @@ StorageTypes Storage_parseName(const String storageName,
     }
     else
     {
-      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
-      if (fileName != NULL) String_clear(fileName);
+      if (storageSpecifier != NULL) String_clear(storageSpecifier);
+      if (fileName != NULL) String_set(fileName,string);
     }
 
     storageType = STORAGE_TYPE_DVD;
@@ -955,8 +955,8 @@ StorageTypes Storage_parseName(const String storageName,
     }
     else
     {
-      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
-      if (fileName != NULL) String_clear(fileName);
+      if (storageSpecifier != NULL) String_clear(storageSpecifier);
+      if (fileName != NULL) String_set(fileName,string);
     }
 
     storageType = STORAGE_TYPE_BD;
@@ -973,8 +973,8 @@ StorageTypes Storage_parseName(const String storageName,
     }
     else
     {
-      if (storageSpecifier != NULL) String_set(storageSpecifier,string);
-      if (fileName != NULL) String_clear(fileName);
+      if (storageSpecifier != NULL) String_clear(storageSpecifier);
+      if (fileName != NULL) String_set(fileName,string);
     }
 
     storageType = STORAGE_TYPE_DEVICE;
