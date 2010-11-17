@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.27 $
+* $Revision: 1.28 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -134,6 +134,13 @@ class TabJobs
     long      datetime;
     String    title;
 
+    /** create file tree data
+     * @param name file name
+     * @param type file type
+     * @param size file size [bytes]
+     * @param datetime file date/time [s]
+     * @param title title to display
+     */
     FileTreeData(String name, FileTypes type, long size, long datetime, String title)
     {
       this.name     = name;
@@ -143,6 +150,12 @@ class TabJobs
       this.title    = title;
     }
 
+    /** create file tree data
+     * @param name file name
+     * @param type file type
+     * @param datetime file date/time [s]
+     * @param title title to display
+     */
     FileTreeData(String name, FileTypes type, long datetime, String title)
     {
       this.name     = name;
@@ -152,6 +165,11 @@ class TabJobs
       this.title    = title;
     }
 
+    /** create file tree data
+     * @param name file name
+     * @param type file type
+     * @param title title to display
+     */
     FileTreeData(String name, FileTypes type, String title)
     {
       this.name     = name;
@@ -161,6 +179,9 @@ class TabJobs
       this.title    = title;
     }
 
+    /** convert data to string
+     * @return string
+     */
     public String toString()
     {
       return "File {"+name+", "+type+", "+size+" bytes, datetime="+datetime+", title="+title+"}";
@@ -181,16 +202,23 @@ class TabJobs
 
     /** create file data comparator
      * @param tree file tree
+     * @param sortColumn column to sort
      */
-    FileTreeDataComparator(Tree tree)
+    FileTreeDataComparator(Tree tree, TreeColumn sortColumn)
     {
-      TreeColumn sortColumn = tree.getSortColumn();
-
       if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
       else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_TYPE;
       else if (tree.getColumn(2) == sortColumn) sortMode = SORTMODE_SIZE;
       else if (tree.getColumn(3) == sortColumn) sortMode = SORTMODE_DATETIME;
       else                                      sortMode = SORTMODE_NAME;
+    }
+
+    /** create file data comparator
+     * @param tree file tree
+     */
+    FileTreeDataComparator(Tree tree)
+    {
+      this(tree,tree.getSortColumn());
     }
 
     /** compare file tree data without take care about type
@@ -252,6 +280,9 @@ class TabJobs
       }
     }
 
+    /** convert data to string
+     * @return string
+     */
     public String toString()
     {
       return "FileComparator {"+sortMode+"}";
@@ -265,18 +296,28 @@ class TabJobs
     String name;
     long   size;
 
+    /** create device tree data
+     * @param name device name
+     * @param size device size [bytes]
+     */
     DeviceTreeData(String name, long size)
     {
       this.name = name;
       this.size = size;
     }
 
+    /** create device tree data
+     * @param name device name
+     */
     DeviceTreeData(String name)
     {
       this.name = name;
       this.size = 0;
     }
 
+    /** convert data to string
+     * @return string
+     */
     public String toString()
     {
       return "File {"+name+", "+size+" bytes}";
@@ -295,14 +336,21 @@ class TabJobs
 
     /** create device data comparator
      * @param tree device tree
+     * @param sortColumn column to sort
      */
-    DeviceTreeDataComparator(Tree tree)
+    DeviceTreeDataComparator(Tree tree, TreeColumn sortColumn)
     {
-      TreeColumn sortColumn = tree.getSortColumn();
-
       if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
       else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
       else                                      sortMode = SORTMODE_NAME;
+    }
+
+    /** create device data comparator
+     * @param tree device tree
+     */
+    DeviceTreeDataComparator(Tree tree)
+    {
+      this(tree,tree.getSortColumn());
     }
 
     /** compare device tree data without take care about type
@@ -326,6 +374,9 @@ class TabJobs
       }
     }
 
+    /** convert data to string
+     * @return string
+     */
     public String toString()
     {
       return "DeviceComparator {"+sortMode+"}";
@@ -367,6 +418,9 @@ class TabJobs
         this.treeItem  = treeItem;
       }
 
+      /** convert data to string
+       * @return string
+       */
       public String toString()
       {
       return "DirectoryInfoRequest {"+name+", "+forceFlag+", "+depth+", "+timeout+"}";
@@ -438,7 +492,7 @@ class TabJobs
           }
 
           /* get file count, size */
-  //Dprintf.dprintf("get file size for %s\n",directoryInfoRequest);
+//Dprintf.dprintf("get file size for %s\n",directoryInfoRequest);
           String[] result = new String[1];
           Object[] data   = new Object[3];
           if (   (BARServer.executeCommand("DIRECTORY_INFO "+StringUtils.escape(directoryInfoRequest.name)+" "+directoryInfoRequest.timeout,result) != Errors.NONE)
@@ -1155,7 +1209,6 @@ class TabJobs
   private     HashMap<String,Integer>   jobIds             = new HashMap<String,Integer>();
   private     String                    selectedJobName    = null;
   private     int                       selectedJobId      = 0;
-//  private     HashMap<String,DeviceTreeData> deviceHashMap     = new HashMap<String,DeviceTreeData>();
   private     HashMap<String,EntryData> includeHashMap     = new HashMap<String,EntryData>();
   private     HashSet<String>           excludeHashSet     = new HashSet<String>();
   private     LinkedList<ScheduleData>  scheduleList       = new LinkedList<ScheduleData>();
@@ -1334,8 +1387,8 @@ class TabJobs
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            TreeColumn             treeColumn = (TreeColumn)selectionEvent.widget;
-            FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
+            TreeColumn             treeColumn             = (TreeColumn)selectionEvent.widget;
+            FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree,treeColumn);
             synchronized(widgetFileTree)
             {
               Widgets.sortTreeColumn(widgetFileTree,treeColumn,fileTreeDataComparator);
@@ -1405,9 +1458,18 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeDelete(fileTreeData.name);
-                excludeDelete(fileTreeData.name);
-                treeItem.setImage(IMAGE_DEVICE_INCLUDED);
+                includeAdd(EntryTypes.FILE,fileTreeData.name);
+                excludeRemove(fileTreeData.name);
+                switch (fileTreeData.type)
+                {
+                  case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_INCLUDED); break;
+                  case LINK:      treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
+                  case DEVICE:    treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case FIFO:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case SOCKET:    treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                }
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1425,8 +1487,18 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                excludeDelete(fileTreeData.name);
-                includeDelete(fileTreeData.name);
+                includeRemove(fileTreeData.name);
+                excludeAdd(fileTreeData.name);
+                switch (fileTreeData.type)
+                {
+                  case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                  case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                  case DEVICE:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case FIFO:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case SOCKET:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                }
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1444,8 +1516,18 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                excludeDelete(fileTreeData.name);
-                excludeDelete(fileTreeData.name);
+                includeRemove(fileTreeData.name);
+                excludeRemove(fileTreeData.name);
+                switch (fileTreeData.type)
+                {
+                  case FILE:      treeItem.setImage(IMAGE_FILE);      break;
+                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY); break;
+                  case LINK:      treeItem.setImage(IMAGE_LINK);      break;
+                  case DEVICE:    treeItem.setImage(IMAGE_FILE);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE);      break;
+                  case FIFO:      treeItem.setImage(IMAGE_FILE);      break;
+                  case SOCKET:    treeItem.setImage(IMAGE_FILE);      break;
+                }
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1455,7 +1537,7 @@ class TabJobs
 
           menuItem = Widgets.addMenuSeparator(menu);
 
-          menuItem = Widgets.addMenuItem(menu,"Directory size...");
+          menuItem = Widgets.addMenuItem(menu,"Directory size");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -1464,8 +1546,8 @@ class TabJobs
 
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
-Dprintf.dprintf("treeItem=%s",treeItem);
-                directoryInfoThread.add(treeItem.getText(),true,treeItem);
+                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                directoryInfoThread.add(fileTreeData.name,true,treeItem);
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1474,7 +1556,7 @@ Dprintf.dprintf("treeItem=%s",treeItem);
           });
         }
         widgetFileTree.setMenu(menu);
-        widgetFileTree.setToolTipText("Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.");
+        widgetFileTree.setToolTipText("Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.\nNote size column: numbers in red color indicates size update is still in progress.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -1491,8 +1573,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeNew(EntryTypes.FILE,fileTreeData.name);
-                excludeDelete(fileTreeData.name);
+                includeAdd(EntryTypes.FILE,fileTreeData.name);
+                excludeRemove(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
@@ -1521,8 +1603,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeDelete(fileTreeData.name);
-                excludeNew(fileTreeData.name);
+                includeRemove(fileTreeData.name);
+                excludeAdd(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
@@ -1551,8 +1633,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeDelete(fileTreeData.name);
-                excludeDelete(fileTreeData.name);
+                includeRemove(fileTreeData.name);
+                excludeRemove(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE);      break;
@@ -1617,8 +1699,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            TreeColumn               treeColumn = (TreeColumn)selectionEvent.widget;
-            DeviceTreeDataComparator deviceTreeDataComparator = new DeviceTreeDataComparator(widgetDeviceTree);
+            TreeColumn               treeColumn               = (TreeColumn)selectionEvent.widget;
+            DeviceTreeDataComparator deviceTreeDataComparator = new DeviceTreeDataComparator(widgetDeviceTree,treeColumn);
             synchronized(widgetDeviceTree)
             {
               Widgets.sortTreeColumn(widgetDeviceTree,treeColumn,deviceTreeDataComparator);
@@ -1645,8 +1727,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeNew(EntryTypes.IMAGE,deviceTreeData.name);
-                excludeDelete(deviceTreeData.name);
+                includeAdd(EntryTypes.IMAGE,deviceTreeData.name);
+                excludeRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
@@ -1665,8 +1747,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeDelete(deviceTreeData.name);
-                excludeNew(deviceTreeData.name);
+                includeRemove(deviceTreeData.name);
+                excludeAdd(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
@@ -1685,8 +1767,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeDelete(deviceTreeData.name);
-                excludeDelete(deviceTreeData.name);
+                includeRemove(deviceTreeData.name);
+                excludeRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE);
               }
             }
@@ -1713,8 +1795,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeNew(EntryTypes.IMAGE,deviceTreeData.name);
-                excludeDelete(deviceTreeData.name);
+                includeAdd(EntryTypes.IMAGE,deviceTreeData.name);
+                excludeRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
@@ -1734,8 +1816,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeDelete(deviceTreeData.name);
-                excludeNew(deviceTreeData.name);
+                includeRemove(deviceTreeData.name);
+                excludeAdd(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
@@ -1755,8 +1837,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                excludeDelete(deviceTreeData.name);
-                includeDelete(deviceTreeData.name);
+                includeRemove(deviceTreeData.name);
+                excludeRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE);
               }
             }
@@ -1794,8 +1876,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeNew(EntryTypes.IMAGE,deviceTreeData.name);
-                excludeDelete(deviceTreeData.name);
+                includeAdd(EntryTypes.IMAGE,deviceTreeData.name);
+                excludeRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
@@ -1812,7 +1894,7 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               MenuItem widget = (MenuItem)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                includeNew();
+                includeAdd();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1828,7 +1910,7 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               MenuItem widget = (MenuItem)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                includeDelete();
+                includeRemove();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1852,7 +1934,7 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                includeNew();
+                includeAdd();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1870,7 +1952,7 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                includeDelete();
+                includeRemove();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1899,8 +1981,8 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeNew(EntryTypes.IMAGE,deviceTreeData.name);
-                excludeDelete(deviceTreeData.name);
+                includeAdd(EntryTypes.IMAGE,deviceTreeData.name);
+                excludeRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
@@ -1917,7 +1999,7 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               MenuItem widget = (MenuItem)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                excludeNew();
+                excludeAdd();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1933,7 +2015,7 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               MenuItem widget = (MenuItem)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                excludeDelete();
+                excludeRemove();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1957,7 +2039,7 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                excludeNew();
+                excludeAdd();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1975,7 +2057,7 @@ Dprintf.dprintf("treeItem=%s",treeItem);
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                excludeDelete();
+                excludeRemove();
               }
             }
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3847,7 +3929,7 @@ throw new Error("NYI");
                 return Units.formatByteSize(variable.getLong());
               }
             });
-            combo.setToolTipText("Size of medium. You may specify a small value than the real physical size when you enable error-correction codes.");
+            combo.setToolTipText("Size of medium. You may specify a smaller value than the real physical size when you have enabled error-correction codes.");
 
             label = Widgets.newLabel(subComposite,"bytes");
             Widgets.layout(label,0,1,TableLayoutData.W);
@@ -4991,7 +5073,7 @@ throw new Error("NYI");
           String name     = (String)data[1];
 
           // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,new File(name).getName());
+          fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,datetime,new File(name).getName());
 
           // add entry
           Image   image;
@@ -5641,11 +5723,11 @@ throw new Error("NYI");
     return (Boolean)Dialogs.run(dialog,false) && !pattern[0].equals("");
   }
 
-  /** add new include entry
+  /** add include entry
    * @param entryType entry type
    * @param pattern pattern to add to included/exclude list
    */
-  private void includeNew(EntryTypes entryType, String pattern)
+  private void includeAdd(EntryTypes entryType, String pattern)
   {
     assert selectedJobId != 0;
 
@@ -5670,10 +5752,10 @@ throw new Error("NYI");
     updateDeviceImages();
   }
 
-  /** add new exclude pattern
+  /** add exclude pattern
    * @param pattern pattern to add to included/exclude list
    */
-  private void excludeNew(String pattern)
+  private void excludeAdd(String pattern)
   {
     assert selectedJobId != 0;
 
@@ -5693,7 +5775,7 @@ throw new Error("NYI");
 
   /** add new include entry
    */
-  private void includeNew()
+  private void includeAdd()
   {
     assert selectedJobId != 0;
 
@@ -5701,27 +5783,27 @@ throw new Error("NYI");
     String[]     pattern   = new String[1];
     if (includeEdit(entryType,pattern,"New include pattern","Add"))
     {
-      includeNew(entryType[0],pattern[0]);
+      includeAdd(entryType[0],pattern[0]);
     }
   }
 
   /** add new exclude pattern
    */
-  private void excludeNew()
+  private void excludeAdd()
   {
     assert selectedJobId != 0;
 
     String[] pattern = new String[1];
     if (excludeEdit(pattern,"New exclude pattern","Add"))
     {
-      excludeNew(pattern[0]);
+      excludeAdd(pattern[0]);
     }
   }
 
-  /** delete include entry
+  /** remove include entry
    * @param pattern pattern to remove from include/exclude list
    */
-  private void includeDelete(String pattern)
+  private void includeRemove(String pattern)
   {
     assert selectedJobId != 0;
 
@@ -5744,10 +5826,10 @@ throw new Error("NYI");
     updateDeviceImages();
   }
 
-  /** delete exclude pattern
+  /** remove exclude pattern
    * @param pattern pattern to remove from include/exclude list
    */
-  private void excludeDelete(String pattern)
+  private void excludeRemove(String pattern)
   {
     assert selectedJobId != 0;
 
@@ -5765,29 +5847,29 @@ throw new Error("NYI");
     updateDeviceImages();
   }
 
-  /** delete selected include/exclude pattern
+  /** remove selected include/exclude pattern
    */
-  private void includeDelete()
+  private void includeRemove()
   {
     assert selectedJobId != 0;
 
     int index = widgetIncludeTable.getSelectionIndex();
     if (index >= 0)
     { 
-      includeDelete(((EntryData)widgetIncludeTable.getItem(index).getData()).pattern);
+      includeRemove(((EntryData)widgetIncludeTable.getItem(index).getData()).pattern);
     }
   }
 
-  /** delete selected include/exclude pattern
+  /** remove selected include/exclude pattern
    */
-  private void excludeDelete()
+  private void excludeRemove()
   {
     assert selectedJobId != 0;
 
     int index = widgetExcludeList.getSelectionIndex();
     if (index >= 0)
     {
-      excludeDelete(widgetExcludeList.getItem(index));
+      excludeRemove(widgetExcludeList.getItem(index));
     }
   }
 
