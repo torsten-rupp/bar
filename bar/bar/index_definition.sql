@@ -8,7 +8,7 @@ CREATE TABLE meta(
   name  TEXT,
   value TEXT
 );
-INSERT INTO meta (name,value) VALUES ('version',1);
+INSERT INTO meta (name,value) VALUES ('version',2);
 INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
 CREATE TABLE storage(
@@ -71,6 +71,21 @@ CREATE TABLE links(
   userId          INTEGER,
   groupId         INTEGER,
   permission      INTEGER
+);
+
+CREATE TABLE hardlinks(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
 );
 
 CREATE TABLE special(
