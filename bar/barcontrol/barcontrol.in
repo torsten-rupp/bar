@@ -29,10 +29,11 @@ case `uname` in
 esac
 
 # java, java flags, JAR
-JAVA="@JAVA@"
-JAVA_FLAGS="@JAVA_FLAGS@"
+JAVA="java"
 case $HOST_PLATFORM in
   linux)
+    JAVA_FLAGS="@JAVA_FLAGS@"
+
     $JAVA $JAVA_FLAGS -cp $BASE_DIRECTORY/barcontrol-linux.jar DataModel
     rc=$?
     if   test $rc -eq 32; then
@@ -45,15 +46,19 @@ case $HOST_PLATFORM in
     fi
     ;;
   solaris)
+    JAVA_FLAGS="@JAVA_FLAGS@"
+
     BARCONTROL_JAR="$BASE_DIRECTORY/barcontrol-solaris.jar"
     ;;
   macos)
+    JAVA_FLAGS="@JAVA_FLAGS@ -XstartOnFirstThread"
+
     $JAVA $JAVA_FLAGS -cp $BASE_DIRECTORY/barcontrol-macosx.jar DataModel
     rc=$?
     if   test $rc -eq 32; then
       BARCONTROL_JAR="$BASE_DIRECTORY/barcontrol-macosx.jar"
     elif test $rc -eq 64; then
-      BARCONTROL_JAR="$BASE_DIRECTORY/barcontrol-macosx.jar"
+      BARCONTROL_JAR="$BASE_DIRECTORY/barcontrol-macosx_64.jar"
     else
       echo >&2 "ERROR: cannot detect data model (32/64 bit) - VM failure?"
       exit 1

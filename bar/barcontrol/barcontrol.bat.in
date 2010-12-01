@@ -6,11 +6,11 @@ if errorlevel 32 goto 32
 goto error
 
 :64
-  java.exe @JAVA_FLAGS@ -jar barcontrol-windows_64.jar BARControl %*
+  java.exe @JAVA_FLAGS@ -jar barcontrol-windows_64.jar %*
 goto end
 
 :32
-  java.exe @JAVA_FLAGS@ -jar barcontrol-windows.jar BARControl %*
+  java.exe @JAVA_FLAGS@ -jar barcontrol-windows.jar %*
 goto end
 
 :error
