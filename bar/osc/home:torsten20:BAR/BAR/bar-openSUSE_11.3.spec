@@ -1,7 +1,7 @@
 # norootforbuild
 
 Name:          bar
-Version:       0.15b
+Version:       0.15f
 Release:       0
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2
