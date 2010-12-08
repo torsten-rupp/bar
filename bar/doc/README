@@ -1,9 +1,9 @@
 BAR - BAckup aRchiver
 
 BAR is backup archiver program. It can create compressed, encrypted
-and splitted archives of files and harddisk images which can be
-stored on a harddisk, cd, dvd, bd or directly on a server via ftp,
-scp or sftp. A server-mode and a scheduler is integrated for making
+and splitted archives of files and disk images which can be stored
+on a harddisk, cd, dvd, bd or directly on a server via ftp, scp or
+sftp. A server-mode and a scheduler is integrated for making
 automated backups in the background.
 
 --- Features
@@ -21,7 +21,8 @@ automated backups in the background.
 * asymmetric encryption with RSA
 * direct copy of archives to remote computer via FTP or
   SSH (SCP or SFTP)
-* can store archives on DVD (with external tools)
+* can store archives on CD,DVD,BD (with external tools)
+  and on a generic device
 * support pre- and post-processing of DVD images (e. g.
   for including functions of dvdisaster)
 * daemon-mode with control over plain and TLS network
