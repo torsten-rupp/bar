@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # $Author: torsten $
 # Contents: generate BAR server keys (PEM files)
 # Systems: Unix
@@ -457,19 +457,19 @@ stdout=$tmpDir/stdout; $ECHO_NO_LF > $stdout
 stderr=$tmpDir/stderr; $ECHO_NO_LF > $stderr
 
 # create template files
-if   test $CERTTOOL_OK -eq 1; then
-  $CAT <<EOT > $tmpDir/ca.tmpl
-@CERTTOOL/CA.TEMPL@
-EOT
-  $CAT <<EOT > $tmpDir/server.tmpl
-@CERTTOOL/SERVER.TEMPL@
-EOT
-elif test $OPENSSL_OK -eq 1; then
+if   test $OPENSSL_OK -eq 1; then
   $CAT <<EOT > $tmpDir/ca.tmpl
 @OPENSSL/CA.TEMPL@
 EOT
   $CAT <<EOT > $tmpDir/server.tmpl
 @OPENSSL/SERVER.TEMPL@
+EOT
+elif test $CERTTOOL_OK -eq 1; then
+  $CAT <<EOT > $tmpDir/ca.tmpl
+@CERTTOOL/CA.TEMPL@
+EOT
+  $CAT <<EOT > $tmpDir/server.tmpl
+@CERTTOOL/SERVER.TEMPL@
 EOT
 fi
 
@@ -509,17 +509,17 @@ fi
 
 # create bar-key.pem
 print "Create '$barKey'..."
-if   test $CERTTOOL_OK -eq 1; then
-  $CERTTOOL \
-    --generate-privkey \
-    --outfile "$barKey" \
-    1>$stdout 2>$stderr
-  rc=$?
-elif test $OPENSSL_OK -eq 1; then
+if   test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     genrsa \
     -out "$barKey" \
     1024 \
+    1>$stdout 2>$stderr
+  rc=$?
+elif test $CERTTOOL_OK -eq 1; then
+  $CERTTOOL \
+    --generate-privkey \
+    --outfile "$barKey" \
     1>$stdout 2>$stderr
   rc=$?
 fi
@@ -533,15 +533,7 @@ println "OK"
 
 # create bar-ca.pem
 print "Create '$barCA'..."
-if   test $CERTTOOL_OK -eq 1; then
-  $CERTTOOL \
-    --generate-self-signed \
-    --template "$tmpDir/ca.tmpl" \
-    --load-privkey "$barKey" \
-    --outfile "$barCA" \
-    1>$stdout 2>$stderr
-  rc=$?
-elif test $OPENSSL_OK -eq 1; then
+if   test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     req \
     -new \
@@ -550,6 +542,14 @@ elif test $OPENSSL_OK -eq 1; then
     -x509 \
     -nodes \
     -out "$barCA" \
+    1>$stdout 2>$stderr
+  rc=$?
+elif test $CERTTOOL_OK -eq 1; then
+  $CERTTOOL \
+    --generate-self-signed \
+    --template "$tmpDir/ca.tmpl" \
+    --load-privkey "$barKey" \
+    --outfile "$barCA" \
     1>$stdout 2>$stderr
   rc=$?
 fi
@@ -563,17 +563,17 @@ println "OK"
 
 # create bar-server-key.pem
 print "Create '$barServerKey'..."
-if   test $CERTTOOL_OK -eq 1; then
-  $CERTTOOL \
-    --generate-privkey \
-    --outfile "$barServerKey" \
-    1>$stdout 2>$stderr
-  rc=$?
-elif test $OPENSSL_OK -eq 1; then
+if   test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     genrsa \
     -out "$barServerKey" \
     1024 \
+    1>$stdout 2>$stderr
+  rc=$?
+elif test $CERTTOOL_OK -eq 1; then
+  $CERTTOOL \
+    --generate-privkey \
+    --outfile "$barServerKey" \
     1>$stdout 2>$stderr
   rc=$?
 fi
@@ -587,17 +587,7 @@ println "OK"
 
 # create bar-server-cert.pem
 print "Create '$barServerCert'..."
-if   test $CERTTOOL_OK -eq 1; then
-  $CERTTOOL \
-    --generate-certificate \
-    --template $tmpDir/server.tmpl \
-    --load-privkey "$barServerKey" \
-    --load-ca-certificate "$barCA" \
-    --load-ca-privkey "$barKey" \
-    --outfile "$barServerCert" \
-    1>$stdout 2>$stderr
-  rc=$?
-elif test $OPENSSL_OK -eq 1; then
+if   test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     req \
     -config $tmpDir/server.tmpl \
@@ -607,6 +597,16 @@ elif test $OPENSSL_OK -eq 1; then
     -nodes \
     -days 365 \
     -out "$barServerCert" \
+    1>$stdout 2>$stderr
+  rc=$?
+elif test $CERTTOOL_OK -eq 1; then
+  $CERTTOOL \
+    --generate-certificate \
+    --template $tmpDir/server.tmpl \
+    --load-privkey "$barServerKey" \
+    --load-ca-certificate "$barCA" \
+    --load-ca-privkey "$barKey" \
+    --outfile "$barServerCert" \
     1>$stdout 2>$stderr
   rc=$?
 fi
