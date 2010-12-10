@@ -1,12 +1,17 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/Makefile.in,v $
-# $Revision: 1.73 $
+# $Revision: 1.74 $
 # $Author: torsten $
 # Contents: Makefile for bar
 # Systems: all
 #			   
 # ----------------------------------------------------------------------------
+
+#----------------------------- external variables ----------------------------
+#
+# DESTDIR=<path>    install destination directory
+# DIST=1            install distributin (without keys)
 
 #---------------------------------- settings ---------------------------------
 
@@ -171,7 +176,7 @@ endif
 
 barcontrol/barcontrol%.jar:
 ifeq ($(ENABLE_GUI),yes)
-	$(MAKE) -C barcontrol barcontrol%.jar
+	$(MAKE) -C barcontrol barcontrol$*.jar
 else
 	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
 endif
@@ -273,6 +278,7 @@ install_base: \
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar/bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 ifeq ($(ENABLE_GUI),yes)
+	$(INSTALL) bar/bar-keygen "$(DESTDIR)$(INSTALL_BIN_DIR)"
 ifeq ($(PLATFORM),Linux)
 	$(INSTALL) barcontrol/barcontrol \
                    barcontrol/barcontrol-linux.jar \
@@ -354,6 +360,7 @@ uninstall:
 	@read -n 1 -p "Really uninstall? [y/N] " s; \
         if test "$s" = "y" -o "$s" = "Y"; then \
           $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen"; \
           $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
                                                       "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
                                                       "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
@@ -448,6 +455,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   doc/COPYING \
   doc/bar.odt \
   doc/*.txt \
+  doc/images/*.png \
   $(MAN)
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)
 	$(INSTALL) -m 775 \
@@ -507,6 +515,10 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    doc/*.txt \
                    doc/bar.7 \
                    tmp/$(DISTRIBUTION_NAME)/doc
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc/images
+	$(INSTALL) -m 664 \
+                   doc/images/*.png \
+                   tmp/$(DISTRIBUTION_NAME)/doc/images
 	#
 	($(CD) tmp; $(TAR) cjf ../$@ $(DISTRIBUTION_NAME))
 	$(RMRF) tmp/$(DISTRIBUTION_NAME)
@@ -515,7 +527,7 @@ ifneq ($(MD5SUM),)
 	$(MD5SUM) $@
 endif
 
-# Debian distribution file
+# --- Debian distribution
 .PHONY: debian_dist clean_debian_dist $(DISTRIBUTION_NAME).orig.tar.gz
 
 debian_dist: \
@@ -529,16 +541,17 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
   $(DISTRIBUTION_NAME).tar.bz2 \
   download-third-party-packages.sh
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig
-	$(CP) $(DISTRIBUTION_NAME).tar.bz2 tmp/$(DISTRIBUTION_NAME).orig
-	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig
+	($(CD) tmp/$(DISTRIBUTION_NAME).orig; $(TAR) --strip-components=1 -xjf ../../$(DISTRIBUTION_NAME).tar.bz2)
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/packages
+	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig/packages
 	($(CD) tmp; $(TAR) czf ../$@ $(DISTRIBUTION_NAME).orig)
 	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
 
 # ----------------------------------------------------------------------------
 
-# packages
+# --- packages
 
-# --- create RPM
+# RPM
 .PHONY: rpm clean_rpm
 
 rpm: \
@@ -567,7 +580,7 @@ else
 	@$(ECHO) "No EPM installed. Cannot create RPM package."
 endif
 
-# create DEB
+# DEB
 .PHONY: deb clean_deb
 
 deb: \
@@ -677,13 +690,13 @@ ifeq ($(PLATFORM),Windows)
 endif
 endif
 
-# --- create GUI package
-.PHONY: gui clean_gui
+# GUI
+.PHONY: gui_package gui clean_gui_package clean_gui
 
-gui: \
+gui_package gui: \
   bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip
 
-clean_gui:
+clean_gui_package clean_gui:
 	$(RMF) bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip
 
 bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip: \
@@ -737,5 +750,5 @@ bar-gui-$(VERSION_MAJOR).$(VERSION_MINOR).zip: \
 ifneq ($(MD5SUM),)
 	$(MD5SUM) $@
 endif
-        
+
 # end of file
