@@ -27,4 +27,7 @@ ToDo
 - support sparse file when restoring
 - compile-info (what is included, which version)
 - delete temporary image directory when writing dvd
-- suppport for config reload with SIGHUP
+- support for config reload with SIGHUP
+- support lzo compression library
+- support for rmt? (tape control tool)
+

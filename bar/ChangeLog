@@ -11,6 +11,26 @@
   * improved error handling
   * fix typing errors in error messages
   * improved tests
+  * added -o as shortcut for --overwrite-archive-files
+  * added option --dry-run: do all operations, but do not
+    compress, encrypt and store files, do not write incremental
+    data lists, do not write on CD/DVD/BD/devices
+  * fixed --no-storage: incremental data list was not written
+  * fixed possible deadlock in server when archive files cannot
+    be transmitted to a remote server and local harddisk becomes
+    full
+  * added option --compress-exclude to disable compression for
+    files, images and hard links which match to the specified
+    pattern
+  * barcontrol: added exclude list in storage tab under compress
+  * fixed memory leak
+  * support building Debian/Ubuntu packages with SuSE build
+    service!
+  * fix install: add bar-keygen
+
+2010-12-05 0.15f
+  * fix SigSegV in string.c:formatString() which can occur on
+    amd64 systems
 
 2010-12-02 0.15e
   * barcontrol: fix exception when running barcontrol under
