@@ -1,7 +1,7 @@
 //***********************************************************************
 //
 // $Source: /home/torsten/cvs/bar/errors.def,v $
-// $Revision: 1.28 $
+// $Revision: 1.29 $
 // $Author: torsten $
 // Contents: Backup ARchiver errors definition
 // Systems: all
@@ -159,15 +159,34 @@ ERROR NO_FILE_ENTRY                  "no file entry"
 ERROR NO_FILE_DATA                   "no file data entry"
 ERROR NO_DIRECTORY_ENTRY             "no directory entry"
 ERROR NO_LINK_ENTRY                  "no link entry"
+ERROR NO_HARDLINK_ENTRY              "no hard link entry"
 ERROR NO_SPECIAL_ENTRY               "no special entry"
 ERROR NO_IMAGE_ENTRY                 "no image entry"
 ERROR NO_IMAGE_DATA                  "no image data entry"
 ERROR END_OF_DATA                    "end of data"
-ERROR CRC_ERROR                      "CRC error"
+ERROR CRC
+  strncpy(errorText,"wrong CRC",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText," ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 ERROR FILE_INCOMPLETE                "file is incomplete"
 ERROR WRONG_FILE_TYPE                "wrong file type"
 ERROR FILES_DIFFER                   "files differ"
-ERROR CORRUPT_DATA                   "corrupt data or invalid password"
+ERROR CORRUPT_DATA
+  strncpy(errorText,"corrupt data or invalid password",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText," ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR INVALID_CHUNK_SIZE             "invalid chunk size"
+ERROR UNKNOWN_CHUNK                  "unknown chunk"
 
 // incremental files
 ERROR NOT_AN_INCREMENTAL_FILE        "invalid incremental file"
