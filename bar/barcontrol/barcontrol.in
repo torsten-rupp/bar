@@ -66,6 +66,14 @@ case $HOST_PLATFORM in
     ;;
 esac
 
+# check X11 server connection
+xset -q > /dev/null
+rc=$?
+if test $rc -ne 0; then
+  echo >&2 "ERROR: cannot connect to X11 server. Please check DISPLAY variable and rights to connect to X11 server."
+  exit 1
+fi
+
 # run main
 $JAVA $JAVA_FLAGS -jar $BARCONTROL_JAR "$@"
 rc=$?
