@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/compress.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -1221,7 +1221,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
 Errors Compress_deflate(CompressInfo *compressInfo,
                         const byte   *data,
                         ulong        length,
-                        ulong        *deflatedBytess
+                        ulong        *deflatedBytes
                        )
 {
   Errors error;
@@ -1230,9 +1230,9 @@ Errors Compress_deflate(CompressInfo *compressInfo,
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
   assert(data != NULL);
-  assert(deflatedBytess != NULL);
+  assert(deflatedBytes != NULL);
 
-  (*deflatedBytess) = 0;
+  (*deflatedBytes) = 0;
   do
   {
     /* check if data buffer is full, compress data buffer */
@@ -1255,7 +1255,7 @@ Errors Compress_deflate(CompressInfo *compressInfo,
     data += n;
     length -= n;
 
-    (*deflatedBytess) += n;
+    (*deflatedBytes) += n;
   }
   while (   (n > 0)
          && (length > 0)

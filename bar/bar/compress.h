@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/compress.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver compress functions
 * Systems : all
@@ -242,7 +242,7 @@ Errors Compress_reset(CompressInfo *compressInfo);
 * Purpose: deflate (compress) data
 * Input  : compressInfo - compress info block
 *          data         - data byte to compress
-* Output : deflatedBytess - number of processed data bytes
+* Output : deflatedBytes - number of processed data bytes
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -250,7 +250,7 @@ Errors Compress_reset(CompressInfo *compressInfo);
 Errors Compress_deflate(CompressInfo *compressInfo,
                         const byte   *data,
                         ulong        length,
-                        ulong        *deflatedBytess
+                        ulong        *deflatedBytes
                        );
 
 /***********************************************************************\

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/devices.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver device functions
 * Systems: all
@@ -380,7 +380,9 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
   return ERROR_NONE;
 }
 
-Errors Device_getDeviceInfo(const String deviceName, DeviceInfo *deviceInfo)
+Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
+                            const String deviceName
+                           )
 {
   struct stat64 fileStat;
   int           handle;

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/devices.h,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: Backup ARchiver device functions
 * Systems: all
@@ -268,15 +268,15 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
 /***********************************************************************\
 * Name   : Device_getDeviceInfo
 * Purpose: get device info
-* Input  : deviceName - device name
-+          deviceInfo - device info variable to fill
-* Output : -
+* Input  : deviceInfo - device info variable to fill
+*          deviceName - device name
+* Output : deviceInfo - device info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Device_getDeviceInfo(const String deviceName,
-                            DeviceInfo   *deviceInfo
+Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
+                            const String deviceName
                            );
 
 #ifdef __cplusplus
