@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patternlists.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -20,6 +20,8 @@
 
 #include "global.h"
 #include "lists.h"
+#include "strings.h"
+#include "stringlists.h"
 
 #include "bar.h"
 #include "patterns.h"
@@ -222,6 +224,28 @@ bool PatternList_match(const PatternList *patternList,
   {
     matchFlag = Pattern_match(&patternNode->pattern,string,patternMatchMode);
     patternNode = patternNode->next;
+  }
+
+  return matchFlag;
+}
+
+bool PatternList_matchStringList(const PatternList *patternList,
+                                 const StringList  *stringList,
+                                 PatternMatchModes patternMatchMode
+                                )
+{
+  bool       matchFlag;
+  StringNode *stringNode;
+
+  assert(patternList != NULL);
+  assert(stringList != NULL);
+
+  matchFlag  = FALSE;
+  stringNode = stringList->head;
+  while ((stringNode != NULL) && !matchFlag)
+  {
+    matchFlag = PatternList_match(patternList,stringNode->string,patternMatchMode);
+    stringNode = stringNode->next;
   }
 
   return matchFlag;

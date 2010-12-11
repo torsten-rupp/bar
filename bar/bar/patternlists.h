@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/patternlists.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver pattern functions
 * Systems: all
@@ -23,6 +23,7 @@
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
+#include "stringlists.h"
 #include "patterns.h"
 
 #include "errors.h"
@@ -158,10 +159,11 @@ Errors PatternList_appendCString(PatternList  *patternList,
                                 );
 
 /***********************************************************************\
-* Name   : PatternList_match
+* Name   : PatternList_match, PatternList_matchStringList
 * Purpose: patch string with all patterns of list
 * Input  : patternList      - pattern list
-*          s                - string
+*          string           - string
+*          stringList       - string list
 *          patternMatchMode - pattern match mode; see PatternMatchModes
 * Output : -
 * Return : TRUE if pattern match, FALSE otherwise
@@ -172,6 +174,10 @@ bool PatternList_match(const PatternList *patternList,
                        const String      string,
                        PatternMatchModes patternMatchMode
                       );
+bool PatternList_matchStringList(const PatternList *patternList,
+                                 const StringList  *stringList,
+                                 PatternMatchModes patternMatchMode
+                                );
 
 #ifdef __cplusplus
   }
