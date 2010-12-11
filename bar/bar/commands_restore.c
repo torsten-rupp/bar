@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_restore.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive restore function
 * Systems : all
@@ -41,6 +41,7 @@
 
 /***************************** Constants *******************************/
 
+/* file data buffer size */
 #define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
@@ -137,14 +138,13 @@ LOCAL String getDestinationFileName(String       destinationFileName,
 }
 
 /***********************************************************************\
-* Name   : getDestinationFileName
-* Purpose: get destination file name by stripping directory levels and
-*          add destination directory
+* Name   : getDestinationDeviceName
+* Purpose: get destination device name
 * Input  : destinationDeviceName - destination device name variable
 *          imageName             - original file name
 *          destination           - destination device or NULL
 * Output : -
-* Return : file name
+* Return : device name
 * Notes  : -
 \***********************************************************************/
 
@@ -212,7 +212,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   bool              abortFlag;
   Errors            error;
   ArchiveInfo       archiveInfo;
-  ArchiveFileInfo   archiveFileInfo;
+  ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
   FragmentNode      *fragmentNode;
 
@@ -289,7 +289,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
     /* read files */
     while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
-           && !Archive_eof(&archiveInfo)
+           && !Archive_eof(&archiveInfo,TRUE)
            && (restoreInfo.failError == ERROR_NONE)
           )
     {
@@ -301,11 +301,12 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
       /* get next archive entry type */
       error = Archive_getNextArchiveEntryType(&archiveInfo,
-                                              &archiveEntryType
+                                              &archiveEntryType,
+                                              TRUE
                                              );
       if (error != ERROR_NONE)
       {
-        printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
+        printError("Cannot read next entry in archive '%s' (error: %s)!\n",
                    String_cString(archiveFileName),
                    Errors_getText(error)
                   );
@@ -322,7 +323,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             uint64       fragmentOffset,fragmentSize;
             String       destinationFileName;
             FragmentNode *fragmentNode;
-            String       directoryName;
+            String       parentDirectoryName;
 //            FileInfo         localFileInfo;
             FileHandle   fileHandle;
             uint64       length;
@@ -331,7 +332,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             /* read file */
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
-                                          &archiveFileInfo,
+                                          &archiveEntryInfo,
                                           NULL,
                                           NULL,
                                           NULL,
@@ -342,7 +343,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                                          );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read 'file' content of archive '%s' (error: %s)!\n",
+              printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
@@ -368,7 +369,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                                                           );
 
 
-              /* check if file fragment exists */
+              /* check if file fragment already exists, file already exists */
               fragmentNode = FragmentList_find(&fragmentList,fileName);
               if (fragmentNode != NULL)
               {
@@ -377,10 +378,10 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   printInfo(1,"  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
                             String_cString(destinationFileName),
                             fragmentOffset,
-                            (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset
+                            (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
                            );
                   String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveFileInfo);
+                  Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   continue;
                 }
@@ -391,7 +392,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 {
                   printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
                   String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveFileInfo);
+                  Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   continue;
                 }
@@ -400,101 +401,107 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
               printInfo(2,"  Restore file '%s'...",String_cString(destinationFileName));
 
-              /* create directory if not existing */
-              directoryName = File_getFilePathName(String_new(),destinationFileName);
-              if (!File_exists(directoryName))
+              /* create parent directories if not existing */
+              if (!jobOptions->dryRunFlag)
               {
-                /* create directory */
-                error = File_makeDirectory(directoryName,
-                                           FILE_DEFAULT_USER_ID,
-                                           FILE_DEFAULT_GROUP_ID,
-                                           fileInfo.permission
-                                          );
-                if (error != ERROR_NONE)
+                parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
+                if (!File_exists(parentDirectoryName))
                 {
-                  printInfo(2,"FAIL!\n");
-                  printError("Cannot create directory '%s' (error: %s)\n",
-                             String_cString(directoryName),
-                             Errors_getText(error)
-                            );
-                  String_delete(directoryName);
-                  String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveFileInfo);
-                  String_delete(fileName);
-                  if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                  continue;
-                }
-
-                /* set owner ship */
-                error = File_setOwner(directoryName,
-                                      (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
-                                      (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
-                                     );
-                if (error != ERROR_NONE)
-                {
-                  if (jobOptions->stopOnErrorFlag)
+                  /* create directory */
+                  error = File_makeDirectory(parentDirectoryName,
+                                             FILE_DEFAULT_USER_ID,
+                                             FILE_DEFAULT_GROUP_ID,
+                                             fileInfo.permission
+                                            );
+                  if (error != ERROR_NONE)
                   {
                     printInfo(2,"FAIL!\n");
-                    printError("Cannot set owner ship of directory '%s' (error: %s)\n",
-                               String_cString(directoryName),
+                    printError("Cannot create directory '%s' (error: %s)\n",
+                               String_cString(parentDirectoryName),
                                Errors_getText(error)
                               );
-                    String_delete(directoryName);
+                    String_delete(parentDirectoryName);
                     String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveFileInfo);
+                    Archive_closeEntry(&archiveEntryInfo);
                     String_delete(fileName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                     continue;
                   }
-                  else
+
+                  /* set directory owner ship */
+                  error = File_setOwner(parentDirectoryName,
+                                        (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
+                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
+                                       );
+                  if (error != ERROR_NONE)
                   {
-                    printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
-                                 String_cString(directoryName),
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      printInfo(2,"FAIL!\n");
+                      printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                 String_cString(parentDirectoryName),
                                  Errors_getText(error)
                                 );
+                      String_delete(parentDirectoryName);
+                      String_delete(destinationFileName);
+                      Archive_closeEntry(&archiveEntryInfo);
+                      String_delete(fileName);
+                      if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                      continue;
+                    }
+                    else
+                    {
+                      printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                   String_cString(parentDirectoryName),
+                                   Errors_getText(error)
+                                  );
+                    }
                   }
                 }
+                String_delete(parentDirectoryName);
               }
-              String_delete(directoryName);
+
+              /* create file */
+              if (!jobOptions->dryRunFlag)
+              {
+                error = File_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
+                if (error != ERROR_NONE)
+                {
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot create/write to file '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Errors_getText(error)
+                            );
+                  String_delete(destinationFileName);
+                  Archive_closeEntry(&archiveEntryInfo);
+                  String_delete(fileName);
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    restoreInfo.failError = error;
+                  }
+                  continue;
+                }
+                error = File_seek(&fileHandle,fragmentOffset);
+                if (error != ERROR_NONE)
+                {
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot write file '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Errors_getText(error)
+                            );
+                  File_close(&fileHandle);
+                  String_delete(destinationFileName);
+                  Archive_closeEntry(&archiveEntryInfo);
+                  String_delete(fileName);
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    restoreInfo.failError = error;
+                  }
+                  continue;
+                }
+              }
 
               /* write file data */
-//if (fragmentNode == NULL) File_delete(destinationFileName,TRUE);
-              error = File_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
-              if (error != ERROR_NONE)
-              {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot create/write to file '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  restoreInfo.failError = error;
-                }
-                continue;
-              }
-              error = File_seek(&fileHandle,fragmentOffset);
-              if (error != ERROR_NONE)
-              {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot write file '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                File_close(&fileHandle);
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  restoreInfo.failError = error;
-                }
-                continue;
-              }
-
               length = 0;
               while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                      && (length < fragmentSize)
@@ -508,84 +515,100 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
                 n = MIN(fragmentSize-length,BUFFER_SIZE);
 
-                error = Archive_readData(&archiveFileInfo,buffer,n);
+                error = Archive_readData(&archiveEntryInfo,buffer,n);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                  printError("Cannot read content of archive '%s' (error: %s)!\n",
                              String_cString(archiveFileName),
                              Errors_getText(error)
                             );
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                   break;
                 }
-                error = File_write(&fileHandle,buffer,n);
-                if (error != ERROR_NONE)
+                if (!jobOptions->dryRunFlag)
                 {
-                  printInfo(2,"FAIL!\n");
-                  printError("Cannot write file '%s' (error: %s)\n",
-                             String_cString(destinationFileName),
-                             Errors_getText(error)
-                            );
-                  if (jobOptions->stopOnErrorFlag)
+                  error = File_write(&fileHandle,buffer,n);
+                  if (error != ERROR_NONE)
                   {
-                    restoreInfo.failError = error;
+                    printInfo(2,"FAIL!\n");
+                    printError("Cannot write file '%s' (error: %s)\n",
+                               String_cString(destinationFileName),
+                               Errors_getText(error)
+                              );
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      restoreInfo.failError = error;
+                    }
+                    break;
                   }
-                  break;
                 }
                 restoreInfo.statusInfo.entryDoneBytes += n;
                 abortFlag = !updateStatusInfo(&restoreInfo);
 
                 length += n;
               }
-              if (File_getSize(&fileHandle) > fileInfo.size)
+              if      (restoreInfo.failError != ERROR_NONE)
               {
-                File_truncate(&fileHandle,fileInfo.size);
+                if (!jobOptions->dryRunFlag)
+                {
+                  File_close(&fileHandle);
+                }
+                String_delete(destinationFileName);
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(fileName);
+                continue;
               }
-              File_close(&fileHandle);
-              if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
+              else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
               {
                 printInfo(2,"ABORTED\n");
+                if (!jobOptions->dryRunFlag)
+                {
+                  File_close(&fileHandle);
+                }
                 String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
+                Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 continue;
               }
-#if 0
-              if (restoreInfo.failError != ERROR_NONE)
+
+              if (!jobOptions->dryRunFlag)
               {
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(fileName);
-                continue;
+                if (File_getSize(&fileHandle) > fileInfo.size)
+                {
+                  File_truncate(&fileHandle,fileInfo.size);
+                }
+                File_close(&fileHandle);
               }
-#endif /* 0 */
 
               /* set file time, file owner/group */
-              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-              error = File_setFileInfo(destinationFileName,&fileInfo);
-              if (error != ERROR_NONE)
+              if (!jobOptions->dryRunFlag)
               {
-                if (jobOptions->stopOnErrorFlag)
+                if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+                if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+                error = File_setFileInfo(destinationFileName,&fileInfo);
+                if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
-                  printError("Cannot set file info of '%s' (error: %s)\n",
-                             String_cString(destinationFileName),
-                             Errors_getText(error)
-                            );
-                  String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveFileInfo);
-                  String_delete(fileName);
-                  restoreInfo.failError = error;
-                  continue;
-                }
-                else
-                {
-                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    printInfo(2,"FAIL!\n");
+                    printError("Cannot set file info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
                                Errors_getText(error)
                               );
+                    String_delete(destinationFileName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(fileName);
+                    restoreInfo.failError = error;
+                    continue;
+                  }
+                  else
+                  {
+                    printWarning("Cannot set file info of '%s' (error: %s)\n",
+                                 String_cString(destinationFileName),
+                                 Errors_getText(error)
+                                );
+                  }
                 }
               }
 
@@ -599,10 +622,28 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 FragmentList_remove(&fragmentList,fragmentNode);
               }
 
+              if (!jobOptions->dryRunFlag)
+              {
+                printInfo(2,"ok\n");
+              }
+              else
+              {
+                printInfo(2,"ok (dry-run)\n");
+              }
+
+              /* check if all data read.
+                 Note: it is not possible to check if all data is read when
+                 compression is used. The decompressor may not all data even
+                 data is _not_ corrupt.
+              */
+              if (   (archiveEntryInfo.file.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+                  && !Archive_eofData(&archiveEntryInfo))
+              {
+                printWarning("unexpected data at end of file entry '%S'.\n",fileName);
+              }
+
               /* free resources */
               String_delete(destinationFileName);
-
-              printInfo(2,"ok\n");
             }
             else
             {
@@ -611,7 +652,13 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             }
 
             /* close archive file, free resources */
-            Archive_closeEntry(&archiveFileInfo);
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printWarning("close 'file' entry fail (error: %s)\n",Errors_getText(error));
+            }
+
+            /* free resources */
             String_delete(fileName);
           }
           break;
@@ -629,7 +676,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             /* read image */
             imageName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
-                                           &archiveFileInfo,
+                                           &archiveEntryInfo,
                                            NULL,
                                            NULL,
                                            NULL,
@@ -640,7 +687,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                                           );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read 'image' content of archive '%s' (error: %s)!\n",
+              printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
@@ -677,7 +724,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                             ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
                            );
                   String_delete(destinationDeviceName);
-                  Archive_closeEntry(&archiveFileInfo);
+                  Archive_closeEntry(&archiveEntryInfo);
                   String_delete(imageName);
                   continue;
                 }
@@ -689,43 +736,47 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
               printInfo(2,"  Restore image '%s'...",String_cString(destinationDeviceName));
 
-              /* write image data */
-              error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPENMODE_WRITE);
-              if (error != ERROR_NONE)
+              /* open device */
+              if (!jobOptions->dryRunFlag)
               {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot write to device '%s' (error: %s)\n",
-                           String_cString(destinationDeviceName),
-                           Errors_getText(error)
-                          );
-                String_delete(destinationDeviceName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(imageName);
-                if (jobOptions->stopOnErrorFlag)
+                error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPENMODE_WRITE);
+                if (error != ERROR_NONE)
                 {
-                  restoreInfo.failError = error;
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot write to device '%s' (error: %s)\n",
+                             String_cString(destinationDeviceName),
+                             Errors_getText(error)
+                            );
+                  String_delete(destinationDeviceName);
+                  Archive_closeEntry(&archiveEntryInfo);
+                  String_delete(imageName);
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    restoreInfo.failError = error;
+                  }
+                  continue;
                 }
-                continue;
-              }
-              error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
-              if (error != ERROR_NONE)
-              {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot write to device '%s' (error: %s)\n",
-                           String_cString(destinationDeviceName),
-                           Errors_getText(error)
-                          );
-                Device_close(&deviceHandle);
-                String_delete(destinationDeviceName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(imageName);
-                if (jobOptions->stopOnErrorFlag)
+                error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
+                if (error != ERROR_NONE)
                 {
-                  restoreInfo.failError = error;
+                  printInfo(2,"FAIL!\n");
+                  printError("Cannot write to device '%s' (error: %s)\n",
+                             String_cString(destinationDeviceName),
+                             Errors_getText(error)
+                            );
+                  Device_close(&deviceHandle);
+                  String_delete(destinationDeviceName);
+                  Archive_closeEntry(&archiveEntryInfo);
+                  String_delete(imageName);
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    restoreInfo.failError = error;
+                  }
+                  continue;
                 }
-                continue;
               }
 
+              /* write image data */
               block = 0;
               while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                      && (block < blockCount)
@@ -740,54 +791,51 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 assert(deviceInfo.blockSize > 0);
                 bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 
-                error = Archive_readData(&archiveFileInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
+                error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                  printError("Cannot read content of archive '%s' (error: %s)!\n",
                              String_cString(archiveFileName),
                              Errors_getText(error)
                             );
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                   break;
                 }
-                error = Device_write(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
-                if (error != ERROR_NONE)
+                if (!jobOptions->dryRunFlag)
                 {
-                  printInfo(2,"FAIL!\n");
-                  printError("Cannot write to device '%s' (error: %s)\n",
-                             String_cString(destinationDeviceName),
-                             Errors_getText(error)
-                            );
-                  if (jobOptions->stopOnErrorFlag)
+                  error = Device_write(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
+                  if (error != ERROR_NONE)
                   {
-                    restoreInfo.failError = error;
+                    printInfo(2,"FAIL!\n");
+                    printError("Cannot write to device '%s' (error: %s)\n",
+                               String_cString(destinationDeviceName),
+                               Errors_getText(error)
+                              );
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      restoreInfo.failError = error;
+                    }
+                    break;
                   }
-                  break;
                 }
                 restoreInfo.statusInfo.entryDoneBytes += bufferBlockCount*deviceInfo.blockSize;
                 abortFlag = !updateStatusInfo(&restoreInfo);
 
                 block += (uint64)bufferBlockCount;
               }
-              Device_close(&deviceHandle);
-              if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
+              if (!jobOptions->dryRunFlag)
               {
-                printInfo(2,"ABORTED\n");
-                String_delete(destinationDeviceName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(imageName);
-                continue;
+                Device_close(&deviceHandle);
+                if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
+                {
+                  printInfo(2,"ABORTED\n");
+                  String_delete(destinationDeviceName);
+                  Archive_closeEntry(&archiveEntryInfo);
+                  String_delete(imageName);
+                  continue;
+                }
               }
-#if 0
-              if (restoreInfo.failError != ERROR_NONE)
-              {
-                String_delete(destinationDeviceName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(imageName);
-                continue;
-              }
-#endif /* 0 */
 
               /* add fragment to file fragment list */
               FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
@@ -798,10 +846,28 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 FragmentList_remove(&fragmentList,fragmentNode);
               }
 
+              if (!jobOptions->dryRunFlag)
+              {
+                printInfo(2,"ok\n");
+              }
+              else
+              {
+                printInfo(2,"ok (dry-run)\n");
+              }
+
+              /* check if all data read.
+                 Note: it is not possible to check if all data is read when
+                 compression is used. The decompressor may not all data even
+                 data is _not_ corrupt.
+              */
+              if (   (archiveEntryInfo.image.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+                  && !Archive_eofData(&archiveEntryInfo))
+              {
+                printWarning("unexpected data at end of image entry '%S'.\n",imageName);
+              }
+
               /* free resources */
               String_delete(destinationDeviceName);
-
-              printInfo(2,"ok\n");
             }
             else
             {
@@ -810,7 +876,13 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             }
 
             /* close archive file, free resources */
-            Archive_closeEntry(&archiveFileInfo);
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printWarning("close 'image' entry fail (error: %s)\n",Errors_getText(error));
+            }
+
+            /* free resources */
             String_delete(imageName);
           }
           break;
@@ -824,7 +896,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             /* read directory */
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveInfo,
-                                               &archiveFileInfo,
+                                               &archiveEntryInfo,
                                                NULL,
                                                NULL,
                                                directoryName,
@@ -832,7 +904,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                                               );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read 'directory' content of archive '%s' (error: %s)!\n",
+              printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
@@ -866,7 +938,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                           String_cString(destinationFileName)
                          );
                 String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
+                Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
                 continue;
               }
@@ -874,43 +946,22 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               printInfo(2,"  Restore directory '%s'...",String_cString(destinationFileName));
 
               /* create directory */
-              error = File_makeDirectory(destinationFileName,
-                                         FILE_DEFAULT_USER_ID,
-                                         FILE_DEFAULT_GROUP_ID,
-                                         fileInfo.permission
-                                        );
-              if (error != ERROR_NONE)
+              if (!jobOptions->dryRunFlag)
               {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot create directory '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(directoryName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  restoreInfo.failError = error;
-                }
-                continue;
-              }
-
-              /* set file time, file owner/group */
-              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-              error = File_setFileInfo(destinationFileName,&fileInfo);
-              if (error != ERROR_NONE)
-              {
-                if (jobOptions->stopOnErrorFlag)
+                error = File_makeDirectory(destinationFileName,
+                                           FILE_DEFAULT_USER_ID,
+                                           FILE_DEFAULT_GROUP_ID,
+                                           fileInfo.permission
+                                          );
+                if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot set directory info of '%s' (error: %s)\n",
+                  printError("Cannot create directory '%s' (error: %s)\n",
                              String_cString(destinationFileName),
                              Errors_getText(error)
                             );
                   String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveFileInfo);
+                  Archive_closeEntry(&archiveEntryInfo);
                   String_delete(directoryName);
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -918,19 +969,59 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   }
                   continue;
                 }
-                else
+              }
+
+              /* set file time, file owner/group */
+              if (!jobOptions->dryRunFlag)
+              {
+                if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+                if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+                error = File_setFileInfo(destinationFileName,&fileInfo);
+                if (error != ERROR_NONE)
                 {
-                  printWarning("Cannot set directory info of '%s' (error: %s)\n",
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    printInfo(2,"FAIL!\n");
+                    printError("Cannot set directory info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
                                Errors_getText(error)
                               );
+                    String_delete(destinationFileName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(directoryName);
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      restoreInfo.failError = error;
+                    }
+                    continue;
+                  }
+                  else
+                  {
+                    printWarning("Cannot set directory info of '%s' (error: %s)\n",
+                                 String_cString(destinationFileName),
+                                 Errors_getText(error)
+                                );
+                  }
                 }
+              }
+
+              if (!jobOptions->dryRunFlag)
+              {
+                printInfo(2,"ok\n");
+              }
+              else
+              {
+                printInfo(2,"ok (dry-run)\n");
+              }
+
+              /* check if all data read */
+              if (!Archive_eofData(&archiveEntryInfo))
+              {
+                printWarning("unexpected data at end of directory entry '%S'.\n",directoryName);
               }
 
               /* free resources */
               String_delete(destinationFileName);
-
-              printInfo(2,"ok\n");
             }
             else
             {
@@ -939,7 +1030,13 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             }
 
             /* close archive file */
-            Archive_closeEntry(&archiveFileInfo);
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printWarning("close 'directory' entry fail (error: %s)\n",Errors_getText(error));
+            }
+
+            /* free resources */
             String_delete(directoryName);
           }
           break;
@@ -949,13 +1046,14 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             String   fileName;
             FileInfo fileInfo;
             String   destinationFileName;
+            String   parentDirectoryName;
 //            FileInfo localFileInfo;
 
             /* read link */
             linkName = String_new();
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
-                                          &archiveFileInfo,
+                                          &archiveEntryInfo,
                                           NULL,
                                           NULL,
                                           linkName,
@@ -964,7 +1062,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                                          );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read 'link' content of archive '%s' (error: %s)!\n",
+              printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
@@ -990,8 +1088,68 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                                                            jobOptions->directoryStripCount
                                                           );
 
+              /* create parent directories if not existing */
+              if (!jobOptions->dryRunFlag)
+              {
+                parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
+                if (!File_exists(parentDirectoryName))
+                {
+                  /* create directory */
+                  error = File_makeDirectory(parentDirectoryName,
+                                             FILE_DEFAULT_USER_ID,
+                                             FILE_DEFAULT_GROUP_ID,
+                                             fileInfo.permission
+                                            );
+                  if (error != ERROR_NONE)
+                  {
+                    printInfo(2,"FAIL!\n");
+                    printError("Cannot create directory '%s' (error: %s)\n",
+                               String_cString(parentDirectoryName),
+                               Errors_getText(error)
+                              );
+                    String_delete(parentDirectoryName);
+                    String_delete(destinationFileName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(fileName);
+                    String_delete(linkName);
+                    if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                    continue;
+                  }
 
-              /* create link */
+                  /* set directory owner ship */
+                  error = File_setOwner(parentDirectoryName,
+                                        (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
+                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
+                                       );
+                  if (error != ERROR_NONE)
+                  {
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      printInfo(2,"FAIL!\n");
+                      printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                 String_cString(parentDirectoryName),
+                                 Errors_getText(error)
+                                );
+                      String_delete(parentDirectoryName);
+                      String_delete(destinationFileName);
+                      Archive_closeEntry(&archiveEntryInfo);
+                      String_delete(fileName);
+                      if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                      continue;
+                    }
+                    else
+                    {
+                      printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                   String_cString(parentDirectoryName),
+                                   Errors_getText(error)
+                                  );
+                    }
+                  }
+                }
+                String_delete(parentDirectoryName);
+              }
+
+              /* check if link areadly exists */
               if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
               {
                 printInfo(1,
@@ -999,7 +1157,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                           String_cString(destinationFileName)
                          );
                 String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
+                Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
@@ -1011,41 +1169,20 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
               printInfo(2,"  Restore link '%s'...",String_cString(destinationFileName));
 
-              error = File_makeLink(destinationFileName,fileName);
-              if (error != ERROR_NONE)
+              /* create link */
+              if (!jobOptions->dryRunFlag)
               {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot create link '%s' -> '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           String_cString(fileName),
-                           Errors_getText(error)
-                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(fileName);
-                String_delete(linkName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  restoreInfo.failError = error;
-                }
-                continue;
-              }
-
-              /* set file time, file owner/group */
-              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-              error = File_setFileInfo(destinationFileName,&fileInfo);
-              if (error != ERROR_NONE)
-              {
-                if (jobOptions->stopOnErrorFlag)
+                error = File_makeLink(destinationFileName,fileName);
+                if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot set file info of '%s' (error: %s)\n",
+                  printError("Cannot create link '%s' -> '%s' (error: %s)\n",
                              String_cString(destinationFileName),
+                             String_cString(fileName),
                              Errors_getText(error)
                             );
                   String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveFileInfo);
+                  Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   String_delete(linkName);
                   if (jobOptions->stopOnErrorFlag)
@@ -1054,19 +1191,60 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   }
                   continue;
                 }
-                else
+              }
+
+              /* set file time, file owner/group */
+              if (!jobOptions->dryRunFlag)
+              {
+                if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+                if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+                error = File_setFileInfo(destinationFileName,&fileInfo);
+                if (error != ERROR_NONE)
                 {
-                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    printInfo(2,"FAIL!\n");
+                    printError("Cannot set file info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
                                Errors_getText(error)
                               );
+                    String_delete(destinationFileName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(fileName);
+                    String_delete(linkName);
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      restoreInfo.failError = error;
+                    }
+                    continue;
+                  }
+                  else
+                  {
+                    printWarning("Cannot set file info of '%s' (error: %s)\n",
+                                 String_cString(destinationFileName),
+                                 Errors_getText(error)
+                                );
+                  }
                 }
+              }
+
+              if (!jobOptions->dryRunFlag)
+              {
+                printInfo(2,"ok\n");
+              }
+              else
+              {
+                printInfo(2,"ok (dry-run)\n");
+              }
+
+              /* check if all data read */
+              if (!Archive_eofData(&archiveEntryInfo))
+              {
+                printWarning("unexpected data at end of link entry '%S'.\n",linkName);
               }
 
               /* free resources */
               String_delete(destinationFileName);
-
-              printInfo(2,"ok\n");
             }
             else
             {
@@ -1075,9 +1253,422 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             }
 
             /* close archive file */
-            Archive_closeEntry(&archiveFileInfo);
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printWarning("close 'link' entry fail (error: %s)\n",Errors_getText(error));
+            }
+
+            /* free resources */
             String_delete(fileName);
             String_delete(linkName);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_HARDLINK:
+          {
+            StringList       fileNameList;
+            FileInfo         fileInfo;
+            uint64           fragmentOffset,fragmentSize;
+            String           hardLinkFileName;
+            String           destinationFileName;
+            bool             restoredDataFlag;
+            const StringNode *stringNode;
+            String           fileName;
+            FragmentNode     *fragmentNode;
+            String           parentDirectoryName;
+//            FileInfo         localFileInfo;
+            FileHandle       fileHandle;
+            uint64           length;
+            ulong            n;
+
+            /* read hard link */
+            StringList_init(&fileNameList);
+            error = Archive_readHardLinkEntry(&archiveInfo,
+                                              &archiveEntryInfo,
+                                              NULL,
+                                              NULL,
+                                              NULL,
+                                              &fileNameList,
+                                              &fileInfo,
+                                              &fragmentOffset,
+                                              &fragmentSize
+                                             );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         Errors_getText(error)
+                        );
+              StringList_done(&fileNameList);
+              if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+              continue;
+            }
+
+            hardLinkFileName    = String_new();
+            destinationFileName = String_new();
+            restoredDataFlag    = FALSE;
+            STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
+            {
+              if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                  && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                 )
+              {
+                String_set(restoreInfo.statusInfo.name,fileName);
+                restoreInfo.statusInfo.entryDoneBytes  = 0LL;
+                restoreInfo.statusInfo.entryTotalBytes = fragmentSize;
+                abortFlag = !updateStatusInfo(&restoreInfo);
+
+                /* get destination filename */
+                getDestinationFileName(destinationFileName,
+                                       fileName,
+                                       jobOptions->destination,
+                                       jobOptions->directoryStripCount
+                                      );
+
+                printInfo(2,"  Restore hard link '%s'...",String_cString(destinationFileName));
+
+                /* create parent directories if not existing */
+                if (!jobOptions->dryRunFlag)
+                {
+                  parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
+                  if (!File_exists(parentDirectoryName))
+                  {
+                    /* create directory */
+                    error = File_makeDirectory(parentDirectoryName,
+                                               FILE_DEFAULT_USER_ID,
+                                               FILE_DEFAULT_GROUP_ID,
+                                               fileInfo.permission
+                                              );
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(2,"FAIL!\n");
+                      printError("Cannot create directory '%s' (error: %s)\n",
+                                 String_cString(parentDirectoryName),
+                                 Errors_getText(error)
+                                );
+                      String_delete(parentDirectoryName);
+                      if (jobOptions->stopOnErrorFlag)
+                      {
+                        restoreInfo.failError = error;
+                        break;
+                      }
+                      else
+                      {
+                        continue;
+                      }
+                    }
+
+                    /* set directory owner ship */
+                    error = File_setOwner(parentDirectoryName,
+                                          (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
+                                          (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
+                                         );
+                    if (error != ERROR_NONE)
+                    {
+                      if (jobOptions->stopOnErrorFlag)
+                      {
+                        printInfo(2,"FAIL!\n");
+                        printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                   String_cString(parentDirectoryName),
+                                   Errors_getText(error)
+                                  );
+                        String_delete(parentDirectoryName);
+                        restoreInfo.failError = error;
+                        break;
+                      }
+                      else
+                      {
+                        printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                     String_cString(parentDirectoryName),
+                                     Errors_getText(error)
+                                    );
+                      }
+                    }
+                  }
+                  String_delete(parentDirectoryName);
+                }
+
+                if (!restoredDataFlag)
+                {
+                  /* check if file fragment already eixsts, file already exists */
+                  fragmentNode = FragmentList_find(&fragmentList,fileName);
+                  if (fragmentNode != NULL)
+                  {
+                    if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,fragmentOffset,fragmentSize))
+                    {
+                      printInfo(1,"skipped (file part %llu..%llu exists)\n",
+                                String_cString(destinationFileName),
+                                fragmentOffset,
+                                (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
+                               );
+                      continue;
+                    }
+                  }
+                  else
+                  {
+                    if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+                    {
+                      printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
+                      continue;
+                    }
+                    fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size);
+                  }
+
+                  /* create file */
+                  if (!jobOptions->dryRunFlag)
+                  {
+                    error = File_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(2,"FAIL!\n");
+                      printError("Cannot create/write to file '%s' (error: %s)\n",
+                                 String_cString(destinationFileName),
+                                 Errors_getText(error)
+                                );
+                      if (jobOptions->stopOnErrorFlag)
+                      {
+                        restoreInfo.failError = error;
+                        break;
+                      }
+                      else
+                      {
+                        continue;
+                      }
+                    }
+                    error = File_seek(&fileHandle,fragmentOffset);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(2,"FAIL!\n");
+                      printError("Cannot write file '%s' (error: %s)\n",
+                                 String_cString(destinationFileName),
+                                 Errors_getText(error)
+                                );
+                      File_close(&fileHandle);
+                      if (jobOptions->stopOnErrorFlag)
+                      {
+                        restoreInfo.failError = error;
+                        break;
+                      }
+                      else
+                      {
+                        continue;
+                      }
+                    }
+                    String_set(hardLinkFileName,destinationFileName);
+                  }
+
+                  /* write file data */
+                  length = 0;
+                  while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
+                         && (length < fragmentSize)
+                        )
+                  {
+                    /* pause */
+                    while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
+                    {
+                      Misc_udelay(500*1000);
+                    }
+
+                    n = MIN(fragmentSize-length,BUFFER_SIZE);
+
+                    error = Archive_readData(&archiveEntryInfo,buffer,n);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(2,"FAIL!\n");
+                      printError("Cannot read content of archive '%s' (error: %s)!\n",
+                                 String_cString(archiveFileName),
+                                 Errors_getText(error)
+                                );
+                      restoreInfo.failError = error;
+                      break;
+                    }
+                    if (!jobOptions->dryRunFlag)
+                    {
+                      error = File_write(&fileHandle,buffer,n);
+                      if (error != ERROR_NONE)
+                      {
+                        printInfo(2,"FAIL!\n");
+                        printError("Cannot write file '%s' (error: %s)\n",
+                                   String_cString(destinationFileName),
+                                   Errors_getText(error)
+                                  );
+                        if (jobOptions->stopOnErrorFlag)
+                        {
+                          restoreInfo.failError = error;
+                        }
+                        break;
+                      }
+                    }
+                    restoreInfo.statusInfo.entryDoneBytes += n;
+                    abortFlag = !updateStatusInfo(&restoreInfo);
+
+                    length += n;
+                  }
+                  if      (restoreInfo.failError != ERROR_NONE)
+                  {
+                    if (!jobOptions->dryRunFlag)
+                    {
+                      File_close(&fileHandle);
+                      break;
+                    }
+                  }
+                  else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
+                  {
+                    printInfo(2,"ABORTED\n");
+                    File_close(&fileHandle);
+                    break;
+                  }
+
+                  /* set file size */
+                  if (!jobOptions->dryRunFlag)
+                  {
+                    if (File_getSize(&fileHandle) > fileInfo.size)
+                    {
+                      File_truncate(&fileHandle,fileInfo.size);
+                    }
+                  }
+
+                  /* close file */
+                  if (!jobOptions->dryRunFlag)
+                  {
+                    File_close(&fileHandle);
+                  }
+
+#if 0
+                  if (restoreInfo.failError != ERROR_NONE)
+                  {
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(fileName);
+                    continue;
+                  }
+#endif /* 0 */
+
+                  /* set file time, file owner/group */
+                  if (!jobOptions->dryRunFlag)
+                  {
+                    if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+                    if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+                    error = File_setFileInfo(destinationFileName,&fileInfo);
+                    if (error != ERROR_NONE)
+                    {
+                      if (jobOptions->stopOnErrorFlag)
+                      {
+                        printInfo(2,"FAIL!\n");
+                        printError("Cannot set file info of '%s' (error: %s)\n",
+                                   String_cString(destinationFileName),
+                                   Errors_getText(error)
+                                  );
+                        restoreInfo.failError = error;
+                        break;
+                      }
+                      else
+                      {
+                        printWarning("Cannot set file info of '%s' (error: %s)\n",
+                                     String_cString(destinationFileName),
+                                     Errors_getText(error)
+                                    );
+                      }
+                    }
+                  }
+
+                  if (!jobOptions->dryRunFlag)
+                  {
+                    printInfo(2,"ok\n");
+                  }
+                  else
+                  {
+                    printInfo(2,"ok (dry-run)\n");
+                  }
+
+                  /* add fragment to file fragment list */
+                  FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+//FragmentList_print(fragmentNode,String_cString(fileName));
+
+                  /* discard fragment list if file is complete */
+                  if (FragmentList_checkEntryComplete(fragmentNode))
+                  {
+                    FragmentList_remove(&fragmentList,fragmentNode);
+                  }
+
+                  restoredDataFlag = TRUE;
+                }
+                else
+                {
+                  /* check file if exists */
+                  if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+                  {
+                    printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
+                    continue;
+                  }
+
+                  /* create hard link */
+                  if (!jobOptions->dryRunFlag)
+                  {
+                    error = File_makeHardLink(destinationFileName,hardLinkFileName);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(2,"FAIL!\n");
+                      printError("Cannot create/write to file '%s' (error: %s)\n",
+                                 String_cString(destinationFileName),
+                                 Errors_getText(error)
+                                );
+                      if (jobOptions->stopOnErrorFlag)
+                      {
+                        restoreInfo.failError = error;
+                        break;
+                      }
+                      else
+                      {
+                        continue;
+                      }
+                    }
+                  }
+
+                  if (!jobOptions->dryRunFlag)
+                  {
+                    printInfo(2,"ok\n");
+                  }
+                  else
+                  {
+                    printInfo(2,"ok (dry-run)\n");
+                  }
+
+                  /* check if all data read.
+                     Note: it is not possible to check if all data is read when
+                     compression is used. The decompressor may not all data even
+                     data is _not_ corrupt.
+                  */
+                  if (   (archiveEntryInfo.hardLink.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+                      && !Archive_eofData(&archiveEntryInfo))
+                  {
+                    printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);
+                  }
+                }
+              }
+              else
+              {
+                /* skip */
+                printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
+              }
+            }
+            String_delete(destinationFileName);
+            String_delete(hardLinkFileName);
+            if (restoreInfo.failError != ERROR_NONE)
+            {
+              Archive_closeEntry(&archiveEntryInfo);
+              StringList_done(&fileNameList);
+              continue;
+            }
+
+            /* close archive file, free resources */
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printWarning("close 'hard link' entry fail (error: %s)\n",Errors_getText(error));
+            }
+
+            /* free resources */
+            StringList_done(&fileNameList);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
@@ -1085,12 +1676,13 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             String   fileName;
             FileInfo fileInfo;
             String   destinationFileName;
+            String   parentDirectoryName;
 //            FileInfo localFileInfo;
 
             /* read special device */
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveInfo,
-                                             &archiveFileInfo,
+                                             &archiveEntryInfo,
                                              NULL,
                                              NULL,
                                              fileName,
@@ -1098,7 +1690,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                                             );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read 'special' content of archive '%s' (error: %s)!\n",
+              printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
@@ -1123,8 +1715,67 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                                                            jobOptions->directoryStripCount
                                                           );
 
+              /* create parent directories if not existing */
+              if (!jobOptions->dryRunFlag)
+              {
+                parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
+                if (!File_exists(parentDirectoryName))
+                {
+                  /* create directory */
+                  error = File_makeDirectory(parentDirectoryName,
+                                             FILE_DEFAULT_USER_ID,
+                                             FILE_DEFAULT_GROUP_ID,
+                                             fileInfo.permission
+                                            );
+                  if (error != ERROR_NONE)
+                  {
+                    printInfo(2,"FAIL!\n");
+                    printError("Cannot create directory '%s' (error: %s)\n",
+                               String_cString(parentDirectoryName),
+                               Errors_getText(error)
+                              );
+                    String_delete(parentDirectoryName);
+                    String_delete(destinationFileName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(fileName);
+                    if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                    continue;
+                  }
 
-              /* create special device */
+                  /* set directory owner ship */
+                  error = File_setOwner(parentDirectoryName,
+                                        (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
+                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
+                                       );
+                  if (error != ERROR_NONE)
+                  {
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      printInfo(2,"FAIL!\n");
+                      printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                 String_cString(parentDirectoryName),
+                                 Errors_getText(error)
+                                );
+                      String_delete(parentDirectoryName);
+                      String_delete(destinationFileName);
+                      Archive_closeEntry(&archiveEntryInfo);
+                      String_delete(fileName);
+                      if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                      continue;
+                    }
+                    else
+                    {
+                      printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                   String_cString(parentDirectoryName),
+                                   Errors_getText(error)
+                                  );
+                    }
+                  }
+                }
+                String_delete(parentDirectoryName);
+              }
+
+              /* check if special file already exists */
               if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
               {
                 printInfo(1,
@@ -1132,7 +1783,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                           String_cString(destinationFileName)
                          );
                 String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
+                Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
@@ -1143,43 +1794,23 @@ Errors Command_restore(StringList                      *archiveFileNameList,
 
               printInfo(2,"  Restore special device '%s'...",String_cString(destinationFileName));
 
-              error = File_makeSpecial(destinationFileName,
-                                       fileInfo.specialType,
-                                       fileInfo.major,
-                                       fileInfo.minor
-                                      );
-              if (error != ERROR_NONE)
+              /* create special device */
+              if (!jobOptions->dryRunFlag)
               {
-                printInfo(2,"FAIL!\n");
-                printError("Cannot create special device '%s' (error: %s)\n",
-                           String_cString(fileName),
-                           Errors_getText(error)
-                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveFileInfo);
-                String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  restoreInfo.failError = error;
-                }
-                continue;
-              }
-
-              /* set file time, file owner/group */
-              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-              error = File_setFileInfo(destinationFileName,&fileInfo);
-              if (error != ERROR_NONE)
-              {
-                if (jobOptions->stopOnErrorFlag)
+                error = File_makeSpecial(destinationFileName,
+                                         fileInfo.specialType,
+                                         fileInfo.major,
+                                         fileInfo.minor
+                                        );
+                if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot set file info of '%s' (error: %s)\n",
-                             String_cString(destinationFileName),
+                  printError("Cannot create special device '%s' (error: %s)\n",
+                             String_cString(fileName),
                              Errors_getText(error)
                             );
                   String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveFileInfo);
+                  Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -1187,19 +1818,59 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   }
                   continue;
                 }
-                else
+              }
+
+              /* set file time, file owner/group */
+              if (!jobOptions->dryRunFlag)
+              {
+                if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+                if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+                error = File_setFileInfo(destinationFileName,&fileInfo);
+                if (error != ERROR_NONE)
                 {
-                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    printInfo(2,"FAIL!\n");
+                    printError("Cannot set file info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
                                Errors_getText(error)
                               );
+                    String_delete(destinationFileName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(fileName);
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      restoreInfo.failError = error;
+                    }
+                    continue;
+                  }
+                  else
+                  {
+                    printWarning("Cannot set file info of '%s' (error: %s)\n",
+                                 String_cString(destinationFileName),
+                                 Errors_getText(error)
+                                );
+                  }
                 }
+              }
+
+              if (!jobOptions->dryRunFlag)
+              {
+                printInfo(2,"ok\n");
+              }
+              else
+              {
+                printInfo(2,"ok (dry-run)\n");
+              }
+
+              /* check if all data read */
+              if (!Archive_eofData(&archiveEntryInfo))
+              {
+                printWarning("unexpected data at end of special entry '%S'.\n",fileName);
               }
 
               /* free resources */
               String_delete(destinationFileName);
-
-              printInfo(2,"ok\n");
             }
             else
             {
@@ -1208,7 +1879,13 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             }
 
             /* close archive file */
-            Archive_closeEntry(&archiveFileInfo);
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printWarning("close 'special' entry fail (error: %s)\n",Errors_getText(error));
+            }
+
+            /* free resources */
             String_delete(fileName);
           }
           break;
